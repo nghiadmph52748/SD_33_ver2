@@ -804,9 +804,9 @@ SET IDENTITY_INSERT [dbo].[nha_san_xuat] OFF
 GO
 SET IDENTITY_INSERT [dbo].[nhan_vien] ON 
 GO
-INSERT [dbo].[nhan_vien] ([id], [id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [gioi_tinh], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 2, N'Nguyễn Đại Ca', N'daica', N'daica123', N'daica@gearup.vn', N'0987654321', NULL, CAST(N'1990-01-01' AS Date), N'Quản trị viên hệ thống', N'Hà Nội', N'Hoàn Kiếm', N'Phúc Tân', N'Tầng 5, Tòa nhà ABC, số 123 Đường Phúc Tân', 1, N'001234567890', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[nhan_vien] ([id], [id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [gioi_tinh], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 2, N'Nguyễn Đại Ca', N'admin', N'$2a$10$BAlCSfey81iEY5CTIAH7zOPNTP/9zNe9d6cUUCc7SeF.O8bc0nekG', N'daica@gearup.vn', N'0987654321', NULL, CAST(N'1990-01-01' AS Date), N'Quản trị viên hệ thống', N'Hà Nội', N'Hoàn Kiếm', N'Phúc Tân', N'Tầng 5, Tòa nhà ABC, số 123 Đường Phúc Tân', 1, N'001234567890', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[nhan_vien] ([id], [id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [gioi_tinh], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 1, N'Trần Thị Em', N'them', N'them123', N'them.tran@gearup.vn', N'0978123456', NULL, CAST(N'1995-02-15' AS Date), N'Nhân viên bán hàng tại quầy', N'Hà Nội', N'Ba Đình', N'Ngọc Hà', N'Số 45 Ngõ 89 Đường Ngọc Hà', 0, N'012345678901', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[nhan_vien] ([id], [id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [gioi_tinh], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 1, N'Trần Thị Em', N'them', N'$2a$10$8K2L0IgfzC3QHICobxwVOXdKUOz5hdzrQyLj8LrQ8D6cjzVzVzQG', N'them.tran@gearup.vn', N'0978123456', NULL, CAST(N'1995-02-15' AS Date), N'Nhân viên bán hàng tại quầy', N'Hà Nội', N'Ba Đình', N'Ngọc Hà', N'Số 45 Ngõ 89 Đường Ngọc Hà', 0, N'012345678901', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[nhan_vien] OFF
 GO
@@ -904,6 +904,10 @@ INSERT [dbo].[xuat_xu] ([id], [ten_xuat_xu], [trang_thai], [deleted], [create_at
 GO
 SET IDENTITY_INSERT [dbo].[xuat_xu] OFF
 GO
+-- Thêm dữ liệu test cho nhân viên admin (Đã comment vì đã có bản ghi admin ở trên)
+-- INSERT INTO [dbo].[nhan_vien] ([id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by])
+-- VALUES (1, N'Administrator', N'admin', N'admin', N'admin@gearup.com', N'0123456789', NULL, '1990-01-01', N'Tài khoản admin hệ thống', N'Hà Nội', N'Hoàn Kiếm', N'Phúc Tân', N'Số 1 Phố Huế', N'001122334455', 1, 0, CAST(N'2025-01-27' AS Date), 1, NULL, NULL)
+-- GO
 SET ANSI_PADDING ON
 GO
 /****** Object:  Index [UQ__anh_san___F73EF50114E0E34D]    Script Date: 9/27/2025 1:30:02 PM ******/
@@ -1267,3 +1271,20 @@ USE [master]
 GO
 ALTER DATABASE [GearUp] SET  READ_WRITE 
 GO
+-- Create TokenBlacklist table for JWT token invalidation
+CREATE TABLE token_blacklist (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    token NVARCHAR(255) NOT NULL,
+    username NVARCHAR(255) NOT NULL,
+    expiry_date DATETIME2 NOT NULL,
+    created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
+
+    -- Index for fast lookup
+    INDEX idx_token_blacklist_token (token),
+    INDEX idx_token_blacklist_username (username),
+    INDEX idx_token_blacklist_expiry_date (expiry_date)
+);
+
+-- Add unique constraint to prevent duplicate tokens
+ALTER TABLE token_blacklist
+ADD CONSTRAINT uk_token_blacklist_token UNIQUE (token);

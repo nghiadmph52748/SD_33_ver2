@@ -1,12 +1,13 @@
 package org.example.be_sp.model.response;
 
+import java.time.LocalDate;
+
+import org.example.be_sp.entity.XuatXu;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.example.be_sp.entity.XuatXu;
-
-import java.time.LocalDate;
 
 @Getter
 @Setter

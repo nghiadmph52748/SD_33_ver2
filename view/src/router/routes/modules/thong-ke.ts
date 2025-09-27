@@ -10,7 +10,7 @@ const THONG_KE: AppRouteRecordRaw = {
     locale: 'menu.thong-ke',
     requiresAuth: true,
     icon: 'IconList',
-    order: 1,
+    order: 0,
     roles: ['*'],
   },
   children: [

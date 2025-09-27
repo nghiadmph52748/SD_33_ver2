@@ -1,6 +1,16 @@
 package org.example.be_sp.service;
 
-import org.apache.poi.ss.usermodel.*;
+import java.io.IOException;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.exception.ApiException;
@@ -14,19 +24,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.time.ZoneId;
-import java.util.Date;
-import java.util.List;
-
 @Service
 public class NhanVienService {
     @Autowired
     private NhanVienRepository nhanVienRepository;
     @Autowired
     QuyenHanRepository repository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     public List<NhanVienResponse> getAllNhanVien() {
         return nhanVienRepository.findAll().stream().map(NhanVienResponse::new).toList();
@@ -44,7 +47,11 @@ public class NhanVienService {
         return nhanVienRepository.findByTenTaiKhoan(tenTaiKhoan).map(NhanVienResponse::new).orElseThrow(() -> new ApiException("NhanVien not found", "404"));
     }
 
-    public void saveNhanVien(NhanVienRequest request) {
+    public NhanVien findByTenTaiKhoan(String tenTaiKhoan) {
+        return nhanVienRepository.findByTenTaiKhoan(tenTaiKhoan).orElse(null);
+    }
+
+    public void saveNhanVien(NhanVienRequest request, PasswordEncoder passwordEncoder) {
         NhanVien nv = MapperUtils.map(request, NhanVien.class);
         nv.setIdQuyenHan(repository.findById(request.getIdQuyenHan()).orElseThrow(() -> new ApiException("QuyenHan not found", "404")));
         if (request.getTenTaiKhoan() != null && request.getMatKhau() != null){
@@ -58,7 +65,7 @@ public class NhanVienService {
         nhanVienRepository.save(nv);
     }
 
-    public void updateNhanVien(Integer id, NhanVienRequest request) {
+    public void updateNhanVien(Integer id, NhanVienRequest request, PasswordEncoder passwordEncoder) {
         NhanVien nv = nhanVienRepository.findById(id)
                 .orElseThrow(() -> new ApiException("NhanVien not found", "404"));
 
@@ -110,7 +117,7 @@ public class NhanVienService {
         c.setDeleted(true);
         nhanVienRepository.save(c);
     }
-    public void importNhanVienFromExcel(MultipartFile file) throws IOException {
+    public void importNhanVienFromExcel(MultipartFile file, PasswordEncoder passwordEncoder) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
             boolean firstRow = true;
@@ -154,7 +161,7 @@ public class NhanVienService {
                 request.setDeleted(false);
 
                 if (!existsByTenTaiKhoan(request.getTenTaiKhoan()) && !existsByEmail(request.getEmail())) {
-                    saveNhanVien(request);
+                    saveNhanVien(request, passwordEncoder);
                 }
                 // Hoặc bạn có thể chọn cập nhật nếu tồn tại, tuỳ yêu cầu
             }

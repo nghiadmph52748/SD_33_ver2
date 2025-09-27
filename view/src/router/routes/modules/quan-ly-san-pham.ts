@@ -37,7 +37,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'bien-the',
+      path: 'bien-the/:productId',
       name: 'BienTheSanPham',
       component: () => import('@/views/main-view/quan-ly-san-pham/bien-the/bien-the-san-pham.vue'),
       meta: {

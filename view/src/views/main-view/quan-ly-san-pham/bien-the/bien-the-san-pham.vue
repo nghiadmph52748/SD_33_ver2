@@ -11,10 +11,7 @@
           <!-- Row 1: Search - NSX - XX -->
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tên sản phẩm, mã SKU..." allow-clear @input="onSearchInput">
-                <template #prefix>
-                </template>
-              </a-input>
+              <a-input v-model="filters.search" placeholder="Tên sản phẩm, mã SKU..." allow-clear @input="onSearchInput" />
             </a-form-item>
           </a-col>
           <a-col :span="8">
@@ -163,7 +160,16 @@
         </a-space>
       </div>
 
-      <a-table :columns="columns" :data="variants" :pagination="pagination" :loading="loading" :scroll="{ x: 1350 }">
+      <a-table
+        :columns="columns"
+        :data="variants"
+        :pagination="{
+          ...pagination,
+          onChange: handlePageChange,
+        }"
+        :loading="loading"
+        :scroll="{ x: 1350 }"
+      >
         <template #checkbox="{ record }">
           <a-checkbox
             :checked="selectedVariants.includes(record.id.toString())"
@@ -297,7 +303,26 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { Message } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import {
+  getBienTheSanPhamList,
+  getSanPhamOptions,
+  getMauSacOptions,
+  getKichThuocOptions,
+  getChatLieuOptions,
+  getDeGiayOptions,
+  getTrongLuongOptions,
+  type BienTheSanPham,
+  type BienTheResponse,
+  type SanPham,
+  type MauSac,
+  type KichThuoc,
+  type ChatLieu,
+  type DeGiay,
+  type TrongLuong,
+} from '@/api/san-pham/bien-the'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
   IconPlus,
@@ -318,6 +343,10 @@ import {
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 
+// Route params
+const route = useRoute()
+const productId = computed(() => (route.params.productId ? Number(route.params.productId) : undefined))
+
 // Filters
 const filters = ref({
   search: '', // Tìm theo tên sản phẩm hoặc SKU
@@ -330,6 +359,51 @@ const filters = ref({
   status: '', // Trạng thái: active/inactive
 })
 
+// Pagination
+const pagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0, // Sẽ được cập nhật từ API response
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: true,
+})
+
+// API Data State
+const bienTheList = ref<BienTheResponse | null>(null)
+const variants = ref<BienTheSanPham[]>([])
+const totalElements = ref(0)
+
+// Options State
+const sanPhamOptions = ref<SanPham[]>([])
+const mauSacOptions = ref<MauSac[]>([])
+const kichThuocOptions = ref<KichThuoc[]>([])
+const chatLieuOptions = ref<ChatLieu[]>([])
+const deGiayOptions = ref<DeGiay[]>([])
+const trongLuongOptions = ref<TrongLuong[]>([])
+
+// Computed options for dropdowns
+const manufacturerOptions = computed(() => {
+  const unique = [...new Set(variants.value.map((v) => v.tenNhaSanXuat).filter(Boolean))]
+  return unique.map((name) => ({ value: name, label: name }))
+})
+
+const originOptions = computed(() => {
+  const unique = [...new Set(variants.value.map((v) => v.tenXuatXu).filter(Boolean))]
+  return unique.map((name) => ({ value: name, label: name }))
+})
+
+const materialOptions = computed(() => {
+  const unique = [...new Set(variants.value.map((v) => v.tenChatLieu).filter(Boolean))]
+  return unique.map((name) => ({ value: name, label: name }))
+})
+
+const shoeSoleOptions = computed(() => {
+  const unique = [...new Set(variants.value.map((v) => v.tenDeGiay).filter(Boolean))]
+  return unique.map((name) => ({ value: name, label: name }))
+})
+
+// Computed title for variants table
 // Table
 const loading = ref(false)
 const selectedVariants = ref<string[]>([])
@@ -346,13 +420,13 @@ const variantsTableTitle = computed(() => {
 
   // If filtering by manufacturer, use manufacturer as category name
   if (filters.value.manufacturer) {
-    const manufacturerOptions = [
+    const staticManufacturerOptions = [
       { value: 'nike', label: 'Nike' },
       { value: 'adidas', label: 'Adidas' },
       { value: 'gucci', label: 'Gucci' },
       { value: 'puma', label: 'Puma' },
     ]
-    const manufacturer = manufacturerOptions.find((m) => m.value === filters.value.manufacturer)
+    const manufacturer = staticManufacturerOptions.find((m) => m.value === filters.value.manufacturer)
     if (manufacturer) {
       categoryName = manufacturer.label
     }
@@ -455,141 +529,61 @@ const columns = [
 ]
 
 // Pagination
-const pagination = ref({
-  current: 1,
-  pageSize: 10,
-  total: 50,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: true,
-})
-
 // Mock data
 
 const availableSizes = ref(['35', '36', '37', '38', '39', '40', '41', '42'])
 
-const variants = ref([
-  {
-    id: 1,
-    product_name: 'Giày sneaker Nike Air Max',
-    product_image: 'https://via.placeholder.com/80x80/1890ff/ffffff?text=Nike',
-    sku: 'NK-AM270-38-BLUE',
-    manufacturer: 'Nike',
-    origin: 'Việt Nam',
-    material: 'Da tổng hợp',
-    shoeSole: 'Đế PU',
-    weight: '0.5',
-    attributes: [
-      { label: 'Màu sắc', value: 'Xanh dương' },
-      { label: 'Kích thước', value: '38' },
-      { label: 'Chất liệu', value: 'Da tổng hợp' },
-      { label: 'Đế giày', value: 'Đế PU' },
-      { label: 'Trọng lượng', value: '0.5 kg' },
-    ],
-    stock: 25,
-    price: 3200000,
-    discount: 10,
-    final_price: 2880000,
-    status: 'active',
-    unit: 'đôi',
-  },
-  {
-    id: 2,
-    product_name: 'Giày boot Chelsea',
-    product_image: 'https://via.placeholder.com/80x80/52c41a/ffffff?text=Boot',
-    sku: 'BT-CH-37-BLACK',
-    manufacturer: 'Adidas',
-    origin: 'Trung Quốc',
-    material: 'Da thật',
-    shoeSole: 'Đế cao su',
-    weight: '0.7',
-    attributes: [
-      { label: 'Màu sắc', value: 'Đen' },
-      { label: 'Kích thước', value: '37' },
-      { label: 'Chất liệu', value: 'Da thật' },
-      { label: 'Đế giày', value: 'Đế cao su' },
-      { label: 'Trọng lượng', value: '0.7 kg' },
-    ],
-    stock: 8,
-    price: 4500000,
-    discount: 0,
-    final_price: 4500000,
-    status: 'active',
-    unit: 'đôi',
-  },
-  {
-    id: 3,
-    product_name: 'Giày thể thao Puma',
-    product_image: 'https://via.placeholder.com/80x80/f5222d/ffffff?text=Puma',
-    sku: 'PM-SPRT-39-WHITE',
-    manufacturer: 'Puma',
-    origin: 'Mỹ',
-    material: 'Vải',
-    shoeSole: 'Đế EVA',
-    weight: '0.4',
-    attributes: [
-      { label: 'Màu sắc', value: 'Trắng' },
-      { label: 'Kích thước', value: '39' },
-      { label: 'Chất liệu', value: 'Vải' },
-      { label: 'Đế giày', value: 'Đế EVA' },
-      { label: 'Trọng lượng', value: '0.4 kg' },
-    ],
-    stock: 15,
-    price: 2800000,
-    discount: 5,
-    final_price: 2660000,
-    status: 'inactive',
-    unit: 'đôi',
-  },
-  {
-    id: 4,
-    product_name: 'Giày chạy bộ Adidas Ultraboost',
-    product_image: 'https://via.placeholder.com/80x80/722ed1/ffffff?text=Adidas',
-    sku: 'AD-UB-40-GRAY',
-    manufacturer: 'Adidas',
-    origin: 'Đức',
-    material: 'Vải',
-    shoeSole: 'Đế EVA',
-    weight: '0.3',
-    attributes: [
-      { label: 'Màu sắc', value: 'Xám' },
-      { label: 'Kích thước', value: '40' },
-      { label: 'Chất liệu', value: 'Vải' },
-      { label: 'Đế giày', value: 'Đế EVA' },
-      { label: 'Trọng lượng', value: '0.3 kg' },
-    ],
-    stock: 12,
-    price: 5200000,
-    discount: 15,
-    final_price: 4420000,
-    status: 'active',
-    unit: 'đôi',
-  },
-  {
-    id: 5,
-    product_name: 'Giày Gucci Marmont',
-    product_image: 'https://via.placeholder.com/80x80/13c2c2/ffffff?text=Gucci',
-    sku: 'GC-MM-36-BEIGE',
-    manufacturer: 'Gucci',
-    origin: 'Ý',
-    material: 'Da thật',
-    shoeSole: 'Đế TPU',
-    weight: '0.6',
-    attributes: [
-      { label: 'Màu sắc', value: 'Beige' },
-      { label: 'Kích thước', value: '36' },
-      { label: 'Chất liệu', value: 'Da thật' },
-      { label: 'Đế giày', value: 'Đế TPU' },
-      { label: 'Trọng lượng', value: '0.6 kg' },
-    ],
-    stock: 5,
-    price: 15000000,
-    discount: 0,
-    final_price: 15000000,
-    status: 'active',
-    unit: 'đôi',
-  },
-])
+// API Functions
+const loadBienTheList = async () => {
+  try {
+    loading.value = true
+    const response = await getBienTheSanPhamList(pagination.value.current - 1) // API sử dụng 0-based indexing
+
+    bienTheList.value = response.data
+    variants.value = response.data.content || []
+    totalElements.value = response.data.totalElements || 0
+
+    // Cập nhật pagination
+    pagination.value.total = totalElements.value
+    pagination.value.current = (response.data.number || 0) + 1 // API trả về 0-based, UI cần 1-based
+  } catch (error) {
+    Message.error('Không thể tải danh sách biến thể sản phẩm')
+    variants.value = []
+    totalElements.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+// Load options from API
+const loadAllOptions = async () => {
+  try {
+    const [sanPham, mauSac, kichThuoc, chatLieu, deGiay, trongLuong] = await Promise.all([
+      getSanPhamOptions(),
+      getMauSacOptions(),
+      getKichThuocOptions(),
+      getChatLieuOptions(),
+      getDeGiayOptions(),
+      getTrongLuongOptions(),
+    ])
+
+    sanPhamOptions.value = sanPham.data || []
+    mauSacOptions.value = mauSac.data || []
+    kichThuocOptions.value = kichThuoc.data || []
+    chatLieuOptions.value = chatLieu.data || []
+    deGiayOptions.value = deGiay.data || []
+    trongLuongOptions.value = trongLuong.data || []
+  } catch (error) {
+    Message.error('Không thể tải danh sách lựa chọn')
+  }
+}
+
+// Pagination change handler
+const handlePageChange = (page: number, size: number) => {
+  pagination.value.current = page
+  pagination.value.pageSize = size
+  loadBienTheList()
+}
 
 // Methods
 const formatCurrency = (amount: number) => {
@@ -795,134 +789,18 @@ watch(
 )
 
 onMounted(() => {
-  // Initialize with mock data
-  const mockVariants = [
-    {
-      id: '1',
-      sku: 'NK-AIR-RED-36',
-      product_name: 'Nike Air Max 270',
-      manufacturer: 'Nike',
-      origin: 'Việt Nam',
-      color: 'red',
-      size: '36',
-      material: 'Vải tổng hợp',
-      shoeSole: 'Đế cao su',
-      weight: '0.8',
-      price: 2500000,
-      discount: 10,
-      final_price: 2250000,
-      stock: 25,
-      status: 'active',
-      image: 'https://via.placeholder.com/80',
-      attributes: [
-        { label: 'Màu sắc', value: 'Đỏ' },
-        { label: 'Kích thước', value: '36' },
-        { label: 'Chất liệu', value: 'Vải tổng hợp' },
-        { label: 'Đế giày', value: 'Đế cao su' },
-      ],
-    },
-    {
-      id: '2',
-      sku: 'NK-AIR-BLUE-37',
-      product_name: 'Nike Air Max 270',
-      manufacturer: 'Nike',
-      origin: 'Việt Nam',
-      color: 'blue',
-      size: '37',
-      material: 'Da tổng hợp',
-      shoeSole: 'Đế EVA',
-      weight: '0.9',
-      price: 2600000,
-      discount: 5,
-      final_price: 2470000,
-      stock: 15,
-      status: 'active',
-      image: 'https://via.placeholder.com/80',
-      attributes: [
-        { label: 'Màu sắc', value: 'Xanh dương' },
-        { label: 'Kích thước', value: '37' },
-        { label: 'Chất liệu', value: 'Da tổng hợp' },
-        { label: 'Đế giày', value: 'Đế EVA' },
-      ],
-    },
-    {
-      id: '3',
-      sku: 'AD-ULTRA-BLK-38',
-      product_name: 'Adidas Ultraboost 22',
-      manufacturer: 'Adidas',
-      origin: 'Trung Quốc',
-      color: 'black',
-      size: '38',
-      material: 'Vải lưới',
-      shoeSole: 'Đế Boost',
-      weight: '0.7',
-      price: 3200000,
-      discount: 15,
-      final_price: 2720000,
-      stock: 8,
-      status: 'active',
-      image: 'https://via.placeholder.com/80',
-      attributes: [
-        { label: 'Màu sắc', value: 'Đen' },
-        { label: 'Kích thước', value: '38' },
-        { label: 'Chất liệu', value: 'Vải lưới' },
-        { label: 'Đế giày', value: 'Đế Boost' },
-      ],
-    },
-    {
-      id: '4',
-      sku: 'PU-GAZ-WHT-39',
-      product_name: 'Puma Gazelle',
-      manufacturer: 'Puma',
-      origin: 'Việt Nam',
-      color: 'white',
-      size: '39',
-      material: 'Da thật',
-      shoeSole: 'Đế cao su',
-      weight: '0.6',
-      price: 1800000,
-      discount: 0,
-      final_price: 1800000,
-      stock: 0,
-      status: 'inactive',
-      image: 'https://via.placeholder.com/80',
-      attributes: [
-        { label: 'Màu sắc', value: 'Trắng' },
-        { label: 'Kích thước', value: '39' },
-        { label: 'Chất liệu', value: 'Da thật' },
-        { label: 'Đế giày', value: 'Đế cao su' },
-      ],
-    },
-    {
-      id: '5',
-      sku: 'NK-JORDAN-GRN-40',
-      product_name: 'Nike Air Jordan 1',
-      manufacturer: 'Nike',
-      origin: 'Mỹ',
-      color: 'green',
-      size: '40',
-      material: 'Da tổng hợp',
-      shoeSole: 'Đế cao su',
-      weight: '1.0',
-      price: 4500000,
-      discount: 20,
-      final_price: 3600000,
-      stock: 12,
-      status: 'active',
-      image: 'https://via.placeholder.com/80',
-      attributes: [
-        { label: 'Màu sắc', value: 'Xanh lá' },
-        { label: 'Kích thước', value: '40' },
-        { label: 'Chất liệu', value: 'Da tổng hợp' },
-        { label: 'Đế giày', value: 'Đế cao su' },
-      ],
-    },
-  ]
-
-  // Store original data and display data
-  originalVariants.value = mockVariants
-  variants.value = mockVariants
+  // Load data from API
+  loadAllOptions()
+  loadBienTheList()
 })
+
+// Watch for filter changes to reload data
+watch(
+  () => pagination.value.current,
+  () => {
+    loadBienTheList()
+  }
+)
 </script>
 
 <style scoped>

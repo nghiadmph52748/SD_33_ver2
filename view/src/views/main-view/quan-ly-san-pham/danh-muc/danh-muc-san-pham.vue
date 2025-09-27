@@ -5,7 +5,7 @@
 
     <!-- Search and Filter -->
     <a-card class="filters-card">
-      <a-form layout="vertical">
+      <a-form :model="filters" layout="vertical">
         <a-row :gutter="16">
           <!-- Row 1 -->
           <a-col :span="8">
@@ -15,10 +15,10 @@
           </a-col>
           <a-col :span="8">
             <a-form-item label="Trạng thái">
-              <a-radio-group v-model="filters.status" type="button" @change="searchCategories">
+              <a-radio-group v-model="filters.trangThai" type="button" @change="searchCategories">
                 <a-radio value="">Tất cả</a-radio>
-                <a-radio value="active">Đang bán</a-radio>
-                <a-radio value="inactive">Tạm ngưng bán</a-radio>
+                <a-radio :value="true">Đang bán</a-radio>
+                <a-radio :value="false">Tạm ngưng bán</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-col>
@@ -26,14 +26,14 @@
             <a-form-item label="Khoảng giá">
               <div class="price-range-container">
                 <a-slider
-                  v-model="filters.priceRange"
+                  v-model="priceRange"
                   :min="0"
                   :max="5000000"
                   :step="50000"
                   range
                   tooltip-visible
                   :tooltip-formatter="formatPrice"
-                  @change="searchCategories"
+                  @change="updatePriceRangeAndSearch"
                   style="width: 100%"
                 />
               </div>
@@ -81,11 +81,18 @@
 
       <a-table
         :columns="columns"
-        :data="filteredCategories"
-        :pagination="pagination"
+        :data="transformedDanhMucList || []"
+        :pagination="{
+          current: filters.page + 1, // Hiển thị 1-based cho UI
+          pageSize: filters.size,
+          total: totalElements || 0,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: true,
+          onChange: handlePageChange,
+        }"
         :loading="loading"
         :scroll="{ x: 800 }"
-        @change="handleTableChange"
       >
         <template #checkbox="{ record }">
           <a-checkbox
@@ -100,8 +107,8 @@
                   }
                   if (!editingData.value) editingData.value = {}
                   editingData.value[record.id] = {
-                    name: record.name,
-                    status: record.status,
+                    tenSanPham: record.tenSanPham,
+                    trangThai: record.trangThai,
                   }
                 } else {
                   // Remove from selection and editing data
@@ -118,11 +125,11 @@
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode -->
             <a-select
-              :model-value="editingData.value[record.id]?.status || record.status"
+              :model-value="editingData.value[record.id]?.trangThai ? 'active' : 'inactive'"
               @update:model-value="
                 (value) => {
                   if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = { ...(editingData.value[record.id] || {}), status: value }
+                  editingData.value[record.id] = { ...(editingData.value[record.id] || {}), trangThai: value === 'active' }
                 }
               "
               size="mini"
@@ -132,8 +139,8 @@
               <a-option value="inactive">Tạm ngưng bán</a-option>
             </a-select>
           </div>
-          <a-tag v-else :color="record.status === 'active' ? 'green' : 'red'">
-            {{ record.status === 'active' ? 'Đang bán' : 'Tạm ngưng bán' }}
+          <a-tag v-else :color="record.trangThai ? 'green' : 'red'">
+            {{ record.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}
           </a-tag>
         </template>
 
@@ -141,46 +148,54 @@
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode for name -->
             <a-input
-              :model-value="editingData.value[record.id]?.name || record.name"
+              :model-value="editingData.value[record.id]?.tenSanPham || record.tenSanPham"
               @update:model-value="
                 (value) => {
                   if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = { ...(editingData.value[record.id] || {}), name: value }
+                  editingData.value[record.id] = { ...(editingData.value[record.id] || {}), tenSanPham: value }
                 }
               "
               size="mini"
               style="width: 200px"
             />
           </div>
-          <span v-else class="custom-name">{{ record.name }}</span>
+          <span v-else class="custom-name">{{ record.tenSanPham }}</span>
         </template>
 
         <template #price_range="{ record }">
-          <span class="custom-price-range">{{ record.price_range }}</span>
+          <span class="custom-price-range">
+            {{
+              record.giaNhoNhat && record.giaLonNhat
+                ? `${record.giaNhoNhat.toLocaleString('vi-VN')} - ${record.giaLonNhat.toLocaleString('vi-VN')}đ`
+                : 'Chưa có giá'
+            }}
+          </span>
         </template>
 
         <template #action="{ record }">
-          <a-button type="text" @click="viewCategory(record)">
-            <template #icon>
-              <icon-eye />
-            </template>
-          </a-button>
+          <a-tooltip content="Xem biến thể sản phẩm">
+            <a-button type="text" @click="viewCategory(record)">
+              <template #icon>
+                <icon-eye />
+              </template>
+            </a-button>
+          </a-tooltip>
         </template>
 
         <template #checkbox-title>
           <a-checkbox
-            :checked="selectedCount === filteredCategories.length && filteredCategories.length > 0"
-            :indeterminate="selectedCount > 0 && selectedCount < filteredCategories.length"
+            :checked="selectedCount === (danhMucList?.length || 0) && (danhMucList?.length || 0) > 0"
+            :indeterminate="selectedCount > 0 && selectedCount < (danhMucList?.length || 0)"
             @change="
               (checked) => {
                 if (checked) {
-                  // Select all filtered categories and initialize editing data
-                  selectedRowKeys.value = [...filteredCategories.map((cat) => cat.id)]
+                  // Select all categories and initialize editing data
+                  selectedRowKeys.value = [...(danhMucList?.map((cat) => cat.id) || [])]
                   if (!editingData.value) editingData.value = {}
-                  filteredCategories.forEach((category) => {
+                  danhMucList?.forEach((category) => {
                     editingData.value[category.id] = {
-                      name: category.name,
-                      status: category.status,
+                      tenSanPham: category.tenSanPham,
+                      trangThai: category.trangThai,
                     }
                   })
                 } else {
@@ -198,11 +213,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, h } from 'vue'
+import { ref, reactive, computed, onMounted, h, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { debounce } from 'lodash'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { getDanhMucSanPhamList, getNhaSanXuatOptions, getXuatXuOptions } from '@/api/san-pham/danh-muc'
+import type { DanhMucSanPham, DanhMucParams, NhaSanXuatOption, XuatXuOption, DanhMucResponse } from '@/api/san-pham/danh-muc'
 import {
   IconPlus,
   IconSearch,
@@ -216,6 +233,7 @@ import {
   IconPauseCircle,
   IconImage,
 } from '@arco-design/web-vue/es/icon'
+import { Message } from '@arco-design/web-vue'
 
 // Form and modal
 // Breadcrumb setup
@@ -228,7 +246,7 @@ const formRef = ref()
 
 // Edit inline mode state
 const selectedRowKeys = ref<number[]>([])
-const editingData = ref<Record<number, { name: string; status: string }>>({})
+const editingData = ref<Record<number, { tenSanPham: string; trangThai: boolean }>>({}) // Updated to match backend
 
 // Computed properties for safe access
 const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
@@ -249,14 +267,131 @@ const formData = reactive({
 const fileList = ref([])
 
 // Filters
-const filters = reactive({
+const filters = reactive<DanhMucParams>({
+  page: 0, // Đổi từ 1 thành 0 để khớp với backend
+  size: 10,
   search: '',
-  status: '',
-  priceRange: [0, 5000000], // min and max price range
+  trangThai: '', // Sửa từ undefined thành empty string để đồng bộ với radio "Tất cả"
+  idNhaSanXuat: undefined,
+  idXuatXu: undefined,
+  giaTu: 0,
+  giaDen: 5000000,
+})
+
+// Data
+const danhMucList = ref<DanhMucResponse | null>(null) // Raw data from API
+const totalElements = ref(0)
+const nhaSanXuatOptions = ref<NhaSanXuatOption[]>([])
+const xuatXuOptions = ref<XuatXuOption[]>([])
+
+// Maps for quick lookup of names
+const nhaSanXuatMap = ref<Map<number, string>>(new Map())
+const xuatXuMap = ref<Map<number, string>>(new Map())
+
+// Price range ref để tránh tạo array mới
+const priceRange = ref([0, 5000000])
+
+// Đồng bộ priceRange với filters
+const syncPriceRange = () => {
+  priceRange.value = [filters.giaTu || 0, filters.giaDen || 5000000]
+}
+
+// Watcher để sync khi filters thay đổi
+watch([() => filters.giaTu, () => filters.giaDen], syncPriceRange, { immediate: true })
+
+// Cập nhật filters khi priceRange thay đổi
+const updatePriceRange = (value: number[]) => {
+  if (Array.isArray(value) && value.length === 2) {
+    ;[filters.giaTu, filters.giaDen] = value
+  }
+}
+
+// Computed property to transform and filter danhMucList for table display
+const transformedDanhMucList = computed(() => {
+  if (!danhMucList.value || !danhMucList.value.data || !Array.isArray(danhMucList.value.data)) return []
+  let filteredList = danhMucList.value.data
+  // Apply search filter
+  if (filters.search) {
+    const lowerCaseSearch = filters.search.toLowerCase()
+    filteredList = filteredList.filter(
+      (item) =>
+        item.maSanPham?.toLowerCase().includes(lowerCaseSearch) ||
+        item.tenSanPham.toLowerCase().includes(lowerCaseSearch) ||
+        (item.giaNhoNhat && item.giaLonNhat && `${item.giaNhoNhat} - ${item.giaLonNhat}`.includes(lowerCaseSearch))
+    )
+  }
+
+  // Apply status filter
+  if (filters.trangThai !== undefined && filters.trangThai !== '') {
+    filteredList = filteredList.filter((item) => item.trangThai === filters.trangThai)
+  }
+
+  // Apply NhaSanXuat filter
+  if (filters.idNhaSanXuat) {
+    filteredList = filteredList.filter((item) => item.idNhaSanXuat === filters.idNhaSanXuat)
+  }
+
+  // Apply XuatXu filter
+  if (filters.idXuatXu) {
+    filteredList = filteredList.filter((item) => item.idXuatXu === filters.idXuatXu)
+  }
+
+  // Apply price range filter
+  if (filters.giaTu !== undefined && filters.giaDen !== undefined) {
+    filteredList = filteredList.filter(
+      (item) =>
+        (item.giaNhoNhat === null || item.giaNhoNhat >= filters.giaTu) && (item.giaLonNhat === null || item.giaLonNhat <= filters.giaDen)
+    )
+  }
+
+  // Update total elements after filtering for frontend pagination
+  totalElements.value = danhMucList.value.totalElements || filteredList.length
+
+  // Nếu đang sử dụng backend pagination thì không cần frontend pagination
+  const result = filteredList.map((item) => ({
+    ...item,
+    name: item.tenSanPham, // Map tenSanPham to name for table column
+    status: item.trangThai ? 'active' : 'inactive', // Map boolean trangThai to string status
+    giaThapNhat: item.giaNhoNhat, // Map giaNhoNhat to giaThapNhat
+    giaCaoNhat: item.giaLonNhat, // Map giaLonNhat to giaCaoNhat
+    nhaSanXuatName: nhaSanXuatMap.value.get(item.idNhaSanXuat) || '',
+    xuatXuName: xuatXuMap.value.get(item.idXuatXu) || '',
+  }))
+
+  return result
 })
 
 // Table
 const loading = ref(false)
+
+// Load danh mục sản phẩm (chỉ phân trang ở backend)
+const loadDanhMucList = async () => {
+  try {
+    loading.value = true
+    // Gửi page và size đến backend để lấy dữ liệu phân trang
+    const response = await getDanhMucSanPhamList(filters.page)
+    danhMucList.value = response.data
+    // totalElements sẽ được cập nhật trong computed property transformedDanhMucList
+  } catch (error) {
+    Message.error('Không thể tải danh sách danh mục sản phẩm')
+  } finally {
+    loading.value = false
+  }
+}
+
+// Tìm kiếm với debounce
+const searchCategories = debounce(() => {
+  filters.page = 0 // Reset về trang đầu khi tìm kiếm
+  loadDanhMucList()
+}, 500)
+
+// Cập nhật price range và tìm kiếm
+const updatePriceRangeAndSearch = (value: number[]) => {
+  updatePriceRange(value)
+  searchCategories()
+}
+
+// Table
 const columns = [
   {
     title: '',
@@ -268,30 +403,30 @@ const columns = [
   },
   {
     title: 'Mã sản phẩm',
-    dataIndex: 'code',
+    dataIndex: 'maSanPham',
     width: 110,
   },
   {
     title: 'Tên sản phẩm',
-    dataIndex: 'name',
+    dataIndex: 'name', // Sẽ được ánh xạ từ tenSanPham
     slotName: 'name',
     width: 250,
   },
   {
     title: 'Nhà sản xuất',
-    dataIndex: 'manufacturer',
+    dataIndex: 'nhaSanXuatName', // Sử dụng tên đã ánh xạ
     width: 110,
     align: 'center',
   },
   {
     title: 'Xuất xứ',
-    dataIndex: 'origin',
+    dataIndex: 'xuatXuName', // Sử dụng tên đã ánh xạ
     width: 100,
     align: 'center',
   },
   {
     title: 'Số lượng biến thể',
-    dataIndex: 'variant_count',
+    dataIndex: 'soLuongBienThe',
     width: 150,
     align: 'center',
   },
@@ -303,7 +438,7 @@ const columns = [
   },
   {
     title: 'Trạng thái',
-    dataIndex: 'status',
+    dataIndex: 'status', // Sử dụng status đã ánh xạ
     slotName: 'status',
     width: 120,
     align: 'center',
@@ -317,124 +452,11 @@ const columns = [
 ]
 
 // Mock data
-const categories = ref([
-  {
-    id: 1,
-    code: 'SP001',
-    name: 'Giày sneaker',
-    variant_count: 25,
-    price_range: '200.000 - 500.000',
-    manufacturer: 'Nike',
-    origin: 'Việt Nam',
-    status: 'active',
-  },
-  {
-    id: 2,
-    code: 'SP002',
-    name: 'Giày boot',
-    variant_count: 18,
-    price_range: '800.000 - 1.800.000',
-    manufacturer: 'Adidas',
-    origin: 'Trung Quốc',
-    status: 'active',
-  },
-  {
-    id: 3,
-    code: 'SP003',
-    name: 'Giày cao gót',
-    variant_count: 12,
-    price_range: '150.000 - 400.000',
-    manufacturer: 'Gucci',
-    origin: 'Ý',
-    status: 'active',
-  },
-  {
-    id: 4,
-    code: 'SP004',
-    name: 'Giày thể thao',
-    variant_count: 30,
-    price_range: '2.500.000 - 5.000.000',
-    manufacturer: 'Puma',
-    origin: 'Đức',
-    status: 'active',
-  },
-  {
-    id: 5,
-    code: 'SP005',
-    name: 'Giày sandal',
-    variant_count: 8,
-    price_range: '80.000 - 150.000',
-    manufacturer: "Biti's",
-    origin: 'Việt Nam',
-    status: 'inactive',
-  },
-  {
-    id: 6,
-    code: 'SP006',
-    name: 'Giày lười',
-    variant_count: 15,
-    price_range: '50.000 - 100.000',
-    manufacturer: 'Crocs',
-    origin: 'Mỹ',
-    status: 'active',
-  },
-  {
-    id: 7,
-    code: 'SP007',
-    name: 'Giày da',
-    variant_count: 20,
-    price_range: '1.200.000 - 3.000.000',
-    manufacturer: 'Louis Vuitton',
-    origin: 'Pháp',
-    status: 'active',
-  },
-])
+// Sử dụng danhMucList từ API thay vì mock data
 
-// Filtered categories computed property
-const filteredCategories = computed(() => {
-  return categories.value.filter((category) => {
-    // Filter by status
-    if (filters.status && category.status !== filters.status) {
-      return false
-    }
+// API sẽ tự động filter và search phía backend
 
-    // Filter by price range
-    const [minPrice, maxPrice] = filters.priceRange
-    if (minPrice > 0 || maxPrice < 5000000) {
-      const priceText = category.price_range.replace(/[^\d-]/g, '') // Remove non-numeric chars except dash
-      const prices = priceText.split('-').map((p) => parseInt(p, 10))
-      const categoryMinPrice = prices[0]
-      const categoryMaxPrice = prices[prices.length - 1]
-
-      // Check if category price range overlaps with filter range
-      return categoryMaxPrice >= minPrice && categoryMinPrice <= maxPrice
-    }
-
-    // Filter by search (code, name, or price range)
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase()
-      const matchesCode = category.code.toLowerCase().includes(searchTerm)
-      const matchesName = category.name.toLowerCase().includes(searchTerm)
-      const matchesPrice = category.price_range.toLowerCase().includes(searchTerm)
-
-      if (!matchesCode && !matchesName && !matchesPrice) {
-        return false
-      }
-    }
-
-    return true
-  })
-})
-
-// Pagination
-const pagination = computed(() => ({
-  current: 1,
-  pageSize: 10,
-  total: filteredCategories.value.length,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: true,
-}))
+// Pagination được xử lý trực tiếp trong table component
 
 // Form validation rules
 const formRules = {
@@ -445,19 +467,7 @@ const formRules = {
   description: [{ max: 200, message: 'Mô tả không được vượt quá 200 ký tự' }],
 }
 
-// Methods
-const searchCategories = debounce(() => {
-  // Removed console.log
-  // Implement search logic
-}, 300)
-
-const resetFilters = () => {
-  filters.value = {
-    search: '',
-    status: '',
-    priceRange: [0, 5000000],
-  }
-}
+// Methods đã được định nghĩa ở phía dưới
 
 // Format price for display
 const formatPrice = (price: number) => {
@@ -497,8 +507,13 @@ const editCategory = (category: any) => {
 }
 
 const viewCategory = (category: any) => {
-  // Removed console.log
-  // Implement view logic
+  // Navigate đến trang biến thể sản phẩm với ID sản phẩm
+  router.push({
+    name: 'BienTheSanPham',
+    params: {
+      productId: category.id,
+    },
+  })
 }
 
 const deleteCategory = (category: any) => {
@@ -513,12 +528,17 @@ const toggleStatus = (category: any) => {
 
 const handleSubmit = async () => {
   try {
+    // Debug: Starting handleSubmit
     await formRef.value.validate()
-    // Removed console.log
-    // Implement submit logic
+    // Debug: Form validation passed
+    // TODO: Implement submit logic
+    // Debug: Submit logic not implemented yet
     modalVisible.value = false
+    // Debug: handleSubmit completed
   } catch (error) {
-    // console.error('Form validation failed:', error)
+    // Error: Form validation failed
+    // Error details available in development
+    Message.error('Có lỗi xảy ra khi lưu danh mục sản phẩm')
   }
 }
 
@@ -526,20 +546,67 @@ const handleCancel = () => {
   modalVisible.value = false
 }
 
+// Load options cho dropdown
+const loadOptions = async () => {
+  try {
+    // Debug: Starting loadOptions
+    const [nhaSanXuatRes, xuatXuRes] = await Promise.all([getNhaSanXuatOptions(), getXuatXuOptions()])
+    // Debug: Options loaded
+    nhaSanXuatOptions.value = nhaSanXuatRes.data
+    xuatXuOptions.value = xuatXuRes.data
+
+    // Build maps for quick lookup
+    nhaSanXuatMap.value = new Map(nhaSanXuatRes.data.map((item) => [item.id, item.tenNhaSanXuat]))
+    xuatXuMap.value = new Map(xuatXuRes.data.map((item) => [item.id, item.tenXuatXu]))
+
+    // Debug: loadOptions completed
+  } catch (error) {
+    // Error: Lỗi khi tải options
+    // Error details available in development
+    Message.error('Không thể tải dữ liệu dropdown')
+  }
+}
+
+// Reset filters
+const resetFilters = () => {
+  Object.assign(filters, {
+    page: 0, // Reset về trang đầu (0-based) khi tìm kiếm
+    size: 10,
+    search: '',
+    trangThai: '', // Sửa từ undefined thành empty string để đồng bộ với radio "Tất cả"
+    idNhaSanXuat: undefined,
+    idXuatXu: undefined,
+    giaTu: 0,
+    giaDen: 5000000,
+  })
+  loadDanhMucList()
+}
+
+// Thay đổi trang
+const handlePageChange = (page: number, size: number) => {
+  filters.page = page - 1 // Chuyển đổi từ 1-based (UI) sang 0-based (backend)
+  filters.size = size
+  loadDanhMucList()
+}
+
 const handleTableChange = (paginationData: any, filtersData: any, sorter: any) => {
   // Handle table change
 }
 
-const completeBulkUpdate = () => {
-  // Update categories with edited data
-  selectedRowKeys.value.forEach((id) => {
-    const category = categories.value.find((cat) => cat.id === id)
-    const editData = editingData.value[id]
-    if (category && editData) {
-      category.name = editData.name
-      category.status = editData.status
-    }
-  })
+const completeBulkUpdate = async () => {
+  // Update selected items via API
+  try {
+    // Debug: Starting completeBulkUpdate
+    // TODO: Implement bulk update API call
+    // Debug: Bulk update API not implemented yet, reloading list
+    // For now, just reload the list
+    await loadDanhMucList()
+    // Debug: completeBulkUpdate completed
+  } catch (error) {
+    // Error: Lỗi khi cập nhật hàng loạt
+    // Error details available in development
+    Message.error('Không thể cập nhật hàng loạt')
+  }
 
   // Clear selection and editing data
   selectedRowKeys.value = []
@@ -570,10 +637,24 @@ const handleUploadChange = (info: any) => {
   // Handle upload logic
 }
 
-onMounted(() => {
-  // Ensure reactive state is properly initialized
-  selectedRowKeys.value = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  editingData.value = editingData.value && typeof editingData.value === 'object' ? editingData.value : {}
+onMounted(async () => {
+  try {
+    // Debug: Component mounted, initializing...
+
+    // Ensure reactive state is properly initialized
+    selectedRowKeys.value = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
+    editingData.value = editingData.value && typeof editingData.value === 'object' ? editingData.value : {}
+    // Debug: Reactive state initialized
+
+    // Load dữ liệu ban đầu
+    // Debug: Loading initial data...
+    await Promise.all([loadOptions(), loadDanhMucList()])
+    // Debug: Initial data loaded successfully
+  } catch (error) {
+    // Error: Lỗi khi khởi tạo component
+    // Error details available in development
+    Message.error('Không thể tải dữ liệu ban đầu')
+  }
 })
 </script>
 

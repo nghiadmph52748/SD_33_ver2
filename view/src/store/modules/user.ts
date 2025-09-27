@@ -7,7 +7,10 @@ import { UserState } from './user/types'
 
 const useUserStore = defineStore('user', {
   state: (): UserState => ({
+    id: undefined,
+    maNhanVien: undefined,
     name: undefined,
+    tenTaiKhoan: undefined,
     avatar: undefined,
     job: undefined,
     organization: undefined,
@@ -23,6 +26,10 @@ const useUserStore = defineStore('user', {
     accountId: undefined,
     certification: undefined,
     role: 'admin',
+    idQuyenHan: undefined,
+    tenQuyenHan: undefined,
+    accessToken: undefined,
+    refreshToken: undefined,
   }),
 
   getters: {
@@ -59,7 +66,25 @@ const useUserStore = defineStore('user', {
     async login(loginForm: LoginData) {
       try {
         const res = await userLogin(loginForm)
-        setToken(res.data.token)
+
+        // Set JWT tokens
+        if (res.data.accessToken) {
+          setToken(res.data.accessToken)
+        }
+
+        // Update user info
+        const userInfo = {
+          id: res.data.id,
+          maNhanVien: res.data.maNhanVien,
+          name: res.data.tenNhanVien,
+          tenTaiKhoan: res.data.tenTaiKhoan,
+          email: res.data.email,
+          idQuyenHan: res.data.idQuyenHan,
+          tenQuyenHan: res.data.tenQuyenHan,
+          accessToken: res.data.accessToken,
+          refreshToken: res.data.refreshToken,
+          role: res.data.tenQuyenHan?.toLowerCase() === 'admin' ? 'admin' : 'user',
+        }
       } catch (err) {
         clearToken()
         throw err
@@ -72,11 +97,14 @@ const useUserStore = defineStore('user', {
       removeRouteListener()
       appStore.clearServerMenu()
     },
-    // Logout
+    // Logout - Call server API for synchronization
     async logout() {
       try {
         await userLogout()
-      } finally {
+        this.logoutCallBack()
+      } catch (error) {
+        // Even if server call fails, still logout client-side
+        console.warn('Server logout failed, but proceeding with client-side logout:', error)
         this.logoutCallBack()
       }
     },

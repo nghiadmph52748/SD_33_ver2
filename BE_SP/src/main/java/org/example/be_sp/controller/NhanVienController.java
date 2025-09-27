@@ -1,6 +1,9 @@
 package org.example.be_sp.controller;
 
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -11,12 +14,19 @@ import org.example.be_sp.model.response.NhanVienResponse;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.NhanVienService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/api/nhan-vien-management")
@@ -25,42 +35,73 @@ public class NhanVienController {
     @Autowired
     private NhanVienService nhanVienService;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @GetMapping("/playlist")
     public ResponseObject<?> getAllNhanVien() {
-        return new ResponseObject<>(nhanVienService.getAllNhanVien());
+        try {
+            return new ResponseObject<>(true, nhanVienService.getAllNhanVien(), "Lấy danh sách nhân viên thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy danh sách nhân viên: " + e.getMessage());
+        }
     }
 
     @GetMapping("/detail/{id}")
     public ResponseObject<?> getNhanVienById(@PathVariable Integer id) {
-        return new ResponseObject<>(nhanVienService.getNhanVienById(id));
+        try {
+            return new ResponseObject<>(true, nhanVienService.getNhanVienById(id), "Lấy thông tin nhân viên thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy thông tin nhân viên: " + e.getMessage());
+        }
     }
 
     @GetMapping("/detail/email/{email}")
     public ResponseObject<?> getNhanVienByEmail(@PathVariable String email) {
-        return new ResponseObject<>(nhanVienService.getNhanVienByEmail(email));
+        try {
+            return new ResponseObject<>(true, nhanVienService.getNhanVienByEmail(email), "Lấy thông tin nhân viên theo email thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy thông tin nhân viên theo email: " + e.getMessage());
+        }
     }
 
     @GetMapping("/detail/nickname/{tenTaiKhoan}")
     public ResponseObject<?> getNhanVienByTenTaiKhoan(@PathVariable String tenTaiKhoan) {
-        return new ResponseObject<>(nhanVienService.getNhanVienByTenTaiKhoan(tenTaiKhoan));
+        try {
+            return new ResponseObject<>(true, nhanVienService.getNhanVienByTenTaiKhoan(tenTaiKhoan), "Lấy thông tin nhân viên theo tên tài khoản thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy thông tin nhân viên theo tên tài khoản: " + e.getMessage());
+        }
     }
 
     @PostMapping("/add")
     public ResponseObject<?> createNhanVien(@RequestBody NhanVienRequest request) {
-        nhanVienService.saveNhanVien(request);
-        return new ResponseObject<>(null, "Add success");
+        try {
+            nhanVienService.saveNhanVien(request, passwordEncoder);
+            return new ResponseObject<>(true, null, "Thêm nhân viên mới thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi thêm nhân viên: " + e.getMessage());
+        }
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> updateNhanVien(@PathVariable Integer id, @RequestBody NhanVienRequest request) {
-        nhanVienService.updateNhanVien(id, request);
-        return new ResponseObject<>(null, "Update success");
+        try {
+            nhanVienService.updateNhanVien(id, request, passwordEncoder);
+            return new ResponseObject<>(true, null, "Cập nhật nhân viên thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi cập nhật nhân viên: " + e.getMessage());
+        }
     }
 
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> update(@PathVariable Integer id) {
-        nhanVienService.updateStatus(id);
-        return new ResponseObject<>(null, "Update status success");
+        try {
+            nhanVienService.updateStatus(id);
+            return new ResponseObject<>(true, null, "Cập nhật trạng thái nhân viên thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi cập nhật trạng thái nhân viên: " + e.getMessage());
+        }
     }
     @GetMapping("/export-excel")
     public void exportToExcel(HttpServletResponse response) throws IOException {
@@ -103,10 +144,10 @@ public class NhanVienController {
     @PostMapping("/import")
     public ResponseObject<?> importNhanVien(@RequestParam("file") MultipartFile file) {
         try {
-            nhanVienService.importNhanVienFromExcel(file);
-            return new ResponseObject<>(null, "Import nhân viên thành công");
+            nhanVienService.importNhanVienFromExcel(file, passwordEncoder);
+            return new ResponseObject<>(true, null, "Import nhân viên thành công");
         } catch (Exception e) {
-            return new ResponseObject<>(null, "Lỗi import: " + e.getMessage());
+            return new ResponseObject<>(false, null, "Lỗi import: " + e.getMessage());
         }
     }
 

@@ -8,14 +8,22 @@ export interface LoginData {
 }
 
 export interface LoginRes {
-  token: string
+  id: number
+  maNhanVien: string
+  tenNhanVien: string
+  tenTaiKhoan: string
+  email: string
+  idQuyenHan: number
+  tenQuyenHan: string
+  accessToken: string
+  refreshToken: string
 }
 export function login(data: LoginData) {
-  return axios.post<LoginRes>('/api/user/login', data)
+  return axios.post<LoginRes>('/api/auth/login', data)
 }
 
 export function logout() {
-  return axios.post<LoginRes>('/api/user/logout')
+  return axios.post('/api/auth/logout')
 }
 
 export function getUserInfo() {

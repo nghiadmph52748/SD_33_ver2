@@ -3,10 +3,6 @@ import Mock from 'mockjs'
 import './mock/user'
 import './mock/message-box'
 
-import '@/views/dashboard/workplace/mock'
-/** simple */
-import '@/views/dashboard/monitor/mock'
-
 import '@/views/list/card/mock'
 import '@/views/list/search-table/mock'
 

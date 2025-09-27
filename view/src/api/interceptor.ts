@@ -4,15 +4,13 @@ import { Message, Modal } from '@arco-design/web-vue'
 import axios from 'axios'
 
 export interface HttpResponse<T = unknown> {
-  status: number
-  msg: string
-  code: number
+  success: boolean
+  message: string
   data: T
 }
 
-if (import.meta.env.VITE_API_BASE_URL) {
-  axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL
-}
+// Set API base URL for backend
+axios.defaults.baseURL = 'http://localhost:8080'
 
 axios.interceptors.request.use(
   (config: any) => {
@@ -38,35 +36,42 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   (response: any) => {
     const res = response.data
-    // if the custom code is not 20000, it is judged as an error.
-    if (res.code !== 20000) {
+    // Backend returns: { data: ..., message: "...", success: true/false }
+
+    // Check if request was successful
+    if (!res.success) {
       Message.error({
-        content: res.msg || 'Error',
+        content: res.message || 'Request failed',
         duration: 5 * 1000,
       })
-      // 50008: Illegal token; 50012: Other clients logged in; 50014: Token expired;
-      if ([50008, 50012, 50014].includes(res.code) && response.config.url !== '/api/user/info') {
-        Modal.error({
-          title: 'Confirm logout',
-          content: 'You have been logged out, you can cancel to stay on this page, or log in again',
-          okText: 'Re-Login',
-          async onOk() {
-            const userStore = useUserStore()
-
-            await userStore.logout()
-            window.location.reload()
-          },
-        })
-      }
-      return Promise.reject(new Error(res.msg || 'Error'))
+      return Promise.reject(new Error(res.message || 'Request failed'))
     }
+
+    // Return the actual data for successful requests
     return res
   },
   (error) => {
-    Message.error({
-      content: error.msg || 'Request Error',
-      duration: 5 * 1000,
-    })
+    // Handle network errors or other axios errors
+    if (error.response) {
+      // Server responded with error status
+      const errorMessage = error.response.data?.message || `Request failed with status ${error.response.status}`
+      Message.error({
+        content: errorMessage,
+        duration: 5 * 1000,
+      })
+    } else if (error.request) {
+      // Network error
+      Message.error({
+        content: 'Network error - unable to connect to server',
+        duration: 5 * 1000,
+      })
+    } else {
+      // Other error
+      Message.error({
+        content: error.message || 'Request Error',
+        duration: 5 * 1000,
+      })
+    }
     return Promise.reject(error)
   }
 )

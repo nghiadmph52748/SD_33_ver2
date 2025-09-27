@@ -79,7 +79,7 @@ const handleSubmit = async ({ errors, values }: { errors: Record<string, Validat
       const { redirect, ...othersQuery } = router.currentRoute.value.query
 
       router.push({
-        name: (redirect as string) || 'Workplace',
+        name: (redirect as string) || 'ThongKeChung',
         query: {
           ...othersQuery,
         },

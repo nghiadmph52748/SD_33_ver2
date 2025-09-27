@@ -8,7 +8,7 @@ const externalModules = import.meta.glob('./routes/externalModules/*.ts', {
 function formatModules(_modules: any, result: RouteRecordNormalized[]) {
   Object.keys(_modules).forEach((key) => {
     const defaultModule = _modules[key].default
-    if (!defaultModule) {
+    if (!defaultModule || (typeof defaultModule === 'object' && !defaultModule.path && !defaultModule.name)) {
       return
     }
     const moduleList = Array.isArray(defaultModule) ? [...defaultModule] : [defaultModule]

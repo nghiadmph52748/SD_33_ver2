@@ -2,7 +2,7 @@
   <a-dropdown trigger="contextMenu" :popup-max-height="false" @select="actionSelect">
     <span
       class="arco-tag arco-tag-size-medium arco-tag-checked"
-      :class="{ 'link-activated': itemData.fullPath === $route.fullPath }"
+      :class="{ 'link-activated': itemData.fullPath === route.fullPath }"
       @click="goto(itemData)"
     >
       <span class="tag-link">
@@ -48,7 +48,7 @@
 import { DEFAULT_ROUTE_NAME, REDIRECT_ROUTE_NAME } from '@/router/constants'
 import { useTabBarStore } from '@/store'
 import type { TagProps } from '@/store/modules/tab-bar/types'
-import { PropType, computed } from 'vue'
+import { PropType, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 // eslint-disable-next-line no-shadow
@@ -78,8 +78,38 @@ const router = useRouter()
 const route = useRoute()
 const tabBarStore = useTabBarStore()
 
-const goto = (tag: TagProps) => {
-  router.push({ ...tag })
+// Prevent multiple navigation at the same time
+let isNavigating = false
+
+const goto = async (tag: TagProps) => {
+  // Prevent multiple clicks
+  if (isNavigating) return
+
+  isNavigating = true
+
+  try {
+    // Wait for next DOM update cycle to ensure component stability
+    await nextTick()
+    // Add small delay to prevent race conditions
+    await new Promise((resolve) => {
+      setTimeout(() => resolve(), 10)
+    })
+    await router.push({ ...tag })
+  } catch (error) {
+    // Fallback: try to navigate without router if there's an error
+    if (tag.fullPath) {
+      try {
+        window.location.href = tag.fullPath
+      } catch (fallbackError) {
+        // Fallback navigation failed
+      }
+    }
+  } finally {
+    // Reset flag after a short delay to allow subsequent clicks
+    setTimeout(() => {
+      isNavigating = false
+    }, 300)
+  }
 }
 const tagList = computed(() => {
   return tabBarStore.getTabList

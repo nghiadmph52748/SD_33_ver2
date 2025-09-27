@@ -1,10 +1,6 @@
 import localeMessageBox from '@/components/message-box/locale/vi-VN'
 import localeLogin from '@/views/login/locale/vi-VN'
 
-import localeWorkplace from '@/views/dashboard/workplace/locale/vi-VN'
-/** simple */
-import localeMonitor from '@/views/dashboard/monitor/locale/vi-VN'
-
 import localeCardList from '@/views/list/card/locale/vi-VN'
 import localeSearchTable from '@/views/list/search-table/locale/vi-VN'
 
@@ -25,6 +21,8 @@ import locale500 from '@/views/exception/500/locale/vi-VN'
 
 import localeUserInfo from '@/views/user/info/locale/vi-VN'
 import localeUserSetting from '@/views/user/setting/locale/vi-VN'
+
+// Dashboard components don't use localization
 /** simple end */
 import localeSettings from './vi-VN/settings'
 
@@ -76,9 +74,6 @@ export default {
   ...localeSettings,
   ...localeMessageBox,
   ...localeLogin,
-  ...localeWorkplace,
-  /** simple */
-  ...localeMonitor,
   ...localeSearchTable,
   ...localeCardList,
   ...localeStepForm,
