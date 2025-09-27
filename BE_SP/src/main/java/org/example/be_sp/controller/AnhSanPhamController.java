@@ -44,19 +44,11 @@ public class AnhSanPhamController {
     }
 
     @PostMapping("/add-multi-image/cloud")
-    public ResponseEntity<?> post(@RequestParam("file") MultipartFile[] file,
-                                  @RequestParam("loaiAnh") String loaiAnh,
-                                  @RequestParam(value = "moTa", required = false) String moTa,
-                                  @RequestParam(value = "deleted", defaultValue = "false") Boolean deleted,
-                                  @RequestParam(value = "trangThai", defaultValue = "true") Boolean trangThai) {
+    public ResponseEntity<?> post(@RequestParam("file") MultipartFile[] file) {
         try {
             // Tạo request object từ các tham số
             AnhSanPhamUploadCloud request = new AnhSanPhamUploadCloud();
             request.setDuongDanAnh(file);
-            request.setLoaiAnh(loaiAnh);
-            request.setMoTa(moTa);
-            request.setTrangThai(trangThai);
-            request.setDeleted(deleted);
             request.setCreateAt(LocalDate.now());
             List<Integer> savedIds = anhSanPhamService.addAnhSanPhamFromCloud(request);
             return ResponseEntity.ok(new ResponseObject<>(savedIds, "Thêm ảnh sản phẩm thành công"));
@@ -69,15 +61,11 @@ public class AnhSanPhamController {
     @PostMapping("/add")
     public ResponseObject<?> add(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("loaiAnh") String loaiAnh,
-            @RequestParam(value = "moTa", required = false) String moTa,
             @RequestParam(value = "deleted", defaultValue = "false") Boolean deleted,
             @RequestParam(value = "trangThai", defaultValue = "true") Boolean trangThai) {
         try {
             // Tạo request object từ các tham số
             AnhSanPhamRequest request = new AnhSanPhamRequest();
-            request.setLoaiAnh(loaiAnh);
-            request.setMoTa(moTa);
             request.setTrangThai(trangThai);
             request.setDeleted(deleted);
 
@@ -96,21 +84,16 @@ public class AnhSanPhamController {
     public ResponseObject<?> update(
             @PathVariable int id,
             @RequestParam("duongDanAnh") String duongDanAnh,
-            @RequestParam("loaiAnh") String loaiAnh,
-            @RequestParam(value = "moTa", required = false) String moTa,
             @RequestParam(value = "trangThai") Boolean trangThai,
             @RequestParam(value = "deleted", defaultValue = "false") Boolean deleted,
             @RequestParam(value = "updateBy", defaultValue = "1") Integer updateBy) {
         try {
             AnhSanPhamRequest request = new AnhSanPhamRequest();
             request.setDuongDanAnh(duongDanAnh);
-            request.setLoaiAnh(loaiAnh);
-            request.setMoTa(moTa);
             request.setTrangThai(trangThai);
             request.setDeleted(deleted);
             request.setUpdateAt(LocalDate.now());
             request.setUpdateBy(updateBy);
-
             AnhSanPham updatedAnhSanPham = anhSanPhamService.updateAnhSanPham(id, request);
             return new ResponseObject<>(updatedAnhSanPham.getId(), "Cập nhật ảnh sản phẩm thành công");
         } catch (Exception e) {

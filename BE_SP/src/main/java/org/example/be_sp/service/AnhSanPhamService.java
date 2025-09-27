@@ -74,7 +74,6 @@ public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, A
 
     public List<Integer> addAnhSanPhamFromCloud(AnhSanPhamUploadCloud request) {
         try {
-            // Upload file và lấy đường dẫn
             ArrayList<String> duongDanAnh = uploadImageToCloudinary.uploadImage(request.getDuongDanAnh());
             List<Integer> savedIds = new ArrayList<>();
 

@@ -14,8 +14,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class AnhSanPhamRequest {
     String duongDanAnh;
-    String loaiAnh;
-    String moTa;
     Boolean trangThai;
     Boolean deleted;
     LocalDate createAt;

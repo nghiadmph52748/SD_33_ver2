@@ -29,9 +29,10 @@ public class KhachHangResponse {
     private String soDienThoai;
     private Boolean gioiTinh;
     private LocalDate ngaySinh;
+    private Integer phanLoai;
     private Boolean deleted;
-    private List<DiaChi> listDiaChi;
 
+    private List<DiaChi> listDiaChi;
     public KhachHangResponse(KhachHang e) {
         this.id = e.getId();
         this.maKhachHang = e.getMaKhachHang();
@@ -42,6 +43,7 @@ public class KhachHangResponse {
         this.soDienThoai = e.getSoDienThoai();
         this.gioiTinh = e.getGioiTinh();
         this.ngaySinh = e.getNgaySinh();
+        this.phanLoai = e.getPhanLoai();
         this.deleted = e.getDeleted();
         this.listDiaChi = Optional.ofNullable(e.getDiaChiKhachHangs())
                 .orElseGet(Collections::emptySet)

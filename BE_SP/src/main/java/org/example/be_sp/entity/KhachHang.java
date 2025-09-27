@@ -60,7 +60,7 @@ public class KhachHang {
 
 	@ColumnDefault("0")
     @Column(name = "phan_loai")
-    private Boolean phanLoai;
+    private Integer phanLoai;
 
 	@ColumnDefault("1")
     @Column(name = "trang_thai")

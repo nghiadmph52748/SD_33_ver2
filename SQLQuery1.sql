@@ -356,7 +356,7 @@ CREATE TABLE [dbo].[khach_hang](
 	[so_dien_thoai] [varchar](12) NULL,
 	[gioi_tinh] [bit] NULL,
 	[ngay_sinh] [date] NULL,
-	[phan_loai] [tinyint] NULL,
+	[phan_loai] [int] NULL,
 	[trang_thai] [bit] NULL,
 	[deleted] [bit] NULL,
 	[create_at] [date] NULL,
