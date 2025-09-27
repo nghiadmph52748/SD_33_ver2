@@ -1,0 +1,122 @@
+<template>
+  <a-breadcrumb class="container-breadcrumb">
+    <a-breadcrumb-item>
+      <router-link to="/dashboard">
+        <icon-apps />
+      </router-link>
+    </a-breadcrumb-item>
+    <a-breadcrumb-item v-for="(item, index) in processedItems" :key="getItemKey(item, index)">
+      <router-link v-if="getItemPath(item, index)" :to="getItemPath(item, index)">
+        {{ $t(getItemLocale(item)) }}
+      </router-link>
+      <span v-else>
+        {{ $t(getItemLocale(item)) }}
+      </span>
+    </a-breadcrumb-item>
+  </a-breadcrumb>
+</template>
+
+<script lang="ts" setup>
+import { IconHome } from '@arco-design/web-vue/es/icon'
+import { PropType, computed } from 'vue'
+
+interface BreadcrumbItem {
+  locale: string
+  path: string
+}
+
+const props = defineProps({
+  items: {
+    type: Array as PropType<BreadcrumbItem[] | string[]>,
+    default() {
+      return []
+    },
+  },
+})
+
+// Generate path from locale (simplified - may need adjustment based on routing)
+const generatePathFromLocale = (locale: string): string => {
+  // This is a simple mapping - you might need to adjust based on your routing structure
+  const pathMap: Record<string, string> = {
+    'menu.dashboard': '/dashboard',
+    'menu.dashboard.monitor': '/dashboard/monitor',
+    'menu.visualization': '/visualization',
+    'menu.visualization.multiDimensionDataAnalysis': '/visualization/multi-dimension-data-analysis',
+    'menu.visualization.dataAnalysis': '/visualization/data-analysis',
+    'menu.user': '/user',
+    'menu.user.setting': '/user/setting',
+    'menu.user.info': '/user/info',
+    'menu.result': '/result',
+    'menu.result.success': '/result/success',
+    'menu.result.error': '/result/error',
+    'menu.profile': '/profile',
+    'menu.profile.basic': '/profile/basic',
+    'menu.list': '/list',
+    'menu.list.searchTable': '/list/search-table',
+    'menu.list.cardList': '/list/card',
+    'menu.form': '/form',
+    'menu.form.step': '/form/step',
+    'menu.form.group': '/form/group',
+    'menu.exception': '/exception',
+    'menu.exception.500': '/exception/500',
+    'menu.exception.404': '/exception/404',
+    'menu.exception.403': '/exception/403',
+    'menu.quan-ly-san-pham': '/quan-ly-san-pham',
+    'menu.quan-ly-san-pham.danh-muc': '/quan-ly-san-pham/danh-muc',
+    'menu.quan-ly-san-pham.them-san-pham': '/quan-ly-san-pham/them-san-pham',
+    'menu.quan-ly-san-pham.bien-the': '/quan-ly-san-pham/bien-the',
+    'menu.quan-ly-san-pham.thuoc-tinh': '/quan-ly-san-pham/thuoc-tinh',
+    'menu.quan-ly-san-pham.thuoc-tinh.anh-san-pham': '/quan-ly-san-pham/thuoc-tinh/anh-san-pham',
+    'menu.quan-ly-san-pham.thuoc-tinh.nha-san-xuat': '/quan-ly-san-pham/thuoc-tinh/nha-san-xuat',
+    'menu.quan-ly-san-pham.thuoc-tinh.xuat-xu': '/quan-ly-san-pham/thuoc-tinh/xuat-xu',
+    'menu.quan-ly-san-pham.thuoc-tinh.mau-sac': '/quan-ly-san-pham/thuoc-tinh/mau-sac',
+    'menu.quan-ly-san-pham.thuoc-tinh.kich-thuoc': '/quan-ly-san-pham/thuoc-tinh/kich-thuoc',
+    'menu.quan-ly-san-pham.thuoc-tinh.de-giay': '/quan-ly-san-pham/thuoc-tinh/de-giay',
+    'menu.quan-ly-san-pham.thuoc-tinh.chat-lieu': '/quan-ly-san-pham/thuoc-tinh/chat-lieu',
+    'menu.quan-ly-san-pham.thuoc-tinh.trong-luong': '/quan-ly-san-pham/thuoc-tinh/trong-luong',
+  }
+  return pathMap[locale] || ''
+}
+
+// Process items to handle both formats: string[] and BreadcrumbItem[]
+const processedItems = computed(() => {
+  return props.items.map((item) => {
+    if (typeof item === 'string') {
+      // Convert string to BreadcrumbItem format
+      return {
+        locale: item,
+        path: '', // Path will be generated dynamically in getItemPath
+      }
+    }
+    return item
+  })
+})
+
+// Helper functions to get properties regardless of format
+const getItemLocale = (item: BreadcrumbItem | string): string => {
+  return typeof item === 'string' ? item : item.locale
+}
+
+const getItemPath = (item: BreadcrumbItem | string, index: number): string => {
+  const isLastItem = index === props.items.length - 1
+  if (isLastItem) return '' // Current page, no link
+
+  return typeof item === 'string' ? generatePathFromLocale(item) : item.path
+}
+
+const getItemKey = (item: BreadcrumbItem | string, index: number): string => {
+  return typeof item === 'string' ? `${item}-${index}` : item.locale
+}
+</script>
+
+<style scoped lang="less">
+.container-breadcrumb {
+  margin: 16px 0;
+  :deep(.arco-breadcrumb-item) {
+    color: rgb(var(--gray-6));
+    &:last-child {
+      color: rgb(var(--gray-8));
+    }
+  }
+}
+</style>

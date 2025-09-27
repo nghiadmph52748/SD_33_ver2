@@ -1,0 +1,50 @@
+import { DEFAULT_LAYOUT } from '../base'
+import { AppRouteRecordRaw } from '../types'
+
+const THONG_KE: AppRouteRecordRaw = {
+  path: '/thong-ke',
+  name: 'thong-ke',
+  component: DEFAULT_LAYOUT,
+  redirect: { name: 'ThongKeChung' },
+  meta: {
+    locale: 'menu.thong-ke',
+    requiresAuth: true,
+    icon: 'IconList',
+    order: 1,
+    roles: ['*'],
+  },
+  children: [
+    {
+      path: 'chung',
+      name: 'ThongKeChung',
+      component: () => import('@/views/main-view/thong-ke/chung/thong-ke-chung.vue'),
+      meta: {
+        locale: 'menu.thong-ke.chung',
+        requiresAuth: true,
+        roles: ['*'],
+      },
+    },
+    {
+      path: 'kho-hang',
+      name: 'ThongKeKhoHang',
+      component: () => import('@/views/main-view/thong-ke/kho-hang/thong-ke-kho-hang.vue'),
+      meta: {
+        locale: 'menu.thong-ke.kho-hang',
+        requiresAuth: true,
+        roles: ['*'],
+      },
+    },
+    {
+      path: 'doanh-thu',
+      name: 'ThongKeDoanhThu',
+      component: () => import('@/views/main-view/thong-ke/doanh-thu/thong-ke-doanh-thu.vue'),
+      meta: {
+        locale: 'menu.thong-ke.doanh-thu',
+        requiresAuth: true,
+        roles: ['*'],
+      },
+    },
+  ],
+}
+
+export default THONG_KE

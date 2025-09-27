@@ -1,0 +1,15 @@
+export default {
+  'menu.visualization.multiDimensionDataAnalysis': 'Phân tích đa chiều',
+  'multiDAnalysis.card.title.dataOverview': 'Tổng quan',
+  'multiDAnalysis.dataOverview.contentProduction': 'Sản xuất nội dung',
+  'multiDAnalysis.dataOverview.contentClick': 'Nhấp chuột nội dung',
+  'multiDAnalysis.dataOverview.contentExposure': 'Tiếp xúc nội dung',
+  'multiDAnalysis.dataOverview.activeUsers': 'Người dùng hoạt động',
+  'multiDAnalysis.card.title.userActions': 'Hành động người dùng',
+  'multiDAnalysis.card.title.contentTypeDistribution': 'Phân phối loại nội dung',
+  'multiDAnalysis.card.title.retentionTrends': 'Xu hướng giữ chân',
+  'multiDAnalysis.card.title.userRetention': 'Giữ chân người dùng',
+  'multiDAnalysis.card.title.contentConsumptionTrends': 'Xu hướng tiêu thụ nội dung',
+  'multiDAnalysis.card.title.contentConsumption': 'Tiêu thụ nội dung',
+  'multiDAnalysis.card.title.contentPublishingSource': 'Nguồn xuất bản nội dung',
+}

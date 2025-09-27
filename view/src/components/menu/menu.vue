@@ -1,0 +1,192 @@
+<script lang="tsx">
+// @ts-nocheck
+import { IconList, IconHome, IconFolder, IconSettings, IconUser, IconStar } from '@arco-design/web-vue/es/icon'
+import { useAppStore } from '@/store'
+import { openWindow, regexUrl } from '@/utils'
+import { listenerRouteChange } from '@/utils/route-listener'
+import { compile, computed, defineComponent, h, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { RouteMeta } from 'vue-router'
+import { RouteRecordRaw, useRoute, useRouter } from 'vue-router'
+import useMenuTree from './use-menu-tree'
+
+export default defineComponent({
+  emit: ['collapse'],
+  setup() {
+    const { t } = useI18n()
+    const appStore = useAppStore()
+    const router = useRouter()
+    const route = useRoute()
+    const { menuTree } = useMenuTree()
+
+    const iconMap = {
+      IconList,
+      IconHome,
+      IconFolder,
+      IconSettings,
+      IconUser,
+      IconStar,
+    }
+    const collapsed = computed({
+      get() {
+        if (appStore.device === 'desktop') return appStore.menuCollapse
+        return false
+      },
+      set(value: boolean) {
+        appStore.updateSettings({ menuCollapse: value })
+      },
+    })
+
+    const topMenu = computed(() => appStore.topMenu)
+    const openKeys = ref<string[]>([])
+    const selectedKey = ref<string[]>([])
+
+    const goto = (item: RouteRecordRaw) => {
+      // Open external link
+      if (regexUrl.test(item.path)) {
+        openWindow(item.path)
+        selectedKey.value = [item.name as string]
+        return
+      }
+
+      // Check if item has children and no component (parent route)
+      if (item.children && item.children.length > 0) {
+        // Find first navigable child route
+        const firstNavigableChild = item.children.find((child) => child.component || (child.children && child.children.length > 0))
+        if (firstNavigableChild) {
+          // If child also has children, go to its first child
+          if (firstNavigableChild.children && firstNavigableChild.children.length > 0) {
+            const firstGrandChild = firstNavigableChild.children.find((grandChild) => grandChild.component)
+            if (firstGrandChild) {
+              router.push({
+                name: firstGrandChild.name,
+              })
+              return
+            }
+          }
+          // Navigate to the child route
+          router.push({
+            name: firstNavigableChild.name,
+          })
+          return
+        }
+      }
+
+      // Eliminate external link side effects
+      const { hideInMenu, activeMenu } = item.meta as RouteMeta
+      if (route.name === item.name && !hideInMenu && !activeMenu) {
+        selectedKey.value = [item.name as string]
+        return
+      }
+
+      // Trigger router change
+      router.push({
+        name: item.name,
+      })
+    }
+    const findMenuOpenKeys = (target: string) => {
+      const result: string[] = []
+      let isFind = false
+      const backtrack = (item: RouteRecordRaw, keys: string[]) => {
+        if (item.name === target) {
+          isFind = true
+          result.push(...keys)
+          return
+        }
+        if (item.children?.length) {
+          item.children.forEach((el) => {
+            backtrack(el, [...keys, el.name as string])
+          })
+        }
+      }
+      menuTree.value.forEach((el: RouteRecordRaw) => {
+        if (isFind) return // Performance optimization
+        backtrack(el, [el.name as string])
+      })
+      return result
+    }
+    listenerRouteChange((newRoute) => {
+      const { requiresAuth, activeMenu, hideInMenu } = newRoute.meta
+      if (requiresAuth && (!hideInMenu || activeMenu)) {
+        const menuOpenKeys = findMenuOpenKeys((activeMenu || newRoute.name) as string)
+
+        const keySet = new Set([...menuOpenKeys, ...openKeys.value])
+        openKeys.value = [...keySet]
+
+        selectedKey.value = [activeMenu || menuOpenKeys[menuOpenKeys.length - 1]]
+      }
+    }, true)
+    const setCollapse = (val: boolean) => {
+      if (appStore.device === 'desktop') appStore.updateSettings({ menuCollapse: val })
+    }
+
+    const renderSubMenu = () => {
+      function travel(_route: RouteRecordRaw[], nodes = []) {
+        if (_route) {
+          _route.forEach((element) => {
+            // This is demo, modify nodes as needed
+            const icon = element?.meta?.icon ? () => h(iconMap[element.meta.icon] || IconList) : null
+
+            // Check if this route should be rendered as submenu or menu item
+            const hasNavigableChildren =
+              element?.children &&
+              element?.children.length > 0 &&
+              element.children.some((child) => child.component || (child.children && child.children.length > 0))
+
+            const node = hasNavigableChildren ? (
+              <a-sub-menu
+                key={element?.name}
+                v-slots={{
+                  icon,
+                  title: () => h(compile(t(element?.meta?.locale || ''))),
+                }}
+              >
+                {travel(element?.children)}
+              </a-sub-menu>
+            ) : (
+              <a-menu-item key={element?.name} v-slots={{ icon }} onClick={() => goto(element)}>
+                {t(element?.meta?.locale || '')}
+              </a-menu-item>
+            )
+            nodes.push(node as never)
+          })
+        }
+        return nodes
+      }
+      return travel(menuTree.value)
+    }
+
+    return () => (
+      <a-menu
+        theme='dark'
+        mode={topMenu.value ? 'horizontal' : 'vertical'}
+        v-model:collapsed={collapsed.value}
+        v-model:open-keys={openKeys.value}
+        show-collapse-button={appStore.device !== 'mobile'}
+        auto-open={false}
+        selected-keys={selectedKey.value}
+        auto-open-selected={true}
+        level-indent={34}
+        style='height: 100%;width:100%;'
+        onCollapse={setCollapse}
+      >
+        {renderSubMenu()}
+      </a-menu>
+    )
+  },
+})
+</script>
+
+<style lang="less" scoped>
+:deep(.arco-menu-inner) {
+  .arco-menu-inline-header {
+    display: flex;
+    align-items: center;
+  }
+  .arco-icon {
+    &:not(.arco-icon-down) {
+      font-size: 18px;
+    }
+  }
+}
+</style>

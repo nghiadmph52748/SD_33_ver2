@@ -1,0 +1,57 @@
+export default {
+  'menu.form.step': 'Biểu mẫu bước',
+  'stepForm.step.title': 'Tạo biểu mẫu kênh',
+  'stepForm.step.title.baseInfo': 'Chọn thông tin cơ bản',
+  'stepForm.step.subTitle.baseInfo': 'Hoạt động tạo kênh',
+  'stepForm.step.title.channel': 'Thông tin kênh',
+  'stepForm.step.subTitle.channel': 'Chọn upstream của domain',
+  'stepForm.step.title.finish': 'Hoàn thành',
+  'stepForm.step.subTitle.finish': 'Gửi thành công',
+  'stepForm.success.title': 'Thành công',
+  'stepForm.success.subTitle': 'Biểu mẫu đã được gửi thành công!',
+  'stepForm.button.next': 'Tiếp theo',
+  'stepForm.button.prev': 'Trước',
+  'stepForm.button.submit': 'Gửi',
+  'stepForm.button.again': 'Lại',
+  'stepForm.button.view': 'Chi tiết',
+  'stepForm.label.type.web': 'domain web',
+  'stepForm.label.type.api': 'domain api',
+  // form -1
+  'stepForm.form.label.activityName': 'Tên hoạt động',
+  'stepForm.placeholder.activityName': 'Nhập tối đa 20 ký tự tiếng Trung, chữ cái hoặc số',
+  'stepForm.form.error.activityName.pattern': 'Nhập tối đa 20 ký tự tiếng Trung, chữ cái hoặc số',
+  'stepForm.form.error.activityName.required': 'Vui lòng nhập tên hoạt động',
+  'stepForm.form.label.channelType': 'Loại kênh',
+  'stepForm.placeholder.channelType': 'Chọn loại kênh',
+  'stepForm.form.error.channelType.required': 'Vui lòng chọn loại kênh',
+  'stepForm.form.label.promotionTime': 'Thời gian quảng bá',
+  'stepForm.form.error.promotionTime.required': 'Vui lòng chọn thời gian quảng bá',
+  'stepForm.form.label.promoteLink': 'Liên kết quảng bá',
+  'stepForm.form.error.promoteLink.required': 'Vui lòng nhập liên kết quảng bá',
+  'stepForm.form.error.promoteLink.pattern':
+    'Ví dụ: địa chỉ tải xuống của Android hoặc iOS hoặc URL trung gian phải bắt đầu bằng http:// hoặc https://',
+  'stepForm.form.tip.promoteLink':
+    'Ví dụ: địa chỉ tải xuống của Android hoặc iOS hoặc URL trung gian phải bắt đầu bằng http:// hoặc https://',
+  'stepForm.placeholder.promoteLink': 'Vui lòng nhập liên kết trang quảng bá',
+
+  // form -1 end
+  // form -2
+  'stepForm.form.label.advertisingSource': 'Nguồn quảng cáo',
+  'stepForm.placeholder.advertisingSource': 'Địa chỉ nguồn giới thiệu: Sohu, Sina',
+  'stepForm.form.error.advertisingSource.required': 'Vui lòng nhập nguồn quảng cáo',
+  'stepForm.form.label.advertisingMedia': 'Phương tiện quảng cáo',
+  'stepForm.placeholder.advertisingMedia': 'Phương tiện marketing: CPC, Banner, EDM',
+  'stepForm.form.error.advertisingMedia.required': 'Vui lòng nhập phương tiện quảng cáo',
+  'stepForm.form.label.keyword': 'từ khóa',
+  'stepForm.placeholder.keyword': 'Vui lòng chọn từ khóa',
+  'stepForm.form.error.keyword.required': 'Vui lòng chọn từ khóa',
+  'stepForm.form.label.pushNotify': 'Thông báo đẩy',
+  'stepForm.form.label.advertisingContent': 'Nội dung quảng cáo',
+  'stepForm.placeholder.advertisingContent': 'Vui lòng nhập mô tả nội dung quảng cáo, tối đa 200 từ',
+  'stepForm.form.error.advertisingContent.required': 'Vui lòng nhập mô tả nội dung quảng cáo',
+  'stepForm.form.error.advertisingContent.maxLength': 'tối đa 200 từ',
+  // form -2 end
+  'stepForm.form.description.title': 'Mô tả biểu mẫu kênh',
+  'stepForm.form.description.text':
+    'Quảng bá kênh nhà quảng cáo hỗ trợ theo dõi người dùng tải xuống ứng dụng bằng cách đặt quảng cáo trên nhà quảng cáo bên thứ ba, chẳng hạn như kênh toutiao, và theo dõi người dùng kích hoạt ứng dụng bằng cách tải xuống ứng dụng qua kênh.',
+}

@@ -1,0 +1,16 @@
+export default {
+  'menu.visualization.dataAnalysis': 'Phân tích',
+  'dataAnalysis.title.publicOpinion': 'Phân tích dư luận',
+  'dataAnalysis.card.title.allVisitors': 'Tất cả khách truy cập',
+  'dataAnalysis.card.title.contentPublished': 'Nội dung đã xuất bản',
+  'dataAnalysis.card.title.totalComment': 'Tổng bình luận',
+  'dataAnalysis.card.title.totalShare': 'Tổng chia sẻ',
+  'dataAnalysis.card.yesterday': 'Hôm qua',
+  'dataAnalysis.contentPublishRatio': 'Tỷ lệ xuất bản nội dung',
+  'dataAnalysis.popularAuthor': 'Tác giả phổ biến',
+  'dataAnalysis.popularAuthor.column.ranking': 'xếp hạng',
+  'dataAnalysis.popularAuthor.column.author': 'tác giả',
+  'dataAnalysis.popularAuthor.column.content': 'Số nội dung',
+  'dataAnalysis.popularAuthor.column.click': 'Số nhấp chuột',
+  'dataAnalysis.contentPeriodAnalysis': 'Phân tích thời kỳ nội dung',
+}
