@@ -25,6 +25,18 @@ const QUAN_LY_GIAM_GIA: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'dot-khuyen-mai/tao-moi',
+      name: 'QuanLyDotKhuyenMaiCreate',
+      component: () => import('@/views/main-view/quan-ly-giam-gia/dot-khuyen-mai/dot-khuyen-mai-create.vue'),
+      meta: {
+        locale: 'menu.quan-ly-giam-gia.dot-khuyen-mai.create',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+        activeMenu: 'QuanLyDotKhuyenMai',
+      },
+    },
+    {
       path: 'phieu-giam-gia',
       name: 'QuanLyPhieuGiamGia',
       component: () => import('@/views/main-view/quan-ly-giam-gia/phieu-giam-gia/phieu-giam-gia.vue'),
@@ -32,6 +44,18 @@ const QUAN_LY_GIAM_GIA: AppRouteRecordRaw = {
         locale: 'menu.quan-ly-giam-gia.phieu-giam-gia',
         requiresAuth: true,
         roles: ['*'],
+      },
+    },
+    {
+      path: 'phieu-giam-gia/tao-moi',
+      name: 'QuanLyPhieuGiamGiaCreate',
+      component: () => import('@/views/main-view/quan-ly-giam-gia/phieu-giam-gia/phieu-giam-gia-create.vue'),
+      meta: {
+        locale: 'menu.quan-ly-giam-gia.phieu-giam-gia.create',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+        activeMenu: 'QuanLyPhieuGiamGia',
       },
     },
   ],

@@ -6,14 +6,14 @@
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form :model="filters" layout="vertical">
-        <!-- Row 1: Search - Start Date - End Date -->
+        <!-- Row 1: Search - Start Date - End Date - Percentage -->
         <a-row :gutter="16">
-          <a-col :span="8">
+          <a-col :span="6">
             <a-form-item label="Tìm kiếm">
               <a-input v-model="filters.search" placeholder="Tên khuyến mãi..." allow-clear @change="searchPromotions" />
             </a-form-item>
           </a-col>
-          <a-col :span="8">
+          <a-col :span="5">
             <a-form-item label="Ngày bắt đầu">
               <a-date-picker
                 v-model="filters.startDate"
@@ -24,7 +24,7 @@
               />
             </a-form-item>
           </a-col>
-          <a-col :span="8">
+          <a-col :span="5">
             <a-form-item label="Ngày kết thúc">
               <a-date-picker
                 v-model="filters.endDate"
@@ -33,6 +33,27 @@
                 @change="searchPromotions"
                 style="width: 100%"
               />
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="Phần trăm giảm">
+              <div class="percentage-filter">
+                <a-slider
+                  class="percentage-slider-control"
+                  v-model="filters.percentageRange"
+                  range
+                  :min="DEFAULT_PERCENTAGE_RANGE[0]"
+                  :max="DEFAULT_PERCENTAGE_RANGE[1]"
+                  :step="1"
+                  @change="searchPromotions"
+                  style="width: 100%"
+                />
+                <div class="percentage-filter-values">
+                  <span class="percentage-value-badge">{{ filters.percentageRange[0] }}%</span>
+                  <span class="percentage-filter-separator">-</span>
+                  <span class="percentage-value-badge">{{ filters.percentageRange[1] }}%</span>
+                </div>
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
@@ -65,7 +86,7 @@
               </template>
               Xuất Excel
             </a-button>
-            <a-button type="primary" @click="showCreateModal">
+            <a-button type="primary" @click="openCreatePage">
               <template #icon>
                 <icon-plus />
               </template>
@@ -105,7 +126,7 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-button type="text" danger @click="deletePromotion(record)">
+            <a-button type="text" status="danger" @click="deletePromotion(record)">
               <template #icon>
                 <icon-delete />
               </template>
@@ -114,13 +135,83 @@
         </template>
       </a-table>
     </a-card>
+
+    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt khuyến mãi" :footer="false" width="520px">
+      <a-descriptions :column="1" layout="vertical">
+        <a-descriptions-item label="Tên">{{ selectedPromotion?.name }}</a-descriptions-item>
+        <a-descriptions-item label="Mã">{{ selectedPromotion?.code }}</a-descriptions-item>
+        <a-descriptions-item label="Giá trị giảm">{{ selectedPromotion?.percentage }}%</a-descriptions-item>
+        <a-descriptions-item label="Thời gian">
+          {{ formatDate(selectedPromotion?.start_date ?? '') }} - {{ formatDate(selectedPromotion?.end_date ?? '') }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">{{ selectedPromotion ? getStatusText(selectedPromotion.status) : '' }}</a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="editVisible"
+      title="Chỉnh sửa đợt khuyến mãi"
+      :confirm-loading="editSubmitting"
+      @ok="submitPromotionEdit"
+      @cancel="editVisible = false"
+      width="560px"
+    >
+      <a-form ref="promotionEditFormRef" :model="promotionEditForm" :rules="promotionEditRules" layout="vertical">
+        <a-form-item field="name" label="Tên đợt khuyến mãi">
+          <a-input v-model="promotionEditForm.name" placeholder="Nhập tên đợt khuyến mãi" allow-clear />
+        </a-form-item>
+        <a-form-item field="discountValue" label="Giá trị giảm (%)">
+          <a-input-number v-model="promotionEditForm.discountValue" :min="1" :max="100" :precision="0" style="width: 100%" />
+        </a-form-item>
+        <a-form-item field="dateRange" label="Thời gian áp dụng">
+          <a-range-picker
+            v-model="promotionEditForm.dateRange"
+            value-format="YYYY-MM-DD"
+            format="DD/MM/YYYY"
+            allow-clear
+            style="width: 100%"
+          />
+        </a-form-item>
+        <a-form-item field="active" label="Trạng thái">
+          <a-switch v-model="promotionEditForm.active" checked-text="Bật" unchecked-text="Tắt" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="deleteVisible"
+      title="Xóa đợt khuyến mãi"
+      :confirm-loading="deleteSubmitting"
+      width="420px"
+      ok-text="Xóa"
+      :ok-button-props="{ status: 'danger' }"
+      @ok="confirmDeletePromotion"
+      @cancel="deleteVisible = false"
+    >
+      <p>
+        Bạn chắc chắn muốn xóa đợt khuyến mãi
+        <strong>{{ selectedPromotion?.name }}</strong>
+        ?
+      </p>
+      <p class="modal-note">Hành động này không thể hoàn tác.</p>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { Message } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import downloadCsv from '@/utils/export-csv'
+import {
+  deletePromotionCampaign,
+  fetchPromotionCampaigns,
+  type PromotionApiModel,
+  updatePromotionCampaign,
+} from '@/api/discount-management'
+import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import {
   IconPlus,
   IconSearch,
@@ -140,14 +231,30 @@ import {
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
+const router = useRouter()
 
-// Filters
-const filters = ref({
+type PromotionStatus = 'active' | 'expired' | 'upcoming' | 'inactive'
+
+type PromotionFilters = {
+  search: string
+  startDate: Date | null
+  endDate: Date | null
+  status: '' | PromotionStatus
+  percentageRange: [number, number]
+}
+
+const DEFAULT_PERCENTAGE_RANGE: [number, number] = [0, 100]
+
+const createDefaultFilters = (): PromotionFilters => ({
   search: '',
   startDate: null,
   endDate: null,
   status: '',
+  percentageRange: [...DEFAULT_PERCENTAGE_RANGE] as [number, number],
 })
+
+// Filters
+const filters = ref<PromotionFilters>(createDefaultFilters())
 
 // Table
 const loading = ref(false)
@@ -201,40 +308,115 @@ const columns = [
 
 // Pagination - moved after filteredPromotions
 
-// Mock data
+interface PromotionRecord {
+  id: number
+  index: number
+  code: string
+  name: string
+  percentage: number
+  start_date: string
+  end_date: string
+  status: PromotionStatus
+  source: PromotionApiModel
+}
 
-const promotions = ref([
-  {
-    id: 1,
-    index: 1,
-    code: 'KM001',
-    name: 'Mừng khai trương - Giảm 20%',
-    percentage: 20,
-    start_date: '2024-01-01',
-    end_date: '2024-01-31',
-    status: 'active',
-  },
-  {
-    id: 2,
-    index: 2,
-    code: 'KM002',
-    name: 'Flash Sale - Giảm 50k',
-    percentage: 15,
-    start_date: '2024-01-15',
-    end_date: '2024-01-15',
-    status: 'expired',
-  },
-  {
-    id: 3,
-    index: 3,
-    code: 'KM003',
-    name: 'Mua 2 tặng 1',
-    percentage: 25,
-    start_date: '2024-01-20',
-    end_date: '2024-02-20',
-    status: 'active',
-  },
-])
+const promotions = ref<PromotionRecord[]>([])
+const selectedPromotion = ref<PromotionRecord | null>(null)
+
+const detailVisible = ref(false)
+const editVisible = ref(false)
+const deleteVisible = ref(false)
+const editSubmitting = ref(false)
+const deleteSubmitting = ref(false)
+
+const promotionEditFormRef = ref<FormInstance>()
+const promotionEditForm = reactive({
+  name: '',
+  discountValue: 10,
+  dateRange: [] as string[],
+  active: true,
+})
+
+const promotionEditRules: FormRules = {
+  name: [{ required: true, message: 'Vui lòng nhập tên đợt khuyến mãi' }],
+  discountValue: [
+    { required: true, message: 'Vui lòng nhập giá trị giảm' },
+    {
+      validator: (value: number, callback: (msg?: string) => void) => {
+        if (value === undefined || value === null || Number.isNaN(Number(value))) {
+          callback('Vui lòng nhập giá trị giảm')
+          return
+        }
+        if (value <= 0) {
+          callback('Giá trị giảm phải lớn hơn 0')
+          return
+        }
+        if (value > 100) {
+          callback('Giá trị giảm tối đa 100%')
+          return
+        }
+        callback()
+      },
+    },
+  ],
+  dateRange: [
+    { required: true, type: 'array', message: 'Vui lòng chọn khoảng thời gian' },
+    {
+      validator: (value: string[], callback: (msg?: string) => void) => {
+        if (!Array.isArray(value) || value.length !== 2) {
+          callback('Vui lòng chọn khoảng thời gian')
+          return
+        }
+        const [start, end] = value
+        if (!start || !end) {
+          callback('Vui lòng chọn khoảng thời gian')
+          return
+        }
+        if (new Date(start) > new Date(end)) {
+          callback('Ngày kết thúc phải sau ngày bắt đầu')
+          return
+        }
+        callback()
+      },
+    },
+  ],
+}
+
+const derivePromotionStatus = (promotion: PromotionApiModel): PromotionStatus => {
+  if (promotion.deleted) {
+    return 'inactive'
+  }
+
+  const now = new Date()
+  const start = promotion.ngayBatDau ? new Date(promotion.ngayBatDau) : null
+  const end = promotion.ngayKetThuc ? new Date(promotion.ngayKetThuc) : null
+
+  if (start && now < start) {
+    return 'upcoming'
+  }
+
+  if (end) {
+    const endOfDay = new Date(end)
+    endOfDay.setHours(23, 59, 59, 999)
+    if (now > endOfDay) {
+      return 'expired'
+    }
+  }
+
+  return promotion.trangThai ? 'active' : 'inactive'
+}
+
+const toPromotionRecord = (promotion: PromotionApiModel, index: number): PromotionRecord => ({
+  id: promotion.id,
+  index: index + 1,
+  code: promotion.maDotGiamGia ?? '',
+  name: promotion.tenDotGiamGia ?? '',
+  percentage: Number(promotion.giaTriGiamGia ?? 0),
+  start_date: promotion.ngayBatDau ?? '',
+  end_date: promotion.ngayKetThuc ?? '',
+  status: derivePromotionStatus(promotion),
+  source: promotion,
+})
 
 // Filtered promotions computed
 const filteredPromotions = computed(() => {
@@ -264,6 +446,12 @@ const filteredPromotions = computed(() => {
     })
   }
 
+  // Filter by percentage range
+  if (filters.value.percentageRange) {
+    const [minPercentage, maxPercentage] = filters.value.percentageRange
+    filtered = filtered.filter((promotion) => promotion.percentage >= minPercentage && promotion.percentage <= maxPercentage)
+  }
+
   // Filter by status
   if (filters.value.status && filters.value.status !== '') {
     filtered = filtered.filter((promotion) => promotion.status === filters.value.status)
@@ -284,15 +472,26 @@ const pagination = computed(() => ({
 
 // Methods
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount)
+const loadPromotions = async () => {
+  loading.value = true
+  try {
+    const data = await fetchPromotionCampaigns()
+    promotions.value = data.map((item, index) => toPromotionRecord(item, index))
+  } catch (error) {
+    Message.error({ content: 'Không thể tải danh sách đợt khuyến mãi', duration: 5000 })
+  } finally {
+    loading.value = false
+  }
 }
 
 const formatDate = (dateString: string) => {
+  if (!dateString) {
+    return ''
+  }
   const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
   return date.toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: '2-digit',
@@ -332,6 +531,10 @@ const getStatusColor = (status: string) => {
       return 'green'
     case 'expired':
       return 'red'
+    case 'upcoming':
+      return 'orange'
+    case 'inactive':
+      return 'gray'
     default:
       return 'default'
   }
@@ -343,6 +546,10 @@ const getStatusText = (status: string) => {
       return 'Đang hoạt động'
     case 'expired':
       return 'Đã kết thúc'
+    case 'upcoming':
+      return 'Sắp diễn ra'
+    case 'inactive':
+      return 'Tạm dừng'
     default:
       return status
   }
@@ -353,43 +560,117 @@ const searchPromotions = () => {
   // This function is called when filters change to trigger reactivity
 }
 
-const showCreateModal = () => {
-  // Removed console.log
+const openCreatePage = () => {
+  router.push({ name: 'QuanLyDotKhuyenMaiCreate' })
 }
 
 const viewPromotion = (promotion: any) => {
-  // TODO: Implement view promotion details
+  selectedPromotion.value = promotion
+  detailVisible.value = true
 }
 
 const editPromotion = (promotion: any) => {
-  // Removed console.log
+  selectedPromotion.value = promotion
+  promotionEditForm.name = promotion.name ?? ''
+  promotionEditForm.discountValue = Number(promotion.percentage ?? 0)
+  promotionEditForm.active = Boolean(promotion.source?.trangThai)
+  promotionEditForm.dateRange = [promotion.start_date ?? '', promotion.end_date ?? ''].filter(Boolean) as string[]
+  editVisible.value = true
 }
 
-const duplicatePromotion = (promotion: any) => {
-  // Removed console.log
+const duplicatePromotion = (promotion: PromotionRecord) => {
+  // TODO: Implement duplication workflow when requirements are defined
+  Message.info(`Tính năng nhân bản đang được phát triển cho "${promotion.name}"`)
 }
 
 const deletePromotion = (promotion: any) => {
-  // Removed console.log
+  selectedPromotion.value = promotion
+  deleteVisible.value = true
 }
 
-const resetFilters = () => {
-  filters.value = {
-    search: '',
-    startDate: null,
-    endDate: null,
-    status: '',
-  }
+const resetFilters = async () => {
+  filters.value = createDefaultFilters()
   // Reset to show all promotions
   searchPromotions()
+  await loadPromotions()
 }
 
 const exportExcel = () => {
-  // TODO: Implement Excel export functionality
+  if (!filteredPromotions.value.length) {
+    Message.warning('Không có dữ liệu để xuất')
+    return
+  }
+
+  const header = ['STT', 'Mã', 'Tên', 'Phần trăm giảm', 'Ngày bắt đầu', 'Ngày kết thúc', 'Trạng thái']
+  const rows = filteredPromotions.value.map((promotion, index) => [
+    promotion.index ?? index + 1,
+    promotion.code ?? '',
+    promotion.name ?? '',
+    promotion.percentage ?? '',
+    formatDate(promotion.start_date ?? ''),
+    formatDate(promotion.end_date ?? ''),
+    getStatusText(promotion.status ?? ''),
+  ])
+
+  downloadCsv('dot-khuyen-mai.csv', header, rows)
+  Message.success('Đã xuất danh sách đợt khuyến mãi')
+}
+
+const submitPromotionEdit = async () => {
+  if (!selectedPromotion.value) return
+  if (editSubmitting.value) return
+
+  const form = promotionEditFormRef.value
+  if (!form) return
+
+  try {
+    await form.validate()
+  } catch (error) {
+    return
+  }
+
+  const [startDate, endDate] = promotionEditForm.dateRange
+  const payload = {
+    tenDotGiamGia: promotionEditForm.name.trim(),
+    giaTriGiamGia: Number(promotionEditForm.discountValue),
+    ngayBatDau: startDate,
+    ngayKetThuc: endDate,
+    trangThai: promotionEditForm.active,
+    deleted: Boolean(selectedPromotion.value.source?.deleted),
+  }
+
+  editSubmitting.value = true
+  try {
+    await updatePromotionCampaign(selectedPromotion.value.id, payload)
+    Message.success('Cập nhật đợt khuyến mãi thành công')
+    editVisible.value = false
+    await loadPromotions()
+  } catch (error) {
+    Message.error((error as Error).message || 'Không thể cập nhật đợt khuyến mãi')
+  } finally {
+    editSubmitting.value = false
+  }
+}
+
+const confirmDeletePromotion = async () => {
+  if (!selectedPromotion.value) return
+  if (deleteSubmitting.value) return
+
+  deleteSubmitting.value = true
+  try {
+    await deletePromotionCampaign(selectedPromotion.value.id)
+    Message.success('Đã xóa đợt khuyến mãi')
+    deleteVisible.value = false
+    await loadPromotions()
+  } catch (error) {
+    Message.error((error as Error).message || 'Không thể xóa đợt khuyến mãi')
+  } finally {
+    deleteSubmitting.value = false
+  }
 }
 
 onMounted(() => {
-  // Removed console.log
+  loadPromotions()
 })
 </script>
 
@@ -408,13 +689,18 @@ onMounted(() => {
 .page-title {
   font-size: 28px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--color-text-1);
   margin: 0 0 8px 0;
 }
 
 .page-description {
   font-size: 16px;
-  color: #86909c;
+  color: var(--color-text-3);
+}
+
+.modal-note {
+  margin-top: 4px;
+  color: var(--color-text-3);
 }
 
 .stats-grid {
@@ -494,10 +780,49 @@ onMounted(() => {
   color: #1890ff;
 }
 
+
+.percentage-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+:deep(.percentage-slider-control) {
+  width: 100%;
+  display: block;
+}
+
+:deep(.percentage-slider-control .arco-slider-rail),
+:deep(.percentage-slider-control .arco-slider-track) {
+  width: 100%;
+}
+
+.percentage-filter-values {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+
+.percentage-value-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-fill-3);
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.percentage-filter-separator {
+  font-weight: 500;
+  color: var(--color-text-2);
+}
+
 .date-range {
   text-align: center;
   font-size: 14px;
-  color: #1d2129;
+  color: var(--color-text-1);
 }
 
 .danger-item {
