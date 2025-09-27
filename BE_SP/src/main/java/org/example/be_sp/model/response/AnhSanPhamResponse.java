@@ -13,8 +13,8 @@ import java.time.LocalDate;
 public class AnhSanPhamResponse {
     Integer id;
     String duongDanAnh;
-    String loaiAnh;
-    String moTa;
+    String tenAnh;
+    String mauAnh;
     Boolean trangThai;
     Boolean deleted;
     LocalDate createAt;
@@ -25,6 +25,8 @@ public class AnhSanPhamResponse {
     public AnhSanPhamResponse(AnhSanPham data) {
         this.id = data.getId();
         this.duongDanAnh = data.getDuongDanAnh();
+        this.tenAnh = data.getTenAnh();
+        this.mauAnh = data.getMauAnh();
         this.deleted = data.getDeleted();
         this.trangThai = data.getTrangThai();
         this.createAt = data.getCreateAt();

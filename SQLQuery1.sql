@@ -672,9 +672,9 @@ PRIMARY KEY CLUSTERED
 GO
 SET IDENTITY_INSERT [dbo].[anh_san_pham] ON 
 GO
-INSERT [dbo].[anh_san_pham] ([id], [duong_dan_anh], [ten_anh], [mau_anh], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'https://res.cloudinary.com/dlgbdwd96/image/upload/v1757491893/SD_73/nike_air_max.jpg', N'?nh Nike Air Max', NULL, 1, 0, CAST(N'2025-09-27' AS Date), NULL, NULL, NULL)
+INSERT [dbo].[anh_san_pham] ([id], [duong_dan_anh], [ten_anh], [mau_anh], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'https://res.cloudinary.com/dlgbdwd96/image/upload/v1757491893/SD_73/nike_air_max.jpg', N'Ảnh Nike Air Max', NULL, 1, 0, CAST(N'2025-09-27' AS Date), NULL, NULL, NULL)
 GO
-INSERT [dbo].[anh_san_pham] ([id], [duong_dan_anh], [ten_anh], [mau_anh], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'https://res.cloudinary.com/dlgbdwd96/image/upload/v1757489765/SD_73/adidas_ultraboost.jpg', N'?nh Adidas Ultraboost', NULL, 1, 0, CAST(N'2025-09-27' AS Date), NULL, NULL, NULL)
+INSERT [dbo].[anh_san_pham] ([id], [duong_dan_anh], [ten_anh], [mau_anh], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'https://res.cloudinary.com/dlgbdwd96/image/upload/v1757489765/SD_73/adidas_ultraboost.jpg', N'Ảnh Adidas Ultraboost', NULL, 1, 0, CAST(N'2025-09-27' AS Date), NULL, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[anh_san_pham] OFF
 GO
