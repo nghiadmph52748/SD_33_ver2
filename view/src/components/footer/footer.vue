@@ -1,6 +1,6 @@
 <template>
   <a-layout-footer class="footer">
-    Admin GearUp
+    GearUp
     <span style="margin-left: 3px">© {{ currentYear }}</span>
   </a-layout-footer>
 </template>
