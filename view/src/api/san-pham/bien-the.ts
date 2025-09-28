@@ -89,8 +89,22 @@ export interface BienTheResponse {
   number: number
 }
 
-export function getBienTheSanPhamList(page: number) {
-  return axios.get<BienTheResponse>(`/api/chi-tiet-san-pham-management/paging?page=${page}`)
+export function getBienTheSanPhamList(page: number, productId?: number) {
+  if (productId) {
+    // Lấy biến thể theo sản phẩm
+    return axios.get<BienTheSanPham[]>(`/api/chi-tiet-san-pham-management/list/${productId}`)
+  }
+  // Lấy tất cả biến thể
+  return axios.get<BienTheSanPham[]>(`/api/chi-tiet-san-pham-management/playlist`)
+}
+
+export function getBienTheSanPhamPage(page: number, productId?: number) {
+  if (productId) {
+    // Lấy biến thể theo sản phẩm
+    return axios.get<BienTheResponse>(`/api/chi-tiet-san-pham-management/paging/${productId}?page=${page}`)
+  }
+  // Lấy tất cả biến thể
+  return axios.get<BienTheResponse>(`/api/chi-tiet-san-pham-management/paging/all?page=${page}`)
 }
 
 export function getBienTheSanPhamById(id: number) {

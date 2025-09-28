@@ -6,6 +6,7 @@ import org.example.be_sp.entity.ChiTietSanPham;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.ChiTietSanPhamRequest;
 import org.example.be_sp.model.response.ChiTietSanPhamFullResponse;
+import org.example.be_sp.model.response.PagingResponse;
 import org.example.be_sp.repository.ChatLieuRepository;
 import org.example.be_sp.repository.ChiTietSanPhamRepository;
 import org.example.be_sp.repository.DeGiayRepository;
@@ -15,10 +16,12 @@ import org.example.be_sp.repository.SanPhamRepository;
 import org.example.be_sp.repository.TrongLuongRepository;
 import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ChiTietSanPhamService {
+
     @Autowired
     ChiTietSanPhamRepository repository;
     @Autowired
@@ -39,7 +42,19 @@ public class ChiTietSanPhamService {
     }
 
     public List<ChiTietSanPhamFullResponse> getAllByIdSanPham(Integer idSanPham) {
-        return repository.findAllByDeletedAndIdSanPham_Id(false, idSanPham).stream().map(ChiTietSanPhamFullResponse::new).toList();
+        return repository.findAllByDeletedAndIdSanPham_Id(false, idSanPham).stream()
+                .map(ChiTietSanPhamFullResponse::new).toList();
+    }
+
+    public PagingResponse<ChiTietSanPhamFullResponse> getAllWithPage(int page, int size) {
+        return new PagingResponse<>(repository.findAllByDeleted(false, PageRequest.of(page, size))
+                .map(ChiTietSanPhamFullResponse::new), page);
+    }
+
+    public PagingResponse<ChiTietSanPhamFullResponse> getAllByIdSanPhamWithPage(Integer idSanPham, int page, int size) {
+        return new PagingResponse<>(repository.findAllByDeletedAndIdSanPham_Id(false, idSanPham, PageRequest.of(page,
+                size)).map(ChiTietSanPhamFullResponse::new),
+                page);
     }
 
     public ChiTietSanPhamFullResponse getById(Integer id) {

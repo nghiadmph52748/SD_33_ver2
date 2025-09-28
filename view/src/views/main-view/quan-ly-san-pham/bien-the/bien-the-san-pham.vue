@@ -168,7 +168,7 @@
           onChange: handlePageChange,
         }"
         :loading="loading"
-        :scroll="{ x: 1350 }"
+        size="small"
       >
         <template #checkbox="{ record }">
           <a-checkbox
@@ -177,21 +177,21 @@
           />
         </template>
 
-        <template #sku="{ record }">
-          <a-typography-text copyable>{{ record.sku }}</a-typography-text>
-        </template>
-
         <template #product_image="{ record }">
           <div class="image-cell">
-            <a-avatar :src="record.product_image" :size="48" shape="square" />
+            <a-avatar
+              :src="Array.isArray(record.anhSanPham) && record.anhSanPham.length > 0 ? record.anhSanPham[0] : '/default-product.png'"
+              :size="48"
+              shape="square"
+            />
           </div>
         </template>
 
         <template #manufacturer="{ record }">
           <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">
-            {{ record.manufacturer }}
+            {{ record.tenNhaSanXuat }}
           </div>
-          <a-select v-else v-model="record.manufacturer" size="small" style="width: 100%" placeholder="Chọn nhà sản xuất">
+          <a-select v-else v-model="record.tenNhaSanXuat" size="small" style="width: 100%" placeholder="Chọn nhà sản xuất">
             <a-option value="Nike">Nike</a-option>
             <a-option value="Adidas">Adidas</a-option>
             <a-option value="Puma">Puma</a-option>
@@ -201,9 +201,9 @@
 
         <template #origin="{ record }">
           <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">
-            {{ record.origin }}
+            {{ record.tenXuatXu }}
           </div>
-          <a-select v-else v-model="record.origin" size="small" style="width: 100%" placeholder="Chọn xuất xứ">
+          <a-select v-else v-model="record.tenXuatXu" size="small" style="width: 100%" placeholder="Chọn xuất xứ">
             <a-option value="Việt Nam">Việt Nam</a-option>
             <a-option value="Trung Quốc">Trung Quốc</a-option>
             <a-option value="Mỹ">Mỹ</a-option>
@@ -213,72 +213,61 @@
 
         <template #attributes="{ record }">
           <div class="attributes-cell">
-            <div v-for="attr in record.attributes" :key="attr.label" class="attribute-item">
-              <span class="attribute-label">{{ attr.label }}:</span>
-              <span v-if="!isEditMode || !selectedVariants.includes(record.id.toString())" class="attribute-value">
-                {{ attr.value }}
-              </span>
-              <a-input
-                v-else-if="attr.label === 'Trọng lượng'"
-                v-model="attr.value"
-                size="small"
-                style="width: 80px"
-                placeholder="0.0 kg"
-              />
-              <a-select
-                v-else-if="attr.label === 'Chất liệu'"
-                v-model="attr.value"
-                size="small"
-                style="width: 100px"
-                placeholder="Chọn chất liệu"
-              >
-                <a-option value="Da thật">Da thật</a-option>
-                <a-option value="Da tổng hợp">Da tổng hợp</a-option>
-                <a-option value="Vải">Vải</a-option>
-                <a-option value="Nhựa">Nhựa</a-option>
-              </a-select>
-              <a-select
-                v-else-if="attr.label === 'Đế giày'"
-                v-model="attr.value"
-                size="small"
-                style="width: 100px"
-                placeholder="Chọn đế giày"
-              >
-                <a-option value="Đế cao su">Đế cao su</a-option>
-                <a-option value="Đế PU">Đế PU</a-option>
-                <a-option value="Đế EVA">Đế EVA</a-option>
-              </a-select>
+            <div class="attribute-item">
+              <span class="attribute-label">Màu sắc:</span>
+              <span class="attribute-value">{{ record.tenMauSac }}</span>
+            </div>
+            <div class="attribute-item">
+              <span class="attribute-label">Kích thước:</span>
+              <span class="attribute-value">{{ record.tenKichThuoc }}</span>
+            </div>
+            <div class="attribute-item">
+              <span class="attribute-label">Chất liệu:</span>
+              <span class="attribute-value">{{ record.tenChatLieu }}</span>
+            </div>
+            <div class="attribute-item">
+              <span class="attribute-label">Đế giày:</span>
+              <span class="attribute-value">{{ record.tenDeGiay }}</span>
+            </div>
+            <div class="attribute-item">
+              <span class="attribute-label">Trọng lượng:</span>
+              <span class="attribute-value">{{ record.tenTrongLuong }}</span>
             </div>
           </div>
         </template>
 
         <template #stock="{ record }">
-          <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">{{ record.stock }} {{ record.unit }}</div>
-          <a-input-number v-else v-model="record.stock" :min="0" size="small" style="width: 80px" :precision="0" />
+          <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">{{ record.soLuong }}</div>
+          <a-input-number v-else v-model="record.soLuong" :min="0" size="small" style="width: 80px" :precision="0" />
         </template>
 
         <template #discount="{ record }">
-          <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">{{ record.discount }}%</div>
-          <a-input-number v-else v-model="record.discount" :min="0" :max="100" size="small" style="width: 80px" :precision="1" suffix="%" />
+          <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">{{ record.giaTriGiamGia || 0 }}%</div>
+          <a-input-number
+            v-else
+            v-model="record.giaTriGiamGia"
+            :min="0"
+            :max="100"
+            size="small"
+            style="width: 80px"
+            :precision="1"
+            suffix="%"
+          />
         </template>
 
         <template #final_price="{ record }">
           <div class="final-price-cell">
-            <div class="final-price">{{ formatCurrency(record.final_price) }}</div>
-            <div v-if="record.discount > 0" class="original-price">{{ formatCurrency(record.price) }}</div>
+            <div class="final-price">{{ formatCurrency(record.giaBan) }}</div>
           </div>
         </template>
 
         <template #status="{ record }">
-          <a-tag
-            v-if="!isEditMode || !selectedVariants.includes(record.id.toString())"
-            :color="record.status === 'active' ? 'green' : 'red'"
-          >
-            {{ record.status === 'active' ? 'Đang bán' : 'Tạm ngưng bán' }}
+          <a-tag v-if="!isEditMode || !selectedVariants.includes(record.id.toString())" :color="record.trangThai ? 'green' : 'red'">
+            {{ record.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}
           </a-tag>
-          <a-select v-else v-model="record.status" size="small" style="width: 120px">
-            <a-option value="active">Đang bán</a-option>
-            <a-option value="inactive">Tạm ngưng bán</a-option>
+          <a-select v-else v-model="record.trangThai" size="small" style="width: 120px">
+            <a-option :value="true">Đang bán</a-option>
+            <a-option :value="false">Tạm ngưng bán</a-option>
           </a-select>
         </template>
 
@@ -339,6 +328,7 @@ import {
   IconEye,
   IconCheckCircle,
 } from '@arco-design/web-vue/es/icon'
+import { getBienTheSanPhamPage } from '../../../../api/san-pham/bien-the'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -346,7 +336,6 @@ const { breadcrumbItems } = useBreadcrumb()
 // Route params
 const route = useRoute()
 const productId = computed(() => (route.params.productId ? Number(route.params.productId) : undefined))
-
 // Filters
 const filters = ref({
   search: '', // Tìm theo tên sản phẩm hoặc SKU
@@ -384,21 +373,25 @@ const trongLuongOptions = ref<TrongLuong[]>([])
 
 // Computed options for dropdowns
 const manufacturerOptions = computed(() => {
+  if (!Array.isArray(variants.value)) return []
   const unique = [...new Set(variants.value.map((v) => v.tenNhaSanXuat).filter(Boolean))]
   return unique.map((name) => ({ value: name, label: name }))
 })
 
 const originOptions = computed(() => {
+  if (!Array.isArray(variants.value)) return []
   const unique = [...new Set(variants.value.map((v) => v.tenXuatXu).filter(Boolean))]
   return unique.map((name) => ({ value: name, label: name }))
 })
 
 const materialOptions = computed(() => {
+  if (!Array.isArray(variants.value)) return []
   const unique = [...new Set(variants.value.map((v) => v.tenChatLieu).filter(Boolean))]
   return unique.map((name) => ({ value: name, label: name }))
 })
 
 const shoeSoleOptions = computed(() => {
+  if (!Array.isArray(variants.value)) return []
   const unique = [...new Set(variants.value.map((v) => v.tenDeGiay).filter(Boolean))]
   return unique.map((name) => ({ value: name, label: name }))
 })
@@ -456,74 +449,71 @@ const columns = [
     title: '',
     slotName: 'checkbox',
     width: 30,
-    fixed: 'left',
     align: 'center',
   },
   {
-    title: 'Mã biến thể',
-    dataIndex: 'sku',
+    title: 'Mã',
+    dataIndex: 'maChiTietSanPham',
     slotName: 'sku',
-    width: 90,
+    width: 70,
   },
   {
-    title: 'Ảnh sản phẩm',
-    dataIndex: 'product_image',
+    title: 'Ảnh',
+    dataIndex: 'anhSanPham',
     slotName: 'product_image',
-    width: 98,
+    width: 50,
     align: 'center',
   },
   {
     title: 'Nhà sản xuất',
-    dataIndex: 'manufacturer',
+    dataIndex: 'tenNhaSanXuat',
     slotName: 'manufacturer',
-    width: 90,
+    width: 60,
     align: 'center',
   },
   {
     title: 'Xuất xứ',
-    dataIndex: 'origin',
+    dataIndex: 'tenXuatXu',
     slotName: 'origin',
-    width: 90,
+    width: 50,
     align: 'center',
   },
   {
     title: 'Thuộc tính sản phẩm',
-    dataIndex: 'attributes',
     slotName: 'attributes',
-    width: 130,
+    width: 90,
   },
   {
     title: 'Số lượng',
-    dataIndex: 'stock',
+    dataIndex: 'soLuong',
     slotName: 'stock',
-    width: 68,
+    width: 40,
     align: 'center',
   },
   {
     title: 'Giảm giá (%)',
-    dataIndex: 'discount',
+    dataIndex: 'giaTriGiamGia',
     slotName: 'discount',
-    width: 85,
+    width: 60,
     align: 'center',
   },
   {
-    title: 'Giá sau giảm',
-    dataIndex: 'final_price',
+    title: 'Giá bán',
+    dataIndex: 'giaBan',
     slotName: 'final_price',
-    width: 100,
+    width: 65,
   },
   {
     title: 'Trạng thái',
-    dataIndex: 'status',
+    dataIndex: 'trangThai',
     slotName: 'status',
-    width: 80,
+    width: 60,
     align: 'center',
   },
   {
     title: 'Thao tác',
     slotName: 'action',
-    width: 80,
-    fixed: 'right',
+    width: 60,
     align: 'center',
   },
 ]
@@ -537,16 +527,43 @@ const availableSizes = ref(['35', '36', '37', '38', '39', '40', '41', '42'])
 const loadBienTheList = async () => {
   try {
     loading.value = true
-    const response = await getBienTheSanPhamList(pagination.value.current - 1) // API sử dụng 0-based indexing
+    const response = await getBienTheSanPhamPage(pagination.value.current - 1, productId.value)
+    console.log('=== DEBUG RESPONSE ===')
+    console.log('Full API Response:', response)
+    console.log('Response data:', response.data)
+    console.log('Response success:', response.success)
 
-    bienTheList.value = response.data
-    variants.value = response.data.content || []
-    totalElements.value = response.data.totalElements || 0
+    if (response && response.data) {
+      // Extract the actual data array from the nested structure
+      const paginationData = response.data
+      console.log('Pagination data:', paginationData)
+      console.log('Data array:', paginationData.data)
+      console.log('Is data array?', Array.isArray(paginationData.data))
 
-    // Cập nhật pagination
-    pagination.value.total = totalElements.value
-    pagination.value.current = (response.data.number || 0) + 1 // API trả về 0-based, UI cần 1-based
+      variants.value = paginationData.data || []
+      totalElements.value = paginationData.totalElements || paginationData.data?.length || 0
+
+      // Update pagination info
+      pagination.value.total = paginationData.totalElements || paginationData.data?.length || 0
+      pagination.value.current = (paginationData.currentPage || 0) + 1
+      pagination.value.pageSize = paginationData.pageSize || 10
+
+      console.log('=== FINAL RESULTS ===')
+      console.log('Variants array:', variants.value)
+      console.log('Variants length:', variants.value.length)
+      console.log('Total elements:', totalElements.value)
+      console.log('Pagination:', {
+        total: pagination.value.total,
+        current: pagination.value.current,
+        pageSize: pagination.value.pageSize,
+      })
+    } else {
+      console.log('No data in response, setting empty arrays')
+      variants.value = []
+      totalElements.value = 0
+    }
   } catch (error) {
+    console.error('Error loading variants:', error)
     Message.error('Không thể tải danh sách biến thể sản phẩm')
     variants.value = []
     totalElements.value = 0
@@ -789,6 +806,9 @@ watch(
 )
 
 onMounted(() => {
+  console.log('=== COMPONENT MOUNTED ===')
+  console.log('Product ID from route:', productId.value)
+  console.log('Initial pagination:', pagination.value)
   // Load data from API
   loadAllOptions()
   loadBienTheList()
@@ -908,21 +928,21 @@ watch(
 .attributes-cell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-width: 250px;
+  gap: 2px;
+  max-width: 280px;
 }
 
 .attribute-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 11px;
 }
 
 .attribute-label {
   font-weight: 500;
   color: #86909c;
-  min-width: 60px;
+  min-width: 70px;
 }
 
 .attribute-value {
@@ -956,5 +976,34 @@ watch(
 
 .price-range-container:hover {
   border-color: #d9d9d9;
+}
+
+/* Custom table styles với padding giảm */
+:deep(.arco-table-td) {
+  padding: 5px 8px !important;
+}
+
+:deep(.arco-table-th) {
+  padding: 5px 8px !important;
+}
+
+:deep(.arco-table-cell) {
+  line-height: 1.4;
+}
+
+/* Giảm padding-x cho table size small */
+:deep(.arco-table-size-small .arco-table-cell) {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+
+/* Đảm bảo table không có horizontal scroll */
+:deep(.arco-table-container) {
+  width: 100% !important;
+}
+
+:deep(.arco-table) {
+  width: 100% !important;
+  table-layout: auto !important;
 }
 </style>

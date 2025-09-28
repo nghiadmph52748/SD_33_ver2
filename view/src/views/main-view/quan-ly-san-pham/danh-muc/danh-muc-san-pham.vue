@@ -509,7 +509,7 @@ const editCategory = (category: any) => {
 const viewCategory = (category: any) => {
   // Navigate đến trang biến thể sản phẩm với ID sản phẩm
   router.push({
-    name: 'BienTheSanPham',
+    name: 'BienTheSanPhamChiTiet',
     params: {
       productId: category.id,
     },
