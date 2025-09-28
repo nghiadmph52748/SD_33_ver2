@@ -1,5 +1,6 @@
 package org.example.be_sp.controller;
 
+import org.example.be_sp.annotation.RequireAuth;
 import org.example.be_sp.model.request.DotGiamGiaRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.DotGiamGiaService;
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/dot-giam-gia-management")
 @CrossOrigin(origins = "*")
+@RequireAuth
 public class DotGiamGiaController {
+
     @Autowired
     DotGiamGiaService dotGiamGiaService;
 

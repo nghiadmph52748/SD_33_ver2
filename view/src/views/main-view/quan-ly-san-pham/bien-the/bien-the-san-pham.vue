@@ -528,17 +528,10 @@ const loadBienTheList = async () => {
   try {
     loading.value = true
     const response = await getBienTheSanPhamPage(pagination.value.current - 1, productId.value)
-    console.log('=== DEBUG RESPONSE ===')
-    console.log('Full API Response:', response)
-    console.log('Response data:', response.data)
-    console.log('Response success:', response.success)
 
     if (response && response.data) {
       // Extract the actual data array from the nested structure
       const paginationData = response.data
-      console.log('Pagination data:', paginationData)
-      console.log('Data array:', paginationData.data)
-      console.log('Is data array?', Array.isArray(paginationData.data))
 
       variants.value = paginationData.data || []
       totalElements.value = paginationData.totalElements || paginationData.data?.length || 0
@@ -547,23 +540,11 @@ const loadBienTheList = async () => {
       pagination.value.total = paginationData.totalElements || paginationData.data?.length || 0
       pagination.value.current = (paginationData.currentPage || 0) + 1
       pagination.value.pageSize = paginationData.pageSize || 10
-
-      console.log('=== FINAL RESULTS ===')
-      console.log('Variants array:', variants.value)
-      console.log('Variants length:', variants.value.length)
-      console.log('Total elements:', totalElements.value)
-      console.log('Pagination:', {
-        total: pagination.value.total,
-        current: pagination.value.current,
-        pageSize: pagination.value.pageSize,
-      })
     } else {
-      console.log('No data in response, setting empty arrays')
       variants.value = []
       totalElements.value = 0
     }
   } catch (error) {
-    console.error('Error loading variants:', error)
     Message.error('Không thể tải danh sách biến thể sản phẩm')
     variants.value = []
     totalElements.value = 0
@@ -689,8 +670,6 @@ const performSearch = () => {
     // Update displayed variants
     variants.value = filteredVariants
 
-    console.log('Filtered variants:', filteredVariants.length, 'from', originalVariants.value.length, 'total') // eslint-disable-line no-console
-
     loading.value = false
   }, 200)
 }
@@ -732,7 +711,6 @@ const exportExcel = () => {
 const completeBulkUpdate = () => {
   // Implement bulk update logic
   // This would save all changes made to selected variants
-  console.log('Completing bulk update for selected variants:', selectedVariants.value) // eslint-disable-line no-console
 
   // Reset edit mode and selections
   isEditMode.value = false
@@ -806,9 +784,6 @@ watch(
 )
 
 onMounted(() => {
-  console.log('=== COMPONENT MOUNTED ===')
-  console.log('Product ID from route:', productId.value)
-  console.log('Initial pagination:', pagination.value)
   // Load data from API
   loadAllOptions()
   loadBienTheList()

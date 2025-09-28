@@ -76,8 +76,16 @@ public class ChiTietSanPhamService {
         c.setIdDeGiay(deGiay.findDeGiayById(request.getIdDeGiay()));
         c.setIdChatLieu(chatLieu.findChatLieuById(request.getIdChatLieu()));
         c.setIdTrongLuong(trongLuong.findTrongLuongById(request.getIdTrongLuong()));
+        // Note: Có thể thêm audit fields như createBy nếu entity hỗ trợ
+        // c.setCreateBy(getCurrentUserId()); // nếu có field này trong entity
         ChiTietSanPham saved = repository.save(c);
         return saved.getId();
+    }
+
+    // Overloaded method với username parameter for audit purposes
+    public Integer add(ChiTietSanPhamRequest request, String username) {
+        System.out.println("Creating product variant by user: " + username);
+        return add(request); // Gọi method gốc
     }
 
     public void update(ChiTietSanPhamRequest request, Integer id) {

@@ -1,5 +1,6 @@
 package org.example.be_sp.controller;
 
+import org.example.be_sp.annotation.RequireAuth;
 import org.example.be_sp.model.request.PhieuGiamGiaRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.PhieuGiamGiaService;
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/phieu-giam-gia-management")
 @CrossOrigin(origins = "*")
+@RequireAuth
 public class PhieuGiamGiaController {
+
     @Autowired
     PhieuGiamGiaService service;
 
