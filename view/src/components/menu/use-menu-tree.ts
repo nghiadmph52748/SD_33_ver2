@@ -58,9 +58,7 @@ export default function useMenuTree() {
   const menuTree = computed(() => {
     const copyRouter = cloneDeep(appRoute.value) as RouteRecordNormalized[]
     // Filter out invalid routes (empty objects, no path/name)
-    const validRoutes = copyRouter.filter(route =>
-      route && typeof route === 'object' && (route.path || route.name) && route.meta
-    )
+    const validRoutes = copyRouter.filter((route) => route && typeof route === 'object' && (route.path || route.name) && route.meta)
     validRoutes.sort((a: RouteRecordNormalized, b: RouteRecordNormalized) => {
       return ((a.meta?.order as number) || 0) - ((b.meta?.order as number) || 0)
     })

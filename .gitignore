@@ -3,6 +3,7 @@
 .vscode
 AGENTS.md
 application.properties
+WARP.md
 
 # Maven
 target/

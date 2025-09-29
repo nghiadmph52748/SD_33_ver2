@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
 
 /**
  * Interceptor để validate token trước khi gọi API
@@ -28,7 +29,7 @@ public class TokenValidationInterceptor implements HandlerInterceptor {
     private TokenBlacklistService tokenBlacklistService;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler)
             throws Exception {
 
         // Chỉ xử lý cho HandlerMethod (controller methods)
@@ -51,46 +52,38 @@ public class TokenValidationInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        System.out.println("=== TOKEN VALIDATION INTERCEPTOR ===");
-        System.out.println("Validating token for: " + request.getMethod() + " " + request.getRequestURI());
+        // Token validation for protected endpoints
 
         // Lấy token từ header
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("❌ No valid Authorization header found");
             return handleUnauthorized(response, "Token không được cung cấp");
         }
 
         String token = authHeader.substring(7);
-        System.out.println("🔍 Validating token: " + token.substring(0, Math.min(20, token.length())) + "...");
 
         try {
             // Kiểm tra token có trong blacklist không
             if (tokenBlacklistService.isTokenBlacklisted(token)) {
-                System.out.println("❌ Token is blacklisted");
                 return handleUnauthorized(response, "Token đã bị vô hiệu hóa");
             }
 
             // Lấy username và validate token
             String username = jwtUtils.getUsernameFromToken(token);
             if (username == null || username.trim().isEmpty()) {
-                System.out.println("❌ Cannot extract username from token");
                 return handleUnauthorized(response, "Token không hợp lệ");
             }
 
             // Validate token
             if (!jwtUtils.validateToken(token, username)) {
-                System.out.println("❌ Token validation failed for user: " + username);
                 return handleUnauthorized(response, requireAuth.message());
             }
 
             // Kiểm tra token đã expired chưa
             if (jwtUtils.isTokenExpired(token)) {
-                System.out.println("❌ Token has expired for user: " + username);
                 return handleUnauthorized(response, "Token đã hết hạn");
             }
 
-            System.out.println("✅ Token validation successful for user: " + username);
 
             // Thêm username vào request attribute để controller có thể sử dụng
             request.setAttribute("currentUsername", username);
@@ -112,14 +105,8 @@ public class TokenValidationInterceptor implements HandlerInterceptor {
         response.setContentType("application/json;charset=UTF-8");
 
         // Tạo response object
-        Object responseObj = new Object() {
-            public final boolean success = false;
-            public final String message = errorMessage;
-            public final Object data = null;
-        };
-
         ObjectMapper mapper = new ObjectMapper();
-        String jsonResponse = mapper.writeValueAsString(responseObj);
+        String jsonResponse = String.format("{\"success\":false,\"message\":%s,\"data\":null}", mapper.writeValueAsString(errorMessage));
 
         response.getWriter().write(jsonResponse);
         return false;

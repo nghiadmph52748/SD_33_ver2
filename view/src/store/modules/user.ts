@@ -2,6 +2,7 @@ import { LoginData, getUserInfo, login as userLogin, logout as userLogout } from
 import { clearToken, setToken } from '@/utils/auth'
 import { removeRouteListener } from '@/utils/route-listener'
 import { defineStore } from 'pinia'
+import { Message } from '@arco-design/web-vue'
 import useAppStore from './app'
 import { UserState } from './user/types'
 
@@ -104,7 +105,7 @@ const useUserStore = defineStore('user', {
         this.logoutCallBack()
       } catch (error) {
         // Even if server call fails, still logout client-side
-        console.warn('Server logout failed, but proceeding with client-side logout:', error)
+        Message.warning('Không thể đồng bộ đăng xuất với máy chủ, đã đăng xuất trên thiết bị hiện tại')
         this.logoutCallBack()
       }
     },

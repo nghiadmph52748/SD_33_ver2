@@ -163,13 +163,21 @@
                 </div>
               </div>
             </div>
+            <div v-else-if="paymentMethod === 'transfer'" class="transfer-payment">
+              <p class="transfer-note">
+                Thanh toán trực tuyến qua VNPAY (sandbox). Sau khi khởi tạo, hệ thống sẽ chuyển tới trang thanh toán.
+              </p>
+              <a-select v-model="selectedTransferBankCode" placeholder="Chọn kênh thanh toán (tùy chọn)" allow-clear>
+                <a-option v-for="bank in vnpayBankOptions" :key="bank.value" :value="bank.value">{{ bank.label }}</a-option>
+              </a-select>
+            </div>
           </a-space>
 
-          <a-button type="primary" size="large" block :disabled="cartItems.length === 0" @click="processPayment">
+          <a-button type="primary" size="large" block :disabled="isPaymentDisabled" :loading="isProcessingPayment" @click="processPayment">
             <template #icon>
               <icon-check-circle />
             </template>
-            Thanh toán ({{ formatCurrency(total) }})
+            {{ paymentButtonLabel }}
           </a-button>
         </a-card>
       </div>
@@ -181,6 +189,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { createVnpayPayment, type CreateVnpayPaymentPayload } from '@/api/payment'
+import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconUserAdd, IconStar, IconDelete, IconCheckCircle } from '@arco-design/web-vue/es/icon'
 
 // Breadcrumb setup
@@ -208,6 +218,13 @@ const cartItems = ref<any[]>([])
 const paymentMethod = ref('cash')
 const customerPaid = ref(0)
 const change = ref(0)
+const isProcessingPayment = ref(false)
+const selectedTransferBankCode = ref('')
+const vnpayBankOptions = [
+  { label: 'VNPAY QR', value: 'VNPAYQR' },
+  { label: 'Ngân hàng nội địa (ATM)', value: 'VNBANK' },
+  { label: 'Thẻ quốc tế (Visa/Master/JCB)', value: 'INTCARD' },
+]
 
 // Products data
 const products = ref([
@@ -313,6 +330,13 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
+const paymentButtonLabel = computed(() => {
+  const amountLabel = formatCurrency(Math.max(total.value, 0))
+  return paymentMethod.value === 'transfer' ? `Thanh toán VNPAY (${amountLabel})` : `Thanh toán (${amountLabel})`
+})
+
+const isPaymentDisabled = computed(() => cartItems.value.length === 0 || total.value <= 0 || isProcessingPayment.value)
+
 const addToCart = (product: any) => {
   const existingItem = cartItems.value.find((item) => item.id === product.id)
 
@@ -340,27 +364,97 @@ const calculateChange = () => {
   change.value = Math.max(0, customerPaid.value - total.value)
 }
 
-const processPayment = () => {
-  // Here you would integrate with payment processing
-  // Processing payment with data:
-  // items: cartItems.value,
-  // total: total.value,
-  // paymentMethod: paymentMethod.value,
-  // customer: customerForm.value
-
-  // Show success message
-  // Reset cart after successful payment
+const resetCartState = () => {
   cartItems.value = []
   customerForm.value = { name: '', phone: '' }
   customerPaid.value = 0
   change.value = 0
 }
 
+const completeLocalPayment = () => {
+  Message.success('Thanh toán thành công')
+  resetCartState()
+}
+
+const initiateVnpayPayment = async () => {
+  if (isProcessingPayment.value) {
+    return
+  }
+  if (total.value <= 0) {
+    Message.warning('Số tiền thanh toán không hợp lệ')
+    return
+  }
+
+  try {
+    isProcessingPayment.value = true
+    const payload: CreateVnpayPaymentPayload = {
+      amount: Math.round(total.value),
+      orderId: `POS-${Date.now()}`,
+      orderInfo: `Thanh toan don hang tai quay ${customerForm.value.name || 'Khach le'}`,
+      locale: 'vn',
+    }
+
+    if (selectedTransferBankCode.value) {
+      payload.bankCode = selectedTransferBankCode.value
+    }
+
+    const response = await createVnpayPayment(payload)
+
+    if (!response?.payUrl) {
+      throw new Error('Thiếu đường dẫn thanh toán trong phản hồi VNPAY')
+    }
+
+    window.location.href = response.payUrl
+  } catch (_error) {
+    Message.error('Không thể khởi tạo thanh toán VNPAY. Vui lòng thử lại.')
+  } finally {
+    isProcessingPayment.value = false
+  }
+}
+
+const processPayment = async () => {
+  if (cartItems.value.length === 0) {
+    Message.warning('Chưa có sản phẩm trong giỏ hàng')
+    return
+  }
+
+  if (total.value <= 0) {
+    Message.warning('Số tiền thanh toán không hợp lệ')
+    return
+  }
+
+  if (paymentMethod.value === 'cash') {
+    if (customerPaid.value < total.value) {
+      Message.warning('Khách đưa chưa đủ số tiền cần thanh toán')
+      return
+    }
+    calculateChange()
+    completeLocalPayment()
+    return
+  }
+
+  if (paymentMethod.value === 'transfer') {
+    await initiateVnpayPayment()
+    return
+  }
+
+  completeLocalPayment()
+}
+
 // Watch for payment method changes
-watch(paymentMethod, () => {
-  if (paymentMethod.value !== 'cash') {
+watch(paymentMethod, (method) => {
+  if (method !== 'cash') {
     customerPaid.value = 0
     change.value = 0
+  }
+  if (method !== 'transfer') {
+    selectedTransferBankCode.value = ''
+  }
+})
+
+watch(total, () => {
+  if (paymentMethod.value === 'cash') {
+    calculateChange()
   }
 })
 
@@ -534,6 +628,20 @@ onMounted(() => {
   justify-content: space-between;
   font-weight: 500;
   color: #52c41a;
+}
+
+.transfer-payment {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transfer-note {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
 }
 
 /* Responsive */

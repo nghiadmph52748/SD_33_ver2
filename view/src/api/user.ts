@@ -33,3 +33,11 @@ export function getUserInfo() {
 export function getMenuList() {
   return axios.post<RouteRecordNormalized[]>('/api/user/menu')
 }
+
+export interface ForgotPasswordPayload {
+  email: string
+}
+
+export function forgotPassword(data: ForgotPasswordPayload) {
+  return axios.post('/api/auth/forgot-password', data)
+}

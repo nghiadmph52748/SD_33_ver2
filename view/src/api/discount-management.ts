@@ -1,7 +1,8 @@
-const DEFAULT_API_BASE = 'http://localhost:8080/api'
+import { getToken } from '@/utils/auth'
 
+const DEFAULT_API_BASE = 'http://localhost:8080/api'
 const resolveBaseUrl = () => {
-  const configured = import.meta.env.VITE_API_BASE_URL?.trim()
+  const configured = (import.meta as any).env?.VITE_API_BASE_URL?.trim?.()
   if (configured && configured.length > 0) {
     return configured.replace(/\/$/, '')
   }
@@ -28,10 +29,12 @@ const buildUrl = (path: string) => {
 }
 
 const requestJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const token = getToken()
   const response = await fetch(buildUrl(path), {
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
     ...init,
