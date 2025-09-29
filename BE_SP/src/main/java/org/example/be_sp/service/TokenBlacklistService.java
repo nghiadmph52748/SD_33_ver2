@@ -34,7 +34,7 @@ public class TokenBlacklistService {
                 String createTableSql = """
                     CREATE TABLE token_blacklist (
                         id BIGINT IDENTITY(1,1) PRIMARY KEY,
-                        token NVARCHAR(MAX) NOT NULL,
+                        token NVARCHAR(255) NOT NULL,
                         username NVARCHAR(255) NOT NULL,
                         expiry_date DATETIME2 NOT NULL,
                         created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
@@ -90,7 +90,7 @@ public class TokenBlacklistService {
     public void cleanupExpiredTokens() {
         LocalDateTime now = LocalDateTime.now();
         List<TokenBlacklist> expiredTokens = tokenBlacklistRepository.findExpiredTokens(now);
-
+        System.out.println("Found " + expiredTokens.size() + " expired tokens to clean up");
         if (!expiredTokens.isEmpty()) {
             tokenBlacklistRepository.deleteExpiredTokens(now);
             System.out.println("Cleaned up " + expiredTokens.size() + " expired tokens from blacklist");
