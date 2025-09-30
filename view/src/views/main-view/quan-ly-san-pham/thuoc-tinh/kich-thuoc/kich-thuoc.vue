@@ -51,50 +51,36 @@
 
     <!-- Sizes Table -->
     <a-card title="Danh sách kích thước" class="table-card">
-      <a-table :columns="columns" :data="sizes" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
-        <template #checkbox="{ record }">
-          <a-checkbox
-            :checked="isRowSelected(record.id)"
-            @change="
-              (checked) => {
-                if (checked) {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = [...currentKeys, record.id]
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = {
-                    code: record.code,
-                    name: record.name,
-                    status: record.is_active,
-                  }
-                } else {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = currentKeys.filter((key) => key !== record.id)
-                  if (editingData.value && editingData.value[record.id]) {
-                    delete editingData.value[record.id]
-                  }
-                }
-              }
-            "
-          />
+      <a-table
+        :columns="columns"
+        :data="sizes"
+        :pagination="pagination"
+        :loading="loading"
+        :scroll="{ x: 1000 }"
+        @page-change="getKichThuocPage($event - 1)"
+        @page-size-change="
+          (size) => {
+            pagination.pageSize = size
+            getKichThuocPage(0)
+          }
+        "
+        row-key="id"
+      >
+        <template #stt="{ record, rowIndex }">
+          <span>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</span>
         </template>
 
         <template #code="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].code" size="mini" style="width: 80px" />
-          </div>
-          <span v-else>{{ record.code }}</span>
+          <span>{{ record.maKichThuoc || 'N/A' }}</span>
         </template>
 
         <template #name="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].name" size="mini" style="width: 100px" />
-          </div>
-          <span v-else>{{ record.name }}</span>
+          <span>{{ record.tenKichThuoc }}</span>
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.is_active ? 'green' : 'red'">
-            {{ record.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+          <a-tag :color="record.trangThai ? 'green' : 'red'">
+            {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
 
@@ -117,79 +103,83 @@
             </a-button>
           </a-space>
         </template>
-
-        <template #checkbox-title>
-          <a-checkbox
-            :checked="selectedCount === sizes.length && sizes.length > 0"
-            :indeterminate="selectedCount > 0 && selectedCount < sizes.length"
-            @change="
-              (checked) => {
-                if (checked) {
-                  selectedRowKeys.value = [...sizes.map((size) => size.id)]
-                  if (!editingData.value) editingData.value = {}
-                  sizes.forEach((size) => {
-                    editingData.value[size.id] = {
-                      code: size.code,
-                      name: size.name,
-                      status: size.is_active,
-                    }
-                  })
-                } else {
-                  selectedRowKeys.value = []
-                  editingData.value = {}
-                }
-              }
-            "
-          />
-        </template>
       </a-table>
     </a-card>
 
-    <!-- Create/Edit Modal -->
+    <!-- Add Size Modal -->
     <a-modal
-      v-model:open="modalVisible"
-      :title="isEdit ? 'Chỉnh sửa kích thước' : 'Thêm kích thước mới'"
-      width="500px"
-      @ok="handleSubmit"
-      @cancel="handleCancel"
+      v-model:visible="addModalVisible"
+      title="Thêm kích thước"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeAddModal"
+      @ok="confirmAddSize"
     >
-      <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">
-        <a-form-item label="Giá trị kích thước" name="value">
-          <a-input v-model="formData.value" placeholder="Ví dụ: 38, 39, 40..." allow-clear />
+      <a-form :model="sizeForm" :rules="formRules" layout="vertical" ref="addFormRef">
+        <a-form-item label="Tên kích thước" field="tenKichThuoc" required>
+          <a-input v-model="sizeForm.tenKichThuoc" placeholder="Nhập tên kích thước" />
         </a-form-item>
+      </a-form>
+    </a-modal>
 
-        <a-form-item label="Đơn vị" name="unit">
-          <a-select v-model="formData.unit" placeholder="Chọn đơn vị">
-            <a-option value="">Không có đơn vị</a-option>
-            <a-option value="EU">EU</a-option>
-            <a-option value="US">US</a-option>
-            <a-option value="UK">UK</a-option>
-            <a-option value="cm">cm</a-option>
-            <a-option value="inch">inch</a-option>
-          </a-select>
+    <!-- Detail Size Modal -->
+    <a-modal
+      v-model:visible="detailModalVisible"
+      title="Chi tiết kích thước"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeDetailModal"
+      @ok="closeDetailModal"
+      ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }"
+    >
+      <a-descriptions :column="1" size="small">
+        <a-descriptions-item label="Mã kích thước">{{ selectedSize?.maKichThuoc }}</a-descriptions-item>
+        <a-descriptions-item label="Tên kích thước">{{ selectedSize?.tenKichThuoc }}</a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="selectedSize?.trangThai ? 'green' : 'red'">
+            {{ selectedSize?.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+          </a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
+
+    <!-- Update Size Modal -->
+    <a-modal
+      v-model:visible="updateModalVisible"
+      title="Cập nhật kích thước"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeUpdateModal"
+      @ok="confirmUpdateSize"
+    >
+      <a-form :model="sizeForm" :rules="formRules" layout="vertical" ref="updateFormRef">
+        <a-form-item label="Tên kích thước" field="tenKichThuoc" required>
+          <a-input v-model="sizeForm.tenKichThuoc" placeholder="Nhập tên kích thước" />
         </a-form-item>
-
-        <a-form-item label="Loại giày" name="category">
-          <a-select v-model="formData.category" placeholder="Chọn loại giày áp dụng">
-            <a-option value="sneakers">Giày sneaker</a-option>
-            <a-option value="boots">Giày boot</a-option>
-            <a-option value="heels">Giày cao gót</a-option>
-            <a-option value="sandals">Giày sandal</a-option>
-            <a-option value="all">Tất cả</a-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="Mô tả (tùy chọn)">
-          <a-textarea v-model="formData.description" placeholder="Mô tả về kích thước này" :rows="2" allow-clear />
-        </a-form-item>
-
-        <a-form-item label="Trạng thái" name="is_active">
-          <a-radio-group v-model="formData.is_active">
+        <a-form-item label="Trạng thái" field="trangThai" required>
+          <a-radio-group v-model="sizeForm.trangThai" type="button">
             <a-radio :value="true">Hoạt động</a-radio>
-            <a-radio :value="false">Ngừng sử dụng</a-radio>
+            <a-radio :value="false">Không hoạt động</a-radio>
           </a-radio-group>
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <!-- Confirmation Modal -->
+    <a-modal
+      v-model:visible="confirmModalVisible"
+      title="Xác nhận"
+      width="400px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="cancelConfirm"
+      @ok="executeConfirmedAction"
+    >
+      <p>{{ confirmMessage }}</p>
     </a-modal>
   </div>
 </template>
@@ -211,9 +201,12 @@ import {
   IconDelete,
   IconRefresh,
 } from '@arco-design/web-vue/es/icon'
+import { useUserStore } from '@/store'
+import { createKichThuoc, getKichThuocList, updateKichThuoc, deleteKichThuoc } from '../../../../../api/san-pham/thuoc-tinh/kich-thuoc'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
+const userStore = useUserStore()
 
 // Filters
 const filters = ref({
@@ -223,33 +216,56 @@ const filters = ref({
   sort: 'newest',
 })
 
-// Edit inline mode state
-const selectedRowKeys = ref<number[]>([])
-const editingData = ref<Record<number, { code: string; name: string; status: boolean }>>({})
+// Data
+const sizes = ref([])
 
-// Computed properties for safe access
-const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
-const isRowSelected = (id: number) => {
-  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  return keys.includes(id)
+// Modal states
+const addModalVisible = ref(false)
+const detailModalVisible = ref(false)
+const updateModalVisible = ref(false)
+const confirmModalVisible = ref(false)
+
+// Form refs
+const addFormRef = ref()
+const updateFormRef = ref()
+
+// Selected size for detail/update
+const selectedSize = ref(null)
+
+// Size form data
+const sizeForm = reactive({
+  tenKichThuoc: '',
+  trangThai: true,
+})
+
+// Form validation rules
+const formRules = {
+  tenKichThuoc: [
+    { required: true, message: 'Vui lòng nhập tên kích thước' },
+    { min: 2, message: 'Tên kích thước phải có ít nhất 2 ký tự' },
+  ],
+  trangThai: [{ required: true, message: 'Vui lòng chọn trạng thái' }],
 }
+
+// Confirmation modal
+const confirmMessage = ref('')
+const confirmAction = ref(null)
 
 // Table
 const loading = ref(false)
 const columns = [
   {
-    title: '',
-    dataIndex: 'checkbox',
-    slotName: 'checkbox',
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
     width: 50,
     align: 'center',
-    titleSlotName: 'checkbox-title',
   },
   {
     title: 'Mã kích thước',
     dataIndex: 'code',
-    width: 100,
     slotName: 'code',
+    width: 100,
   },
   {
     title: 'Tên kích thước',
@@ -277,94 +293,11 @@ const columns = [
 const pagination = ref({
   current: 1,
   pageSize: 10,
-  total: 5,
+  total: 3,
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: true,
 })
-
-// Modal and form
-const modalVisible = ref(false)
-const isEdit = ref(false)
-const formRef = ref()
-
-// Form data
-const formData = reactive({
-  code: '',
-  name: '',
-  is_active: true,
-})
-
-// Form validation rules
-const formRules = {
-  code: [{ required: true, message: 'Vui lòng nhập mã kích thước' }],
-  name: [{ required: true, message: 'Vui lòng nhập tên kích thước' }],
-}
-
-// Mock data
-
-const sizes = ref([
-  {
-    id: 1,
-    code: 'KT001',
-    name: 'Size 35',
-    value: '35',
-    unit: 'EU',
-    category: 'heels',
-    usage_count: 15,
-    is_active: true,
-    created_at: '2024-01-15',
-    description: 'Size nhỏ cho giày cao gót',
-  },
-  {
-    id: 2,
-    code: 'KT002',
-    name: 'Size 36',
-    value: '36',
-    unit: 'EU',
-    category: 'heels',
-    usage_count: 20,
-    is_active: true,
-    created_at: '2024-01-16',
-    description: 'Size phổ biến cho giày cao gót',
-  },
-  {
-    id: 3,
-    code: 'KT003',
-    name: 'Size 37',
-    value: '37',
-    unit: 'EU',
-    category: 'sneakers',
-    usage_count: 25,
-    is_active: true,
-    created_at: '2024-01-17',
-    description: 'Size phổ biến cho giày sneaker',
-  },
-  {
-    id: 4,
-    code: 'KT004',
-    name: 'Size 38',
-    value: '38',
-    unit: 'EU',
-    category: 'sneakers',
-    usage_count: 30,
-    is_active: true,
-    created_at: '2024-01-18',
-    description: 'Size lớn cho giày sneaker',
-  },
-  {
-    id: 5,
-    code: 'KT005',
-    name: 'Size 39',
-    value: '39',
-    unit: 'EU',
-    category: 'boots',
-    usage_count: 10,
-    is_active: false,
-    created_at: '2024-01-19',
-    description: 'Size cho giày boot',
-  },
-])
 
 // Methods
 const resetFilters = () => {
@@ -378,51 +311,168 @@ const resetFilters = () => {
 
 const searchSizes = () => {
   // TODO: Implement search functionality
+  console.log('Searching sizes with filters:', filters.value)
+}
+
+const showCreateModal = () => {
+  sizeForm.tenKichThuoc = ''
+  sizeForm.trangThai = true
+  addModalVisible.value = true
+}
+
+const closeAddModal = () => {
+  addModalVisible.value = false
+  addFormRef.value?.resetFields()
+}
+
+const confirmAddSize = () => {
+  addFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn thêm kích thước này?'
+      confirmAction.value = 'add'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const viewSize = (size: any) => {
-  // TODO: Implement view size details functionality
+  selectedSize.value = size
+  detailModalVisible.value = true
+}
+
+const closeDetailModal = () => {
+  detailModalVisible.value = false
+  selectedSize.value = null
 }
 
 const editSize = (size: any) => {
-  isEdit.value = true
-  formData.code = size.code
-  formData.name = size.name
-  formData.is_active = size.is_active
-  modalVisible.value = true
+  selectedSize.value = size
+  sizeForm.tenKichThuoc = size.tenKichThuoc
+  sizeForm.trangThai = size.trangThai
+  updateModalVisible.value = true
+}
+
+const closeUpdateModal = () => {
+  updateModalVisible.value = false
+  updateFormRef.value?.resetFields()
+  selectedSize.value = null
+}
+
+const confirmUpdateSize = () => {
+  updateFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn cập nhật kích thước này?'
+      confirmAction.value = 'update'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const deleteSize = (size: any) => {
-  // TODO: Implement delete size functionality
+  selectedSize.value = size
+  confirmMessage.value = 'Bạn có chắc chắn muốn xóa kích thước này?'
+  confirmAction.value = 'delete'
+  confirmModalVisible.value = true
+}
+
+const cancelConfirm = () => {
+  confirmModalVisible.value = false
+  confirmMessage.value = ''
+  confirmAction.value = null
+}
+
+const getKichThuocPage = async (page) => {
+  try {
+    loading.value = true
+    const res = await getKichThuocList(page)
+    if (res.success) {
+      sizes.value = res.data.data
+      console.log('Fetched sizes:', sizes.value)
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
+    } else {
+      console.error('Failed to fetch sizes:', res.message)
+      sizes.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch sizes:', error)
+    sizes.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+const executeConfirmedAction = async () => {
+  try {
+    if (confirmAction.value === 'add') {
+      // TODO: Implement add API call
+      const data = {
+        tenKichThuoc: sizeForm.tenKichThuoc,
+        trangThai: true,
+        deleted: false,
+        createAt: new Date().toISOString().split('T')[0],
+        createBy: userStore.id,
+      }
+      console.log('Adding size:', data)
+      await createKichThuoc(data)
+      closeAddModal()
+      // Refresh data
+      getKichThuocPage(0)
+    } else if (confirmAction.value === 'update') {
+      // TODO: Implement update API call
+      const data = {
+        tenKichThuoc: sizeForm.tenKichThuoc,
+        trangThai: sizeForm.trangThai,
+        deleted: selectedSize.value.deleted,
+        createAt: selectedSize.value.createAt,
+        createBy: selectedSize.value.createBy,
+        updateAt: new Date().toISOString().split('T')[0],
+        updateBy: userStore.id,
+      }
+      console.log('Updating size:', selectedSize.value.id, data)
+      await updateKichThuoc(selectedSize.value.id, data)
+      closeUpdateModal()
+      // Refresh data
+      getKichThuocPage(0)
+    } else if (confirmAction.value === 'delete') {
+      // TODO: Implement delete API call
+      console.log('Deleting size:', selectedSize.value.id)
+      await deleteKichThuoc(selectedSize.value.id)
+      // Refresh data
+      getKichThuocPage(0)
+    }
+  } catch (error) {
+    console.error('API call failed:', error)
+  } finally {
+    confirmModalVisible.value = false
+    confirmMessage.value = ''
+    confirmAction.value = null
+  }
+}
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('vi-VN')
 }
 
 const exportSizes = () => {
   // TODO: Implement Excel export functionality
-}
-
-const showCreateModal = () => {
-  isEdit.value = false
-  formData.code = ''
-  formData.name = ''
-  formData.is_active = true
-  modalVisible.value = true
-}
-
-const handleSubmit = async () => {
-  try {
-    await formRef.value.validate()
-    modalVisible.value = false
-  } catch (error) {
-    // console.error('Form validation failed:', error)
-  }
-}
-
-const handleCancel = () => {
-  modalVisible.value = false
+  console.log('Exporting sizes to Excel...')
 }
 
 onMounted(() => {
-  // TODO: Load initial data
+  getKichThuocPage(0)
 })
 </script>
 

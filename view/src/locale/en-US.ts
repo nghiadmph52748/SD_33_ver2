@@ -27,6 +27,9 @@ import localeUserSetting from '@/views/user/setting/locale/en-US'
 import localeSettings from './en-US/settings'
 
 export default {
+  'Biến thể sản phẩm': 'Product Variants',
+  'Chi tiết biến thể': 'Variant Details',
+  'Chỉnh sửa biến thể': 'Edit Variant',
   'menu.thong-ke': 'Statistics',
   'menu.thong-ke.chung': 'General Statistics',
   'menu.thong-ke.kho-hang': 'Inventory Statistics',

@@ -76,14 +76,27 @@ const handleSubmit = async ({ errors, values }: { errors: Record<string, Validat
     setLoading(true)
     try {
       await userStore.login(values as LoginData)
-      const { redirect, ...othersQuery } = router.currentRoute.value.query
 
-      router.push({
-        name: (redirect as string) || 'ThongKeChung',
-        query: {
-          ...othersQuery,
-        },
-      })
+      // Lấy thông tin redirect từ sessionStorage thay vì URL
+      const redirectInfo = sessionStorage.getItem('redirectAfterLogin')
+      let redirectRoute = { name: 'ThongKeChung' }
+
+      if (redirectInfo) {
+        try {
+          const parsedRedirect = JSON.parse(redirectInfo)
+          redirectRoute = {
+            name: parsedRedirect.name || 'ThongKeChung',
+            query: parsedRedirect.query,
+            params: parsedRedirect.params,
+          }
+          // Xóa thông tin redirect sau khi sử dụng
+          sessionStorage.removeItem('redirectAfterLogin')
+        } catch {
+          // Nếu parse lỗi thì dùng route mặc định
+        }
+      }
+
+      router.push(redirectRoute)
       Message.success(t('login.form.login.success'))
       const { rememberPassword } = loginConfig.value
       const { username, password } = values

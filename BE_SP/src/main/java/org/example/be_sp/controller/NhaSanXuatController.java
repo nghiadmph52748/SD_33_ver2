@@ -4,9 +4,15 @@ import org.example.be_sp.model.request.NhaSanXuatRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.NhaSanXuatService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
-import java.lang.reflect.InvocationTargetException;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/nha-san-xuat-management")
@@ -15,6 +21,11 @@ public class NhaSanXuatController {
     @Autowired
     NhaSanXuatService nhaSanXuatService;
 
+    @GetMapping("/list")
+    public ResponseObject<?> get() {
+        return new ResponseObject<>(nhaSanXuatService.getAll());
+    }
+
     @GetMapping("/playlist")
     public ResponseObject<?> getAll() {
         return new ResponseObject<>(nhaSanXuatService.getAllNhaSanXuat(), "Hien thi thanh cong");
@@ -22,7 +33,7 @@ public class NhaSanXuatController {
 
     @GetMapping("/paging")
     public ResponseObject<?> getAllPaging(@RequestParam(defaultValue = "0") Integer page, @RequestParam(defaultValue = "10") Integer size) {
-        return new ResponseObject<>(nhaSanXuatService.paging(page, size), "Hien thi thanh cong");
+        return new ResponseObject<>(nhaSanXuatService.getNhaSanXuatPagingFalse(page, size), "Hien thi thanh cong");
     }
 
     @GetMapping("/detail/{id}")

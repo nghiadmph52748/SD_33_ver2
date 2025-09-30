@@ -1,5 +1,5 @@
 import axios from 'axios'
-
+import { type PagingResponse, type PagedResponseObject } from '../ResponseObject'
 // ==================== NHÀ SẢN XUẤT ====================
 export interface NhaSanXuat {
   id: number
@@ -11,12 +11,12 @@ export interface NhaSanXuat {
   updateAt?: string
 }
 
-export interface NhaSanXuatResponse {
-  content: NhaSanXuat[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+export interface NhaSanXuatPagingResponse extends PagingResponse {
+  data: NhaSanXuat[]
+}
+
+export interface NhaSanXuatResponse extends PagedResponseObject {
+  data: NhaSanXuatPagingResponse
 }
 
 export function getNhaSanXuatListAll() {

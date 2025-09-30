@@ -27,6 +27,9 @@ import localeUserSetting from '@/views/user/setting/locale/vi-VN'
 import localeSettings from './vi-VN/settings'
 
 export default {
+  'Biến thể sản phẩm': 'Biến thể sản phẩm',
+  'Chi tiết biến thể': 'Chi tiết biến thể',
+  'Chỉnh sửa biến thể': 'Chỉnh sửa biến thể',
   'menu.thong-ke': 'Thống kê',
   'menu.thong-ke.chung': 'Thống kê chung',
   'menu.thong-ke.kho-hang': 'Thống kê kho hàng',

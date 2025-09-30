@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { type PagingResponse, type PagedResponseObject } from '../ResponseObject'
 
 // ==================== MÀU SẮC ====================
 export interface MauSac {
@@ -12,12 +13,12 @@ export interface MauSac {
   updateAt?: string
 }
 
-export interface MauSacResponse {
-  content: MauSac[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+export interface MauSacPagingResponse extends PagingResponse {
+  data: MauSac[]
+}
+
+export interface MauSacResponse extends PagedResponseObject {
+  data: MauSacPagingResponse
 }
 
 export function getMauSacListAll() {

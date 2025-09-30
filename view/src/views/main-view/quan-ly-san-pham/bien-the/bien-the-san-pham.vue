@@ -16,24 +16,21 @@
           </a-col>
           <a-col :span="8">
             <a-form-item label="Nhà sản xuất">
-              <a-select v-model="filters.manufacturer" placeholder="Chọn nhà sản xuất" allow-clear>
+              <a-select v-model="filters.manufacturer" placeholder="Chọn nhà sản xuất" allow-clear @change="performSearch">
                 <a-option value="">Tất cả</a-option>
-                <a-option value="Nike">Nike</a-option>
-                <a-option value="Adidas">Adidas</a-option>
-                <a-option value="Puma">Puma</a-option>
-                <a-option value="Gucci">Gucci</a-option>
+                <a-option v-for="option in manufacturerOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </a-option>
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :span="8">
             <a-form-item label="Xuất xứ">
-              <a-select v-model="filters.origin" placeholder="Chọn xuất xứ" allow-clear>
+              <a-select v-model="filters.origin" placeholder="Chọn xuất xứ" allow-clear @change="performSearch">
                 <a-option value="">Tất cả</a-option>
-                <a-option value="Việt Nam">Việt Nam</a-option>
-                <a-option value="Trung Quốc">Trung Quốc</a-option>
-                <a-option value="Mỹ">Mỹ</a-option>
-                <a-option value="Đức">Đức</a-option>
-                <a-option value="Nhật Bản">Nhật Bản</a-option>
+                <a-option v-for="option in originOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </a-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -43,34 +40,31 @@
           <!-- Row 2: Chất liệu - Đế giày - Trọng lượng -->
           <a-col :span="8">
             <a-form-item label="Chất liệu">
-              <a-select v-model="filters.material" placeholder="Chọn chất liệu" allow-clear>
+              <a-select v-model="filters.material" placeholder="Chọn chất liệu" allow-clear @change="performSearch">
                 <a-option value="">Tất cả</a-option>
-                <a-option value="Da thật">Da thật</a-option>
-                <a-option value="Da tổng hợp">Da tổng hợp</a-option>
-                <a-option value="Vải">Vải</a-option>
-                <a-option value="Nhựa">Nhựa</a-option>
+                <a-option v-for="option in materialOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </a-option>
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :span="8">
             <a-form-item label="Đế giày">
-              <a-select v-model="filters.shoeSole" placeholder="Chọn đế giày" allow-clear>
+              <a-select v-model="filters.shoeSole" placeholder="Chọn đế giày" allow-clear @change="performSearch">
                 <a-option value="">Tất cả</a-option>
-                <a-option value="Đế cao su">Đế cao su</a-option>
-                <a-option value="Đế PU">Đế PU</a-option>
-                <a-option value="Đế EVA">Đế EVA</a-option>
-                <a-option value="Đế TPU">Đế TPU</a-option>
+                <a-option v-for="option in shoeSoleOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </a-option>
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :span="8">
             <a-form-item label="Trọng lượng">
-              <a-select v-model="filters.weight" placeholder="Chọn trọng lượng" allow-clear>
+              <a-select v-model="filters.weight" placeholder="Chọn trọng lượng" allow-clear @change="performSearch">
                 <a-option value="">Tất cả</a-option>
-                <a-option value="0.3">Dưới 0.5kg</a-option>
-                <a-option value="0.5">0.5kg</a-option>
-                <a-option value="0.7">0.7kg</a-option>
-                <a-option value="1.0">Trên 1.0kg</a-option>
+                <a-option v-for="option in weightOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </a-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -80,7 +74,7 @@
           <!-- Row 3: Trạng thái - Khoảng giá -->
           <a-col :span="8">
             <a-form-item label="Trạng thái">
-              <a-radio-group v-model="filters.status" type="button">
+              <a-radio-group v-model="filters.status" type="button" @change="performSearch">
                 <a-radio value="">Tất cả</a-radio>
                 <a-radio value="active">Hoạt động</a-radio>
                 <a-radio value="inactive">Không hoạt động</a-radio>
@@ -131,19 +125,8 @@
     <a-card :title="variantsTableTitle" class="table-card">
       <template #extra>
         <a-space>
-          <a-button v-if="isEditMode && selectedVariants.length === 0" @click="toggleEditMode">
-            <template #icon>
-              <icon-close-circle />
-            </template>
-            Hủy
-          </a-button>
-          <a-button v-if="selectedVariants.length > 0 && isEditMode" type="primary" @click="completeBulkUpdate">
-            <template #icon>
-              <icon-check-circle />
-            </template>
-            Hoàn thành cập nhật
-          </a-button>
-          <a-button v-if="!isEditMode" @click="toggleShowAllVariants">
+          <!-- Edit mode buttons removed -->
+          <a-button @click="toggleShowAllVariants">
             <template #icon>
               <icon-eye />
             </template>
@@ -151,15 +134,6 @@
           </a-button>
         </a-space>
       </template>
-
-      <div v-if="selectedVariants.length > 0 && isEditMode" class="bulk-actions">
-        <a-space>
-          <span>Đã chọn {{ selectedVariants.length }} biến thể:</span>
-          <a-button type="primary" size="small">Lưu thay đổi</a-button>
-          <a-button size="small">Hủy</a-button>
-        </a-space>
-      </div>
-
       <a-table
         :columns="columns"
         :data="variants"
@@ -170,11 +144,8 @@
         :loading="loading"
         size="small"
       >
-        <template #checkbox="{ record }">
-          <a-checkbox
-            :checked="selectedVariants.includes(record.id.toString())"
-            @change="(checked) => onRowSelect(record.id.toString(), checked)"
-          />
+        <template #stt="{ rowIndex }">
+          <div>{{ rowIndex + 1 }}</div>
         </template>
 
         <template #product_image="{ record }">
@@ -188,27 +159,15 @@
         </template>
 
         <template #manufacturer="{ record }">
-          <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">
+          <div>
             {{ record.tenNhaSanXuat }}
           </div>
-          <a-select v-else v-model="record.tenNhaSanXuat" size="small" style="width: 100%" placeholder="Chọn nhà sản xuất">
-            <a-option value="Nike">Nike</a-option>
-            <a-option value="Adidas">Adidas</a-option>
-            <a-option value="Puma">Puma</a-option>
-            <a-option value="Gucci">Gucci</a-option>
-          </a-select>
         </template>
 
         <template #origin="{ record }">
-          <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">
+          <div>
             {{ record.tenXuatXu }}
           </div>
-          <a-select v-else v-model="record.tenXuatXu" size="small" style="width: 100%" placeholder="Chọn xuất xứ">
-            <a-option value="Việt Nam">Việt Nam</a-option>
-            <a-option value="Trung Quốc">Trung Quốc</a-option>
-            <a-option value="Mỹ">Mỹ</a-option>
-            <a-option value="Đức">Đức</a-option>
-          </a-select>
         </template>
 
         <template #attributes="{ record }">
@@ -237,48 +196,42 @@
         </template>
 
         <template #stock="{ record }">
-          <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">{{ record.soLuong }}</div>
-          <a-input-number v-else v-model="record.soLuong" :min="0" size="small" style="width: 80px" :precision="0" />
+          <div>{{ record.soLuong }}</div>
         </template>
 
         <template #discount="{ record }">
-          <div v-if="!isEditMode || !selectedVariants.includes(record.id.toString())">{{ record.giaTriGiamGia || 0 }}%</div>
-          <a-input-number
-            v-else
-            v-model="record.giaTriGiamGia"
-            :min="0"
-            :max="100"
-            size="small"
-            style="width: 80px"
-            :precision="1"
-            suffix="%"
-          />
+          <div>{{ record.giaTriGiamGia || 0 }}%</div>
         </template>
 
         <template #final_price="{ record }">
           <div class="final-price-cell">
-            <div class="final-price">{{ formatCurrency(record.giaBan) }}</div>
+            <div v-if="record.giaTriGiamGia && record.giaTriGiamGia > 0" class="with-discount">
+              <div class="original-price">{{ formatCurrency(record.giaBan) }}</div>
+              <div class="final-price">{{ formatCurrency(record.giaBan * (1 - record.giaTriGiamGia / 100)) }}</div>
+            </div>
+            <div v-else class="final-price">{{ formatCurrency(record.giaBan) }}</div>
           </div>
         </template>
 
         <template #status="{ record }">
-          <a-tag v-if="!isEditMode || !selectedVariants.includes(record.id.toString())" :color="record.trangThai ? 'green' : 'red'">
+          <a-tag :color="record.trangThai ? 'green' : 'red'">
             {{ record.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}
           </a-tag>
-          <a-select v-else v-model="record.trangThai" size="small" style="width: 120px">
-            <a-option :value="true">Đang bán</a-option>
-            <a-option :value="false">Tạm ngưng bán</a-option>
-          </a-select>
         </template>
 
         <template #action="{ record }">
           <a-space>
+            <a-button type="text" @click="viewDetail(record)">
+              <template #icon>
+                <icon-eye />
+              </template>
+            </a-button>
             <a-button type="text" @click="editVariant(record)">
               <template #icon>
                 <icon-edit />
               </template>
             </a-button>
-            <a-button type="text" danger @click="deleteVariant(record)">
+            <a-button type="text" danger @click="onDeleteClick(record)">
               <template #icon>
                 <icon-delete />
               </template>
@@ -287,32 +240,31 @@
         </template>
       </a-table>
     </a-card>
+
+    <!-- Delete Confirm Modal -->
+    <a-modal
+      v-model:visible="showDeleteConfirm"
+      title="Xác nhận xoá"
+      ok-text="Xoá"
+      cancel-text="Huỷ"
+      @ok="confirmDelete"
+      @cancel="cancelDelete"
+    >
+      <template #default>
+        <div>Bạn có chắc chắn muốn xoá biến thể này?</div>
+        <div v-if="variantToDelete">
+          Mã biến thể:
+          <strong>{{ variantToDelete.maChiTietSanPham }}</strong>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { Message } from '@arco-design/web-vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import {
-  getBienTheSanPhamList,
-  getSanPhamOptions,
-  getMauSacOptions,
-  getKichThuocOptions,
-  getChatLieuOptions,
-  getDeGiayOptions,
-  getTrongLuongOptions,
-  type BienTheSanPham,
-  type BienTheResponse,
-  type SanPham,
-  type MauSac,
-  type KichThuoc,
-  type ChatLieu,
-  type DeGiay,
-  type TrongLuong,
-} from '@/api/san-pham/bien-the'
-import useBreadcrumb from '@/hooks/breadcrumb'
+import { useRoute, useRouter } from 'vue-router'
+import { Message, Modal } from '@arco-design/web-vue'
 import {
   IconPlus,
   IconSearch,
@@ -328,14 +280,58 @@ import {
   IconEye,
   IconCheckCircle,
 } from '@arco-design/web-vue/es/icon'
+import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import useBreadcrumb from '@/hooks/breadcrumb'
+import {
+  getSanPhamOptions,
+  getMauSacOptions,
+  getKichThuocOptions,
+  getChatLieuOptions,
+  getDeGiayOptions,
+  getTrongLuongOptions,
+  type BienTheSanPham,
+  type BienTheResponse,
+  type SanPham,
+  type MauSac,
+  type KichThuoc,
+  type ChatLieu,
+  type DeGiay,
+  type TrongLuong,
+} from '@/api/san-pham/bien-the'
 import { getBienTheSanPhamPage } from '../../../../api/san-pham/bien-the'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 
-// Route params
+// Router setup
 const route = useRoute()
+const router = useRouter()
 const productId = computed(() => (route.params.productId ? Number(route.params.productId) : undefined))
+
+// API Data State - cần khai báo sớm cho pageTitle
+const sanPhamOptions = ref<SanPham[]>([])
+
+// Dynamic page title cho tab-bar phân biệt
+const pageTitle = computed(() => {
+  if (productId.value) {
+    const product = sanPhamOptions.value.find((p) => p.id === productId.value)
+    const productName = product ? product.tenSanPham : `Sản phẩm ${productId.value}`
+    return `Biến thể - ${productName}`
+  }
+  return 'Biến thể sản phẩm'
+})
+
+// Cập nhật document title để phân biệt tab
+watch(
+  pageTitle,
+  (newTitle) => {
+    if (typeof document !== 'undefined') {
+      document.title = newTitle
+    }
+  },
+  { immediate: true }
+)
+
 // Filters
 const filters = ref({
   search: '', // Tìm theo tên sản phẩm hoặc SKU
@@ -363,8 +359,7 @@ const bienTheList = ref<BienTheResponse | null>(null)
 const variants = ref<BienTheSanPham[]>([])
 const totalElements = ref(0)
 
-// Options State
-const sanPhamOptions = ref<SanPham[]>([])
+// Options State (tiếp tục từ sanPhamOptions đã khai báo ở trên)
 const mauSacOptions = ref<MauSac[]>([])
 const kichThuocOptions = ref<KichThuoc[]>([])
 const chatLieuOptions = ref<ChatLieu[]>([])
@@ -396,11 +391,17 @@ const shoeSoleOptions = computed(() => {
   return unique.map((name) => ({ value: name, label: name }))
 })
 
+const weightOptions = computed(() => {
+  if (!Array.isArray(variants.value)) return []
+  const unique = [...new Set(variants.value.map((v) => v.tenTrongLuong).filter(Boolean))]
+  return unique.map((name) => ({ value: name, label: name }))
+})
+
 // Computed title for variants table
 // Table
 const loading = ref(false)
 const selectedVariants = ref<string[]>([])
-const isEditMode = ref(false)
+// Edit mode removed
 const showAllVariants = ref(false)
 
 // Store original variants for filtering
@@ -408,47 +409,21 @@ const originalVariants = ref([])
 
 // Computed title for variants table
 const variantsTableTitle = computed(() => {
-  // Determine category name based on current filters
-  let categoryName = 'Tất cả biến thể'
-
-  // If filtering by manufacturer, use manufacturer as category name
-  if (filters.value.manufacturer) {
-    const staticManufacturerOptions = [
-      { value: 'nike', label: 'Nike' },
-      { value: 'adidas', label: 'Adidas' },
-      { value: 'gucci', label: 'Gucci' },
-      { value: 'puma', label: 'Puma' },
-    ]
-    const manufacturer = staticManufacturerOptions.find((m) => m.value === filters.value.manufacturer)
-    if (manufacturer) {
-      categoryName = manufacturer.label
-    }
-  }
-  // If showing all variants explicitly
-  else if (showAllVariants.value) {
-    categoryName = 'Tất cả biến thể'
-  }
-  // If has other active filters but no specific manufacturer
-  else if (
-    filters.value.search ||
-    filters.value.origin ||
-    filters.value.material ||
-    filters.value.shoeSole ||
-    filters.value.weight ||
-    (filters.value.status && filters.value.status !== '') ||
-    (Array.isArray(filters.value.priceRange) && (filters.value.priceRange[0] > 0 || filters.value.priceRange[1] < 5000000))
-  ) {
-    categoryName = 'Biến thể đã lọc'
+  if (productId.value && showAllVariants.value === false) {
+    const product = sanPhamOptions.value.find((p) => p.id === productId.value)
+    const categoryName = product ? product.tenSanPham : `Sản phẩm ${productId.value}`
+    return `Danh sách biến thể - ${categoryName}`
   }
 
-  return `Danh sách biến thể - ${categoryName}`
+  return `Danh sách biến thể - Tất cả sản phẩm`
 })
 
 const columns = [
   {
-    title: '',
-    slotName: 'checkbox',
-    width: 30,
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
+    width: 50,
     align: 'center',
   },
   {
@@ -475,13 +450,13 @@ const columns = [
     title: 'Xuất xứ',
     dataIndex: 'tenXuatXu',
     slotName: 'origin',
-    width: 50,
+    width: 60,
     align: 'center',
   },
   {
     title: 'Thuộc tính sản phẩm',
     slotName: 'attributes',
-    width: 90,
+    width: 120,
   },
   {
     title: 'Số lượng',
@@ -494,26 +469,26 @@ const columns = [
     title: 'Giảm giá (%)',
     dataIndex: 'giaTriGiamGia',
     slotName: 'discount',
-    width: 60,
+    width: 30,
     align: 'center',
   },
   {
     title: 'Giá bán',
     dataIndex: 'giaBan',
     slotName: 'final_price',
-    width: 65,
+    width: 40,
   },
   {
     title: 'Trạng thái',
     dataIndex: 'trangThai',
     slotName: 'status',
-    width: 60,
+    width: 40,
     align: 'center',
   },
   {
     title: 'Thao tác',
     slotName: 'action',
-    width: 60,
+    width: 40,
     align: 'center',
   },
 ]
@@ -528,26 +503,33 @@ const loadBienTheList = async () => {
   try {
     loading.value = true
     const response = await getBienTheSanPhamPage(pagination.value.current - 1, productId.value)
-
-    if (response && response.data) {
+    console.log('Response:', response)
+    if (response.success) {
       // Extract the actual data array from the nested structure
-      const paginationData = response.data
-
-      variants.value = paginationData.data || []
+      const paginationData = response.data.data
+      console.log('Pagination Data:', paginationData)
+      variants.value = paginationData
       totalElements.value = paginationData.totalElements || paginationData.data?.length || 0
+
+      // Update originalVariants for search functionality
+      originalVariants.value = { data: paginationData }
 
       // Update pagination info
       pagination.value.total = paginationData.totalElements || paginationData.data?.length || 0
       pagination.value.current = (paginationData.currentPage || 0) + 1
       pagination.value.pageSize = paginationData.pageSize || 10
     } else {
+      // API response structure unexpected
       variants.value = []
       totalElements.value = 0
+      originalVariants.value = { data: [], totalElements: 0, currentPage: 0, pageSize: 10, totalPages: 0 }
     }
   } catch (error) {
+    // Error loading biến thể
     Message.error('Không thể tải danh sách biến thể sản phẩm')
     variants.value = []
     totalElements.value = 0
+    originalVariants.value = { data: [], totalElements: 0, currentPage: 0, pageSize: 10, totalPages: 0 }
   } finally {
     loading.value = false
   }
@@ -576,11 +558,50 @@ const loadAllOptions = async () => {
   }
 }
 
+// Function để load tất cả variants
+const loadAllVariants = async () => {
+  try {
+    loading.value = true
+    const response = await getBienTheSanPhamPage(pagination.value.current - 1)
+    if (response.success) {
+      const paginationData = response.data.data
+      variants.value = paginationData
+      totalElements.value = paginationData.totalElements || paginationData.data?.length || 0
+
+      // Update originalVariants for search functionality
+      originalVariants.value = { data: paginationData }
+
+      // Update pagination info
+      pagination.value.total = paginationData.totalElements || paginationData.data?.length || 0
+      pagination.value.current = (paginationData.currentPage || 0) + 1
+      pagination.value.pageSize = paginationData.pageSize || 10
+    } else {
+      // All variants API response structure unexpected
+      variants.value = []
+      totalElements.value = 0
+      originalVariants.value = { data: [], totalElements: 0, currentPage: 0, pageSize: 10, totalPages: 0 }
+    }
+  } catch (error) {
+    Message.error('Không thể tải danh sách biến thể sản phẩm')
+    variants.value = []
+    totalElements.value = 0
+    originalVariants.value = { data: [], totalElements: 0, currentPage: 0, pageSize: 10, totalPages: 0 }
+  } finally {
+    loading.value = false
+  }
+}
+
 // Pagination change handler
 const handlePageChange = (page: number, size: number) => {
   pagination.value.current = page
   pagination.value.pageSize = size
-  loadBienTheList()
+
+  // Gọi đúng function dựa trên trạng thái hiện tại
+  if (showAllVariants.value) {
+    loadAllVariants()
+  } else {
+    loadBienTheList()
+  }
 }
 
 // Methods
@@ -611,60 +632,65 @@ const performSearch = () => {
 
   // Frontend search implementation
   setTimeout(() => {
-    let filteredVariants = [...originalVariants.value]
+    // Ensure originalVariants.value.data exists and is an array
+    const sourceData = originalVariants.value?.data || []
+    let filteredVariants = [...sourceData]
 
     // Search by product name or SKU
     if (filters.value.search) {
       const searchTerm = filters.value.search.toLowerCase()
       filteredVariants = filteredVariants.filter(
-        (variant) => variant.product_name.toLowerCase().includes(searchTerm) || variant.sku.toLowerCase().includes(searchTerm)
+        (variant) =>
+          (variant.tenSanPham && variant.tenSanPham.toLowerCase().includes(searchTerm)) ||
+          (variant.maChiTietSanPham && variant.maChiTietSanPham.toLowerCase().includes(searchTerm))
       )
     }
 
     // Filter by manufacturer
     if (filters.value.manufacturer) {
-      filteredVariants = filteredVariants.filter((variant) => variant.manufacturer === filters.value.manufacturer)
+      filteredVariants = filteredVariants.filter((variant) => variant.tenNhaSanXuat === filters.value.manufacturer)
     }
 
     // Filter by origin
     if (filters.value.origin) {
-      filteredVariants = filteredVariants.filter((variant) => variant.origin === filters.value.origin)
+      filteredVariants = filteredVariants.filter((variant) => variant.tenXuatXu === filters.value.origin)
     }
 
     // Filter by material
     if (filters.value.material) {
-      filteredVariants = filteredVariants.filter((variant) => variant.material === filters.value.material)
+      filteredVariants = filteredVariants.filter((variant) => variant.tenChatLieu === filters.value.material)
     }
 
     // Filter by shoe sole
     if (filters.value.shoeSole) {
-      filteredVariants = filteredVariants.filter((variant) => variant.shoeSole === filters.value.shoeSole)
+      filteredVariants = filteredVariants.filter((variant) => variant.tenDeGiay === filters.value.shoeSole)
     }
 
     // Filter by weight
     if (filters.value.weight) {
-      filteredVariants = filteredVariants.filter((variant) => {
-        const weight = parseFloat(variant.weight)
-        if (filters.value.weight === '0.3') return weight < 0.5
-        if (filters.value.weight === '0.5') return weight >= 0.5 && weight < 0.7
-        if (filters.value.weight === '0.7') return weight >= 0.7 && weight < 1.0
-        if (filters.value.weight === '1.0') return weight >= 1.0
-        return true
-      })
+      filteredVariants = filteredVariants.filter((variant) => variant.tenTrongLuong === filters.value.weight)
     }
 
     // Filter by price range (slider: [min, max])
     if (filters.value.priceRange && Array.isArray(filters.value.priceRange)) {
       const [minPrice, maxPrice] = filters.value.priceRange
       filteredVariants = filteredVariants.filter((variant) => {
-        const { price } = variant
+        const price = variant.giaBan || 0
         return price >= minPrice && price <= maxPrice
       })
     }
 
     // Filter by status (only filter if not "Tất cả")
     if (filters.value.status && filters.value.status !== '') {
-      filteredVariants = filteredVariants.filter((variant) => variant.status === filters.value.status)
+      filteredVariants = filteredVariants.filter((variant) => {
+        if (filters.value.status === 'active') {
+          return variant.trangThai === true
+        }
+        if (filters.value.status === 'inactive') {
+          return variant.trangThai === false
+        }
+        return true
+      })
     }
 
     // Update displayed variants
@@ -700,11 +726,11 @@ const resetFilters = () => {
   }
 
   // Reset to show all variants
-  variants.value = [...originalVariants.value]
+  const sourceData = originalVariants.value?.data || []
+  variants.value = [...sourceData]
 }
 
 const exportExcel = () => {
-  // Removed console.log
   // Implement Excel export logic
 }
 
@@ -713,12 +739,7 @@ const completeBulkUpdate = () => {
   // This would save all changes made to selected variants
 
   // Reset edit mode and selections
-  isEditMode.value = false
   selectedVariants.value = []
-}
-
-const showCreateModal = () => {
-  // Removed console.log
 }
 
 // Selection methods
@@ -739,32 +760,55 @@ const onRowSelect = (id: string, checked: boolean) => {
   }
 }
 
-// Edit mode methods
-const toggleEditMode = () => {
-  isEditMode.value = !isEditMode.value
-  if (!isEditMode.value) {
-    selectedVariants.value = []
+// Edit mode removed
+
+const toggleShowAllVariants = async () => {
+  showAllVariants.value = !showAllVariants.value
+
+  // Reset về trang đầu khi toggle
+  pagination.value.current = 1
+
+  if (showAllVariants.value) {
+    // Lấy tất cả biến thể
+    await loadAllVariants()
+  } else {
+    // Lấy biến thể của sản phẩm cụ thể
+    await loadBienTheList()
   }
 }
 
-const toggleShowAllVariants = () => {
-  showAllVariants.value = !showAllVariants.value
-  if (showAllVariants.value) {
-    // Hiển thị tất cả variants
-    variants.value = [...originalVariants.value]
-  } else {
-    // Hiển thị variants đã filter
-    performSearch()
-  }
+const viewDetail = (variant: any) => {
+  router.push(`/quan-ly-san-pham/bien-the/detail/${variant.id}`)
 }
 
 const editVariant = (variant: any) => {
-  // Removed console.log
+  router.push(`/quan-ly-san-pham/bien-the/update/${variant.id}`)
 }
 
-const deleteVariant = (variant: any) => {
-  // Removed console.log
+const deleteVariant = async (variant: any) => {
   // Implement delete logic
+}
+
+// Delete confirm modal state
+const showDeleteConfirm = ref(false)
+const variantToDelete = ref(null)
+
+const onDeleteClick = (variant) => {
+  variantToDelete.value = variant
+  showDeleteConfirm.value = true
+}
+
+const confirmDelete = async () => {
+  if (variantToDelete.value) {
+    await deleteVariant(variantToDelete.value)
+    showDeleteConfirm.value = false
+    variantToDelete.value = null
+  }
+}
+
+const cancelDelete = () => {
+  showDeleteConfirm.value = false
+  variantToDelete.value = null
 }
 
 // Watch for filter changes (excluding search which is handled by onSearchInput)
@@ -789,11 +833,29 @@ onMounted(() => {
   loadBienTheList()
 })
 
+// Watch for productId changes (khi nhấn xem biến thể từ danh mục sản phẩm)
+watch(
+  () => productId.value,
+  (newProductId, oldProductId) => {
+    if (newProductId !== oldProductId) {
+      // Reset pagination khi chuyển sản phẩm
+      pagination.value.current = 1
+      showAllVariants.value = false // Đảm bảo hiển thị biến thể của sản phẩm cụ thể
+      loadBienTheList()
+    }
+  },
+  { immediate: false }
+)
+
 // Watch for filter changes to reload data
 watch(
   () => pagination.value.current,
   () => {
-    loadBienTheList()
+    if (showAllVariants.value) {
+      loadAllVariants()
+    } else {
+      loadBienTheList()
+    }
   }
 )
 </script>
@@ -930,9 +992,21 @@ watch(
   gap: 2px;
 }
 
+.with-discount .original-price {
+  font-size: 12px;
+  color: #86909c;
+  text-decoration: line-through;
+  font-weight: 400;
+}
+
 .final-price {
   font-weight: 500;
   color: #1d2129;
+}
+
+.with-discount .final-price {
+  color: #f53f3f;
+  font-weight: 600;
 }
 
 .original-price {
@@ -953,32 +1027,7 @@ watch(
   border-color: #d9d9d9;
 }
 
-/* Custom table styles với padding giảm */
 :deep(.arco-table-td) {
-  padding: 5px 8px !important;
-}
-
-:deep(.arco-table-th) {
-  padding: 5px 8px !important;
-}
-
-:deep(.arco-table-cell) {
-  line-height: 1.4;
-}
-
-/* Giảm padding-x cho table size small */
-:deep(.arco-table-size-small .arco-table-cell) {
-  padding-left: 6px !important;
-  padding-right: 6px !important;
-}
-
-/* Đảm bảo table không có horizontal scroll */
-:deep(.arco-table-container) {
-  width: 100% !important;
-}
-
-:deep(.arco-table) {
-  width: 100% !important;
-  table-layout: auto !important;
+  word-break: normal;
 }
 </style>

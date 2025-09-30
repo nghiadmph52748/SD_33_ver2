@@ -100,29 +100,8 @@
 
       <div v-else class="images-list">
         <a-table :columns="listColumns" :data="filteredImages" :pagination="pagination" :loading="loading" size="middle">
-          <template #checkbox="{ record }">
-            <a-checkbox
-              :checked="isRowSelected(record.id)"
-              @change="
-                (checked) => {
-                  if (checked) {
-                    const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                    if (!currentKeys.includes(record.id)) {
-                      selectedRowKeys.value = [...currentKeys, record.id]
-                    }
-                    if (!editingData.value) editingData.value = {}
-                    editingData.value[record.id] = {
-                      name: record.name,
-                      folder: record.folder,
-                    }
-                  } else {
-                    const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                    selectedRowKeys.value = currentKeys.filter((id) => id !== record.id)
-                    delete editingData.value[record.id]
-                  }
-                }
-              "
-            />
+          <template #stt="{ rowIndex }">
+            <div>{{ rowIndex + 1 }}</div>
           </template>
 
           <template #preview="{ record }">
@@ -130,20 +109,7 @@
           </template>
 
           <template #name="{ record }">
-            <div v-if="isRowSelected(record.id)">
-              <a-input
-                :model-value="editingData.value[record.id]?.name || record.name"
-                @update:model-value="
-                  (value) => {
-                    if (!editingData.value) editingData.value = {}
-                    editingData.value[record.id] = { ...(editingData.value[record.id] || {}), name: value }
-                  }
-                "
-                size="mini"
-                style="width: 200px"
-              />
-            </div>
-            <span v-else>{{ record.name }}</span>
+            <span>{{ record.name }}</span>
           </template>
 
           <template #status="{ record }">
@@ -160,30 +126,6 @@
                 </template>
               </a-button>
             </a-space>
-          </template>
-
-          <template #checkbox-title>
-            <a-checkbox
-              :checked="selectedCount === filteredImages.length && filteredImages.length > 0"
-              :indeterminate="selectedCount > 0 && selectedCount < filteredImages.length"
-              @change="
-                (checked) => {
-                  if (checked) {
-                    selectedRowKeys.value = [...filteredImages.map((img) => img.id)]
-                    if (!editingData.value) editingData.value = {}
-                    filteredImages.forEach((image) => {
-                      editingData.value[image.id] = {
-                        name: image.name,
-                        folder: image.folder,
-                      }
-                    })
-                  } else {
-                    selectedRowKeys.value = []
-                    editingData.value = {}
-                  }
-                }
-              "
-            />
           </template>
         </a-table>
       </div>
@@ -234,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
@@ -268,10 +210,6 @@ const previewVisible = ref(false)
 const uploadVisible = ref(false)
 const selectedImage = ref(null)
 const fileList = ref([])
-
-// Edit inline mode state
-const selectedRowKeys = ref<number[]>([])
-const editingData = ref<Record<number, { name: string; folder: string }>>({})
 
 // Mock data
 const images = ref([
@@ -307,13 +245,6 @@ const images = ref([
   },
 ])
 
-// Computed properties for safe access
-const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
-const isRowSelected = (id: number) => {
-  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  return keys.includes(id)
-}
-
 // Filtered images computed property
 const filteredImages = computed(() => {
   return images.value.filter((image) => {
@@ -343,12 +274,11 @@ const uploadForm = reactive({
 
 const listColumns = [
   {
-    title: '',
-    dataIndex: 'checkbox',
-    slotName: 'checkbox',
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
     width: 50,
     align: 'center',
-    titleSlotName: 'checkbox-title',
   },
   {
     title: 'Ảnh',
@@ -502,12 +432,6 @@ const beforeUpload = (file: File) => {
   }
   return false
 }
-
-onMounted(() => {
-  // Ensure reactive state is properly initialized
-  selectedRowKeys.value = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  editingData.value = editingData.value && typeof editingData.value === 'object' ? editingData.value : {}
-})
 </script>
 
 <style scoped>

@@ -51,50 +51,36 @@
 
     <!-- Materials Table -->
     <a-card title="Danh sách chất liệu" class="table-card">
-      <a-table :columns="columns" :data="materials" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
-        <template #checkbox="{ record }">
-          <a-checkbox
-            :checked="isRowSelected(record.id)"
-            @change="
-              (checked) => {
-                if (checked) {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = [...currentKeys, record.id]
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = {
-                    code: record.code,
-                    name: record.name,
-                    status: record.is_active,
-                  }
-                } else {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = currentKeys.filter((key) => key !== record.id)
-                  if (editingData.value && editingData.value[record.id]) {
-                    delete editingData.value[record.id]
-                  }
-                }
-              }
-            "
-          />
+      <a-table
+        :columns="columns"
+        :data="materials"
+        :pagination="pagination"
+        :loading="loading"
+        :scroll="{ x: 1000 }"
+        @page-change="getChatLieuPage($event - 1)"
+        @page-size-change="
+          (size) => {
+            pagination.pageSize = size
+            getChatLieuPage(0)
+          }
+        "
+        row-key="id"
+      >
+        <template #stt="{ record, rowIndex }">
+          <span>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</span>
         </template>
 
         <template #code="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].code" size="mini" style="width: 80px" />
-          </div>
-          <span v-else>{{ record.code }}</span>
+          <span>{{ record.maChatLieu || 'N/A' }}</span>
         </template>
 
         <template #name="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].name" size="mini" style="width: 100px" />
-          </div>
-          <span v-else>{{ record.name }}</span>
+          <span>{{ record.tenChatLieu }}</span>
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.is_active ? 'green' : 'red'">
-            {{ record.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+          <a-tag :color="record.trangThai ? 'green' : 'red'">
+            {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
 
@@ -117,33 +103,84 @@
             </a-button>
           </a-space>
         </template>
-
-        <template #checkbox-title>
-          <a-checkbox
-            :checked="selectedCount === materials.length && materials.length > 0"
-            :indeterminate="selectedCount > 0 && selectedCount < materials.length"
-            @change="
-              (checked) => {
-                if (checked) {
-                  selectedRowKeys.value = [...materials.map((material) => material.id)]
-                  if (!editingData.value) editingData.value = {}
-                  materials.forEach((material) => {
-                    editingData.value[material.id] = {
-                      code: material.code,
-                      name: material.name,
-                      status: material.is_active,
-                    }
-                  })
-                } else {
-                  selectedRowKeys.value = []
-                  editingData.value = {}
-                }
-              }
-            "
-          />
-        </template>
       </a-table>
     </a-card>
+
+    <!-- Add Material Modal -->
+    <a-modal
+      v-model:visible="addModalVisible"
+      title="Thêm chất liệu"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeAddModal"
+      @ok="confirmAddMaterial"
+    >
+      <a-form :model="materialForm" :rules="formRules" layout="vertical" ref="addFormRef">
+        <a-form-item label="Tên chất liệu" field="tenChatLieu" required>
+          <a-input v-model="materialForm.tenChatLieu" placeholder="Nhập tên chất liệu" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- Detail Material Modal -->
+    <a-modal
+      v-model:visible="detailModalVisible"
+      title="Chi tiết chất liệu"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeDetailModal"
+      @ok="closeDetailModal"
+      ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }"
+    >
+      <a-descriptions :column="1" size="small">
+        <a-descriptions-item label="Mã chất liệu">{{ selectedMaterial?.maChatLieu }}</a-descriptions-item>
+        <a-descriptions-item label="Tên chất liệu">{{ selectedMaterial?.tenChatLieu }}</a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="selectedMaterial?.trangThai ? 'green' : 'red'">
+            {{ selectedMaterial?.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+          </a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
+
+    <!-- Update Material Modal -->
+    <a-modal
+      v-model:visible="updateModalVisible"
+      title="Cập nhật chất liệu"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeUpdateModal"
+      @ok="confirmUpdateMaterial"
+    >
+      <a-form :model="materialForm" :rules="formRules" layout="vertical" ref="updateFormRef">
+        <a-form-item label="Tên chất liệu" field="tenChatLieu" required>
+          <a-input v-model="materialForm.tenChatLieu" placeholder="Nhập tên chất liệu" />
+        </a-form-item>
+        <a-form-item label="Trạng thái" field="trangThai" required>
+          <a-radio-group v-model="materialForm.trangThai" type="button">
+            <a-radio :value="true">Hoạt động</a-radio>
+            <a-radio :value="false">Không hoạt động</a-radio>
+          </a-radio-group>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- Confirmation Modal -->
+    <a-modal
+      v-model:visible="confirmModalVisible"
+      title="Xác nhận"
+      width="400px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="cancelConfirm"
+      @ok="executeConfirmedAction"
+    >
+      <p>{{ confirmMessage }}</p>
+    </a-modal>
   </div>
 </template>
 
@@ -164,10 +201,12 @@ import {
   IconDelete,
   IconRefresh,
 } from '@arco-design/web-vue/es/icon'
+import { useUserStore } from '@/store'
+import { createChatLieu, getChatLieuList, updateChatLieu, deleteChatLieu } from '../../../../../api/san-pham/thuoc-tinh/chat-lieu'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
-
+const userStore = useUserStore()
 // Filters
 const filters = ref({
   search: '',
@@ -176,33 +215,58 @@ const filters = ref({
   sort: 'newest',
 })
 
-// Edit inline mode state
-const selectedRowKeys = ref<number[]>([])
-const editingData = ref<Record<number, { code: string; name: string; status: boolean }>>({})
+// Data
+const materials = ref([])
 
-// Computed properties for safe access
-const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
-const isRowSelected = (id: number) => {
-  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  return keys.includes(id)
+// Modal states
+const addModalVisible = ref(false)
+const detailModalVisible = ref(false)
+const updateModalVisible = ref(false)
+const confirmModalVisible = ref(false)
+
+// Form refs
+const addFormRef = ref()
+const updateFormRef = ref()
+
+// Selected material for detail/update
+const selectedMaterial = ref(null)
+
+// Material form data
+const materialForm = reactive({
+  tenChatLieu: '',
+  trangThai: true,
+})
+
+// Form validation rules
+const formRules = {
+  tenChatLieu: [
+    { required: true, message: 'Vui lòng nhập tên chất liệu' },
+    { min: 2, message: 'Tên chất liệu phải có ít nhất 2 ký tự' },
+  ],
+  trangThai: [{ required: true, message: 'Vui lòng chọn trạng thái' }],
 }
+
+// Confirmation modal
+const confirmMessage = ref('')
+const confirmAction = ref(null)
+
+// Computed properties for safe access removed
 
 // Table
 const loading = ref(false)
 const columns = [
   {
-    title: '',
-    dataIndex: 'checkbox',
-    slotName: 'checkbox',
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
     width: 50,
     align: 'center',
-    titleSlotName: 'checkbox-title',
   },
   {
     title: 'Mã chất liệu',
     dataIndex: 'code',
-    width: 100,
     slotName: 'code',
+    width: 100,
   },
   {
     title: 'Tên chất liệu',
@@ -230,71 +294,11 @@ const columns = [
 const pagination = ref({
   current: 1,
   pageSize: 10,
-  total: 5,
+  total: 3,
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: true,
 })
-
-// Mock data
-
-const materials = ref([
-  {
-    id: 1,
-    code: 'CL001',
-    name: 'Da thật',
-    type: 'natural',
-    eco_friendly: true,
-    products_count: 25,
-    is_active: true,
-    created_at: '2024-01-15',
-    description: 'Chất liệu da thật cao cấp',
-  },
-  {
-    id: 2,
-    code: 'CL002',
-    name: 'Da tổng hợp',
-    type: 'synthetic',
-    eco_friendly: false,
-    products_count: 40,
-    is_active: true,
-    created_at: '2024-01-16',
-    description: 'Chất liệu da PU bền đẹp',
-  },
-  {
-    id: 3,
-    code: 'CL003',
-    name: 'Vải canvas',
-    type: 'natural',
-    eco_friendly: true,
-    products_count: 30,
-    is_active: true,
-    created_at: '2024-01-17',
-    description: 'Vải canvas organic thân thiện môi trường',
-  },
-  {
-    id: 4,
-    code: 'CL004',
-    name: 'Nhựa tái chế',
-    type: 'recycled',
-    eco_friendly: true,
-    products_count: 15,
-    is_active: true,
-    created_at: '2024-01-18',
-    description: 'Nhựa tái chế từ chai nhựa',
-  },
-  {
-    id: 5,
-    code: 'CL005',
-    name: 'Vải polyester',
-    type: 'synthetic',
-    eco_friendly: false,
-    products_count: 20,
-    is_active: false,
-    created_at: '2024-01-19',
-    description: 'Vải tổng hợp bền màu',
-  },
-])
 
 // Methods
 const resetFilters = () => {
@@ -311,19 +315,156 @@ const searchMaterials = () => {
   console.log('Searching materials with filters:', filters.value)
 }
 
+const showCreateModal = () => {
+  materialForm.tenChatLieu = ''
+  materialForm.trangThai = true
+  addModalVisible.value = true
+}
+
+const closeAddModal = () => {
+  addModalVisible.value = false
+  addFormRef.value?.resetFields()
+}
+
+const confirmAddMaterial = () => {
+  addFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn thêm chất liệu này?'
+      confirmAction.value = 'add'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
+}
+
 const viewMaterial = (material: any) => {
-  // TODO: Implement view material details functionality
-  console.log('View material details:', material)
+  selectedMaterial.value = material
+  detailModalVisible.value = true
+}
+
+const closeDetailModal = () => {
+  detailModalVisible.value = false
+  selectedMaterial.value = null
 }
 
 const editMaterial = (material: any) => {
-  // TODO: Implement edit material functionality
-  console.log('Edit material:', material)
+  selectedMaterial.value = material
+  materialForm.tenChatLieu = material.tenChatLieu
+  materialForm.trangThai = material.trangThai
+  updateModalVisible.value = true
+}
+
+const closeUpdateModal = () => {
+  updateModalVisible.value = false
+  updateFormRef.value?.resetFields()
+  selectedMaterial.value = null
+}
+
+const confirmUpdateMaterial = () => {
+  updateFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn cập nhật chất liệu này?'
+      confirmAction.value = 'update'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const deleteMaterial = (material: any) => {
-  // TODO: Implement delete material functionality
-  console.log('Delete material:', material)
+  selectedMaterial.value = material
+  confirmMessage.value = 'Bạn có chắc chắn muốn xóa chất liệu này?'
+  confirmAction.value = 'delete'
+  confirmModalVisible.value = true
+}
+
+const cancelConfirm = () => {
+  confirmModalVisible.value = false
+  confirmMessage.value = ''
+  confirmAction.value = null
+}
+
+const getChatLieuPage = async (page) => {
+  try {
+    loading.value = true
+    const res = await getChatLieuList(page)
+    if (res.success) {
+      materials.value = res.data.data
+      console.log('Fetched materials:', materials.value)
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
+    } else {
+      console.error('Failed to fetch materials:', res.message)
+      materials.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch materials:', error)
+    materials.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+const executeConfirmedAction = async () => {
+  try {
+    if (confirmAction.value === 'add') {
+      // TODO: Implement add API call
+      const data = {
+        tenChatLieu: materialForm.tenChatLieu,
+        trangThai: true,
+        deleted: false,
+        createAt: new Date().toISOString().split('T')[0],
+        createBy: userStore.id,
+      }
+      console.log('Adding material:', data)
+      await createChatLieu(data)
+      closeAddModal()
+      // Refresh data
+      getChatLieuPage(0)
+    } else if (confirmAction.value === 'update') {
+      // TODO: Implement update API call
+      const data = {
+        tenChatLieu: materialForm.tenChatLieu,
+        trangThai: materialForm.trangThai,
+        deleted: selectedMaterial.value.deleted,
+        createAt: selectedMaterial.value.createAt,
+        createBy: selectedMaterial.value.createBy,
+        updateAt: new Date().toISOString().split('T')[0],
+        updateBy: userStore.id,
+      }
+      console.log('Updating material:', selectedMaterial.value.id, data)
+      await updateChatLieu(selectedMaterial.value.id, data)
+      closeUpdateModal()
+      // Refresh data
+      getChatLieuPage(0)
+    } else if (confirmAction.value === 'delete') {
+      // TODO: Implement delete API call
+      console.log('Deleting material:', selectedMaterial.value.id)
+      await deleteChatLieu(selectedMaterial.value.id)
+      // Refresh data
+      getChatLieuPage(0)
+    }
+  } catch (error) {
+    console.error('API call failed:', error)
+  } finally {
+    confirmModalVisible.value = false
+    confirmMessage.value = ''
+    confirmAction.value = null
+  }
+}
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('vi-VN')
 }
 
 const exportMaterials = () => {
@@ -331,14 +472,8 @@ const exportMaterials = () => {
   console.log('Exporting materials to Excel...')
 }
 
-const showCreateModal = () => {
-  // TODO: Implement create material modal
-  console.log('Show create material modal')
-}
-
 onMounted(() => {
-  // TODO: Load initial data
-  console.log('Materials page mounted')
+  getChatLieuPage(0)
 })
 </script>
 

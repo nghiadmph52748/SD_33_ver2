@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { type PagingResponse, type PagedResponseObject } from '../ResponseObject'
 
 // ==================== KÍCH THƯỚC ====================
 export interface KichThuoc {
@@ -11,12 +12,12 @@ export interface KichThuoc {
   updateAt?: string
 }
 
-export interface KichThuocResponse {
-  content: KichThuoc[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+export interface KichThuocPagingResponse extends PagingResponse {
+  data: KichThuoc[]
+}
+
+export interface KichThuocResponse extends PagedResponseObject {
+  data: KichThuocPagingResponse
 }
 
 export function getKichThuocListAll() {

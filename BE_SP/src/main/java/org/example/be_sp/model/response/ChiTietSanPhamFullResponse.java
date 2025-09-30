@@ -1,6 +1,7 @@
 package org.example.be_sp.model.response;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,6 +18,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ChiTietSanPhamFullResponse {
+
     private Integer id;
     private String maChiTietSanPham;
     private String tenSanPham;
@@ -34,6 +36,12 @@ public class ChiTietSanPhamFullResponse {
     private String tenDotGiamGia;
     private Integer giaTriGiamGia;
     private Boolean trangThai;
+    private String ghiChu;
+    private Boolean deleted;
+    private LocalDate createdAt;
+    private Integer createdBy;
+    private LocalDate updatedAt;
+    private Integer updatedBy;
 
     public ChiTietSanPhamFullResponse(ChiTietSanPham s) {
         this.id = s.getId();
@@ -46,7 +54,7 @@ public class ChiTietSanPhamFullResponse {
         if (s.getChiTietSanPhamAnhs() != null) {
             this.anhSanPham = s.getChiTietSanPhamAnhs().stream()
                     .filter(anh -> anh != null && anh.getIdAnhSanPham() != null
-                            && Boolean.TRUE.equals(anh.getTrangThai()) && Boolean.FALSE.equals(anh.getDeleted()))
+                    && Boolean.TRUE.equals(anh.getTrangThai()) && Boolean.FALSE.equals(anh.getDeleted()))
                     .map(anh -> anh.getIdAnhSanPham().getDuongDanAnh())
                     .filter(duongDan -> duongDan != null)
                     .collect(Collectors.toList());
@@ -94,14 +102,14 @@ public class ChiTietSanPhamFullResponse {
         if (s.getChiTietDotGiamGias() != null) {
             this.tenDotGiamGia = s.getChiTietDotGiamGias().stream()
                     .filter(ct -> ct != null && ct.getIdDotGiamGia() != null && Boolean.FALSE.equals(ct.getDeleted())
-                            && Boolean.TRUE.equals(ct.getTrangThai()))
+                    && Boolean.TRUE.equals(ct.getTrangThai()))
                     .map(ct -> ct.getIdDotGiamGia().getTenDotGiamGia())
                     .filter(ten -> ten != null)
                     .findFirst()
                     .orElse(null);
             this.giaTriGiamGia = s.getChiTietDotGiamGias().stream()
                     .filter(ct -> ct != null && ct.getIdDotGiamGia() != null && Boolean.FALSE.equals(ct.getDeleted())
-                            && Boolean.TRUE.equals(ct.getTrangThai()))
+                    && Boolean.TRUE.equals(ct.getTrangThai()))
                     .map(ct -> ct.getIdDotGiamGia().getGiaTriGiamGia())
                     .filter(giaTri -> giaTri != null)
                     .findFirst()
@@ -113,7 +121,7 @@ public class ChiTietSanPhamFullResponse {
         if (s.getChiTietDotGiamGias() != null) {
             this.idDotGiamGia = s.getChiTietDotGiamGias().stream()
                     .filter(ct -> ct != null && ct.getIdDotGiamGia() != null && Boolean.FALSE.equals(ct.getDeleted())
-                            && Boolean.TRUE.equals(ct.getTrangThai()))
+                    && Boolean.TRUE.equals(ct.getTrangThai()))
                     .map(ct -> ct.getIdDotGiamGia().getId())
                     .filter(id -> id != null)
                     .findFirst()
@@ -121,5 +129,11 @@ public class ChiTietSanPhamFullResponse {
         } else {
             this.idDotGiamGia = null;
         }
+        this.ghiChu = s.getGhiChu();
+        this.deleted = s.getDeleted();
+        this.createdAt = s.getCreateAt();
+        this.createdBy = s.getCreateBy();
+        this.updatedAt = s.getUpdateAt();
+        this.updatedBy = s.getUpdateBy();
     }
 }

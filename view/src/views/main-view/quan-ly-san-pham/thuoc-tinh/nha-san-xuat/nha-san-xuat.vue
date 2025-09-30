@@ -57,54 +57,21 @@
     <!-- Manufacturers Table -->
     <a-card title="Danh sách nhà sản xuất" class="table-card">
       <a-table :columns="columns" :data="manufacturers" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
-        <template #checkbox="{ record }">
-          <a-checkbox
-            :checked="isRowSelected(record.id)"
-            @change="
-              (checked) => {
-                if (checked) {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = [...currentKeys, record.id]
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = {
-                    code: record.code,
-                    name: record.name,
-                    products_count: record.products_count,
-                    status: record.is_active,
-                  }
-                } else {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = currentKeys.filter((key) => key !== record.id)
-                  if (editingData.value && editingData.value[record.id]) {
-                    delete editingData.value[record.id]
-                  }
-                }
-              }
-            "
-          />
+        <template #stt="{ rowIndex }">
+          <div>{{ rowIndex + 1 }}</div>
         </template>
 
         <template #code="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].code" size="mini" style="width: 120px" />
-          </div>
-          <span v-else>{{ record.code }}</span>
+          <span>{{ record.maNhaSanXuat }}</span>
         </template>
 
         <template #name="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].name" size="mini" style="width: 180px" />
-          </div>
-          <span v-else>{{ record.name }}</span>
-        </template>
-
-        <template #products_count="{ record }">
-          <span>{{ record.products_count }}</span>
+          <span>{{ record.tenNhaSanXuat }}</span>
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.is_active ? 'green' : 'red'">
-            {{ record.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+          <a-tag :color="record.trangThai ? 'green' : 'red'">
+            {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
 
@@ -127,34 +94,85 @@
             </a-button>
           </a-space>
         </template>
-
-        <template #checkbox-title>
-          <a-checkbox
-            :checked="selectedCount === manufacturers.length && manufacturers.length > 0"
-            :indeterminate="selectedCount > 0 && selectedCount < manufacturers.length"
-            @change="
-              (checked) => {
-                if (checked) {
-                  selectedRowKeys.value = [...manufacturers.map((manufacturer) => manufacturer.id)]
-                  if (!editingData.value) editingData.value = {}
-                  manufacturers.forEach((manufacturer) => {
-                    editingData.value[manufacturer.id] = {
-                      code: manufacturer.code,
-                      name: manufacturer.name,
-                      products_count: manufacturer.products_count,
-                      status: manufacturer.is_active,
-                    }
-                  })
-                } else {
-                  selectedRowKeys.value = []
-                  editingData.value = {}
-                }
-              }
-            "
-          />
-        </template>
       </a-table>
     </a-card>
+
+    <!-- Add Manufacturer Modal -->
+    <a-modal
+      v-model:visible="addModalVisible"
+      title="Thêm nhà sản xuất"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeAddModal"
+      @ok="confirmAddManufacturer"
+    >
+      <a-form :model="manufacturerForm" :rules="formRules" layout="vertical" ref="addFormRef">
+        <a-form-item label="Tên nhà sản xuất" field="tenNhaSanXuat" required>
+          <a-input v-model="manufacturerForm.tenNhaSanXuat" placeholder="Nhập tên nhà sản xuất" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- Detail Manufacturer Modal -->
+    <a-modal
+      v-model:visible="detailModalVisible"
+      title="Chi tiết nhà sản xuất"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeDetailModal"
+      @ok="closeDetailModal"
+      ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }"
+    >
+      <a-descriptions :column="1" size="small">
+        <a-descriptions-item label="Mã nhà sản xuất">{{ selectedManufacturer?.maNhaSanXuat }}</a-descriptions-item>
+        <a-descriptions-item label="Tên nhà sản xuất">{{ selectedManufacturer?.tenNhaSanXuat }}</a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="selectedManufacturer?.trangThai ? 'green' : 'red'">
+            {{ selectedManufacturer?.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+          </a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
+
+    <!-- Update Manufacturer Modal -->
+    <a-modal
+      v-model:visible="updateModalVisible"
+      title="Cập nhật nhà sản xuất"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeUpdateModal"
+      @ok="confirmUpdateManufacturer"
+    >
+      <a-form :model="manufacturerForm" :rules="formRules" layout="vertical" ref="updateFormRef">
+        <a-form-item label="Tên nhà sản xuất" field="tenNhaSanXuat" required>
+          <a-input v-model="manufacturerForm.tenNhaSanXuat" placeholder="Nhập tên nhà sản xuất" />
+        </a-form-item>
+
+        <a-form-item label="Trạng thái" field="trangThai" required>
+          <a-radio-group v-model="manufacturerForm.trangThai" type="button">
+            <a-radio :value="true">Hoạt động</a-radio>
+            <a-radio :value="false">Không hoạt động</a-radio>
+          </a-radio-group>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- Confirmation Modal -->
+    <a-modal
+      v-model:visible="confirmModalVisible"
+      title="Xác nhận"
+      width="400px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="cancelConfirm"
+      @ok="executeConfirmedAction"
+    >
+      <p>{{ confirmMessage }}</p>
+    </a-modal>
   </div>
 </template>
 
@@ -175,10 +193,17 @@ import {
   IconDelete,
   IconRefresh,
 } from '@arco-design/web-vue/es/icon'
+import { useUserStore } from '@/store'
+import {
+  createNhaSanXuat,
+  getNhaSanXuatList,
+  updateNhaSanXuat,
+  deleteNhaSanXuat,
+} from '../../../../../api/san-pham/thuoc-tinh/nha-san-xuat'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
-
+const userStore = useUserStore()
 // Filters
 const filters = ref({
   search: '',
@@ -187,46 +212,64 @@ const filters = ref({
   sort: 'newest',
 })
 
-// Edit inline mode state
-const selectedRowKeys = ref<number[]>([])
-const editingData = ref<Record<number, { code: string; name: string; products_count: number; status: boolean }>>({})
+// Data
+const manufacturers = ref([])
 
-// Computed properties for safe access
-const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
-const isRowSelected = (id: number) => {
-  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  return keys.includes(id)
+// Modal states
+const addModalVisible = ref(false)
+const detailModalVisible = ref(false)
+const updateModalVisible = ref(false)
+const confirmModalVisible = ref(false)
+
+// Form refs
+const addFormRef = ref()
+const updateFormRef = ref()
+
+// Selected manufacturer for detail/update
+const selectedManufacturer = ref(null)
+
+// Manufacturer form data
+const manufacturerForm = reactive({
+  tenNhaSanXuat: '',
+  trangThai: true,
+})
+
+// Form validation rules
+const formRules = {
+  tenNhaSanXuat: [
+    { required: true, message: 'Vui lòng nhập tên nhà sản xuất' },
+    { min: 2, message: 'Tên nhà sản xuất phải có ít nhất 2 ký tự' },
+  ],
+  trangThai: [{ required: true, message: 'Vui lòng chọn trạng thái' }],
 }
+
+// Confirmation modal
+const confirmMessage = ref('')
+const confirmAction = ref(null)
+
+// Computed properties for safe access removed
 
 // Table
 const loading = ref(false)
 const columns = [
   {
-    title: '',
-    dataIndex: 'checkbox',
-    slotName: 'checkbox',
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
     width: 50,
     align: 'center',
-    titleSlotName: 'checkbox-title',
   },
   {
     title: 'Mã nhà sản xuất',
     dataIndex: 'code',
-    width: 100,
     slotName: 'code',
+    width: 100,
   },
   {
     title: 'Tên nhà sản xuất',
     dataIndex: 'name',
     width: 100,
     slotName: 'name',
-  },
-  {
-    title: 'Số lượng sản phẩm',
-    dataIndex: 'products_count',
-    width: 100,
-    align: 'center',
-    slotName: 'products_count',
   },
   {
     title: 'Trạng thái',
@@ -253,41 +296,6 @@ const pagination = ref({
   showQuickJumper: true,
   showTotal: true,
 })
-
-// Mock data
-
-const manufacturers = ref([
-  {
-    id: 1,
-    code: 'NSX001',
-    name: 'Nike',
-    logo: 'https://via.placeholder.com/40x40/1890ff/ffffff?text=Nike',
-    country: 'usa',
-    products_count: 45,
-    is_active: true,
-    created_at: '2024-01-01',
-  },
-  {
-    id: 2,
-    code: 'NSX002',
-    name: 'Adidas',
-    logo: 'https://via.placeholder.com/40x40/722ed1/ffffff?text=Adidas',
-    country: 'usa',
-    products_count: 38,
-    is_active: true,
-    created_at: '2024-01-02',
-  },
-  {
-    id: 3,
-    code: 'NSX003',
-    name: 'Puma',
-    logo: 'https://via.placeholder.com/40x40/52c41a/ffffff?text=Puma',
-    country: 'usa',
-    products_count: 23,
-    is_active: false,
-    created_at: '2024-01-03',
-  },
-])
 
 // Methods
 const getCountryColor = (country: string) => {
@@ -335,23 +343,150 @@ const searchManufacturers = () => {
 }
 
 const showCreateModal = () => {
-  // TODO: Implement create manufacturer modal
-  console.log('Show create manufacturer modal')
+  manufacturerForm.tenNhaSanXuat = ''
+  manufacturerForm.trangThai = true
+  addModalVisible.value = true
 }
 
-const editManufacturer = (manufacturer: any) => {
-  // TODO: Implement edit manufacturer functionality
-  console.log('Edit manufacturer:', manufacturer)
+const closeAddModal = () => {
+  addModalVisible.value = false
+  addFormRef.value?.resetFields()
+}
+
+const confirmAddManufacturer = () => {
+  addFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn thêm nhà sản xuất này?'
+      confirmAction.value = 'add'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const viewManufacturer = (manufacturer: any) => {
-  // TODO: Implement view manufacturer details functionality
-  console.log('View manufacturer details:', manufacturer)
+  selectedManufacturer.value = manufacturer
+  detailModalVisible.value = true
+}
+
+const closeDetailModal = () => {
+  detailModalVisible.value = false
+  selectedManufacturer.value = null
+}
+
+const editManufacturer = (manufacturer: any) => {
+  selectedManufacturer.value = manufacturer
+  manufacturerForm.tenNhaSanXuat = manufacturer.tenNhaSanXuat
+  manufacturerForm.trangThai = manufacturer.trangThai
+  updateModalVisible.value = true
+}
+
+const closeUpdateModal = () => {
+  updateModalVisible.value = false
+  updateFormRef.value?.resetFields()
+  selectedManufacturer.value = null
+}
+
+const confirmUpdateManufacturer = () => {
+  updateFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn cập nhật nhà sản xuất này?'
+      confirmAction.value = 'update'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const deleteManufacturer = (manufacturer: any) => {
-  // TODO: Implement delete manufacturer functionality
-  console.log('Delete manufacturer:', manufacturer)
+  selectedManufacturer.value = manufacturer
+  confirmMessage.value = 'Bạn có chắc chắn muốn xóa nhà sản xuất này?'
+  confirmAction.value = 'delete'
+  confirmModalVisible.value = true
+}
+
+const cancelConfirm = () => {
+  confirmModalVisible.value = false
+  confirmMessage.value = ''
+  confirmAction.value = null
+}
+
+const getNhaSanXuatPage = async (page) => {
+  try {
+    const res = await getNhaSanXuatList(page)
+    if (res.success) {
+      manufacturers.value = res.data.data
+      console.log('Fetched manufacturers:', manufacturers.value)
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.pageSize
+      pagination.value.current = res.data.currentPage + 1
+    } else {
+      console.error('Failed to fetch manufacturers:', res.message)
+      manufacturers.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch manufacturers:', error)
+  }
+}
+
+const executeConfirmedAction = async () => {
+  try {
+    if (confirmAction.value === 'add') {
+      // TODO: Implement add API call
+      const data = {
+        tenNhaSanXuat: manufacturerForm.tenNhaSanXuat,
+        trangThai: true,
+        deleted: false,
+        createAt: new Date().toISOString().split('T')[0],
+        createBy: userStore.id,
+      }
+      console.log('Adding manufacturer:', data)
+      await createNhaSanXuat(data)
+      closeAddModal()
+      // Refresh data
+      getNhaSanXuatPage(0)
+    } else if (confirmAction.value === 'update') {
+      // TODO: Implement update API call
+      const data = {
+        tenNhaSanXuat: manufacturerForm.tenNhaSanXuat,
+        trangThai: manufacturerForm.trangThai,
+        deleted: selectedManufacturer.value.deleted,
+        createAt: selectedManufacturer.value.createAt,
+        createBy: selectedManufacturer.value.createBy,
+        updateAt: new Date().toISOString().split('T')[0],
+        updateBy: userStore.id,
+      }
+      console.log('Updating manufacturer:', selectedManufacturer.value.id, data)
+      await updateNhaSanXuat(selectedManufacturer.value.id, data)
+      closeUpdateModal()
+      // Refresh data
+      getNhaSanXuatPage(0)
+    } else if (confirmAction.value === 'delete') {
+      // TODO: Implement delete API call
+      console.log('Deleting manufacturer:', selectedManufacturer.value.id)
+      await deleteNhaSanXuat(selectedManufacturer.value.id)
+      // Refresh data
+      getNhaSanXuatPage(0)
+    }
+  } catch (error) {
+    console.error('API call failed:', error)
+  } finally {
+    confirmModalVisible.value = false
+    confirmMessage.value = ''
+    confirmAction.value = null
+  }
+}
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('vi-VN')
 }
 
 const viewProducts = (manufacturer: any) => {
@@ -365,7 +500,7 @@ const exportManufacturers = () => {
 }
 
 onMounted(() => {
-  // Removed console.log
+  getNhaSanXuatPage(0)
 })
 </script>
 

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { type PagingResponse, type PagedResponseObject } from '../ResponseObject'
 
 // ==================== TRỌNG LƯỢNG ====================
 export interface TrongLuong {
@@ -11,12 +12,12 @@ export interface TrongLuong {
   updateAt?: string
 }
 
-export interface TrongLuongResponse {
-  content: TrongLuong[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+export interface TrongLuongPagingResponse extends PagingResponse {
+  data: TrongLuong[]
+}
+
+export interface TrongLuongResponse extends PagedResponseObject {
+  data: TrongLuongPagingResponse
 }
 
 export function getTrongLuongListAll() {

@@ -1,6 +1,8 @@
 package org.example.be_sp.repository;
 
 import org.example.be_sp.entity.NhaSanXuat;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -12,4 +14,6 @@ public interface NhaSanXuatRepository extends JpaRepository<NhaSanXuat, Integer>
     NhaSanXuat findNhaSanXuatById(Integer id);
     @Query("SELECT n FROM NhaSanXuat n WHERE n.deleted = ?1")
     List<NhaSanXuat> findByDeletedFalse(Boolean deleted);
+
+    Page<NhaSanXuat> findAllByDeleted(Boolean deleted, Pageable pageable);
 }

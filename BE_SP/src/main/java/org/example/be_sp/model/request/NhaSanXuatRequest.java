@@ -17,5 +17,4 @@ public class NhaSanXuatRequest {
     Integer createBy;
     LocalDate updateAt;
     Integer updateBy;
-
 }

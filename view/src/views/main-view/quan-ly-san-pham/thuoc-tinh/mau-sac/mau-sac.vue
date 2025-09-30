@@ -52,56 +52,28 @@
     <!-- Colors Table -->
     <a-card title="Danh sách màu sắc" class="table-card">
       <a-table :columns="columns" :data="colors" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
-        <template #checkbox="{ record }">
-          <a-checkbox
-            :checked="isRowSelected(record.id)"
-            @change="
-              (checked) => {
-                if (checked) {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = [...currentKeys, record.id]
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = {
-                    code: record.code,
-                    name: record.name,
-                    status: record.is_active,
-                  }
-                } else {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = currentKeys.filter((key) => key !== record.id)
-                  if (editingData.value && editingData.value[record.id]) {
-                    delete editingData.value[record.id]
-                  }
-                }
-              }
-            "
-          />
+        <template #stt="{ rowIndex }">
+          <div>{{ rowIndex + 1 }}</div>
         </template>
 
         <template #code="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].code" size="mini" style="width: 80px" />
-          </div>
-          <span v-else>{{ record.code }}</span>
+          <span>{{ record.maMauSac }}</span>
         </template>
 
         <template #name="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].name" size="mini" style="width: 100px" />
-          </div>
-          <span v-else>{{ record.name }}</span>
+          <span>{{ record.tenMauSac }}</span>
         </template>
 
         <template #color_preview="{ record }">
           <div class="color-display">
-            <div class="color-circle-small" :style="{ backgroundColor: record.hex_code }"></div>
-            <span class="color-hex">{{ record.hex_code.toUpperCase() }}</span>
+            <div class="color-circle-small" :style="{ backgroundColor: record.maMau }"></div>
+            <span class="color-hex">{{ record.maMau?.toUpperCase() }}</span>
           </div>
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.is_active ? 'green' : 'red'">
-            {{ record.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+          <a-tag :color="record.trangThai ? 'green' : 'red'">
+            {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
 
@@ -124,84 +96,118 @@
             </a-button>
           </a-space>
         </template>
-
-        <template #checkbox-title>
-          <a-checkbox
-            :checked="selectedCount === colors.length && colors.length > 0"
-            :indeterminate="selectedCount > 0 && selectedCount < colors.length"
-            @change="
-              (checked) => {
-                if (checked) {
-                  selectedRowKeys.value = [...colors.map((color) => color.id)]
-                  if (!editingData.value) editingData.value = {}
-                  colors.forEach((color) => {
-                    editingData.value[color.id] = {
-                      code: color.code,
-                      name: color.name,
-                      status: color.is_active,
-                    }
-                  })
-                } else {
-                  selectedRowKeys.value = []
-                  editingData.value = {}
-                }
-              }
-            "
-          />
-        </template>
       </a-table>
     </a-card>
 
-    <!-- Create/Edit Modal -->
+    <!-- Add Color Modal -->
     <a-modal
-      v-model:open="modalVisible"
-      :title="isEdit ? 'Chỉnh sửa màu sắc' : 'Thêm màu sắc mới'"
-      width="500px"
-      @ok="handleSubmit"
-      @cancel="handleCancel"
+      v-model:visible="addModalVisible"
+      title="Thêm màu sắc"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeAddModal"
+      @ok="confirmAddColor"
     >
-      <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">
-        <a-form-item label="Tên màu sắc" name="name">
-          <a-input v-model="formData.name" placeholder="Nhập tên màu sắc" allow-clear />
+      <a-form :model="colorForm" :rules="formRules" layout="vertical" ref="addFormRef">
+        <a-form-item label="Tên màu sắc" field="tenMauSac">
+          <a-input v-model="colorForm.tenMauSac" placeholder="Tên màu sẽ tự động cập nhật khi chọn mã màu" readonly />
         </a-form-item>
-
-        <a-form-item label="Mã màu HEX" name="hex_code">
-          <a-input v-model="formData.hex_code" placeholder="#FF0000" allow-clear>
-            <template #suffix>
-              <div class="color-preview-small" :style="{ backgroundColor: formData.hex_code }"></div>
-            </template>
-          </a-input>
-        </a-form-item>
-
-        <a-form-item label="Chọn màu từ palette">
-          <div class="color-picker">
-            <div
-              v-for="presetColor in presetColors"
-              :key="presetColor"
-              class="preset-color"
-              :style="{ backgroundColor: presetColor }"
-              @click="selectPresetColor(presetColor)"
-            ></div>
-          </div>
-        </a-form-item>
-
-        <a-form-item label="Mô tả (tùy chọn)">
-          <a-textarea v-model="formData.description" placeholder="Mô tả về màu sắc này" :rows="3" allow-clear />
+        <a-form-item label="Mã màu" field="maMau" required>
+          <input type="color" v-model="colorForm.maMau" class="arco-input" style="width: 100%; height: 32px" @input="onColorChange" />
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <!-- Detail Color Modal -->
+    <a-modal
+      v-model:visible="detailModalVisible"
+      title="Chi tiết màu sắc"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeDetailModal"
+      @ok="closeDetailModal"
+      ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }"
+    >
+      <a-descriptions :column="1" size="small">
+        <a-descriptions-item label="Mã màu sắc">{{ selectedColor?.maMauSac }}</a-descriptions-item>
+        <a-descriptions-item label="Tên màu sắc">{{ selectedColor?.tenMauSac }}</a-descriptions-item>
+        <a-descriptions-item label="Mã màu">{{ selectedColor?.maMau }}</a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="selectedColor?.trangThai ? 'green' : 'red'">
+            {{ selectedColor?.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+          </a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
+
+    <!-- Update Color Modal -->
+    <a-modal
+      v-model:visible="updateModalVisible"
+      title="Cập nhật màu sắc"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeUpdateModal"
+      @ok="confirmUpdateColor"
+    >
+      <a-form :model="colorForm" :rules="formRules" layout="vertical" ref="updateFormRef">
+        <a-form-item label="Tên màu sắc" field="tenMauSac" required>
+          <a-input v-model="colorForm.tenMauSac" placeholder="Tên màu sẽ tự động cập nhật khi chọn mã màu" readonly />
+        </a-form-item>
+        <a-form-item label="Mã màu" field="maMau" required>
+          <input type="color" v-model="colorForm.maMau" class="arco-input" style="width: 100%; height: 32px" @input="onColorChange" />
+        </a-form-item>
+        <a-form-item label="Trạng thái" field="trangThai" required>
+          <a-radio-group v-model="colorForm.trangThai" type="button">
+            <a-radio :value="true">Hoạt động</a-radio>
+            <a-radio :value="false">Không hoạt động</a-radio>
+          </a-radio-group>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- Confirmation Modal -->
+    <a-modal
+      v-model:visible="confirmModalVisible"
+      title="Xác nhận"
+      width="400px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="cancelConfirm"
+      @ok="executeConfirmedAction"
+    >
+      <p>{{ confirmMessage }}</p>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { IconPlus, IconPalette, IconGift, IconEye, IconDownload, IconEdit, IconDelete, IconRefresh } from '@arco-design/web-vue/es/icon'
+import {
+  IconPlus,
+  IconPalette,
+  IconGift,
+  IconLocation,
+  IconStar,
+  IconSearch,
+  IconDownload,
+  IconEdit,
+  IconEye,
+  IconDelete,
+  IconRefresh,
+} from '@arco-design/web-vue/es/icon'
+import { useUserStore } from '@/store'
+import colorNamer from 'color-namer'
+import { createMauSac, getMauSacList, updateMauSac, deleteMauSac, type MauSac } from '../../../../../api/san-pham/thuoc-tinh/mau-sac'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
-
+const userStore = useUserStore()
 // Filters
 const filters = ref({
   search: '',
@@ -210,33 +216,334 @@ const filters = ref({
   sort: 'newest',
 })
 
-// Edit inline mode state
-const selectedRowKeys = ref<number[]>([])
-const editingData = ref<Record<number, { code: string; name: string; status: boolean }>>({})
+// Data
+const colors = ref<MauSac[]>([])
 
-// Computed properties for safe access
-const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
-const isRowSelected = (id: number) => {
-  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  return keys.includes(id)
+// Modal states
+const addModalVisible = ref(false)
+const detailModalVisible = ref(false)
+const updateModalVisible = ref(false)
+const confirmModalVisible = ref(false)
+
+// Form refs
+const addFormRef = ref()
+const updateFormRef = ref()
+
+// Selected color for detail/update
+const selectedColor = ref<MauSac | null>(null)
+
+// Color form data
+const colorForm = reactive({
+  tenMauSac: '',
+  maMau: '',
+  trangThai: true,
+})
+
+// Form validation rules
+const formRules = {
+  tenMauSac: [{ required: true, message: 'Vui lòng chọn mã màu để tự động điền tên màu sắc' }],
+  maMau: [
+    { required: true, message: 'Vui lòng nhập mã màu' },
+    { pattern: /^#[0-9A-F]{6}$/i, message: 'Mã màu phải có định dạng HEX (VD: #FF0000)' },
+  ],
+  trangThai: [{ required: true, message: 'Vui lòng chọn trạng thái' }],
 }
+
+// Hàm phân tích mã màu hex và trả về tên tiếng Việt
+const getVietnameseColorFromHex = (hexColor: string): string => {
+  // Chuyển hex sang RGB
+  const r = parseInt(hexColor.slice(1, 3), 16)
+  const g = parseInt(hexColor.slice(3, 5), 16)
+  const b = parseInt(hexColor.slice(5, 7), 16)
+
+  // Tính độ sáng và độ bão hòa
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const lightness = (max + min) / 2
+  const saturation = max === 0 ? 0 : (max - min) / max
+
+  // Xác định màu dựa trên giá trị RGB
+  if (saturation < 0.1) {
+    // Màu xám/xanh
+    if (lightness < 0.2) return 'Đen'
+    if (lightness > 0.8) return 'Trắng'
+    return 'Xám'
+  }
+
+  // Xác định màu chính
+  if (r > g && r > b) {
+    if (g > b * 1.5) return 'Cam'
+    if (b > r * 0.5) return 'Đỏ hồng'
+    return 'Đỏ'
+  }
+
+  if (g > r && g > b) {
+    if (b > g * 0.7) return 'Xanh ngọc'
+    return 'Xanh lá'
+  }
+
+  if (b > r && b > g) {
+    if (r > b * 0.7) return 'Tím'
+    return 'Xanh dương'
+  }
+
+  if (r === g && g === b) {
+    return 'Xám'
+  }
+
+  // Màu hỗn hợp
+  if (r > 200 && g > 150) return 'Vàng'
+  if (r > 150 && b > 150) return 'Tím'
+  return 'Màu hỗn hợp'
+}
+
+// Color name mapping function
+const getColorName = (hexColor: string): string => {
+  if (!hexColor || !hexColor.startsWith('#')) return ''
+
+  try {
+    const colorResults = colorNamer(hexColor)
+
+    // Mapping tên màu tiếng Anh sang tiếng Việt
+    const vietnameseColorNames: Record<string, string> = {
+      red: 'Đỏ',
+      blue: 'Xanh dương',
+      green: 'Xanh lá',
+      yellow: 'Vàng',
+      orange: 'Cam',
+      purple: 'Tím',
+      pink: 'Hồng',
+      brown: 'Nâu',
+      gray: 'Xám',
+      grey: 'Xám',
+      black: 'Đen',
+      white: 'Trắng',
+      cyan: 'Xanh ngọc',
+      magenta: 'Đỏ tươi',
+      lime: 'Chanh',
+      maroon: 'Nâu đỏ',
+      navy: 'Xanh navy',
+      olive: 'Ô liu',
+      teal: 'Xanh teal',
+      aqua: 'Xanh nước',
+      fuchsia: 'Đỏ hồng',
+      silver: 'Bạc',
+      gold: 'Vàng',
+      indigo: 'Chàm',
+      violet: 'Tía',
+      turquoise: 'Thủy ngọc',
+      salmon: 'Hồng cá',
+      coral: 'San hô',
+      crimson: 'Đỏ thắm',
+      khaki: 'Kaki',
+      plum: 'Mận',
+      orchid: 'Lan',
+      lavender: 'Oải hương',
+      beige: 'Be',
+      mint: 'Bạc hà',
+      peach: 'Đào',
+      rose: 'Hoa hồng',
+      'sky blue': 'Xanh trời',
+      'royal blue': 'Xanh hoàng gia',
+      'forest green': 'Xanh rừng',
+      'sea green': 'Xanh biển',
+      'lime green': 'Xanh chanh',
+      'dark green': 'Xanh đậm',
+      'light blue': 'Xanh nhạt',
+      'dark blue': 'Xanh đậm',
+      'light green': 'Xanh nhạt',
+      'dark red': 'Đỏ đậm',
+      'light red': 'Đỏ nhạt',
+      'dark yellow': 'Vàng đậm',
+      'light yellow': 'Vàng nhạt',
+      'dark orange': 'Cam đậm',
+      'light orange': 'Cam nhạt',
+      'dark purple': 'Tím đậm',
+      'light purple': 'Tím nhạt',
+      'dark pink': 'Hồng đậm',
+      'light pink': 'Hồng nhạt',
+      'dark brown': 'Nâu đậm',
+      'light brown': 'Nâu nhạt',
+      'dark gray': 'Xám đậm',
+      'light gray': 'Xám nhạt',
+      'dark grey': 'Xám đậm',
+      'light grey': 'Xám nhạt',
+
+      // Thêm các tên màu HTML chuẩn khác
+      aliceblue: 'Xanh nhạt',
+      antiquewhite: 'Trắng cổ',
+      aquamarine: 'Xanh ngọc biển',
+      azure: 'Xanh da trời',
+      bisque: 'Vàng nhạt',
+      blanchedalmond: 'Hạnh nhân nhạt',
+      blueviolet: 'Tím xanh',
+      burlywood: 'Nâu gỗ',
+      cadetblue: 'Xanh cadet',
+      chartreuse: 'Vàng chanh',
+      chocolate: 'Sô-cô-la',
+      cornflowerblue: 'Xanh hoa cỏ',
+      cornsilk: 'Lụa ngô',
+      darkcyan: 'Xanh ngọc đậm',
+      darkgoldenrod: 'Vàng kim đậm',
+      darkkhaki: 'Kaki đậm',
+      darkmagenta: 'Đỏ tươi đậm',
+      darkolivegreen: 'Ô liu xanh đậm',
+      darkorchid: 'Lan đậm',
+      darksalmon: 'Hồng cá đậm',
+      darkseagreen: 'Xanh biển đậm',
+      darkslateblue: 'Xanh đá đậm',
+      darkslategray: 'Xám đá đậm',
+      darkslategrey: 'Xám đá đậm',
+      darkturquoise: 'Thủy ngọc đậm',
+      darkviolet: 'Tía đậm',
+      deeppink: 'Hồng sâu',
+      deepskyblue: 'Xanh trời sâu',
+      dimgray: 'Xám mờ',
+      dimgrey: 'Xám mờ',
+      dodgerblue: 'Xanh dodger',
+      firebrick: 'Gạch lửa',
+      floralwhite: 'Trắng hoa',
+      gainsboro: 'Xám gainsboro',
+      ghostwhite: 'Trắng ma',
+      goldenrod: 'Vàng kim',
+      greenyellow: 'Vàng xanh lá',
+      honeydew: 'Mật ong',
+      hotpink: 'Hồng nóng',
+      indianred: 'Đỏ ấn độ',
+      ivory: 'Ngà',
+      lavenderblush: 'Hồng oải hương',
+      lawngreen: 'Xanh cỏ',
+      lemonchiffon: 'Vàng chanh nhạt',
+      lightcoral: 'San hô nhạt',
+      lightcyan: 'Xanh ngọc nhạt',
+      lightgoldenrodyellow: 'Vàng kim nhạt',
+      lightpink: 'Hồng nhạt',
+      lightsalmon: 'Hồng cá nhạt',
+      lightseagreen: 'Xanh biển nhạt',
+      lightskyblue: 'Xanh trời nhạt',
+      lightslategray: 'Xám đá nhạt',
+      lightslategrey: 'Xám đá nhạt',
+      lightsteelblue: 'Xanh thép nhạt',
+      lightyellow: 'Vàng nhạt',
+      linen: 'Vải lanh',
+      mediumaquamarine: 'Xanh ngọc trung bình',
+      mediumblue: 'Xanh dương trung bình',
+      mediumorchid: 'Lan trung bình',
+      mediumpurple: 'Tím trung bình',
+      mediumseagreen: 'Xanh biển trung bình',
+      mediumslateblue: 'Xanh đá trung bình',
+      mediumspringgreen: 'Xanh xuân trung bình',
+      mediumturquoise: 'Thủy ngọc trung bình',
+      mediumvioletred: 'Đỏ tía trung bình',
+      midnightblue: 'Xanh nửa đêm',
+      mintcream: 'Kem bạc hà',
+      mistyrose: 'Hoa hồng sương mù',
+      moccasin: 'Da hươu',
+      navajowhite: 'Trắng navajo',
+      oldlace: 'Ren cũ',
+      olivedrab: 'Ô liu xám',
+      orangered: 'Cam đỏ',
+      palegoldenrod: 'Vàng kim nhạt',
+      palegreen: 'Xanh lá nhạt',
+      paleturquoise: 'Thủy ngọc nhạt',
+      palevioletred: 'Đỏ tía nhạt',
+      papayawhip: 'Kem đu đủ',
+      peachpuff: 'Hồng đào',
+      peru: 'Nâu peru',
+      powderblue: 'Xanh bột',
+      rosybrown: 'Nâu hồng',
+      saddlebrown: 'Nâu yên ngựa',
+      sandybrown: 'Nâu cát',
+      seashell: 'Vỏ sò',
+      sienna: 'Nâu sienna',
+      slateblue: 'Xanh đá',
+      slategray: 'Xám đá',
+      slategrey: 'Xám đá',
+      snow: 'Tuyết',
+      springgreen: 'Xanh xuân',
+      steelblue: 'Xanh thép',
+      tan: 'Nâu tan',
+      thistle: 'Cây kế',
+      tomato: 'Cà chua',
+      wheat: 'Lúa mì',
+      whitesmoke: 'Khói trắng',
+      yellowgreen: 'Vàng xanh lá',
+    }
+
+    // Lấy tên màu từ palette 'html' (các tên màu HTML chuẩn)
+    const htmlColor = colorResults.html?.[0]
+    if (htmlColor && htmlColor.distance < 10) {
+      // Chỉ lấy tên màu nếu khoảng cách nhỏ (tương tự)
+      const vietnameseName = vietnameseColorNames[htmlColor.name.toLowerCase()]
+      if (vietnameseName) {
+        return vietnameseName
+      }
+      // Nếu không có mapping, phân tích mã màu để xác định loại màu
+      return getVietnameseColorFromHex(hexColor)
+    }
+
+    // Nếu không có tên HTML chuẩn, lấy từ palette 'ntc' (Name That Color)
+    const ntcColor = colorResults.ntc?.[0]
+    if (ntcColor) {
+      const vietnameseName = vietnameseColorNames[ntcColor.name.toLowerCase()]
+      if (vietnameseName) {
+        return vietnameseName
+      }
+      // Nếu không có mapping, phân tích mã màu để xác định loại màu
+      return getVietnameseColorFromHex(hexColor)
+    }
+
+    // Nếu không có tên màu từ thư viện, phân tích trực tiếp từ hex
+    return getVietnameseColorFromHex(hexColor)
+  } catch (error) {
+    console.error('Error getting color name:', error)
+    return ''
+  }
+}
+
+// Watch for color code changes and auto-fill color name
+watch(
+  () => colorForm.maMau,
+  (newColor) => {
+    if (newColor && newColor.length === 7) {
+      // Luôn cập nhật tên màu khi mã màu thay đổi
+      const colorName = getColorName(newColor)
+      colorForm.tenMauSac = colorName
+    }
+  }
+)
+
+// Handle color input change
+const onColorChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const newColor = target.value
+  if (newColor && newColor.length === 7) {
+    const colorName = getColorName(newColor)
+    colorForm.tenMauSac = colorName
+  }
+}
+
+// Confirmation modal
+const confirmMessage = ref('')
+const confirmAction = ref<'add' | 'update' | 'delete' | null>(null)
+
+// Computed properties for safe access removed
 
 // Table
 const loading = ref(false)
 const columns = [
   {
-    title: '',
-    dataIndex: 'checkbox',
-    slotName: 'checkbox',
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
     width: 50,
     align: 'center',
-    titleSlotName: 'checkbox-title',
   },
   {
     title: 'Mã màu sắc',
     dataIndex: 'code',
-    width: 100,
     slotName: 'code',
+    width: 100,
   },
   {
     title: 'Tên màu sắc',
@@ -271,111 +578,30 @@ const columns = [
 const pagination = ref({
   current: 1,
   pageSize: 10,
-  total: 5,
+  total: 3,
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: true,
 })
 
-// Modal and form
-const modalVisible = ref(false)
-const isEdit = ref(false)
-const formRef = ref()
-
-// Form data
-const formData = reactive({
-  name: '',
-  hex_code: '#000000',
-  description: '',
-})
-
-// Form validation rules
-const formRules = {
-  name: [
-    { required: true, message: 'Vui lòng nhập tên màu sắc' },
-    { min: 2, max: 50, message: 'Tên màu sắc phải từ 2-50 ký tự' },
-  ],
-  hex_code: [
-    { required: true, message: 'Vui lòng nhập mã màu HEX' },
-    { pattern: /^#[0-9A-F]{6}$/i, message: 'Mã màu HEX không hợp lệ (VD: #FF0000)' },
-  ],
+// Methods
+const getColorColor = (color: string) => {
+  switch (color) {
+    case 'red':
+      return 'red'
+    case 'blue':
+      return 'blue'
+    case 'green':
+      return 'green'
+    case 'yellow':
+      return 'orange'
+    case 'black':
+      return 'gray'
+    default:
+      return 'gray'
+  }
 }
 
-// Preset colors for picker
-const presetColors = ref([
-  '#FF0000',
-  '#00FF00',
-  '#0000FF',
-  '#FFFF00',
-  '#FF00FF',
-  '#00FFFF',
-  '#FFA500',
-  '#800080',
-  '#FFC0CB',
-  '#A52A2A',
-  '#808080',
-  '#000000',
-  '#FFFFFF',
-  '#C0C0C0',
-  '#800000',
-  '#808000',
-  '#008000',
-  '#008080',
-  '#000080',
-  '#800080',
-])
-
-// Mock data
-
-const colors = ref([
-  {
-    id: 1,
-    code: 'MS001',
-    name: 'Đỏ',
-    hex_code: '#FF0000',
-    usage_count: 12,
-    description: 'Màu đỏ tươi',
-    is_active: true,
-  },
-  {
-    id: 2,
-    code: 'MS002',
-    name: 'Xanh dương',
-    hex_code: '#1890FF',
-    usage_count: 15,
-    description: 'Màu xanh dương nhạt',
-    is_active: true,
-  },
-  {
-    id: 3,
-    code: 'MS003',
-    name: 'Đen',
-    hex_code: '#000000',
-    usage_count: 8,
-    description: 'Màu đen',
-    is_active: true,
-  },
-  {
-    id: 4,
-    code: 'MS004',
-    name: 'Trắng',
-    hex_code: '#FFFFFF',
-    usage_count: 20,
-    description: 'Màu trắng',
-    is_active: true,
-  },
-  {
-    id: 5,
-    code: 'MS005',
-    name: 'Xanh lá',
-    hex_code: '#00FF00',
-    usage_count: 5,
-    description: 'Màu xanh lá tươi',
-    is_active: false,
-  },
-])
-
-// Methods
 const resetFilters = () => {
   filters.value = {
     search: '',
@@ -387,60 +613,171 @@ const resetFilters = () => {
 
 const searchColors = () => {
   // TODO: Implement search functionality
-  // console.log('Searching colors with filters:', filters.value)
+  console.log('Searching colors with filters:', filters.value)
+}
+
+const showCreateModal = () => {
+  colorForm.tenMauSac = ''
+  colorForm.maMau = '#000000' // Màu đen mặc định
+  colorForm.trangThai = true
+  addModalVisible.value = true
+}
+
+const closeAddModal = () => {
+  addModalVisible.value = false
+  addFormRef.value?.resetFields()
+}
+
+const confirmAddColor = () => {
+  addFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn thêm màu sắc này?'
+      confirmAction.value = 'add'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const viewColor = (color: any) => {
-  // TODO: Implement view color details functionality
-  // console.log('View color details:', color)
+  selectedColor.value = color
+  detailModalVisible.value = true
+}
+
+const closeDetailModal = () => {
+  detailModalVisible.value = false
+  selectedColor.value = null
 }
 
 const editColor = (color: any) => {
-  isEdit.value = true
-  formData.name = color.name
-  formData.hex_code = color.hex_code
-  formData.description = color.description || ''
-  modalVisible.value = true
+  selectedColor.value = color
+  colorForm.tenMauSac = color.tenMauSac
+  colorForm.maMau = color.maMau
+  colorForm.trangThai = color.trangThai
+  updateModalVisible.value = true
+}
+
+const closeUpdateModal = () => {
+  updateModalVisible.value = false
+  updateFormRef.value?.resetFields()
+  selectedColor.value = null
+}
+
+const confirmUpdateColor = () => {
+  updateFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn cập nhật màu sắc này?'
+      confirmAction.value = 'update'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const deleteColor = (color: any) => {
-  // TODO: Implement delete color functionality
-  // console.log('Delete color:', color)
+  selectedColor.value = color
+  confirmMessage.value = 'Bạn có chắc chắn muốn xóa màu sắc này?'
+  confirmAction.value = 'delete'
+  confirmModalVisible.value = true
+}
+
+const cancelConfirm = () => {
+  confirmModalVisible.value = false
+  confirmMessage.value = ''
+  confirmAction.value = null
+}
+
+const getMauSacPage = async (page: number) => {
+  try {
+    const res = await getMauSacList(page)
+    if (res.success) {
+      colors.value = res.data.data
+      console.log('Fetched colors:', colors.value)
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.pageSize
+      pagination.value.current = res.data.currentPage + 1
+    } else {
+      console.error('Failed to fetch colors:', res.message)
+      colors.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch colors:', error)
+  }
+}
+
+const executeConfirmedAction = async () => {
+  try {
+    if (confirmAction.value === 'add') {
+      // TODO: Implement add API call
+      const data = {
+        tenMauSac: colorForm.tenMauSac,
+        maMau: colorForm.maMau,
+        trangThai: true,
+        deleted: false,
+        createAt: new Date().toISOString().split('T')[0],
+        createBy: userStore.id,
+      }
+      console.log('Adding color:', data)
+      await createMauSac(data)
+      closeAddModal()
+      // Refresh data
+      getMauSacPage(0)
+    } else if (confirmAction.value === 'update') {
+      if (!selectedColor.value) return
+
+      // TODO: Implement update API call
+      const data = {
+        tenMauSac: colorForm.tenMauSac,
+        maMau: colorForm.maMau,
+        trangThai: colorForm.trangThai,
+        deleted: selectedColor.value.deleted,
+        createAt: selectedColor.value.createAt,
+        createBy: selectedColor.value.createBy,
+        updateAt: new Date().toISOString().split('T')[0],
+        updateBy: userStore.id,
+      }
+      console.log('Updating color:', selectedColor.value.id, data)
+      await updateMauSac(selectedColor.value.id, data)
+      closeUpdateModal()
+      // Refresh data
+      getMauSacPage(0)
+    } else if (confirmAction.value === 'delete') {
+      if (!selectedColor.value) return
+
+      // TODO: Implement delete API call
+      console.log('Deleting color:', selectedColor.value.id)
+      await deleteMauSac(selectedColor.value.id)
+      // Refresh data
+      getMauSacPage(0)
+    }
+  } catch (error) {
+    console.error('API call failed:', error)
+  } finally {
+    confirmModalVisible.value = false
+    confirmMessage.value = ''
+    confirmAction.value = null
+  }
+}
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('vi-VN')
 }
 
 const exportColors = () => {
   // TODO: Implement Excel export functionality
-  // console.log('Exporting colors to Excel...')
-}
-
-const showCreateModal = () => {
-  isEdit.value = false
-  formData.name = ''
-  formData.hex_code = '#000000'
-  formData.description = ''
-  modalVisible.value = true
-}
-
-const handleSubmit = async () => {
-  try {
-    await formRef.value.validate()
-    modalVisible.value = false
-  } catch (error) {
-    // console.error('Form validation failed:', error)
-  }
-}
-
-const handleCancel = () => {
-  modalVisible.value = false
-}
-
-const selectPresetColor = (color: string) => {
-  formData.hex_code = color
+  console.log('Exporting colors to Excel...')
 }
 
 onMounted(() => {
-  // TODO: Load initial data
-  // console.log('Colors page mounted')
+  getMauSacPage(0)
 })
 </script>
 
@@ -510,9 +847,6 @@ onMounted(() => {
 
 .active-icon {
   color: #52c41a;
-}
-
-.colors-card {
 }
 
 .colors-grid {

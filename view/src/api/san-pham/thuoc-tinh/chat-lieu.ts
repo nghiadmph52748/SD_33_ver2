@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { type PagingResponse, type PagedResponseObject } from '../ResponseObject'
 
 // ==================== CHẤT LIỆU ====================
 export interface ChatLieu {
@@ -11,12 +12,12 @@ export interface ChatLieu {
   updateAt?: string
 }
 
-export interface ChatLieuResponse {
-  content: ChatLieu[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+export interface ChatLieuPagingResponse extends PagingResponse {
+  data: ChatLieu[]
+}
+
+export interface ChatLieuResponse extends PagedResponseObject {
+  data: ChatLieuPagingResponse
 }
 
 export function getChatLieuListAll() {

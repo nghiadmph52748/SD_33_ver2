@@ -18,8 +18,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/chat-lieu-management")
 @CrossOrigin(origins = "*")
 public class ChatLieuController {
+
     @Autowired
     private ChatLieuService chatLieuService;
+
+    @GetMapping("/list")
+    public ResponseObject<?> get() {
+        return new ResponseObject<>(chatLieuService.getAll());
+    }
 
     @GetMapping("/playlist")
     public ResponseObject<?> getAll() {
@@ -28,7 +34,7 @@ public class ChatLieuController {
 
     @GetMapping("/paging")
     public ResponseObject<?> paging(@RequestParam(defaultValue = "0") Integer page, @RequestParam(defaultValue = "10") Integer size) {
-        return new ResponseObject<>(chatLieuService.paging(page, size), "Hiển thị trang" + page);
+        return new ResponseObject<>(chatLieuService.pagingwithdeletedfalse(page, size), "Hien thi thanh cong");
     }
 
     @GetMapping("/detail/{id}")
@@ -39,18 +45,18 @@ public class ChatLieuController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody ChatLieuRequest chatLieuRequest) {
         chatLieuService.add(chatLieuRequest);
-        return new ResponseObject<>(true,null, "Thêm mới thành công");
+        return new ResponseObject<>(true, null, "Thêm mới thành công");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable("id") Integer id, @RequestBody ChatLieuRequest chatLieuRequest) {
         chatLieuService.update(id, chatLieuRequest);
-        return new ResponseObject<>(true,null, "Cập nhật thành công");
+        return new ResponseObject<>(true, null, "Cập nhật thành công");
     }
 
     @PutMapping("/update/status/{id}")
-    public ResponseObject<?> updateStatus(@PathVariable ("id") Integer id) {
+    public ResponseObject<?> updateStatus(@PathVariable("id") Integer id) {
         chatLieuService.updateStatus(id);
-        return new ResponseObject<>(true,null, "Cập nhật trạng thái thành công");
+        return new ResponseObject<>(true, null, "Cập nhật trạng thái thành công");
     }
 }

@@ -61,11 +61,12 @@ public class ChiTietSanPhamService {
         return repository.findById(id).map(ChiTietSanPhamFullResponse::new).orElseThrow(() -> new ApiException("Chi tiết sản phẩm không tồn tại", "404"));
     }
 
-    public void updateStatus(Integer id) {
+    public Integer updateStatus(Integer id) {
         ChiTietSanPham chiTietSanPham = repository.findById(id).orElseThrow(() -> new ApiException("Chi tiết sản phẩm không tồn tại", "404"));
         chiTietSanPham.setDeleted(true);
         chiTietSanPham.setTrangThai(false);
         repository.save(chiTietSanPham);
+        return chiTietSanPham.getId();
     }
 
     public Integer add(ChiTietSanPhamRequest request) {
@@ -82,13 +83,7 @@ public class ChiTietSanPhamService {
         return saved.getId();
     }
 
-    // Overloaded method với username parameter for audit purposes
-    public Integer add(ChiTietSanPhamRequest request, String username) {
-        System.out.println("Creating product variant by user: " + username);
-        return add(request); // Gọi method gốc
-    }
-
-    public void update(ChiTietSanPhamRequest request, Integer id) {
+    public Integer update(ChiTietSanPhamRequest request, Integer id) {
         ChiTietSanPham e = repository.findById(id).orElseThrow(() -> new ApiException("Chi tiết sản phẩm không tồn tại", "404"));
         MapperUtils.mapToExisting(request, e);
         e.setId(id);
@@ -99,5 +94,6 @@ public class ChiTietSanPhamService {
         e.setIdChatLieu(chatLieu.findChatLieuById(request.getIdChatLieu()));
         e.setIdTrongLuong(trongLuong.findTrongLuongById(request.getIdTrongLuong()));
         repository.save(e);
+        return e.getId();
     }
 }

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { type PagingResponse, type PagedResponseObject } from '../ResponseObject'
 
 // ==================== XUẤT XỨ ====================
 export interface XuatXu {
@@ -11,12 +12,12 @@ export interface XuatXu {
   updateAt?: string
 }
 
-export interface XuatXuResponse {
-  content: XuatXu[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+export interface XuatXuPagingResponse extends PagingResponse {
+  data: XuatXu[]
+}
+
+export interface XuatXuResponse extends PagedResponseObject {
+  data: XuatXuPagingResponse
 }
 
 export function getXuatXuListAll() {

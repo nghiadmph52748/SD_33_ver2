@@ -14,7 +14,7 @@ import java.util.function.Function;
 public class JwtUtils {
 
     private static final String SECRET = "mySecretKeymySecretKeymySecretKeymySecretKeymySecretKey"; // Should be from config
-    private static final int JWT_EXPIRATION = 86400000; // 24 hours in milliseconds
+    private static final int JWT_EXPIRATION = 3600000; // 24 hours in milliseconds
     private static final int JWT_REFRESH_EXPIRATION = 604800000; // 7 days in milliseconds
 
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());

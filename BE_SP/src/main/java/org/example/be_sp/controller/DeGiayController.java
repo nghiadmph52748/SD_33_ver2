@@ -4,14 +4,21 @@ import org.example.be_sp.model.request.DeGiayRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.DeGiayService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/de-giay-management")
 @CrossOrigin(origins = "*")
 public class DeGiayController {
+
     @Autowired
     DeGiayService deGiayService;
+
+    @GetMapping("/list")
+    public ResponseObject<?> get() {
+        return new ResponseObject<>(deGiayService.getAll());
+    }
 
     @GetMapping("/playlist")
     public ResponseObject<?> getAll() {
@@ -20,7 +27,7 @@ public class DeGiayController {
 
     @GetMapping("/paging")
     public ResponseObject<?> paging(@RequestParam(defaultValue = "0") Integer page, @RequestParam(defaultValue = "10") Integer size) {
-        return new ResponseObject<>(deGiayService.paging(page, size));
+        return new ResponseObject<>(deGiayService.pagingwithdeletedfalse(page, size), "Hien thi thanh cong");
     }
 
     @GetMapping("/detail/{id}")
@@ -31,17 +38,18 @@ public class DeGiayController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody DeGiayRequest deGiayRequest) {
         deGiayService.add(deGiayRequest);
-        return new ResponseObject<>(true,null,"Thêm đế giày thành công");
+        return new ResponseObject<>(true, null, "Thêm đế giày thành công");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@RequestBody DeGiayRequest deGiayRequest, @PathVariable Integer id) {
         deGiayService.update(id, deGiayRequest);
-        return new ResponseObject<>(true,null,"Cập nhật đế giày thành công");
+        return new ResponseObject<>(true, null, "Cập nhật đế giày thành công");
     }
+
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         deGiayService.updateStatus(id);
-        return new ResponseObject<>(true,null, "Cập nhật trạng thái đế giày thành");
+        return new ResponseObject<>(true, null, "Cập nhật trạng thái đế giày thành");
     }
 }

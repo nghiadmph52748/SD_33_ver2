@@ -51,50 +51,36 @@
 
     <!-- Soles Table -->
     <a-card title="Danh sách đế giày" class="table-card">
-      <a-table :columns="columns" :data="soles" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
-        <template #checkbox="{ record }">
-          <a-checkbox
-            :checked="isRowSelected(record.id)"
-            @change="
-              (checked) => {
-                if (checked) {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = [...currentKeys, record.id]
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = {
-                    code: record.code,
-                    name: record.name,
-                    status: record.is_active,
-                  }
-                } else {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = currentKeys.filter((key) => key !== record.id)
-                  if (editingData.value && editingData.value[record.id]) {
-                    delete editingData.value[record.id]
-                  }
-                }
-              }
-            "
-          />
+      <a-table
+        :columns="columns"
+        :data="soles"
+        :pagination="pagination"
+        :loading="loading"
+        :scroll="{ x: 1000 }"
+        @page-change="getDeGiayPage($event - 1)"
+        @page-size-change="
+          (size) => {
+            pagination.pageSize = size
+            getDeGiayPage(0)
+          }
+        "
+        row-key="id"
+      >
+        <template #stt="{ record, rowIndex }">
+          <span>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</span>
         </template>
 
         <template #code="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].code" size="mini" style="width: 80px" />
-          </div>
-          <span v-else>{{ record.code }}</span>
+          <span>{{ record.maDeGiay || 'N/A' }}</span>
         </template>
 
         <template #name="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].name" size="mini" style="width: 100px" />
-          </div>
-          <span v-else>{{ record.name }}</span>
+          <span>{{ record.tenDeGiay }}</span>
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.is_active ? 'green' : 'red'">
-            {{ record.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+          <a-tag :color="record.trangThai ? 'green' : 'red'">
+            {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
 
@@ -117,58 +103,83 @@
             </a-button>
           </a-space>
         </template>
-
-        <template #checkbox-title>
-          <a-checkbox
-            :checked="selectedCount === soles.length && soles.length > 0"
-            :indeterminate="selectedCount > 0 && selectedCount < soles.length"
-            @change="
-              (checked) => {
-                if (checked) {
-                  selectedRowKeys.value = [...soles.map((sole) => sole.id)]
-                  if (!editingData.value) editingData.value = {}
-                  soles.forEach((sole) => {
-                    editingData.value[sole.id] = {
-                      code: sole.code,
-                      name: sole.name,
-                      status: sole.is_active,
-                    }
-                  })
-                } else {
-                  selectedRowKeys.value = []
-                  editingData.value = {}
-                }
-              }
-            "
-          />
-        </template>
       </a-table>
     </a-card>
 
-    <!-- Create/Edit Modal -->
+    <!-- Add Sole Modal -->
     <a-modal
-      v-model:open="modalVisible"
-      :title="isEdit ? 'Chỉnh sửa đế giày' : 'Thêm đế giày mới'"
-      width="500px"
-      @ok="handleSubmit"
-      @cancel="handleCancel"
+      v-model:visible="addModalVisible"
+      title="Thêm đế giày"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeAddModal"
+      @ok="confirmAddSole"
     >
-      <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">
-        <a-form-item label="Mã đế giày" name="code">
-          <a-input v-model="formData.code" placeholder="Ví dụ: DG001" allow-clear />
+      <a-form :model="soleForm" :rules="formRules" layout="vertical" ref="addFormRef">
+        <a-form-item label="Tên đế giày" field="tenDeGiay" required>
+          <a-input v-model="soleForm.tenDeGiay" placeholder="Nhập tên đế giày" />
         </a-form-item>
+      </a-form>
+    </a-modal>
 
-        <a-form-item label="Tên đế giày" name="name">
-          <a-input v-model="formData.name" placeholder="Nhập tên đế giày" allow-clear />
+    <!-- Detail Sole Modal -->
+    <a-modal
+      v-model:visible="detailModalVisible"
+      title="Chi tiết đế giày"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeDetailModal"
+      @ok="closeDetailModal"
+      ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }"
+    >
+      <a-descriptions :column="1" size="small">
+        <a-descriptions-item label="Mã đế giày">{{ selectedSole?.maDeGiay }}</a-descriptions-item>
+        <a-descriptions-item label="Tên đế giày">{{ selectedSole?.tenDeGiay }}</a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="selectedSole?.trangThai ? 'green' : 'red'">
+            {{ selectedSole?.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+          </a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
+
+    <!-- Update Sole Modal -->
+    <a-modal
+      v-model:visible="updateModalVisible"
+      title="Cập nhật đế giày"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeUpdateModal"
+      @ok="confirmUpdateSole"
+    >
+      <a-form :model="soleForm" :rules="formRules" layout="vertical" ref="updateFormRef">
+        <a-form-item label="Tên đế giày" field="tenDeGiay" required>
+          <a-input v-model="soleForm.tenDeGiay" placeholder="Nhập tên đế giày" />
         </a-form-item>
-
-        <a-form-item label="Trạng thái" name="is_active">
-          <a-radio-group v-model="formData.is_active">
+        <a-form-item label="Trạng thái" field="trangThai" required>
+          <a-radio-group v-model="soleForm.trangThai" type="button">
             <a-radio :value="true">Hoạt động</a-radio>
             <a-radio :value="false">Không hoạt động</a-radio>
           </a-radio-group>
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <!-- Confirmation Modal -->
+    <a-modal
+      v-model:visible="confirmModalVisible"
+      title="Xác nhận"
+      width="400px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="cancelConfirm"
+      @ok="executeConfirmedAction"
+    >
+      <p>{{ confirmMessage }}</p>
     </a-modal>
   </div>
 </template>
@@ -178,9 +189,12 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { IconPlus, IconSearch, IconDownload, IconEdit, IconEye, IconDelete, IconRefresh } from '@arco-design/web-vue/es/icon'
+import { useUserStore } from '@/store'
+import { createDeGiay, getDeGiayList, updateDeGiay, deleteDeGiay } from '../../../../../api/san-pham/thuoc-tinh/de-giay'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
+const userStore = useUserStore()
 
 // Filters
 const filters = ref({
@@ -190,33 +204,56 @@ const filters = ref({
   sort: 'newest',
 })
 
-// Edit inline mode state
-const selectedRowKeys = ref<number[]>([])
-const editingData = ref<Record<number, { code: string; name: string; status: boolean }>>({})
+// Data
+const soles = ref([])
 
-// Computed properties for safe access
-const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
-const isRowSelected = (id: number) => {
-  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  return keys.includes(id)
+// Modal states
+const addModalVisible = ref(false)
+const detailModalVisible = ref(false)
+const updateModalVisible = ref(false)
+const confirmModalVisible = ref(false)
+
+// Form refs
+const addFormRef = ref()
+const updateFormRef = ref()
+
+// Selected sole for detail/update
+const selectedSole = ref(null)
+
+// Sole form data
+const soleForm = reactive({
+  tenDeGiay: '',
+  trangThai: true,
+})
+
+// Form validation rules
+const formRules = {
+  tenDeGiay: [
+    { required: true, message: 'Vui lòng nhập tên đế giày' },
+    { min: 2, message: 'Tên đế giày phải có ít nhất 2 ký tự' },
+  ],
+  trangThai: [{ required: true, message: 'Vui lòng chọn trạng thái' }],
 }
+
+// Confirmation modal
+const confirmMessage = ref('')
+const confirmAction = ref(null)
 
 // Table
 const loading = ref(false)
 const columns = [
   {
-    title: '',
-    dataIndex: 'checkbox',
-    slotName: 'checkbox',
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
     width: 50,
     align: 'center',
-    titleSlotName: 'checkbox-title',
   },
   {
     title: 'Mã đế giày',
     dataIndex: 'code',
-    width: 100,
     slotName: 'code',
+    width: 100,
   },
   {
     title: 'Tên đế giày',
@@ -244,88 +281,11 @@ const columns = [
 const pagination = ref({
   current: 1,
   pageSize: 10,
-  total: 5,
+  total: 3,
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: true,
 })
-
-// Modal and form
-const modalVisible = ref(false)
-const isEdit = ref(false)
-const formRef = ref()
-
-// Form data
-const formData = reactive({
-  code: '',
-  name: '',
-  is_active: true,
-})
-
-// Form validation rules
-const formRules = {
-  code: [{ required: true, message: 'Vui lòng nhập mã đế giày' }],
-  name: [{ required: true, message: 'Vui lòng nhập tên đế giày' }],
-}
-
-// Mock data
-const soles = ref([
-  {
-    id: 1,
-    code: 'DG001',
-    name: 'Đế cao su EVA',
-    material: 'rubber',
-    durability: 4,
-    products_count: 52,
-    premium: true,
-    is_active: true,
-    created_at: '2024-01-15',
-  },
-  {
-    id: 2,
-    code: 'DG002',
-    name: 'Đế cao su TPR',
-    material: 'rubber',
-    durability: 3,
-    products_count: 38,
-    premium: false,
-    is_active: true,
-    created_at: '2024-01-16',
-  },
-  {
-    id: 3,
-    code: 'DG003',
-    name: 'Đế nhựa PVC',
-    material: 'plastic',
-    durability: 2,
-    products_count: 25,
-    premium: false,
-    is_active: true,
-    created_at: '2024-01-17',
-  },
-  {
-    id: 4,
-    code: 'DG004',
-    name: 'Đế da thật',
-    material: 'leather',
-    durability: 5,
-    products_count: 18,
-    premium: true,
-    is_active: true,
-    created_at: '2024-01-18',
-  },
-  {
-    id: 5,
-    code: 'DG005',
-    name: 'Đế EVA siêu nhẹ',
-    material: 'rubber',
-    durability: 4,
-    products_count: 30,
-    premium: false,
-    is_active: false,
-    created_at: '2024-01-19',
-  },
-])
 
 // Methods
 const resetFilters = () => {
@@ -339,51 +299,168 @@ const resetFilters = () => {
 
 const searchSoles = () => {
   // TODO: Implement search functionality
+  console.log('Searching soles with filters:', filters.value)
+}
+
+const showCreateModal = () => {
+  soleForm.tenDeGiay = ''
+  soleForm.trangThai = true
+  addModalVisible.value = true
+}
+
+const closeAddModal = () => {
+  addModalVisible.value = false
+  addFormRef.value?.resetFields()
+}
+
+const confirmAddSole = () => {
+  addFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn thêm đế giày này?'
+      confirmAction.value = 'add'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const viewSole = (sole: any) => {
-  // TODO: Implement view sole details functionality
+  selectedSole.value = sole
+  detailModalVisible.value = true
+}
+
+const closeDetailModal = () => {
+  detailModalVisible.value = false
+  selectedSole.value = null
 }
 
 const editSole = (sole: any) => {
-  isEdit.value = true
-  formData.code = sole.code
-  formData.name = sole.name
-  formData.is_active = sole.is_active
-  modalVisible.value = true
+  selectedSole.value = sole
+  soleForm.tenDeGiay = sole.tenDeGiay
+  soleForm.trangThai = sole.trangThai
+  updateModalVisible.value = true
+}
+
+const closeUpdateModal = () => {
+  updateModalVisible.value = false
+  updateFormRef.value?.resetFields()
+  selectedSole.value = null
+}
+
+const confirmUpdateSole = () => {
+  updateFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn cập nhật đế giày này?'
+      confirmAction.value = 'update'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const deleteSole = (sole: any) => {
-  // TODO: Implement delete sole functionality
+  selectedSole.value = sole
+  confirmMessage.value = 'Bạn có chắc chắn muốn xóa đế giày này?'
+  confirmAction.value = 'delete'
+  confirmModalVisible.value = true
+}
+
+const cancelConfirm = () => {
+  confirmModalVisible.value = false
+  confirmMessage.value = ''
+  confirmAction.value = null
+}
+
+const getDeGiayPage = async (page) => {
+  try {
+    loading.value = true
+    const res = await getDeGiayList(page)
+    if (res.success) {
+      soles.value = res.data.data
+      console.log('Fetched soles:', soles.value)
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
+    } else {
+      console.error('Failed to fetch soles:', res.message)
+      soles.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch soles:', error)
+    soles.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+const executeConfirmedAction = async () => {
+  try {
+    if (confirmAction.value === 'add') {
+      // TODO: Implement add API call
+      const data = {
+        tenDeGiay: soleForm.tenDeGiay,
+        trangThai: true,
+        deleted: false,
+        createAt: new Date().toISOString().split('T')[0],
+        createBy: userStore.id,
+      }
+      console.log('Adding sole:', data)
+      await createDeGiay(data)
+      closeAddModal()
+      // Refresh data
+      getDeGiayPage(0)
+    } else if (confirmAction.value === 'update') {
+      // TODO: Implement update API call
+      const data = {
+        tenDeGiay: soleForm.tenDeGiay,
+        trangThai: soleForm.trangThai,
+        deleted: selectedSole.value.deleted,
+        createAt: selectedSole.value.createAt,
+        createBy: selectedSole.value.createBy,
+        updateAt: new Date().toISOString().split('T')[0],
+        updateBy: userStore.id,
+      }
+      console.log('Updating sole:', selectedSole.value.id, data)
+      await updateDeGiay(selectedSole.value.id, data)
+      closeUpdateModal()
+      // Refresh data
+      getDeGiayPage(0)
+    } else if (confirmAction.value === 'delete') {
+      // TODO: Implement delete API call
+      console.log('Deleting sole:', selectedSole.value.id)
+      await deleteDeGiay(selectedSole.value.id)
+      // Refresh data
+      getDeGiayPage(0)
+    }
+  } catch (error) {
+    console.error('API call failed:', error)
+  } finally {
+    confirmModalVisible.value = false
+    confirmMessage.value = ''
+    confirmAction.value = null
+  }
+}
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('vi-VN')
 }
 
 const exportSoles = () => {
   // TODO: Implement Excel export functionality
-}
-
-const showCreateModal = () => {
-  isEdit.value = false
-  formData.code = ''
-  formData.name = ''
-  formData.is_active = true
-  modalVisible.value = true
-}
-
-const handleSubmit = async () => {
-  try {
-    await formRef.value.validate()
-    modalVisible.value = false
-  } catch (error) {
-    // console.error('Form validation failed:', error)
-  }
-}
-
-const handleCancel = () => {
-  modalVisible.value = false
+  console.log('Exporting soles to Excel...')
 }
 
 onMounted(() => {
-  // TODO: Load initial data
+  getDeGiayPage(0)
 })
 </script>
 

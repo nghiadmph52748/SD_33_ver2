@@ -52,49 +52,21 @@
     <!-- Origins Table -->
     <a-card title="Danh sách xuất xứ" class="table-card">
       <a-table :columns="columns" :data="origins" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
-        <template #checkbox="{ record }">
-          <a-checkbox
-            :checked="isRowSelected(record.id)"
-            @change="
-              (checked) => {
-                if (checked) {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = [...currentKeys, record.id]
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = {
-                    code: record.code,
-                    name: record.name,
-                    status: record.is_active,
-                  }
-                } else {
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = currentKeys.filter((key) => key !== record.id)
-                  if (editingData.value && editingData.value[record.id]) {
-                    delete editingData.value[record.id]
-                  }
-                }
-              }
-            "
-          />
+        <template #stt="{ rowIndex }">
+          <div>{{ rowIndex + 1 }}</div>
         </template>
 
         <template #code="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].code" size="mini" style="width: 80px" />
-          </div>
-          <span v-else>{{ record.code }}</span>
+          <span>{{ record.maXuatXu }}</span>
         </template>
 
         <template #name="{ record }">
-          <div v-if="editingData.value && editingData.value[record.id]">
-            <a-input v-model="editingData.value[record.id].name" size="mini" style="width: 100px" />
-          </div>
-          <span v-else>{{ record.name }}</span>
+          <span>{{ record.tenXuatXu }}</span>
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.is_active ? 'green' : 'red'">
-            {{ record.is_active ? 'Hoạt động' : 'Không hoạt động' }}
+          <a-tag :color="record.trangThai ? 'green' : 'red'">
+            {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
 
@@ -117,33 +89,84 @@
             </a-button>
           </a-space>
         </template>
-
-        <template #checkbox-title>
-          <a-checkbox
-            :checked="selectedCount === origins.length && origins.length > 0"
-            :indeterminate="selectedCount > 0 && selectedCount < origins.length"
-            @change="
-              (checked) => {
-                if (checked) {
-                  selectedRowKeys.value = [...origins.map((origin) => origin.id)]
-                  if (!editingData.value) editingData.value = {}
-                  origins.forEach((origin) => {
-                    editingData.value[origin.id] = {
-                      code: origin.code,
-                      name: origin.name,
-                      status: origin.is_active,
-                    }
-                  })
-                } else {
-                  selectedRowKeys.value = []
-                  editingData.value = {}
-                }
-              }
-            "
-          />
-        </template>
       </a-table>
     </a-card>
+
+    <!-- Add Origin Modal -->
+    <a-modal
+      v-model:visible="addModalVisible"
+      title="Thêm xuất xứ"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeAddModal"
+      @ok="confirmAddOrigin"
+    >
+      <a-form :model="originForm" :rules="formRules" layout="vertical" ref="addFormRef">
+        <a-form-item label="Tên xuất xứ" field="tenXuatXu" required>
+          <a-input v-model="originForm.tenXuatXu" placeholder="Nhập tên xuất xứ" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- Detail Origin Modal -->
+    <a-modal
+      v-model:visible="detailModalVisible"
+      title="Chi tiết xuất xứ"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeDetailModal"
+      @ok="closeDetailModal"
+      ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }"
+    >
+      <a-descriptions :column="1" size="small">
+        <a-descriptions-item label="Mã xuất xứ">{{ selectedOrigin?.maXuatXu }}</a-descriptions-item>
+        <a-descriptions-item label="Tên xuất xứ">{{ selectedOrigin?.tenXuatXu }}</a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="selectedOrigin?.trangThai ? 'green' : 'red'">
+            {{ selectedOrigin?.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+          </a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
+
+    <!-- Update Origin Modal -->
+    <a-modal
+      v-model:visible="updateModalVisible"
+      title="Cập nhật xuất xứ"
+      width="600px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="closeUpdateModal"
+      @ok="confirmUpdateOrigin"
+    >
+      <a-form :model="originForm" :rules="formRules" layout="vertical" ref="updateFormRef">
+        <a-form-item label="Tên xuất xứ" field="tenXuatXu" required>
+          <a-input v-model="originForm.tenXuatXu" placeholder="Nhập tên xuất xứ" />
+        </a-form-item>
+        <a-form-item label="Trạng thái" field="trangThai" required>
+          <a-radio-group v-model="originForm.trangThai" type="button">
+            <a-radio :value="true">Hoạt động</a-radio>
+            <a-radio :value="false">Không hoạt động</a-radio>
+          </a-radio-group>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- Confirmation Modal -->
+    <a-modal
+      v-model:visible="confirmModalVisible"
+      title="Xác nhận"
+      width="400px"
+      :mask-closable="false"
+      :closable="true"
+      @cancel="cancelConfirm"
+      @ok="executeConfirmedAction"
+    >
+      <p>{{ confirmMessage }}</p>
+    </a-modal>
   </div>
 </template>
 
@@ -164,10 +187,12 @@ import {
   IconDelete,
   IconRefresh,
 } from '@arco-design/web-vue/es/icon'
+import { useUserStore } from '@/store'
+import { createXuatXu, getXuatXuList, updateXuatXu, deleteXuatXu } from '../../../../../api/san-pham/thuoc-tinh/xuat-xu'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
-
+const userStore = useUserStore()
 // Filters
 const filters = ref({
   search: '',
@@ -176,33 +201,58 @@ const filters = ref({
   sort: 'newest',
 })
 
-// Edit inline mode state
-const selectedRowKeys = ref<number[]>([])
-const editingData = ref<Record<number, { code: string; name: string; status: boolean }>>({})
+// Data
+const origins = ref([])
 
-// Computed properties for safe access
-const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
-const isRowSelected = (id: number) => {
-  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  return keys.includes(id)
+// Modal states
+const addModalVisible = ref(false)
+const detailModalVisible = ref(false)
+const updateModalVisible = ref(false)
+const confirmModalVisible = ref(false)
+
+// Form refs
+const addFormRef = ref()
+const updateFormRef = ref()
+
+// Selected origin for detail/update
+const selectedOrigin = ref(null)
+
+// Origin form data
+const originForm = reactive({
+  tenXuatXu: '',
+  trangThai: true,
+})
+
+// Form validation rules
+const formRules = {
+  tenXuatXu: [
+    { required: true, message: 'Vui lòng nhập tên xuất xứ' },
+    { min: 2, message: 'Tên xuất xứ phải có ít nhất 2 ký tự' },
+  ],
+  trangThai: [{ required: true, message: 'Vui lòng chọn trạng thái' }],
 }
+
+// Confirmation modal
+const confirmMessage = ref('')
+const confirmAction = ref(null)
+
+// Computed properties for safe access removed
 
 // Table
 const loading = ref(false)
 const columns = [
   {
-    title: '',
-    dataIndex: 'checkbox',
-    slotName: 'checkbox',
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
     width: 50,
     align: 'center',
-    titleSlotName: 'checkbox-title',
   },
   {
     title: 'Mã xuất xứ',
     dataIndex: 'code',
-    width: 100,
     slotName: 'code',
+    width: 100,
   },
   {
     title: 'Tên xuất xứ',
@@ -214,13 +264,13 @@ const columns = [
     title: 'Trạng thái',
     dataIndex: 'is_active',
     slotName: 'status',
-    width: 400,
+    width: 100,
     align: 'center',
   },
   {
     title: 'Thao tác',
     slotName: 'action',
-    width: 100,
+    width: 120,
     fixed: 'right',
     align: 'center',
   },
@@ -236,78 +286,7 @@ const pagination = ref({
   showTotal: true,
 })
 
-// Mock data
-
-const origins = ref([
-  {
-    id: 1,
-    code: 'XX001',
-    name: 'Trung Quốc',
-    flag: '🇨🇳',
-    continent: 'asia',
-    products_count: 65,
-    shipping_cost: 180000,
-    currency: 'CNY',
-    is_active: true,
-  },
-  {
-    id: 2,
-    code: 'XX002',
-    name: 'Việt Nam',
-    flag: '🇻🇳',
-    continent: 'asia',
-    products_count: 45,
-    shipping_cost: 50000,
-    currency: 'VND',
-    is_active: true,
-  },
-  {
-    id: 3,
-    code: 'XX003',
-    name: 'Ý',
-    flag: '🇮🇹',
-    continent: 'europe',
-    products_count: 35,
-    shipping_cost: 450000,
-    currency: 'EUR',
-    is_active: false,
-  },
-])
-
 // Methods
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount)
-}
-
-const getContinentColor = (continent: string) => {
-  switch (continent) {
-    case 'asia':
-      return 'orange'
-    case 'europe':
-      return 'blue'
-    case 'america':
-      return 'green'
-    default:
-      return 'gray'
-  }
-}
-
-const getContinentName = (continent: string) => {
-  switch (continent) {
-    case 'asia':
-      return 'Châu Á'
-    case 'europe':
-      return 'Châu Âu'
-    case 'america':
-      return 'Châu Mỹ'
-    default:
-      return continent
-  }
-}
-
 const resetFilters = () => {
   filters.value = {
     search: '',
@@ -323,28 +302,150 @@ const searchOrigins = () => {
 }
 
 const showCreateModal = () => {
-  // TODO: Implement create origin modal
-  console.log('Show create origin modal')
+  originForm.tenXuatXu = ''
+  originForm.trangThai = true
+  addModalVisible.value = true
 }
 
-const editOrigin = (origin: any) => {
-  // TODO: Implement edit origin functionality
-  console.log('Edit origin:', origin)
+const closeAddModal = () => {
+  addModalVisible.value = false
+  addFormRef.value?.resetFields()
+}
+
+const confirmAddOrigin = () => {
+  addFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn thêm xuất xứ này?'
+      confirmAction.value = 'add'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const viewOrigin = (origin: any) => {
-  // TODO: Implement view origin details functionality
-  console.log('View origin details:', origin)
+  selectedOrigin.value = origin
+  detailModalVisible.value = true
+}
+
+const closeDetailModal = () => {
+  detailModalVisible.value = false
+  selectedOrigin.value = null
+}
+
+const editOrigin = (origin: any) => {
+  selectedOrigin.value = origin
+  originForm.tenXuatXu = origin.tenXuatXu
+  originForm.trangThai = origin.trangThai
+  updateModalVisible.value = true
+}
+
+const closeUpdateModal = () => {
+  updateModalVisible.value = false
+  updateFormRef.value?.resetFields()
+  selectedOrigin.value = null
+}
+
+const confirmUpdateOrigin = () => {
+  updateFormRef.value
+    ?.validate()
+    .then(() => {
+      confirmMessage.value = 'Bạn có chắc chắn muốn cập nhật xuất xứ này?'
+      confirmAction.value = 'update'
+      confirmModalVisible.value = true
+    })
+    .catch(() => {
+      // Validation failed
+    })
 }
 
 const deleteOrigin = (origin: any) => {
-  // TODO: Implement delete origin functionality
-  console.log('Delete origin:', origin)
+  selectedOrigin.value = origin
+  confirmMessage.value = 'Bạn có chắc chắn muốn xóa xuất xứ này?'
+  confirmAction.value = 'delete'
+  confirmModalVisible.value = true
 }
 
-const viewProducts = (origin: any) => {
-  // TODO: Implement view products functionality
-  console.log('View products for origin:', origin)
+const cancelConfirm = () => {
+  confirmModalVisible.value = false
+  confirmMessage.value = ''
+  confirmAction.value = null
+}
+
+const getXuatXuPage = async (page) => {
+  try {
+    const res = await getXuatXuList(page)
+    if (res.success) {
+      origins.value = res.data.data
+      console.log('Fetched origins:', origins.value)
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.pageSize
+      pagination.value.current = res.data.currentPage + 1
+    } else {
+      console.error('Failed to fetch origins:', res.message)
+      origins.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch origins:', error)
+  }
+}
+
+const executeConfirmedAction = async () => {
+  try {
+    if (confirmAction.value === 'add') {
+      // TODO: Implement add API call
+      const data = {
+        tenXuatXu: originForm.tenXuatXu,
+        trangThai: true,
+        deleted: false,
+        createAt: new Date().toISOString().split('T')[0],
+        createBy: userStore.id,
+      }
+      console.log('Adding origin:', data)
+      await createXuatXu(data)
+      closeAddModal()
+      // Refresh data
+      getXuatXuPage(0)
+    } else if (confirmAction.value === 'update') {
+      // TODO: Implement update API call
+      const data = {
+        tenXuatXu: originForm.tenXuatXu,
+        trangThai: originForm.trangThai,
+        deleted: selectedOrigin.value.deleted,
+        createAt: selectedOrigin.value.createAt,
+        createBy: selectedOrigin.value.createBy,
+        updateAt: new Date().toISOString().split('T')[0],
+        updateBy: userStore.id,
+      }
+      console.log('Updating origin:', selectedOrigin.value.id, data)
+      await updateXuatXu(selectedOrigin.value.id, data)
+      closeUpdateModal()
+      // Refresh data
+      getXuatXuPage(0)
+    } else if (confirmAction.value === 'delete') {
+      // TODO: Implement delete API call
+      console.log('Deleting origin:', selectedOrigin.value.id)
+      await deleteXuatXu(selectedOrigin.value.id)
+      // Refresh data
+      getXuatXuPage(0)
+    }
+  } catch (error) {
+    console.error('API call failed:', error)
+  } finally {
+    confirmModalVisible.value = false
+    confirmMessage.value = ''
+    confirmAction.value = null
+  }
+}
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('vi-VN')
 }
 
 const exportOrigins = () => {
@@ -353,7 +454,7 @@ const exportOrigins = () => {
 }
 
 onMounted(() => {
-  // Removed console.log
+  getXuatXuPage(0)
 })
 </script>
 

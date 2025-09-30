@@ -48,10 +48,33 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
     },
     {
       path: 'bien-the/:productId',
-      name: 'BienTheSanPhamChiTiet',
+      name: 'BienTheSanPhamTheoProd',
       component: () => import('@/views/main-view/quan-ly-san-pham/bien-the/bien-the-san-pham.vue'),
       meta: {
-        locale: 'menu.quan-ly-san-pham.bien-the',
+        locale: 'Biến thể sản phẩm',
+        requiresAuth: true,
+        hideInMenu: true,
+        roles: ['*'],
+        isProductSpecific: true,
+      },
+    },
+    {
+      path: 'bien-the/detail/:id',
+      name: 'BienTheDetail',
+      component: () => import('@/views/main-view/quan-ly-san-pham/bien-the/bien-the-detail.vue'),
+      meta: {
+        locale: 'Chi tiết biến thể',
+        requiresAuth: true,
+        hideInMenu: true,
+        roles: ['*'],
+      },
+    },
+    {
+      path: 'bien-the/update/:id',
+      name: 'BienTheUpdate',
+      component: () => import('@/views/main-view/quan-ly-san-pham/bien-the/bien-the-update.vue'),
+      meta: {
+        locale: 'Chỉnh sửa biến thể',
         requiresAuth: true,
         hideInMenu: true,
         roles: ['*'],

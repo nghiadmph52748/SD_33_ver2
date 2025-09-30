@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { type PagingResponse, type PagedResponseObject } from '../ResponseObject'
 
 // ==================== ĐẾ GIÀY ====================
 export interface DeGiay {
@@ -11,12 +12,12 @@ export interface DeGiay {
   updateAt?: string
 }
 
-export interface DeGiayResponse {
-  content: DeGiay[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+export interface DeGiayPagingResponse extends PagingResponse {
+  data: DeGiay[]
+}
+
+export interface DeGiayResponse extends PagedResponseObject {
+  data: DeGiayPagingResponse
 }
 
 export function getDeGiayListAll() {

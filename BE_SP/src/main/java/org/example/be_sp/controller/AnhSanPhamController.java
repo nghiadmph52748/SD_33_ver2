@@ -28,8 +28,13 @@ public class AnhSanPhamController {
     @Autowired
     AnhSanPhamService anhSanPhamService;
 
-    @GetMapping("/playlist")
+    @GetMapping("/list")
     public ResponseObject<?> getAll() {
+        return new ResponseObject<>(anhSanPhamService.getAll());
+    }
+
+    @GetMapping("/playlist")
+    public ResponseObject<?> getAllWF() {
         return new ResponseObject<>(anhSanPhamService.getAllAnhSanPham());
     }
 

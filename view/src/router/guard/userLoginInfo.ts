@@ -9,21 +9,28 @@ export default function setupUserLoginInfoGuard(router: Router) {
     NProgress.start()
     const userStore = useUserStore()
     if (isLogin()) {
-      if (userStore.role) {
+      if (userStore.id) {
         next()
       } else {
-        try {
-          await userStore.info()
+        // Thử khôi phục thông tin user từ token
+        const restored = await userStore.initUserFromToken()
+        if (restored) {
           next()
-        } catch (error) {
+        } else {
+          // Nếu không khôi phục được, logout
           await userStore.logout()
-          next({
-            name: 'login',
-            query: {
-              redirect: to.name,
-              ...to.query,
-            } as LocationQueryRaw,
-          })
+          // Lưu thông tin redirect vào sessionStorage thay vì URL
+          if (to.name !== 'login') {
+            sessionStorage.setItem(
+              'redirectAfterLogin',
+              JSON.stringify({
+                name: to.name,
+                query: to.query,
+                params: to.params,
+              })
+            )
+          }
+          next({ name: 'login' })
         }
       }
     } else {
@@ -31,13 +38,16 @@ export default function setupUserLoginInfoGuard(router: Router) {
         next()
         return
       }
-      next({
-        name: 'login',
-        query: {
-          redirect: to.name,
-          ...to.query,
-        } as LocationQueryRaw,
-      })
+      // Lưu thông tin redirect vào sessionStorage thay vì URL
+      sessionStorage.setItem(
+        'redirectAfterLogin',
+        JSON.stringify({
+          name: to.name,
+          query: to.query,
+          params: to.params,
+        })
+      )
+      next({ name: 'login' })
     }
   })
 }

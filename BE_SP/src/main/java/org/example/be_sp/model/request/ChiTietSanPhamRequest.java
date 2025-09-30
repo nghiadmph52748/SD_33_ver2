@@ -1,18 +1,20 @@
 package org.example.be_sp.model.request;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class ChiTietSanPhamRequest {
+
     Integer idSanPham;
     Integer idMauSac;
     Integer idKichThuoc;
@@ -23,9 +25,10 @@ public class ChiTietSanPhamRequest {
     BigDecimal giaBan;
     Boolean trangThai;
     String ghiChu;
+    @NotNull(message = "Trường deleted không được để trống")
     Boolean deleted;
-    LocalDate createdAt;
+    LocalDate createAt;
     Integer createBy;
-    LocalDate updatedAt;
+    LocalDate updateAt;
     Integer updateBy;
 }

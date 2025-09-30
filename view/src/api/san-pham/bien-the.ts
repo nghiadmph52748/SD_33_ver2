@@ -82,11 +82,17 @@ export interface BienTheSanPham {
 }
 
 export interface BienTheResponse {
-  content: BienTheSanPham[]
-  totalElements: number
+  data: BienTheSanPham[]
+  currentPage: number
   totalPages: number
-  size: number
-  number: number
+  pageSize: number
+  totalElements: number
+}
+
+export interface ApiResponse<T> {
+  data: T
+  message: string
+  success: boolean
 }
 
 export function getBienTheSanPhamList(page: number, productId?: number) {
@@ -101,14 +107,14 @@ export function getBienTheSanPhamList(page: number, productId?: number) {
 export function getBienTheSanPhamPage(page: number, productId?: number) {
   if (productId) {
     // Lấy biến thể theo sản phẩm
-    return axios.get<BienTheResponse>(`/api/chi-tiet-san-pham-management/paging/${productId}?page=${page}`)
+    return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/${productId}?page=${page}`)
   }
   // Lấy tất cả biến thể
-  return axios.get<BienTheResponse>(`/api/chi-tiet-san-pham-management/paging/all?page=${page}`)
+  return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/all?page=${page}`)
 }
 
 export function getBienTheSanPhamById(id: number) {
-  return axios.get<BienTheSanPham>(`/api/chi-tiet-san-pham-management/detail/${id}`)
+  return axios.get<ApiResponse<BienTheSanPham>>(`/api/chi-tiet-san-pham-management/detail/${id}`)
 }
 
 export interface CreateBienTheSanPhamRequest {
@@ -139,6 +145,51 @@ export function deleteBienTheSanPham(id: number) {
   return axios.put(`/api/chi-tiet-san-pham-management/update/status/${id}`)
 }
 
+// ==================== API CHO TRANG CHI TIẾT VÀ CẬP NHẬT ====================
+// Sử dụng lại API đã có thay vì tạo alias mới
+export const getBienTheById = getBienTheSanPhamById
+
+export interface UpdateBienTheRequest {
+  id: number
+  idSanPham: number
+  giaBan: number
+  giaTriGiamGia?: number
+  soLuong: number
+  trangThai: boolean
+  mauSac: number
+  kichThuoc: number
+  chatLieu: number
+  deGiay: number
+  trongLuong: number
+  ghiChu?: string
+  deleted: boolean
+  createdAt: Date
+  createdBy: number
+  updatedAt: Date
+  updatedBy: number
+}
+
+export function updateBienThe(data: UpdateBienTheRequest) {
+  // Map to backend UpdateBienTheSanPhamRequest structure
+  return updateBienTheSanPham(data.id, {
+    idSanPham: data.idSanPham,
+    idMauSac: data.mauSac,
+    idKichThuoc: data.kichThuoc,
+    idChatLieu: data.chatLieu,
+    idDeGiay: data.deGiay,
+    idTrongLuong: data.trongLuong,
+    soLuong: data.soLuong,
+    giaBan: data.giaBan,
+    trangThai: data.trangThai,
+    ghiChu: data.ghiChu,
+    deleted: data.deleted,
+    createAt: data.createAt,
+    createBy: data.createBy,
+    updateAt: data.updateAt,
+    updateBy: data.updateBy,
+  })
+}
+
 // ==================== UPLOAD ẢNH CHO BIẾN THỂ ====================
 // Note: uploadAnhBienThe bây giờ trả về array ID của ảnh đã upload lên cloud
 
@@ -165,23 +216,23 @@ export function getSanPhamOptions() {
 }
 
 export function getMauSacOptions() {
-  return axios.get<MauSac[]>('/api/mau-sac-management/playlist')
+  return axios.get<MauSac[]>('/api/mau-sac-management/list')
 }
 
 export function getKichThuocOptions() {
-  return axios.get<KichThuoc[]>('/api/kich-thuoc-management/playlist')
+  return axios.get<KichThuoc[]>('/api/kich-thuoc-management/list')
 }
 
 export function getChatLieuOptions() {
-  return axios.get<ChatLieu[]>('/api/chat-lieu-management/playlist')
+  return axios.get<ChatLieu[]>('/api/chat-lieu-management/list')
 }
 
 export function getDeGiayOptions() {
-  return axios.get<DeGiay[]>('/api/de-giay-management/playlist')
+  return axios.get<DeGiay[]>('/api/de-giay-management/list')
 }
 
 export function getTrongLuongOptions() {
-  return axios.get<TrongLuong[]>('/api/trong-luong-management/playlist')
+  return axios.get<TrongLuong[]>('/api/trong-luong-management/list')
 }
 
 // ==================== LẤY ẢNH SẢN PHẨM THEO BIẾN THỂ ====================
@@ -202,3 +253,10 @@ export function themAnhChoBienThe(data: ThemAnhBienTheRequest) {
 export function xoaAnhKhoiBienThe(idAnhBienThe: number) {
   return axios.put(`/api/chi-tiet-san-pham-anh-management/update/status/${idAnhBienThe}`)
 }
+
+// Sử dụng lại API đã có thay vì tạo alias
+export const getMauSac = getMauSacOptions
+export const getKichThuoc = getKichThuocOptions
+export const getChatLieu = getChatLieuOptions
+export const getDeGiay = getDeGiayOptions
+export const getTrongLuong = getTrongLuongOptions
