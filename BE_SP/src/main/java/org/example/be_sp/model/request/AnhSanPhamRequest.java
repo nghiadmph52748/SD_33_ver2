@@ -1,6 +1,5 @@
 package org.example.be_sp.model.request;
 
-
 import java.time.LocalDate;
 
 import lombok.AllArgsConstructor;
@@ -13,11 +12,12 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AnhSanPhamRequest {
-    String duongDanAnh;
-    Boolean trangThai;
-    Boolean deleted;
-    LocalDate createAt;
-    Integer createBy;
-    LocalDate updateAt;
-    Integer updateBy;
+	String duongDanAnh;
+	String tenAnh;
+	Boolean trangThai;
+	Boolean deleted;
+	LocalDate createAt;
+	Integer createBy;
+	LocalDate updateAt;
+	Integer updateBy;
 }

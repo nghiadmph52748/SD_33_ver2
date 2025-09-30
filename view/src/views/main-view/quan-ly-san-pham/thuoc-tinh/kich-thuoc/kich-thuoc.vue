@@ -66,8 +66,8 @@
         "
         row-key="id"
       >
-        <template #stt="{ record, rowIndex }">
-          <span>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</span>
+        <template #stt="{ rowIndex }">
+          <div>{{ rowIndex + 1 }}</div>
         </template>
 
         <template #code="{ record }">
@@ -311,7 +311,6 @@ const resetFilters = () => {
 
 const searchSizes = () => {
   // TODO: Implement search functionality
-  console.log('Searching sizes with filters:', filters.value)
 }
 
 const showCreateModal = () => {
@@ -393,7 +392,6 @@ const getKichThuocPage = async (page) => {
     const res = await getKichThuocList(page)
     if (res.success) {
       sizes.value = res.data.data
-      console.log('Fetched sizes:', sizes.value)
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
@@ -424,7 +422,6 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      console.log('Adding size:', data)
       await createKichThuoc(data)
       closeAddModal()
       // Refresh data
@@ -440,14 +437,12 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      console.log('Updating size:', selectedSize.value.id, data)
       await updateKichThuoc(selectedSize.value.id, data)
       closeUpdateModal()
       // Refresh data
       getKichThuocPage(0)
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
-      console.log('Deleting size:', selectedSize.value.id)
       await deleteKichThuoc(selectedSize.value.id)
       // Refresh data
       getKichThuocPage(0)
@@ -468,7 +463,6 @@ const formatDate = (dateString: string) => {
 
 const exportSizes = () => {
   // TODO: Implement Excel export functionality
-  console.log('Exporting sizes to Excel...')
 }
 
 onMounted(() => {

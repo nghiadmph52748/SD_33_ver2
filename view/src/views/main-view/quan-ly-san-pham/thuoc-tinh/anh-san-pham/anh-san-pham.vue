@@ -79,7 +79,7 @@
                     <icon-download />
                   </template>
                 </a-button>
-                <a-button type="danger" size="mini" @click.stop="deleteImage(image)">
+                <a-button type="primary" status="danger" size="mini" @click.stop="deleteImage(image)">
                   <template #icon>
                     <icon-delete />
                   </template>
@@ -120,6 +120,11 @@
 
           <template #action="{ record }">
             <a-space>
+              <a-button type="text" @click="editImage(record)">
+                <template #icon>
+                  <icon-edit />
+                </template>
+              </a-button>
               <a-button type="text" danger @click="deleteImage(record)">
                 <template #icon>
                   <icon-delete />
@@ -138,6 +143,7 @@
         <div class="preview-info">
           <a-descriptions :column="2" size="small">
             <a-descriptions-item label="Tên file">{{ selectedImage.name }}</a-descriptions-item>
+            <a-descriptions-item label="Màu chủ đạo">{{ selectedImage.color }}</a-descriptions-item>
             <a-descriptions-item label="Kích thước">{{ formatFileSize(selectedImage.size) }}</a-descriptions-item>
             <a-descriptions-item label="Thư mục">{{ getFolderName(selectedImage.folder) }}</a-descriptions-item>
             <a-descriptions-item label="Ngày upload">{{ formatDate(selectedImage.uploaded_at) }}</a-descriptions-item>
@@ -148,54 +154,126 @@
     </a-modal>
 
     <!-- Upload Modal -->
-    <a-modal v-model:open="uploadVisible" title="Upload ảnh sản phẩm" width="600px" @ok="handleUpload" @cancel="handleCancel">
-      <a-form :model="uploadForm" layout="vertical">
-        <a-form-item label="Chọn thư mục">
-          <a-select v-model="uploadForm.folder" placeholder="Chọn thư mục để lưu">
-            <a-option value="sneakers">Giày sneaker</a-option>
-            <a-option value="boots">Giày boot</a-option>
-            <a-option value="heels">Giày cao gót</a-option>
-            <a-option value="other">Khác</a-option>
-          </a-select>
-        </a-form-item>
+    <div
+      v-if="uploadVisible"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto">
+        <h3>Upload ảnh sản phẩm</h3>
+        <a-form :model="uploadForm" layout="vertical">
+          <a-form-item label="Tên ảnh" required>
+            <a-input v-model="uploadForm.tenAnh" placeholder="Nhập tên cho ảnh" />
+          </a-form-item>
+          <a-form-item label="Upload ảnh" required>
+            <a-upload v-model:file-list="fileList" :multiple="true" :before-upload="beforeUpload" accept=".jpg,.jpeg,.png,.gif,.webp" drag>
+              <div style="padding: 20px; text-align: center; border: 2px dashed #d9d9d9; border-radius: 6px">
+                <p style="font-size: 24px; margin-bottom: 8px">
+                  <icon-folder />
+                </p>
+                <p style="font-size: 16px; margin-bottom: 4px">Nhấp hoặc kéo file vào khu vực này để upload</p>
+                <p style="font-size: 12px; color: #999">Hỗ trợ JPG, PNG, GIF, WebP. Tối đa 10MB mỗi file.</p>
+              </div>
+            </a-upload>
+          </a-form-item>
 
-        <a-form-item label="Upload ảnh">
-          <a-upload v-model:file-list="fileList" :multiple="true" :before-upload="beforeUpload" accept=".jpg,.jpeg,.png,.gif,.webp" drag>
-            <div style="padding: 20px; text-align: center; border: 2px dashed #d9d9d9; border-radius: 6px">
-              <p style="font-size: 24px; margin-bottom: 8px">
-                <icon-folder />
-              </p>
-              <p style="font-size: 16px; margin-bottom: 4px">Nhấp hoặc kéo file vào khu vực này để upload</p>
-              <p style="font-size: 12px; color: #999">Hỗ trợ JPG, PNG, GIF, WebP. Tối đa 10MB mỗi file.</p>
+          <!-- Image Preview -->
+          <div v-if="fileList.length > 0" class="image-preview-section">
+            <h4>Ảnh đã chọn:</h4>
+            <div class="preview-grid">
+              <div v-for="(file, index) in fileList" :key="index" class="preview-item">
+                <img :src="file.url || URL.createObjectURL(file.originFile || file)" :alt="file.name" class="preview-thumbnail" />
+                <div class="preview-info">
+                  <span>{{ file.name }}</span>
+                  <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                </div>
+              </div>
             </div>
-          </a-upload>
-        </a-form-item>
-      </a-form>
-    </a-modal>
+          </div>
+        </a-form>
+
+        <div style="margin-top: 16px; text-align: right">
+          <a-button @click="handleCancel" style="margin-right: 8px" :disabled="uploadLoading">Hủy</a-button>
+          <a-button type="primary" @click="handleUpload" :loading="uploadLoading">
+            <template v-if="!uploadLoading">Upload</template>
+            <template v-else>Đang upload...</template>
+          </a-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div
+      v-if="editVisible"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto">
+        <h3>Chỉnh sửa ảnh sản phẩm</h3>
+        <a-form :model="editForm" layout="vertical">
+          <a-form-item label="Tên ảnh" required>
+            <a-input v-model="editForm.tenAnh" placeholder="Nhập tên cho ảnh" />
+          </a-form-item>
+
+          <a-form-item label="Trạng thái">
+            <a-radio-group v-model="editForm.trangThai">
+              <a-radio :value="true">Hoạt động</a-radio>
+              <a-radio :value="false">Không hoạt động</a-radio>
+            </a-radio-group>
+          </a-form-item>
+        </a-form>
+
+        <div style="margin-top: 16px; text-align: right">
+          <a-button @click="handleCancel" style="margin-right: 8px" :disabled="editLoading">Hủy</a-button>
+          <a-button type="primary" @click="handleEdit" :loading="editLoading">
+            <template v-if="!editLoading">Cập nhật</template>
+            <template v-else>Đang cập nhật...</template>
+          </a-button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { useUserStore } from '@/store'
+import { Message } from '@arco-design/web-vue'
+import { IconUpload, IconFolder, IconApps, IconList, IconEdit, IconDownload, IconDelete, IconRefresh } from '@arco-design/web-vue/es/icon'
 import {
-  IconUpload,
-  IconImage,
-  IconFolder,
-  IconStorage,
-  IconClockCircle,
-  IconSearch,
-  IconApps,
-  IconList,
-  IconEye,
-  IconEdit,
-  IconDownload,
-  IconDelete,
-} from '@arco-design/web-vue/es/icon'
+  getAnhSanPhamList,
+  uploadMutipartFile,
+  updateMutipartFile,
+  deleteAnhSanPham,
+} from '../../../../../api/san-pham/thuoc-tinh/anh-san-pham'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
+
+// User store
+const userStore = useUserStore()
 
 // Reactive data
 const filters = ref({
@@ -208,42 +286,12 @@ const filters = ref({
 const viewMode = ref('grid')
 const previewVisible = ref(false)
 const uploadVisible = ref(false)
-const selectedImage = ref(null)
+const editVisible = ref(false)
+const selectedImage = ref<any>(null)
 const fileList = ref([])
 
 // Mock data
-const images = ref([
-  {
-    id: 1,
-    name: 'Nike Air Max 270 - Trắng',
-    url: 'https://via.placeholder.com/200x200/f5f5f5/666666?text=Nike+Air+Max',
-    size: 2450000,
-    folder: 'sneakers',
-    status: 'active',
-    uploaded_at: '2024-01-20',
-    description: 'Ảnh chính giày Nike Air Max 270 màu trắng',
-  },
-  {
-    id: 2,
-    name: 'Dr. Martens Boot - Đen',
-    url: 'https://via.placeholder.com/200x200/333333/ffffff?text=Dr.+Martens',
-    size: 1890000,
-    folder: 'boots',
-    status: 'active',
-    uploaded_at: '2024-01-19',
-    description: 'Ảnh chi tiết giày boot Dr. Martens màu đen',
-  },
-  {
-    id: 3,
-    name: 'Jimmy Choo Heel - Đỏ',
-    url: 'https://via.placeholder.com/200x200/ff4d4f/ffffff?text=Jimmy+Choo',
-    size: 3200000,
-    folder: 'heels',
-    status: 'inactive',
-    uploaded_at: '2024-01-18',
-    description: 'Ảnh sản phẩm giày cao gót Jimmy Choo màu đỏ',
-  },
-])
+const images = ref<any[]>([])
 
 // Filtered images computed property
 const filteredImages = computed(() => {
@@ -252,24 +300,28 @@ const filteredImages = computed(() => {
     if (filters.value.status && image.status !== filters.value.status) {
       return false
     }
-
     // Filter by search (name)
     if (filters.value.search) {
       const searchTerm = filters.value.search.toLowerCase()
       const matchesName = image.name.toLowerCase().includes(searchTerm)
       const matchesDescription = image.description?.toLowerCase().includes(searchTerm)
-
       if (!matchesName && !matchesDescription) {
         return false
       }
     }
-
     return true
   })
 })
 
 const uploadForm = reactive({
-  folder: '',
+  tenAnh: '',
+  file: '',
+})
+
+const editForm = reactive({
+  id: null as number | null,
+  tenAnh: '',
+  trangThai: true,
 })
 
 const listColumns = [
@@ -294,6 +346,12 @@ const listColumns = [
     width: 250,
   },
   {
+    title: 'Tên màu',
+    dataIndex: 'color',
+    width: 150,
+    align: 'center',
+  },
+  {
     title: 'Trạng thái',
     dataIndex: 'status',
     slotName: 'status',
@@ -312,7 +370,7 @@ const listColumns = [
 // Pagination
 const pagination = computed(() => ({
   current: 1,
-  pageSize: 12,
+  pageSize: 10,
   total: filteredImages.value.length,
   showSizeChanger: true,
   showQuickJumper: true,
@@ -320,20 +378,20 @@ const pagination = computed(() => ({
 }))
 
 const loading = ref(false)
+const uploadLoading = ref(false)
+const editLoading = ref(false)
 
 // Methods
 const resetFilters = () => {
   filters.value = {
     search: '',
     status: '',
-    folder: '',
     sort: 'newest',
   }
 }
 
 const exportExcel = () => {
   // TODO: Implement Excel export functionality
-  console.log('Exporting to Excel...')
   // You can implement the actual Excel export logic here
   // For example, using libraries like xlsx or similar
 }
@@ -351,21 +409,6 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString('vi-VN')
 }
 
-const getFolderColor = (folder: string) => {
-  switch (folder) {
-    case 'sneakers':
-      return 'blue'
-    case 'boots':
-      return 'green'
-    case 'heels':
-      return 'red'
-    case 'other':
-      return 'gray'
-    default:
-      return 'default'
-  }
-}
-
 const getFolderName = (folder: string) => {
   switch (folder) {
     case 'sneakers':
@@ -381,8 +424,47 @@ const getFolderName = (folder: string) => {
   }
 }
 
+const loadImages = async () => {
+  try {
+    loading.value = true
+    const res = await getAnhSanPhamList(0)
+    if (res.success) {
+      // Map API data to component expected format
+      images.value = res.data.data.map((item: any) => ({
+        id: item.id,
+        name: item.tenAnh,
+        url: item.duongDanAnh,
+        status: item.trangThai ? 'active' : 'inactive',
+        color: item.mauAnh,
+        folder: 'other', // Default folder
+        size: 0, // Default size
+        uploaded_at: item.createAt,
+        description: `Màu chủ đạo: ${item.mauAnh}`,
+        createAt: item.createAt,
+        createBy: item.createBy,
+        updateAt: item.updateAt,
+        updateBy: item.updateBy,
+        deleted: item.deleted,
+      }))
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.pageSize
+      pagination.value.current = res.data.currentPage + 1
+    } else {
+      images.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    Message.error('Lỗi khi tải danh sách ảnh')
+  } finally {
+    loading.value = false
+  }
+}
+
 const searchImages = () => {
-  // Removed console.log
+  // Search is handled by the filteredImages computed property
+  // This function can be used for additional search logic if needed
 }
 
 const toggleViewMode = () => {
@@ -395,43 +477,143 @@ const previewImage = (image: any) => {
 }
 
 const editImage = (image: any) => {
-  // Removed console.log
+  editForm.id = image.id
+  editForm.tenAnh = image.name
+  editForm.trangThai = image.status === 'active'
+  editVisible.value = true
 }
 
 const downloadImage = (image: any) => {
-  // Removed console.log
+  const link = document.createElement('a')
+  link.href = image.url
+  link.download = image.name || 'image'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
-const deleteImage = (image: any) => {
-  // Removed console.log
+const deleteImage = async (image: any) => {
+  try {
+    await deleteAnhSanPham(image.id)
+    // Reload images
+    await loadImages()
+  } catch (error) {
+    Message.error('Lỗi khi xóa ảnh')
+  }
 }
 
 const showUploadModal = () => {
   uploadVisible.value = true
 }
 
-const handleUpload = () => {
-  // Removed console.log
-  uploadVisible.value = false
+const handleUpload = async () => {
+  if (!uploadForm.tenAnh.trim()) {
+    Message.error('Vui lòng nhập tên ảnh')
+    return
+  }
+
+  if (fileList.value.length === 0) {
+    Message.error('Vui lòng chọn ít nhất một file ảnh để upload')
+    return
+  }
+
+  try {
+    uploadLoading.value = true
+    const files = fileList.value.map((fileItem: any) => fileItem.originFile || fileItem.file)
+    const result = await uploadMutipartFile(files, uploadForm.tenAnh, userStore.id!)
+
+    if (result.data && result.data.length > 0) {
+      Message.success('Upload ảnh thành công')
+
+      // Clean up preview URLs
+      fileList.value.forEach((file: any) => {
+        if (file.url && file.url.startsWith('blob:')) {
+          URL.revokeObjectURL(file.url)
+        }
+      })
+
+      // Reset form
+      uploadForm.tenAnh = ''
+      uploadForm.file = ''
+      fileList.value = []
+
+      // Reload images
+      await loadImages()
+
+      uploadVisible.value = false
+    }
+  } catch (error) {
+    Message.error('Lỗi khi upload ảnh')
+  } finally {
+    uploadLoading.value = false
+  }
 }
 
 const handleCancel = () => {
   uploadVisible.value = false
+  editVisible.value = false
+
+  // Clean up preview URLs
+  fileList.value.forEach((file: any) => {
+    if (file.url && file.url.startsWith('blob:')) {
+      URL.revokeObjectURL(file.url)
+    }
+  })
+
+  uploadForm.tenAnh = ''
+  uploadForm.file = ''
+  fileList.value = []
+  editForm.id = null
+  editForm.tenAnh = ''
+  editForm.trangThai = true
+}
+
+const handleEdit = async () => {
+  if (!editForm.tenAnh.trim() || !editForm.id) {
+    Message.error('Vui lòng nhập tên ảnh')
+    return
+  }
+
+  try {
+    editLoading.value = true
+    const result = await updateMutipartFile(editForm.id!, [], editForm.tenAnh, userStore.id!)
+
+    if (result.data && result.data.length > 0) {
+      Message.success('Cập nhật ảnh thành công')
+      // Reload images
+      await loadImages()
+
+      editVisible.value = false
+      editForm.id = null
+      editForm.tenAnh = ''
+      editForm.trangThai = true
+    }
+  } catch (error) {
+    Message.error('Lỗi khi chỉnh sửa ảnh')
+  } finally {
+    editLoading.value = false
+  }
 }
 
 const beforeUpload = (file: File) => {
   const isValidType = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)
   if (!isValidType) {
-    // console.error('Chỉ được upload file ảnh!')
+    Message.error('Chỉ được upload file ảnh!')
     return false
   }
   const isLt10M = file.size / 1024 / 1024 < 10
   if (!isLt10M) {
-    // console.error('Ảnh phải nhỏ hơn 10MB!')
+    Message.error('Ảnh phải nhỏ hơn 10MB!')
     return false
   }
+
+  // Create preview URL for the file
+  file.url = URL.createObjectURL(file)
   return false
 }
+onMounted(() => {
+  loadImages()
+})
 </script>
 
 <style scoped>
@@ -575,6 +757,13 @@ const beforeUpload = (file: File) => {
   white-space: nowrap;
 }
 
+.image-color {
+  font-size: 12px;
+  color: #165dff;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
 .image-meta {
   font-size: 12px;
   color: #86909c;
@@ -609,6 +798,71 @@ const beforeUpload = (file: File) => {
 .preview-info {
   padding: 16px;
   background: #f8f9fa;
+}
+
+/* Image Preview Section */
+.image-preview-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.image-preview-section h4 {
+  margin: 0 0 12px 0;
+  color: #1d2129;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.preview-item {
+  border: 1px solid #e5e6eb;
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+}
+
+.preview-thumbnail {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-info {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-info span:first-child {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1d2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  font-size: 11px;
+  color: #86909c;
+}
+
+/* Modal styles */
+:deep(.arco-modal) {
+  z-index: 1000 !important;
+}
+
+:deep(.arco-modal-mask) {
+  z-index: 999 !important;
 }
 
 /* Responsive */

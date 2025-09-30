@@ -12,14 +12,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AnhSanPhamUploadCloud {
-    Integer id;
     MultipartFile[] duongDanAnh;
-    String loaiAnh;
-    String moTa;
+    String tenAnh;
     Boolean trangThai;
-    Boolean deleted;
-    LocalDate createAt;
     Integer createBy;
-    LocalDate updateAt;
     Integer updateBy;
 }

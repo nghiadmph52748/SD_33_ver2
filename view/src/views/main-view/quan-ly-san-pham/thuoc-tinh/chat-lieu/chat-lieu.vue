@@ -67,7 +67,7 @@
         row-key="id"
       >
         <template #stt="{ record, rowIndex }">
-          <span>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</span>
+          <span>{{ rowIndex + 1 }}</span>
         </template>
 
         <template #code="{ record }">
@@ -312,7 +312,6 @@ const resetFilters = () => {
 
 const searchMaterials = () => {
   // TODO: Implement search functionality
-  console.log('Searching materials with filters:', filters.value)
 }
 
 const showCreateModal = () => {
@@ -394,7 +393,6 @@ const getChatLieuPage = async (page) => {
     const res = await getChatLieuList(page)
     if (res.success) {
       materials.value = res.data.data
-      console.log('Fetched materials:', materials.value)
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
@@ -425,7 +423,6 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      console.log('Adding material:', data)
       await createChatLieu(data)
       closeAddModal()
       // Refresh data
@@ -441,14 +438,12 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      console.log('Updating material:', selectedMaterial.value.id, data)
       await updateChatLieu(selectedMaterial.value.id, data)
       closeUpdateModal()
       // Refresh data
       getChatLieuPage(0)
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
-      console.log('Deleting material:', selectedMaterial.value.id)
       await deleteChatLieu(selectedMaterial.value.id)
       // Refresh data
       getChatLieuPage(0)
@@ -469,7 +464,6 @@ const formatDate = (dateString: string) => {
 
 const exportMaterials = () => {
   // TODO: Implement Excel export functionality
-  console.log('Exporting materials to Excel...')
 }
 
 onMounted(() => {

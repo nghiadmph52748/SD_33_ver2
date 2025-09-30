@@ -30,6 +30,7 @@ public class AnhSanPham {
     @Column(name = "duong_dan_anh")
     private String duongDanAnh;
 
+    @Nationalized
     @Column(name = "ten_anh")
     private String tenAnh;
 

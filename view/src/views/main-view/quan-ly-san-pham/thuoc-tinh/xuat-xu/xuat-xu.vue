@@ -298,7 +298,6 @@ const resetFilters = () => {
 
 const searchOrigins = () => {
   // TODO: Implement search functionality
-  console.log('Searching origins with filters:', filters.value)
 }
 
 const showCreateModal = () => {
@@ -379,7 +378,6 @@ const getXuatXuPage = async (page) => {
     const res = await getXuatXuList(page)
     if (res.success) {
       origins.value = res.data.data
-      console.log('Fetched origins:', origins.value)
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1
@@ -406,7 +404,6 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      console.log('Adding origin:', data)
       await createXuatXu(data)
       closeAddModal()
       // Refresh data
@@ -422,14 +419,12 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      console.log('Updating origin:', selectedOrigin.value.id, data)
       await updateXuatXu(selectedOrigin.value.id, data)
       closeUpdateModal()
       // Refresh data
       getXuatXuPage(0)
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
-      console.log('Deleting origin:', selectedOrigin.value.id)
       await deleteXuatXu(selectedOrigin.value.id)
       // Refresh data
       getXuatXuPage(0)
@@ -450,7 +445,6 @@ const formatDate = (dateString: string) => {
 
 const exportOrigins = () => {
   // TODO: Implement Excel export functionality
-  console.log('Exporting origins to Excel...')
 }
 
 onMounted(() => {

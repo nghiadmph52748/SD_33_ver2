@@ -67,7 +67,7 @@
         row-key="id"
       >
         <template #stt="{ record, rowIndex }">
-          <span>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</span>
+          <span>{{ rowIndex + 1 }}</span>
         </template>
 
         <template #code="{ record }">
@@ -299,7 +299,6 @@ const resetFilters = () => {
 
 const searchWeights = () => {
   // TODO: Implement search functionality
-  console.log('Searching weights with filters:', filters.value)
 }
 
 const showCreateModal = () => {
@@ -381,7 +380,6 @@ const getTrongLuongPage = async (page) => {
     const res = await getTrongLuongList(page)
     if (res.success) {
       weights.value = res.data.data
-      console.log('Fetched weights:', weights.value)
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
@@ -412,7 +410,6 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      console.log('Adding weight:', data)
       await createTrongLuong(data)
       closeAddModal()
       // Refresh data
@@ -428,14 +425,12 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      console.log('Updating weight:', selectedWeight.value.id, data)
       await updateTrongLuong(selectedWeight.value.id, data)
       closeUpdateModal()
       // Refresh data
       getTrongLuongPage(0)
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
-      console.log('Deleting weight:', selectedWeight.value.id)
       await deleteTrongLuong(selectedWeight.value.id)
       // Refresh data
       getTrongLuongPage(0)
@@ -456,7 +451,6 @@ const formatDate = (dateString: string) => {
 
 const exportWeights = () => {
   // TODO: Implement Excel export functionality
-  console.log('Exporting weights to Excel...')
 }
 
 onMounted(() => {

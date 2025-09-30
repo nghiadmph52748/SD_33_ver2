@@ -613,7 +613,6 @@ const resetFilters = () => {
 
 const searchColors = () => {
   // TODO: Implement search functionality
-  console.log('Searching colors with filters:', filters.value)
 }
 
 const showCreateModal = () => {
@@ -696,7 +695,6 @@ const getMauSacPage = async (page: number) => {
     const res = await getMauSacList(page)
     if (res.success) {
       colors.value = res.data.data
-      console.log('Fetched colors:', colors.value)
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1
@@ -724,7 +722,6 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      console.log('Adding color:', data)
       await createMauSac(data)
       closeAddModal()
       // Refresh data
@@ -743,7 +740,6 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      console.log('Updating color:', selectedColor.value.id, data)
       await updateMauSac(selectedColor.value.id, data)
       closeUpdateModal()
       // Refresh data
@@ -752,7 +748,6 @@ const executeConfirmedAction = async () => {
       if (!selectedColor.value) return
 
       // TODO: Implement delete API call
-      console.log('Deleting color:', selectedColor.value.id)
       await deleteMauSac(selectedColor.value.id)
       // Refresh data
       getMauSacPage(0)
@@ -773,7 +768,6 @@ const formatDate = (dateString: string) => {
 
 const exportColors = () => {
   // TODO: Implement Excel export functionality
-  console.log('Exporting colors to Excel...')
 }
 
 onMounted(() => {

@@ -44,6 +44,10 @@ public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, A
         return anhSanPhamRepository.findAllByDeletedFalse(false).stream().map(AnhSanPhamResponse::new).toList();
     }
 
+    public List<AnhSanPhamResponse> getAllByMauAnh(String mauAnh) {
+        return anhSanPhamRepository.findAllByMauAnh(mauAnh).stream().map(AnhSanPhamResponse::new).toList();
+    }
+
     public PagingResponse<AnhSanPhamResponse> pagingAnhSanPham(int page, int size) {
         return new PagingResponse<>(anhSanPhamRepository.findAll(PageRequest.of(page, size)), page);
     }
@@ -74,17 +78,23 @@ public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, A
 
     public List<Integer> addAnhSanPhamFromCloud(AnhSanPhamUploadCloud request) {
         try {
-            ArrayList<String> duongDanAnh = uploadImageToCloudinary.uploadImage(request.getDuongDanAnh());
+            ArrayList<UploadImageToCloudinary.Image> lst = uploadImageToCloudinary.uploadImage(request.getDuongDanAnh());
             List<Integer> savedIds = new ArrayList<>();
 
-            for (String s : duongDanAnh){
-                AnhSanPham entity = MapperUtils.map(request, AnhSanPham.class);
-                if (anhSanPhamRepository.existsByDuongDanAnh(s)) {
-                    AnhSanPham existingAnhSanPham = anhSanPhamRepository.findByDuongDanAnh(s);
+            for (UploadImageToCloudinary.Image s : lst) {
+                AnhSanPham entity = new AnhSanPham();
+                if (anhSanPhamRepository.existsByDuongDanAnh(s.getUrl())) {
+                    AnhSanPham existingAnhSanPham = anhSanPhamRepository.findByDuongDanAnh(s.getUrl());
                     savedIds.add(existingAnhSanPham.getId());
                     continue;
                 }
-                entity.setDuongDanAnh(s);
+                entity.setDuongDanAnh(s.getUrl());
+                entity.setTenAnh(request.getTenAnh() + " - " + s.getColor());
+                entity.setMauAnh(s.getColor());
+                entity.setCreateAt(LocalDate.now());
+                entity.setCreateBy(request.getCreateBy());
+                entity.setDeleted(false);
+                entity.setTrangThai(true);
                 AnhSanPham savedEntity = anhSanPhamRepository.save(entity);
                 savedIds.add(savedEntity.getId());
             }
@@ -107,18 +117,20 @@ public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, A
         return anhSanPhamRepository.save(entity);
     }
 
-    public void updateMultiImageCloud(Integer id, AnhSanPhamUploadCloud request) {
-        ArrayList<String> duongDanAnh = uploadImageToCloudinary.uploadImage(request.getDuongDanAnh());
+    public List<Integer> updateMultiImageCloud(Integer id, AnhSanPhamUploadCloud request) {
+        ArrayList<Integer> returnlst = new ArrayList<>();
+        ArrayList<UploadImageToCloudinary.Image> lst = uploadImageToCloudinary.uploadImage(request.getDuongDanAnh());
         AnhSanPham entity = anhSanPhamRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy ảnh sản phẩm với id: " + id, "404"));
-        entity.setDeleted(request.getDeleted());
-        entity.setTrangThai(request.getTrangThai());
-        entity.setUpdateAt(LocalDate.now());
-        entity.setUpdateBy(1);
-        entity.setId(id);
-        for ( String s : duongDanAnh){
-            entity.setDuongDanAnh(s);
+        for (UploadImageToCloudinary.Image s : lst) {
+            entity.setDuongDanAnh(s.getUrl());
+            entity.setTenAnh(request.getTenAnh() + " - " + s.getColor());
+            entity.setMauAnh(s.getColor());
+            entity.setUpdateAt(LocalDate.now());
+            entity.setUpdateBy(request.getUpdateBy());
+            entity.setId(id);
+            returnlst.add(anhSanPhamRepository.save(entity).getId());
         }
-        anhSanPhamRepository.save(entity);
+        return returnlst;
     }
 
     /**

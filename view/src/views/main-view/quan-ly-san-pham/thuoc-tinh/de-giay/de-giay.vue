@@ -67,7 +67,7 @@
         row-key="id"
       >
         <template #stt="{ record, rowIndex }">
-          <span>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</span>
+          <span>{{ rowIndex + 1 }}</span>
         </template>
 
         <template #code="{ record }">
@@ -299,7 +299,6 @@ const resetFilters = () => {
 
 const searchSoles = () => {
   // TODO: Implement search functionality
-  console.log('Searching soles with filters:', filters.value)
 }
 
 const showCreateModal = () => {
@@ -381,7 +380,6 @@ const getDeGiayPage = async (page) => {
     const res = await getDeGiayList(page)
     if (res.success) {
       soles.value = res.data.data
-      console.log('Fetched soles:', soles.value)
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
@@ -412,7 +410,6 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      console.log('Adding sole:', data)
       await createDeGiay(data)
       closeAddModal()
       // Refresh data
@@ -428,14 +425,12 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      console.log('Updating sole:', selectedSole.value.id, data)
       await updateDeGiay(selectedSole.value.id, data)
       closeUpdateModal()
       // Refresh data
       getDeGiayPage(0)
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
-      console.log('Deleting sole:', selectedSole.value.id)
       await deleteDeGiay(selectedSole.value.id)
       // Refresh data
       getDeGiayPage(0)
@@ -456,7 +451,6 @@ const formatDate = (dateString: string) => {
 
 const exportSoles = () => {
   // TODO: Implement Excel export functionality
-  console.log('Exporting soles to Excel...')
 }
 
 onMounted(() => {

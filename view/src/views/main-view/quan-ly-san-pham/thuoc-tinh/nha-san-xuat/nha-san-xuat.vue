@@ -339,7 +339,6 @@ const resetFilters = () => {
 
 const searchManufacturers = () => {
   // TODO: Implement search functionality
-  console.log('Searching manufacturers with filters:', filters.value)
 }
 
 const showCreateModal = () => {
@@ -420,7 +419,6 @@ const getNhaSanXuatPage = async (page) => {
     const res = await getNhaSanXuatList(page)
     if (res.success) {
       manufacturers.value = res.data.data
-      console.log('Fetched manufacturers:', manufacturers.value)
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1
@@ -447,7 +445,6 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      console.log('Adding manufacturer:', data)
       await createNhaSanXuat(data)
       closeAddModal()
       // Refresh data
@@ -463,14 +460,12 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      console.log('Updating manufacturer:', selectedManufacturer.value.id, data)
       await updateNhaSanXuat(selectedManufacturer.value.id, data)
       closeUpdateModal()
       // Refresh data
       getNhaSanXuatPage(0)
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
-      console.log('Deleting manufacturer:', selectedManufacturer.value.id)
       await deleteNhaSanXuat(selectedManufacturer.value.id)
       // Refresh data
       getNhaSanXuatPage(0)
@@ -491,12 +486,10 @@ const formatDate = (dateString: string) => {
 
 const viewProducts = (manufacturer: any) => {
   // TODO: Implement view products functionality
-  console.log('View products for manufacturer:', manufacturer)
 }
 
 const exportManufacturers = () => {
   // TODO: Implement Excel export functionality
-  console.log('Exporting manufacturers to Excel...')
 }
 
 onMounted(() => {
