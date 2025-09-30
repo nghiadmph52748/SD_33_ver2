@@ -2,6 +2,7 @@ import { LoginData, login as userLogin, logout as userLogout } from '@/api/user'
 import { clearToken, setToken } from '@/utils/auth'
 import { removeRouteListener } from '@/utils/route-listener'
 import { defineStore } from 'pinia'
+import { Message } from '@arco-design/web-vue'
 import useAppStore from './app'
 import { UserState } from './user/types'
 

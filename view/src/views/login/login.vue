@@ -1,34 +1,35 @@
 <template>
   <div class="login-bg">
     <div class="container">
-      <div class="scan-login-btn" @click="showQr = true">
-        <svg class="scan-icon" viewBox="0 0 24 24" width="20" height="20">
-          <rect x="3" y="3" width="7" height="7" rx="2" fill="none" stroke="#00308f" stroke-width="2" />
-          <rect x="14" y="3" width="7" height="7" rx="2" fill="none" stroke="#00308f" stroke-width="2" />
-          <rect x="14" y="14" width="7" height="7" rx="2" fill="none" stroke="#00308f" stroke-width="2" />
-          <rect x="3" y="14" width="7" height="7" rx="2" fill="none" stroke="#00308f" stroke-width="2" />
-        </svg>
-        <span>Đăng nhập QR</span>
-      </div>
-      <a-modal v-model:visible="showQr" title="Đăng nhập bằng mã QR" :footer="false" width="320px">
-        <div class="qr-modal-content">
-          <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=login-demo"
-            alt="Mã QR"
-            style="width: 200px; height: 200px; display: block; margin: 0 auto"
-          />
-          <div style="text-align: center; margin-top: 12px; color: #888">Vui lòng sử dụng WeChat/DingTalk... để quét mã đăng nhập</div>
-        </div>
-      </a-modal>
-      <div class="logo">
-        <img alt="logo" src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" />
-        <div class="logo-text">Vue Admin Arco</div>
-      </div>
-      <LoginBanner />
       <div class="content">
-        <div class="content-inner">
-          <LoginForm />
+        <div class="logo">
+          <img
+            alt="logo"
+            src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
+          />
+          <div class="logo-text">GearUp</div>
         </div>
+        <transition name="fade" mode="out-in">
+          <div class="content-inner" :key="mode">
+            <LoginForm v-if="mode === 'login'" @forgot-password="goToForgot" />
+            <ForgotPasswordForm
+              v-else-if="mode === 'forgot'"
+              :email="forgotEmail"
+              @back-to-login="backToLogin"
+              @submitted="handleForgotSubmitted"
+            />
+            <div v-else class="reset-success">
+              <icon-check-circle-fill class="success-icon" />
+              <h2>Đã gửi yêu cầu</h2>
+              <p>
+                Hướng dẫn đặt lại mật khẩu đã được gửi tới
+                <strong>{{ successEmail }}</strong>
+                . Vui lòng kiểm tra hộp thư (và thư rác) để tiếp tục.
+              </p>
+              <a-button type="primary" long @click="backToLogin">Quay lại đăng nhập</a-button>
+            </div>
+          </div>
+        </transition>
       </div>
     </div>
   </div>
@@ -36,17 +37,44 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
-import LoginBanner from './components/banner.vue'
+import { IconCheckCircleFill } from '@arco-design/web-vue/es/icon'
 import LoginForm from './components/login-form.vue'
+import ForgotPasswordForm from './components/forgot-password-form.vue'
 
 export default defineComponent({
   components: {
-    LoginBanner,
     LoginForm,
+    ForgotPasswordForm,
+    IconCheckCircleFill,
   },
   setup() {
-    const showQr = ref(false)
-    return { showQr }
+    const mode = ref<'login' | 'forgot' | 'success'>('login')
+    const successEmail = ref('')
+    const forgotEmail = ref('')
+
+    const goToForgot = (email: string) => {
+      forgotEmail.value = email
+      mode.value = 'forgot'
+    }
+
+    const backToLogin = () => {
+      mode.value = 'login'
+      successEmail.value = ''
+    }
+
+    const handleForgotSubmitted = (email: string) => {
+      successEmail.value = email
+      mode.value = 'success'
+    }
+
+    return {
+      mode,
+      successEmail,
+      forgotEmail,
+      goToForgot,
+      backToLogin,
+      handleForgotSubmitted,
+    }
   },
 })
 </script>
@@ -63,7 +91,7 @@ export default defineComponent({
 .container {
   display: flex;
   min-height: 500px;
-  width: 900px;
+  width: 520px;
   max-width: 96vw;
   border-radius: 18px;
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
@@ -72,23 +100,15 @@ export default defineComponent({
   overflow: hidden;
   margin: 40px 0;
   @media (max-width: 900px) {
-    flex-direction: column;
     width: 98vw;
     min-height: unset;
-  }
-  .banner {
-    width: 400px;
-    background: linear-gradient(163.85deg, #1d2129 0%, #00308f 100%);
-    @media (max-width: 900px) {
-      width: 100%;
-      min-height: 220px;
-    }
   }
   .content {
     border-radius: 18px;
     position: relative;
     display: flex;
-    flex: 1;
+    width: 100%;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 40px 0;
@@ -98,11 +118,54 @@ export default defineComponent({
     }
   }
 }
+.content-inner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.reset-success {
+  width: 320px;
+  text-align: center;
+}
+
+.reset-success h2 {
+  margin: 16px 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.reset-success p {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.success-icon {
+  font-size: 48px;
+  color: #22c55e;
+}
+
+.reset-success :deep(.arco-btn) {
+  border-radius: 24px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 .logo {
-  position: absolute;
-  top: 32px;
-  left: 32px;
-  z-index: 2;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.85);
@@ -121,39 +184,10 @@ export default defineComponent({
     width: 32px;
   }
   @media (max-width: 900px) {
-    position: static;
-    margin: 24px auto 0 auto;
+    margin: 16px auto;
     justify-content: center;
     box-shadow: none;
     background: transparent;
   }
-}
-.scan-login-btn {
-  position: absolute;
-  top: 24px;
-  right: 32px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #f4f8ff;
-  color: #00308f;
-  border-radius: 18px;
-  padding: 6px 16px;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 2px 8px 0 rgba(31, 38, 135, 0.08);
-  transition: background 0.2s;
-  &:hover {
-    background: #e0e7ff;
-  }
-  .scan-icon {
-    display: inline-block;
-    vertical-align: middle;
-  }
-}
-.qr-modal-content {
-  padding: 12px 0 0 0;
 }
 </style>

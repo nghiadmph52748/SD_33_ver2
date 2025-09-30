@@ -539,7 +539,7 @@ watch(
 
 const determineDiscountType = (coupon: CouponApiModel): 'percentage' | 'fixed' => {
   if (coupon.loaiPhieuGiamGia !== null && coupon.loaiPhieuGiamGia !== undefined) {
-    return coupon.loaiPhieuGiamGia ? 'percentage' : 'fixed'
+    return coupon.loaiPhieuGiamGia ? 'fixed' : 'percentage'
   }
   const numericValue = Number(coupon.giaTriGiamGia ?? 0)
   return numericValue <= 100 ? 'percentage' : 'fixed'
