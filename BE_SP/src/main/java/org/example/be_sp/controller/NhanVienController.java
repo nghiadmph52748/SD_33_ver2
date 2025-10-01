@@ -9,21 +9,15 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.NhanVienRequest;
 import org.example.be_sp.model.response.NhanVienResponse;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.NhanVienService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -170,6 +164,18 @@ public class NhanVienController {
         IOUtils.copy(templateStream, response.getOutputStream());
         response.flushBuffer();
         templateStream.close();
+    }
+
+    @DeleteMapping("/nhan-vien/{id}")
+    public ResponseEntity<String> deleteNhanVien(@PathVariable Integer id) {
+        try {
+            nhanVienService.deleteNhanVien(id);
+            return ResponseEntity.ok("Nhân viên đã được xóa");
+        } catch (ApiException e) {
+            return ResponseEntity.status(404).body("Không tìm thấy nhân viên: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi server: " + e.getMessage());
+        }
     }
 
 }

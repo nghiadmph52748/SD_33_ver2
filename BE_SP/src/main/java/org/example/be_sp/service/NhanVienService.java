@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -52,18 +53,36 @@ public class NhanVienService {
     }
 
     public void saveNhanVien(NhanVienRequest request, PasswordEncoder passwordEncoder) {
-        NhanVien nv = MapperUtils.map(request, NhanVien.class);
-        nv.setIdQuyenHan(repository.findById(request.getIdQuyenHan()).orElseThrow(() -> new ApiException("QuyenHan not found", "404")));
-        if (request.getTenTaiKhoan() != null && request.getMatKhau() != null){
-            if (nhanVienRepository.existsByTenTaiKhoan(request.getTenTaiKhoan())){
+        NhanVien nv = new NhanVien();
+        nv.setTenNhanVien(request.getTenNhanVien());
+        nv.setEmail(request.getEmail());
+        nv.setSoDienThoai(request.getSoDienThoai());
+        nv.setDiaChiCuThe(request.getDiaChiCuThe());
+        nv.setThanhPho(request.getThanhPho());
+        nv.setQuan(request.getQuan());
+        nv.setPhuong(request.getPhuong());
+        nv.setCccd(request.getCccd());
+        nv.setNgaySinh(request.getNgaySinh());
+        nv.setTrangThai(request.getTrangThai());
+        nv.setDeleted(false);
+        nv.setGioiTinh(request.getGioiTinh());
+
+        // set quyền hạn
+        nv.setIdQuyenHan(repository.findById(request.getIdQuyenHan())
+                .orElseThrow(() -> new ApiException("QuyenHan not found", "404")));
+
+        // set tài khoản & mật khẩu
+        if (request.getTenTaiKhoan() != null && request.getMatKhau() != null) {
+            if (nhanVienRepository.existsByTenTaiKhoan(request.getTenTaiKhoan())) {
                 throw new ApiException("TenTaiKhoan da ton tai", "400");
-            } else {
-                nv.setTenTaiKhoan(request.getTenTaiKhoan());
-                nv.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
             }
+            nv.setTenTaiKhoan(request.getTenTaiKhoan());
+            nv.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
         }
+
         nhanVienRepository.save(nv);
     }
+
 
     public void updateNhanVien(Integer id, NhanVienRequest request, PasswordEncoder passwordEncoder) {
         NhanVien nv = nhanVienRepository.findById(id)
@@ -168,7 +187,9 @@ public class NhanVienService {
         }
     }
 
-
+    public boolean existsById(Integer id) {
+        return nhanVienRepository.existsById(id);  // Trả về true nếu tồn tại, false nếu không
+    }
     private String getCellStringValue(Cell cell) {
         if (cell == null) return null;
         if (cell.getCellType() == CellType.STRING) {
@@ -178,4 +199,14 @@ public class NhanVienService {
         }
         return null;
     }
+
+    public void deleteNhanVien(Integer id) {
+        NhanVien nv = nhanVienRepository.findById(id)
+                .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên với id: " + id, "404"));
+
+        nhanVienRepository.delete(nv);  // Xóa cứng khỏi database
+    }
+
+
+
 }
