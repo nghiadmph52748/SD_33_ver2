@@ -298,24 +298,15 @@
           </a-col>
         </a-row>
 
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item field="dateRange" label="Thời gian áp dụng">
-              <a-range-picker
-                v-model="couponEditForm.dateRange"
-                value-format="YYYY-MM-DD"
-                format="DD/MM/YYYY"
-                allow-clear
-                style="width: 100%"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item field="active" label="Trạng thái">
-              <a-switch v-model="couponEditForm.active" checked-text="Bật" unchecked-text="Tắt" />
-            </a-form-item>
-          </a-col>
-        </a-row>
+        <a-form-item field="dateRange" label="Thời gian áp dụng">
+          <a-range-picker
+            v-model="couponEditForm.dateRange"
+            value-format="YYYY-MM-DD"
+            format="DD/MM/YYYY"
+            allow-clear
+            style="width: 100%"
+          />
+        </a-form-item>
 
         <a-form-item field="description" label="Mô tả">
           <a-textarea v-model="couponEditForm.description" allow-clear :max-length="500" auto-size />
