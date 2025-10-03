@@ -4,6 +4,7 @@
 AGENTS.md
 application.properties
 WARP.md
+node_modules
 
 # Maven
 target/
@@ -37,3 +38,4 @@ buildNumber.properties
 # OS
 .DS_Store
 Thumbs.db
+

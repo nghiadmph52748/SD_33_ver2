@@ -1,7 +1,9 @@
 package org.example.be_sp.service;
 
 import org.example.be_sp.entity.HoaDon;
+import org.example.be_sp.entity.HoaDonChiTiet;
 import org.example.be_sp.exception.ApiException;
+import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
 import org.example.be_sp.model.response.HoaDonResponse;
 import org.example.be_sp.model.response.PagingResponse;
@@ -13,11 +15,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class HoaDonService {
     @Autowired
     private HoaDonRepository hoaDonRepository;
@@ -27,6 +34,8 @@ public class HoaDonService {
     NhanVienRepository nhanVienRepository;
     @Autowired
     PhieuGiamGiaService phieuGiamGiaService;
+    @Autowired
+    private EmailService emailService;
 
 
 
@@ -47,7 +56,10 @@ public class HoaDonService {
         hd.setIdKhachHang(khachHangRepository.findKhachHangById(request.getIdKhachHang()));
         hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
         hd.setIdNhanVien(nhanVienRepository.getById(request.getIdNhanVien()));
-        hoaDonRepository.save(hd);
+        HoaDon savedHoaDon = hoaDonRepository.save(hd);
+        
+        // Send order confirmation email
+        sendOrderConfirmationEmail(savedHoaDon);
     }
     public HoaDonResponse update(Integer id, BanHangTaiQuayRequest request) {
         HoaDon hd = hoaDonRepository.findById(id)
@@ -115,7 +127,82 @@ public class HoaDonService {
         hd.setDeleted(true);
         hoaDonRepository.save(hd);
     }
-
-
-
+    
+    /**
+     * Helper method to send order confirmation email
+     */
+    private void sendOrderConfirmationEmail(HoaDon hoaDon) {
+        try {
+            // Get customer email - prefer order email, fallback to customer email
+            String customerEmail = hoaDon.getEmailNguoiNhan();
+            if (customerEmail == null || customerEmail.trim().isEmpty()) {
+                if (hoaDon.getIdKhachHang() != null && hoaDon.getIdKhachHang().getEmail() != null) {
+                    customerEmail = hoaDon.getIdKhachHang().getEmail();
+                }
+            }
+            
+            if (customerEmail == null || customerEmail.trim().isEmpty()) {
+                log.warn("Order {} has no email address, skipping order confirmation email", 
+                        hoaDon.getMaHoaDon());
+                return;
+            }
+            
+            // Build order items list
+            List<OrderEmailData.OrderItemData> items = new ArrayList<>();
+            if (hoaDon.getHoaDonChiTiets() != null && !hoaDon.getHoaDonChiTiets().isEmpty()) {
+                items = hoaDon.getHoaDonChiTiets().stream()
+                    .map(item -> {
+                        String productName = "Sản phẩm";
+                        BigDecimal price = BigDecimal.ZERO;
+                        if (item.getIdChiTietSanPham() != null) {
+                            if (item.getIdChiTietSanPham().getIdSanPham() != null) {
+                                productName = item.getIdChiTietSanPham().getIdSanPham().getTenSanPham();
+                            }
+                            price = item.getGiaBan() != null ? item.getGiaBan() : BigDecimal.ZERO;
+                        }
+                        Integer quantity = item.getSoLuong() != null ? item.getSoLuong() : 0;
+                        BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
+                        
+                        return OrderEmailData.OrderItemData.builder()
+                            .productName(productName)
+                            .quantity(quantity)
+                            .price(price)
+                            .subtotal(subtotal)
+                            .build();
+                    })
+                    .collect(Collectors.toList());
+            }
+            
+            // Calculate discount amount
+            BigDecimal discountAmount = BigDecimal.ZERO;
+            if (hoaDon.getTongTien() != null && hoaDon.getTongTienSauGiam() != null) {
+                discountAmount = hoaDon.getTongTien().subtract(hoaDon.getTongTienSauGiam());
+                if (hoaDon.getPhiVanChuyen() != null) {
+                    discountAmount = discountAmount.subtract(hoaDon.getPhiVanChuyen());
+                }
+            }
+            
+            OrderEmailData emailData = OrderEmailData.builder()
+                .orderCode(hoaDon.getMaHoaDon())
+                .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
+                .customerEmail(customerEmail)
+                .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDate.now())
+                .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
+                .discountAmount(discountAmount)
+                .shippingFee(hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO)
+                .finalAmount(hoaDon.getTongTienSauGiam() != null ? hoaDon.getTongTienSauGiam() : BigDecimal.ZERO)
+                .deliveryAddress(hoaDon.getDiaChiNguoiNhan() != null ? hoaDon.getDiaChiNguoiNhan() : "")
+                .phoneNumber(hoaDon.getSoDienThoaiNguoiNhan() != null ? hoaDon.getSoDienThoaiNguoiNhan() : "")
+                .items(items)
+                .build();
+                
+            emailService.sendOrderConfirmationEmail(emailData);
+            log.info("Order confirmation email sent for order: {}", hoaDon.getMaHoaDon());
+            
+        } catch (Exception e) {
+            log.error("Failed to send order confirmation email for order: {}", 
+                    hoaDon.getMaHoaDon(), e);
+            // Don't throw exception - we don't want to rollback the order creation
+        }
+    }
 }

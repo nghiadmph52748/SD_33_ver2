@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/khach-hang-management/**").permitAll() // Allow customer management without auth for testing
                 .requestMatchers("/api/pos/**").permitAll() // Allow POS endpoints without auth for testing
                 .requestMatchers("/api/test/**").permitAll() // Allow test endpoints without auth
+                .requestMatchers("/api/email-test/**").permitAll() // Allow email test endpoints without auth
                 .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

@@ -10,7 +10,7 @@
         </div>
         <a-space>
           <a-button @click="goBack">Quay lại</a-button>
-          <a-button type="primary" :loading="submitting" @click="submitCoupon">Lưu phiếu giảm giá</a-button>
+          <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu phiếu giảm giá</a-button>
         </a-space>
       </div>
 
@@ -83,11 +83,57 @@
         <div class="form-footer">
           <a-space>
             <a-button @click="goBack">Hủy</a-button>
-            <a-button type="primary" :loading="submitting" @click="submitCoupon">Lưu phiếu giảm giá</a-button>
+            <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu phiếu giảm giá</a-button>
           </a-space>
         </div>
       </a-form>
     </a-card>
+
+    <!-- Confirmation Modal -->
+    <a-modal
+      v-model:visible="confirmSaveVisible"
+      title="Xác nhận tạo phiếu giảm giá"
+      :confirm-loading="confirmSaveSubmitting"
+      @ok="confirmSave"
+      @cancel="confirmSaveVisible = false"
+      ok-text="Xác nhận"
+      cancel-text="Hủy"
+      width="560px"
+    >
+      <p style="margin-bottom: 16px; color: var(--color-text-2);">Vui lòng kiểm tra lại thông tin trước khi lưu:</p>
+      <a-descriptions :column="1" bordered>
+        <a-descriptions-item label="Tên phiếu giảm giá">
+          {{ formState.name }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Hình thức giảm giá">
+          {{ isPercent ? 'Phần trăm (%)' : 'Số tiền (VNĐ)' }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Giá trị giảm">
+          <span v-if="isPercent">{{ formState.discountValue }}%</span>
+          <span v-else>{{ formatCurrency(formState.discountValue) }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item v-if="isPercent && formState.maxDiscount" label="Giảm tối đa">
+          {{ formatCurrency(formState.maxDiscount) }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Đơn hàng tối thiểu">
+          {{ formState.minOrder ? formatCurrency(formState.minOrder) : 'Không giới hạn' }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Số lượng áp dụng">
+          {{ formState.quantity }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Thời gian áp dụng">
+          {{ formatDateRange(formState.dateRange) }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="formState.active ? 'green' : 'gray'">
+            {{ formState.active ? 'Bật' : 'Tắt' }}
+          </a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item v-if="formState.description" label="Mô tả">
+          {{ formState.description }}
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
   </div>
 </template>
 
@@ -104,7 +150,8 @@ const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
 
 const formRef = ref<FormInstance>()
-const submitting = ref(false)
+const confirmSaveVisible = ref(false)
+const confirmSaveSubmitting = ref(false)
 
 const formState = reactive({
   name: '',
@@ -143,15 +190,41 @@ const goBack = () => {
   router.back()
 }
 
-const submitCoupon = async () => {
-  if (submitting.value) return
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount)
+}
 
+const formatDateRange = (dateRange: string[]) => {
+  if (!dateRange || dateRange.length !== 2) return ''
+  const [start, end] = dateRange
+  if (!start || !end) return ''
+  
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  }
+  
+  return `${formatDate(start)} - ${formatDate(end)}`
+}
+
+const handleSaveClick = async () => {
   const form = formRef.value
   if (!form) return
 
   try {
-    await form.validate()
+    const errors = await form.validate()
+    if (errors) {
+      return
+    }
   } catch (error) {
+    // Validation failed, errors are already displayed by the form
     return
   }
 
@@ -190,6 +263,17 @@ const submitCoupon = async () => {
     return
   }
 
+  // All validations passed, show confirmation modal
+  confirmSaveVisible.value = true
+}
+
+const confirmSave = async () => {
+  if (confirmSaveSubmitting.value) return
+
+  const discountValue = Number(formState.discountValue)
+  const [startDate, endDate] = formState.dateRange
+  const quantityValue = Number(formState.quantity)
+
   const payload = {
     tenPhieuGiamGia: formState.name.trim(),
     loaiPhieuGiamGia: !isPercent.value,
@@ -205,15 +289,16 @@ const submitCoupon = async () => {
     idKhachHang: [],
   }
 
-  submitting.value = true
+  confirmSaveSubmitting.value = true
   try {
     await createCoupon(payload)
     Message.success('Tạo phiếu giảm giá thành công')
+    confirmSaveVisible.value = false
     router.push({ name: 'QuanLyPhieuGiamGia' })
   } catch (error) {
     Message.error((error as Error).message || 'Không thể tạo phiếu giảm giá')
   } finally {
-    submitting.value = false
+    confirmSaveSubmitting.value = false
   }
 }
 </script>

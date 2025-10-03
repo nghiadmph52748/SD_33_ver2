@@ -81,10 +81,10 @@ public class HoaDon {
     @Column(name = "dia_chi_khach_hang")
     private String diaChiNguoiNhan;
 
-    @Column(name = "so_dien_thoai_khach_hang", length = 12)
+    @Column(name = "so_dien_thoai_khach_hang", length = 12, columnDefinition = "nvarchar(12)")
     private String soDienThoaiNguoiNhan;
 
-    @Column(name = "email_khach_hang")
+    @Column(name = "email_khach_hang", columnDefinition = "nvarchar(255)")
     private String emailNguoiNhan;
 
     @Column(name = "ngay_tao")

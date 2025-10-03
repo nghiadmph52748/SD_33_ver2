@@ -40,16 +40,16 @@ public class KhachHang {
     @Column(name = "ten_khach_hang")
     private String tenKhachHang;
 
-    @Column(name = "ten_tai_khoan")
+    @Column(name = "ten_tai_khoan", columnDefinition = "nvarchar(255)")
     private String tenTaiKhoan;
 
-    @Column(name = "mat_khau")
+    @Column(name = "mat_khau", columnDefinition = "nvarchar(255)")
     private String matKhau;
 
-    @Column(name = "email")
+    @Column(name = "email", columnDefinition = "nvarchar(255)")
     private String email;
 
-    @Column(name = "so_dien_thoai", length = 12)
+    @Column(name = "so_dien_thoai", length = 12, columnDefinition = "nvarchar(12)")
     private String soDienThoai;
 
     @Column(name = "gioi_tinh")

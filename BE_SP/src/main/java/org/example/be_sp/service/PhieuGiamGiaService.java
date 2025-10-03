@@ -7,6 +7,7 @@ import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.PhieuGiamGia;
 import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
 import org.example.be_sp.exception.ApiException;
+import org.example.be_sp.model.email.VoucherEmailData;
 import org.example.be_sp.model.request.PhieuGiamGiaRequest;
 import org.example.be_sp.model.response.PagingResponse;
 import org.example.be_sp.model.response.PhieuGiamGiaResponse;
@@ -17,8 +18,10 @@ import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class PhieuGiamGiaService {
     @Autowired
     private PhieuGiamGiaRepository phieuGiamGiaRepository;
@@ -26,6 +29,8 @@ public class PhieuGiamGiaService {
     private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
     @Autowired
     private KhachHangRepository khachHangRepository;
+    @Autowired
+    private EmailService emailService;
 
     public List<PhieuGiamGiaResponse> getAll() {
         return new ArrayList<>(phieuGiamGiaRepository.findAll().stream().map(PhieuGiamGiaResponse::new).toList());
@@ -47,18 +52,22 @@ public class PhieuGiamGiaService {
 
     public void add(PhieuGiamGiaRequest request) {
         PhieuGiamGia pgg = MapperUtils.map(request, PhieuGiamGia.class);
-        phieuGiamGiaRepository.save(pgg);
+        PhieuGiamGia savedPgg = phieuGiamGiaRepository.save(pgg);
         if (request.getIdKhachHang() != null) {
             for (Integer idKhachHang : request.getIdKhachHang()) {
                 PhieuGiamGiaCaNhan pggcn = new PhieuGiamGiaCaNhan();
-                pggcn.setIdKhachHang(khachHangRepository.getById(idKhachHang));
-                pggcn.setIdPhieuGiamGia(pgg);
+                KhachHang khachHang = khachHangRepository.getById(idKhachHang);
+                pggcn.setIdKhachHang(khachHang);
+                pggcn.setIdPhieuGiamGia(savedPgg);
                 pggcn.setTenPhieuGiamGiaCaNhan(request.getTenPhieuGiamGia());
                 pggcn.setNgayNhan(request.getNgayBatDau());
                 pggcn.setNgayHetHan(request.getNgayKetThuc());
                 pggcn.setTrangThai(true);
                 pggcn.setDeleted(false);
-                phieuGiamGiaCaNhanRepository.save(pggcn);
+                PhieuGiamGiaCaNhan savedPggcn = phieuGiamGiaCaNhanRepository.save(pggcn);
+                
+                // Send voucher assignment email
+                sendVoucherEmail(savedPggcn, khachHang, savedPgg);
             }
         }
     }
@@ -94,11 +103,49 @@ public class PhieuGiamGiaService {
                 pggcn.setNgayHetHan(request.getNgayKetThuc());
                 pggcn.setTrangThai(true);
                 pggcn.setDeleted(false);
-                phieuGiamGiaCaNhanRepository.save(pggcn);
+                PhieuGiamGiaCaNhan savedPggcn = phieuGiamGiaCaNhanRepository.save(pggcn);
+                
+                // Send voucher assignment email
+                KhachHang customer = khachHangRepository.getById(idKhachHang);
+                sendVoucherEmail(savedPggcn, customer, saved);
             }
         }
     }
-
+    
+    /**
+     * Helper method to send voucher assignment email
+     */
+    private void sendVoucherEmail(PhieuGiamGiaCaNhan pggcn, KhachHang khachHang, PhieuGiamGia pgg) {
+        try {
+            if (khachHang.getEmail() != null && !khachHang.getEmail().trim().isEmpty()) {
+                VoucherEmailData emailData = VoucherEmailData.builder()
+                    .customerName(khachHang.getTenKhachHang())
+                    .customerEmail(khachHang.getEmail())
+                    .voucherCode(pggcn.getMaPhieuGiamGiaCaNhan())
+                    .voucherName(pgg.getTenPhieuGiamGia())
+                    .voucherType(pgg.getLoaiPhieuGiamGia() ? "PERCENTAGE" : "FIXED_AMOUNT")
+                    .discountValue(pgg.getGiaTriGiamGia())
+                    .maxDiscount(pgg.getSoTienToiDa())
+                    .minOrderValue(pgg.getHoaDonToiThieu())
+                    .validFrom(pgg.getNgayBatDau())
+                    .validUntil(pgg.getNgayKetThuc())
+                    .usageLimit(pgg.getSoLuongDung())
+                    .description(pgg.getMoTa())
+                    .build();
+                    
+                emailService.sendVoucherAssignmentEmail(emailData);
+                log.info("Voucher assignment email sent to customer: {} for voucher: {}", 
+                        khachHang.getEmail(), pggcn.getMaPhieuGiamGiaCaNhan());
+            } else {
+                log.warn("Customer {} has no email address, skipping voucher email", khachHang.getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send voucher assignment email to customer: {}", 
+                    khachHang.getId(), e);
+            // Don't throw exception - we don't want to rollback the voucher creation
+        }
+    }
+    
     public void updateStatus(Integer id) {
         PhieuGiamGia phieuGiamGia = phieuGiamGiaRepository.getById(id);
         phieuGiamGia.setTrangThai(!phieuGiamGia.getTrangThai()); // Toggle trangThai status (active/inactive)

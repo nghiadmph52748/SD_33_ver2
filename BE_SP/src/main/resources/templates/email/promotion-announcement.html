@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Khuyến mãi đặc biệt</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; line-height: 1.6; color: #1d2129; background-color: #f7f8fa; padding: 20px; }
+        .email-container { max-width: 600px; margin: 0 auto; background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+        .email-header { background: linear-gradient(135deg, #F53F3F 0%, #CB272D 100%); padding: 40px 24px; text-align: center; }
+        .email-header h1 { color: white; font-size: 28px; font-weight: 600; margin-bottom: 8px; }
+        .email-header p { color: rgba(255, 255, 255, 0.9); font-size: 16px; }
+        .email-body { padding: 32px 24px; }
+        .greeting { font-size: 16px; color: #1d2129; margin-bottom: 20px; line-height: 1.5; }
+        .promotion-banner { background: linear-gradient(135deg, #FFECE8 0%, #FFE1DC 100%); border: 2px solid #F53F3F; padding: 32px; margin: 24px 0; border-radius: 8px; text-align: center; }
+        .promotion-title { color: #F53F3F; font-size: 24px; font-weight: 600; margin-bottom: 12px; }
+        .discount-badge { display: inline-block; background: #F53F3F; color: white; padding: 12px 32px; border-radius: 50px; font-size: 28px; font-weight: 700; margin: 16px 0; box-shadow: 0 4px 12px rgba(245, 63, 63, 0.3); }
+        .promo-info { background: #F7F8FA; border: 1px solid #E5E6EB; border-left: 3px solid #F53F3F; padding: 20px; margin: 24px 0; border-radius: 4px; }
+        .promo-info h3 { color: #1d2129; font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #E5E6EB; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #4e5969; font-size: 14px; }
+        .info-value { color: #1d2129; font-weight: 500; font-size: 14px; }
+        .products-section { margin: 24px 0; }
+        .products-section h3 { color: #1d2129; font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+        .product-item { background: #FFFFFF; border: 1px solid #E5E6EB; border-radius: 4px; padding: 12px 16px; margin-bottom: 8px; }
+        .button { display: inline-block; background: #165DFF; color: white; padding: 14px 32px; text-decoration: none; border-radius: 4px; font-weight: 500; font-size: 16px; margin: 20px 0; transition: background 0.2s; box-shadow: 0 2px 8px rgba(22, 93, 255, 0.3); }
+        .button:hover { background: #4080FF; box-shadow: 0 4px 12px rgba(22, 93, 255, 0.4); }
+        .highlight { color: #F53F3F; font-weight: 600; }
+        .email-footer { background: #F7F8FA; padding: 24px; text-align: center; color: #86909C; font-size: 13px; border-top: 1px solid #E5E6EB; }
+        .email-footer p { margin: 8px 0; }
+        @media only screen and (max-width: 600px) {
+            .email-container { border-radius: 0; }
+            .email-header, .email-body, .email-footer { padding: 20px; }
+            .promotion-banner { padding: 20px; }
+            .promotion-title { font-size: 20px; }
+            .discount-badge { font-size: 24px; padding: 10px 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>&#128165; GearUp</h1>
+            <p>Chương trình khuyến mãi đặc biệt dành cho bạn!</p>
+        </div>
+        <div class="email-body">
+            <div class="greeting">
+                <p>Xin chào <strong th:text="${promotion.customerName}">Khách hàng</strong>,</p>
+                <p>GearUp mang đến cho bạn chương trình khuyến mãi cực HOT! Đừng bỏ lỡ cơ hội sở hữu những sản phẩm yêu thích với giá tốt nhất! &#127881;</p>
+            </div>
+            <div class="promotion-banner">
+                <div class="promotion-title" th:text="${promotion.promotionName}">MEGA SALE THÁNG 10</div>
+                <div class="discount-badge">
+                    <span th:text="|GIẢM ${promotion.discountPercentage}%|">GIẢM 50%</span>
+                </div>
+                <p style="color: #4e5969; margin-top: 16px; font-size: 15px;" th:text="${promotion.description}">
+                    Giảm giá lên đến 50% cho tất cả sản phẩm giày thể thao
+                </p>
+            </div>
+            <div class="promo-info">
+                <h3>&#128197; Thời gian áp dụng</h3>
+                <div class="info-row">
+                    <span class="info-label">Ngày bắt đầu:</span>
+                    <span class="info-value highlight" th:text="${#temporals.format(promotion.startDate, 'dd/MM/yyyy')}">01/10/2024</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Ngày kết thúc:</span>
+                    <span class="info-value highlight" th:text="${#temporals.format(promotion.endDate, 'dd/MM/yyyy')}">31/10/2024</span>
+                </div>
+            </div>
+            <div class="products-section" th:if="${promotion.featuredProducts != null}">
+                <h3>&#11088; Sản phẩm nổi bật trong chương trình</h3>
+                <div th:each="product : ${promotion.featuredProducts}" class="product-item">
+                    <span>&#128095; </span><span th:text="${product}">Nike Air Max 2024 - Giảm 45%</span>
+                </div>
+            </div>
+            <div style="text-align: center; margin: 32px 0;">
+                <a th:href="|${baseUrl}${promotion.shopNowUrl}|" class="button">
+                    &#128717; MUA NGAY - GIẢM SÂU
+                </a>
+            </div>
+            <div style="background: #FFECE8; border: 1px solid #FFCCC7; border-radius: 4px; padding: 16px; margin: 20px 0;">
+                <p style="color: #D43F3C; font-size: 14px; margin: 0; text-align: center;">
+                    <strong>&#9889; Nhanh tay!</strong> Ưu đãi có hạn, số lượng sản phẩm có giới hạn!
+                </p>
+            </div>
+        </div>
+        <div class="email-footer">
+            <p><strong>GearUp - Gear Up Your Style!</strong></p>
+            <p>Địa chỉ: 123 Đường Sneaker, Quận Giày, TP. Thể Thao</p>
+            <p>Email: info@gearup.com | Hotline: 1900-1234</p>
+            <p style="margin-top: 16px; font-size: 12px;">
+                Email này được gửi tự động, vui lòng không trả lời.<br/>
+                Nếu không muốn nhận email khuyến mãi, vui lòng liên hệ với chúng tôi.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

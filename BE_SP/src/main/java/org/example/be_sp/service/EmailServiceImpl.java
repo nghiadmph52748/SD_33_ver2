@@ -1,0 +1,190 @@
+package org.example.be_sp.service;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.be_sp.config.EmailConfig;
+import org.example.be_sp.model.email.OrderEmailData;
+import org.example.be_sp.model.email.PromotionEmailData;
+import org.example.be_sp.model.email.VoucherEmailData;
+import org.example.be_sp.service.EmailService;
+import org.springframework.mail.MailException;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+/**
+ * Email Service Implementation
+ * 
+ * Handles sending HTML emails using JavaMailSender and Thymeleaf templates
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class EmailServiceImpl implements EmailService {
+    
+    private final JavaMailSender mailSender;
+    private final TemplateEngine templateEngine;
+    private final EmailConfig emailConfig;
+    
+    @Override
+    public void sendOrderConfirmationEmail(OrderEmailData orderData) {
+        if (!emailConfig.isEnabled()) {
+            log.info("Email disabled. Skipping order confirmation email for order: {}", 
+                    orderData.getOrderCode());
+            return;
+        }
+        
+        try {
+            log.info("Sending order confirmation email to: {} for order: {}", 
+                    orderData.getCustomerEmail(), orderData.getOrderCode());
+            
+            Context context = new Context();
+            context.setVariable("order", orderData);
+            context.setVariable("baseUrl", emailConfig.getBaseUrl());
+            
+            String htmlContent = templateEngine.process("email/order-confirmation", context);
+            
+            sendHtmlEmail(
+                orderData.getCustomerEmail(),
+                "Xác nhận đơn hàng #" + orderData.getOrderCode(),
+                htmlContent
+            );
+            
+            log.info("Order confirmation email sent successfully to: {}", 
+                    orderData.getCustomerEmail());
+            
+        } catch (MailException | MessagingException e) {
+            log.error("Failed to send order confirmation email to: {} for order: {}", 
+                    orderData.getCustomerEmail(), orderData.getOrderCode(), e);
+            // Don't throw exception - we don't want to rollback the transaction
+        }
+    }
+    
+    @Override
+    public void sendOrderStatusUpdateEmail(OrderEmailData orderData) {
+        if (!emailConfig.isEnabled()) {
+            log.info("Email disabled. Skipping order status update email for order: {}", 
+                    orderData.getOrderCode());
+            return;
+        }
+        
+        try {
+            log.info("Sending order status update email to: {} for order: {} - Status: {}", 
+                    orderData.getCustomerEmail(), orderData.getOrderCode(), orderData.getOrderStatus());
+            
+            Context context = new Context();
+            context.setVariable("order", orderData);
+            context.setVariable("baseUrl", emailConfig.getBaseUrl());
+            
+            String htmlContent = templateEngine.process("email/order-status-update", context);
+            
+            sendHtmlEmail(
+                orderData.getCustomerEmail(),
+                "Cập nhật đơn hàng #" + orderData.getOrderCode() + " - " + orderData.getOrderStatus(),
+                htmlContent
+            );
+            
+            log.info("Order status update email sent successfully to: {}", 
+                    orderData.getCustomerEmail());
+            
+        } catch (MailException | MessagingException e) {
+            log.error("Failed to send order status update email to: {} for order: {}", 
+                    orderData.getCustomerEmail(), orderData.getOrderCode(), e);
+        }
+    }
+    
+    @Override
+    public void sendVoucherAssignmentEmail(VoucherEmailData voucherData) {
+        if (!emailConfig.isEnabled()) {
+            log.info("Email disabled. Skipping voucher assignment email for: {}", 
+                    voucherData.getCustomerEmail());
+            return;
+        }
+        
+        try {
+            log.info("Sending voucher assignment email to: {} - Voucher: {}", 
+                    voucherData.getCustomerEmail(), voucherData.getVoucherCode());
+            
+            Context context = new Context();
+            context.setVariable("voucher", voucherData);
+            context.setVariable("baseUrl", emailConfig.getBaseUrl());
+            
+            String htmlContent = templateEngine.process("email/voucher-assignment", context);
+            
+            sendHtmlEmail(
+                voucherData.getCustomerEmail(),
+                "🎁 Bạn nhận được phiếu giảm giá mới từ GearUp!",
+                htmlContent
+            );
+            
+            log.info("Voucher assignment email sent successfully to: {}", 
+                    voucherData.getCustomerEmail());
+            
+        } catch (MailException | MessagingException e) {
+            log.error("Failed to send voucher assignment email to: {} - Voucher: {}", 
+                    voucherData.getCustomerEmail(), voucherData.getVoucherCode(), e);
+        }
+    }
+    
+    @Override
+    public void sendPromotionAnnouncementEmail(PromotionEmailData promotionData) {
+        if (!emailConfig.isEnabled()) {
+            log.info("Email disabled. Skipping promotion announcement email for: {}", 
+                    promotionData.getCustomerEmail());
+            return;
+        }
+        
+        try {
+            log.info("Sending promotion announcement email to: {} - Promotion: {}", 
+                    promotionData.getCustomerEmail(), promotionData.getPromotionName());
+            
+            Context context = new Context();
+            context.setVariable("promotion", promotionData);
+            context.setVariable("baseUrl", emailConfig.getBaseUrl());
+            
+            String htmlContent = templateEngine.process("email/promotion-announcement", context);
+            
+            sendHtmlEmail(
+                promotionData.getCustomerEmail(),
+                "🔥 " + promotionData.getPromotionName(),
+                htmlContent
+            );
+            
+            log.info("Promotion announcement email sent successfully to: {}", 
+                    promotionData.getCustomerEmail());
+            
+        } catch (MailException | MessagingException e) {
+            log.error("Failed to send promotion announcement email to: {} - Promotion: {}", 
+                    promotionData.getCustomerEmail(), promotionData.getPromotionName(), e);
+        }
+    }
+    
+    /**
+     * Helper method to send HTML email
+     * 
+     * @param to Recipient email address
+     * @param subject Email subject
+     * @param htmlContent HTML content of the email
+     * @throws MessagingException if email sending fails
+     */
+    private void sendHtmlEmail(String to, String subject, String htmlContent) 
+            throws MessagingException {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setFrom(emailConfig.getFromAddress(), emailConfig.getFromPersonal());
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true); // true = HTML
+            
+            mailSender.send(message);
+        } catch (java.io.UnsupportedEncodingException e) {
+            throw new MessagingException("Unsupported encoding", e);
+        }
+    }
+}
