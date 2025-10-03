@@ -1,12 +1,12 @@
 package org.example.be_sp.model.response;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import org.example.be_sp.entity.AnhSanPham;
-import org.springframework.beans.PropertyValue;
-
 import java.time.LocalDate;
+
+import org.example.be_sp.entity.AnhSanPham;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter

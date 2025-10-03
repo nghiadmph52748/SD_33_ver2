@@ -50,7 +50,7 @@ public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, A
 	}
 
 	public PagingResponse<AnhSanPhamResponse> pagingAnhSanPham(int page, int size) {
-		return new PagingResponse<>(anhSanPhamRepository.findAllPageByDeleted(false, PageRequest.of(page, size)), page);
+		return new PagingResponse<>(anhSanPhamRepository.findAllPageByDeleted(false, PageRequest.of(page, size)).map(AnhSanPhamResponse::new ), page);
 	}
 
 	public AnhSanPhamResponse getAnhSanPhamById(int id) {
