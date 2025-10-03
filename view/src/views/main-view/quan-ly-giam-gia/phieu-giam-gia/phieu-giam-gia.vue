@@ -907,11 +907,9 @@ const exportCoupons = () => {
   ]
 
   const rows = filteredCoupons.value.map((coupon, index) => {
-    const discountDisplay =
-      coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : formatCurrency(coupon.discount_value)
+    const discountDisplay = coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : formatCurrency(coupon.discount_value)
     const minOrderDisplay = coupon.min_order_value != null ? formatCurrency(coupon.min_order_value) : 'Không giới hạn'
-    const maxDiscountDisplay =
-      coupon.max_discount_value != null ? formatCurrency(coupon.max_discount_value) : 'Không giới hạn'
+    const maxDiscountDisplay = coupon.max_discount_value != null ? formatCurrency(coupon.max_discount_value) : 'Không giới hạn'
     const quantityDisplay = coupon.usage_limit != null ? coupon.usage_limit : '∞'
 
     return [

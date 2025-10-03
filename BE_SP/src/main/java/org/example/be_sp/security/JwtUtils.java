@@ -1,20 +1,23 @@
 package org.example.be_sp.security;
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Component;
-
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+
 @Component
 public class JwtUtils {
 
     private static final String SECRET = "mySecretKeymySecretKeymySecretKeymySecretKeymySecretKey"; // Should be from config
-    private static final int JWT_EXPIRATION = 3600000; // 24 hours in milliseconds
+    private static final int JWT_EXPIRATION = 3600000; // 1 hour in milliseconds
     private static final int JWT_REFRESH_EXPIRATION = 604800000; // 7 days in milliseconds
 
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
@@ -71,6 +74,55 @@ public class JwtUtils {
         return (username.equals(tokenUsername) && !isTokenExpired(token));
     }
 
+    /**
+     * Reset thời hạn của token về 1 giờ nếu token vẫn còn hạn
+     *
+     * @param token Token hiện tại
+     * @return Token mới với thời hạn 1 giờ hoặc null nếu token đã hết hạn
+     */
+    public String refreshTokenIfValid(String token) {
+        try {
+            if (!isTokenExpired(token)) {
+                String username = getUsernameFromToken(token);
+                // Tạo token mới với thời hạn 1 giờ
+                return generateToken(username);
+            }
+            return null; // Token đã hết hạn
+        } catch (Exception e) {
+            return null; // Token không hợp lệ
+        }
+    }
+
+    /**
+     * Kiểm tra token và trả về token mới nếu cần refresh
+     *
+     * @param token Token hiện tại
+     * @param username Username để validate
+     * @return Token mới nếu cần refresh, token cũ nếu vẫn còn thời gian, null
+     * nếu hết hạn
+     */
+    public String validateAndRefreshToken(String token, String username) {
+        try {
+            if (validateToken(token, username)) {
+                // Kiểm tra thời gian còn lại của token
+                Date expiration = getExpirationDateFromToken(token);
+                Date now = new Date();
+                long timeLeft = expiration.getTime() - now.getTime();
+
+                // Nếu token còn ít hơn 30 phút, refresh token
+                if (timeLeft < 1800000) { // 30 minutes in milliseconds
+                    return generateToken(username);
+                }
+
+                // Token vẫn còn thời gian, trả về token cũ
+                return token;
+            }
+            return null; // Token không hợp lệ hoặc đã hết hạn
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public boolean isRefreshToken(String token) {
         try {
             Claims claims = getAllClaimsFromToken(token);
@@ -81,4 +133,3 @@ public class JwtUtils {
         }
     }
 }
-

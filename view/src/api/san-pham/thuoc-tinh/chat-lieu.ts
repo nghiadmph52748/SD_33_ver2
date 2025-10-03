@@ -9,7 +9,9 @@ export interface ChatLieu {
   trangThai: boolean
   deleted: boolean
   createAt?: string
+  createBy?: number
   updateAt?: string
+  updateBy?: number
 }
 
 export interface ChatLieuPagingResponse extends PagingResponse {
@@ -24,15 +26,15 @@ export function getChatLieuListAll() {
   return axios.get<ChatLieuResponse>('/api/chat-lieu-management/playlist')
 }
 
-export function getChatLieuList(page: number) {
-  return axios.get<ChatLieuResponse>(`/api/chat-lieu-management/paging?page=${page}`)
+export function getChatLieuList(page: number, size: number) {
+  return axios.get<ChatLieuResponse>(`/api/chat-lieu-management/paging?page=${page}&size=${size}`)
 }
 
 export function getChatLieuById(id: number) {
   return axios.get<ChatLieu>(`/api/chat-lieu-management/detail/${id}`)
 }
 
-export function createChatLieu(data: Omit<ChatLieu, 'id' | 'maChatLieu' | 'createAt' | 'updateAt'>) {
+export function createChatLieu(data: Omit<ChatLieu, 'tenChatLieu' | 'trangThai' | 'deleted' | 'createAt' | 'createBy'>) {
   return axios.post<ChatLieu>('/api/chat-lieu-management/add', data)
 }
 

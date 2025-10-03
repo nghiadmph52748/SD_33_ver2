@@ -40,7 +40,7 @@ public class ChiTietSanPhamAnhController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody ChiTietSanPhamAnhListRequest request) {
         service.add(request);
-        return new ResponseObject<>(true, "Thêm mới thành công", null);
+        return new ResponseObject<>(true, null, "Thêm mới thành công");
     }
 
     @PostMapping("/add-multiple")

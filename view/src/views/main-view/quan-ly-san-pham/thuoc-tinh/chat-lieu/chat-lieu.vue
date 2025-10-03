@@ -53,7 +53,7 @@
     <a-card title="Danh sách chất liệu" class="table-card">
       <a-table
         :columns="columns"
-        :data="materials"
+        :data="filteredMaterials"
         :pagination="pagination"
         :loading="loading"
         :scroll="{ x: 1000 }"
@@ -117,7 +117,10 @@
       @ok="confirmAddMaterial"
     >
       <a-form :model="materialForm" :rules="formRules" layout="vertical" ref="addFormRef">
-        <a-form-item label="Tên chất liệu" field="tenChatLieu" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên chất liệu</span>
+          </template>
           <a-input v-model="materialForm.tenChatLieu" placeholder="Nhập tên chất liệu" />
         </a-form-item>
       </a-form>
@@ -157,10 +160,16 @@
       @ok="confirmUpdateMaterial"
     >
       <a-form :model="materialForm" :rules="formRules" layout="vertical" ref="updateFormRef">
-        <a-form-item label="Tên chất liệu" field="tenChatLieu" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên chất liệu</span>
+          </template>
           <a-input v-model="materialForm.tenChatLieu" placeholder="Nhập tên chất liệu" />
         </a-form-item>
-        <a-form-item label="Trạng thái" field="trangThai" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Trạng thái</span>
+          </template>
           <a-radio-group v-model="materialForm.trangThai" type="button">
             <a-radio :value="true">Hoạt động</a-radio>
             <a-radio :value="false">Không hoạt động</a-radio>
@@ -188,6 +197,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { Message } from '@arco-design/web-vue'
 import {
   IconPlus,
   IconTool,
@@ -202,7 +212,13 @@ import {
   IconRefresh,
 } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store'
-import { createChatLieu, getChatLieuList, updateChatLieu, deleteChatLieu } from '../../../../../api/san-pham/thuoc-tinh/chat-lieu'
+import {
+  createChatLieu,
+  getChatLieuList,
+  updateChatLieu,
+  deleteChatLieu,
+  getChatLieuListAll,
+} from '../../../../../api/san-pham/thuoc-tinh/chat-lieu'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -300,6 +316,26 @@ const pagination = ref({
   showTotal: true,
 })
 
+// Filtered materials computed property
+const filteredMaterials = computed(() => {
+  return materials.value.filter((material) => {
+    // Filter by status
+    if (filters.value.status && material.trangThai !== (filters.value.status === 'active')) {
+      return false
+    }
+    // Filter by search (name or code)
+    if (filters.value.search) {
+      const searchTerm = filters.value.search.toLowerCase()
+      const matchesName = material.tenChatLieu.toLowerCase().includes(searchTerm)
+      const matchesCode = material.maChatLieu?.toLowerCase().includes(searchTerm)
+      if (!matchesName && !matchesCode) {
+        return false
+      }
+    }
+    return true
+  })
+})
+
 // Methods
 const resetFilters = () => {
   filters.value = {
@@ -311,7 +347,8 @@ const resetFilters = () => {
 }
 
 const searchMaterials = () => {
-  // TODO: Implement search functionality
+  // Search is handled by the filteredMaterials computed property
+  // This function can be used for additional search logic if needed
 }
 
 const showCreateModal = () => {
@@ -390,12 +427,48 @@ const cancelConfirm = () => {
 const getChatLieuPage = async (page) => {
   try {
     loading.value = true
-    const res = await getChatLieuList(page)
+    const res = await getChatLieuList(page, pagination.value.pageSize)
     if (res.success) {
       materials.value = res.data.data
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
+    } else {
+      console.error('Failed to fetch materials:', res.message)
+      materials.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch materials:', error)
+    materials.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadMaterialsWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean = false) => {
+  try {
+    loading.value = true
+    const res = await getChatLieuList(0, 9)
+    if (res.success) {
+      let materialsData = res.data.data
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
+
+      // If there's an updated item and it's not a new item, move it to the front
+      if (updatedId && !isNewItem) {
+        const updatedIndex = materialsData.findIndex((material) => material.id === updatedId)
+        if (updatedIndex > 0) {
+          const updatedItem = materialsData.splice(updatedIndex, 1)[0]
+          materialsData = [updatedItem, ...materialsData.slice(0, updatedIndex), ...materialsData.slice(updatedIndex)]
+        }
+      }
+
+      materials.value = materialsData
     } else {
       console.error('Failed to fetch materials:', res.message)
       materials.value = []
@@ -423,12 +496,19 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      await createChatLieu(data)
+      const result = await createChatLieu(data)
       closeAddModal()
-      // Refresh data
-      getChatLieuPage(0)
+      // Load data with new item first (always load from page 0 for new items)
+      loadMaterialsWithUpdatedFirst(undefined, true)
+      Message.success('Thêm chất liệu thành công!')
     } else if (confirmAction.value === 'update') {
       // TODO: Implement update API call
+      if (!selectedMaterial.value) {
+        console.error('No material selected for update')
+        return
+      }
+
+      const materialId = selectedMaterial.value.id
       const data = {
         tenChatLieu: materialForm.tenChatLieu,
         trangThai: materialForm.trangThai,
@@ -438,18 +518,26 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      await updateChatLieu(selectedMaterial.value.id, data)
+      await updateChatLieu(materialId, data)
       closeUpdateModal()
-      // Refresh data
-      getChatLieuPage(0)
+      // Load data with updated item first
+      loadMaterialsWithUpdatedFirst(materialId, false)
+      Message.success('Cập nhật chất liệu thành công!')
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
+      if (!selectedMaterial.value) {
+        console.error('No material selected for delete')
+        return
+      }
+
       await deleteChatLieu(selectedMaterial.value.id)
       // Refresh data
-      getChatLieuPage(0)
+      loadMaterialsWithUpdatedFirst()
+      Message.success('Xóa chất liệu thành công!')
     }
   } catch (error) {
     console.error('API call failed:', error)
+    Message.error('Có lỗi xảy ra. Vui lòng thử lại!')
   } finally {
     confirmModalVisible.value = false
     confirmMessage.value = ''
@@ -485,5 +573,12 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+/* Custom required field styling */
+.required-field::after {
+  content: ' *' !important;
+  color: #f53f3f !important;
+  font-weight: bold !important;
 }
 </style>

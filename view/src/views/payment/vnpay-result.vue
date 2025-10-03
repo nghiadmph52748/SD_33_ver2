@@ -69,9 +69,7 @@ const resultSubtitle = computed(() =>
 
 const formattedAmount = computed(() => {
   const value = Number.isFinite(amount.value) ? amount.value : 0
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0 })
-    .format(value)
-    .replace('₫', ' VND')
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0 }).format(value).replace('₫', ' VND')
 })
 
 const formattedDate = computed(() => {

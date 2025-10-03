@@ -46,8 +46,7 @@ public class XuatXuController {
 
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody @Valid XuatXuRequest xuatXuRequest) {
-        xuatXuService.add(xuatXuRequest);
-        return new ResponseObject<>(true, null, "Thêm xuất xứ thành công");
+        return new ResponseObject<>(true, xuatXuService.add(xuatXuRequest).getId(), "Thêm xuất xứ thành công");
     }
 
     @PutMapping("/update/{id}")

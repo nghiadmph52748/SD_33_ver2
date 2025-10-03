@@ -106,6 +106,7 @@ public class AuthController {
 
     // Inner class cho response data
     public static class LoginResponseData {
+
         private Integer id;
         private String maNhanVien;
         private String tenNhanVien;
@@ -199,17 +200,17 @@ public class AuthController {
                 String username = jwtUtils.getUsernameFromToken(token);
                 Date expiryDate = jwtUtils.getExpirationDateFromToken(token);
                 LocalDateTime expiryLocalDateTime = expiryDate.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime();
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime();
 
                 // Add token to blacklist
                 tokenBlacklistService.addToBlacklist(token, username, expiryLocalDateTime);
-                System.out.println("Token blacklisted for user: " + username);
             }
 
             return new ResponseObject<>(true, null, "Logged out successfully - token invalidated server-side");
         } catch (Exception e) {
-            return new ResponseObject<>(false, null, "Error: " + e.getMessage());
+            // Even if there's an error, we should still return success for logout
+            return new ResponseObject<>(true, null, "Logged out successfully");
         }
     }
 }

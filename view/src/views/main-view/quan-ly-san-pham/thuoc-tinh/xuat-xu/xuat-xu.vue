@@ -51,7 +51,7 @@
 
     <!-- Origins Table -->
     <a-card title="Danh sách xuất xứ" class="table-card">
-      <a-table :columns="columns" :data="origins" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
+      <a-table :columns="columns" :data="filteredOrigins" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
         <template #stt="{ rowIndex }">
           <div>{{ rowIndex + 1 }}</div>
         </template>
@@ -103,7 +103,10 @@
       @ok="confirmAddOrigin"
     >
       <a-form :model="originForm" :rules="formRules" layout="vertical" ref="addFormRef">
-        <a-form-item label="Tên xuất xứ" field="tenXuatXu" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên xuất xứ</span>
+          </template>
           <a-input v-model="originForm.tenXuatXu" placeholder="Nhập tên xuất xứ" />
         </a-form-item>
       </a-form>
@@ -143,10 +146,16 @@
       @ok="confirmUpdateOrigin"
     >
       <a-form :model="originForm" :rules="formRules" layout="vertical" ref="updateFormRef">
-        <a-form-item label="Tên xuất xứ" field="tenXuatXu" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên xuất xứ</span>
+          </template>
           <a-input v-model="originForm.tenXuatXu" placeholder="Nhập tên xuất xứ" />
         </a-form-item>
-        <a-form-item label="Trạng thái" field="trangThai" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Trạng thái</span>
+          </template>
           <a-radio-group v-model="originForm.trangThai" type="button">
             <a-radio :value="true">Hoạt động</a-radio>
             <a-radio :value="false">Không hoạt động</a-radio>
@@ -174,6 +183,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { Message } from '@arco-design/web-vue'
 import {
   IconPlus,
   IconStar,
@@ -203,6 +213,27 @@ const filters = ref({
 
 // Data
 const origins = ref([])
+
+// Filtered origins computed property
+const filteredOrigins = computed(() => {
+  let filtered = [...origins.value]
+
+  // Filter by search term
+  if (filters.value.search) {
+    const searchTerm = filters.value.search.toLowerCase()
+    filtered = filtered.filter(
+      (origin) => origin.maXuatXu?.toLowerCase().includes(searchTerm) || origin.tenXuatXu?.toLowerCase().includes(searchTerm)
+    )
+  }
+
+  // Filter by status
+  if (filters.value.status) {
+    const statusFilter = filters.value.status === 'active'
+    filtered = filtered.filter((origin) => origin.trangThai === statusFilter)
+  }
+
+  return filtered
+})
 
 // Modal states
 const addModalVisible = ref(false)
@@ -375,12 +406,43 @@ const cancelConfirm = () => {
 
 const getXuatXuPage = async (page) => {
   try {
-    const res = await getXuatXuList(page)
+    const res = await getXuatXuList(page, pagination.value.pageSize)
     if (res.success) {
       origins.value = res.data.data
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1
+    } else {
+      console.error('Failed to fetch origins:', res.message)
+      origins.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch origins:', error)
+  }
+}
+
+const loadOriginsWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean = false) => {
+  try {
+    const res = await getXuatXuList(0, 9)
+    if (res.success) {
+      let originsData = res.data.data
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.pageSize
+      pagination.value.current = res.data.currentPage + 1
+
+      // If there's an updated item and it's not a new item, move it to the front
+      if (updatedId && !isNewItem) {
+        const updatedIndex = originsData.findIndex((origin) => origin.id === updatedId)
+        if (updatedIndex > 0) {
+          const updatedItem = originsData.splice(updatedIndex, 1)[0]
+          originsData = [updatedItem, ...originsData.slice(0, updatedIndex), ...originsData.slice(updatedIndex)]
+        }
+      }
+
+      origins.value = originsData
     } else {
       console.error('Failed to fetch origins:', res.message)
       origins.value = []
@@ -404,12 +466,19 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      await createXuatXu(data)
+      const res = await createXuatXu(data)
       closeAddModal()
-      // Refresh data
-      getXuatXuPage(0)
+      // Load data with new item first (always load from page 0 for new items)
+      loadOriginsWithUpdatedFirst(undefined, true)
+      Message.success('Thêm xuất xứ thành công!')
     } else if (confirmAction.value === 'update') {
       // TODO: Implement update API call
+      if (!selectedOrigin.value) {
+        console.error('No origin selected for update')
+        return
+      }
+
+      const originId = selectedOrigin.value.id
       const data = {
         tenXuatXu: originForm.tenXuatXu,
         trangThai: originForm.trangThai,
@@ -419,18 +488,26 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      await updateXuatXu(selectedOrigin.value.id, data)
+      await updateXuatXu(originId, data)
       closeUpdateModal()
-      // Refresh data
-      getXuatXuPage(0)
+      // Load data with updated item first
+      loadOriginsWithUpdatedFirst(originId, false)
+      Message.success('Cập nhật xuất xứ thành công!')
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
+      if (!selectedOrigin.value) {
+        console.error('No origin selected for delete')
+        return
+      }
+
       await deleteXuatXu(selectedOrigin.value.id)
       // Refresh data
-      getXuatXuPage(0)
+      loadOriginsWithUpdatedFirst()
+      Message.success('Xóa xuất xứ thành công!')
     }
   } catch (error) {
     console.error('API call failed:', error)
+    Message.error('Có lỗi xảy ra. Vui lòng thử lại!')
   } finally {
     confirmModalVisible.value = false
     confirmMessage.value = ''
@@ -504,5 +581,12 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   font-size: 24px;
+}
+
+/* Custom required field styling */
+.required-field::after {
+  content: ' *' !important;
+  color: #f53f3f !important;
+  font-weight: bold !important;
 }
 </style>

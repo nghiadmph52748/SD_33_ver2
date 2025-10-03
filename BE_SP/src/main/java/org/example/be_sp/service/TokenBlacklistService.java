@@ -27,7 +27,6 @@ public class TokenBlacklistService {
         try {
             // Check if table exists
             jdbcTemplate.execute("SELECT 1 FROM token_blacklist");
-            System.out.println("Token blacklist table already exists");
         } catch (Exception e) {
             // Table doesn't exist, create it
             try {
@@ -49,7 +48,6 @@ public class TokenBlacklistService {
                     """;
 
                 jdbcTemplate.execute(createTableSql);
-                System.out.println("Token blacklist table created successfully");
             } catch (Exception createException) {
                 System.err.println("Failed to create token blacklist table: " + createException.getMessage());
             }
@@ -90,10 +88,8 @@ public class TokenBlacklistService {
     public void cleanupExpiredTokens() {
         LocalDateTime now = LocalDateTime.now();
         List<TokenBlacklist> expiredTokens = tokenBlacklistRepository.findExpiredTokens(now);
-        System.out.println("Found " + expiredTokens.size() + " expired tokens to clean up");
         if (!expiredTokens.isEmpty()) {
             tokenBlacklistRepository.deleteExpiredTokens(now);
-            System.out.println("Cleaned up " + expiredTokens.size() + " expired tokens from blacklist");
         }
     }
 

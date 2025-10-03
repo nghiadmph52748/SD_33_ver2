@@ -10,7 +10,9 @@ export interface MauSac {
   trangThai: boolean
   deleted: boolean
   createAt?: string
+  createBy?: string
   updateAt?: string
+  updateBy?: string
 }
 
 export interface MauSacPagingResponse extends PagingResponse {
@@ -25,15 +27,15 @@ export function getMauSacListAll() {
   return axios.get<MauSacResponse>('/api/mau-sac-management/playlist')
 }
 
-export function getMauSacList(page: number) {
-  return axios.get<MauSacResponse>(`/api/mau-sac-management/paging?page=${page}`)
+export function getMauSacList(page: number, size: number) {
+  return axios.get<MauSacResponse>(`/api/mau-sac-management/paging?page=${page}&size=${size}`)
 }
 
 export function getMauSacById(id: number) {
   return axios.get<MauSac>(`/api/mau-sac-management/detail/${id}`)
 }
 
-export function createMauSac(data: Omit<MauSac, 'id' | 'maMauSac' | 'createAt' | 'updateAt'>) {
+export function createMauSac(data: Omit<MauSac, 'tenMauSac' | 'trangThai' | 'deleted' | 'createAt' | 'createBy'>) {
   return axios.post<MauSac>('/api/mau-sac-management/add', data)
 }
 

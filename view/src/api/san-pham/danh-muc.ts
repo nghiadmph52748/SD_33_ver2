@@ -36,8 +36,8 @@ export interface DanhMucResponse {
   totalElements?: number // Will be calculated on frontend
 }
 
-export function getDanhMucSanPhamList(page: number) {
-  return axios.get<DanhMucResponse>(`/api/san-pham-management/paging?page=${page}`)
+export function getDanhMucSanPhamList(page: number, size: number = 10) {
+  return axios.get<DanhMucResponse>(`/api/san-pham-management/paging?page=${page}&size=${size}`)
 }
 
 export function getDanhMucSanPhamById(id: number) {

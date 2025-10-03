@@ -3,6 +3,7 @@ import ArcoVueIcon from '@arco-design/web-vue/es/icon'
 import { createApp } from 'vue'
 import '@/api/interceptor'
 import '@/assets/style/global.less'
+import { getToken } from '@/utils/auth'
 import App from './App.vue'
 import globalComponents from './components'
 import directive from './directive'
@@ -21,5 +22,27 @@ app.use(store)
 app.use(i18n)
 app.use(globalComponents)
 app.use(directive)
+
+// Handle page unload - logout when user closes browser/tab
+window.addEventListener('beforeunload', async () => {
+  const token = getToken()
+  if (token) {
+    try {
+      // Use fetch with keepalive for more reliable cleanup when page is closing
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        keepalive: true,
+      }).catch(() => {
+        // Ignore errors - page is closing anyway
+      })
+    } catch {
+      // Ignore errors during cleanup
+    }
+  }
+})
 
 app.mount('#app')

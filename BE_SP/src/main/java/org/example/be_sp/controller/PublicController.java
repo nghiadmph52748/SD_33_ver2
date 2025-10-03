@@ -16,13 +16,11 @@ public class PublicController {
 
     @GetMapping("/health")
     public ResponseObject<?> healthCheck() {
-        System.out.println("🌍 Public API accessed - No token required");
         return new ResponseObject<>(true, "API is running", "Health check successful");
     }
 
     @GetMapping("/info")
     public ResponseObject<?> systemInfo() {
-        System.out.println("🌍 System info accessed - No token required");
 
         Object info = new Object() {
             public final String version = "1.0.0";

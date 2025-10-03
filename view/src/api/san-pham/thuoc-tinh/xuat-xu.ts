@@ -9,7 +9,9 @@ export interface XuatXu {
   trangThai: boolean
   deleted: boolean
   createAt?: string
+  createBy?: number
   updateAt?: string
+  updateBy?: number
 }
 
 export interface XuatXuPagingResponse extends PagingResponse {
@@ -24,15 +26,15 @@ export function getXuatXuListAll() {
   return axios.get<XuatXuResponse>('/api/xuat-xu-management/playlist')
 }
 
-export function getXuatXuList(page: number) {
-  return axios.get<XuatXuResponse>(`/api/xuat-xu-management/paging?page=${page}`)
+export function getXuatXuList(page: number, size: number) {
+  return axios.get<XuatXuResponse>(`/api/xuat-xu-management/paging?page=${page}&size=${size}`)
 }
 
 export function getXuatXuById(id: number) {
   return axios.get<XuatXu>(`/api/xuat-xu-management/detail/${id}`)
 }
 
-export function createXuatXu(data: Omit<XuatXu, 'id' | 'maXuatXu' | 'createAt' | 'updateAt'>) {
+export function createXuatXu(data: Omit<XuatXu, 'tenXuatXu' | 'trangThai' | 'deleted' | 'createAt' | 'createBy'>) {
   return axios.post<XuatXu>('/api/xuat-xu-management/add', data)
 }
 

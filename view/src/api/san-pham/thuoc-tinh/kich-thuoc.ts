@@ -9,7 +9,9 @@ export interface KichThuoc {
   trangThai: boolean
   deleted: boolean
   createAt?: string
+  createBy?: string
   updateAt?: string
+  updateBy?: string
 }
 
 export interface KichThuocPagingResponse extends PagingResponse {
@@ -24,15 +26,15 @@ export function getKichThuocListAll() {
   return axios.get<KichThuocResponse>('/api/kich-thuoc-management/playlist')
 }
 
-export function getKichThuocList(page: number) {
-  return axios.get<KichThuocResponse>(`/api/kich-thuoc-management/paging?page=${page}`)
+export function getKichThuocList(page: number, size: number) {
+  return axios.get<KichThuocResponse>(`/api/kich-thuoc-management/paging?page=${page}&size=${size}`)
 }
 
 export function getKichThuocById(id: number) {
   return axios.get<KichThuoc>(`/api/kich-thuoc-management/detail/${id}`)
 }
 
-export function createKichThuoc(data: Omit<KichThuoc, 'id' | 'maKichThuoc' | 'createAt' | 'updateAt'>) {
+export function createKichThuoc(data: Omit<KichThuoc, 'tenKichThuoc' | 'trangThai' | 'deleted' | 'createAt' | 'createBy'>) {
   return axios.post<KichThuoc>('/api/kich-thuoc-management/add', data)
 }
 

@@ -51,7 +51,7 @@
 
     <!-- Colors Table -->
     <a-card title="Danh sách màu sắc" class="table-card">
-      <a-table :columns="columns" :data="colors" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
+      <a-table :columns="columns" :data="filteredColors" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
         <template #stt="{ rowIndex }">
           <div>{{ rowIndex + 1 }}</div>
         </template>
@@ -110,10 +110,16 @@
       @ok="confirmAddColor"
     >
       <a-form :model="colorForm" :rules="formRules" layout="vertical" ref="addFormRef">
-        <a-form-item label="Tên màu sắc" field="tenMauSac">
+        <a-form-item>
+          <template #label>
+            <span>Tên màu sắc</span>
+          </template>
           <a-input v-model="colorForm.tenMauSac" placeholder="Tên màu sẽ tự động cập nhật khi chọn mã màu" readonly />
         </a-form-item>
-        <a-form-item label="Mã màu" field="maMau" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Mã màu</span>
+          </template>
           <input type="color" v-model="colorForm.maMau" class="arco-input" style="width: 100%; height: 32px" @input="onColorChange" />
         </a-form-item>
       </a-form>
@@ -154,13 +160,22 @@
       @ok="confirmUpdateColor"
     >
       <a-form :model="colorForm" :rules="formRules" layout="vertical" ref="updateFormRef">
-        <a-form-item label="Tên màu sắc" field="tenMauSac" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên màu sắc</span>
+          </template>
           <a-input v-model="colorForm.tenMauSac" placeholder="Tên màu sẽ tự động cập nhật khi chọn mã màu" readonly />
         </a-form-item>
-        <a-form-item label="Mã màu" field="maMau" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Mã màu</span>
+          </template>
           <input type="color" v-model="colorForm.maMau" class="arco-input" style="width: 100%; height: 32px" @input="onColorChange" />
         </a-form-item>
-        <a-form-item label="Trạng thái" field="trangThai" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Trạng thái</span>
+          </template>
           <a-radio-group v-model="colorForm.trangThai" type="button">
             <a-radio :value="true">Hoạt động</a-radio>
             <a-radio :value="false">Không hoạt động</a-radio>
@@ -188,6 +203,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { Message } from '@arco-design/web-vue'
 import {
   IconPlus,
   IconPalette,
@@ -218,6 +234,30 @@ const filters = ref({
 
 // Data
 const colors = ref<MauSac[]>([])
+
+// Filtered colors computed property
+const filteredColors = computed(() => {
+  let filtered = [...colors.value]
+
+  // Filter by search term
+  if (filters.value.search) {
+    const searchTerm = filters.value.search.toLowerCase()
+    filtered = filtered.filter(
+      (color) =>
+        color.maMauSac?.toLowerCase().includes(searchTerm) ||
+        color.tenMauSac?.toLowerCase().includes(searchTerm) ||
+        color.maMau?.toLowerCase().includes(searchTerm)
+    )
+  }
+
+  // Filter by status
+  if (filters.value.status) {
+    const statusFilter = filters.value.status === 'active'
+    filtered = filtered.filter((color) => color.trangThai === statusFilter)
+  }
+
+  return filtered
+})
 
 // Modal states
 const addModalVisible = ref(false)
@@ -368,8 +408,6 @@ const getColorName = (hexColor: string): string => {
       'light gray': 'Xám nhạt',
       'dark grey': 'Xám đậm',
       'light grey': 'Xám nhạt',
-
-      // Thêm các tên màu HTML chuẩn khác
       aliceblue: 'Xanh nhạt',
       antiquewhite: 'Trắng cổ',
       aquamarine: 'Xanh ngọc biển',
@@ -692,12 +730,43 @@ const cancelConfirm = () => {
 
 const getMauSacPage = async (page: number) => {
   try {
-    const res = await getMauSacList(page)
+    const res = await getMauSacList(page, pagination.value.pageSize)
     if (res.success) {
       colors.value = res.data.data
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1
+    } else {
+      console.error('Failed to fetch colors:', res.message)
+      colors.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch colors:', error)
+  }
+}
+
+const loadColorsWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean = false) => {
+  try {
+    const res = await getMauSacList(0, 9)
+    if (res.success) {
+      let colorsData = res.data.data
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.pageSize
+      pagination.value.current = res.data.currentPage + 1
+
+      // If there's an updated item and it's not a new item, move it to the front
+      if (updatedId && !isNewItem) {
+        const updatedIndex = colorsData.findIndex((color) => color.id === updatedId)
+        if (updatedIndex > 0) {
+          const updatedItem = colorsData.splice(updatedIndex, 1)[0]
+          colorsData = [updatedItem, ...colorsData.slice(0, updatedIndex), ...colorsData.slice(updatedIndex)]
+        }
+      }
+
+      colors.value = colorsData
     } else {
       console.error('Failed to fetch colors:', res.message)
       colors.value = []
@@ -722,14 +791,16 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      await createMauSac(data)
+      const res = await createMauSac(data)
       closeAddModal()
-      // Refresh data
-      getMauSacPage(0)
+      // Load data with new item first (always load from page 0 for new items)
+      loadColorsWithUpdatedFirst(undefined, true)
+      Message.success('Thêm màu sắc thành công!')
     } else if (confirmAction.value === 'update') {
       if (!selectedColor.value) return
 
       // TODO: Implement update API call
+      const colorId = selectedColor.value.id
       const data = {
         tenMauSac: colorForm.tenMauSac,
         maMau: colorForm.maMau,
@@ -740,20 +811,23 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      await updateMauSac(selectedColor.value.id, data)
+      await updateMauSac(colorId, data)
       closeUpdateModal()
-      // Refresh data
-      getMauSacPage(0)
+      // Load data with updated item first
+      loadColorsWithUpdatedFirst(colorId, false)
+      Message.success('Cập nhật màu sắc thành công!')
     } else if (confirmAction.value === 'delete') {
       if (!selectedColor.value) return
 
       // TODO: Implement delete API call
       await deleteMauSac(selectedColor.value.id)
       // Refresh data
-      getMauSacPage(0)
+      loadColorsWithUpdatedFirst()
+      Message.success('Xóa màu sắc thành công!')
     }
   } catch (error) {
     console.error('API call failed:', error)
+    Message.error('Có lỗi xảy ra. Vui lòng thử lại!')
   } finally {
     confirmModalVisible.value = false
     confirmMessage.value = ''
@@ -919,6 +993,13 @@ onMounted(() => {
 
 .danger-item {
   color: #ff4d4f;
+}
+
+/* Custom required field styling */
+.required-field::after {
+  content: ' *' !important;
+  color: #f53f3f !important;
+  font-weight: bold !important;
 }
 
 /* Responsive */

@@ -44,8 +44,7 @@ public class MauSacController {
 
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody MauSacRequest mauSacRequest) {
-        mauSacService.add(mauSacRequest);
-        return new ResponseObject<>(true, null, "Thêm mới màu sắc thành công");
+        return new ResponseObject<>(true, mauSacService.add(mauSacRequest).getId(), "Thêm mới màu sắc thành công");
     }
 
     @PutMapping("/update/{id}")

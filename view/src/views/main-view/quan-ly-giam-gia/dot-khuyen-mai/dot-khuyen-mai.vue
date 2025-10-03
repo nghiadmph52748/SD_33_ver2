@@ -780,7 +780,6 @@ onMounted(() => {
   color: #1890ff;
 }
 
-
 .percentage-filter {
   display: flex;
   flex-direction: column;

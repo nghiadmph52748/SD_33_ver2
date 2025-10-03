@@ -56,7 +56,7 @@
 
     <!-- Manufacturers Table -->
     <a-card title="Danh sách nhà sản xuất" class="table-card">
-      <a-table :columns="columns" :data="manufacturers" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
+      <a-table :columns="columns" :data="filteredManufacturers" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
         <template #stt="{ rowIndex }">
           <div>{{ rowIndex + 1 }}</div>
         </template>
@@ -108,7 +108,10 @@
       @ok="confirmAddManufacturer"
     >
       <a-form :model="manufacturerForm" :rules="formRules" layout="vertical" ref="addFormRef">
-        <a-form-item label="Tên nhà sản xuất" field="tenNhaSanXuat" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên nhà sản xuất</span>
+          </template>
           <a-input v-model="manufacturerForm.tenNhaSanXuat" placeholder="Nhập tên nhà sản xuất" />
         </a-form-item>
       </a-form>
@@ -148,11 +151,17 @@
       @ok="confirmUpdateManufacturer"
     >
       <a-form :model="manufacturerForm" :rules="formRules" layout="vertical" ref="updateFormRef">
-        <a-form-item label="Tên nhà sản xuất" field="tenNhaSanXuat" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên nhà sản xuất</span>
+          </template>
           <a-input v-model="manufacturerForm.tenNhaSanXuat" placeholder="Nhập tên nhà sản xuất" />
         </a-form-item>
 
-        <a-form-item label="Trạng thái" field="trangThai" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Trạng thái</span>
+          </template>
           <a-radio-group v-model="manufacturerForm.trangThai" type="button">
             <a-radio :value="true">Hoạt động</a-radio>
             <a-radio :value="false">Không hoạt động</a-radio>
@@ -180,6 +189,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { Message } from '@arco-design/web-vue'
 import {
   IconPlus,
   IconBuilding,
@@ -214,6 +224,28 @@ const filters = ref({
 
 // Data
 const manufacturers = ref([])
+
+// Filtered manufacturers computed property
+const filteredManufacturers = computed(() => {
+  let filtered = [...manufacturers.value]
+
+  // Filter by search term
+  if (filters.value.search) {
+    const searchTerm = filters.value.search.toLowerCase()
+    filtered = filtered.filter(
+      (manufacturer) =>
+        manufacturer.maNhaSanXuat?.toLowerCase().includes(searchTerm) || manufacturer.tenNhaSanXuat?.toLowerCase().includes(searchTerm)
+    )
+  }
+
+  // Filter by status
+  if (filters.value.status) {
+    const statusFilter = filters.value.status === 'active'
+    filtered = filtered.filter((manufacturer) => manufacturer.trangThai === statusFilter)
+  }
+
+  return filtered
+})
 
 // Modal states
 const addModalVisible = ref(false)
@@ -416,12 +448,43 @@ const cancelConfirm = () => {
 
 const getNhaSanXuatPage = async (page) => {
   try {
-    const res = await getNhaSanXuatList(page)
+    const res = await getNhaSanXuatList(page, pagination.value.pageSize)
     if (res.success) {
       manufacturers.value = res.data.data
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1
+    } else {
+      console.error('Failed to fetch manufacturers:', res.message)
+      manufacturers.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch manufacturers:', error)
+  }
+}
+
+const loadManufacturersWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean = false) => {
+  try {
+    const res = await getNhaSanXuatList(0, 9)
+    if (res.success) {
+      let manufacturersData = res.data.data
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.pageSize
+      pagination.value.current = res.data.currentPage + 1
+
+      // If there's an updated item and it's not a new item, move it to the front
+      if (updatedId && !isNewItem) {
+        const updatedIndex = manufacturersData.findIndex((manufacturer) => manufacturer.id === updatedId)
+        if (updatedIndex > 0) {
+          const updatedItem = manufacturersData.splice(updatedIndex, 1)[0]
+          manufacturersData = [updatedItem, ...manufacturersData.slice(0, updatedIndex), ...manufacturersData.slice(updatedIndex)]
+        }
+      }
+
+      manufacturers.value = manufacturersData
     } else {
       console.error('Failed to fetch manufacturers:', res.message)
       manufacturers.value = []
@@ -445,12 +508,19 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      await createNhaSanXuat(data)
+      const res = await createNhaSanXuat(data)
       closeAddModal()
-      // Refresh data
-      getNhaSanXuatPage(0)
+      // Load data with new item first (always load from page 0 for new items)
+      loadManufacturersWithUpdatedFirst(undefined, true)
+      Message.success('Thêm nhà sản xuất thành công!')
     } else if (confirmAction.value === 'update') {
       // TODO: Implement update API call
+      if (!selectedManufacturer.value) {
+        console.error('No manufacturer selected for update')
+        return
+      }
+
+      const manufacturerId = selectedManufacturer.value.id
       const data = {
         tenNhaSanXuat: manufacturerForm.tenNhaSanXuat,
         trangThai: manufacturerForm.trangThai,
@@ -460,18 +530,26 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      await updateNhaSanXuat(selectedManufacturer.value.id, data)
+      await updateNhaSanXuat(manufacturerId, data)
       closeUpdateModal()
-      // Refresh data
-      getNhaSanXuatPage(0)
+      // Load data with updated item first
+      loadManufacturersWithUpdatedFirst(manufacturerId, false)
+      Message.success('Cập nhật nhà sản xuất thành công!')
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
+      if (!selectedManufacturer.value) {
+        console.error('No manufacturer selected for delete')
+        return
+      }
+
       await deleteNhaSanXuat(selectedManufacturer.value.id)
       // Refresh data
-      getNhaSanXuatPage(0)
+      loadManufacturersWithUpdatedFirst()
+      Message.success('Xóa nhà sản xuất thành công!')
     }
   } catch (error) {
     console.error('API call failed:', error)
+    Message.error('Có lỗi xảy ra. Vui lòng thử lại!')
   } finally {
     confirmModalVisible.value = false
     confirmMessage.value = ''
@@ -548,5 +626,12 @@ onMounted(() => {
 .logo-cell {
   display: flex;
   justify-content: center;
+}
+
+/* Custom required field styling */
+.required-field::after {
+  content: ' *' !important;
+  color: #f53f3f !important;
+  font-weight: bold !important;
 }
 </style>

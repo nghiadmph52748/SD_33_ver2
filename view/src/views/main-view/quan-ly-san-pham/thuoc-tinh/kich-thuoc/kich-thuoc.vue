@@ -53,7 +53,7 @@
     <a-card title="Danh sách kích thước" class="table-card">
       <a-table
         :columns="columns"
-        :data="sizes"
+        :data="filteredSizes"
         :pagination="pagination"
         :loading="loading"
         :scroll="{ x: 1000 }"
@@ -117,7 +117,10 @@
       @ok="confirmAddSize"
     >
       <a-form :model="sizeForm" :rules="formRules" layout="vertical" ref="addFormRef">
-        <a-form-item label="Tên kích thước" field="tenKichThuoc" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên kích thước</span>
+          </template>
           <a-input v-model="sizeForm.tenKichThuoc" placeholder="Nhập tên kích thước" />
         </a-form-item>
       </a-form>
@@ -157,10 +160,16 @@
       @ok="confirmUpdateSize"
     >
       <a-form :model="sizeForm" :rules="formRules" layout="vertical" ref="updateFormRef">
-        <a-form-item label="Tên kích thước" field="tenKichThuoc" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên kích thước</span>
+          </template>
           <a-input v-model="sizeForm.tenKichThuoc" placeholder="Nhập tên kích thước" />
         </a-form-item>
-        <a-form-item label="Trạng thái" field="trangThai" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Trạng thái</span>
+          </template>
           <a-radio-group v-model="sizeForm.trangThai" type="button">
             <a-radio :value="true">Hoạt động</a-radio>
             <a-radio :value="false">Không hoạt động</a-radio>
@@ -188,6 +197,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { Message } from '@arco-design/web-vue'
 import {
   IconPlus,
   IconRuler,
@@ -218,6 +228,27 @@ const filters = ref({
 
 // Data
 const sizes = ref([])
+
+// Filtered sizes computed property
+const filteredSizes = computed(() => {
+  let filtered = [...sizes.value]
+
+  // Filter by search term
+  if (filters.value.search) {
+    const searchTerm = filters.value.search.toLowerCase()
+    filtered = filtered.filter(
+      (size) => size.maKichThuoc?.toLowerCase().includes(searchTerm) || size.tenKichThuoc?.toLowerCase().includes(searchTerm)
+    )
+  }
+
+  // Filter by status
+  if (filters.value.status) {
+    const statusFilter = filters.value.status === 'active'
+    filtered = filtered.filter((size) => size.trangThai === statusFilter)
+  }
+
+  return filtered
+})
 
 // Modal states
 const addModalVisible = ref(false)
@@ -389,12 +420,48 @@ const cancelConfirm = () => {
 const getKichThuocPage = async (page) => {
   try {
     loading.value = true
-    const res = await getKichThuocList(page)
+    const res = await getKichThuocList(page, pagination.value.pageSize)
     if (res.success) {
       sizes.value = res.data.data
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
+    } else {
+      console.error('Failed to fetch sizes:', res.message)
+      sizes.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch sizes:', error)
+    sizes.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadSizesWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean = false) => {
+  try {
+    loading.value = true
+    const res = await getKichThuocList(0, 9)
+    if (res.success) {
+      let sizesData = res.data.data
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
+
+      // If there's an updated item and it's not a new item, move it to the front
+      if (updatedId && !isNewItem) {
+        const updatedIndex = sizesData.findIndex((size) => size.id === updatedId)
+        if (updatedIndex > 0) {
+          const updatedItem = sizesData.splice(updatedIndex, 1)[0]
+          sizesData = [updatedItem, ...sizesData.slice(0, updatedIndex), ...sizesData.slice(updatedIndex)]
+        }
+      }
+
+      sizes.value = sizesData
     } else {
       console.error('Failed to fetch sizes:', res.message)
       sizes.value = []
@@ -422,12 +489,19 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      await createKichThuoc(data)
+      const res = await createKichThuoc(data)
       closeAddModal()
-      // Refresh data
-      getKichThuocPage(0)
+      // Load data with new item first (always load from page 0 for new items)
+      loadSizesWithUpdatedFirst(undefined, true)
+      Message.success('Thêm kích thước thành công!')
     } else if (confirmAction.value === 'update') {
       // TODO: Implement update API call
+      if (!selectedSize.value) {
+        console.error('No size selected for update')
+        return
+      }
+
+      const sizeId = selectedSize.value.id
       const data = {
         tenKichThuoc: sizeForm.tenKichThuoc,
         trangThai: sizeForm.trangThai,
@@ -437,18 +511,26 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      await updateKichThuoc(selectedSize.value.id, data)
+      await updateKichThuoc(sizeId, data)
       closeUpdateModal()
-      // Refresh data
-      getKichThuocPage(0)
+      // Load data with updated item first
+      loadSizesWithUpdatedFirst(sizeId, false)
+      Message.success('Cập nhật kích thước thành công!')
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
+      if (!selectedSize.value) {
+        console.error('No size selected for delete')
+        return
+      }
+
       await deleteKichThuoc(selectedSize.value.id)
       // Refresh data
-      getKichThuocPage(0)
+      loadSizesWithUpdatedFirst()
+      Message.success('Xóa kích thước thành công!')
     }
   } catch (error) {
     console.error('API call failed:', error)
+    Message.error('Có lỗi xảy ra. Vui lòng thử lại!')
   } finally {
     confirmModalVisible.value = false
     confirmMessage.value = ''
@@ -484,5 +566,12 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+/* Custom required field styling */
+.required-field::after {
+  content: ' *' !important;
+  color: #f53f3f !important;
+  font-weight: bold !important;
 }
 </style>

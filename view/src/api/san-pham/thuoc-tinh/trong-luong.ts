@@ -9,7 +9,9 @@ export interface TrongLuong {
   trangThai: boolean
   deleted: boolean
   createAt?: string
+  createBy?: string
   updateAt?: string
+  updateBy?: string
 }
 
 export interface TrongLuongPagingResponse extends PagingResponse {
@@ -24,15 +26,15 @@ export function getTrongLuongListAll() {
   return axios.get<TrongLuongResponse>('/api/trong-luong-management/playlist')
 }
 
-export function getTrongLuongList(page: number) {
-  return axios.get<TrongLuongResponse>(`/api/trong-luong-management/paging?page=${page}`)
+export function getTrongLuongList(page: number, size: number) {
+  return axios.get<TrongLuongResponse>(`/api/trong-luong-management/paging?page=${page}&size=${size}`)
 }
 
 export function getTrongLuongById(id: number) {
   return axios.get<TrongLuong>(`/api/trong-luong-management/detail/${id}`)
 }
 
-export function createTrongLuong(data: Omit<TrongLuong, 'id' | 'maTrongLuong' | 'createAt' | 'updateAt'>) {
+export function createTrongLuong(data: Omit<TrongLuong, 'tenTrongLuong' | 'trangThai' | 'deleted' | 'createAt' | 'createBy'>) {
   return axios.post<TrongLuong>('/api/trong-luong-management/add', data)
 }
 

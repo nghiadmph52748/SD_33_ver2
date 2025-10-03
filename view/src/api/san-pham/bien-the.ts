@@ -7,6 +7,14 @@ export interface MauSac {
   maMau: string
 }
 
+export interface anhSanPham {
+  id: number
+  duongDanAnh: string
+  tenAnh?: string
+  mauAnh?: string
+  trangThai: boolean
+}
+
 export interface KichThuoc {
   id: number
   tenKichThuoc: string
@@ -104,13 +112,13 @@ export function getBienTheSanPhamList(page: number, productId?: number) {
   return axios.get<BienTheSanPham[]>(`/api/chi-tiet-san-pham-management/playlist`)
 }
 
-export function getBienTheSanPhamPage(page: number, productId?: number) {
+export function getBienTheSanPhamPage(page: number, productId?: number, size: number = 10) {
   if (productId) {
     // Lấy biến thể theo sản phẩm
-    return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/${productId}?page=${page}`)
+    return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/${productId}?page=${page}&size=${size}`)
   }
   // Lấy tất cả biến thể
-  return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/all?page=${page}`)
+  return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/all?page=${page}&size=${size}`)
 }
 
 export function getBienTheSanPhamById(id: number) {
@@ -193,17 +201,24 @@ export function updateBienThe(data: UpdateBienTheRequest) {
 // ==================== UPLOAD ẢNH CHO BIẾN THỂ ====================
 // Note: uploadAnhBienThe bây giờ trả về array ID của ảnh đã upload lên cloud
 
-export function uploadAnhBienThe(files: File[]) {
+export function uploadAnhBienThe(files: File[], tenAnh: string, mauAnh: string, createBy: number) {
+  console.log('uploadAnhBienThe called')
   const formData = new FormData()
-  files.forEach((file, index) => {
+  files.forEach((file) => {
     formData.append('file', file)
   })
-
+  formData.append('tenAnh', tenAnh)
+  formData.append('mauAnh', mauAnh)
+  formData.append('createBy', createBy)
   return axios.post<number[]>('/api/anh-san-pham-management/add-multi-image/cloud', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   })
+}
+
+export function getAnhSanPhamByMauAnh(mauAnh: string) {
+  return axios.get<AnhSanPham[]>(`/api/anh-san-pham-management/filter?mauAnh=${mauAnh}`)
 }
 
 export function deleteAnhBienThe(idBienThe: number, idAnh: number) {
@@ -243,7 +258,11 @@ export function getAnhBienThe(idBienThe: number) {
 // ==================== THÊM/XÓA ẢNH CHO BIẾN THỂ ====================
 export interface ThemAnhBienTheRequest {
   idChiTietSanPham: number
-  danhSachAnh: number[] // Array of anh_san_pham IDs
+  idAnhSanPhamList: number[] // Array of anh_san_pham IDs
+  trangThai: true
+  deleted: false
+  createAt: Date
+  createBy: number
 }
 
 export function themAnhChoBienThe(data: ThemAnhBienTheRequest) {

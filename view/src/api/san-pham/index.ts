@@ -1,8 +1,15 @@
-// Export tất cả API quản lý sản phẩm
+// Export tất cả API quản lý sản phẩm - Fixed exports
 // Chỉ export các hàm API để tránh xung đột interface trùng tên
 
 // Thuộc tính sản phẩm
-export { getNhaSanXuatList, getNhaSanXuatById, createNhaSanXuat, updateNhaSanXuat, deleteNhaSanXuat } from './thuoc-tinh/nha-san-xuat'
+export {
+  getNhaSanXuatList,
+  getNhaSanXuatListAll,
+  getNhaSanXuatById,
+  createNhaSanXuat,
+  updateNhaSanXuat,
+  deleteNhaSanXuat,
+} from './thuoc-tinh/nha-san-xuat'
 
 export { getChatLieuList, getChatLieuById, createChatLieu, updateChatLieu, deleteChatLieu } from './thuoc-tinh/chat-lieu'
 
@@ -10,7 +17,7 @@ export { getMauSacList, getMauSacById, createMauSac, updateMauSac, deleteMauSac 
 
 export { getKichThuocList, getKichThuocById, createKichThuoc, updateKichThuoc, deleteKichThuoc } from './thuoc-tinh/kich-thuoc'
 
-export { getXuatXuList, getXuatXuById, createXuatXu, updateXuatXu, deleteXuatXu } from './thuoc-tinh/xuat-xu'
+export { getXuatXuList, getXuatXuListAll, getXuatXuById, createXuatXu, updateXuatXu, deleteXuatXu } from './thuoc-tinh/xuat-xu'
 
 export { getTrongLuongList, getTrongLuongById, createTrongLuong, updateTrongLuong, deleteTrongLuong } from './thuoc-tinh/trong-luong'
 
@@ -56,4 +63,4 @@ export {
   updateAnhSanPham,
   deleteAnhSanPham,
   getAllAnhSanPham,
-} from './anh-san-pham'
+} from './thuoc-tinh/anh-san-pham'

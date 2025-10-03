@@ -1,5 +1,5 @@
 import { useUserStore } from '@/store'
-import { getToken } from '@/utils/auth'
+import { getToken, setToken } from '@/utils/auth'
 import { Message, Modal } from '@arco-design/web-vue'
 import axios from 'axios'
 
@@ -35,6 +35,13 @@ axios.interceptors.request.use(
 // add response interceptors
 axios.interceptors.response.use(
   (response: any) => {
+    // Kiểm tra xem có token mới từ server không
+    const newToken = response.headers['new-token']
+    if (newToken) {
+      // Cập nhật token mới vào localStorage
+      setToken(newToken)
+    }
+
     const res = response.data
     // Backend returns: { data: ..., message: "...", success: true/false }
 

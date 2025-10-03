@@ -44,8 +44,7 @@ public class ChatLieuController {
 
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody ChatLieuRequest chatLieuRequest) {
-        chatLieuService.add(chatLieuRequest);
-        return new ResponseObject<>(true, null, "Thêm mới thành công");
+        return new ResponseObject<>(true, chatLieuService.add(chatLieuRequest).getId(), "Thêm mới thành công");
     }
 
     @PutMapping("/update/{id}")

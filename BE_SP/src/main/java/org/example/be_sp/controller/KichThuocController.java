@@ -45,8 +45,7 @@ public class KichThuocController {
 
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody KichThuocRequest kichThuocRequest) {
-        kichThuocService.add(kichThuocRequest);
-        return new ResponseObject<>(true, null, "Thêm kích thước thành công");
+        return new ResponseObject<>(true, kichThuocService.add(kichThuocRequest).getId(), "Thêm kích thước thành công");
     }
 
     @PutMapping("/update/{id}")

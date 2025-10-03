@@ -13,9 +13,7 @@
         </a-input>
       </a-form-item>
       <a-space direction="vertical" :size="16" style="width: 100%">
-        <a-button type="primary" html-type="submit" long :loading="loading">
-          Gửi hướng dẫn đặt lại
-        </a-button>
+        <a-button type="primary" html-type="submit" long :loading="loading">Gửi hướng dẫn đặt lại</a-button>
         <a-button long @click="emit('back-to-login')">Quay lại đăng nhập</a-button>
       </a-space>
     </a-form>

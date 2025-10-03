@@ -8,8 +8,8 @@ export interface AnhSanPham {
   mauAnh?: string
   trangThai: boolean
   deleted: boolean
-  createAt: string
-  createBy: number
+  createAt?: string
+  createBy?: number
   updateAt?: string
   updateBy?: number
 }
@@ -29,16 +29,23 @@ export interface UploadResponse extends ResponseObject {
 }
 
 // ==================== CRUD ẢNH SẢN PHẨM ====================
-export function getAnhSanPhamList(page: number) {
-  return axios.get<AnhSanPhamResponse>(`/api/anh-san-pham-management/paging?page=${page}`)
+export function getAnhSanPhamList(page: number, size: number) {
+  return axios.get<AnhSanPhamResponse>(`/api/anh-san-pham-management/paging?page=${page}&size=${size}`)
 }
 
-export function uploadMutipartFile(files: File[], tenAnh: string, createBy: number) {
+export function getAnhSanPhamById(id: number) {
+  return axios.get<AnhSanPham>(`/api/anh-san-pham-management/detail/${id}`)
+}
+
+export function uploadMutipartFile(files: File[], tenAnh: string, mauAnh?: string, createBy: number) {
   const formData = new FormData()
   files.forEach((file) => {
     formData.append(`file`, file)
   })
   formData.append('tenAnh', tenAnh)
+  if (mauAnh) {
+    formData.append('mauAnh', mauAnh)
+  }
   formData.append('createBy', createBy)
 
   return axios.post<number[]>('/api/anh-san-pham-management/add-multi-image/cloud', formData, {
@@ -51,11 +58,11 @@ export function uploadMutipartFile(files: File[], tenAnh: string, createBy: numb
 export function updateMutipartFile(id: number, files: File[], tenAnh: string, updateBy: number) {
   const formData = new FormData()
   files.forEach((file) => {
-    formData.append(`file`, file)
+    formData.append('file', file)
   })
   formData.append('tenAnh', tenAnh)
   formData.append('updateBy', updateBy.toString())
-  return axios.post<number[]>(`/api/anh-san-pham-management/update-multi-image/cloud/${id}`, formData, {
+  return axios.put<number[]>(`/api/anh-san-pham-management/update-multi-image/cloud/${id}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -73,3 +80,13 @@ export function getAllAnhSanPham() {
 export function getAnhSanPhamByTenMau(mauAnh: string) {
   return axios.get<AnhSanPham[]>(`/api/anh-san-pham-management/filter?mauAnh=${mauAnh}`)
 }
+
+export function updateAnhSanPham(id: number, tenAnh: string, trangThai: boolean, updateBy: number) {
+  return axios.put<AnhSanPham>(
+    `/api/anh-san-pham-management/update-anh-san-pham/${id}?trangThai=${trangThai}&tenAnh=${tenAnh}&updateBy=${updateBy}`
+  )
+}
+
+// Alias functions for compatibility with index.ts exports
+export const uploadAnhSanPham = uploadMutipartFile
+export const uploadNhieuAnhSanPham = uploadMutipartFile

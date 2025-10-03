@@ -9,7 +9,9 @@ export interface DeGiay {
   trangThai: boolean
   deleted: boolean
   createAt?: string
+  createBy?: string
   updateAt?: string
+  updateBy?: string
 }
 
 export interface DeGiayPagingResponse extends PagingResponse {
@@ -24,15 +26,15 @@ export function getDeGiayListAll() {
   return axios.get<DeGiayResponse>('/api/de-giay-management/playlist')
 }
 
-export function getDeGiayList(page: number) {
-  return axios.get<DeGiayResponse>(`/api/de-giay-management/paging?page=${page}`)
+export function getDeGiayList(page: number, size: number) {
+  return axios.get<DeGiayResponse>(`/api/de-giay-management/paging?page=${page}&size=${size}`)
 }
 
 export function getDeGiayById(id: number) {
   return axios.get<DeGiay>(`/api/de-giay-management/detail/${id}`)
 }
 
-export function createDeGiay(data: Omit<DeGiay, 'id' | 'maDeGiay' | 'createAt' | 'updateAt'>) {
+export function createDeGiay(data: Omit<DeGiay, 'tenDeGiay' | 'trangThai' | 'deleted' | 'createAt' | 'createBy'>) {
   return axios.post<DeGiay>('/api/de-giay-management/add', data)
 }
 

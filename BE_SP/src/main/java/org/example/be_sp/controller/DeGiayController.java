@@ -4,8 +4,15 @@ import org.example.be_sp.model.request.DeGiayRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.DeGiayService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/de-giay-management")
@@ -37,8 +44,7 @@ public class DeGiayController {
 
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody DeGiayRequest deGiayRequest) {
-        deGiayService.add(deGiayRequest);
-        return new ResponseObject<>(true, null, "Thêm đế giày thành công");
+        return new ResponseObject<>(true, deGiayService.add(deGiayRequest).getId(), "Thêm đế giày thành công");
     }
 
     @PutMapping("/update/{id}")

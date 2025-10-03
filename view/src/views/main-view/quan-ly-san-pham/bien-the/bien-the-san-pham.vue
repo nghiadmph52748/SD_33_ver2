@@ -125,6 +125,13 @@
     <a-card :title="variantsTableTitle" class="table-card">
       <template #extra>
         <a-space>
+          <!-- New variants highlighting notification -->
+          <a-tag v-if="shouldHighlight && newVariantIds.length > 0" color="green" size="large" closable @close="clearHighlighting">
+            <template #icon>
+              <icon-check />
+            </template>
+            {{ newVariantIds.length }} biến thể mới được tạo (highlight trong 30s)
+          </a-tag>
           <!-- Edit mode buttons removed -->
           <a-button @click="toggleShowAllVariants">
             <template #icon>
@@ -132,17 +139,48 @@
             </template>
             {{ showAllVariants ? 'Hiển thị biến thể hiện tại' : 'Hiển thị toàn bộ biến thể' }}
           </a-button>
+
+          <!-- Bulk Status Actions -->
+          <a-dropdown>
+            <a-button>
+              <template #icon>
+                <icon-settings />
+              </template>
+              Thao tác hàng loạt
+            </a-button>
+            <template #content>
+              <a-doption @click="bulkToggleStatus(true)">
+                <template #icon>
+                  <icon-check />
+                </template>
+                Bật trạng thái bán tất cả
+              </a-doption>
+              <a-doption @click="bulkToggleStatus(false)">
+                <template #icon>
+                  <icon-close />
+                </template>
+                Tắt trạng thái bán tất cả
+              </a-doption>
+            </template>
+          </a-dropdown>
         </a-space>
       </template>
       <a-table
         :columns="columns"
-        :data="variants"
+        :data="sortedVariants"
         :pagination="{
-          ...pagination,
-          onChange: handlePageChange,
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: pagination.showSizeChanger,
+          showQuickJumper: pagination.showQuickJumper,
+          showTotal: true,
         }"
         :loading="loading"
         size="small"
+        :row-class="getRowClass"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageChange"
       >
         <template #stt="{ rowIndex }">
           <div>{{ rowIndex + 1 }}</div>
@@ -150,11 +188,12 @@
 
         <template #product_image="{ record }">
           <div class="image-cell">
-            <a-avatar
-              :src="Array.isArray(record.anhSanPham) && record.anhSanPham.length > 0 ? record.anhSanPham[0] : '/default-product.png'"
-              :size="48"
-              shape="square"
-            />
+            <a-avatar v-if="getProductImage(record)" :src="getProductImage(record)" :size="48" shape="square" />
+            <a-avatar v-else :size="48" shape="square" style="background-color: #f5f5f5; color: #999">
+              <template #icon>
+                <icon-image />
+              </template>
+            </a-avatar>
           </div>
         </template>
 
@@ -221,6 +260,18 @@
 
         <template #action="{ record }">
           <a-space>
+            <!-- Status Toggle Switch -->
+            <a-tooltip content="Thay đổi trạng thái bán">
+              <a-switch :model-value="record.trangThai" type="round" @change="toggleStatus(record)" :loading="record.updating">
+                <template #checked-icon>
+                  <icon-check />
+                </template>
+                <template #unchecked-icon>
+                  <icon-close />
+                </template>
+              </a-switch>
+            </a-tooltip>
+
             <a-button type="text" @click="viewDetail(record)">
               <template #icon>
                 <icon-eye />
@@ -231,11 +282,13 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-button type="text" danger @click="onDeleteClick(record)">
-              <template #icon>
-                <icon-delete />
-              </template>
-            </a-button>
+            <a-tooltip content="Xóa/Khôi phục biến thể">
+              <a-button type="text" danger @click="onDeleteClick(record)">
+                <template #icon>
+                  <icon-delete />
+                </template>
+              </a-button>
+            </a-tooltip>
           </a-space>
         </template>
       </a-table>
@@ -266,19 +319,15 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
 import {
-  IconPlus,
-  IconSearch,
-  IconGift,
-  IconStorage,
-  IconExclamationCircle,
-  IconCloseCircle,
   IconEdit,
   IconCheck,
+  IconClose,
   IconRefresh,
   IconDelete,
   IconDownload,
   IconEye,
-  IconCheckCircle,
+  IconImage,
+  IconSettings,
 } from '@arco-design/web-vue/es/icon'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
@@ -297,8 +346,9 @@ import {
   type ChatLieu,
   type DeGiay,
   type TrongLuong,
+  type CreateBienTheSanPhamRequest,
 } from '@/api/san-pham/bien-the'
-import { getBienTheSanPhamPage } from '../../../../api/san-pham/bien-the'
+import { deleteBienTheSanPham, getBienTheSanPhamPage, updateBienTheSanPham } from '../../../../api/san-pham/bien-the'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -307,6 +357,25 @@ const { breadcrumbItems } = useBreadcrumb()
 const route = useRoute()
 const router = useRouter()
 const productId = computed(() => (route.params.productId ? Number(route.params.productId) : undefined))
+
+// New variants highlighting
+const newVariantIds = ref<number[]>([])
+const shouldHighlight = ref(false)
+const highlightTimeoutId = ref<number | null>(null)
+
+// Parse new variants from query params
+const parseNewVariants = () => {
+  const newVariantsParam = route.query.newVariants as string
+  const highlightParam = route.query.highlight as string
+
+  if (newVariantsParam && highlightParam === 'true') {
+    newVariantIds.value = newVariantsParam
+      .split(',')
+      .map((id) => parseInt(id.trim(), 10))
+      .filter((id) => !Number.isNaN(id))
+    shouldHighlight.value = true
+  }
+}
 
 // API Data State - cần khai báo sớm cho pageTitle
 const sanPhamOptions = ref<SanPham[]>([])
@@ -355,9 +424,31 @@ const pagination = ref({
 })
 
 // API Data State
-const bienTheList = ref<BienTheResponse | null>(null)
 const variants = ref<BienTheSanPham[]>([])
-const totalElements = ref(0)
+
+// Computed for sorted variants with new variants on top
+const sortedVariants = computed(() => {
+  if (!shouldHighlight.value || newVariantIds.value.length === 0) {
+    return variants.value
+  }
+
+  // Convert all IDs to numbers for consistent comparison
+  const newIds = newVariantIds.value.map((id) => Number(id))
+
+  // Separate new and existing variants
+  const newVariants = variants.value.filter((v) => {
+    const variantId = Number(v.id)
+    const isNew = newIds.includes(variantId)
+    return isNew
+  })
+  const existingVariants = variants.value.filter((v) => {
+    const variantId = Number(v.id)
+    return !newIds.includes(variantId)
+  })
+
+  // Return new variants first, then existing variants
+  return [...newVariants, ...existingVariants]
+})
 
 // Options State (tiếp tục từ sanPhamOptions đã khai báo ở trên)
 const mauSacOptions = ref<MauSac[]>([])
@@ -493,43 +584,82 @@ const columns = [
   },
 ]
 
-// Pagination
-// Mock data
-
-const availableSizes = ref(['35', '36', '37', '38', '39', '40', '41', '42'])
-
 // API Functions
 const loadBienTheList = async () => {
   try {
     loading.value = true
-    const response = await getBienTheSanPhamPage(pagination.value.current - 1, productId.value)
-    console.log('Response:', response)
-    if (response.success) {
-      // Extract the actual data array from the nested structure
-      const paginationData = response.data.data
-      console.log('Pagination Data:', paginationData)
-      variants.value = paginationData
-      totalElements.value = paginationData.totalElements || paginationData.data?.length || 0
+    const response = await getBienTheSanPhamPage(pagination.value.current - 1, productId.value, pagination.value.pageSize)
+    if (response.success && response.data) {
+      const apiData = response.data
+      // Match the exact API response structure
+      if (apiData && apiData.data && Array.isArray(apiData.data)) {
+        // Add updating property to each record for loading state
+        variants.value = apiData.data.map((item) => ({ ...item, updating: false }))
+        pagination.value.total = apiData.totalElements || 0
+        pagination.value.current = (apiData.currentPage || 0) + 1 // Convert from 0-based to 1-based
+        pagination.value.pageSize = apiData.pageSize || 10
+      } else {
+        // Fallback if structure is different
+        variants.value = []
+        pagination.value.total = 0
+      }
 
       // Update originalVariants for search functionality
-      originalVariants.value = { data: paginationData }
-
-      // Update pagination info
-      pagination.value.total = paginationData.totalElements || paginationData.data?.length || 0
-      pagination.value.current = (paginationData.currentPage || 0) + 1
-      pagination.value.pageSize = paginationData.pageSize || 10
+      originalVariants.value = { data: variants.value }
     } else {
       // API response structure unexpected
       variants.value = []
-      totalElements.value = 0
-      originalVariants.value = { data: [], totalElements: 0, currentPage: 0, pageSize: 10, totalPages: 0 }
+      pagination.value.total = 0
+      originalVariants.value = { data: [] }
     }
   } catch (error) {
+    console.error('Error loading biến thể:', error)
     // Error loading biến thể
     Message.error('Không thể tải danh sách biến thể sản phẩm')
     variants.value = []
-    totalElements.value = 0
-    originalVariants.value = { data: [], totalElements: 0, currentPage: 0, pageSize: 10, totalPages: 0 }
+    pagination.value.total = 0
+    originalVariants.value = { data: [] }
+  } finally {
+    loading.value = false
+  }
+}
+
+// Load ALL variants for highlighting mode
+const loadAllVariantsForHighlight = async () => {
+  try {
+    loading.value = true
+    // Load with very high pageSize to get all variants
+    const response = await getBienTheSanPhamPage(0, productId.value, 1000)
+    if (response.success && response.data) {
+      const apiData = response.data
+      if (apiData && apiData.data && Array.isArray(apiData.data)) {
+        // Add updating property to each record for loading state
+        variants.value = apiData.data.map((item) => ({ ...item, updating: false }))
+
+        // Keep original pagination structure but show all data
+        pagination.value.total = apiData.totalElements || 0
+        pagination.value.current = 1
+        pagination.value.pageSize = apiData.data.length // Show all loaded data
+        // Check if new variants are present
+        const newIds = newVariantIds.value.map((id) => Number(id))
+        // foundNewVariants removed as it was unused
+      } else {
+        variants.value = []
+        pagination.value.total = 0
+      }
+
+      originalVariants.value = { data: variants.value }
+    } else {
+      variants.value = []
+      pagination.value.total = 0
+      originalVariants.value = { data: [] }
+    }
+  } catch (error) {
+    console.error('Error loading ALL variants for highlighting:', error)
+    Message.error('Không thể tải danh sách biến thể sản phẩm')
+    variants.value = []
+    pagination.value.total = 0
+    originalVariants.value = { data: [] }
   } finally {
     loading.value = false
   }
@@ -562,30 +692,37 @@ const loadAllOptions = async () => {
 const loadAllVariants = async () => {
   try {
     loading.value = true
-    const response = await getBienTheSanPhamPage(pagination.value.current - 1)
-    if (response.success) {
-      const paginationData = response.data.data
-      variants.value = paginationData
-      totalElements.value = paginationData.totalElements || paginationData.data?.length || 0
+    const response = await getBienTheSanPhamPage(pagination.value.current - 1, undefined, pagination.value.pageSize)
+    if (response.success && response.data) {
+      const apiData = response.data
+
+      // Match the exact API response structure
+      if (apiData && apiData.data && Array.isArray(apiData.data)) {
+        // Add updating property to each record for loading state
+        variants.value = apiData.data.map((item) => ({ ...item, updating: false }))
+        pagination.value.total = apiData.totalElements || 0
+        pagination.value.current = (apiData.currentPage || 0) + 1 // Convert from 0-based to 1-based
+        pagination.value.pageSize = apiData.pageSize || 10
+      } else {
+        // Fallback if structure is different
+        variants.value = []
+        pagination.value.total = 0
+      }
 
       // Update originalVariants for search functionality
-      originalVariants.value = { data: paginationData }
-
-      // Update pagination info
-      pagination.value.total = paginationData.totalElements || paginationData.data?.length || 0
-      pagination.value.current = (paginationData.currentPage || 0) + 1
-      pagination.value.pageSize = paginationData.pageSize || 10
+      originalVariants.value = { data: variants.value }
     } else {
       // All variants API response structure unexpected
       variants.value = []
-      totalElements.value = 0
-      originalVariants.value = { data: [], totalElements: 0, currentPage: 0, pageSize: 10, totalPages: 0 }
+      pagination.value.total = 0
+      originalVariants.value = { data: [] }
     }
   } catch (error) {
+    console.error('Error loading all variants:', error)
     Message.error('Không thể tải danh sách biến thể sản phẩm')
     variants.value = []
-    totalElements.value = 0
-    originalVariants.value = { data: [], totalElements: 0, currentPage: 0, pageSize: 10, totalPages: 0 }
+    pagination.value.total = 0
+    originalVariants.value = { data: [] }
   } finally {
     loading.value = false
   }
@@ -624,13 +761,66 @@ const formatPrice = (price: number) => {
   return price.toString()
 }
 
+// Helper function to get product image
+const getProductImage = (record: any) => {
+  if (!record.anhSanPham) {
+    return null
+  }
+
+  // If it's an array, take the first image
+  if (Array.isArray(record.anhSanPham) && record.anhSanPham.length > 0) {
+    const firstImage = record.anhSanPham[0]
+    // Handle case where array contains objects with duongDanAnh property
+    if (typeof firstImage === 'object' && firstImage.duongDanAnh) {
+      return firstImage.duongDanAnh
+    }
+    // Handle case where array contains direct URL strings
+    if (typeof firstImage === 'string') {
+      return firstImage
+    }
+  }
+
+  // If it's a direct string URL
+  if (typeof record.anhSanPham === 'string') {
+    return record.anhSanPham
+  }
+
+  // If it's an object with duongDanAnh property
+  if (typeof record.anhSanPham === 'object' && record.anhSanPham.duongDanAnh) {
+    return record.anhSanPham.duongDanAnh
+  }
+
+  return null
+}
+
 // Debounce timer for search
 let searchTimer: number | null = null
 
 const performSearch = () => {
+  // Check if any filters are active
+  const hasActiveFilters =
+    filters.value.search ||
+    filters.value.manufacturer ||
+    filters.value.origin ||
+    filters.value.material ||
+    filters.value.shoeSole ||
+    filters.value.weight ||
+    filters.value.status ||
+    (filters.value.priceRange && (filters.value.priceRange[0] > 0 || filters.value.priceRange[1] < 5000000))
+
+  if (!hasActiveFilters) {
+    // No filters active, reload data from API with current pagination
+    if (showAllVariants.value) {
+      loadAllVariants()
+    } else {
+      loadBienTheList()
+    }
+    return
+  }
+
+  // Filters are active, perform frontend filtering
   loading.value = true
 
-  // Frontend search implementation
   setTimeout(() => {
     // Ensure originalVariants.value.data exists and is an array
     const sourceData = originalVariants.value?.data || []
@@ -696,6 +886,17 @@ const performSearch = () => {
     // Update displayed variants
     variants.value = filteredVariants
 
+    // Check if filtering results in empty current page and adjust if needed
+    const totalFiltered = filteredVariants.length
+    const maxPage = Math.ceil(totalFiltered / pagination.value.pageSize) || 1
+
+    if (pagination.value.current > maxPage) {
+      pagination.value.current = maxPage
+    }
+
+    // Update pagination total for filtered results (for display purposes)
+    pagination.value.total = totalFiltered
+
     loading.value = false
   }, 200)
 }
@@ -725,13 +926,53 @@ const resetFilters = () => {
     status: '',
   }
 
-  // Reset to show all variants
-  const sourceData = originalVariants.value?.data || []
-  variants.value = [...sourceData]
+  // Reset pagination to first page
+  pagination.value.current = 1
+
+  // Reload data from API
+  if (showAllVariants.value) {
+    loadAllVariants()
+  } else {
+    loadBienTheList()
+  }
 }
 
 const exportExcel = () => {
   // Implement Excel export logic
+}
+
+// Clear highlighting function
+const clearHighlighting = () => {
+  shouldHighlight.value = false
+  newVariantIds.value = []
+
+  // Clear timeout if exists
+  if (highlightTimeoutId.value) {
+    clearTimeout(highlightTimeoutId.value)
+    highlightTimeoutId.value = null
+  }
+
+  // Clean up URL query params
+  router.replace({
+    name: route.name,
+    params: route.params,
+  })
+  Message.success('Đã tắt highlighting biến thể mới')
+}
+
+// Helper function to check if we need to go back a page after deletion
+const checkAndAdjustPagination = () => {
+  // For filtered results, we need to check against the actual filtered count
+  const totalItems = variants.value.length
+  const maxPage = Math.ceil(totalItems / pagination.value.pageSize) || 1
+  const currentPage = pagination.value.current
+
+  if (currentPage > maxPage) {
+    pagination.value.current = maxPage
+    return true
+  }
+
+  return false
 }
 
 const completeBulkUpdate = () => {
@@ -785,8 +1026,210 @@ const editVariant = (variant: any) => {
   router.push(`/quan-ly-san-pham/bien-the/update/${variant.id}`)
 }
 
+// Toggle status function
+const toggleStatus = async (record: any) => {
+  try {
+    // Set loading state for this specific record
+    record.updating = true
+
+    // Helper function to find ID by name from options
+    const findIdByName = (options: any[], nameField: string, name: string) => {
+      const found = options.find((option) => option[nameField] === name)
+      return found ? found.id : null
+    }
+
+    // Create update request with all required fields
+    const updateData = {
+      idSanPham: record.idSanPham || productId.value || findIdByName(sanPhamOptions.value, 'tenSanPham', record.tenSanPham),
+      idMauSac: findIdByName(mauSacOptions.value, 'tenMauSac', record.tenMauSac),
+      idKichThuoc: findIdByName(kichThuocOptions.value, 'tenKichThuoc', record.tenKichThuoc),
+      idDeGiay: findIdByName(deGiayOptions.value, 'tenDeGiay', record.tenDeGiay),
+      idChatLieu: findIdByName(chatLieuOptions.value, 'tenChatLieu', record.tenChatLieu),
+      idTrongLuong: findIdByName(trongLuongOptions.value, 'tenTrongLuong', record.tenTrongLuong),
+      soLuong: record.soLuong,
+      giaBan: record.giaBan,
+      trangThai: !record.trangThai, // Toggle status
+      ghiChu: record.ghiChu || '',
+      deleted: record.deleted || false,
+    }
+
+    // Call API to update variant
+    const response = await updateBienTheSanPham(record.id, updateData)
+
+    if (response.success || response.status === 200 || response.data) {
+      // Update local data immediately for better UX
+      record.trangThai = !record.trangThai
+
+      // Update in variants array
+      const index = variants.value.findIndex((v) => v.id === record.id)
+      if (index !== -1) {
+        variants.value[index].trangThai = record.trangThai
+      }
+
+      // Update in originalVariants if exists
+      if (originalVariants.value?.data) {
+        const origIndex = originalVariants.value.data.findIndex((v) => v.id === record.id)
+        if (origIndex !== -1) {
+          originalVariants.value.data[origIndex].trangThai = record.trangThai
+        }
+      }
+
+      const statusText = record.trangThai ? 'Đang bán' : 'Tạm ngưng bán'
+      Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
+    } else {
+      // Revert the local change if API fails
+      console.error('API response not successful:', response)
+      Message.error('Cập nhật trạng thái thất bại')
+    }
+  } catch (error) {
+    console.error('Error toggling status:', error)
+    Message.error('Có lỗi xảy ra khi cập nhật trạng thái')
+  } finally {
+    // Remove loading state
+    record.updating = false
+  }
+} // Bulk status toggle function
+const bulkToggleStatus = async (targetStatus: boolean) => {
+  try {
+    const actionText = targetStatus ? 'bật trạng thái bán' : 'tắt trạng thái bán'
+    const confirmMessage = `Bạn có chắc muốn ${actionText} cho tất cả biến thể?`
+
+    Modal.confirm({
+      title: 'Xác nhận thao tác hàng loạt',
+      content: confirmMessage,
+      okText: 'Xác nhận',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          loading.value = true
+          let successCount = 0
+          let errorCount = 0
+
+          // Get all variants that need status change
+          const variantsToUpdate = variants.value.filter((v) => v.trangThai !== targetStatus)
+          // Process in parallel but with some limit to avoid overwhelming the server
+          const promises = variantsToUpdate.map(async (variant) => {
+            try {
+              variant.updating = true
+
+              // Helper function to find ID by name from options
+              const findIdByName = (options: any[], nameField: string, name: string) => {
+                const found = options.find((option) => option[nameField] === name)
+                return found ? found.id : null
+              }
+
+              // Create full update request with all required fields
+              const updateRequest: CreateBienTheSanPhamRequest = {
+                idSanPham: variant.idSanPham || productId.value || findIdByName(sanPhamOptions.value, 'tenSanPham', variant.tenSanPham),
+                idMauSac: findIdByName(mauSacOptions.value, 'tenMauSac', variant.tenMauSac),
+                idKichThuoc: findIdByName(kichThuocOptions.value, 'tenKichThuoc', variant.tenKichThuoc),
+                idDeGiay: findIdByName(deGiayOptions.value, 'tenDeGiay', variant.tenDeGiay),
+                idChatLieu: findIdByName(chatLieuOptions.value, 'tenChatLieu', variant.tenChatLieu),
+                idTrongLuong: findIdByName(trongLuongOptions.value, 'tenTrongLuong', variant.tenTrongLuong),
+                soLuong: variant.soLuong,
+                giaBan: variant.giaBan,
+                trangThai: targetStatus,
+                ghiChu: variant.ghiChu || '',
+                deleted: variant.deleted || false,
+              }
+
+              const response = await updateBienTheSanPham(variant.id, updateRequest)
+
+              if (response.success || response.status === 200 || response.data) {
+                // Update local data
+                variant.trangThai = targetStatus
+
+                // Update in originalVariants if exists
+                if (originalVariants.value?.data) {
+                  const origIndex = originalVariants.value.data.findIndex((v) => v.id === variant.id)
+                  if (origIndex !== -1) {
+                    originalVariants.value.data[origIndex].trangThai = targetStatus
+                  }
+                }
+
+                successCount += 1
+              } else {
+                errorCount += 1
+              }
+            } catch (error) {
+              console.error(`Error updating variant ${variant.id}:`, error)
+              errorCount += 1
+            } finally {
+              variant.updating = false
+            }
+          })
+
+          await Promise.all(promises)
+
+          // Show result message
+          if (successCount > 0 && errorCount === 0) {
+            Message.success(`Đã ${actionText} thành công cho ${successCount} biến thể`)
+          } else if (successCount > 0 && errorCount > 0) {
+            Message.warning(`Đã ${actionText} thành công ${successCount} biến thể, ${errorCount} biến thể lỗi`)
+          } else {
+            Message.error(`Không thể ${actionText} cho biến thể nào`)
+          }
+        } catch (error) {
+          console.error('Bulk status update error:', error)
+          Message.error('Có lỗi xảy ra khi thực hiện thao tác hàng loạt')
+        } finally {
+          loading.value = false
+        }
+      },
+    })
+  } catch (error) {
+    console.error('Bulk toggle status error:', error)
+    Message.error('Có lỗi xảy ra khi chuẩn bị thao tác hàng loạt')
+  }
+}
+
 const deleteVariant = async (variant: any) => {
-  // Implement delete logic
+  try {
+    const res = await deleteBienTheSanPham(variant.id)
+    if (res.success) {
+      Message.success('Xoá biến thể thành công')
+      // Check if filters are active
+      const hasActiveFilters =
+        filters.value.search ||
+        filters.value.manufacturer ||
+        filters.value.origin ||
+        filters.value.material ||
+        filters.value.shoeSole ||
+        filters.value.weight ||
+        filters.value.status ||
+        (filters.value.priceRange && (filters.value.priceRange[0] > 0 || filters.value.priceRange[1] < 5000000))
+
+      if (hasActiveFilters) {
+        // With filters: Remove item from local arrays first, then check pagination
+        variants.value = variants.value.filter((v) => v.id !== variant.id)
+        if (originalVariants.value?.data) {
+          originalVariants.value.data = originalVariants.value.data.filter((v) => v.id !== variant.id)
+        }
+        // Check if page adjustment needed and perform search to refresh
+        const wasAdjusted = checkAndAdjustPagination()
+        performSearch()
+      } else {
+        const currentPageItems = sortedVariants.value.length
+        const isLastItemOnPage = currentPageItems === 1
+        const isNotFirstPage = pagination.value.current > 1
+
+        if (isLastItemOnPage && isNotFirstPage) {
+          pagination.value.current -= 1
+        }
+
+        // Reload data after deletion
+        if (showAllVariants.value) {
+          await loadAllVariants()
+        } else {
+          await loadBienTheList()
+        }
+      }
+    } else {
+      Message.error('Xoá biến thể thất bại')
+    }
+  } catch (error) {
+    Message.error('Có lỗi xảy ra khi xóa biến thể')
+  }
 }
 
 // Delete confirm modal state
@@ -799,11 +1242,19 @@ const onDeleteClick = (variant) => {
 }
 
 const confirmDelete = async () => {
-  if (variantToDelete.value) {
-    await deleteVariant(variantToDelete.value)
-    showDeleteConfirm.value = false
-    variantToDelete.value = null
+  deleteVariant(variantToDelete.value)
+  showDeleteConfirm.value = false
+}
+
+// Row class for highlighting new variants
+const getRowClass = (record: any) => {
+  if (shouldHighlight.value && newVariantIds.value.length > 0) {
+    const newIds = newVariantIds.value.map((id) => Number(id))
+    const recordId = Number(record.id)
+    const isNew = newIds.includes(recordId)
+    return isNew ? 'new-variant-row' : ''
   }
+  return ''
 }
 
 const cancelDelete = () => {
@@ -828,16 +1279,69 @@ watch(
 )
 
 onMounted(() => {
+  // Parse new variants from query params first
+  parseNewVariants()
+
+  // If we have new variants to highlight, ensure we're on page 1
+  if (shouldHighlight.value && newVariantIds.value.length > 0) {
+    pagination.value.current = 1
+  }
+
   // Load data from API
   loadAllOptions()
-  loadBienTheList()
+
+  // Load all variants if highlighting, otherwise load paginated
+  if (shouldHighlight.value && newVariantIds.value.length > 0) {
+    loadAllVariantsForHighlight()
+  } else {
+    loadBienTheList()
+  }
+
+  // Auto-remove highlighting after 30 seconds (increased from 10)
+  if (shouldHighlight.value) {
+    // Clear any existing timeout
+    if (highlightTimeoutId.value) {
+      clearTimeout(highlightTimeoutId.value)
+    }
+
+    highlightTimeoutId.value = setTimeout(() => {
+      shouldHighlight.value = false
+      newVariantIds.value = []
+      highlightTimeoutId.value = null
+      // Clean up URL query params without reloading data
+      router.replace({
+        name: route.name,
+        params: route.params,
+      })
+      Message.info('Highlighting biến thể mới đã hết hiệu lực')
+    }, 30000)
+  }
 })
+
+// Watch for variants data changes to ensure proper sorting
+watch(
+  () => variants.value,
+  (newVariants) => {
+    if (shouldHighlight.value && newVariantIds.value.length > 0 && newVariants.length > 0) {
+      const newIds = newVariantIds.value.map((id) => Number(id))
+      // Check if new variants are present but don't store in unused variable
+      newVariants.filter((v) => newIds.includes(Number(v.id)))
+    }
+  },
+  { deep: true }
+)
 
 // Watch for productId changes (khi nhấn xem biến thể từ danh mục sản phẩm)
 watch(
   () => productId.value,
   (newProductId, oldProductId) => {
-    if (newProductId !== oldProductId) {
+    // Only reload if productId actually changed AND it's not the initial load
+    if (newProductId !== oldProductId && oldProductId !== undefined) {
+      // Clear highlighting when switching products
+      if (shouldHighlight.value) {
+        clearHighlighting()
+      }
+
       // Reset pagination khi chuyển sản phẩm
       pagination.value.current = 1
       showAllVariants.value = false // Đảm bảo hiển thị biến thể của sản phẩm cụ thể
@@ -845,18 +1349,6 @@ watch(
     }
   },
   { immediate: false }
-)
-
-// Watch for filter changes to reload data
-watch(
-  () => pagination.value.current,
-  () => {
-    if (showAllVariants.value) {
-      loadAllVariants()
-    } else {
-      loadBienTheList()
-    }
-  }
 )
 </script>
 
@@ -1023,11 +1515,53 @@ watch(
   width: 100%;
 }
 
+/* Highlight for new variants */
+:deep(.new-variant-row) {
+  background-color: #f6ffed !important;
+  border-left: 4px solid #52c41a !important;
+  animation: highlightFade 10s ease-out;
+}
+
+:deep(.new-variant-row:hover) {
+  background-color: #f0f9ff !important;
+}
+
+@keyframes highlightFade {
+  0% {
+    background-color: #d9f7be;
+    box-shadow: 0 0 10px rgba(82, 196, 26, 0.3);
+  }
+  50% {
+    background-color: #f6ffed;
+  }
+  100% {
+    background-color: #f6ffed;
+  }
+}
+
 .price-range-container:hover {
   border-color: #d9d9d9;
 }
 
 :deep(.arco-table-td) {
   word-break: normal;
+}
+
+/* Status Switch Styling */
+:deep(.arco-switch) {
+  margin-right: 8px;
+}
+
+:deep(.arco-switch-checked) {
+  background-color: #52c41a;
+}
+
+:deep(.arco-switch:not(.arco-switch-checked)) {
+  background-color: #ff4d4f;
+}
+
+:deep(.arco-switch-loading) {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 </style>

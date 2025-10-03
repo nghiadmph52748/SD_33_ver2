@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.example.be_sp.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,7 +17,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.lang.NonNull;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -32,11 +32,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
-
         final String jwt;
         final String username;
 
@@ -63,7 +62,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if (jwtUtils.validateToken(jwt, userDetails.getUsername())) {
+
+                // Sử dụng method mới để validate và refresh token nếu cần
+                String refreshedToken = jwtUtils.validateAndRefreshToken(jwt, userDetails.getUsername());
+
+                if (refreshedToken != null) {
+                    // Nếu token được refresh (khác với token cũ), gửi token mới về client
+                    if (!refreshedToken.equals(jwt)) {
+                        response.setHeader("New-Token", refreshedToken);
+                        response.setHeader("Access-Control-Expose-Headers", "New-Token");
+                    }
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -73,7 +82,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("Invalid token");
+                    response.getWriter().write("Invalid or expired token");
                     return;
                 }
             } catch (Exception e) {
@@ -86,4 +95,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
-

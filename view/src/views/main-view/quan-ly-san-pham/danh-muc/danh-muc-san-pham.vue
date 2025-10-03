@@ -83,13 +83,9 @@
         :columns="columns"
         :data="transformedDanhMucList || []"
         :pagination="{
-          current: filters.page + 1, // Hiển thị 1-based cho UI
-          pageSize: filters.size,
-          total: totalElements || 0,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: true,
+          ...pagination,
           onChange: handlePageChange,
+          onShowSizeChange: handlePageChange,
         }"
         :loading="loading"
         :scroll="{ x: 800 }"
@@ -268,8 +264,6 @@ const fileList = ref([])
 
 // Filters
 const filters = reactive<DanhMucParams>({
-  page: 0, // Đổi từ 1 thành 0 để khớp với backend
-  size: 10,
   search: '',
   trangThai: '', // Sửa từ undefined thành empty string để đồng bộ với radio "Tất cả"
   idNhaSanXuat: undefined,
@@ -283,6 +277,16 @@ const danhMucList = ref<DanhMucResponse | null>(null) // Raw data from API
 const totalElements = ref(0)
 const nhaSanXuatOptions = ref<NhaSanXuatOption[]>([])
 const xuatXuOptions = ref<XuatXuOption[]>([])
+
+// Pagination state
+const pagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number, range: [number, number]) => `Hiển thị ${range[0]}-${range[1]} trong tổng số ${total} sản phẩm`,
+})
 
 // Maps for quick lookup of names
 const nhaSanXuatMap = ref<Map<number, string>>(new Map())
@@ -361,27 +365,48 @@ const transformedDanhMucList = computed(() => {
   return result
 })
 
-// Table
 const loading = ref(false)
 
-// Load danh mục sản phẩm (chỉ phân trang ở backend)
 const loadDanhMucList = async () => {
   try {
     loading.value = true
-    // Gửi page và size đến backend để lấy dữ liệu phân trang
-    const response = await getDanhMucSanPhamList(filters.page)
-    danhMucList.value = response.data
-    // totalElements sẽ được cập nhật trong computed property transformedDanhMucList
+    const response = await getDanhMucSanPhamList(pagination.value.current - 1, pagination.value.pageSize)
+
+    if (response.data) {
+      const apiData = response.data
+
+      // Match the API response structure like bien-the
+      if (apiData && apiData.data && Array.isArray(apiData.data)) {
+        danhMucList.value = apiData
+        pagination.value.total = apiData.totalElements || 0
+        pagination.value.current = (apiData.currentPage || 0) + 1
+        pagination.value.pageSize = apiData.pageSize || 10
+      } else {
+        // Fallback if structure is different
+        danhMucList.value = response.data
+        pagination.value.total = response.data.totalElements || 0
+      }
+    }
   } catch (error) {
+    console.error('Error loading danh mục:', error)
     Message.error('Không thể tải danh sách danh mục sản phẩm')
+    danhMucList.value = null
+    pagination.value.total = 0
   } finally {
     loading.value = false
   }
 }
 
+// Pagination change handler
+const handlePageChange = (page: number, size: number) => {
+  pagination.value.current = page
+  pagination.value.pageSize = size
+  loadDanhMucList()
+}
+
 // Tìm kiếm với debounce
 const searchCategories = debounce(() => {
-  filters.page = 0 // Reset về trang đầu khi tìm kiếm
+  pagination.value.current = 1 // Reset về trang đầu khi tìm kiếm
   loadDanhMucList()
 }, 500)
 
@@ -516,28 +541,11 @@ const viewCategory = (category: any) => {
   })
 }
 
-const deleteCategory = (category: any) => {
-  // Removed console.log
-  // Implement delete logic
-}
-
-const toggleStatus = (category: any) => {
-  // Removed console.log
-  // Implement toggle logic
-}
-
 const handleSubmit = async () => {
   try {
-    // Debug: Starting handleSubmit
     await formRef.value.validate()
-    // Debug: Form validation passed
-    // TODO: Implement submit logic
-    // Debug: Submit logic not implemented yet
     modalVisible.value = false
-    // Debug: handleSubmit completed
   } catch (error) {
-    // Error: Form validation failed
-    // Error details available in development
     Message.error('Có lỗi xảy ra khi lưu danh mục sản phẩm')
   }
 }
@@ -570,8 +578,6 @@ const loadOptions = async () => {
 // Reset filters
 const resetFilters = () => {
   Object.assign(filters, {
-    page: 0, // Reset về trang đầu (0-based) khi tìm kiếm
-    size: 10,
     search: '',
     trangThai: '', // Sửa từ undefined thành empty string để đồng bộ với radio "Tất cả"
     idNhaSanXuat: undefined,
@@ -579,13 +585,10 @@ const resetFilters = () => {
     giaTu: 0,
     giaDen: 5000000,
   })
-  loadDanhMucList()
-}
 
-// Thay đổi trang
-const handlePageChange = (page: number, size: number) => {
-  filters.page = page - 1 // Chuyển đổi từ 1-based (UI) sang 0-based (backend)
-  filters.size = size
+  // Reset pagination to first page
+  pagination.value.current = 1
+
   loadDanhMucList()
 }
 
@@ -614,8 +617,6 @@ const completeBulkUpdate = async () => {
 }
 
 const exportExcel = () => {
-  // Removed console.log
-  // Implement export logic
 }
 
 const beforeUpload = (file: File) => {
@@ -633,8 +634,6 @@ const beforeUpload = (file: File) => {
 }
 
 const handleUploadChange = (info: any) => {
-  // Removed console.log
-  // Handle upload logic
 }
 
 onMounted(async () => {

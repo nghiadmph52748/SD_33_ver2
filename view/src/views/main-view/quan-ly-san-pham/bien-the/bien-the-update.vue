@@ -52,7 +52,10 @@
           <!-- Basic Information -->
           <a-col :span="12">
             <a-card title="Thông tin cơ bản" class="form-card">
-              <a-form-item label="Giá bán" field="giaBan">
+              <a-form-item>
+                <template #label>
+                  <span class="required-field">Giá bán</span>
+                </template>
                 <a-input-number
                   v-model="formData.giaBan"
                   :min="0"
@@ -64,7 +67,10 @@
                 />
               </a-form-item>
 
-              <a-form-item label="Số lượng tồn kho" field="soLuong">
+              <a-form-item>
+                <template #label>
+                  <span class="required-field">Số lượng tồn kho</span>
+                </template>
                 <a-input-number
                   v-model="formData.soLuong"
                   :min="0"
@@ -74,7 +80,10 @@
                 />
               </a-form-item>
 
-              <a-form-item label="Trạng thái" field="trangThai">
+              <a-form-item>
+                <template #label>
+                  <span class="required-field">Trạng thái</span>
+                </template>
                 <a-radio-group v-model="formData.trangThai">
                   <a-radio :value="true">Đang bán</a-radio>
                   <a-radio :value="false">Tạm ngưng bán</a-radio>
@@ -86,7 +95,10 @@
           <!-- Attributes -->
           <a-col :span="12">
             <a-card title="Thuộc tính sản phẩm" class="form-card">
-              <a-form-item label="Màu sắc" field="mauSac">
+              <a-form-item>
+                <template #label>
+                  <span class="required-field">Màu sắc</span>
+                </template>
                 <a-select v-model="formData.mauSac" placeholder="Chọn màu sắc" :loading="attributesLoading" allow-clear>
                   <a-option v-for="color in colorOptions" :key="color.value" :value="color.value">
                     {{ color.label }}
@@ -94,7 +106,10 @@
                 </a-select>
               </a-form-item>
 
-              <a-form-item label="Kích thước" field="kichThuoc">
+              <a-form-item>
+                <template #label>
+                  <span class="required-field">Kích thước</span>
+                </template>
                 <a-select v-model="formData.kichThuoc" placeholder="Chọn kích thước" :loading="attributesLoading" allow-clear>
                   <a-option v-for="size in sizeOptions" :key="size.value" :value="size.value">
                     {{ size.label }}
@@ -102,7 +117,10 @@
                 </a-select>
               </a-form-item>
 
-              <a-form-item label="Chất liệu" field="chatLieu">
+              <a-form-item>
+                <template #label>
+                  <span class="required-field">Chất liệu</span>
+                </template>
                 <a-select v-model="formData.chatLieu" placeholder="Chọn chất liệu" :loading="attributesLoading" allow-clear>
                   <a-option v-for="material in materialOptions" :key="material.value" :value="material.value">
                     {{ material.label }}
@@ -110,7 +128,10 @@
                 </a-select>
               </a-form-item>
 
-              <a-form-item label="Đế giày" field="deGiay">
+              <a-form-item>
+                <template #label>
+                  <span class="required-field">Đế giày</span>
+                </template>
                 <a-select v-model="formData.deGiay" placeholder="Chọn đế giày" :loading="attributesLoading" allow-clear>
                   <a-option v-for="sole in soleOptions" :key="sole.value" :value="sole.value">
                     {{ sole.label }}
@@ -118,7 +139,10 @@
                 </a-select>
               </a-form-item>
 
-              <a-form-item label="Trọng lượng" field="trongLuong">
+              <a-form-item>
+                <template #label>
+                  <span class="required-field">Trọng lượng</span>
+                </template>
                 <a-select v-model="formData.trongLuong" placeholder="Chọn trọng lượng" :loading="attributesLoading" allow-clear>
                   <a-option v-for="weight in weightOptions" :key="weight.value" :value="weight.value">
                     {{ weight.label }}
@@ -537,5 +561,12 @@ onMounted(async () => {
 
 :deep(.arco-input-number) {
   width: 100%;
+}
+
+/* Custom required field styling */
+.required-field::after {
+  content: ' *' !important;
+  color: #f53f3f !important;
+  font-weight: bold !important;
 }
 </style>

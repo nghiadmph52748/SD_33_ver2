@@ -51,7 +51,7 @@ public class AnhSanPhamController {
 	@GetMapping("/paging")
 	public ResponseObject<?> paging(@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
-		return new ResponseObject<>(anhSanPhamService.paging(page, size));
+		return new ResponseObject<>(anhSanPhamService.pagingAnhSanPham(page, size));
 	}
 
 	@GetMapping("/detail/{id}")
@@ -105,13 +105,17 @@ public class AnhSanPhamController {
 	@PostMapping("/add-multi-image/cloud")
 	public ResponseObject<?> post(@RequestParam("file") MultipartFile[] file,
 											@RequestParam(value = "tenAnh") String tenAnh,
-											@RequestParam(value = "createBy") Integer createBy) {
+											@RequestParam(value = "createBy") Integer createBy,
+											@RequestParam(value = "mauAnh", required=false) String mauAnh) {
 		try {
 			// Tạo request object từ các tham số
 			AnhSanPhamUploadCloud request = new AnhSanPhamUploadCloud();
 			request.setDuongDanAnh(file);
 			request.setTenAnh(tenAnh);
 			request.setCreateBy(createBy);
+			if (mauAnh != null && !mauAnh.isEmpty()) {
+				request.setMauAnh(mauAnh);
+			}
 			List<Integer> savedIds = anhSanPhamService.addAnhSanPhamFromCloud(request);
 			return new ResponseObject<>(savedIds, "Thêm ảnh sản phẩm thành công");
 		} catch (Exception e) {
@@ -130,6 +134,22 @@ public class AnhSanPhamController {
 		request.setUpdateBy(updateBy);
 		List<Integer> saved = anhSanPhamService.updateMultiImageCloud(id, request);
 		return new ResponseObject<>(true, saved, "Cập nhật ảnh sản phẩm thành công");
+	}
+
+	@PutMapping("/update-anh-san-pham/{id}")
+	public ResponseObject<?> update(@PathVariable int id, @RequestParam("trangThai") Boolean trangThai,
+												@RequestParam("tenAnh") String tenAnh, @RequestParam("updateBy") Integer updateBy) {
+		try {
+			AnhSanPhamRequest request = new AnhSanPhamRequest();
+			request.setTrangThai(trangThai);
+			request.setTenAnh(tenAnh);
+			request.setUpdateAt(LocalDate.now());
+			request.setUpdateBy(updateBy);
+			AnhSanPham updatedAnhSanPham = anhSanPhamService.updateAnhSanPham(id, request);
+			return new ResponseObject<>(updatedAnhSanPham.getId(), "Cập nhật ảnh sản phẩm thành công");
+		} catch (Exception e) {
+			return new ResponseObject<>(true, null, "Lỗi khi cập nhật ảnh sản phẩm: " + e.getMessage());
+		}
 	}
 
 	@PutMapping("/update/status/{id}")

@@ -172,10 +172,16 @@
       <div style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto">
         <h3>Upload ảnh sản phẩm</h3>
         <a-form :model="uploadForm" layout="vertical">
-          <a-form-item label="Tên ảnh" required>
+          <a-form-item>
+            <template #label>
+              <span class="required-field">Tên ảnh</span>
+            </template>
             <a-input v-model="uploadForm.tenAnh" placeholder="Nhập tên cho ảnh" />
           </a-form-item>
-          <a-form-item label="Upload ảnh" required>
+          <a-form-item>
+            <template #label>
+              <span class="required-field">Upload ảnh</span>
+            </template>
             <a-upload v-model:file-list="fileList" :multiple="true" :before-upload="beforeUpload" accept=".jpg,.jpeg,.png,.gif,.webp" drag>
               <div style="padding: 20px; text-align: center; border: 2px dashed #d9d9d9; border-radius: 6px">
                 <p style="font-size: 24px; margin-bottom: 8px">
@@ -192,7 +198,7 @@
             <h4>Ảnh đã chọn:</h4>
             <div class="preview-grid">
               <div v-for="(file, index) in fileList" :key="index" class="preview-item">
-                <img :src="file.url || URL.createObjectURL(file.originFile || file)" :alt="file.name" class="preview-thumbnail" />
+                <img :src="getImageSrc(file)" :alt="file.name" class="preview-thumbnail" />
                 <div class="preview-info">
                   <span>{{ file.name }}</span>
                   <span class="file-size">{{ formatFileSize(file.size) }}</span>
@@ -231,11 +237,17 @@
       <div style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto">
         <h3>Chỉnh sửa ảnh sản phẩm</h3>
         <a-form :model="editForm" layout="vertical">
-          <a-form-item label="Tên ảnh" required>
+          <a-form-item>
+            <template #label>
+              <span class="required-field">Tên ảnh</span>
+            </template>
             <a-input v-model="editForm.tenAnh" placeholder="Nhập tên cho ảnh" />
           </a-form-item>
 
-          <a-form-item label="Trạng thái">
+          <a-form-item>
+            <template #label>
+              <span class="required-field">Trạng thái</span>
+            </template>
             <a-radio-group v-model="editForm.trangThai">
               <a-radio :value="true">Hoạt động</a-radio>
               <a-radio :value="false">Không hoạt động</a-radio>
@@ -248,6 +260,36 @@
           <a-button type="primary" @click="handleEdit" :loading="editLoading">
             <template v-if="!editLoading">Cập nhật</template>
             <template v-else>Đang cập nhật...</template>
+          </a-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div
+      v-if="confirmModalVisible"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div style="background: white; padding: 20px; border-radius: 8px; width: 400px; max-height: 80vh; overflow-y: auto">
+        <h3>Xác nhận</h3>
+        <p style="margin: 16px 0">{{ confirmMessage }}</p>
+
+        <div style="margin-top: 16px; text-align: right">
+          <a-button @click="cancelConfirm" style="margin-right: 8px">Hủy</a-button>
+          <a-button type="primary" danger @click="executeConfirmedAction" :loading="confirmLoading">
+            <template v-if="!confirmLoading">Xác nhận</template>
+            <template v-else>Đang xử lý...</template>
           </a-button>
         </div>
       </div>
@@ -267,7 +309,15 @@ import {
   uploadMutipartFile,
   updateMutipartFile,
   deleteAnhSanPham,
+  updateAnhSanPham,
+  getAllAnhSanPham,
 } from '../../../../../api/san-pham/thuoc-tinh/anh-san-pham'
+
+// Extend File interface to include url property
+interface FileWithUrl extends File {
+  url?: string
+  originFile?: File
+}
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -287,8 +337,14 @@ const viewMode = ref('grid')
 const previewVisible = ref(false)
 const uploadVisible = ref(false)
 const editVisible = ref(false)
+const confirmModalVisible = ref(false)
 const selectedImage = ref<any>(null)
-const fileList = ref([])
+const fileList = ref<FileWithUrl[]>([])
+
+// Confirmation modal
+const confirmMessage = ref('')
+const confirmAction = ref('')
+const confirmLoading = ref(false)
 
 // Mock data
 const images = ref<any[]>([])
@@ -386,6 +442,7 @@ const resetFilters = () => {
   filters.value = {
     search: '',
     status: '',
+    folder: '',
     sort: 'newest',
   }
 }
@@ -402,6 +459,10 @@ const formatFileSize = (bytes: number) => {
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
+}
+
+const getImageSrc = (file: FileWithUrl) => {
+  return file.url || window.URL.createObjectURL(file.originFile || file)
 }
 
 const formatDate = (dateString: string) => {
@@ -427,7 +488,7 @@ const getFolderName = (folder: string) => {
 const loadImages = async () => {
   try {
     loading.value = true
-    const res = await getAnhSanPhamList(0)
+    const res = await getAnhSanPhamList(0, 10)
     if (res.success) {
       // Map API data to component expected format
       images.value = res.data.data.map((item: any) => ({
@@ -436,10 +497,6 @@ const loadImages = async () => {
         url: item.duongDanAnh,
         status: item.trangThai ? 'active' : 'inactive',
         color: item.mauAnh,
-        folder: 'other', // Default folder
-        size: 0, // Default size
-        uploaded_at: item.createAt,
-        description: `Màu chủ đạo: ${item.mauAnh}`,
         createAt: item.createAt,
         createBy: item.createBy,
         updateAt: item.updateAt,
@@ -455,8 +512,70 @@ const loadImages = async () => {
       pagination.value.pageSize = 10
       pagination.value.current = 1
     }
-  } catch (error) {
+  } catch {
     Message.error('Lỗi khi tải danh sách ảnh')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadImagesWithUpdatedFirst = async (updatedId: number) => {
+  try {
+    loading.value = true
+    // Get all images
+    const allRes = await getAllAnhSanPham()
+    if (allRes.data && Array.isArray(allRes.data)) {
+      // Find the updated item
+      const updatedItem = allRes.data.find((item: any) => item.id === updatedId)
+
+      if (updatedItem) {
+        // Map the updated item to component format
+        const mappedUpdatedItem = {
+          id: updatedItem.id,
+          name: updatedItem.tenAnh,
+          url: updatedItem.duongDanAnh,
+          status: updatedItem.trangThai ? 'active' : 'inactive',
+          color: updatedItem.mauAnh,
+          createAt: updatedItem.createAt,
+          createBy: updatedItem.createBy,
+          updateAt: updatedItem.updateAt,
+          updateBy: updatedItem.updateBy,
+          deleted: updatedItem.deleted,
+        }
+
+        // Get other items (excluding the updated one) and take 9 more
+        const otherItems = allRes.data
+          .filter((item: any) => item.id !== updatedId)
+          .slice(0, 9)
+          .map((item: any) => ({
+            id: item.id,
+            name: item.tenAnh,
+            url: item.duongDanAnh,
+            status: item.trangThai ? 'active' : 'inactive',
+            color: item.mauAnh,
+            createAt: item.createAt,
+            createBy: item.createBy,
+            updateAt: item.updateAt,
+            updateBy: item.updateBy,
+            deleted: item.deleted,
+          }))
+
+        // Combine: updated item first, then 9 other items
+        images.value = [mappedUpdatedItem, ...otherItems]
+        pagination.value.total = allRes.data.length
+        pagination.value.pageSize = 10
+        pagination.value.current = 1
+      } else {
+        // Fallback to regular load if updated item not found
+        await loadImages()
+      }
+    } else {
+      // Fallback to regular load if API fails
+      await loadImages()
+    }
+  } catch {
+    // Fallback to regular load on error
+    await loadImages()
   } finally {
     loading.value = false
   }
@@ -492,21 +611,18 @@ const downloadImage = (image: any) => {
   document.body.removeChild(link)
 }
 
-const deleteImage = async (image: any) => {
-  try {
-    await deleteAnhSanPham(image.id)
-    // Reload images
-    await loadImages()
-  } catch (error) {
-    Message.error('Lỗi khi xóa ảnh')
-  }
+const deleteImage = (image: any) => {
+  selectedImage.value = image
+  confirmMessage.value = `Bạn có chắc chắn muốn xóa ảnh "${image.name}"?`
+  confirmAction.value = 'delete'
+  confirmModalVisible.value = true
 }
 
 const showUploadModal = () => {
   uploadVisible.value = true
 }
 
-const handleUpload = async () => {
+const handleUpload = () => {
   if (!uploadForm.tenAnh.trim()) {
     Message.error('Vui lòng nhập tên ảnh')
     return
@@ -517,36 +633,10 @@ const handleUpload = async () => {
     return
   }
 
-  try {
-    uploadLoading.value = true
-    const files = fileList.value.map((fileItem: any) => fileItem.originFile || fileItem.file)
-    const result = await uploadMutipartFile(files, uploadForm.tenAnh, userStore.id!)
-
-    if (result.data && result.data.length > 0) {
-      Message.success('Upload ảnh thành công')
-
-      // Clean up preview URLs
-      fileList.value.forEach((file: any) => {
-        if (file.url && file.url.startsWith('blob:')) {
-          URL.revokeObjectURL(file.url)
-        }
-      })
-
-      // Reset form
-      uploadForm.tenAnh = ''
-      uploadForm.file = ''
-      fileList.value = []
-
-      // Reload images
-      await loadImages()
-
-      uploadVisible.value = false
-    }
-  } catch (error) {
-    Message.error('Lỗi khi upload ảnh')
-  } finally {
-    uploadLoading.value = false
-  }
+  // Show confirmation modal
+  confirmMessage.value = `Bạn có chắc chắn muốn upload ${fileList.value.length} ảnh với tên "${uploadForm.tenAnh}"?`
+  confirmAction.value = 'upload'
+  confirmModalVisible.value = true
 }
 
 const handleCancel = () => {
@@ -568,31 +658,16 @@ const handleCancel = () => {
   editForm.trangThai = true
 }
 
-const handleEdit = async () => {
+const handleEdit = () => {
   if (!editForm.tenAnh.trim() || !editForm.id) {
     Message.error('Vui lòng nhập tên ảnh')
     return
   }
 
-  try {
-    editLoading.value = true
-    const result = await updateMutipartFile(editForm.id!, [], editForm.tenAnh, userStore.id!)
-
-    if (result.data && result.data.length > 0) {
-      Message.success('Cập nhật ảnh thành công')
-      // Reload images
-      await loadImages()
-
-      editVisible.value = false
-      editForm.id = null
-      editForm.tenAnh = ''
-      editForm.trangThai = true
-    }
-  } catch (error) {
-    Message.error('Lỗi khi chỉnh sửa ảnh')
-  } finally {
-    editLoading.value = false
-  }
+  // Show confirmation modal
+  confirmMessage.value = 'Bạn có chắc chắn muốn cập nhật ảnh này?'
+  confirmAction.value = 'edit'
+  confirmModalVisible.value = true
 }
 
 const beforeUpload = (file: File) => {
@@ -608,9 +683,89 @@ const beforeUpload = (file: File) => {
   }
 
   // Create preview URL for the file
-  file.url = URL.createObjectURL(file)
+  ;(file as FileWithUrl).url = URL.createObjectURL(file)
   return false
 }
+
+const cancelConfirm = () => {
+  confirmModalVisible.value = false
+  confirmMessage.value = ''
+  confirmAction.value = ''
+  selectedImage.value = null
+}
+
+const executeConfirmedAction = async () => {
+  try {
+    confirmLoading.value = true
+
+    if (confirmAction.value === 'upload') {
+      // Execute upload
+      const files = fileList.value.map((fileItem: any) => fileItem.originFile || fileItem.file)
+      const result = await uploadMutipartFile(files, uploadForm.tenAnh, userStore.id!)
+
+      if (result.data && result.data.length > 0) {
+        Message.success('Upload ảnh thành công')
+
+        // Clean up preview URLs
+        fileList.value.forEach((file: any) => {
+          if (file.url && file.url.startsWith('blob:')) {
+            URL.revokeObjectURL(file.url)
+          }
+        })
+
+        // Reset form
+        uploadForm.tenAnh = ''
+        uploadForm.file = ''
+        fileList.value = []
+
+        // Reload images with updated item first
+        if (result.data && result.data.length > 0) {
+          await loadImagesWithUpdatedFirst(result.data[0])
+        } else {
+          await loadImages()
+        }
+
+        uploadVisible.value = false
+      }
+    } else if (confirmAction.value === 'edit') {
+      // Execute edit
+      const result = await updateAnhSanPham(editForm.id!, editForm.tenAnh, editForm.trangThai, userStore.id!)
+      if (result.data) {
+        Message.success('Cập nhật ảnh thành công')
+        // Luôn reload với id vừa edit lên đầu
+        await loadImagesWithUpdatedFirst(editForm.id!)
+        editVisible.value = false
+        editForm.id = null
+        editForm.tenAnh = ''
+        editForm.trangThai = true
+      }
+    } else if (confirmAction.value === 'delete') {
+      // Execute delete
+      await deleteAnhSanPham(selectedImage.value.id)
+      Message.success('Xóa ảnh thành công')
+      // Reload images
+      await loadImages()
+    }
+
+    confirmModalVisible.value = false
+    confirmMessage.value = ''
+    confirmAction.value = ''
+    selectedImage.value = null
+  } catch {
+    let actionText = 'xử lý'
+    if (confirmAction.value === 'upload') {
+      actionText = 'upload'
+    } else if (confirmAction.value === 'edit') {
+      actionText = 'cập nhật'
+    } else if (confirmAction.value === 'delete') {
+      actionText = 'xóa'
+    }
+    Message.error(`Lỗi khi ${actionText} ảnh`)
+  } finally {
+    confirmLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadImages()
 })
@@ -863,6 +1018,13 @@ onMounted(() => {
 
 :deep(.arco-modal-mask) {
   z-index: 999 !important;
+}
+
+/* Custom required field styling */
+.required-field::after {
+  content: ' *' !important;
+  color: #f53f3f !important;
+  font-weight: bold !important;
 }
 
 /* Responsive */

@@ -53,7 +53,7 @@
     <a-card title="Danh sách đế giày" class="table-card">
       <a-table
         :columns="columns"
-        :data="soles"
+        :data="filteredSoles"
         :pagination="pagination"
         :loading="loading"
         :scroll="{ x: 1000 }"
@@ -117,7 +117,10 @@
       @ok="confirmAddSole"
     >
       <a-form :model="soleForm" :rules="formRules" layout="vertical" ref="addFormRef">
-        <a-form-item label="Tên đế giày" field="tenDeGiay" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên đế giày</span>
+          </template>
           <a-input v-model="soleForm.tenDeGiay" placeholder="Nhập tên đế giày" />
         </a-form-item>
       </a-form>
@@ -157,10 +160,16 @@
       @ok="confirmUpdateSole"
     >
       <a-form :model="soleForm" :rules="formRules" layout="vertical" ref="updateFormRef">
-        <a-form-item label="Tên đế giày" field="tenDeGiay" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên đế giày</span>
+          </template>
           <a-input v-model="soleForm.tenDeGiay" placeholder="Nhập tên đế giày" />
         </a-form-item>
-        <a-form-item label="Trạng thái" field="trangThai" required>
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Trạng thái</span>
+          </template>
           <a-radio-group v-model="soleForm.trangThai" type="button">
             <a-radio :value="true">Hoạt động</a-radio>
             <a-radio :value="false">Không hoạt động</a-radio>
@@ -188,6 +197,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconSearch, IconDownload, IconEdit, IconEye, IconDelete, IconRefresh } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store'
 import { createDeGiay, getDeGiayList, updateDeGiay, deleteDeGiay } from '../../../../../api/san-pham/thuoc-tinh/de-giay'
@@ -206,6 +216,27 @@ const filters = ref({
 
 // Data
 const soles = ref([])
+
+// Filtered soles computed property
+const filteredSoles = computed(() => {
+  let filtered = [...soles.value]
+
+  // Filter by search term
+  if (filters.value.search) {
+    const searchTerm = filters.value.search.toLowerCase()
+    filtered = filtered.filter(
+      (sole) => sole.maDeGiay?.toLowerCase().includes(searchTerm) || sole.tenDeGiay?.toLowerCase().includes(searchTerm)
+    )
+  }
+
+  // Filter by status
+  if (filters.value.status) {
+    const statusFilter = filters.value.status === 'active'
+    filtered = filtered.filter((sole) => sole.trangThai === statusFilter)
+  }
+
+  return filtered
+})
 
 // Modal states
 const addModalVisible = ref(false)
@@ -377,12 +408,48 @@ const cancelConfirm = () => {
 const getDeGiayPage = async (page) => {
   try {
     loading.value = true
-    const res = await getDeGiayList(page)
+    const res = await getDeGiayList(page, pagination.value.pageSize)
     if (res.success) {
       soles.value = res.data.data
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
+    } else {
+      console.error('Failed to fetch soles:', res.message)
+      soles.value = []
+      pagination.value.total = 0
+      pagination.value.pageSize = 10
+      pagination.value.current = 1
+    }
+  } catch (error) {
+    console.error('Failed to fetch soles:', error)
+    soles.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadSolesWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean = false) => {
+  try {
+    loading.value = true
+    const res = await getDeGiayList(0, 9)
+    if (res.success) {
+      let solesData = res.data.data
+      pagination.value.total = res.data.totalElements
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
+
+      // If there's an updated item and it's not a new item, move it to the front
+      if (updatedId && !isNewItem) {
+        const updatedIndex = solesData.findIndex((sole) => sole.id === updatedId)
+        if (updatedIndex > 0) {
+          const updatedItem = solesData.splice(updatedIndex, 1)[0]
+          solesData = [updatedItem, ...solesData.slice(0, updatedIndex), ...solesData.slice(updatedIndex)]
+        }
+      }
+
+      soles.value = solesData
     } else {
       console.error('Failed to fetch soles:', res.message)
       soles.value = []
@@ -410,12 +477,19 @@ const executeConfirmedAction = async () => {
         createAt: new Date().toISOString().split('T')[0],
         createBy: userStore.id,
       }
-      await createDeGiay(data)
+      const res = await createDeGiay(data)
       closeAddModal()
-      // Refresh data
-      getDeGiayPage(0)
+      // Load data with new item first (always load from page 0 for new items)
+      loadSolesWithUpdatedFirst(undefined, true)
+      Message.success('Thêm đế giày thành công!')
     } else if (confirmAction.value === 'update') {
       // TODO: Implement update API call
+      if (!selectedSole.value) {
+        console.error('No sole selected for update')
+        return
+      }
+
+      const soleId = selectedSole.value.id
       const data = {
         tenDeGiay: soleForm.tenDeGiay,
         trangThai: soleForm.trangThai,
@@ -425,18 +499,26 @@ const executeConfirmedAction = async () => {
         updateAt: new Date().toISOString().split('T')[0],
         updateBy: userStore.id,
       }
-      await updateDeGiay(selectedSole.value.id, data)
+      await updateDeGiay(soleId, data)
       closeUpdateModal()
-      // Refresh data
-      getDeGiayPage(0)
+      // Load data with updated item first
+      loadSolesWithUpdatedFirst(soleId, false)
+      Message.success('Cập nhật đế giày thành công!')
     } else if (confirmAction.value === 'delete') {
       // TODO: Implement delete API call
+      if (!selectedSole.value) {
+        console.error('No sole selected for delete')
+        return
+      }
+
       await deleteDeGiay(selectedSole.value.id)
       // Refresh data
-      getDeGiayPage(0)
+      loadSolesWithUpdatedFirst()
+      Message.success('Xóa đế giày thành công!')
     }
   } catch (error) {
     console.error('API call failed:', error)
+    Message.error('Có lỗi xảy ra. Vui lòng thử lại!')
   } finally {
     confirmModalVisible.value = false
     confirmMessage.value = ''
@@ -472,5 +554,12 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+/* Custom required field styling */
+.required-field::after {
+  content: ' *' !important;
+  color: #f53f3f !important;
+  font-weight: bold !important;
 }
 </style>

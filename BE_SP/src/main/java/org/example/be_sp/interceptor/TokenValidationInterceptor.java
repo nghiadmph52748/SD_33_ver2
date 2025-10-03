@@ -6,6 +6,7 @@ import org.example.be_sp.annotation.RequireAuth;
 import org.example.be_sp.security.JwtUtils;
 import org.example.be_sp.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -14,7 +15,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.lang.NonNull;
 
 /**
  * Interceptor để validate token trước khi gọi API
@@ -53,7 +53,6 @@ public class TokenValidationInterceptor implements HandlerInterceptor {
         }
 
         // Token validation for protected endpoints
-
         // Lấy token từ header
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -84,7 +83,6 @@ public class TokenValidationInterceptor implements HandlerInterceptor {
                 return handleUnauthorized(response, "Token đã hết hạn");
             }
 
-
             // Thêm username vào request attribute để controller có thể sử dụng
             request.setAttribute("currentUsername", username);
             request.setAttribute("validatedToken", token);
@@ -92,7 +90,6 @@ public class TokenValidationInterceptor implements HandlerInterceptor {
             return true;
 
         } catch (Exception e) {
-            System.out.println("❌ Token validation error: " + e.getMessage());
             return handleUnauthorized(response, "Lỗi xác thực token: " + e.getMessage());
         }
     }
