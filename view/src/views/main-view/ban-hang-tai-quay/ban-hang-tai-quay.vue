@@ -30,18 +30,23 @@
         </div>
 
         <!-- Products Grid -->
-        <div class="products-grid">
+        <div v-if="loading" class="loading-container">
+          <a-spin size="large" />
+          <p>Đang tải sản phẩm...</p>
+        </div>
+        
+        <div v-else class="products-grid">
           <a-card v-for="product in filteredProducts" :key="product.id" class="product-card" hoverable @click="addToCart(product)">
             <template #cover>
-              <img :src="product.image" :alt="product.name" class="product-image" />
+              <img :src="getProductImage(product)" :alt="product.tenSanPham" class="product-image" />
             </template>
 
-            <a-card-meta :title="product.name">
+            <a-card-meta :title="product.tenSanPham">
               <template #description>
                 <div class="product-info">
-                  <div class="product-price">{{ formatCurrency(product.price) }}</div>
+                  <div class="product-price">{{ formatCurrency(getProductPrice(product)) }}</div>
                   <div class="product-stock">
-                    <a-tag :color="product.stock > 10 ? 'green' : product.stock > 0 ? 'orange' : 'red'">{{ product.stock }} còn lại</a-tag>
+                    <a-tag :color="getStockColor(product)">{{ getStockText(product) }}</a-tag>
                   </div>
                 </div>
               </template>
@@ -187,6 +192,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { createVnpayPayment, type CreateVnpayPaymentPayload } from '@/api/payment'
@@ -196,9 +202,11 @@ import { IconPlus, IconUserAdd, IconStar, IconDelete, IconCheckCircle } from '@a
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 
-// Mock data
-const todayOrders = ref(45)
-const todayRevenue = ref(87500000) // 87.5 triệu
+// Data from API
+const todayOrders = ref(0)
+const todayRevenue = ref(0)
+const productsList = ref<any[]>([])
+const loading = ref(false)
 
 // Search & Filter
 const productSearch = ref('')
@@ -226,57 +234,35 @@ const vnpayBankOptions = [
   { label: 'Thẻ quốc tế (Visa/Master/JCB)', value: 'INTCARD' },
 ]
 
-// Products data
-const products = ref([
-  {
-    id: 1,
-    name: 'Giày sneaker Nike Air Max 270',
-    price: 3200000,
-    stock: 15,
-    category: 'sneaker',
-    image: 'https://via.placeholder.com/200x150/1890ff/ffffff?text=Nike+Air+Max',
-  },
-  {
-    id: 2,
-    name: 'Giày boot Chelsea Dr. Martens',
-    price: 4500000,
-    stock: 8,
-    category: 'boot',
-    image: 'https://via.placeholder.com/200x150/52c41a/ffffff?text=Dr.+Martens',
-  },
-  {
-    id: 3,
-    name: 'Giày cao gót Jimmy Choo',
-    price: 8500000,
-    stock: 5,
-    category: 'heel',
-    image: 'https://via.placeholder.com/200x150/fa8c16/ffffff?text=Jimmy+Choo',
-  },
-  {
-    id: 4,
-    name: 'Giày thể thao Adidas Ultraboost',
-    price: 3800000,
-    stock: 12,
-    category: 'sport',
-    image: 'https://via.placeholder.com/200x150/722ed1/ffffff?text=Adidas',
-  },
-  {
-    id: 5,
-    name: 'Giày sandal Birkenstock',
-    price: 2800000,
-    stock: 20,
-    category: 'sandal',
-    image: 'https://via.placeholder.com/200x150/13c2c2/ffffff?text=Birkenstock',
-  },
-  {
-    id: 6,
-    name: 'Giày sneaker Converse Chuck Taylor',
-    price: 2200000,
-    stock: 25,
-    category: 'sneaker',
-    image: 'https://via.placeholder.com/200x150/f5222d/ffffff?text=Converse',
-  },
-])
+// Products data from API
+const products = computed(() => productsList.value)
+
+// Helper functions
+const getProductImage = (product: any) => {
+  // Lấy ảnh đầu tiên từ danh sách ảnh sản phẩm
+  if (product.anhSanPham && product.anhSanPham.length > 0) {
+    return product.anhSanPham[0]
+  }
+  // Fallback về placeholder nếu không có ảnh
+  return `https://via.placeholder.com/200x150/1890ff/ffffff?text=${encodeURIComponent(product.tenSanPham || 'Sản phẩm')}`
+}
+
+const getProductPrice = (product: any) => {
+  // Sử dụng giá bán từ chi tiết sản phẩm
+  return Number(product.giaBan || 0)
+}
+
+const getStockColor = (product: any) => {
+  const stock = product.soLuong || 0
+  if (stock > 10) return 'green'
+  if (stock > 0) return 'orange'
+  return 'red'
+}
+
+const getStockText = (product: any) => {
+  const stock = product.soLuong || 0
+  return `${stock} sản phẩm`
+}
 
 // Computed
 const filteredProducts = computed(() => {
@@ -284,25 +270,27 @@ const filteredProducts = computed(() => {
 
   // Search filter
   if (productSearch.value) {
-    filtered = filtered.filter((product) => product.name.toLowerCase().includes(productSearch.value.toLowerCase()))
+    filtered = filtered.filter((product) => product.tenSanPham?.toLowerCase().includes(productSearch.value.toLowerCase()))
   }
 
-  // Category filter
-  if (selectedCategory.value) {
-    filtered = filtered.filter((product) => product.category === selectedCategory.value)
-  }
+  // Category filter (tạm thời bỏ qua vì API không có category)
+  // if (selectedCategory.value) {
+  //   filtered = filtered.filter((product) => product.category === selectedCategory.value)
+  // }
 
   // Sort
   filtered = [...filtered].sort((a, b) => {
     switch (sortBy.value) {
       case 'price-low':
-        return a.price - b.price
+        return getProductPrice(a) - getProductPrice(b)
       case 'price-high':
-        return b.price - a.price
+        return getProductPrice(b) - getProductPrice(a)
+      case 'name':
+        return (a.tenSanPham || '').localeCompare(b.tenSanPham || '')
       case 'newest':
-        return b.id - a.id
+        return (b.id || 0) - (a.id || 0)
       default:
-        return a.name.localeCompare(b.name)
+        return 0
     }
   })
 
@@ -341,13 +329,20 @@ const addToCart = (product: any) => {
   const existingItem = cartItems.value.find((item) => item.id === product.id)
 
   if (existingItem) {
-    if (existingItem.quantity < product.stock) {
+    // Kiểm tra số lượng sản phẩm
+    if (existingItem.quantity < (product.soLuong || 0)) {
       existingItem.quantity += 1
     }
   } else {
     cartItems.value.push({
-      ...product,
+      id: product.id,
+      name: product.tenSanPham,
+      price: getProductPrice(product),
+      image: getProductImage(product),
+      stock: product.soLuong || 0,
       quantity: 1,
+      // Lưu thêm thông tin gốc từ API
+      originalProduct: product,
     })
   }
 }
@@ -458,8 +453,56 @@ watch(total, () => {
   }
 })
 
+// API functions
+const fetchProducts = async () => {
+  try {
+    loading.value = true
+    // Sử dụng API chi tiết sản phẩm để lấy ảnh
+    const response = await axios.get('/api/chi-tiet-san-pham-management/playlist')
+    
+    if (response.success) {
+      productsList.value = response.data || []
+    }
+  } catch {
+    // Handle error silently
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchTodayStats = async () => {
+  try {
+    // Lấy thống kê hôm nay từ API hóa đơn
+    const response = await axios.get('/api/hoa-don-management/playlist')
+    if (response.success) {
+      const invoices = response.data || []
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0]
+      
+      // Đếm hóa đơn hôm nay
+      todayOrders.value = invoices.filter((invoice: any) => {
+        const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
+        return invoiceDate.toISOString().split('T')[0] === todayStr
+      }).length
+      
+      // Tính doanh thu hôm nay
+      todayRevenue.value = invoices
+        .filter((invoice: any) => {
+          const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
+          return invoiceDate.toISOString().split('T')[0] === todayStr && (invoice.trangThai === true || invoice.ngayThanhToan)
+        })
+        .reduce((sum: number, invoice: any) => {
+          return sum + Number(invoice.tongTienSauGiam || invoice.tongTien || 0)
+        }, 0)
+    }
+  } catch {
+    // Handle error silently
+  }
+}
+
 onMounted(() => {
-  // Page mounted
+  fetchProducts()
+  fetchTodayStats()
 })
 </script>
 
@@ -482,6 +525,15 @@ onMounted(() => {
 
 .product-controls {
   margin-bottom: 16px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #86909c;
 }
 
 .products-grid {

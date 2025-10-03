@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/payment/vnpay/**").permitAll() // Allow VNPAY redirect/IPN without auth
                 .requestMatchers("/api/hoa-don-management/**").permitAll() // Allow invoice management without auth for testing
                 .requestMatchers("/api/san-pham-management/**").permitAll() // Allow product management without auth for testing
+                .requestMatchers("/api/chi-tiet-san-pham-management/**").permitAll() // Allow product detail management without auth for testing
                 .requestMatchers("/api/khach-hang-management/**").permitAll() // Allow customer management without auth for testing
                 .requestMatchers("/api/test/**").permitAll() // Allow test endpoints without auth
                 .anyRequest().authenticated())
