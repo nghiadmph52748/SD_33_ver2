@@ -85,102 +85,9 @@
           </a-button>
         </a-card>
 
-        <!-- Multi Invoice Toggle -->
-        <a-card title="Chế độ bán hàng" class="mode-card" size="small">
-          <a-radio-group v-model="salesMode" @change="handleModeChange">
-            <a-radio value="single">Đơn hóa đơn</a-radio>
-            <a-radio value="multi">Nhiều hóa đơn (tối đa 5)</a-radio>
-          </a-radio-group>
-        </a-card>
 
-        <!-- Multi Invoice Management -->
-        <a-card v-if="salesMode === 'multi'" title="Quản lý hóa đơn" class="multi-invoice-card">
-          <template #extra>
-            <a-button type="primary" size="small" :disabled="invoices.length >= 5" @click="addNewInvoice">
-              <template #icon>
-                <icon-plus />
-              </template>
-              Thêm hóa đơn
-            </a-button>
-          </template>
-
-          <a-tabs v-model:activeKey="activeInvoiceIndex" type="card">
-            <a-tab-pane v-for="(invoice, index) in invoices" :key="index" :tab="`Hóa đơn ${index + 1}`">
-              <template #tab>
-                <a-space>
-                  <span>Hóa đơn {{ index + 1 }}</span>
-                  <a-button v-if="invoices.length > 1" type="text" size="mini" @click.stop="removeInvoice(index)">
-                    <icon-delete />
-                  </a-button>
-                </a-space>
-              </template>
-
-              <!-- Customer Info for this invoice -->
-              <div class="invoice-customer-info">
-                <a-form layout="inline" :model="invoice.customerForm">
-                  <a-form-item label="Tên khách hàng">
-                    <a-input v-model="invoice.customerForm.name" placeholder="Nhập tên khách hàng" style="width: 150px" />
-                  </a-form-item>
-                  <a-form-item label="SĐT">
-                    <a-input v-model="invoice.customerForm.phone" placeholder="Nhập số điện thoại" style="width: 120px" />
-                  </a-form-item>
-                </a-form>
-              </div>
-
-              <!-- Cart Items for this invoice -->
-              <div class="invoice-cart">
-                <div v-if="invoice.cartItems.length === 0" class="empty-cart">
-                  <icon-star style="font-size: 32px; color: #d9d9d9; margin-bottom: 8px" />
-                  <p style="color: #86909c; font-size: 12px">Chưa có sản phẩm nào</p>
-                </div>
-
-                <div v-else class="cart-items">
-                  <div v-for="(item, itemIndex) in invoice.cartItems" :key="itemIndex" class="cart-item">
-                    <div class="item-info">
-                      <img :src="item.image" :alt="item.name" class="item-image" />
-                      <div class="item-details">
-                        <div class="item-name">{{ item.name }}</div>
-                        <div class="item-price">{{ formatCurrency(item.price) }}</div>
-                      </div>
-                    </div>
-
-                    <div class="item-controls">
-                      <a-button-group size="small">
-                        <a-button @click="updateQuantity(index, itemIndex, item.quantity - 1)">
-                          <icon-minus />
-                        </a-button>
-                        <a-button>{{ item.quantity }}</a-button>
-                        <a-button @click="updateQuantity(index, itemIndex, item.quantity + 1)">
-                          <icon-plus />
-                        </a-button>
-                      </a-button-group>
-                      <a-button type="text" danger @click="removeFromCart(index, itemIndex)">
-                        <icon-delete />
-                      </a-button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Invoice Summary -->
-                <div class="invoice-summary">
-                  <div class="summary-row">
-                    <span>Tạm tính:</span>
-                    <span>{{ formatCurrency(invoice.subtotal) }}</span>
-                  </div>
-                  <div class="summary-row total">
-                    <span><strong>Tổng cộng:</strong></span>
-                    <span>
-                      <strong>{{ formatCurrency(invoice.total) }}</strong>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </a-tab-pane>
-          </a-tabs>
-        </a-card>
-
-        <!-- Single Invoice Cart -->
-        <a-card v-else title="Giỏ hàng" class="cart-card">
+        <!-- Main Cart -->
+        <a-card title="Giỏ hàng" class="cart-card">
           <div v-if="cartItems.length === 0" class="empty-cart">
             <icon-star style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
             <p style="color: #86909c">Chưa có sản phẩm nào</p>
@@ -234,7 +141,7 @@
         </a-card>
 
         <!-- Payment -->
-        <a-card v-if="salesMode === 'single'" title="Thanh toán" class="payment-card">
+        <a-card title="Thanh toán" class="payment-card">
           <a-space direction="vertical" style="width: 100%">
             <a-radio-group v-model="paymentMethod" style="width: 100%">
               <a-space direction="vertical" style="width: 100%">
@@ -280,37 +187,6 @@
           </a-button>
         </a-card>
 
-        <!-- Multi Invoice Payment -->
-        <a-card v-else title="Thanh toán nhiều hóa đơn" class="payment-card">
-          <div class="multi-payment-summary">
-            <div class="invoice-summary-item" v-for="(invoice, index) in invoices" :key="index">
-              <div class="invoice-header">
-                <span><strong>Hóa đơn {{ index + 1 }}</strong></span>
-                <span v-if="invoice.customerForm.name">{{ invoice.customerForm.name }}</span>
-              </div>
-              <div class="invoice-total">
-                <span>{{ formatCurrency(invoice.total) }}</span>
-                <a-button 
-                  type="primary" 
-                  size="small" 
-                  :disabled="invoice.cartItems.length === 0"
-                  @click="processMultiPayment(index)"
-                >
-                  Thanh toán
-                </a-button>
-              </div>
-            </div>
-            
-            <a-divider />
-            
-            <div class="total-all-invoices">
-              <div class="summary-row total">
-                <span><strong>Tổng tất cả hóa đơn:</strong></span>
-                <span><strong>{{ formatCurrency(totalAllInvoices) }}</strong></span>
-              </div>
-            </div>
-          </div>
-        </a-card>
       </div>
     </div>
   </div>
@@ -323,7 +199,7 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { createVnpayPayment, type CreateVnpayPaymentPayload } from '@/api/payment'
 import { Message } from '@arco-design/web-vue'
-import { IconPlus, IconUserAdd, IconStar, IconDelete, IconCheckCircle, IconMinus } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconUserAdd, IconStar, IconDelete, IconCheckCircle } from '@arco-design/web-vue/es/icon'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -334,10 +210,6 @@ const todayRevenue = ref(0)
 const productsList = ref<any[]>([])
 const loading = ref(false)
 
-// Multi-invoice mode
-const salesMode = ref('single')
-const activeInvoiceIndex = ref(0)
-const invoices = ref<any[]>([])
 
 // Search & Filter
 const productSearch = ref('')
@@ -441,24 +313,6 @@ const total = computed(() => {
   return subtotal.value - discount.value
 })
 
-// Multi-invoice computed properties
-const currentInvoice = computed(() => {
-  return invoices.value[activeInvoiceIndex.value] || null
-})
-
-// Update invoice totals when cart items change
-watch(() => invoices.value, () => {
-  invoices.value.forEach((invoice) => {
-    invoice.subtotal = invoice.cartItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0)
-    invoice.total = invoice.subtotal
-  })
-}, { deep: true })
-
-// Total of all invoices
-const totalAllInvoices = computed(() => {
-  return invoices.value.reduce((sum, invoice) => sum + invoice.total, 0)
-})
-
 // Methods
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -473,14 +327,6 @@ const paymentButtonLabel = computed(() => {
 })
 
 const isPaymentDisabled = computed(() => cartItems.value.length === 0 || total.value <= 0 || isProcessingPayment.value)
-
-const addToCart = (product: any) => {
-  if (salesMode.value === 'multi') {
-    addToMultiCart(product)
-  } else {
-    addToSingleCart(product)
-  }
-}
 
 const addToSingleCart = (product: any) => {
   const existingItem = cartItems.value.find((item) => item.id === product.id)
@@ -504,84 +350,19 @@ const addToSingleCart = (product: any) => {
   }
 }
 
-const addToMultiCart = (product: any) => {
-  const currentInvoice = invoices.value[activeInvoiceIndex.value]
-  if (!currentInvoice) return
 
-  const existingItem = currentInvoice.cartItems.find((item: any) => item.id === product.id)
-
-  if (existingItem) {
-    // Kiểm tra số lượng sản phẩm
-    if (existingItem.quantity < (product.soLuong || 0)) {
-      existingItem.quantity += 1
-    }
-  } else {
-    currentInvoice.cartItems.push({
-      id: product.id,
-      name: product.tenSanPham,
-      price: getProductPrice(product),
-      image: getProductImage(product),
-      stock: product.soLuong || 0,
-      quantity: 1,
-      // Lưu thêm thông tin gốc từ API
-      originalProduct: product,
-    })
-  }
+const addToCart = (product: any) => {
+  addToSingleCart(product)
 }
 
-const updateQuantity = (invoiceIndex: number, itemIndex: number, quantity: number) => {
-  if (salesMode.value === 'multi') {
-    const invoice = invoices.value[invoiceIndex]
-    if (invoice && invoice.cartItems[itemIndex]) {
-      invoice.cartItems[itemIndex].quantity = Math.max(0, quantity)
-    }
-  } else {
-    cartItems.value[itemIndex].quantity = Math.max(0, quantity)
-  }
+const updateQuantity = (itemIndex: number, quantity: number) => {
+  cartItems.value[itemIndex].quantity = Math.max(0, quantity)
 }
 
-const removeFromCart = (invoiceIndex: number, itemIndex: number) => {
-  if (salesMode.value === 'multi') {
-    const invoice = invoices.value[invoiceIndex]
-    if (invoice) {
-      invoice.cartItems.splice(itemIndex, 1)
-    }
-  } else {
-    cartItems.value.splice(itemIndex, 1)
-  }
+const removeFromCart = (itemIndex: number) => {
+  cartItems.value.splice(itemIndex, 1)
 }
 
-// Multi-invoice management functions
-const handleModeChange = () => {
-  if (salesMode.value === 'multi' && invoices.value.length === 0) {
-    addNewInvoice()
-  }
-}
-
-const addNewInvoice = () => {
-  if (invoices.value.length < 5) {
-    invoices.value.push({
-      id: Date.now(),
-      customerForm: {
-        name: '',
-        phone: '',
-      },
-      cartItems: [],
-      subtotal: 0,
-      total: 0,
-    })
-    activeInvoiceIndex.value = invoices.value.length - 1
-  }
-}
-
-const removeInvoice = (index: number) => {
-  if (invoices.value.length > 1) {
-    invoices.value.splice(index, 1)
-    if (activeInvoiceIndex.value >= invoices.value.length) {
-      activeInvoiceIndex.value = invoices.value.length - 1
-    }
-  }
-}
 
 const calculateChange = () => {
   change.value = Math.max(0, customerPaid.value - total.value)
@@ -628,7 +409,7 @@ const initiateVnpayPayment = async () => {
     }
 
     window.location.href = response.payUrl
-  } catch (_error) {
+  } catch {
     Message.error('Không thể khởi tạo thanh toán VNPAY. Vui lòng thử lại.')
   } finally {
     isProcessingPayment.value = false
@@ -664,39 +445,6 @@ const processPayment = async () => {
   completeLocalPayment()
 }
 
-const processMultiPayment = async (invoiceIndex: number) => {
-  const invoice = invoices.value[invoiceIndex]
-  if (!invoice || invoice.cartItems.length === 0) {
-    Message.warning('Hóa đơn trống!')
-    return
-  }
-
-  isProcessingPayment.value = true
-
-  try {
-    // Simulate processing
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    
-    Message.success(`Thanh toán hóa đơn ${invoiceIndex + 1} thành công!`)
-    
-    // Remove the paid invoice
-    invoices.value.splice(invoiceIndex, 1)
-    
-    // Adjust active index if needed
-    if (activeInvoiceIndex.value >= invoices.value.length) {
-      activeInvoiceIndex.value = Math.max(0, invoices.value.length - 1)
-    }
-    
-    // If no more invoices, switch back to single mode
-    if (invoices.value.length === 0) {
-      salesMode.value = 'single'
-    }
-  } catch (error) {
-    Message.error('Có lỗi xảy ra khi xử lý thanh toán')
-  } finally {
-    isProcessingPayment.value = false
-  }
-}
 
 // Watch for payment method changes
 watch(paymentMethod, (method) => {
@@ -714,6 +462,7 @@ watch(total, () => {
     calculateChange()
   }
 })
+
 
 // API functions
 const fetchProducts = async () => {
@@ -737,18 +486,18 @@ const fetchTodayStats = async () => {
     // Lấy thống kê hôm nay từ API hóa đơn
     const response = await axios.get('/api/hoa-don-management/playlist')
     if (response.success) {
-      const invoices = response.data || []
+      const invoiceList = response.data || []
       const today = new Date()
       const todayStr = today.toISOString().split('T')[0]
       
       // Đếm hóa đơn hôm nay
-      todayOrders.value = invoices.filter((invoice: any) => {
+      todayOrders.value = invoiceList.filter((invoice: any) => {
         const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
         return invoiceDate.toISOString().split('T')[0] === todayStr
       }).length
       
       // Tính doanh thu hôm nay
-      todayRevenue.value = invoices
+      todayRevenue.value = invoiceList
         .filter((invoice: any) => {
           const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
           return invoiceDate.toISOString().split('T')[0] === todayStr && (invoice.trangThai === true || invoice.ngayThanhToan)
@@ -999,77 +748,4 @@ onMounted(() => {
   }
 }
 
-/* Multi-invoice styles */
-.mode-card {
-  margin-bottom: 16px;
-}
-
-.multi-invoice-card {
-  margin-bottom: 16px;
-}
-
-.invoice-customer-info {
-  margin-bottom: 16px;
-  padding: 12px;
-  background-color: #f7f8fa;
-  border-radius: 6px;
-}
-
-.invoice-cart {
-  min-height: 200px;
-}
-
-.invoice-summary {
-  margin-top: 16px;
-  padding: 12px;
-  background-color: #f7f8fa;
-  border-radius: 6px;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.summary-row.total {
-  border-top: 1px solid #e5e6eb;
-  padding-top: 8px;
-  font-size: 16px;
-}
-
-/* Multi-payment styles */
-.multi-payment-summary {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.invoice-summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  margin-bottom: 8px;
-  background-color: #f7f8fa;
-  border-radius: 6px;
-}
-
-.invoice-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.invoice-total {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.total-all-invoices {
-  margin-top: 16px;
-  padding: 12px;
-  background-color: #e8f4fd;
-  border-radius: 6px;
-}
 </style>
