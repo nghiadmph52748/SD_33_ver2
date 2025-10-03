@@ -222,6 +222,7 @@ import { ref, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { IconStar, IconGift, IconSettings, IconArrowUp, IconArrowDown, IconDownload } from '@arco-design/web-vue/es/icon'
+import axios from 'axios'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -232,8 +233,17 @@ const chartType = ref('line')
 const comparisonPeriod1 = ref('this-month')
 const comparisonPeriod2 = ref('last-month')
 
-// Mock data
-const totalRevenue = ref(245000000) // 245 triệu
+// Dữ liệu hóa đơn và tổng doanh thu tính từ API
+const invoices = ref<any[]>([])
+const totalRevenue = computed(() => {
+  if (!invoices.value || invoices.value.length === 0) return 0
+  return invoices.value
+    .filter((invoice: any) => invoice.trangThai === true || invoice.ngayThanhToan)
+    .reduce((sum: number, invoice: any) => {
+      const amount = Number(invoice.tongTienSauGiam ?? invoice.tongTien ?? 0)
+      return sum + (isNaN(amount) ? 0 : amount)
+    }, 0)
+})
 const revenueGrowth = ref(12.5)
 const totalOrders = ref(1250)
 const ordersGrowth = ref(8.2)
@@ -337,12 +347,22 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
+const fetchInvoices = async () => {
+  try {
+    const res = await axios.get('/api/hoa-don-management/playlist')
+    // interceptor trả về { success, message, data }
+    invoices.value = res.data ?? []
+  } catch (e) {
+    invoices.value = []
+  }
+}
+
 const exportReport = () => {
   // Implement export logic
 }
 
 onMounted(() => {
-  // Page mounted
+  fetchInvoices()
 })
 </script>
 

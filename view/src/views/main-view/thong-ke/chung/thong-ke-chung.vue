@@ -82,11 +82,7 @@
               </a-select>
             </template>
             <div class="chart-container">
-              <v-chart
-                class="chart"
-                :option="revenueChartOption"
-                autoresize
-              />
+              <v-chart class="chart" :option="revenueChartOption" autoresize />
             </div>
           </a-card>
         </a-col>
@@ -100,11 +96,7 @@
               </a-select>
             </template>
             <div class="chart-container">
-              <v-chart
-                class="chart"
-                :option="topProductsChartOption"
-                autoresize
-              />
+              <v-chart class="chart" :option="topProductsChartOption" autoresize />
             </div>
           </a-card>
         </a-col>
@@ -114,11 +106,7 @@
         <a-col :span="12">
           <a-card title="Phân loại khách hàng" class="chart-card">
             <div class="chart-container">
-              <v-chart
-                class="chart"
-                :option="customerChartOption"
-                autoresize
-              />
+              <v-chart class="chart" :option="customerChartOption" autoresize />
             </div>
           </a-card>
         </a-col>
@@ -163,15 +151,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, BarChart, PieChart } from 'echarts/charts'
-import {
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
-} from 'echarts/components'
+import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
@@ -188,25 +172,16 @@ import {
 } from '@arco-design/web-vue/es/icon'
 
 // ECharts setup
-use([
-  CanvasRenderer,
-  LineChart,
-  BarChart,
-  PieChart,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
-])
+use([CanvasRenderer, LineChart, BarChart, PieChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 
 // Mock data - trong thực tế sẽ fetch từ API
-const totalRevenue = ref(125000000) // 125 triệu
-const totalOrders = ref(1250)
-const totalProducts = ref(450)
-const totalCustomers = ref(3200)
+const totalRevenue = ref(0)
+const totalOrders = ref(0)
+const totalProducts = ref(0)
+const totalCustomers = ref(0)
 
 const revenuePeriod = ref('6months')
 const topProductsPeriod = ref('month')
@@ -260,7 +235,7 @@ const revenueChartOption = computed(() => ({
   },
   xAxis: {
     type: 'category',
-    data: revenueData.value.map(item => item.month),
+    data: revenueData.value.map((item) => item.month),
     axisLabel: {
       rotate: 45,
     },
@@ -275,7 +250,7 @@ const revenueChartOption = computed(() => ({
     {
       name: 'Doanh thu',
       type: 'line',
-      data: revenueData.value.map(item => item.revenue),
+      data: revenueData.value.map((item) => item.revenue),
       smooth: true,
       lineStyle: {
         color: '#1890ff',
@@ -321,7 +296,7 @@ const topProductsChartOption = computed(() => ({
   },
   xAxis: {
     type: 'category',
-    data: topProductsData.value.map(item => item.name),
+    data: topProductsData.value.map((item) => item.name),
     axisLabel: {
       rotate: 45,
       interval: 0,
@@ -335,7 +310,7 @@ const topProductsChartOption = computed(() => ({
     {
       name: 'Số lượng bán',
       type: 'bar',
-      data: topProductsData.value.map(item => item.value),
+      data: topProductsData.value.map((item) => item.value),
       itemStyle: {
         color: {
           type: 'linear',
@@ -383,9 +358,52 @@ const customerChartOption = computed(() => ({
   ],
 }))
 
+const fetchProducts = async () => {
+  try {
+    const res = await axios.get('/api/san-pham-management/playlist')
+    const products = res.data ?? []
+    totalProducts.value = Array.isArray(products) ? products.length : 0
+  } catch {
+    totalProducts.value = 0
+  }
+}
+
+const fetchOrders = async () => {
+  try {
+    const res = await axios.get('/api/hoa-don-management/playlist')
+    const orders = res.data ?? []
+    totalOrders.value = Array.isArray(orders) ? orders.length : 0
+    // Tính tổng doanh thu từ các hóa đơn đã thanh toán
+    if (Array.isArray(orders)) {
+      totalRevenue.value = orders
+        .filter((order: any) => order.trangThai === true || order.ngayThanhToan)
+        .reduce((sum: number, order: any) => {
+          const amount = Number(order.tongTienSauGiam ?? order.tongTien ?? 0)
+          return sum + (Number.isNaN(amount) ? 0 : amount)
+        }, 0)
+    } else {
+      totalRevenue.value = 0
+    }
+  } catch {
+    totalOrders.value = 0
+    totalRevenue.value = 0
+  }
+}
+
+const fetchCustomers = async () => {
+  try {
+    const res = await axios.get('/api/khach-hang-management/playlist')
+    const customers = res.data ?? []
+    totalCustomers.value = Array.isArray(customers) ? customers.length : 0
+  } catch {
+    totalCustomers.value = 0
+  }
+}
+
 onMounted(() => {
-  // Trong thực tế sẽ gọi API để fetch data
-  // Load data here
+  fetchProducts()
+  fetchOrders()
+  fetchCustomers()
 })
 </script>
 
