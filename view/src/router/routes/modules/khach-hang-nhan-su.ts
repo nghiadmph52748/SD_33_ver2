@@ -1,13 +1,11 @@
 import ThemNhanVien from '@/views/main-view/khach-hang-nhan-su/nhan-vien/themnhanvien.vue'
 import Updatenhanvien from '@/views/main-view/khach-hang-nhan-su/nhan-vien/updatenhanvien.vue'
-import ThemKhachHang from '@/views/main-view/khach-hang-nhan-su/khach-hang/themkhachhang.vue'
-import DetailKhachHang from '@/views/main-view/khach-hang-nhan-su/khach-hang/detailkhachhang.vue'
-import Updatekhachhang from '@/views/main-view/khach-hang-nhan-su/khach-hang/updatekhachhang.vue'
 import Detail from '@/views/main-view/khach-hang-nhan-su/nhan-vien/detail.vue'
+import ThemKhachHang from '@/views/main-view/khach-hang-nhan-su/khach-hang/themkhachhang.vue'
+import DetailKhachHang from '@/views/main-view/khach-hang-nhan-su/khach-hang/detailkhachang.vue'
+import Updatekhachhang from '@/views/main-view/khach-hang-nhan-su/khach-hang/updatekhachhang.vue'
 import { DEFAULT_LAYOUT } from '../base'
 import { AppRouteRecordRaw } from '../types'
-
-
 
 const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
   path: '/khach-hang-nhan-su',
@@ -46,26 +44,26 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
       meta: { hideInMenu: true },
     },
     {
-        path: '/detail/:id',   // dynamic route
-        name: 'DetailNhanVien',
-        component: Detail,
-        meta: { hideInMenu: true },
-      },
-      {
+      path: '/detail/:id',
+      name: 'DetailNhanVien',
+      component: Detail,
+      meta: { hideInMenu: true },
+    },
+    {
       path: '/themkhachhang',
       name: 'ThemKhachHang',
       component: ThemKhachHang,
       meta: { hideInMenu: true },
     },
     {
-      path: "/detailkhachhang/:id",
-      name: "ChiTietKhachHang",
+      path: '/detailkhachhang/:id',
+      name: 'ChiTietKhachHang',
       component: DetailKhachHang,
       meta: { hideInMenu: true },
     },
     {
-      path: "/updatekhachhang/:id",
-      name: "UpdateKhachHang",
+      path: '/updatekhachhang/:id',
+      name: 'UpdateKhachHang',
       component: Updatekhachhang,
       meta: { hideInMenu: true },
     },
