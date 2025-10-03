@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/san-pham-management/**").permitAll() // Allow product management without auth for testing
                 .requestMatchers("/api/chi-tiet-san-pham-management/**").permitAll() // Allow product detail management without auth for testing
                 .requestMatchers("/api/khach-hang-management/**").permitAll() // Allow customer management without auth for testing
+                .requestMatchers("/api/pos/**").permitAll() // Allow POS endpoints without auth for testing
                 .requestMatchers("/api/test/**").permitAll() // Allow test endpoints without auth
                 .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

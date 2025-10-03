@@ -68,7 +68,8 @@
       <div class="cart-panel">
         <!-- Customer Info -->
         <a-card title="Thông tin khách hàng" class="customer-card" size="small">
-          <a-form layout="vertical" :model="customerForm">
+          <div class="customer-info-section">
+            <a-form layout="vertical" :model="customerForm" v-if="!isGuestCustomer">
             <a-form-item label="Tên khách hàng">
               <a-input v-model="customerForm.name" placeholder="Nhập tên khách hàng" allow-clear />
             </a-form-item>
@@ -77,13 +78,137 @@
             </a-form-item>
           </a-form>
 
-          <a-button type="dashed" block style="margin-top: 8px">
+            <div v-else class="guest-customer-display">
+              <a-tag color="orange" size="large">
+                <template #icon>
+                  <icon-user-add />
+                </template>
+                Khách lạ
+              </a-tag>
+              <p style="margin: 8px 0 0 0; color: #86909c; font-size: 12px">Khách hàng không có trong hệ thống</p>
+            </div>
+
+            <div class="customer-actions">
+              <div class="button-group">
+                <a-button type="dashed" @click="showCustomerModal = true" style="flex: 1; margin-right: 8px">
             <template #icon>
               <icon-user-add />
             </template>
             Chọn khách hàng
           </a-button>
+                
+                <a-button v-if="!isGuestCustomer" type="primary" @click="selectGuestCustomer" style="flex: 1">
+                  <template #icon>
+                    <icon-user />
+                  </template>
+                  Khách lạ
+                </a-button>
+              </div>
+              
+              <a-button v-if="isGuestCustomer" type="text" size="small" @click="clearCustomer" style="margin-top: 8px; width: 100%">
+                Xóa khách lạ
+              </a-button>
+            </div>
+          </div>
         </a-card>
+
+        <!-- Customer Selection Modal -->
+        <a-modal v-model:visible="showCustomerModal" title="Chọn khách hàng có trong hệ thống" width="800px" @ok="selectCustomer">
+          <div class="customer-modal">
+            <a-input-search
+              v-model="customerSearch"
+              placeholder="Tìm kiếm khách hàng theo tên hoặc số điện thoại"
+              style="margin-bottom: 16px"
+              @search="searchCustomers"
+            />
+
+            <a-table
+              :columns="customerColumns"
+              :data="filteredCustomers"
+              :pagination="customerPagination"
+              :loading="customerLoading"
+              @row-click="handleCustomerRowClick"
+              row-key="id"
+            >
+              <template #name="{ record }">
+                <div class="customer-name">
+                  <strong>{{ record.tenKhachHang }}</strong>
+                </div>
+              </template>
+
+              <template #phone="{ record }">
+                <span>{{ record.soDienThoai || 'N/A' }}</span>
+              </template>
+
+              <template #email="{ record }">
+                <span>{{ record.email || 'N/A' }}</span>
+              </template>
+
+              <template #address="{ record }">
+                <span>{{ record.diaChi || 'N/A' }}</span>
+              </template>
+
+              <template #status="{ record }">
+                <a-tag :color="record.trangThai ? 'green' : 'red'">
+                  {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+                </a-tag>
+              </template>
+            </a-table>
+          </div>
+        </a-modal>
+
+        <!-- Coupon Modal -->
+        <a-modal v-model:visible="showCouponModal" title="Chọn phiếu giảm giá" width="800px" @ok="applyCoupon">
+          <div class="coupon-modal">
+            <a-input-search
+              v-model="couponSearch"
+              placeholder="Tìm kiếm phiếu giảm giá theo mã hoặc tên"
+              style="margin-bottom: 16px"
+              @search="searchCoupons"
+            />
+
+            <a-table
+              :columns="couponColumns"
+              :data="filteredCoupons"
+              :pagination="couponPagination"
+              :loading="couponLoading"
+              @row-click="handleCouponRowClick"
+              row-key="id"
+            >
+              <template #code="{ record }">
+                <div class="coupon-code">
+                  <strong>{{ record.maPhieuGiamGia }}</strong>
+                </div>
+              </template>
+
+              <template #name="{ record }">
+                <span>{{ record.tenPhieuGiamGia || 'N/A' }}</span>
+              </template>
+
+              <template #type="{ record }">
+                <a-tag :color="record.loaiPhieuGiamGia ? 'blue' : 'green'">
+                  {{ record.loaiPhieuGiamGia ? 'Phần trăm' : 'Số tiền cố định' }}
+                </a-tag>
+              </template>
+
+              <template #value="{ record }">
+                <span v-if="record.loaiPhieuGiamGia">{{ record.giaTriGiamGia }}%</span>
+                <span v-else>{{ formatCurrency(Number(record.giaTriGiamGia)) }}</span>
+              </template>
+
+              <template #minOrder="{ record }">
+                <span v-if="record.hoaDonToiThieu">{{ formatCurrency(Number(record.hoaDonToiThieu)) }}</span>
+                <span v-else>Không giới hạn</span>
+              </template>
+
+              <template #status="{ record }">
+                <a-tag :color="record.trangThai ? 'green' : 'red'">
+                  {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+                </a-tag>
+              </template>
+            </a-table>
+          </div>
+        </a-modal>
 
 
         <!-- Main Cart -->
@@ -127,15 +252,36 @@
               <span>Tạm tính:</span>
               <span>{{ formatCurrency(subtotal) }}</span>
             </div>
-            <div class="summary-row">
-              <span>Giảm giá:</span>
-              <span>-{{ formatCurrency(discount) }}</span>
+            
+            <!-- Applied Coupon -->
+            <div v-if="appliedCoupon" class="summary-row discount-applied">
+              <span>Giảm giá ({{ appliedCoupon.code }}):</span>
+              <span>-{{ formatCurrency(discountAmount) }}</span>
             </div>
+
+            <!-- Add Coupon Button -->
+            <div v-if="!appliedCoupon" class="coupon-section">
+              <a-button type="dashed" block @click="showCouponModal = true">
+                <template #icon>
+                  <icon-tag />
+                </template>
+                Thêm phiếu giảm giá
+              </a-button>
+            </div>
+
+            <!-- Remove Coupon Button -->
+            <div v-if="appliedCoupon" class="coupon-section">
+              <a-button type="text" size="small" @click="removeCoupon" style="color: #ff4d4f">
+                <template #icon>
+                  <icon-close />
+                </template>
+                Xóa phiếu giảm giá
+              </a-button>
+            </div>
+            
             <div class="summary-row total">
               <span><strong>Tổng cộng:</strong></span>
-              <span>
-                <strong>{{ formatCurrency(total) }}</strong>
-              </span>
+              <span><strong>{{ formatCurrency(total) }}</strong></span>
             </div>
           </div>
         </a-card>
@@ -152,7 +298,20 @@
             </a-radio-group>
 
             <div v-if="paymentMethod === 'cash'" class="cash-payment">
-              <a-form-item label="Khách đưa">
+              <a-alert
+                v-if="customerPaid <= 0"
+                message="Vui lòng nhập số tiền khách đưa để thanh toán"
+                type="warning"
+                show-icon
+                style="margin-bottom: 16px"
+              />
+              
+              <a-form-item
+                label="Khách đưa"
+                :required="true"
+                :validate-status="customerPaid <= 0 ? 'error' : 'success'"
+                :help="customerPaid <= 0 ? 'Vui lòng nhập số tiền khách đưa' : ''"
+              >
                 <a-input-number
                   v-model="customerPaid"
                   :min="0"
@@ -160,6 +319,7 @@
                   style="width: 100%"
                   placeholder="Nhập số tiền khách đưa"
                   @change="calculateChange"
+                  :status="customerPaid <= 0 ? 'error' : ''"
                 />
               </a-form-item>
               <div class="change-info">
@@ -199,7 +359,7 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { createVnpayPayment, type CreateVnpayPaymentPayload } from '@/api/payment'
 import { Message } from '@arco-design/web-vue'
-import { IconPlus, IconUserAdd, IconStar, IconDelete, IconCheckCircle } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconUserAdd, IconStar, IconDelete, IconCheckCircle, IconTag, IconClose } from '@arco-design/web-vue/es/icon'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -222,6 +382,109 @@ const customerForm = ref({
   phone: '',
 })
 
+// Customer selection
+const showCustomerModal = ref(false)
+const customerSearch = ref('')
+const customersList = ref<any[]>([])
+const customerLoading = ref(false)
+const selectedCustomer = ref<any>(null)
+const isGuestCustomer = ref(false)
+
+
+// Customer table columns
+const customerColumns = [
+  {
+    title: 'Tên khách hàng',
+    dataIndex: 'tenKhachHang',
+    key: 'name',
+    slots: { customRender: 'name' },
+  },
+  {
+    title: 'Số điện thoại',
+    dataIndex: 'soDienThoai',
+    key: 'phone',
+    slots: { customRender: 'phone' },
+  },
+  {
+    title: 'Email',
+    dataIndex: 'email',
+    key: 'email',
+    slots: { customRender: 'email' },
+  },
+  {
+    title: 'Địa chỉ',
+    dataIndex: 'diaChi',
+    key: 'address',
+    slots: { customRender: 'address' },
+  },
+  {
+    title: 'Trạng thái',
+    dataIndex: 'trangThai',
+    key: 'status',
+    slots: { customRender: 'status' },
+  },
+]
+
+// Coupon table columns
+const couponColumns = [
+  {
+    title: 'Mã phiếu',
+    dataIndex: 'maPhieuGiamGia',
+    key: 'code',
+    slots: { customRender: 'code' },
+  },
+  {
+    title: 'Tên phiếu',
+    dataIndex: 'tenPhieuGiamGia',
+    key: 'name',
+    slots: { customRender: 'name' },
+  },
+  {
+    title: 'Loại giảm giá',
+    dataIndex: 'loaiPhieuGiamGia',
+    key: 'type',
+    slots: { customRender: 'type' },
+  },
+  {
+    title: 'Giá trị',
+    dataIndex: 'giaTriGiamGia',
+    key: 'value',
+    slots: { customRender: 'value' },
+  },
+  {
+    title: 'Hóa đơn tối thiểu',
+    dataIndex: 'hoaDonToiThieu',
+    key: 'minOrder',
+    slots: { customRender: 'minOrder' },
+  },
+  {
+    title: 'Trạng thái',
+    dataIndex: 'trangThai',
+    key: 'status',
+    slots: { customRender: 'status' },
+  },
+]
+
+// Customer pagination
+const customerPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `Tổng ${total} khách hàng`,
+})
+
+// Coupon pagination
+const couponPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `Tổng ${total} phiếu giảm giá`,
+})
+
 // Cart
 const cartItems = ref<any[]>([])
 
@@ -231,6 +494,14 @@ const customerPaid = ref(0)
 const change = ref(0)
 const isProcessingPayment = ref(false)
 const selectedTransferBankCode = ref('')
+
+// Discount coupon
+const showCouponModal = ref(false)
+const couponSearch = ref('')
+const couponsList = ref<any[]>([])
+const couponLoading = ref(false)
+const selectedCoupon = ref<any>(null)
+const appliedCoupon = ref<any>(null)
 const vnpayBankOptions = [
   { label: 'VNPAY QR', value: 'VNPAYQR' },
   { label: 'Ngân hàng nội địa (ATM)', value: 'VNBANK' },
@@ -304,13 +575,48 @@ const subtotal = computed(() => {
   return cartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
 })
 
-const discount = computed(() => {
-  // Simple discount logic - can be enhanced
-  return subtotal.value > 5000000 ? subtotal.value * 0.1 : 0
+const discountAmount = computed(() => {
+  if (!appliedCoupon.value) return 0
+
+  if (appliedCoupon.value.type === 'percentage') {
+    return (subtotal.value * appliedCoupon.value.discount) / 100
+  }
+  return Math.min(appliedCoupon.value.discount, subtotal.value)
 })
 
 const total = computed(() => {
-  return subtotal.value - discount.value
+  return Math.max(0, subtotal.value - discountAmount.value)
+})
+
+// Filtered customers
+const filteredCustomers = computed(() => {
+  if (!customerSearch.value) {
+    return customersList.value
+  }
+  
+  const searchTerm = customerSearch.value.toLowerCase()
+  return customersList.value.filter((customer) => {
+    return (
+      customer.tenKhachHang?.toLowerCase().includes(searchTerm) ||
+      customer.soDienThoai?.toLowerCase().includes(searchTerm) ||
+      customer.email?.toLowerCase().includes(searchTerm)
+    )
+  })
+})
+
+// Filtered coupons
+const filteredCoupons = computed(() => {
+  if (!couponSearch.value) {
+    return couponsList.value
+  }
+
+  const searchTerm = couponSearch.value.toLowerCase()
+  return couponsList.value.filter((coupon) => {
+    return (
+      coupon.maPhieuGiamGia?.toLowerCase().includes(searchTerm) ||
+      coupon.tenPhieuGiamGia?.toLowerCase().includes(searchTerm)
+    )
+  })
 })
 
 // Methods
@@ -326,7 +632,18 @@ const paymentButtonLabel = computed(() => {
   return paymentMethod.value === 'transfer' ? `Thanh toán VNPAY (${amountLabel})` : `Thanh toán (${amountLabel})`
 })
 
-const isPaymentDisabled = computed(() => cartItems.value.length === 0 || total.value <= 0 || isProcessingPayment.value)
+const isPaymentDisabled = computed(() => {
+  if (cartItems.value.length === 0 || total.value <= 0 || isProcessingPayment.value) {
+    return true
+  }
+
+  // For cash payment, require customer payment amount
+  if (paymentMethod.value === 'cash') {
+    return customerPaid.value <= 0
+  }
+
+  return false
+})
 
 const addToSingleCart = (product: any) => {
   const existingItem = cartItems.value.find((item) => item.id === product.id)
@@ -363,6 +680,124 @@ const removeFromCart = (itemIndex: number) => {
   cartItems.value.splice(itemIndex, 1)
 }
 
+// Customer functions
+const fetchCustomers = async () => {
+  try {
+    customerLoading.value = true
+    const response = await axios.get('/api/khach-hang-management/playlist')
+    
+    if (response.data.success) {
+      customersList.value = response.data.data || []
+      customerPagination.value.total = customersList.value.length
+    }
+  } catch {
+    // Handle error silently
+  } finally {
+    customerLoading.value = false
+  }
+}
+
+const searchCustomers = () => {
+  // Search is handled by computed property
+}
+
+
+const handleCustomerRowClick = (record: any) => {
+  selectedCustomer.value = record
+}
+
+const selectCustomer = () => {
+  if (selectedCustomer.value) {
+    // Handle existing customer
+    isGuestCustomer.value = false
+    customerForm.value.name = selectedCustomer.value.tenKhachHang || ''
+    customerForm.value.phone = selectedCustomer.value.soDienThoai || ''
+    showCustomerModal.value = false
+    Message.success('Đã chọn khách hàng thành công!')
+    return
+  }
+  Message.warning('Vui lòng chọn một khách hàng!')
+}
+
+const selectGuestCustomer = () => {
+  isGuestCustomer.value = true
+  customerForm.value.name = ''
+  customerForm.value.phone = ''
+  selectedCustomer.value = null
+  Message.success('Đã chọn khách lạ!')
+}
+
+const clearCustomer = () => {
+  isGuestCustomer.value = false
+  customerForm.value.name = ''
+  customerForm.value.phone = ''
+  selectedCustomer.value = null
+  Message.info('Đã xóa thông tin khách hàng!')
+}
+
+// Coupon functions
+const fetchCoupons = async () => {
+  try {
+    couponLoading.value = true
+    const response = await axios.get('/api/pos/coupons')
+    if (response.data && response.data.success) {
+      couponsList.value = response.data.data || []
+      couponPagination.value.total = couponsList.value.length
+    }
+  } catch (error) {
+    console.error('Error fetching coupons:', error)
+    Message.error('Không thể tải danh sách phiếu giảm giá')
+  } finally {
+    couponLoading.value = false
+  }
+}
+
+const searchCoupons = () => {
+  // Search is handled by computed property
+}
+
+const handleCouponRowClick = (record: any) => {
+  selectedCoupon.value = record
+}
+
+const applyCoupon = () => {
+  if (!selectedCoupon.value) {
+    Message.warning('Vui lòng chọn một phiếu giảm giá!')
+    return
+  }
+
+  if (subtotal.value <= 0) {
+    Message.warning('Giỏ hàng trống, không thể áp dụng phiếu giảm giá!')
+    return
+  }
+
+  if (!selectedCoupon.value.trangThai) {
+    Message.warning('Phiếu giảm giá này không còn hoạt động!')
+    return
+  }
+
+  // Check minimum order amount
+  if (selectedCoupon.value.hoaDonToiThieu && subtotal.value < Number(selectedCoupon.value.hoaDonToiThieu)) {
+    Message.warning(`Hóa đơn tối thiểu phải từ ${formatCurrency(Number(selectedCoupon.value.hoaDonToiThieu))}!`)
+    return
+  }
+
+  // Apply coupon
+  appliedCoupon.value = {
+    code: selectedCoupon.value.maPhieuGiamGia,
+    type: selectedCoupon.value.loaiPhieuGiamGia ? 'percentage' : 'fixed',
+    discount: Number(selectedCoupon.value.giaTriGiamGia),
+  }
+
+  showCouponModal.value = false
+  Message.success('Áp dụng phiếu giảm giá thành công!')
+}
+
+const removeCoupon = () => {
+  appliedCoupon.value = null
+  Message.info('Đã xóa phiếu giảm giá!')
+}
+
 
 const calculateChange = () => {
   change.value = Math.max(0, customerPaid.value - total.value)
@@ -371,6 +806,9 @@ const calculateChange = () => {
 const resetCartState = () => {
   cartItems.value = []
   customerForm.value = { name: '', phone: '' }
+  isGuestCustomer.value = false
+  selectedCustomer.value = null
+  appliedCoupon.value = null
   customerPaid.value = 0
   change.value = 0
 }
@@ -427,11 +865,18 @@ const processPayment = async () => {
     return
   }
 
+  // Validate customer payment amount for cash payment
   if (paymentMethod.value === 'cash') {
-    if (customerPaid.value < total.value) {
-      Message.warning('Khách đưa chưa đủ số tiền cần thanh toán')
+    if (customerPaid.value <= 0) {
+      Message.warning('Vui lòng nhập số tiền khách đưa!')
       return
     }
+
+    if (customerPaid.value < total.value) {
+      Message.warning('Số tiền khách đưa không đủ để thanh toán!')
+      return
+    }
+
     calculateChange()
     completeLocalPayment()
     return
@@ -489,13 +934,13 @@ const fetchTodayStats = async () => {
       const invoiceList = response.data || []
       const today = new Date()
       const todayStr = today.toISOString().split('T')[0]
-      
+
       // Đếm hóa đơn hôm nay
       todayOrders.value = invoiceList.filter((invoice: any) => {
         const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
         return invoiceDate.toISOString().split('T')[0] === todayStr
       }).length
-      
+
       // Tính doanh thu hôm nay
       todayRevenue.value = invoiceList
         .filter((invoice: any) => {
@@ -514,6 +959,8 @@ const fetchTodayStats = async () => {
 onMounted(() => {
   fetchProducts()
   fetchTodayStats()
+  fetchCustomers()
+  fetchCoupons()
 })
 </script>
 
@@ -678,6 +1125,15 @@ onMounted(() => {
   margin: 16px 0;
 }
 
+.cash-payment .ant-form-item-has-error .ant-input-number {
+  border-color: #ff4d4f;
+}
+
+.cash-payment .ant-form-item-has-error .ant-input-number:focus {
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+}
+
 .change-info {
   background: #f6ffed;
   border: 1px solid #b7eb8f;
@@ -746,6 +1202,90 @@ onMounted(() => {
   .product-card {
     margin: 0;
   }
+}
+
+/* Customer info section */
+.customer-info-section {
+  min-height: 120px;
+}
+
+.guest-customer-display {
+  text-align: center;
+  padding: 16px;
+  background-color: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.customer-actions {
+  margin-top: 16px;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Customer modal styles */
+.customer-modal {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.guest-customer-info {
+  padding: 16px;
+  background-color: #f7f8fa;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.existing-customer-list {
+  min-height: 300px;
+}
+
+.customer-name {
+  font-weight: 600;
+  color: #1890ff;
+  cursor: pointer;
+}
+
+.customer-name:hover {
+  color: #40a9ff;
+}
+
+/* Coupon styles */
+.coupon-section {
+  margin: 8px 0;
+}
+
+.discount-applied {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+.coupon-modal {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.coupon-preview {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 6px;
+}
+
+.coupon-code {
+  font-weight: 600;
+  color: #1890ff;
+  cursor: pointer;
+}
+
+.coupon-code:hover {
+  color: #40a9ff;
 }
 
 </style>
