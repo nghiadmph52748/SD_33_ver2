@@ -114,31 +114,15 @@
         <a-col :span="12">
           <a-card title="Hoạt động gần đây" class="chart-card">
             <a-timeline>
-              <a-timeline-item>
+              <a-timeline-item v-for="(act, idx) in recentActivities" :key="idx">
                 <template #dot>
-                  <icon-gift />
+                  <icon-check-circle v-if="act.type === 'payment'" />
+              <icon-gift v-else-if="act.type === 'create'" />
+              <icon-archive v-else />
                 </template>
                 <div class="activity-item">
-                  <div class="activity-title">Đơn hàng #12345 đã được tạo</div>
-                  <div class="activity-time">2 phút trước</div>
-                </div>
-              </a-timeline-item>
-              <a-timeline-item>
-                <template #dot>
-                  <icon-user />
-                </template>
-                <div class="activity-item">
-                  <div class="activity-title">Khách hàng mới: Nguyễn Văn A</div>
-                  <div class="activity-time">15 phút trước</div>
-                </div>
-              </a-timeline-item>
-              <a-timeline-item>
-                <template #dot>
-                  <icon-check-circle />
-                </template>
-                <div class="activity-item">
-                  <div class="activity-title">Thanh toán thành công 2.500.000 VNĐ</div>
-                  <div class="activity-time">1 giờ trước</div>
+                  <div class="activity-title">{{ act.title }}</div>
+                  <div class="activity-time">{{ act.time }}</div>
                 </div>
               </a-timeline-item>
             </a-timeline>
@@ -150,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -187,22 +171,11 @@ const revenuePeriod = ref('6months')
 const topProductsPeriod = ref('month')
 
 // Chart data
-const revenueData = ref([
-  { month: 'Tháng 1', revenue: 45000000 },
-  { month: 'Tháng 2', revenue: 52000000 },
-  { month: 'Tháng 3', revenue: 48000000 },
-  { month: 'Tháng 4', revenue: 61000000 },
-  { month: 'Tháng 5', revenue: 58000000 },
-  { month: 'Tháng 6', revenue: 72000000 },
-])
+const revenueData = ref<{ month: string; revenue: number }[]>([])
+const ordersList = ref<any[]>([])
+const productsList = ref<any[]>([])
 
-const topProductsData = ref([
-  { name: 'Giày sneaker Nike', value: 145, revenue: 43500000 },
-  { name: 'Giày boot Chelsea', value: 98, revenue: 29400000 },
-  { name: 'Giày cao gót Jimmy Choo', value: 76, revenue: 30400000 },
-  { name: 'Giày thể thao Adidas', value: 89, revenue: 26700000 },
-  { name: 'Giày sandal Birkenstock', value: 67, revenue: 13400000 },
-])
+const topProductsData = ref<{ name: string; value: number; revenue: number }[]>([])
 
 const customerData = ref([
   { name: 'Khách hàng VIP', value: 15 },
@@ -216,6 +189,82 @@ const formatCurrency = (amount: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
+}
+
+const recentActivities = ref<{ type: 'create' | 'payment' | 'product'; title: string; time: string; at: number }[]>([])
+
+const toRelativeTime = (date: Date) => {
+  const diffMs = Date.now() - date.getTime()
+  const minutes = Math.floor(diffMs / 60000)
+  if (minutes < 1) return 'Vừa xong'
+  if (minutes < 60) return `${minutes} phút trước`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} giờ trước`
+  const days = Math.floor(hours / 24)
+  return `${days} ngày trước`
+}
+
+const buildRecentActivities = () => {
+  const acts: { type: 'create' | 'payment' | 'product'; title: string; time: string; at: number }[] = []
+  console.log('Building activities from orders:', ordersList.value.length, 'products:', productsList.value.length)
+  
+  ordersList.value.forEach((o: any) => {
+    if (o?.ngayTao) {
+      const dt = new Date(o.ngayTao)
+      acts.push({ type: 'create', title: `Đơn hàng ${o?.tenHoaDon ?? `#${o?.id ?? ''}`} đã được tạo`, time: toRelativeTime(dt), at: dt.getTime() })
+    }
+    if (o?.ngayThanhToan) {
+      const dt = new Date(o.ngayThanhToan)
+      const amount = Number(o?.tongTienSauGiam ?? o?.tongTien ?? 0)
+      acts.push({ type: 'payment', title: `Thanh toán thành công ${formatCurrency(Number.isNaN(amount) ? 0 : amount)}`, time: toRelativeTime(dt), at: dt.getTime() })
+    }
+  })
+  // Thêm hoạt động từ sản phẩm mới tạo
+  productsList.value.forEach((p: any) => {
+    const createDate = p?.createAt || p?.create_at
+    if (createDate) {
+      const dt = new Date(createDate)
+      if (!Number.isNaN(dt.getTime())) {
+        acts.push({ type: 'product', title: `Thêm sản phẩm ${p?.tenSanPham ?? `#${p?.id ?? ''}`}`, time: toRelativeTime(dt), at: dt.getTime() })
+      }
+    }
+  })
+  acts.sort((a, b) => b.at - a.at)
+  recentActivities.value = acts.slice(0, 10)
+  console.log('Built activities:', recentActivities.value.length)
+}
+
+// Build revenue by month from ordersList and revenuePeriod
+const isPaidOrder = (order: any) => order?.trangThai === true || !!order?.ngayThanhToan
+const orderAmount = (order: any) => {
+  const amount = Number(order?.tongTienSauGiam ?? order?.tongTien ?? 0)
+  return Number.isNaN(amount) ? 0 : amount
+}
+
+const buildRevenueData = () => {
+  const now = new Date()
+  const months: { label: string; year: number; monthIndex: number }[] = []
+  const count = revenuePeriod.value === '12months' ? 12 : 6
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    months.push({ label: `Tháng ${d.getMonth() + 1}`, year: d.getFullYear(), monthIndex: d.getMonth() })
+  }
+
+  const sums: number[] = new Array(months.length).fill(0)
+  ordersList.value
+    .filter((o: any) => isPaidOrder(o))
+    .forEach((o: any) => {
+      const dateStr = o?.ngayThanhToan ?? o?.ngayTao
+      if (!dateStr) return
+      const dt = new Date(dateStr)
+      if (Number.isNaN(dt.getTime())) return
+      const y = dt.getFullYear()
+      const m = dt.getMonth()
+      const idx = months.findIndex((mm) => mm.year === y && mm.monthIndex === m)
+      if (idx >= 0) sums[idx] += orderAmount(o)
+    })
+
+  revenueData.value = months.map((m, idx) => ({ month: m.label, revenue: sums[idx] }))
 }
 
 // Chart options
@@ -275,6 +324,36 @@ const revenueChartOption = computed(() => ({
     },
   ],
 }))
+
+// Build Top Products from ordersList
+const buildTopProductsData = () => {
+  const map: Record<string, { name: string; value: number; revenue: number }> = {}
+  ordersList.value
+    .filter((o: any) => isPaidOrder(o))
+    .forEach((o: any) => {
+      const items = Array.isArray(o.items) ? o.items : []
+      items.forEach((it: any) => {
+        const name = it?.tenSanPham ?? 'Không rõ'
+        const qty = Number(it?.soLuong ?? 0)
+        const lineRevenue = Number(it?.thanhTien ?? (Number(it?.giaBan ?? 0) * qty))
+        if (!map[name]) {
+          map[name] = { name, value: 0, revenue: 0 }
+        }
+        map[name].value += Number.isNaN(qty) ? 0 : qty
+        map[name].revenue += Number.isNaN(lineRevenue) ? 0 : lineRevenue
+      })
+    })
+
+  topProductsData.value = Object.values(map)
+    .sort((a, b) => b.value - a.value || b.revenue - a.revenue)
+    .slice(0, 5)
+}
+
+watch([ordersList, productsList, revenuePeriod], () => {
+  buildRevenueData()
+  buildTopProductsData()
+  buildRecentActivities()
+})
 
 const topProductsChartOption = computed(() => ({
   tooltip: {
@@ -363,6 +442,8 @@ const fetchProducts = async () => {
     const res = await axios.get('/api/san-pham-management/playlist')
     const products = res.data ?? []
     totalProducts.value = Array.isArray(products) ? products.length : 0
+    productsList.value = Array.isArray(products) ? products : []
+    buildRecentActivities()
   } catch {
     totalProducts.value = 0
   }
@@ -373,6 +454,7 @@ const fetchOrders = async () => {
     const res = await axios.get('/api/hoa-don-management/playlist')
     const orders = res.data ?? []
     totalOrders.value = Array.isArray(orders) ? orders.length : 0
+    ordersList.value = Array.isArray(orders) ? orders : []
     // Tính tổng doanh thu từ các hóa đơn đã thanh toán
     if (Array.isArray(orders)) {
       totalRevenue.value = orders
@@ -384,6 +466,10 @@ const fetchOrders = async () => {
     } else {
       totalRevenue.value = 0
     }
+
+    buildRevenueData()
+    buildTopProductsData()
+    buildRecentActivities()
   } catch {
     totalOrders.value = 0
     totalRevenue.value = 0
@@ -404,6 +490,7 @@ onMounted(() => {
   fetchProducts()
   fetchOrders()
   fetchCustomers()
+  buildRecentActivities()
 })
 </script>
 
