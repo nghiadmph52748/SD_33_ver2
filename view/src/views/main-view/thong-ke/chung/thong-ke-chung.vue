@@ -116,9 +116,10 @@
             <a-timeline>
               <a-timeline-item v-for="(act, idx) in recentActivities" :key="idx">
                 <template #dot>
-                  <icon-check-circle v-if="act.type === 'payment'" />
-              <icon-gift v-else-if="act.type === 'create'" />
-              <icon-archive v-else />
+                  <icon-check-circle v-if="act.type === 'order'" />
+                  <icon-archive v-else-if="act.type === 'product'" />
+                  <icon-user v-else-if="act.type === 'customer'" />
+                  <icon-gift v-else />
                 </template>
                 <div class="activity-item">
                   <div class="activity-title">{{ act.title }}</div>
@@ -174,6 +175,7 @@ const topProductsPeriod = ref('month')
 const revenueData = ref<{ month: string; revenue: number }[]>([])
 const ordersList = ref<any[]>([])
 const productsList = ref<any[]>([])
+const customersList = ref<any[]>([])
 
 const topProductsData = ref<{ name: string; value: number; revenue: number }[]>([])
 
@@ -191,47 +193,99 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const recentActivities = ref<{ type: 'create' | 'payment' | 'product'; title: string; time: string; at: number }[]>([])
+const recentActivities = ref<{ type: 'product' | 'order' | 'customer'; title: string; time: string; at: number }[]>([])
 
 const toRelativeTime = (date: Date) => {
-  const diffMs = Date.now() - date.getTime()
-  const minutes = Math.floor(diffMs / 60000)
-  if (minutes < 1) return 'Vừa xong'
-  if (minutes < 60) return `${minutes} phút trước`
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  
+  // Nếu thời gian trong tương lai hoặc quá xa, hiển thị thời gian tuyệt đối
+  if (diffMs < 0) {
+    return date.toLocaleString('vi-VN', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+  
+  const seconds = Math.floor(diffMs / 1000)
+  const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} giờ trước`
   const days = Math.floor(hours / 24)
-  return `${days} ngày trước`
+  
+  if (seconds < 60) return 'Vừa xong'
+  if (minutes < 60) return `${minutes} phút trước`
+  if (hours < 24) return `${hours} giờ trước`
+  if (days < 7) return `${days} ngày trước`
+  
+  // Nếu quá 7 ngày, hiển thị ngày tháng
+  return date.toLocaleString('vi-VN', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const buildRecentActivities = () => {
-  const acts: { type: 'create' | 'payment' | 'product'; title: string; time: string; at: number }[] = []
-  console.log('Building activities from orders:', ordersList.value.length, 'products:', productsList.value.length)
+  const acts: { type: 'product' | 'order' | 'customer'; title: string; time: string; at: number }[] = []
+  console.log('Building activities from orders:', ordersList.value.length, 'products:', productsList.value.length, 'customers:', customersList.value.length)
   
+  // 1. Đơn hàng thành công mới (đã thanh toán)
   ordersList.value.forEach((o: any) => {
-    if (o?.ngayTao) {
-      const dt = new Date(o.ngayTao)
-      acts.push({ type: 'create', title: `Đơn hàng ${o?.tenHoaDon ?? `#${o?.id ?? ''}`} đã được tạo`, time: toRelativeTime(dt), at: dt.getTime() })
-    }
-    if (o?.ngayThanhToan) {
+    if (o?.ngayThanhToan && (o?.trangThai === true || o?.ngayThanhToan)) {
       const dt = new Date(o.ngayThanhToan)
-      const amount = Number(o?.tongTienSauGiam ?? o?.tongTien ?? 0)
-      acts.push({ type: 'payment', title: `Thanh toán thành công ${formatCurrency(Number.isNaN(amount) ? 0 : amount)}`, time: toRelativeTime(dt), at: dt.getTime() })
+      if (!Number.isNaN(dt.getTime())) {
+        const amount = Number(o?.tongTienSauGiam ?? o?.tongTien ?? 0)
+        acts.push({ 
+          type: 'order', 
+          title: `Đơn hàng thành công ${o?.tenHoaDon ?? `#${o?.id ?? ''}`} - ${formatCurrency(Number.isNaN(amount) ? 0 : amount)}`, 
+          time: toRelativeTime(dt), 
+          at: dt.getTime() 
+        })
+      }
     }
   })
-  // Thêm hoạt động từ sản phẩm mới tạo
+  
+  // 2. Thêm sản phẩm mới
   productsList.value.forEach((p: any) => {
     const createDate = p?.createAt || p?.create_at
     if (createDate) {
       const dt = new Date(createDate)
       if (!Number.isNaN(dt.getTime())) {
-        acts.push({ type: 'product', title: `Thêm sản phẩm ${p?.tenSanPham ?? `#${p?.id ?? ''}`}`, time: toRelativeTime(dt), at: dt.getTime() })
+        acts.push({ 
+          type: 'product', 
+          title: `Thêm sản phẩm mới: ${p?.tenSanPham ?? `#${p?.id ?? ''}`}`, 
+          time: toRelativeTime(dt), 
+          at: dt.getTime() 
+        })
       }
     }
   })
+  
+  // 3. Khách hàng mới
+  customersList.value.forEach((c: any) => {
+    const createDate = c?.createAt || c?.create_at
+    if (createDate) {
+      const dt = new Date(createDate)
+      if (!Number.isNaN(dt.getTime())) {
+        acts.push({ 
+          type: 'customer', 
+          title: `Khách hàng mới: ${c?.tenKhachHang ?? `#${c?.id ?? ''}`}`, 
+          time: toRelativeTime(dt), 
+          at: dt.getTime() 
+        })
+      }
+    }
+  })
+  
+  // Sắp xếp theo thời gian giảm dần (mới nhất lên đầu)
   acts.sort((a, b) => b.at - a.at)
   recentActivities.value = acts.slice(0, 10)
-  console.log('Built activities:', recentActivities.value.length)
+  console.log('Built activities:', recentActivities.value.length, 'First activity time:', recentActivities.value[0]?.time)
 }
 
 // Build revenue by month from ordersList and revenuePeriod
@@ -349,7 +403,7 @@ const buildTopProductsData = () => {
     .slice(0, 5)
 }
 
-watch([ordersList, productsList, revenuePeriod], () => {
+watch([ordersList, productsList, customersList, revenuePeriod], () => {
   buildRevenueData()
   buildTopProductsData()
   buildRecentActivities()
@@ -481,6 +535,8 @@ const fetchCustomers = async () => {
     const res = await axios.get('/api/khach-hang-management/playlist')
     const customers = res.data ?? []
     totalCustomers.value = Array.isArray(customers) ? customers.length : 0
+    customersList.value = Array.isArray(customers) ? customers : []
+    buildRecentActivities()
   } catch {
     totalCustomers.value = 0
   }
