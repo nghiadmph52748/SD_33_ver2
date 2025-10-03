@@ -35,12 +35,18 @@ public class KhachHangService {
     private PasswordEncoder passwordEncoder;
 
     public List<KhachHangResponse> findAll() {
-        return khachHangRepository.findAll().stream().map(KhachHangResponse::new).toList();
+        List<KhachHang> list = khachHangRepository.findAll();
+        return list.stream()
+                .map(kh -> new KhachHangResponse(kh))
+                .toList();
     }
 
     public KhachHangResponse findById(Integer id) {
-        return khachHangRepository.findById(id).map(KhachHangResponse::new).orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng với id: " + id));
+        KhachHang kh = khachHangRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng với id: " + id));
+        return new KhachHangResponse(kh);
     }
+
 
     public void save(KhachHangRequest request) {
         if (request.getEmail() != null && khachHangRepository.findByEmail(request.getEmail()) != null) {

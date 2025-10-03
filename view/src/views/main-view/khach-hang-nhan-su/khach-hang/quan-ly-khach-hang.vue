@@ -5,17 +5,17 @@
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
-      <a-form :model="filters" layout="vertical">
+      <a-form :model="boLoc" layout="vertical">
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Mã, tên, SĐT, email..." allow-clear @change="searchCustomers" />
+              <a-input v-model="boLoc.timKiem" placeholder="Mã, tên, SĐT, email..." allow-clear @change="timKiemKhachHang" />
             </a-form-item>
           </a-col>
 
           <a-col :span="8">
             <a-form-item label="Phân loại">
-              <a-select v-model="filters.category" placeholder="Chọn phân loại" allow-clear @change="searchCustomers">
+              <a-select v-model="boLoc.phanLoai" placeholder="Chọn phân loại" allow-clear @change="timKiemKhachHang">
                 <a-option value="">Tất cả</a-option>
                 <a-option value="vip">VIP</a-option>
                 <a-option value="regular">Thường xuyên</a-option>
@@ -26,7 +26,7 @@
 
           <a-col :span="8">
             <a-form-item label="Giới tính">
-              <a-radio-group v-model="filters.gender" type="button" @change="searchCustomers">
+              <a-radio-group v-model="boLoc.gioiTinh" type="button" @change="timKiemKhachHang">
                 <a-radio value="">Tất cả</a-radio>
                 <a-radio value="Nam">Nam</a-radio>
                 <a-radio value="Nữ">Nữ</a-radio>
@@ -38,7 +38,7 @@
         <a-row :gutter="12">
           <a-col :span="24">
             <a-form-item label="Trạng thái">
-              <a-radio-group v-model="filters.status" type="button" @change="searchCustomers">
+              <a-radio-group v-model="boLoc.trangThai" type="button" @change="timKiemKhachHang">
                 <a-radio value="">Tất cả</a-radio>
                 <a-radio value="active">Hoạt động</a-radio>
                 <a-radio value="inactive">Không hoạt động</a-radio>
@@ -50,19 +50,19 @@
 
       <div class="actions-row">
         <a-space>
-          <a-button @click="resetFilters">
+          <a-button @click="datLaiBoLoc">
             <template #icon>
               <icon-refresh />
             </template>
             Đặt lại
           </a-button>
-          <a-button @click="exportExcel">
+          <a-button @click="xuatExcel">
             <template #icon>
               <icon-download />
             </template>
             Xuất Excel
           </a-button>
-          <a-button type="primary" @click="showCreateModal">
+          <a-button type="primary" @click="chuyenTrangTaoMoi">
             <template #icon>
               <icon-plus />
             </template>
@@ -75,16 +75,16 @@
     <!-- Customers Table -->
     <a-card title="Danh sách khách hàng" class="table-card">
       <a-table
-        :columns="columns"
-        :data="customersWithIndex"
-        :pagination="pagination"
-        :loading="loading"
+        :columns="cotBang"
+        :data="danhSachKhachHang"
+        :pagination="phanTrang"
+        :loading="dangTai"
         :scroll="{ x: 1200 }"
-        @change="handleTableChange"
+        @change="xuLyThayDoiBang"
       >
         <template #customer_type="{ record }">
-          <a-tag :color="getCustomerTypeColor(record.customer_type)">
-            {{ getCustomerTypeText(record.customer_type) }}
+          <a-tag :color="mauPhanLoai(record.customer_type)">
+            {{ tenPhanLoai(record.customer_type) }}
           </a-tag>
         </template>
 
@@ -93,7 +93,7 @@
         </template>
 
         <template #total_spent="{ record }">
-          {{ formatCurrency(record.total_spent) }}
+          {{ dinhDangTien(record.total_spent) }}
         </template>
 
         <template #status="{ record }">
@@ -104,17 +104,17 @@
 
         <template #action="{ record }">
           <a-space>
-            <a-button type="text" @click="viewCustomer(record)">
+            <a-button type="text" @click="xemChiTietKhach(record)">
               <template #icon>
                 <icon-eye />
               </template>
             </a-button>
-            <a-button type="text" @click="editCustomer(record)">
+            <a-button type="text" @click="chinhSuaKhach(record)">
               <template #icon>
                 <icon-edit />
               </template>
             </a-button>
-            <a-button type="text" danger @click="deleteCustomer(record)">
+            <a-button type="text" danger @click="xoaKhach(record)">
               <template #icon>
                 <icon-delete />
               </template>
@@ -126,336 +126,205 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import axios from 'axios'
+import { useRouter } from "vue-router";
 import {
   IconPlus,
-  IconSearch,
   IconRefresh,
   IconDownload,
   IconEye,
   IconEdit,
-  IconDelete,
-  IconUserGroup,
-  IconUser,
-  IconGift,
-  IconStar,
+  IconDelete
 } from '@arco-design/web-vue/es/icon'
+// ✅ Di chuyển lên đầu file <script>
+const convertLoai = (text: string) => {
+  switch (text?.toLowerCase()) {
+    case 'vip':
+      return 'vip';
+    case 'thường xuyên':
+      return 'regular';
+    case 'mới':
+      return 'new';
+    case 'không hoạt động':
+      return 'inactive';
+    default:
+      return 'inactive';
+  }
+};
+const router = useRouter();
 
-// Breadcrumb setup
+const chuyenTrangTaoMoi = () => {
+  router.push("/themkhachhang"); // ✅ thêm chữ "h"
+};
+
 const { breadcrumbItems } = useBreadcrumb()
 
-// Filters
-const filters = ref({
-  search: '',
-  gender: '',
-  category: '',
-  status: '',
+const boLoc = ref({
+  timKiem: '',
+  gioiTinh: '',
+  phanLoai: '',
+  trangThai: ''
 })
 
-// Table
-const loading = ref(false)
-const columns = [
-  {
-    title: 'STT',
-    dataIndex: 'index',
-    width: 40,
-    align: 'center',
-  },
-  {
-    title: 'Mã',
-    dataIndex: 'code',
-    width: 100,
-  },
-  {
-    title: 'Tên',
-    dataIndex: 'name',
-    width: 150,
-  },
-  {
-    title: 'Giới tính',
-    dataIndex: 'gender',
-    width: 80,
-    align: 'center',
-  },
-  {
-    title: 'Ngày sinh',
-    dataIndex: 'birthday',
-    width: 120,
-    align: 'center',
-  },
-  {
-    title: 'Tổng đơn',
-    dataIndex: 'total_orders',
-    slotName: 'total_orders',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: 'Tổng chi tiêu',
-    dataIndex: 'total_spent',
-    slotName: 'total_spent',
-    width: 130,
-    align: 'right',
-  },
-  {
-    title: 'Phân loại',
-    dataIndex: 'customer_type',
-    slotName: 'customer_type',
-    width: 120,
-    align: 'center',
-  },
-  {
-    title: 'Trạng thái',
-    dataIndex: 'status',
-    slotName: 'status',
-    width: 120,
-    align: 'center',
-  },
-  {
-    title: 'Thao tác',
-    slotName: 'action',
-    width: 150,
-    fixed: 'right',
-  },
+const dangTai = ref(false)
+const phanTrang = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0
+})
+
+const cotBang = [
+  { title: 'STT', dataIndex: 'index', width: 40, align: 'center' },
+  { title: 'Mã', dataIndex: 'code', width: 100 },
+  { title: 'Tên', dataIndex: 'name', width: 150 },
+  { title: 'Giới tính', dataIndex: 'gender', width: 80, align: 'center' },
+  { title: 'Ngày sinh', dataIndex: 'birthday', width: 120, align: 'center' },
+  { title: 'Tổng đơn', dataIndex: 'total_orders', slotName: 'total_orders', width: 100, align: 'center' },
+  { title: 'Tổng chi tiêu', dataIndex: 'total_spent', slotName: 'total_spent', width: 130, align: 'right' },
+  { title: 'Phân loại', dataIndex: 'customer_type', slotName: 'customer_type', width: 120, align: 'center' },
+  { title: 'Trạng thái', dataIndex: 'status', slotName: 'status', width: 120, align: 'center' },
+  { title: 'Thao tác', slotName: 'action', width: 150, fixed: 'right' }
 ]
+interface KhachHang {
+  index: number
+  code: string
+  name: string
+  gender: string
+  birthday: string
+  total_orders: number
+  total_spent: number
+  customer_type: string
+  status: string
+}
 
-// Mock data
-const customers = ref([
-  {
-    id: 1,
-    code: 'KH001',
-    name: 'Nguyễn Văn A',
-    email: 'nguyenvana@email.com',
-    phone: '0987654321',
-    gender: 'Nam',
-    birthday: '1990-05-15',
-    avatar: 'https://via.placeholder.com/80x80/1890ff/ffffff?text=A',
-    customer_type: 'vip',
-    total_orders: 15,
-    total_spent: 25000000,
-    status: 'active',
-  },
-  {
-    id: 2,
-    code: 'KH002',
-    name: 'Trần Thị C',
-    email: 'tranthic@email.com',
-    phone: '0978123456',
-    gender: 'Nữ',
-    birthday: '1988-12-03',
-    avatar: 'https://via.placeholder.com/80x80/52c41a/ffffff?text=C',
-    customer_type: 'regular',
-    total_orders: 8,
-    total_spent: 12000000,
-    status: 'active',
-  },
-  {
-    id: 3,
-    code: 'KH003',
-    name: 'Lê Văn D',
-    email: 'levand@email.com',
-    phone: '0967234567',
-    gender: 'Nam',
-    birthday: '1995-08-20',
-    avatar: 'https://via.placeholder.com/80x80/fa8c16/ffffff?text=D',
-    customer_type: 'new',
-    total_orders: 2,
-    total_spent: 3500000,
-    status: 'active',
-  },
-  {
-    id: 4,
-    code: 'KH004',
-    name: 'Phạm Thị E',
-    email: 'phamthie@email.com',
-    phone: '0956123456',
-    gender: 'Nữ',
-    birthday: '1992-03-10',
-    avatar: 'https://via.placeholder.com/80x80/722ed1/ffffff?text=E',
-    customer_type: 'regular',
-    total_orders: 12,
-    total_spent: 18000000,
-    status: 'active',
-  },
-  {
-    id: 5,
-    code: 'KH005',
-    name: 'Hoàng Văn F',
-    email: 'hoangvanf@email.com',
-    phone: '0945987654',
-    gender: 'Nam',
-    birthday: '1985-11-25',
-    avatar: 'https://via.placeholder.com/80x80/13c2c2/ffffff?text=F',
-    customer_type: 'vip',
-    total_orders: 20,
-    total_spent: 35000000,
-    status: 'active',
-  },
-  {
-    id: 6,
-    code: 'KH006',
-    name: 'Vũ Thị G',
-    email: 'vuthig@email.com',
-    phone: '0934876543',
-    gender: 'Nữ',
-    birthday: '1993-07-12',
-    avatar: 'https://via.placeholder.com/80x80/eb2f96/ffffff?text=G',
-    customer_type: 'regular',
-    total_orders: 6,
-    total_spent: 9500000,
-    status: 'inactive',
-  },
-  {
-    id: 7,
-    code: 'KH007',
-    name: 'Đỗ Văn H',
-    email: 'dovanh@email.com',
-    phone: '0923765432',
-    gender: 'Nam',
-    birthday: '1987-09-08',
-    avatar: 'https://via.placeholder.com/80x80/f5222d/ffffff?text=H',
-    customer_type: 'new',
-    total_orders: 1,
-    total_spent: 1200000,
-    status: 'active',
-  },
-  {
-    id: 8,
-    code: 'KH008',
-    name: 'Bùi Thị I',
-    email: 'buithii@email.com',
-    phone: '0912654321',
-    gender: 'Nữ',
-    birthday: '1991-04-18',
-    avatar: 'https://via.placeholder.com/80x80/faad14/ffffff?text=I',
-    customer_type: 'vip',
-    total_orders: 18,
-    total_spent: 32000000,
-    status: 'active',
-  },
-])
 
-// Computed customers with filtering and index for STT
-const customersWithIndex = computed(() => {
-  let filteredCustomers = customers.value
+const danhSachKhachHang = ref<KhachHang[]>([])
 
-  // Filter by search term (code, name, phone, email)
-  if (filters.value.search) {
-    const searchTerm = filters.value.search.toLowerCase()
-    filteredCustomers = filteredCustomers.filter(
-      (customer) =>
-        customer.code.toLowerCase().includes(searchTerm) ||
-        customer.name.toLowerCase().includes(searchTerm) ||
-        customer.phone.toLowerCase().includes(searchTerm) ||
-        (customer.email && customer.email.toLowerCase().includes(searchTerm))
-    )
-  }
-
-  // Filter by gender
-  if (filters.value.gender) {
-    filteredCustomers = filteredCustomers.filter((customer) => customer.gender === filters.value.gender)
-  }
-
-  // Filter by category
-  if (filters.value.category) {
-    filteredCustomers = filteredCustomers.filter((customer) => customer.customer_type === filters.value.category)
-  }
-
-  // Filter by status
-  if (filters.value.status) {
-    filteredCustomers = filteredCustomers.filter((customer) => customer.status === filters.value.status)
-  }
-
-  // Add index for STT
-  return filteredCustomers.map((customer, index) => ({
-    ...customer,
-    index: index + 1,
-  }))
-})
-
-// Methods
-const formatCurrency = (amount: number) => {
+const dinhDangTien = (soTien: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
-    currency: 'VND',
-  }).format(amount)
+    currency: 'VND'
+  }).format(soTien)
 }
 
-const getCustomerTypeColor = (type: string) => {
-  switch (type) {
-    case 'vip':
-      return 'gold'
-    case 'regular':
-      return 'blue'
-    case 'new':
-      return 'green'
-    case 'inactive':
-      return 'red'
-    default:
-      return 'default'
+const mauPhanLoai = (loai: string) => {
+  switch (loai) {
+    case 'vip': return 'gold'
+    case 'regular': return 'blue'
+    case 'new': return 'green'
+    case 'inactive': return 'red'
+    default: return 'default'
   }
 }
 
-const getCustomerTypeText = (type: string) => {
-  switch (type) {
-    case 'vip':
-      return 'VIP'
-    case 'regular':
-      return 'Thường xuyên'
-    case 'new':
-      return 'Mới'
-    case 'inactive':
-      return 'Không hoạt động'
-    default:
-      return type
+const tenPhanLoai = (loai: string) => {
+  switch (loai) {
+    case 'vip': return 'VIP'
+    case 'regular': return 'Thường xuyên'
+    case 'new': return 'Mới'
+    case 'inactive': return 'Không hoạt động'
+    default: return loai
   }
 }
 
-const searchCustomers = () => {
-  // Filtering is handled by computed property customersWithIndex
-  // This method is called when filters change (@change event)
-}
 
-const resetFilters = () => {
-  filters.value = {
-    search: '',
-    gender: '',
-    category: '',
-    status: '',
+const timKiemKhachHang = async () => {
+  try {
+    dangTai.value = true
+    const res = await axios.get('/api/khach-hang-management/playlist')
+    console.log('[DEBUG] Response data:', res.data)
+
+    if (Array.isArray(res.data)) {
+      danhSachKhachHang.value = res.data.map((item: any, index: number) => ({
+        index: index + 1,
+        code: item.maKhachHang,
+        name: item.tenKhachHang,
+        gender: item.gioiTinh ? 'Nam' : 'Nữ',
+        birthday: item.ngaySinh,
+        total_orders: item.tongDon,
+        total_spent: item.tongChiTieu,
+        customer_type: convertLoai(item.phanLoaiText),
+        status: item.trangThaiText === 'Hoạt động' ? 'active' : 'inactive',
+      }))
+      phanTrang.value.total = danhSachKhachHang.value.length
+    } else {
+      danhSachKhachHang.value = []
+      phanTrang.value.total = 0
+      console.error('Dữ liệu trả về không đúng định dạng:', res.data)
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Lỗi gọi API:', error.response?.data || error.message)
+    } else {
+      console.error('Lỗi không xác định:', error)
+    }
+  } finally {
+    dangTai.value = false
   }
 }
 
-const handleTableChange = (paginationData: any, filtersData: any, sorter: any) => {
-  // Removed console.log
+
+const datLaiBoLoc = () => {
+  boLoc.value = {
+    timKiem: '',
+    gioiTinh: '',
+    phanLoai: '',
+    trangThai: ''
+  }
+  timKiemKhachHang()
 }
 
-const showCreateModal = () => {
-  // Removed console.log
+const xuLyThayDoiBang = (duLieuPhanTrang: any) => {
+  phanTrang.value = {
+    ...phanTrang.value,
+    current: duLieuPhanTrang.current,
+    pageSize: duLieuPhanTrang.pageSize
+  }
+  timKiemKhachHang()
 }
 
-const viewCustomer = (customer: any) => {
-  // Removed console.log
+const moModalTaoMoi = () => {}
+const xemChiTietKhach = (khach: any) => {
+  // Điều hướng sang trang detail theo mã khách hàng
+  router.push(`/detailkhachhang/${khach.code}`)
 }
 
-const editCustomer = (customer: any) => {
-  // Removed console.log
+const chinhSuaKhach = (khach: any) => {
+  router.push(`/updatekhachhang/${khach.code}`)  
 }
 
-const deleteCustomer = (customer: any) => {
-  // TODO: Implement delete customer functionality
+const xoaKhach = (khach: any) => {}
+const xuatExcel = () => {}
+
+const layDanhSachKhachHang = async () => {
+  const res = await axios.get('/api/khach-hang-management/playlist')
+  // Chuyển đổi field thành tên dùng trong bảng
+  danhSachKhachHang.value = res.data.data.map((item: any, index: number) => ({
+    id: item.id,
+    index: index + 1,
+    code: item.maKhachHang,
+    name: item.tenKhachHang,
+    gender: item.gioiTinh ? 'Nam' : 'Nữ',
+    birthday: item.ngaySinh,
+    total_orders: item.tongDon,
+    total_spent: item.tongChiTieu,
+    customer_type: convertLoai(item.phanLoaiText),
+    status: item.trangThaiText === 'Hoạt động' ? 'active' : 'inactive',
+  }))
 }
 
-const exportExcel = () => {
-  // Removed console.log
-}
 
 onMounted(() => {
-  // Removed console.log
+  timKiemKhachHang()
 })
+
 </script>
+
 
 <style scoped>
 .customer-management-page {

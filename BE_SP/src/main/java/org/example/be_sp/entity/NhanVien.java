@@ -90,8 +90,8 @@ public class NhanVien {
     // NOTE: Database 'nhan_vien' table currently has no 'gioi_tinh' column.
     // Mark as @Transient to avoid Hibernate selecting a non-existent column
     // and causing SQLGrammarException (Invalid column name 'gioi_tinh').
-    @Transient
-    private Boolean gioiTinh;
+    @Column(name = "gioi_tinh")
+    private Boolean gioiTinh;  // true = Nam, false = Nữ
 
     @Column(name = "cccd", length = 20)
     private String cccd;

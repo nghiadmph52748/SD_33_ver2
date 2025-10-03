@@ -53,4 +53,5 @@ public class NhanVienResponse {
         this.gioiTinh = c.getGioiTinh();
 
     }
+
 }
