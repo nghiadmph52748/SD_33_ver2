@@ -48,12 +48,12 @@
         <template #title>
           <div class="stat-header">
             <icon-star class="stat-icon primary-icon" />
-            <span>Doanh thu tháng</span>
+            <span>Tổng doanh thu</span>
           </div>
         </template>
         <div class="stat-content">
-          <div class="stat-value">{{ formatCurrency(monthlyRevenue) }}</div>
-          <div class="stat-change positive">+12.5% so với tháng trước</div>
+          <div class="stat-value">{{ formatCurrency(totalRevenue) }}</div>
+          <div class="stat-change positive">Tất cả hóa đơn đã thanh toán</div>
         </div>
       </a-card>
     </div>
@@ -101,6 +101,12 @@
     <a-card title="Danh sách hóa đơn" class="table-card">
       <template #extra>
         <a-space>
+          <a-button @click="testAPI" type="primary">
+            <template #icon>
+              <icon-refresh />
+            </template>
+            Test API
+          </a-button>
           <a-button @click="exportExcel">
             <template #icon>
               <icon-download />
@@ -140,17 +146,17 @@
         @change="handleTableChange"
       >
         <template #status="{ record }">
-          <a-tag :color="getStatusColor(record.status)">
-            {{ getStatusText(record.status) }}
+          <a-tag :color="getStatusColor(record.trangThai ? 'paid' : 'pending')">
+            {{ getStatusText(record.trangThai ? 'paid' : 'pending') }}
           </a-tag>
         </template>
 
         <template #total="{ record }">
-          {{ formatCurrency(record.total) }}
+          {{ formatCurrency(record.tongTienSauGiam || record.tongTien || 0) }}
         </template>
 
         <template #payment_method="{ record }">
-          <span>{{ getPaymentMethodText(record.payment_method) }}</span>
+          <span>{{ record.ngayThanhToan ? 'Đã thanh toán' : 'Chờ thanh toán' }}</span>
         </template>
 
         <template #action="{ record }">
@@ -197,12 +203,12 @@
         <!-- Invoice Header -->
         <div class="invoice-header">
           <div class="invoice-info">
-            <h3>Mã hóa đơn: {{ selectedInvoice.code }}</h3>
-            <p>Ngày tạo: {{ formatDate(selectedInvoice.created_at) }}</p>
+            <h3>Mã hóa đơn: {{ selectedInvoice.id }}</h3>
+            <p>Ngày tạo: {{ formatDate(selectedInvoice.ngayTao) }}</p>
             <p>
               Trạng thái:
-              <a-tag :color="getStatusColor(selectedInvoice.status)">
-                {{ getStatusText(selectedInvoice.status) }}
+              <a-tag :color="getStatusColor(selectedInvoice.trangThai ? 'paid' : 'pending')">
+                {{ getStatusText(selectedInvoice.trangThai ? 'paid' : 'pending') }}
               </a-tag>
             </p>
           </div>
@@ -210,15 +216,15 @@
             <h4>Thông tin khách hàng</h4>
             <p>
               <strong>Tên:</strong>
-              {{ selectedInvoice.customer_name }}
+              {{ selectedInvoice.tenKhachHang }}
             </p>
             <p>
               <strong>SĐT:</strong>
-              {{ selectedInvoice.customer_phone }}
+              {{ selectedInvoice.soDienThoai }}
             </p>
             <p>
               <strong>Địa chỉ:</strong>
-              {{ selectedInvoice.customer_address }}
+              {{ selectedInvoice.diaChi }}
             </p>
           </div>
         </div>
@@ -226,9 +232,9 @@
         <!-- Invoice Items -->
         <div class="invoice-items">
           <h4>Chi tiết sản phẩm</h4>
-          <a-table :columns="itemColumns" :data="selectedInvoice.items" :pagination="false" size="small">
+          <a-table :columns="itemColumns" :data="selectedInvoice.items || []" :pagination="false" size="small">
             <template #subtotal="{ record }">
-              {{ formatCurrency(record.price * record.quantity) }}
+              {{ formatCurrency(record.thanhTien || record.giaBan * record.soLuong) }}
             </template>
           </a-table>
         </div>
@@ -237,16 +243,16 @@
         <div class="invoice-summary">
           <div class="summary-row">
             <span>Tạm tính:</span>
-            <span>{{ formatCurrency(selectedInvoice.subtotal) }}</span>
+            <span>{{ formatCurrency(selectedInvoice.tongTien || 0) }}</span>
           </div>
           <div class="summary-row">
             <span>Giảm giá:</span>
-            <span>-{{ formatCurrency(selectedInvoice.discount) }}</span>
+            <span>-{{ formatCurrency((selectedInvoice.tongTien || 0) - (selectedInvoice.tongTienSauGiam || 0)) }}</span>
           </div>
           <div class="summary-row total">
             <span><strong>Tổng cộng:</strong></span>
             <span>
-              <strong>{{ formatCurrency(selectedInvoice.total) }}</strong>
+              <strong>{{ formatCurrency(selectedInvoice.tongTienSauGiam || selectedInvoice.tongTien || 0) }}</strong>
             </span>
           </div>
         </div>
@@ -256,15 +262,15 @@
           <h4>Thông tin thanh toán</h4>
           <p>
             <strong>Phương thức:</strong>
-            {{ getPaymentMethodText(selectedInvoice.payment_method) }}
+            {{ selectedInvoice.ngayThanhToan ? 'Đã thanh toán' : 'Chờ thanh toán' }}
           </p>
           <p>
             <strong>Người tạo:</strong>
-            {{ selectedInvoice.created_by }}
+            {{ selectedInvoice.tenNhanVien }}
           </p>
-          <p v-if="selectedInvoice.paid_at">
+          <p v-if="selectedInvoice.ngayThanhToan">
             <strong>Thời gian thanh toán:</strong>
-            {{ formatDate(selectedInvoice.paid_at) }}
+            {{ formatDate(selectedInvoice.ngayThanhToan) }}
           </p>
         </div>
       </div>
@@ -274,10 +280,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
-  IconPlus,
   IconFile,
   IconCheckCircle,
   IconClockCircle,
@@ -295,12 +301,13 @@ import {
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 
-// Mock data
-const totalInvoices = ref(1247)
-const todayInvoices = ref(23)
-const paidInvoices = ref(1123)
-const pendingInvoices = ref(89)
-const monthlyRevenue = ref(245000000) // 245 triệu
+// Data from API
+const invoicesList = ref<any[]>([])
+const totalInvoices = ref(0)
+const todayInvoices = ref(0)
+const paidInvoices = ref(0)
+const pendingInvoices = ref(0)
+const totalRevenue = ref(0)
 
 const loading = ref(false)
 const selectedRowKeys = ref([])
@@ -318,7 +325,7 @@ const filters = ref({
 const pagination = ref({
   current: 1,
   pageSize: 10,
-  total: 1247,
+  total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: true,
@@ -328,30 +335,30 @@ const pagination = ref({
 const invoiceColumns = [
   {
     title: 'Mã hóa đơn',
-    dataIndex: 'code',
+    dataIndex: 'id',
     width: 120,
     fixed: 'left',
   },
   {
     title: 'Khách hàng',
-    dataIndex: 'customer_name',
+    dataIndex: 'tenKhachHang',
     width: 150,
   },
   {
     title: 'Ngày tạo',
-    dataIndex: 'created_at',
+    dataIndex: 'ngayTao',
     width: 120,
     sorter: true,
   },
   {
     title: 'Trạng thái',
-    dataIndex: 'status',
+    dataIndex: 'trangThai',
     slotName: 'status',
     width: 120,
   },
   {
     title: 'Tổng tiền',
-    dataIndex: 'total',
+    dataIndex: 'tongTienSauGiam',
     slotName: 'total',
     width: 120,
     align: 'right',
@@ -359,13 +366,13 @@ const invoiceColumns = [
   },
   {
     title: 'Thanh toán',
-    dataIndex: 'payment_method',
+    dataIndex: 'ngayThanhToan',
     slotName: 'payment_method',
     width: 120,
   },
   {
     title: 'Người tạo',
-    dataIndex: 'created_by',
+    dataIndex: 'tenNhanVien',
     width: 120,
   },
   {
@@ -379,16 +386,16 @@ const invoiceColumns = [
 const itemColumns = [
   {
     title: 'Sản phẩm',
-    dataIndex: 'name',
+    dataIndex: 'tenSanPham',
   },
   {
     title: 'Đơn giá',
-    dataIndex: 'price',
+    dataIndex: 'giaBan',
     align: 'right',
   },
   {
     title: 'Số lượng',
-    dataIndex: 'quantity',
+    dataIndex: 'soLuong',
     align: 'center',
   },
   {
@@ -398,75 +405,8 @@ const itemColumns = [
   },
 ]
 
-// Mock invoices data
-const invoices = ref([
-  {
-    id: 1,
-    code: 'HD001247',
-    customer_name: 'Nguyễn Văn A',
-    customer_phone: '0987654321',
-    customer_address: '123 Đường ABC, Quận 1, TP.HCM',
-    created_at: '2024-01-20 14:30:00',
-    status: 'paid',
-    total: 2500000,
-    subtotal: 2500000,
-    discount: 0,
-    payment_method: 'cash',
-    created_by: 'Nguyễn Thị B',
-    paid_at: '2024-01-20 14:35:00',
-    items: [
-      {
-        name: 'Giày sneaker Nike Air Max',
-        price: 2500000,
-        quantity: 1,
-      },
-    ],
-  },
-  {
-    id: 2,
-    code: 'HD001246',
-    customer_name: 'Trần Thị C',
-    customer_phone: '0978123456',
-    customer_address: '456 Đường XYZ, Quận 2, TP.HCM',
-    created_at: '2024-01-20 13:15:00',
-    status: 'paid',
-    total: 3200000,
-    subtotal: 3200000,
-    discount: 0,
-    payment_method: 'card',
-    created_by: 'Lê Văn D',
-    paid_at: '2024-01-20 13:20:00',
-    items: [
-      {
-        name: 'Giày boot Chelsea',
-        price: 3200000,
-        quantity: 1,
-      },
-    ],
-  },
-  {
-    id: 3,
-    code: 'HD001245',
-    customer_name: 'Phạm Văn E',
-    customer_phone: '0967234567',
-    customer_address: '789 Đường DEF, Quận 3, TP.HCM',
-    created_at: '2024-01-20 11:45:00',
-    status: 'pending',
-    total: 1800000,
-    subtotal: 1800000,
-    discount: 0,
-    payment_method: 'transfer',
-    created_by: 'Hoàng Thị F',
-    paid_at: null,
-    items: [
-      {
-        name: 'Giày thể thao Adidas',
-        price: 1800000,
-        quantity: 1,
-      },
-    ],
-  },
-])
+// Computed invoices data
+const invoices = computed(() => invoicesList.value)
 
 // Methods
 const formatCurrency = (amount: number) => {
@@ -476,8 +416,10 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString('vi-VN')
+const formatDate = (dateString: string | Date) => {
+  if (!dateString) return 'N/A'
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  return date.toLocaleString('vi-VN')
 }
 
 const getStatusColor = (status: string) => {
@@ -506,22 +448,76 @@ const getStatusText = (status: string) => {
   }
 }
 
-const getPaymentMethodText = (method: string) => {
-  switch (method) {
-    case 'cash':
-      return 'Tiền mặt'
-    case 'card':
-      return 'Thẻ tín dụng'
-    case 'transfer':
-      return 'Chuyển khoản'
-    default:
-      return method
+// API functions
+const calculateStatistics = () => {
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+  const currentMonth = today.getMonth() + 1
+  const currentYear = today.getFullYear()
+
+  totalInvoices.value = invoicesList.value.length
+
+  // Đếm hóa đơn hôm nay
+  todayInvoices.value = invoicesList.value.filter((invoice) => {
+    const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
+    return invoiceDate.toISOString().split('T')[0] === todayStr
+  }).length
+
+  // Đếm hóa đơn đã thanh toán
+  paidInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThai === true || invoice.ngayThanhToan).length
+
+  // Đếm hóa đơn chờ thanh toán
+  pendingInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThai === false && !invoice.ngayThanhToan).length
+
+  // Tính tổng doanh thu từ tất cả hóa đơn đã thanh toán
+  const paidInvoicesAll = invoicesList.value.filter((invoice) => {
+    // Chỉ tính hóa đơn đã thanh toán (trangThai = true hoặc có ngayThanhToan)
+    return invoice.trangThai === true || invoice.ngayThanhToan
+  })
+  
+  console.log('Tổng số hóa đơn đã thanh toán:', paidInvoicesAll.length)
+  console.log('Chi tiết hóa đơn đã thanh toán:', paidInvoicesAll.map(inv => ({
+    id: inv.id,
+    trangThai: inv.trangThai,
+    ngayThanhToan: inv.ngayThanhToan,
+    ngayTao: inv.ngayTao,
+    tongTienSauGiam: inv.tongTienSauGiam,
+    tongTien: inv.tongTien
+  })))
+  
+  totalRevenue.value = paidInvoicesAll.reduce((sum, invoice) => {
+    const amount = Number(invoice.tongTienSauGiam || invoice.tongTien || 0)
+    console.log(`Hóa đơn ${invoice.id}: ${amount}`)
+    return sum + amount
+  }, 0)
+  
+  console.log('Tổng doanh thu:', totalRevenue.value)
+}
+
+const fetchInvoices = async () => {
+  try {
+    loading.value = true
+    console.log('Đang gọi API: /api/hoa-don-management/playlist')
+    const response = await axios.get('/api/hoa-don-management/playlist')
+    console.log('Response từ backend:', response)
+    
+    if (response.success) {
+      invoicesList.value = response.data || []
+      console.log('Dữ liệu hóa đơn:', invoicesList.value)
+      calculateStatistics()
+      pagination.value.total = invoicesList.value.length
+    } else {
+      console.error('API trả về lỗi:', response.message)
+    }
+  } catch (error) {
+    console.error('Lỗi khi gọi API hóa đơn:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 const searchInvoices = () => {
-  // Removed console.log
-  // Implement search logic
+  fetchInvoices()
 }
 
 const resetFilters = () => {
@@ -530,18 +526,21 @@ const resetFilters = () => {
     status: 'all',
     dateRange: [],
   }
+  fetchInvoices()
 }
 
-const handleDateChange = (dates: any) => {
-  // Removed console.log
+const handleDateChange = () => {
+  fetchInvoices()
 }
 
-const handleTableChange = (paginationData: any, filtersData: any, sorter: any) => {
-  // Removed console.log
+const handleTableChange = (paginationData: any) => {
+  pagination.value.current = paginationData.current
+  pagination.value.pageSize = paginationData.pageSize
+  fetchInvoices()
 }
 
 const onSelectChange = (selectedKeys: any) => {
-  // Removed console.log
+  selectedRowKeys.value = selectedKeys
 }
 
 const viewInvoice = (invoice: any) => {
@@ -549,43 +548,71 @@ const viewInvoice = (invoice: any) => {
   detailModalVisible.value = true
 }
 
-const printInvoice = (invoice: any) => {
-  // Removed console.log
+const printInvoice = () => {
   // Implement print logic
 }
 
-const editInvoice = (invoice: any) => {
-  // Removed console.log
+const editInvoice = () => {
   // Implement edit logic
 }
 
-const cancelInvoice = (invoice: any) => {
-  // Removed console.log
+const cancelInvoice = () => {
   // Implement cancel logic
 }
 
-const showCreateModal = () => {
-  // Removed console.log
-  // Implement create logic
+const testAPI = async () => {
+  try {
+    console.log('Testing API connection...')
+    
+    // Test health check
+    const healthResponse = await fetch('http://localhost:8080/api/public/health')
+    const healthData = await healthResponse.json()
+    console.log('Health check:', healthData)
+    
+    // Test database connection
+    const dbResponse = await fetch('http://localhost:8080/api/test/database')
+    const dbData = await dbResponse.json()
+    console.log('Database test:', dbData)
+    
+    // Test invoice API
+    const invoiceResponse = await fetch('http://localhost:8080/api/test/invoices')
+    const invoiceData = await invoiceResponse.json()
+    console.log('Invoice API:', invoiceData)
+    
+    // Test product API
+    const productResponse = await fetch('http://localhost:8080/api/test/products')
+    const productData = await productResponse.json()
+    console.log('Product API:', productData)
+    
+    // Test customer API
+    const customerResponse = await fetch('http://localhost:8080/api/test/customers')
+    const customerData = await customerResponse.json()
+    console.log('Customer API:', customerData)
+    
+    // Refresh data
+    await fetchInvoices()
+    
+    alert('API test completed! Check console for details.')
+  } catch (error) {
+    console.error('API Test Error:', error)
+    alert('API test failed! Check console for details.')
+  }
 }
 
 const exportExcel = () => {
-  // Removed console.log
   // Implement export logic
 }
 
 const printSelected = () => {
-  // Removed console.log
   // Implement batch print logic
 }
 
 const cancelSelected = () => {
-  // Removed console.log
   // Implement batch cancel logic
 }
 
 onMounted(() => {
-  // Page mounted
+  fetchInvoices()
 })
 </script>
 

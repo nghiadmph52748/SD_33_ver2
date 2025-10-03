@@ -32,8 +32,6 @@ export default {
   'Chỉnh sửa biến thể': 'Chỉnh sửa biến thể',
   'menu.thong-ke': 'Thống kê',
   'menu.thong-ke.chung': 'Thống kê chung',
-  'menu.thong-ke.kho-hang': 'Thống kê kho hàng',
-  'menu.thong-ke.doanh-thu': 'Thống kê doanh thu',
   'menu.ban-hang': 'Bán hàng',
   'menu.ban-hang.index': 'Bán hàng',
   'menu.quan-ly-hoa-don': 'Quản lý hoá đơn',

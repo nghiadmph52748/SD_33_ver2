@@ -24,26 +24,6 @@ const THONG_KE: AppRouteRecordRaw = {
         roles: ['*'],
       },
     },
-    {
-      path: 'kho-hang',
-      name: 'ThongKeKhoHang',
-      component: () => import('@/views/main-view/thong-ke/kho-hang/thong-ke-kho-hang.vue'),
-      meta: {
-        locale: 'menu.thong-ke.kho-hang',
-        requiresAuth: true,
-        roles: ['*'],
-      },
-    },
-    {
-      path: 'doanh-thu',
-      name: 'ThongKeDoanhThu',
-      component: () => import('@/views/main-view/thong-ke/doanh-thu/thong-ke-doanh-thu.vue'),
-      meta: {
-        locale: 'menu.thong-ke.doanh-thu',
-        requiresAuth: true,
-        roles: ['*'],
-      },
-    },
   ],
 }
 
