@@ -82,7 +82,11 @@
               </a-select>
             </template>
             <div class="chart-container">
-              <a-empty description="Biểu đồ doanh thu sẽ hiển thị ở đây" />
+              <v-chart
+                class="chart"
+                :option="revenueChartOption"
+                autoresize
+              />
             </div>
           </a-card>
         </a-col>
@@ -96,7 +100,11 @@
               </a-select>
             </template>
             <div class="chart-container">
-              <a-empty description="Top sản phẩm sẽ hiển thị ở đây" />
+              <v-chart
+                class="chart"
+                :option="topProductsChartOption"
+                autoresize
+              />
             </div>
           </a-card>
         </a-col>
@@ -106,7 +114,11 @@
         <a-col :span="12">
           <a-card title="Phân loại khách hàng" class="chart-card">
             <div class="chart-container">
-              <a-empty description="Phân loại khách hàng sẽ hiển thị ở đây" />
+              <v-chart
+                class="chart"
+                :option="customerChartOption"
+                autoresize
+              />
             </div>
           </a-card>
         </a-col>
@@ -151,6 +163,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart, BarChart, PieChart } from 'echarts/charts'
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+} from 'echarts/components'
+import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
@@ -165,6 +187,18 @@ import {
   IconCheckCircle,
 } from '@arco-design/web-vue/es/icon'
 
+// ECharts setup
+use([
+  CanvasRenderer,
+  LineChart,
+  BarChart,
+  PieChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+])
+
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 
@@ -177,12 +211,177 @@ const totalCustomers = ref(3200)
 const revenuePeriod = ref('6months')
 const topProductsPeriod = ref('month')
 
+// Chart data
+const revenueData = ref([
+  { month: 'Tháng 1', revenue: 45000000 },
+  { month: 'Tháng 2', revenue: 52000000 },
+  { month: 'Tháng 3', revenue: 48000000 },
+  { month: 'Tháng 4', revenue: 61000000 },
+  { month: 'Tháng 5', revenue: 58000000 },
+  { month: 'Tháng 6', revenue: 72000000 },
+])
+
+const topProductsData = ref([
+  { name: 'Giày sneaker Nike', value: 145, revenue: 43500000 },
+  { name: 'Giày boot Chelsea', value: 98, revenue: 29400000 },
+  { name: 'Giày cao gót Jimmy Choo', value: 76, revenue: 30400000 },
+  { name: 'Giày thể thao Adidas', value: 89, revenue: 26700000 },
+  { name: 'Giày sandal Birkenstock', value: 67, revenue: 13400000 },
+])
+
+const customerData = ref([
+  { name: 'Khách hàng VIP', value: 15 },
+  { name: 'Khách hàng thường', value: 45 },
+  { name: 'Khách hàng mới', value: 25 },
+  { name: 'Khách hàng tiềm năng', value: 15 },
+])
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
 }
+
+// Chart options
+const revenueChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    formatter: (params: any) => {
+      const data = params[0]
+      return `${data.axisValue}<br/>${data.seriesName}: ${formatCurrency(data.value)}`
+    },
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '3%',
+    containLabel: true,
+  },
+  xAxis: {
+    type: 'category',
+    data: revenueData.value.map(item => item.month),
+    axisLabel: {
+      rotate: 45,
+    },
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: {
+      formatter: (value: number) => `${(value / 1000000).toFixed(0)}M`,
+    },
+  },
+  series: [
+    {
+      name: 'Doanh thu',
+      type: 'line',
+      data: revenueData.value.map(item => item.revenue),
+      smooth: true,
+      lineStyle: {
+        color: '#1890ff',
+        width: 3,
+      },
+      itemStyle: {
+        color: '#1890ff',
+      },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+            { offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
+          ],
+        },
+      },
+    },
+  ],
+}))
+
+const topProductsChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: {
+      type: 'shadow',
+    },
+    formatter: (params: any) => {
+      const data = params[0]
+      const product = topProductsData.value[data.dataIndex]
+      return `${data.axisValue}<br/>Số lượng: ${data.value}<br/>Doanh thu: ${formatCurrency(product.revenue)}`
+    },
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '3%',
+    containLabel: true,
+  },
+  xAxis: {
+    type: 'category',
+    data: topProductsData.value.map(item => item.name),
+    axisLabel: {
+      rotate: 45,
+      interval: 0,
+    },
+  },
+  yAxis: {
+    type: 'value',
+    name: 'Số lượng bán',
+  },
+  series: [
+    {
+      name: 'Số lượng bán',
+      type: 'bar',
+      data: topProductsData.value.map(item => item.value),
+      itemStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: '#52c41a' },
+            { offset: 1, color: '#73d13d' },
+          ],
+        },
+      },
+    },
+  ],
+}))
+
+const customerChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'item',
+    formatter: '{a} <br/>{b}: {c} ({d}%)',
+  },
+  legend: {
+    orient: 'vertical',
+    left: 'left',
+  },
+  series: [
+    {
+      name: 'Phân loại khách hàng',
+      type: 'pie',
+      radius: '50%',
+      center: ['50%', '50%'],
+      data: customerData.value,
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)',
+        },
+      },
+      label: {
+        formatter: '{b}: {d}%',
+      },
+    },
+  ],
+}))
 
 onMounted(() => {
   // Trong thực tế sẽ gọi API để fetch data
@@ -275,6 +474,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
 }
 
 .activity-item {
