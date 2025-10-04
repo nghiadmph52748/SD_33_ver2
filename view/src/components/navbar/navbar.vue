@@ -32,7 +32,7 @@
       <li>
         <a-tooltip :content="$t('settings.navbar.alerts')">
           <div class="message-box-trigger">
-            <a-badge :count="9" dot>
+            <a-badge :count="notificationStore.totalUnread" :dot="notificationStore.totalUnread > 0">
               <a-button class="nav-btn" type="outline" :shape="'circle'" @click="setPopoverVisible">
                 <icon-notification />
               </a-button>
@@ -92,6 +92,7 @@
 <script lang="ts" setup>
 import useUser from '@/hooks/user'
 import { useAppStore, useUserStore } from '@/store'
+import useNotificationStore from '@/store/modules/notification'
 import { Message } from '@arco-design/web-vue'
 import { useDark, useFullscreen, useToggle } from '@vueuse/core'
 import { computed, inject, ref } from 'vue'
@@ -102,6 +103,7 @@ const { t } = useI18n()
 
 const appStore = useAppStore()
 const userStore = useUserStore()
+const notificationStore = useNotificationStore()
 const { logout } = useUser()
 const { isFullscreen, toggle: toggleFullScreen } = useFullscreen()
 const avatar = computed(() => {

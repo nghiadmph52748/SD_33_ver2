@@ -20,9 +20,9 @@
 </template>
 
 <script lang="ts" setup>
-import { MessageListType, MessageRecord, queryMessageList, setMessageStatus } from '@/api/message'
-import useLoading from '@/hooks/loading'
-import { computed, reactive, ref, toRefs } from 'vue'
+import { MessageListType } from '@/api/message'
+import useNotificationStore from '@/store/modules/notification'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import List from './list.vue'
 
@@ -31,17 +31,11 @@ interface TabItem {
   title: string
   avatar?: string
 }
-const { loading, setLoading } = useLoading(true)
+
 const messageType = ref('message')
 const { t } = useI18n()
-const messageData = reactive<{
-  renderList: MessageRecord[]
-  messageList: MessageRecord[]
-}>({
-  renderList: [],
-  messageList: [],
-})
-toRefs(messageData)
+const notificationStore = useNotificationStore()
+
 const tabList: TabItem[] = [
   {
     key: 'message',
@@ -56,43 +50,34 @@ const tabList: TabItem[] = [
     title: t('messageBox.tab.title.todo'),
   },
 ]
-async function fetchSourceData() {
-  setLoading(true)
-  try {
-    const { data } = await queryMessageList()
-    messageData.messageList = data
-  } catch (err) {
-    // you can report use errorHandler or other
-  } finally {
-    setLoading(false)
-  }
-}
-async function readMessage(data: MessageListType) {
-  const ids = data.map((item) => item.id)
-  await setMessageStatus({ ids })
-  fetchSourceData()
-}
-const renderList = computed(() => {
-  return messageData.messageList.filter((item) => messageType.value === item.type)
-})
+
+// Computed values from store
+const loading = computed(() => notificationStore.loading)
+const renderList = computed(() => notificationStore.messagesByType(messageType.value))
 const unreadCount = computed(() => {
   return renderList.value.filter((item) => !item.status).length
 })
-const getUnreadList = (type: string) => {
-  const list = messageData.messageList.filter((item) => item.type === type && !item.status)
-  return list
-}
+
 const formatUnreadLength = (type: string) => {
-  const list = getUnreadList(type)
-  return list.length ? `(${list.length})` : ``
+  const count = notificationStore.unreadCountByType(type)
+  return count > 0 ? `(${count})` : ''
 }
-const handleItemClick = (items: MessageListType) => {
-  if (renderList.value.length) readMessage([...items])
+
+const handleItemClick = async (items: MessageListType) => {
+  if (items.length > 0) {
+    const ids = items.map((item) => item.id)
+    await notificationStore.markAsRead(ids)
+  }
 }
+
 const emptyList = () => {
-  messageData.messageList = []
+  notificationStore.clearAll()
 }
-fetchSourceData()
+
+// Fetch notifications on mount
+onMounted(() => {
+  notificationStore.fetchNotifications()
+})
 </script>
 
 <style scoped lang="less">
