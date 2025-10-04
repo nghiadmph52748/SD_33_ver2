@@ -161,19 +161,19 @@ public class PhieuGiamGiaService {
     }
 
     public void delete(Integer id) {
-        PhieuGiamGia phieuGiamGia = phieuGiamGiaRepository.findById(id)
-                .orElseThrow(() -> new ApiException("PhieuGiamGia not found", "404"));
+        // Verify the entity exists before deleting
+        if (!phieuGiamGiaRepository.existsById(id)) {
+            throw new ApiException("PhieuGiamGia not found", "404");
+        }
 
-        // Soft delete the coupon
-        phieuGiamGia.setDeleted(true);
-        phieuGiamGiaRepository.save(phieuGiamGia);
-
-        // Also soft delete associated personal coupons
+        // Hard delete associated personal coupons first (to maintain referential integrity)
         List<PhieuGiamGiaCaNhan> personalCoupons = phieuGiamGiaCaNhanRepository.findByIdPhieuGiamGiaId(id);
         for (PhieuGiamGiaCaNhan pggcn : personalCoupons) {
-            pggcn.setDeleted(true);
-            phieuGiamGiaCaNhanRepository.save(pggcn);
+            phieuGiamGiaCaNhanRepository.deleteById(pggcn.getId());
         }
+
+        // Hard delete the coupon from database
+        phieuGiamGiaRepository.deleteById(id);
     }
 
     public List<PhieuGiamGiaResponse> getActiveCouponsForCustomer(Integer idKhachHang) {

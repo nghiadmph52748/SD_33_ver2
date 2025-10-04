@@ -27,8 +27,11 @@ public class DotGiamGiaService extends GenericCrudService<DotGiamGia, Integer, D
     }
 
     public void delete(Integer id) {
-        DotGiamGia e = repository.findById(id).orElseThrow(() -> new ApiException("DotGiamGia not found", "404"));
-        e.setDeleted(true);
-        repository.save(e);
+        // Verify the entity exists before deleting
+        if (!repository.existsById(id)) {
+            throw new ApiException("DotGiamGia not found", "404");
+        }
+        // Hard delete from database
+        repository.deleteById(id);
     }
 }

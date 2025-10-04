@@ -172,6 +172,12 @@
             style="width: 100%"
           />
         </a-form-item>
+        <a-form-item field="active" label="Trạng thái">
+          <a-switch v-model="promotionEditForm.active">
+            <template #checked>Hoạt động</template>
+            <template #unchecked>Tạm dừng</template>
+          </a-switch>
+        </a-form-item>
       </a-form>
     </a-modal>
 

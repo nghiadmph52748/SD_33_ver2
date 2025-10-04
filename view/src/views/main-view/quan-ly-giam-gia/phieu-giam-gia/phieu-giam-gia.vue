@@ -311,6 +311,13 @@
         <a-form-item field="description" label="Mô tả">
           <a-textarea v-model="couponEditForm.description" allow-clear :max-length="500" auto-size />
         </a-form-item>
+
+        <a-form-item field="active" label="Trạng thái">
+          <a-switch v-model="couponEditForm.active">
+            <template #checked>Hoạt động</template>
+            <template #unchecked>Tạm dừng</template>
+          </a-switch>
+        </a-form-item>
       </a-form>
     </a-modal>
 
