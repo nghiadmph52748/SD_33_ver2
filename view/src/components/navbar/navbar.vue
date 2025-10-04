@@ -20,26 +20,6 @@
         </a-tooltip>
       </li>
       <li>
-        <a-tooltip :content="$t('settings.language')">
-          <a-button class="nav-btn" type="outline" :shape="'circle'" @click="setDropDownVisible">
-            <template #icon>
-              <icon-language />
-            </template>
-          </a-button>
-        </a-tooltip>
-        <a-dropdown trigger="click" @select="changeLocale as any">
-          <div ref="triggerBtn" class="trigger-btn"></div>
-          <template #content>
-            <a-doption v-for="item in locales" :key="item.value" :value="item.value">
-              <template #icon>
-                <icon-check v-show="item.value === currentLocale" />
-              </template>
-              {{ item.label }}
-            </a-doption>
-          </template>
-        </a-dropdown>
-      </li>
-      <li>
         <a-tooltip :content="theme === 'light' ? $t('settings.navbar.theme.toDark') : $t('settings.navbar.theme.toLight')">
           <a-button class="nav-btn" type="outline" :shape="'circle'" @click="handleToggleTheme">
             <template #icon>
@@ -110,9 +90,7 @@
 </template>
 
 <script lang="ts" setup>
-import useLocale from '@/hooks/locale'
 import useUser from '@/hooks/user'
-import { LOCALE_OPTIONS } from '@/locale'
 import { useAppStore, useUserStore } from '@/store'
 import { Message } from '@arco-design/web-vue'
 import { useDark, useFullscreen, useToggle } from '@vueuse/core'
@@ -125,9 +103,7 @@ const { t } = useI18n()
 const appStore = useAppStore()
 const userStore = useUserStore()
 const { logout } = useUser()
-const { changeLocale, currentLocale }: any = useLocale()
 const { isFullscreen, toggle: toggleFullScreen } = useFullscreen()
-const locales = [...LOCALE_OPTIONS]
 const avatar = computed(() => {
   return userStore.avatar
 })
@@ -154,7 +130,6 @@ const setVisible = () => {
   appStore.updateSettings({ globalSettings: true })
 }
 const refBtn = ref()
-const triggerBtn = ref()
 const setPopoverVisible = () => {
   const event = new MouseEvent('click', {
     view: window,
@@ -165,14 +140,6 @@ const setPopoverVisible = () => {
 }
 const handleLogout = () => {
   logout()
-}
-const setDropDownVisible = () => {
-  const event = new MouseEvent('click', {
-    view: window,
-    bubbles: true,
-    cancelable: true,
-  })
-  triggerBtn.value.dispatchEvent(event)
 }
 const switchRoles = async () => {
   const res = await userStore.switchRoles()
