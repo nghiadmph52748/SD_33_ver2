@@ -67,9 +67,6 @@
           </a-form-item>
 
           <a-form-item label="Địa chỉ cụ thể" name="diaChiCuThe">
-            <a-input v-model="formData.diaChiCuThe" placeholder="Nhập địa chỉ cụ thể" />
-          </a-form-item>
-          <a-form-item label="Địa chỉ cụ thể" name="diaChiCuThe">
             <a-input v-model="formData.diaChiCuThe" placeholder="Nhập địa chỉ cụ thể (số nhà, đường...)" />
           </a-form-item>
           <!-- <a-form-item label="Giới tính" name="gioiTinh">
@@ -92,7 +89,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { Modal } from 'ant-design-vue'
+import { Modal, Message } from '@arco-design/web-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -179,7 +176,7 @@ onMounted(async () => {
     const res = await axios.get(`http://localhost:8080/api/nhan-vien-management/detail/${id}`)
     formData.value = res.data
   } catch (err) {
-    console.error('Lỗi khi load dữ liệu:', err)
+    Message.error('Lỗi khi tải dữ liệu nhân viên')
   }
 })
 
@@ -195,14 +192,13 @@ const handleSubmit = () => {
         loading.value = true
         const res = await axios.put(`http://localhost:8080/api/nhan-vien-management/update/${formData.value.id}`, formData.value)
         if (res.data?.success) {
-          alert('✅ Cập nhật thành công!')
+          Message.success('Cập nhật thành công!')
           router.push('/khach-hang-nhan-su/nhan-vien')
         } else {
-          alert(`❌ Cập nhật thất bại: ${res.data?.message || 'Không có thông báo lỗi từ server'}`)
+          Message.error(`Cập nhật thất bại: ${res.data?.message || 'Không có thông báo lỗi từ server'}`)
         }
       } catch (err) {
-        console.error('❌ Lỗi khi gửi:', err)
-        alert('Form chưa hợp lệ hoặc có lỗi xảy ra. Vui lòng kiểm tra lại.')
+        Message.error('Form chưa hợp lệ hoặc có lỗi xảy ra. Vui lòng kiểm tra lại.')
       } finally {
         loading.value = false
       }

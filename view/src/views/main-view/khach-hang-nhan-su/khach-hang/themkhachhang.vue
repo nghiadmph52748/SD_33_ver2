@@ -73,7 +73,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { Modal } from 'ant-design-vue'
+import { Modal, Message } from '@arco-design/web-vue'
 
 const router = useRouter()
 
@@ -160,7 +160,7 @@ const handleSubmit = async () => {
     await formRef.value.validate()
 
     if (!formData.value.email || !formData.value.email.includes('@')) {
-      alert('Email không hợp lệ để tạo tài khoản.')
+      Message.error('Email không hợp lệ để tạo tài khoản.')
       return
     }
 
@@ -188,10 +188,10 @@ const handleSubmit = async () => {
     }
 
     await axios.post('http://localhost:8080/api/khach-hang-management/add', payload)
+    Message.success('Thêm khách hàng thành công!')
     router.push('/khach-hang-nhan-su/khach-hang')
   } catch (error) {
-    alert('Thêm khách hàng thất bại. Vui lòng kiểm tra lại thông tin.')
-    console.error(error)
+    Message.error('Thêm khách hàng thất bại. Vui lòng kiểm tra lại thông tin.')
   }
 }
 const showConfirm = () => {
@@ -205,7 +205,7 @@ const showConfirm = () => {
       return handleSubmit() // trả về promise để Modal biết khi nào kết thúc
     },
     onCancel() {
-      console.log('Đã hủy lưu')
+      // User cancelled
     },
   })
 }
