@@ -14,17 +14,6 @@
           </a-col>
 
           <a-col :span="8">
-            <a-form-item label="Phân loại">
-              <a-select v-model="boLoc.phanLoai" placeholder="Chọn phân loại" allow-clear @change="timKiemKhachHang">
-                <a-option value="">Tất cả</a-option>
-                <a-option value="vip">VIP</a-option>
-                <a-option value="regular">Thường xuyên</a-option>
-                <a-option value="new">Mới</a-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="8">
             <a-form-item label="Giới tính">
               <a-radio-group v-model="boLoc.gioiTinh" type="button" @change="timKiemKhachHang">
                 <a-radio value="">Tất cả</a-radio>
@@ -36,7 +25,7 @@
         </a-row>
 
         <a-row :gutter="12">
-          <a-col :span="24">
+          <a-col :span="8">
             <a-form-item label="Trạng thái">
               <a-radio-group v-model="boLoc.trangThai" type="button" @change="timKiemKhachHang">
                 <a-radio value="">Tất cả</a-radio>
@@ -82,41 +71,33 @@
         :scroll="{ x: 1200 }"
         @change="xuLyThayDoiBang"
       >
-        <template #customer_type="{ record }">
-          <a-tag :color="mauPhanLoai(record.customer_type)">
-            {{ tenPhanLoai(record.customer_type) }}
-          </a-tag>
-        </template>
+        
 
         <template #total_orders="{ record }">
           <span>{{ record.total_orders }}</span>
         </template>
 
-        <template #total_spent="{ record }">
-          {{ dinhDangTien(record.total_spent) }}
-        </template>
+        
 
         <template #status="{ record }">
           <a-tag :color="record.status === 'active' ? 'green' : 'orange'">
             {{ record.status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
+       <template #diaChi="{ record }">
+          {{ [record.diaChiCuThe, record.phuong, record.quan, record.thanhPho].filter(Boolean).join(', ') }}
+        </template>
 
         <template #action="{ record }">
           <a-space>
-            <a-button type="text" @click="xemChiTietKhach(record)">
+            <!-- <a-button type="text" @click="xemChiTietKhach(record)">
               <template #icon>
                 <icon-eye />
               </template>
-            </a-button>
+            </a-button> -->
             <a-button type="text" @click="chinhSuaKhach(record)">
               <template #icon>
                 <icon-edit />
-              </template>
-            </a-button>
-            <a-button type="text" danger @click="xoaKhach(record)">
-              <template #icon>
-                <icon-delete />
               </template>
             </a-button>
           </a-space>
@@ -142,25 +123,16 @@ import {
   IconDelete
 } from '@arco-design/web-vue/es/icon'
 // ✅ Di chuyển lên đầu file <script>
-const convertLoai = (text: string) => {
-  switch (text?.toLowerCase()) {
-    case 'vip':
-      return 'vip';
-    case 'thường xuyên':
-      return 'regular';
-    case 'mới':
-      return 'new';
-    case 'không hoạt động':
-      return 'inactive';
-    default:
-      return 'inactive';
-  }
-};
+
 const router = useRouter();
 
 const chuyenTrangTaoMoi = () => {
   router.push("/themkhachhang"); // ✅ thêm chữ "h"
 };
+const chinhSuaKhach = (khach: any) => {
+  console.log('ID cần sửa:', khach.id)
+  router.push(`/updatekhachhang/${khach.id}`)
+}
 
 const { breadcrumbItems } = useBreadcrumb()
 
@@ -181,76 +153,90 @@ const phanTrang = ref({
 const cotBang = [
   { title: 'STT', dataIndex: 'index', width: 40, align: 'center' },
   { title: 'Mã', dataIndex: 'code', width: 100 },
-  { title: 'Tên', dataIndex: 'name', width: 150 },
-  { title: 'Giới tính', dataIndex: 'gender', width: 80, align: 'center' },
+  { title: 'Tên', dataIndex: 'name', width: 100 },
   { title: 'Ngày sinh', dataIndex: 'birthday', width: 120, align: 'center' },
-  { title: 'Tổng đơn', dataIndex: 'total_orders', slotName: 'total_orders', width: 100, align: 'center' },
-  { title: 'Tổng chi tiêu', dataIndex: 'total_spent', slotName: 'total_spent', width: 130, align: 'right' },
-  { title: 'Phân loại', dataIndex: 'customer_type', slotName: 'customer_type', width: 120, align: 'center' },
+  { title: 'Giới tính', dataIndex: 'gender', width: 80, align: 'center' },
+   { title: 'Địa chỉ', slotName: 'diaChi', width: 250 },
+  { title: 'Email', dataIndex: 'email', width: 150, align: 'center' },
+  { title: 'SDT', dataIndex: 'soDienThoai', width: 120, align: 'center' },
   { title: 'Trạng thái', dataIndex: 'status', slotName: 'status', width: 120, align: 'center' },
-  { title: 'Thao tác', slotName: 'action', width: 150, fixed: 'right' }
+  { title: 'Thao tác', slotName: 'action', width: 80, fixed: 'right' }
 ]
+
 interface KhachHang {
   index: number
   code: string
   name: string
   gender: string
   birthday: string
-  total_orders: number
-  total_spent: number
-  customer_type: string
+  total_orders?: number
+  total_spent?: number
+  customer_type?: string
   status: string
+  email: string 
+  soDienThoai: string
+  thanhPho: string
+  quan: string
+  phuong: string
+  diaChiCuThe: string
 }
+
 
 
 const danhSachKhachHang = ref<KhachHang[]>([])
 
-const dinhDangTien = (soTien: number) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND'
-  }).format(soTien)
-}
-
-const mauPhanLoai = (loai: string) => {
-  switch (loai) {
-    case 'vip': return 'gold'
-    case 'regular': return 'blue'
-    case 'new': return 'green'
-    case 'inactive': return 'red'
-    default: return 'default'
-  }
-}
-
-const tenPhanLoai = (loai: string) => {
-  switch (loai) {
-    case 'vip': return 'VIP'
-    case 'regular': return 'Thường xuyên'
-    case 'new': return 'Mới'
-    case 'inactive': return 'Không hoạt động'
-    default: return loai
-  }
-}
 
 
 const timKiemKhachHang = async () => {
   try {
     dangTai.value = true
     const res = await axios.get('/api/khach-hang-management/playlist')
-    console.log('[DEBUG] Response data:', res.data)
-
     if (Array.isArray(res.data)) {
-      danhSachKhachHang.value = res.data.map((item: any, index: number) => ({
-        index: index + 1,
-        code: item.maKhachHang,
-        name: item.tenKhachHang,
-        gender: item.gioiTinh ? 'Nam' : 'Nữ',
-        birthday: item.ngaySinh,
-        total_orders: item.tongDon,
-        total_spent: item.tongChiTieu,
-        customer_type: convertLoai(item.phanLoaiText),
-        status: item.trangThaiText === 'Hoạt động' ? 'active' : 'inactive',
-      }))
+      let filtered = res.data
+
+      // Filter theo tìm kiếm
+      if (boLoc.value.timKiem.trim() !== '') {
+        const search = boLoc.value.timKiem.toLowerCase()
+        filtered = filtered.filter(item => 
+          (item.maKhachHang?.toLowerCase().includes(search)) ||
+          (item.tenKhachHang?.toLowerCase().includes(search)) ||
+          (item.soDienThoai?.toLowerCase().includes(search)) ||
+          (item.email?.toLowerCase().includes(search))
+        )
+      }
+
+      // Filter theo giới tính
+      if (boLoc.value.gioiTinh !== '') {
+        filtered = filtered.filter(item => 
+          (item.gioiTinh ? 'Nam' : 'Nữ') === boLoc.value.gioiTinh
+        )
+      }
+
+      // Filter theo trạng thái
+      if (boLoc.value.trangThai !== '') {
+        filtered = filtered.filter(item =>
+          ((item.trangThaiText && item.trangThaiText.toLowerCase() === 'hoạt động') ? 'active' : 'inactive') === boLoc.value.trangThai
+        )
+      }
+
+      danhSachKhachHang.value = filtered.map((item: any, index: number) => {
+        const diaChi = item.listDiaChi?.[0] || {}
+        return {
+          id: item.id,
+          index: index + 1,
+          code: item.maKhachHang,
+          name: item.tenKhachHang,
+          gender: item.gioiTinh ? 'Nam' : 'Nữ',
+          birthday: item.ngaySinh,
+          thanhPho: diaChi.thanhPho || '',
+          phuong: diaChi.phuong || '',
+          quan: diaChi.quan || '',
+          diaChiCuThe: diaChi.diaChiCuThe || '',
+          email: item.email,
+          soDienThoai: item.soDienThoai,
+          status: (item.trangThaiText && item.trangThaiText.toLowerCase() === 'hoạt động') ? 'active' : 'inactive',
+        }
+      })
       phanTrang.value.total = danhSachKhachHang.value.length
     } else {
       danhSachKhachHang.value = []
@@ -267,6 +253,7 @@ const timKiemKhachHang = async () => {
     dangTai.value = false
   }
 }
+
 
 
 const datLaiBoLoc = () => {
@@ -291,32 +278,13 @@ const xuLyThayDoiBang = (duLieuPhanTrang: any) => {
 const moModalTaoMoi = () => {}
 const xemChiTietKhach = (khach: any) => {
   // Điều hướng sang trang detail theo mã khách hàng
-  router.push(`/detailkhachhang/${khach.code}`)
+  router.push(`/detailkhachhang/${khach.id}`)
 }
 
-const chinhSuaKhach = (khach: any) => {
-  router.push(`/updatekhachhang/${khach.code}`)  
-}
+
 
 const xoaKhach = (khach: any) => {}
 const xuatExcel = () => {}
-
-const layDanhSachKhachHang = async () => {
-  const res = await axios.get('/api/khach-hang-management/playlist')
-  // Chuyển đổi field thành tên dùng trong bảng
-  danhSachKhachHang.value = res.data.data.map((item: any, index: number) => ({
-    id: item.id,
-    index: index + 1,
-    code: item.maKhachHang,
-    name: item.tenKhachHang,
-    gender: item.gioiTinh ? 'Nam' : 'Nữ',
-    birthday: item.ngaySinh,
-    total_orders: item.tongDon,
-    total_spent: item.tongChiTieu,
-    customer_type: convertLoai(item.phanLoaiText),
-    status: item.trangThaiText === 'Hoạt động' ? 'active' : 'inactive',
-  }))
-}
 
 
 onMounted(() => {

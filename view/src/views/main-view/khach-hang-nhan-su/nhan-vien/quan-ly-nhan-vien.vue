@@ -19,7 +19,6 @@
                 <a-option value="">Tất cả</a-option>
                 <a-option value="manager">Quản lý</a-option>
                 <a-option value="staff">Nhân viên</a-option>
-                <a-option value="intern">Thực tập</a-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -87,7 +86,16 @@
             {{ getPositionText(record.position) }}
           </a-tag>
         </template>
-
+          <template #anhNhanVien="{ record }">
+            <img
+              :src="record.anhNhanVien || '/images/default-avatar.png'"
+              alt="Ảnh nhân viên"
+              style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"
+            />
+          </template>
+        <template #diaChi="{ record }">
+          {{ [record.diaChi, record.phuong, record.quan, record.thanhPho].filter(Boolean).join(', ') }}
+        </template>
         <template #salary="{ record }">
           {{ formatCurrency(record.salary) }}
         </template>
@@ -105,19 +113,9 @@
 
         <template #action="{ record }">
           <a-space>
-            <a-button type="text" @click="viewDetail(record)">
-              <template #icon>
-                <icon-eye />
-              </template>
-            </a-button>
             <a-button type="text" @click="goToEdit(record)">
               <template #icon>
                 <icon-edit />
-              </template>
-            </a-button>
-            <a-button type="text" danger @click="deleteStaff(record)">
-              <template #icon>
-                <icon-delete />
               </template>
             </a-button>
           </a-space>
@@ -176,6 +174,7 @@ const handleTableChange = (paginationData: any, filtersData: any, sorter: any) =
   // Removed console.log
 }
 
+
 // Form dữ liệu nhân viên
 const formData = reactive({
   maNhanVien: '',
@@ -202,8 +201,9 @@ const formData = reactive({
 const filters = ref({
   timKiem: '', // Tìm kiếm theo tên, email, sđt...
   gioiTinh: '', // Nam / Nữ
-  trangThai: '', // Hoạt động / Ngưng
   tenQuyenHan: '', // Nhân viên / Quản lý
+  trangThai: '', // Hoạt động / Ngưng
+
 })
 
 // Mock data
@@ -256,10 +256,12 @@ const nhanVienCoSTT = computed(() => {
 const loading = ref(false)
 const columns = [
   { title: 'STT', dataIndex: 'stt', width: 50, align: 'center' },
+  { title: 'Ảnh',dataIndex: 'anhNhanVien',width: 80,align: 'center',slotName: 'anhNhanVien'},
   { title: 'Mã nhân viên', dataIndex: 'maNhanVien', width: 120 },
   { title: 'Tên nhân viên', dataIndex: 'tenNhanVien', width: 180 },
   { title: 'Email', dataIndex: 'email', width: 200 },
   { title: 'Số điện thoại', dataIndex: 'soDienThoai', width: 150 },
+  { title: 'Địa chỉ', slotName: 'diaChi', width: 250 },
   { title: 'Ngày sinh', dataIndex: 'ngaySinh', width: 120, align: 'center' },
   { title: 'Giới tính', dataIndex: 'gioiTinh', slotName: 'gioiTinh', width: 100, align: 'center' },
   { title: 'Chức vụ', dataIndex: 'tenQuyenHan', slotName: 'tenQuyenHan', width: 120, align: 'center' },
@@ -385,6 +387,7 @@ onMounted(async () => {
       diaChi: nv.diaChiCuThe,
       tenQuyenHan: nv.tenQuyenHan,
       trangThai: Boolean(nv.trangThai),
+      anhNhanVien: nv.anhNhanVien ? `/uploads/${nv.anhNhanVien}` : null,
     }))
   } catch (error) {
     console.error('❌ Lỗi load nhân viên:', error)

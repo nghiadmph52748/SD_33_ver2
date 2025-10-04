@@ -1,16 +1,10 @@
 <template>
   <a-card title="Chỉnh Sửa Nhân Viên">
-  <a-form
-  ref="formRef"
-  :model="formData"
-  layout="vertical"
-  :rules="rules"
-  @finish="handleSubmit"
->
+    <a-form ref="formRef" :model="formData" layout="vertical" :rules="rules">
       <a-row :gutter="24">
         <a-col :span="12">
           <a-form-item label="Tên nhân viên" name="tenNhanVien">
-            <a-input v-model="formData.tenNhanVien"  style="width: 100%" />
+            <a-input v-model="formData.tenNhanVien" style="width: 100%" />
           </a-form-item>
 
           <a-form-item label="Ngày sinh" name="ngaySinh">
@@ -18,54 +12,75 @@
           </a-form-item>
 
           <a-form-item label="CCCD" name="cccd">
-            <a-input v-model="formData.cccd"  style="width: 100%" />
+            <a-input v-model="formData.cccd" style="width: 100%" />
           </a-form-item>
 
           <a-form-item label="Số điện thoại" name="soDienThoai">
-            <a-input v-model="formData.soDienThoai"  style="width: 100%" />
+            <a-input v-model="formData.soDienThoai" style="width: 100%" />
           </a-form-item>
-
-          <a-form-item label="Quận" name="quan">
-            <a-input v-model="formData.quan"  style="width: 100%" />
+          <a-form-item label="Quyền hạn" name="idQuyenHan">
+            <a-select v-model="formData.idQuyenHan" placeholder="Chọn quyền hạn">
+              <a-option :value="1">Admin</a-option>
+              <a-option :value="2">Nhân viên</a-option>
+            </a-select>
           </a-form-item>
-
           <a-form-item label="Giới tính" name="gioiTinh">
             <a-switch v-model="formData.gioiTinh" checked-children="Nam" un-checked-children="Nữ" />
           </a-form-item>
+          <!-- <a-form-item label="Ảnh nhân viên" name="anhNhanVien">
+            <a-upload name="file" :action="uploadUrl" :show-upload-list="false" :before-upload="beforeUpload" @change="handleUploadChange">
+              <a-button icon="upload">Chọn ảnh</a-button>
+            </a-upload>
+            <div v-if="formData.anhNhanVien">
+              <img :src="formData.anhNhanVien" alt="Ảnh nhân viên" style="max-width: 100px; margin-top: 10px" />
+            </div>
+          </a-form-item> -->
         </a-col>
 
         <a-col :span="12">
-          <a-form-item label="Tên tài khoản" name="tenTaiKhoan">
-            <a-input v-model="formData.tenTaiKhoan"  style="width: 100%" />
-          </a-form-item>
-
-          <a-form-item label="Mật khẩu" name="matKhau">
-            <a-input-password v-model="formData.matKhau"  style="width: 100%" />
-          </a-form-item>
-
           <a-form-item label="Email" name="email">
-            <a-input v-model="formData.email"  style="width: 100%" />
+            <a-input v-model="formData.email" style="width: 100%" />
           </a-form-item>
 
           <a-form-item label="Thành phố" name="thanhPho">
-            <a-input v-model="formData.thanhPho"  style="width: 100%" />
+            <a-select
+              v-model="formData.thanhPho"
+              placeholder="Chọn tỉnh / thành phố"
+              :options="provinces"
+              option-label-prop="label"
+              @change="onProvinceChange"
+            />
+          </a-form-item>
+
+          <a-form-item label="Quận" name="quan">
+            <a-select
+              v-model="formData.quan"
+              placeholder="Chọn quận / huyện"
+              :options="districts"
+              option-label-prop="label"
+              @change="onDistrictChange"
+            />
           </a-form-item>
 
           <a-form-item label="Phường" name="phuong">
-            <a-input v-model="formData.phuong"  style="width: 100%" />
+            <a-select v-model="formData.phuong" placeholder="Chọn phường / xã" :options="wards" option-label-prop="label" />
           </a-form-item>
-          <a-form-item label="Quyền hạn" name="idQuyenHan">
-          <a-select v-model="formData.idQuyenHan" placeholder="Chọn quyền hạn">
-            <a-option :value="1">Admin</a-option>
-            <a-option :value="2">Nhân viên</a-option>
-          </a-select>
-        </a-form-item>
+
+          <a-form-item label="Địa chỉ cụ thể" name="diaChiCuThe">
+            <a-input v-model="formData.diaChiCuThe" placeholder="Nhập địa chỉ cụ thể" />
+          </a-form-item>
+          <a-form-item label="Địa chỉ cụ thể" name="diaChiCuThe">
+            <a-input v-model="formData.diaChiCuThe" placeholder="Nhập địa chỉ cụ thể (số nhà, đường...)" />
+          </a-form-item>
+          <!-- <a-form-item label="Giới tính" name="gioiTinh">
+            <a-switch v-model="formData.gioiTinh" checked-children="Nam" un-checked-children="Nữ" />
+          </a-form-item> -->
         </a-col>
       </a-row>
 
       <a-form-item>
         <a-space>
-          <a-button type="primary" @click="handleSubmit" :loading="loading">Lưu</a-button>
+          <a-button type="primary" :loading="loading" html-type="submit" @click="handleSubmit">Lưu</a-button>
           <a-button @click="handleCancel">Hủy</a-button>
         </a-space>
       </a-form-item>
@@ -73,15 +88,19 @@
   </a-card>
 </template>
 
-<script setup>
-import { ref, reactive, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { Modal } from 'ant-design-vue'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const formRef = ref(null)
+const provinces = ref<{ value: string; label: string; code: number }[]>([])
+const districts = ref<{ value: string; label: string; code: number }[]>([])
+const wards = ref<{ value: string; label: string }[]>([])
 // lấy id từ params
 const { id } = route.params
 const rules = {
@@ -90,75 +109,108 @@ const rules = {
   soDienThoai: [{ required: true, message: 'Vui lòng nhập số điện thoại' }],
 }
 
-// dữ liệu form (cần có id để update)
-const formData = reactive({
+const formData = ref({
   id: null,
   tenNhanVien: '',
-  ngaySinh: '',
   cccd: '',
-  soDienThoai: '',
-  quan: '',
+  ngaySinh: '',
   gioiTinh: true,
+  email: '',
+  soDienThoai: '',
+  thanhPho: '',
+  quan: '',
+  phuong: '',
+  diaChiCuThe: '',
+  tenQuyenHan: '',
+  idQuyenHan: null,
+  trangThai: true,
+  delete: false,
   tenTaiKhoan: '',
   matKhau: '',
-  email: '',
-  thanhPho: '',
-  phuong: '',
-  trangThai: true,
-  idQuyenHan: null,
+  anhNhanVien: null,
 })
 
+const loadProvinces = async () => {
+  const res = await fetch('https://provinces.open-api.vn/api/p/')
+  const data = await res.json()
+  provinces.value = data.map((p: any) => ({
+    value: p.name,
+    label: p.name,
+    code: p.code,
+  }))
+}
+loadProvinces()
+
+const onProvinceChange = async (value: string) => {
+  districts.value = []
+  wards.value = []
+  formData.value.quan = ''
+  formData.value.phuong = ''
+
+  const province = provinces.value.find((p) => p.value === value)
+  if (province) {
+    const res = await fetch(`https://provinces.open-api.vn/api/p/${province.code}?depth=2`)
+    const data = await res.json()
+    districts.value = data.districts.map((d: any) => ({
+      value: d.name,
+      label: d.name,
+      code: d.code,
+    }))
+  }
+}
+
+const onDistrictChange = async (value: string) => {
+  wards.value = []
+  formData.value.phuong = ''
+
+  const district = districts.value.find((d) => d.value === value)
+  if (district) {
+    const res = await fetch(`https://provinces.open-api.vn/api/d/${district.code}?depth=2`)
+    const data = await res.json()
+    wards.value = data.wards.map((w: any) => ({
+      value: w.name,
+      label: w.name,
+    }))
+  }
+}
 // load dữ liệu nhân viên
 onMounted(async () => {
-  if (id) {
-    try {
-      const res = await axios.get(
-        `http://localhost:8080/api/nhan-vien-management/detail/${id}`
-      )
-      console.log("API trả về:", res.data)
-
-      // Nếu backend trả về object trực tiếp thì gán thẳng
-      Object.assign(formData, res.data)
-
-      console.log("FormData sau khi merge:", formData)
-    } catch (err) {
-      console.error('Lỗi tải nhân viên:', err)
-    }
+  try {
+    const res = await axios.get(`http://localhost:8080/api/nhan-vien-management/detail/${id}`)
+    formData.value = res.data
+  } catch (err) {
+    console.error('Lỗi khi load dữ liệu:', err)
   }
 })
 
-
-
-
-
-const handleSubmit = async () => {
-  formRef.value
-    .validate()
-    .then(async () => {
-      console.log("📤 Data gửi đi:", formData)
+const handleSubmit = () => {
+  Modal.confirm({
+    title: 'Xác nhận lưu',
+    content: 'Bạn có chắc chắn muốn lưu thay đổi không?',
+    centered: true,
+    okText: 'Có',
+    cancelText: 'Không',
+    onOk: async () => {
       try {
         loading.value = true
-        const res = await axios.put(
-          `http://localhost:8080/api/nhan-vien-management/update/${formData.id}`,
-          formData
-        )
-        if (res.data.success) {
+        const res = await axios.put(`http://localhost:8080/api/nhan-vien-management/update/${formData.value.id}`, formData.value)
+        if (res.data?.success) {
+          alert('✅ Cập nhật thành công!')
           router.push('/khach-hang-nhan-su/nhan-vien')
+        } else {
+          alert(`❌ Cập nhật thất bại: ${res.data?.message || 'Không có thông báo lỗi từ server'}`)
         }
       } catch (err) {
-        console.error(err)
+        console.error('❌ Lỗi khi gửi:', err)
+        alert('Form chưa hợp lệ hoặc có lỗi xảy ra. Vui lòng kiểm tra lại.')
       } finally {
         loading.value = false
       }
-    })
-    .catch(err => {
-      console.error("Form chưa hợp lệ:", err)
-    })
+    },
+  })
 }
-
 
 const handleCancel = () => {
   router.push('/khach-hang-nhan-su/nhan-vien')
 }
 </script>
-

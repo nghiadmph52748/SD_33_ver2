@@ -1,8 +1,8 @@
 import ThemNhanVien from '@/views/main-view/khach-hang-nhan-su/nhan-vien/themnhanvien.vue'
 import Updatenhanvien from '@/views/main-view/khach-hang-nhan-su/nhan-vien/updatenhanvien.vue'
-import Detail from '@/views/main-view/khach-hang-nhan-su/nhan-vien/detail.vue'
 import ThemKhachHang from '@/views/main-view/khach-hang-nhan-su/khach-hang/themkhachhang.vue'
-import DetailKhachHang from '@/views/main-view/khach-hang-nhan-su/khach-hang/detailkhachang.vue'
+import Detail from '@/views/main-view/khach-hang-nhan-su/nhan-vien/detail.vue'
+import DetailKhachHang from '@/views/main-view/khach-hang-nhan-su/khach-hang/detailkhachhang.vue'
 import Updatekhachhang from '@/views/main-view/khach-hang-nhan-su/khach-hang/updatekhachhang.vue'
 import { DEFAULT_LAYOUT } from '../base'
 import { AppRouteRecordRaw } from '../types'
@@ -23,8 +23,7 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
     {
       path: 'khach-hang',
       name: 'QuanLyKhachHang',
-      component: () =>
-        import('@/views/main-view/khach-hang-nhan-su/khach-hang/quan-ly-khach-hang.vue'),
+      component: () => import('@/views/main-view/khach-hang-nhan-su/khach-hang/quan-ly-khach-hang.vue'),
       meta: {
         locale: 'menu.quan-ly-tai-khoan.khach-hang',
         requiresAuth: true,
@@ -44,7 +43,7 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
       meta: { hideInMenu: true },
     },
     {
-      path: '/detail/:id',
+      path: '/detail/:id', // dynamic route
       name: 'DetailNhanVien',
       component: Detail,
       meta: { hideInMenu: true },
@@ -70,8 +69,7 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
     {
       path: 'nhan-vien',
       name: 'QuanLyNhanVien',
-      component: () =>
-        import('@/views/main-view/khach-hang-nhan-su/nhan-vien/quan-ly-nhan-vien.vue'),
+      component: () => import('@/views/main-view/khach-hang-nhan-su/nhan-vien/quan-ly-nhan-vien.vue'),
       meta: {
         locale: 'menu.quan-ly-tai-khoan.nhan-vien',
         requiresAuth: true,
