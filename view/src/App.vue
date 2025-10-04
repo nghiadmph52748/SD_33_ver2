@@ -6,21 +6,9 @@
 </template>
 
 <script lang="ts" setup>
-import enUS from '@arco-design/web-vue/es/locale/lang/en-us'
-import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn'
-import { computed } from 'vue'
-import useLocale from '@/hooks/locale'
+import viVN from '@arco-design/web-vue/es/locale/lang/vi-vn'
 import GlobalSetting from '@/components/global-setting/global-setting.vue'
 
-const { currentLocale } = useLocale()
-const locale = computed(() => {
-  switch (currentLocale.value) {
-    case 'zh-CN':
-      return zhCN
-    case 'en-US':
-      return enUS
-    default:
-      return enUS
-  }
-})
+// Always use Vietnamese locale
+const locale = viVN
 </script>
