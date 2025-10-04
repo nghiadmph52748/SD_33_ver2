@@ -86,6 +86,16 @@
 
         <template #action="{ record }">
           <a-space>
+            <a-tooltip content="Thay đổi trạng thái">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+                <template #checked-icon>
+                  <icon-check />
+                </template>
+                <template #unchecked-icon>
+                  <icon-close />
+                </template>
+              </a-switch>
+            </a-tooltip>
             <a-button type="text" @click="viewWeight(record)">
               <template #icon>
                 <icon-eye />
@@ -190,6 +200,30 @@
     >
       <p>{{ confirmMessage }}</p>
     </a-modal>
+
+    <!-- Status Toggle Confirm Modal -->
+    <a-modal
+      v-model:visible="showStatusConfirm"
+      title="Xác nhận thay đổi trạng thái"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmToggleStatus"
+      @cancel="cancelToggleStatus"
+    >
+      <template #default>
+        <div v-if="weightToToggleStatus">
+          <div>Bạn có chắc chắn muốn {{ weightToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} trọng lượng này?</div>
+          <div>
+            Tên trọng lượng:
+            <strong>{{ weightToToggleStatus.tenTrongLuong }}</strong>
+          </div>
+          <div>
+            Trạng thái hiện tại:
+            <strong>{{ weightToToggleStatus.trangThai ? 'Hoạt động' : 'Không hoạt động' }}</strong>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -198,7 +232,18 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { Message } from '@arco-design/web-vue'
-import { IconPlus, IconSearch, IconDownload, IconEdit, IconEye, IconDelete, IconRefresh } from '@arco-design/web-vue/es/icon'
+import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
+import {
+  IconPlus,
+  IconSearch,
+  IconDownload,
+  IconEdit,
+  IconEye,
+  IconDelete,
+  IconRefresh,
+  IconCheck,
+  IconClose,
+} from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store'
 import { createTrongLuong, getTrongLuongList, updateTrongLuong, deleteTrongLuong } from '../../../../../api/san-pham/thuoc-tinh/trong-luong'
 
@@ -249,6 +294,10 @@ const formRules = {
 const confirmMessage = ref('')
 const confirmAction = ref(null)
 
+// Status toggle modal
+const showStatusConfirm = ref(false)
+const weightToToggleStatus = ref(null)
+
 // Table
 const loading = ref(false)
 const columns = [
@@ -276,7 +325,7 @@ const columns = [
     dataIndex: 'is_active',
     slotName: 'status',
     width: 100,
-    align: 'center',
+    // align: 'center',
   },
   {
     title: 'Thao tác',
@@ -382,6 +431,67 @@ const cancelConfirm = () => {
   confirmModalVisible.value = false
   confirmMessage.value = ''
   confirmAction.value = null
+}
+
+// Toggle status function - show confirm first
+const toggleStatus = (record: any) => {
+  weightToToggleStatus.value = record
+  showStatusConfirm.value = true
+}
+
+// Actual toggle status implementation
+const performToggleStatus = async (record: any) => {
+  try {
+    // Set loading state for this specific record
+    record.updating = true
+
+    // Call API to update weight status
+    const updateData = {
+      tenTrongLuong: record.tenTrongLuong,
+      trangThai: !record.trangThai, // Toggle status
+      deleted: record.deleted,
+      createAt: record.createAt,
+      createBy: record.createBy,
+      updateAt: new Date().toISOString().split('T')[0],
+      updateBy: userStore.id,
+    }
+
+    const response = await updateTrongLuong(record.id, updateData)
+
+    if (response.success || response.status === 200) {
+      // Update local data immediately for better UX
+      record.trangThai = !record.trangThai
+
+      // Update in weights array
+      const index = weights.value.findIndex((w) => w.id === record.id)
+      if (index !== -1) {
+        weights.value[index].trangThai = record.trangThai
+      }
+
+      const statusText = record.trangThai ? 'Hoạt động' : 'Không hoạt động'
+      Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
+    } else {
+      console.error('API response not successful:', response)
+      Message.error('Cập nhật trạng thái thất bại')
+    }
+  } catch (error) {
+    console.error('Error toggling status:', error)
+    Message.error('Có lỗi xảy ra khi cập nhật trạng thái')
+  } finally {
+    // Remove loading state
+    record.updating = false
+  }
+}
+
+const confirmToggleStatus = async () => {
+  await performToggleStatus(weightToToggleStatus.value)
+  showStatusConfirm.value = false
+  weightToToggleStatus.value = null
+}
+
+const cancelToggleStatus = () => {
+  showStatusConfirm.value = false
+  weightToToggleStatus.value = null
 }
 
 const getTrongLuongPage = async (page) => {
@@ -506,7 +616,17 @@ const formatDate = (dateString: string) => {
 }
 
 const exportWeights = () => {
-  // TODO: Implement Excel export functionality
+  try {
+    if (!weights.value || weights.value.length === 0) {
+      Message.warning('Không có dữ liệu để xuất Excel')
+      return
+    }
+
+    exportToExcel(weights.value, EXPORT_HEADERS.TRONG_LUONG, 'trong-luong')
+  } catch (error) {
+    console.error('Lỗi khi xuất Excel:', error)
+    Message.error('Có lỗi xảy ra khi xuất Excel')
+  }
 }
 
 onMounted(() => {

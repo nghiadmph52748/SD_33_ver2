@@ -169,13 +169,25 @@
         </template>
 
         <template #action="{ record }">
-          <a-tooltip content="Xem biến thể sản phẩm">
-            <a-button type="text" @click="viewCategory(record)">
-              <template #icon>
-                <icon-eye />
-              </template>
-            </a-button>
-          </a-tooltip>
+          <a-space>
+            <a-tooltip content="Thay đổi trạng thái">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+                <template #checked-icon>
+                  <icon-check />
+                </template>
+                <template #unchecked-icon>
+                  <icon-close />
+                </template>
+              </a-switch>
+            </a-tooltip>
+            <a-tooltip content="Xem biến thể sản phẩm">
+              <a-button type="text" @click="viewCategory(record)">
+                <template #icon>
+                  <icon-eye />
+                </template>
+              </a-button>
+            </a-tooltip>
+          </a-space>
         </template>
 
         <template #checkbox-title>
@@ -205,6 +217,30 @@
         </template>
       </a-table>
     </a-card>
+
+    <!-- Status Toggle Confirm Modal -->
+    <a-modal
+      v-model:visible="showStatusConfirm"
+      title="Xác nhận thay đổi trạng thái"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmToggleStatus"
+      @cancel="cancelToggleStatus"
+    >
+      <template #default>
+        <div v-if="categoryToToggleStatus">
+          <div>Bạn có chắc chắn muốn {{ categoryToToggleStatus.trangThai ? 'tạm ngưng bán' : 'kích hoạt bán' }} sản phẩm này?</div>
+          <div>
+            Tên sản phẩm:
+            <strong>{{ categoryToToggleStatus.tenSanPham }}</strong>
+          </div>
+          <div>
+            Trạng thái hiện tại:
+            <strong>{{ categoryToToggleStatus.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}</strong>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -212,9 +248,10 @@
 import { ref, reactive, computed, onMounted, h, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { debounce } from 'lodash'
+import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { getDanhMucSanPhamList, getNhaSanXuatOptions, getXuatXuOptions } from '@/api/san-pham/danh-muc'
+import { getDanhMucSanPhamList, getNhaSanXuatOptions, getXuatXuOptions, updateDanhMucSanPham } from '@/api/san-pham/danh-muc'
 import type { DanhMucSanPham, DanhMucParams, NhaSanXuatOption, XuatXuOption, DanhMucResponse } from '@/api/san-pham/danh-muc'
 import {
   IconPlus,
@@ -228,8 +265,11 @@ import {
   IconCheckCircle,
   IconPauseCircle,
   IconImage,
+  IconCheck,
+  IconClose,
 } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
+import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 
 // Form and modal
 // Breadcrumb setup
@@ -243,6 +283,10 @@ const formRef = ref()
 // Edit inline mode state
 const selectedRowKeys = ref<number[]>([])
 const editingData = ref<Record<number, { tenSanPham: string; trangThai: boolean }>>({}) // Updated to match backend
+
+// Status toggle modal
+const showStatusConfirm = ref(false)
+const categoryToToggleStatus = ref(null)
 
 // Computed properties for safe access
 const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
@@ -459,7 +503,7 @@ const columns = [
     title: 'Khoảng giá(đ)',
     dataIndex: 'price_range',
     slotName: 'price_range',
-    width: 200,
+    width: 170,
   },
   {
     title: 'Trạng thái',
@@ -541,6 +585,75 @@ const viewCategory = (category: any) => {
   })
 }
 
+// Toggle status function - show confirm first
+const toggleStatus = (record: any) => {
+  categoryToToggleStatus.value = record
+  showStatusConfirm.value = true
+}
+
+// Actual toggle status implementation
+const performToggleStatus = async (record: any) => {
+  try {
+    // Set loading state for this specific record
+    record.updating = true
+
+    // Get current userStore for user info
+    const userStore = useUserStore()
+
+    // Prepare full update data with all required fields
+    const updateData = {
+      tenSanPham: record.tenSanPham,
+      idNhaSanXuat: record.idNhaSanXuat,
+      idXuatXu: record.idXuatXu,
+      trangThai: !record.trangThai, // Toggle status
+      deleted: record.deleted || false,
+      createAt: record.createAt,
+      createBy: record.createBy,
+      updateAt: new Date().toISOString(),
+      updateBy: userStore.id || 1, // Use current user ID
+    }
+
+    // Call API to update category status
+    const response = await updateDanhMucSanPham(record.id, updateData)
+
+    if (response.status === 200 || response.data) {
+      // Update local data immediately for better UX
+      record.trangThai = !record.trangThai
+
+      // Update in danhMucList array
+      if (danhMucList.value?.data) {
+        const index = danhMucList.value.data.findIndex((c) => c.id === record.id)
+        if (index !== -1) {
+          danhMucList.value.data[index].trangThai = record.trangThai
+        }
+      }
+
+      const statusText = record.trangThai ? 'Đang bán' : 'Tạm ngưng bán'
+      Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
+    } else {
+      console.error('API response not successful:', response)
+      Message.error('Cập nhật trạng thái thất bại')
+    }
+  } catch (error) {
+    console.error('Error toggling status:', error)
+    Message.error('Có lỗi xảy ra khi cập nhật trạng thái')
+  } finally {
+    // Remove loading state
+    record.updating = false
+  }
+}
+
+const confirmToggleStatus = async () => {
+  await performToggleStatus(categoryToToggleStatus.value)
+  showStatusConfirm.value = false
+  categoryToToggleStatus.value = null
+}
+
+const cancelToggleStatus = () => {
+  showStatusConfirm.value = false
+  categoryToToggleStatus.value = null
+}
+
 const handleSubmit = async () => {
   try {
     await formRef.value.validate()
@@ -617,6 +730,17 @@ const completeBulkUpdate = async () => {
 }
 
 const exportExcel = () => {
+  try {
+    if (!transformedDanhMucList.value || transformedDanhMucList.value.length === 0) {
+      Message.warning('Không có dữ liệu để xuất Excel')
+      return
+    }
+
+    exportToExcel(transformedDanhMucList.value, EXPORT_HEADERS.DANH_MUC, 'danh-muc-san-pham')
+  } catch (error) {
+    console.error('Lỗi khi xuất Excel:', error)
+    Message.error('Có lỗi xảy ra khi xuất Excel')
+  }
 }
 
 const beforeUpload = (file: File) => {
@@ -633,8 +757,7 @@ const beforeUpload = (file: File) => {
   return false // Prevent auto upload
 }
 
-const handleUploadChange = (info: any) => {
-}
+const handleUploadChange = (info: any) => {}
 
 onMounted(async () => {
   try {

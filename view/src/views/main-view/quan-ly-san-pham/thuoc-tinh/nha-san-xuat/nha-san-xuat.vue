@@ -77,6 +77,16 @@
 
         <template #action="{ record }">
           <a-space>
+            <a-tooltip content="Thay đổi trạng thái">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+                <template #checked-icon>
+                  <icon-check />
+                </template>
+                <template #unchecked-icon>
+                  <icon-close />
+                </template>
+              </a-switch>
+            </a-tooltip>
             <a-button type="text" @click="viewManufacturer(record)">
               <template #icon>
                 <icon-eye />
@@ -182,6 +192,30 @@
     >
       <p>{{ confirmMessage }}</p>
     </a-modal>
+
+    <!-- Status Toggle Confirm Modal -->
+    <a-modal
+      v-model:visible="showStatusConfirm"
+      title="Xác nhận thay đổi trạng thái"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmToggleStatus"
+      @cancel="cancelToggleStatus"
+    >
+      <template #default>
+        <div v-if="manufacturerToToggleStatus">
+          <div>Bạn có chắc chắn muốn {{ manufacturerToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} nhà sản xuất này?</div>
+          <div>
+            Tên nhà sản xuất:
+            <strong>{{ manufacturerToToggleStatus.tenNhaSanXuat }}</strong>
+          </div>
+          <div>
+            Trạng thái hiện tại:
+            <strong>{{ manufacturerToToggleStatus.trangThai ? 'Hoạt động' : 'Không hoạt động' }}</strong>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -190,6 +224,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { Message } from '@arco-design/web-vue'
+import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 import {
   IconPlus,
   IconBuilding,
@@ -202,6 +237,8 @@ import {
   IconEye,
   IconDelete,
   IconRefresh,
+  IconCheck,
+  IconClose,
 } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store'
 import {
@@ -279,6 +316,10 @@ const formRules = {
 const confirmMessage = ref('')
 const confirmAction = ref(null)
 
+// Status toggle modal
+const showStatusConfirm = ref(false)
+const manufacturerToToggleStatus = ref(null)
+
 // Computed properties for safe access removed
 
 // Table
@@ -308,7 +349,7 @@ const columns = [
     dataIndex: 'is_active',
     slotName: 'status',
     width: 400,
-    align: 'center',
+    // align: 'center',
   },
   {
     title: 'Thao tác',
@@ -446,6 +487,67 @@ const cancelConfirm = () => {
   confirmAction.value = null
 }
 
+// Toggle status function - show confirm first
+const toggleStatus = (record: any) => {
+  manufacturerToToggleStatus.value = record
+  showStatusConfirm.value = true
+}
+
+// Actual toggle status implementation
+const performToggleStatus = async (record: any) => {
+  try {
+    // Set loading state for this specific record
+    record.updating = true
+
+    // Call API to update manufacturer status
+    const updateData = {
+      tenNhaSanXuat: record.tenNhaSanXuat,
+      trangThai: !record.trangThai, // Toggle status
+      deleted: record.deleted,
+      createAt: record.createAt,
+      createBy: record.createBy,
+      updateAt: new Date().toISOString().split('T')[0],
+      updateBy: userStore.id,
+    }
+
+    const response = await updateNhaSanXuat(record.id, updateData)
+
+    if (response.success || response.status === 200) {
+      // Update local data immediately for better UX
+      record.trangThai = !record.trangThai
+
+      // Update in manufacturers array
+      const index = manufacturers.value.findIndex((m) => m.id === record.id)
+      if (index !== -1) {
+        manufacturers.value[index].trangThai = record.trangThai
+      }
+
+      const statusText = record.trangThai ? 'Hoạt động' : 'Không hoạt động'
+      Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
+    } else {
+      console.error('API response not successful:', response)
+      Message.error('Cập nhật trạng thái thất bại')
+    }
+  } catch (error) {
+    console.error('Error toggling status:', error)
+    Message.error('Có lỗi xảy ra khi cập nhật trạng thái')
+  } finally {
+    // Remove loading state
+    record.updating = false
+  }
+}
+
+const confirmToggleStatus = async () => {
+  await performToggleStatus(manufacturerToToggleStatus.value)
+  showStatusConfirm.value = false
+  manufacturerToToggleStatus.value = null
+}
+
+const cancelToggleStatus = () => {
+  showStatusConfirm.value = false
+  manufacturerToToggleStatus.value = null
+}
+
 const getNhaSanXuatPage = async (page) => {
   try {
     const res = await getNhaSanXuatList(page, pagination.value.pageSize)
@@ -567,7 +669,17 @@ const viewProducts = (manufacturer: any) => {
 }
 
 const exportManufacturers = () => {
-  // TODO: Implement Excel export functionality
+  try {
+    if (!manufacturers.value || manufacturers.value.length === 0) {
+      Message.warning('Không có dữ liệu để xuất Excel')
+      return
+    }
+
+    exportToExcel(manufacturers.value, EXPORT_HEADERS.NHA_SAN_XUAT, 'nha-san-xuat')
+  } catch (error) {
+    console.error('Lỗi khi xuất Excel:', error)
+    Message.error('Có lỗi xảy ra khi xuất Excel')
+  }
 }
 
 onMounted(() => {

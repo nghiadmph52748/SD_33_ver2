@@ -139,30 +139,6 @@
             </template>
             {{ showAllVariants ? 'Hiển thị biến thể hiện tại' : 'Hiển thị toàn bộ biến thể' }}
           </a-button>
-
-          <!-- Bulk Status Actions -->
-          <a-dropdown>
-            <a-button>
-              <template #icon>
-                <icon-settings />
-              </template>
-              Thao tác hàng loạt
-            </a-button>
-            <template #content>
-              <a-doption @click="bulkToggleStatus(true)">
-                <template #icon>
-                  <icon-check />
-                </template>
-                Bật trạng thái bán tất cả
-              </a-doption>
-              <a-doption @click="bulkToggleStatus(false)">
-                <template #icon>
-                  <icon-close />
-                </template>
-                Tắt trạng thái bán tất cả
-              </a-doption>
-            </template>
-          </a-dropdown>
         </a-space>
       </template>
       <a-table
@@ -187,14 +163,18 @@
         </template>
 
         <template #product_image="{ record }">
-          <div class="image-cell">
-            <a-avatar v-if="getProductImage(record)" :src="getProductImage(record)" :size="48" shape="square" />
-            <a-avatar v-else :size="48" shape="square" style="background-color: #f5f5f5; color: #999">
-              <template #icon>
-                <icon-image />
-              </template>
-            </a-avatar>
-          </div>
+          <a-carousel :autoplay="true" show-arrow="hover" :loop="true" style="width: 70px; height: 70px">
+            <a-carousel-item
+              v-if="record.anhSanPham && record.anhSanPham.length > 0"
+              v-for="(img, index) in record.anhSanPham"
+              :key="index"
+            >
+              <a-avatar :image-url="img" :size="70" shape="square"></a-avatar>
+            </a-carousel-item>
+            <a-carousel-item v-else>
+              <a-avatar image-url="null" :size="70" shape="square"></a-avatar>
+            </a-carousel-item>
+          </a-carousel>
         </template>
 
         <template #manufacturer="{ record }">
@@ -262,7 +242,7 @@
           <a-space>
             <!-- Status Toggle Switch -->
             <a-tooltip content="Thay đổi trạng thái bán">
-              <a-switch :model-value="record.trangThai" type="round" @change="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -311,6 +291,30 @@
         </div>
       </template>
     </a-modal>
+
+    <!-- Status Toggle Confirm Modal -->
+    <a-modal
+      v-model:visible="showStatusConfirm"
+      title="Xác nhận thay đổi trạng thái"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmToggleStatus"
+      @cancel="cancelToggleStatus"
+    >
+      <template #default>
+        <div v-if="variantToToggleStatus">
+          <div>Bạn có chắc chắn muốn {{ variantToToggleStatus.trangThai ? 'tạm ngưng bán' : 'kích hoạt bán' }} biến thể này?</div>
+          <div>
+            Mã biến thể:
+            <strong>{{ variantToToggleStatus.maChiTietSanPham }}</strong>
+          </div>
+          <div>
+            Trạng thái hiện tại:
+            <strong>{{ variantToToggleStatus.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}</strong>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -318,6 +322,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
+import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 import {
   IconEdit,
   IconCheck,
@@ -573,8 +578,8 @@ const columns = [
     title: 'Trạng thái',
     dataIndex: 'trangThai',
     slotName: 'status',
-    width: 40,
-    align: 'center',
+    width: 60,
+    // align: 'center',
   },
   {
     title: 'Thao tác',
@@ -761,38 +766,6 @@ const formatPrice = (price: number) => {
   return price.toString()
 }
 
-// Helper function to get product image
-const getProductImage = (record: any) => {
-  if (!record.anhSanPham) {
-    return null
-  }
-
-  // If it's an array, take the first image
-  if (Array.isArray(record.anhSanPham) && record.anhSanPham.length > 0) {
-    const firstImage = record.anhSanPham[0]
-    // Handle case where array contains objects with duongDanAnh property
-    if (typeof firstImage === 'object' && firstImage.duongDanAnh) {
-      return firstImage.duongDanAnh
-    }
-    // Handle case where array contains direct URL strings
-    if (typeof firstImage === 'string') {
-      return firstImage
-    }
-  }
-
-  // If it's a direct string URL
-  if (typeof record.anhSanPham === 'string') {
-    return record.anhSanPham
-  }
-
-  // If it's an object with duongDanAnh property
-  if (typeof record.anhSanPham === 'object' && record.anhSanPham.duongDanAnh) {
-    return record.anhSanPham.duongDanAnh
-  }
-
-  return null
-}
-
 // Debounce timer for search
 let searchTimer: number | null = null
 
@@ -938,7 +911,17 @@ const resetFilters = () => {
 }
 
 const exportExcel = () => {
-  // Implement Excel export logic
+  try {
+    if (!variants.value || variants.value.length === 0) {
+      Message.warning('Không có dữ liệu để xuất Excel')
+      return
+    }
+
+    exportToExcel(variants.value, EXPORT_HEADERS.BIEN_THE, 'bien-the-san-pham')
+  } catch (error) {
+    console.error('Lỗi khi xuất Excel:', error)
+    Message.error('Có lỗi xảy ra khi xuất Excel')
+  }
 }
 
 // Clear highlighting function
@@ -973,14 +956,6 @@ const checkAndAdjustPagination = () => {
   }
 
   return false
-}
-
-const completeBulkUpdate = () => {
-  // Implement bulk update logic
-  // This would save all changes made to selected variants
-
-  // Reset edit mode and selections
-  selectedVariants.value = []
 }
 
 // Selection methods
@@ -1022,12 +997,22 @@ const viewDetail = (variant: any) => {
   router.push(`/quan-ly-san-pham/bien-the/detail/${variant.id}`)
 }
 
+// Confirm modal states
+const showStatusConfirm = ref(false)
+const variantToToggleStatus = ref(null)
+
 const editVariant = (variant: any) => {
   router.push(`/quan-ly-san-pham/bien-the/update/${variant.id}`)
 }
 
-// Toggle status function
-const toggleStatus = async (record: any) => {
+// Toggle status function - show confirm first
+const toggleStatus = (record: any) => {
+  variantToToggleStatus.value = record
+  showStatusConfirm.value = true
+}
+
+// Actual toggle status implementation
+const performToggleStatus = async (record: any) => {
   try {
     // Set loading state for this specific record
     record.updating = true
@@ -1087,99 +1072,6 @@ const toggleStatus = async (record: any) => {
   } finally {
     // Remove loading state
     record.updating = false
-  }
-} // Bulk status toggle function
-const bulkToggleStatus = async (targetStatus: boolean) => {
-  try {
-    const actionText = targetStatus ? 'bật trạng thái bán' : 'tắt trạng thái bán'
-    const confirmMessage = `Bạn có chắc muốn ${actionText} cho tất cả biến thể?`
-
-    Modal.confirm({
-      title: 'Xác nhận thao tác hàng loạt',
-      content: confirmMessage,
-      okText: 'Xác nhận',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          loading.value = true
-          let successCount = 0
-          let errorCount = 0
-
-          // Get all variants that need status change
-          const variantsToUpdate = variants.value.filter((v) => v.trangThai !== targetStatus)
-          // Process in parallel but with some limit to avoid overwhelming the server
-          const promises = variantsToUpdate.map(async (variant) => {
-            try {
-              variant.updating = true
-
-              // Helper function to find ID by name from options
-              const findIdByName = (options: any[], nameField: string, name: string) => {
-                const found = options.find((option) => option[nameField] === name)
-                return found ? found.id : null
-              }
-
-              // Create full update request with all required fields
-              const updateRequest: CreateBienTheSanPhamRequest = {
-                idSanPham: variant.idSanPham || productId.value || findIdByName(sanPhamOptions.value, 'tenSanPham', variant.tenSanPham),
-                idMauSac: findIdByName(mauSacOptions.value, 'tenMauSac', variant.tenMauSac),
-                idKichThuoc: findIdByName(kichThuocOptions.value, 'tenKichThuoc', variant.tenKichThuoc),
-                idDeGiay: findIdByName(deGiayOptions.value, 'tenDeGiay', variant.tenDeGiay),
-                idChatLieu: findIdByName(chatLieuOptions.value, 'tenChatLieu', variant.tenChatLieu),
-                idTrongLuong: findIdByName(trongLuongOptions.value, 'tenTrongLuong', variant.tenTrongLuong),
-                soLuong: variant.soLuong,
-                giaBan: variant.giaBan,
-                trangThai: targetStatus,
-                ghiChu: variant.ghiChu || '',
-                deleted: variant.deleted || false,
-              }
-
-              const response = await updateBienTheSanPham(variant.id, updateRequest)
-
-              if (response.success || response.status === 200 || response.data) {
-                // Update local data
-                variant.trangThai = targetStatus
-
-                // Update in originalVariants if exists
-                if (originalVariants.value?.data) {
-                  const origIndex = originalVariants.value.data.findIndex((v) => v.id === variant.id)
-                  if (origIndex !== -1) {
-                    originalVariants.value.data[origIndex].trangThai = targetStatus
-                  }
-                }
-
-                successCount += 1
-              } else {
-                errorCount += 1
-              }
-            } catch (error) {
-              console.error(`Error updating variant ${variant.id}:`, error)
-              errorCount += 1
-            } finally {
-              variant.updating = false
-            }
-          })
-
-          await Promise.all(promises)
-
-          // Show result message
-          if (successCount > 0 && errorCount === 0) {
-            Message.success(`Đã ${actionText} thành công cho ${successCount} biến thể`)
-          } else if (successCount > 0 && errorCount > 0) {
-            Message.warning(`Đã ${actionText} thành công ${successCount} biến thể, ${errorCount} biến thể lỗi`)
-          } else {
-            Message.error(`Không thể ${actionText} cho biến thể nào`)
-          }
-        } catch (error) {
-          console.error('Bulk status update error:', error)
-          Message.error('Có lỗi xảy ra khi thực hiện thao tác hàng loạt')
-        } finally {
-          loading.value = false
-        }
-      },
-    })
-  } catch (error) {
-    console.error('Bulk toggle status error:', error)
-    Message.error('Có lỗi xảy ra khi chuẩn bị thao tác hàng loạt')
   }
 }
 
@@ -1262,6 +1154,17 @@ const cancelDelete = () => {
   variantToDelete.value = null
 }
 
+const confirmToggleStatus = async () => {
+  await performToggleStatus(variantToToggleStatus.value)
+  showStatusConfirm.value = false
+  variantToToggleStatus.value = null
+}
+
+const cancelToggleStatus = () => {
+  showStatusConfirm.value = false
+  variantToToggleStatus.value = null
+}
+
 // Watch for filter changes (excluding search which is handled by onSearchInput)
 watch(
   () => [
@@ -1281,6 +1184,13 @@ watch(
 onMounted(() => {
   // Parse new variants from query params first
   parseNewVariants()
+
+  // Check if returning from update page
+  if (route.query.updated === 'true') {
+    Message.success('Cập nhật biến thể thành công!')
+    // Remove the query parameter from URL
+    router.replace({ query: { ...route.query, updated: undefined } })
+  }
 
   // If we have new variants to highlight, ensure we're on page 1
   if (shouldHighlight.value && newVariantIds.value.length > 0) {
@@ -1388,6 +1298,10 @@ watch(
   color: #ff4d4f;
 }
 
+:deep(.arco-table-td-content) {
+  width: auto;
+}
+
 .filters-card {
   margin-bottom: 16px;
 }
@@ -1438,14 +1352,6 @@ watch(
   font-size: 12px;
   color: #1890ff;
   font-weight: 500;
-}
-
-.bulk-actions {
-  padding: 12px 16px;
-  background-color: var(--color-primary-1);
-  border-radius: 6px;
-  margin-bottom: 16px;
-  border: 1px solid var(--color-primary-3);
 }
 
 .image-cell {
@@ -1550,14 +1456,6 @@ watch(
 /* Status Switch Styling */
 :deep(.arco-switch) {
   margin-right: 8px;
-}
-
-:deep(.arco-switch-checked) {
-  background-color: #52c41a;
-}
-
-:deep(.arco-switch:not(.arco-switch-checked)) {
-  background-color: #ff4d4f;
 }
 
 :deep(.arco-switch-loading) {

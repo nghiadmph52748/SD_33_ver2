@@ -31,7 +31,9 @@
         <div class="variant-header">
           <div class="variant-image">
             <a-avatar
-              :src="Array.isArray(variant.anhSanPham) && variant.anhSanPham.length > 0 ? variant.anhSanPham[0] : '/default-product.png'"
+              :image-url="
+                Array.isArray(variant.anhSanPham) && variant.anhSanPham.length > 0 ? variant.anhSanPham[0] : '/default-product.png'
+              "
               :size="80"
               shape="square"
             />
@@ -153,6 +155,15 @@
           </a-col>
         </a-row>
 
+        <!-- Images Gallery -->
+        <a-card v-if="variant.anhSanPham && variant.anhSanPham.length > 0" title="Hình ảnh sản phẩm" class="images-card">
+          <div class="images-gallery">
+            <div v-for="(image, index) in variant.anhSanPham" :key="index" class="image-item">
+              <a-image :src="image" :width="150" :height="150" fit="cover" />
+            </div>
+          </div>
+        </a-card>
+
         <!-- Action Buttons -->
         <a-card class="action-card">
           <div class="action-buttons">
@@ -162,7 +173,7 @@
               </template>
               Đặt lại
             </a-button>
-            <a-button type="primary" size="large" :loading="updating" @click="handleUpdate">
+            <a-button type="primary" size="large" :loading="updating" @click="showConfirmUpdate">
               <template #icon>
                 <icon-save />
               </template>
@@ -181,6 +192,39 @@
         </template>
       </a-result>
     </div>
+
+    <!-- Update Confirm Modal -->
+    <a-modal
+      v-model:visible="showUpdateConfirm"
+      title="Xác nhận cập nhật"
+      ok-text="Cập nhật"
+      cancel-text="Hủy"
+      @ok="confirmUpdate"
+      @cancel="cancelUpdate"
+    >
+      <template #default>
+        <div>Bạn có chắc chắn muốn cập nhật thông tin biến thể này?</div>
+        <div v-if="variant">
+          <div style="margin-top: 12px">
+            <strong>Mã biến thể:</strong>
+            {{ variant.maChiTietSanPham }}
+          </div>
+          <div style="margin-top: 8px">
+            <strong>Thông tin sẽ được cập nhật:</strong>
+          </div>
+          <ul style="margin-top: 8px; padding-left: 20px">
+            <li>Giá bán: {{ formatCurrency(formData.giaBan) }}</li>
+            <li>Số lượng: {{ formData.soLuong }}</li>
+            <li>Trạng thái: {{ formData.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}</li>
+            <li>Màu sắc: {{ formData.mauSac }}</li>
+            <li>Kích thước: {{ formData.kichThuoc }}</li>
+            <li>Chất liệu: {{ formData.chatLieu }}</li>
+            <li>Đế giày: {{ formData.deGiay }}</li>
+            <li>Trọng lượng: {{ formData.trongLuong }}</li>
+          </ul>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -221,6 +265,9 @@ const updating = ref(false)
 const attributesLoading = ref(false)
 const variant = ref<BienTheSanPham | null>(null)
 const formRef = ref()
+
+// Update confirm modal state
+const showUpdateConfirm = ref(false)
 
 // Get variant ID from route
 const variantId = Number(route.params.id)
@@ -299,6 +346,14 @@ const findProductIdByName = (productName: string) => {
 const formatCurrencyInput = (value: number) => {
   if (!value) return ''
   return new Intl.NumberFormat('vi-VN').format(value)
+}
+
+const formatCurrency = (amount: number) => {
+  if (!amount) return '0 ₫'
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount)
 }
 
 const parseCurrencyInput = (value: string) => {
@@ -380,6 +435,101 @@ const handleUpdate = async () => {
   } finally {
     updating.value = false
   }
+}
+
+// Show update confirm modal
+const showConfirmUpdate = async () => {
+  try {
+    const valid = await formRef.value?.validate()
+    if (!valid) {
+      // Validate required attributes
+      const missingAttributes = []
+      if (!formData.mauSac) missingAttributes.push('Màu sắc')
+      if (!formData.kichThuoc) missingAttributes.push('Kích thước')
+      if (!formData.chatLieu) missingAttributes.push('Chất liệu')
+      if (!formData.deGiay) missingAttributes.push('Đế giày')
+      if (!formData.trongLuong) missingAttributes.push('Trọng lượng')
+
+      if (missingAttributes.length > 0) {
+        Message.error(`Thiếu thông tin thuộc tính: ${missingAttributes.join(', ')}`)
+        return
+      }
+
+      // Show confirm modal
+      showUpdateConfirm.value = true
+    }
+  } catch (error) {
+    Message.error('Vui lòng kiểm tra lại thông tin nhập vào')
+  }
+}
+
+// Perform actual update (extracted from handleUpdate)
+const performUpdate = async () => {
+  try {
+    updating.value = true
+
+    // Find product ID by name
+    const productId = findProductIdByName(variant.value.tenSanPham)
+    if (!productId) {
+      Message.error('Không tìm thấy ID sản phẩm, vui lòng thử lại')
+      updating.value = false
+      return
+    }
+
+    // Map form data to match UpdateBienTheRequest structure
+    const updateData = {
+      id: variantId,
+      idSanPham: productId,
+      giaBan: formData.giaBan,
+      giaTriGiamGia: formData.giaTriGiamGia,
+      soLuong: formData.soLuong,
+      trangThai: formData.trangThai,
+      mauSac: formData.mauSac,
+      kichThuoc: formData.kichThuoc,
+      chatLieu: formData.chatLieu,
+      deGiay: formData.deGiay,
+      trongLuong: formData.trongLuong,
+      ghiChu: variant.value.ghiChu,
+      deleted: variant.value.deleted,
+      createAt: variant.value.createdAt,
+      createBy: variant.value.createdBy,
+      updateAt: new Date().toISOString().split('T')[0],
+      updateBy: userStore.id,
+    }
+
+    const response = await updateBienThe(updateData)
+    if (response.success) {
+      Message.success('Cập nhật biến thể thành công!')
+
+      // Navigate back with success parameter
+      const returnTo = route.query.returnTo as string
+      if (returnTo) {
+        router.push({ path: returnTo, query: { updated: 'true' } })
+      } else {
+        router.push({
+          path: `/quan-ly-san-pham/bien-the/${productId}`,
+          query: { updated: 'true' },
+        })
+      }
+    } else {
+      Message.error(response.message || 'Không thể cập nhật biến thể')
+    }
+  } catch (error) {
+    Message.error('Có lỗi xảy ra khi cập nhật biến thể')
+  } finally {
+    updating.value = false
+  }
+}
+
+// Confirm update action
+const confirmUpdate = async () => {
+  showUpdateConfirm.value = false
+  await performUpdate()
+}
+
+// Cancel update action
+const cancelUpdate = () => {
+  showUpdateConfirm.value = false
 }
 
 // Helper function to find attribute ID by name
@@ -568,5 +718,19 @@ onMounted(async () => {
   content: ' *' !important;
   color: #f53f3f !important;
   font-weight: bold !important;
+}
+.images-card {
+  margin-bottom: 16px;
+}
+
+.images-gallery {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.image-item {
+  border-radius: 6px;
+  overflow: hidden;
 }
 </style>

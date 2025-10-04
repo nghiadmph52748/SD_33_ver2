@@ -79,6 +79,16 @@
 
         <template #action="{ record }">
           <a-space>
+            <a-tooltip content="Thay đổi trạng thái">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+                <template #checked-icon>
+                  <icon-check />
+                </template>
+                <template #unchecked-icon>
+                  <icon-close />
+                </template>
+              </a-switch>
+            </a-tooltip>
             <a-button type="text" @click="viewColor(record)">
               <template #icon>
                 <icon-eye />
@@ -196,6 +206,30 @@
     >
       <p>{{ confirmMessage }}</p>
     </a-modal>
+
+    <!-- Status Toggle Confirm Modal -->
+    <a-modal
+      v-model:visible="showStatusConfirm"
+      title="Xác nhận thay đổi trạng thái"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmToggleStatus"
+      @cancel="cancelToggleStatus"
+    >
+      <template #default>
+        <div v-if="colorToToggleStatus">
+          <div>Bạn có chắc chắn muốn {{ colorToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} màu sắc này?</div>
+          <div>
+            Tên màu sắc:
+            <strong>{{ colorToToggleStatus.tenMauSac }}</strong>
+          </div>
+          <div>
+            Trạng thái hiện tại:
+            <strong>{{ colorToToggleStatus.trangThai ? 'Hoạt động' : 'Không hoạt động' }}</strong>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -204,6 +238,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { Message } from '@arco-design/web-vue'
+import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 import {
   IconPlus,
   IconPalette,
@@ -216,6 +251,8 @@ import {
   IconEye,
   IconDelete,
   IconRefresh,
+  IconCheck,
+  IconClose,
 } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store'
 import colorNamer from 'color-namer'
@@ -565,6 +602,10 @@ const onColorChange = (event: Event) => {
 const confirmMessage = ref('')
 const confirmAction = ref<'add' | 'update' | 'delete' | null>(null)
 
+// Status toggle modal
+const showStatusConfirm = ref(false)
+const colorToToggleStatus = ref(null)
+
 // Computed properties for safe access removed
 
 // Table
@@ -601,7 +642,7 @@ const columns = [
     dataIndex: 'is_active',
     slotName: 'status',
     width: 100,
-    align: 'center',
+    // align: 'center',
   },
   {
     title: 'Thao tác',
@@ -728,6 +769,68 @@ const cancelConfirm = () => {
   confirmAction.value = null
 }
 
+// Toggle status function - show confirm first
+const toggleStatus = (record: any) => {
+  colorToToggleStatus.value = record
+  showStatusConfirm.value = true
+}
+
+// Actual toggle status implementation
+const performToggleStatus = async (record: any) => {
+  try {
+    // Set loading state for this specific record
+    record.updating = true
+
+    // Call API to update color status
+    const updateData = {
+      tenMauSac: record.tenMauSac,
+      maMau: record.maMau,
+      trangThai: !record.trangThai, // Toggle status
+      deleted: record.deleted,
+      createAt: record.createAt,
+      createBy: record.createBy,
+      updateAt: new Date().toISOString().split('T')[0],
+      updateBy: userStore.id,
+    }
+
+    const response = await updateMauSac(record.id, updateData)
+
+    if (response.success || response.status === 200) {
+      // Update local data immediately for better UX
+      record.trangThai = !record.trangThai
+
+      // Update in colors array
+      const index = colors.value.findIndex((c) => c.id === record.id)
+      if (index !== -1) {
+        colors.value[index].trangThai = record.trangThai
+      }
+
+      const statusText = record.trangThai ? 'Hoạt động' : 'Không hoạt động'
+      Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
+    } else {
+      console.error('API response not successful:', response)
+      Message.error('Cập nhật trạng thái thất bại')
+    }
+  } catch (error) {
+    console.error('Error toggling status:', error)
+    Message.error('Có lỗi xảy ra khi cập nhật trạng thái')
+  } finally {
+    // Remove loading state
+    record.updating = false
+  }
+}
+
+const confirmToggleStatus = async () => {
+  await performToggleStatus(colorToToggleStatus.value)
+  showStatusConfirm.value = false
+  colorToToggleStatus.value = null
+}
+
+const cancelToggleStatus = () => {
+  showStatusConfirm.value = false
+  colorToToggleStatus.value = null
+}
+
 const getMauSacPage = async (page: number) => {
   try {
     const res = await getMauSacList(page, pagination.value.pageSize)
@@ -841,7 +944,17 @@ const formatDate = (dateString: string) => {
 }
 
 const exportColors = () => {
-  // TODO: Implement Excel export functionality
+  try {
+    if (!colors.value || colors.value.length === 0) {
+      Message.warning('Không có dữ liệu để xuất Excel')
+      return
+    }
+
+    exportToExcel(colors.value, EXPORT_HEADERS.MAU_SAC, 'mau-sac')
+  } catch (error) {
+    console.error('Lỗi khi xuất Excel:', error)
+    Message.error('Có lỗi xảy ra khi xuất Excel')
+  }
 }
 
 onMounted(() => {

@@ -86,6 +86,16 @@
 
         <template #action="{ record }">
           <a-space>
+            <a-tooltip content="Thay đổi trạng thái">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+                <template #checked-icon>
+                  <icon-check />
+                </template>
+                <template #unchecked-icon>
+                  <icon-close />
+                </template>
+              </a-switch>
+            </a-tooltip>
             <a-button type="text" @click="viewMaterial(record)">
               <template #icon>
                 <icon-eye />
@@ -190,6 +200,30 @@
     >
       <p>{{ confirmMessage }}</p>
     </a-modal>
+
+    <!-- Status Toggle Confirm Modal -->
+    <a-modal
+      v-model:visible="showStatusConfirm"
+      title="Xác nhận thay đổi trạng thái"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmToggleStatus"
+      @cancel="cancelToggleStatus"
+    >
+      <template #default>
+        <div v-if="materialToToggleStatus">
+          <div>Bạn có chắc chắn muốn {{ materialToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} chất liệu này?</div>
+          <div>
+            Tên chất liệu:
+            <strong>{{ materialToToggleStatus.tenChatLieu }}</strong>
+          </div>
+          <div>
+            Trạng thái hiện tại:
+            <strong>{{ materialToToggleStatus.trangThai ? 'Hoạt động' : 'Không hoạt động' }}</strong>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -198,6 +232,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { Message } from '@arco-design/web-vue'
+import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 import {
   IconPlus,
   IconTool,
@@ -210,6 +245,8 @@ import {
   IconEye,
   IconDelete,
   IconRefresh,
+  IconCheck,
+  IconClose,
 } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store'
 import {
@@ -266,6 +303,10 @@ const formRules = {
 const confirmMessage = ref('')
 const confirmAction = ref(null)
 
+// Status toggle modal
+const showStatusConfirm = ref(false)
+const materialToToggleStatus = ref(null)
+
 // Computed properties for safe access removed
 
 // Table
@@ -295,7 +336,7 @@ const columns = [
     dataIndex: 'is_active',
     slotName: 'status',
     width: 100,
-    align: 'center',
+    // align: 'center',
   },
   {
     title: 'Thao tác',
@@ -422,6 +463,67 @@ const cancelConfirm = () => {
   confirmModalVisible.value = false
   confirmMessage.value = ''
   confirmAction.value = null
+}
+
+// Toggle status function - show confirm first
+const toggleStatus = (record: any) => {
+  materialToToggleStatus.value = record
+  showStatusConfirm.value = true
+}
+
+// Actual toggle status implementation
+const performToggleStatus = async (record: any) => {
+  try {
+    // Set loading state for this specific record
+    record.updating = true
+
+    // Call API to update material status
+    const updateData = {
+      tenChatLieu: record.tenChatLieu,
+      trangThai: !record.trangThai, // Toggle status
+      deleted: record.deleted,
+      createAt: record.createAt,
+      createBy: record.createBy,
+      updateAt: new Date().toISOString().split('T')[0],
+      updateBy: userStore.id,
+    }
+
+    const response = await updateChatLieu(record.id, updateData)
+
+    if (response.success || response.status === 200) {
+      // Update local data immediately for better UX
+      record.trangThai = !record.trangThai
+
+      // Update in materials array
+      const index = materials.value.findIndex((m) => m.id === record.id)
+      if (index !== -1) {
+        materials.value[index].trangThai = record.trangThai
+      }
+
+      const statusText = record.trangThai ? 'Hoạt động' : 'Không hoạt động'
+      Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
+    } else {
+      console.error('API response not successful:', response)
+      Message.error('Cập nhật trạng thái thất bại')
+    }
+  } catch (error) {
+    console.error('Error toggling status:', error)
+    Message.error('Có lỗi xảy ra khi cập nhật trạng thái')
+  } finally {
+    // Remove loading state
+    record.updating = false
+  }
+}
+
+const confirmToggleStatus = async () => {
+  await performToggleStatus(materialToToggleStatus.value)
+  showStatusConfirm.value = false
+  materialToToggleStatus.value = null
+}
+
+const cancelToggleStatus = () => {
+  showStatusConfirm.value = false
+  materialToToggleStatus.value = null
 }
 
 const getChatLieuPage = async (page) => {
@@ -551,7 +653,17 @@ const formatDate = (dateString: string) => {
 }
 
 const exportMaterials = () => {
-  // TODO: Implement Excel export functionality
+  try {
+    if (!materials.value || materials.value.length === 0) {
+      Message.warning('Không có dữ liệu để xuất Excel')
+      return
+    }
+
+    exportToExcel(materials.value, EXPORT_HEADERS.CHAT_LIEU, 'chat-lieu')
+  } catch (error) {
+    console.error('Lỗi khi xuất Excel:', error)
+    Message.error('Có lỗi xảy ra khi xuất Excel')
+  }
 }
 
 onMounted(() => {
