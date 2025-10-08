@@ -12,6 +12,7 @@ const BAN_HANG_TAI_QUAY: AppRouteRecordRaw = {
     icon: 'IconHome',
     order: 2,
     roles: ['*'],
+    hideChildrenInMenu: true, // Ẩn submenu trong sidebar
   },
   children: [
     {
@@ -19,9 +20,10 @@ const BAN_HANG_TAI_QUAY: AppRouteRecordRaw = {
       name: 'BanHangTaiQuayIndex',
       component: () => import('@/views/main-view/ban-hang-tai-quay/ban-hang-tai-quay.vue'),
       meta: {
-        locale: 'menu.ban-hang.index',
+        locale: 'menu.ban-hang',
         requiresAuth: true,
         roles: ['*'],
+        hideInMenu: true, // Ẩn item này trong menu
       },
     },
   ],

@@ -12,6 +12,7 @@ const THONG_KE: AppRouteRecordRaw = {
     icon: 'IconList',
     order: 0,
     roles: ['*'],
+    hideChildrenInMenu: true, // Ẩn submenu trong sidebar
   },
   children: [
     {
@@ -19,9 +20,10 @@ const THONG_KE: AppRouteRecordRaw = {
       name: 'ThongKeChung',
       component: () => import('@/views/main-view/thong-ke/chung/thong-ke-chung.vue'),
       meta: {
-        locale: 'menu.thong-ke.chung',
+        locale: 'menu.thong-ke',
         requiresAuth: true,
         roles: ['*'],
+        hideInMenu: true, // Ẩn item này trong menu
       },
     },
   ],

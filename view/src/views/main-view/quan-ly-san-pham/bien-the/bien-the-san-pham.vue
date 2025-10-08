@@ -130,7 +130,7 @@
             <template #icon>
               <icon-check />
             </template>
-            {{ newVariantIds.length }} biến thể mới được tạo (highlight trong 30s)
+            {{ newVariantIds.length }} biến thể mới được tạo (hiển thị ở đầu danh sách)
           </a-tag>
           <!-- Edit mode buttons removed -->
           <a-button @click="toggleShowAllVariants">
@@ -262,13 +262,13 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-tooltip content="Xóa/Khôi phục biến thể">
+            <!-- <a-tooltip content="Xóa/Khôi phục biến thể">
               <a-button type="text" danger @click="onDeleteClick(record)">
                 <template #icon>
                   <icon-delete />
                 </template>
               </a-button>
-            </a-tooltip>
+            </a-tooltip> -->
           </a-space>
         </template>
       </a-table>
@@ -366,7 +366,6 @@ const productId = computed(() => (route.params.productId ? Number(route.params.p
 // New variants highlighting
 const newVariantIds = ref<number[]>([])
 const shouldHighlight = ref(false)
-const highlightTimeoutId = ref<number | null>(null)
 
 // Parse new variants from query params
 const parseNewVariants = () => {
@@ -682,12 +681,12 @@ const loadAllOptions = async () => {
       getTrongLuongOptions(),
     ])
 
-    sanPhamOptions.value = sanPham.data || []
-    mauSacOptions.value = mauSac.data || []
-    kichThuocOptions.value = kichThuoc.data || []
-    chatLieuOptions.value = chatLieu.data || []
-    deGiayOptions.value = deGiay.data || []
-    trongLuongOptions.value = trongLuong.data || []
+    sanPhamOptions.value = (sanPham.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
+    mauSacOptions.value = (mauSac.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
+    kichThuocOptions.value = (kichThuoc.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
+    chatLieuOptions.value = (chatLieu.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
+    deGiayOptions.value = (deGiay.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
+    trongLuongOptions.value = (trongLuong.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
   } catch (error) {
     Message.error('Không thể tải danh sách lựa chọn')
   }
@@ -789,6 +788,17 @@ const performSearch = () => {
       loadBienTheList()
     }
     return
+  }
+
+  // Khi user thực hiện tìm kiếm/lọc, tắt highlighting biến thể mới
+  if (shouldHighlight.value) {
+    shouldHighlight.value = false
+    newVariantIds.value = []
+    // Clean up URL query params
+    router.replace({
+      name: route.name,
+      params: route.params,
+    })
   }
 
   // Filters are active, perform frontend filtering
@@ -928,12 +938,6 @@ const exportExcel = () => {
 const clearHighlighting = () => {
   shouldHighlight.value = false
   newVariantIds.value = []
-
-  // Clear timeout if exists
-  if (highlightTimeoutId.value) {
-    clearTimeout(highlightTimeoutId.value)
-    highlightTimeoutId.value = null
-  }
 
   // Clean up URL query params
   router.replace({
@@ -1207,25 +1211,8 @@ onMounted(() => {
     loadBienTheList()
   }
 
-  // Auto-remove highlighting after 30 seconds (increased from 10)
-  if (shouldHighlight.value) {
-    // Clear any existing timeout
-    if (highlightTimeoutId.value) {
-      clearTimeout(highlightTimeoutId.value)
-    }
-
-    highlightTimeoutId.value = setTimeout(() => {
-      shouldHighlight.value = false
-      newVariantIds.value = []
-      highlightTimeoutId.value = null
-      // Clean up URL query params without reloading data
-      router.replace({
-        name: route.name,
-        params: route.params,
-      })
-      Message.info('Highlighting biến thể mới đã hết hiệu lực')
-    }, 30000)
-  }
+  // Highlighting sẽ được giữ cho đến khi user tự tắt hoặc thực hiện tìm kiếm/lọc
+  // Không tự động tắt sau 30s nữa
 })
 
 // Watch for variants data changes to ensure proper sorting

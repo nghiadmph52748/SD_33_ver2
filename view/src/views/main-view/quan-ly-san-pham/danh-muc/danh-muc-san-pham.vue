@@ -117,6 +117,10 @@
           />
         </template>
 
+        <template #index="{ rowIndex }">
+          {{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}
+        </template>
+
         <template #status="{ record }">
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode -->
@@ -471,6 +475,13 @@ const columns = [
     titleSlotName: 'checkbox-title',
   },
   {
+    title: 'STT',
+    dataIndex: 'index',
+    width: 70,
+    align: 'center',
+    slotName: 'index',
+  },
+  {
     title: 'Mã sản phẩm',
     dataIndex: 'maSanPham',
     width: 110,
@@ -479,7 +490,7 @@ const columns = [
     title: 'Tên sản phẩm',
     dataIndex: 'name', // Sẽ được ánh xạ từ tenSanPham
     slotName: 'name',
-    width: 250,
+    width: 200,
   },
   {
     title: 'Nhà sản xuất',
@@ -496,7 +507,7 @@ const columns = [
   {
     title: 'Số lượng biến thể',
     dataIndex: 'soLuongBienThe',
-    width: 150,
+    width: 100,
     align: 'center',
   },
   {

@@ -212,7 +212,7 @@
                 </a-button>
                 <div class="selected-items">
                   <a-tag v-for="color in formData.colors" :key="color" closable @close="removeColor(color)" class="color-tag">
-                    {{ colorInputs.find((c) => c.value === color)?.label }}
+                    {{ colorInputs.find((c) => String(c.value) === String(color))?.label }}
                   </a-tag>
                 </div>
               </div>
@@ -243,7 +243,7 @@
                 </a-button>
                 <div class="selected-items">
                   <a-tag v-for="size in formData.sizes" :key="size" closable @close="removeSize(size)" class="size-tag">
-                    {{ sizeInputs.find((s) => s.value === size)?.label }}
+                    {{ sizeInputs.find((s) => String(s.value) === String(size))?.label }}
                   </a-tag>
                 </div>
               </div>
@@ -264,7 +264,7 @@
         </a-button>
       </div>
       <div v-for="colorVariant in variants" :key="colorVariant.color" class="color-variant">
-        <h4>{{ colorInputs.find((c) => c.value === colorVariant.color)?.label }}</h4>
+        <h4>{{ colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label }}</h4>
         <a-table
           :columns="variantColumns"
           :data="colorVariant.variants"
@@ -319,8 +319,11 @@
         <div v-for="color in formData.colors" :key="color" class="color-image-section">
           <div class="color-header">
             <div class="color-info">
-              <div class="color-preview" :style="{ backgroundColor: colorInputs.find((c) => c.value === color)?.maMau || '#ccc' }"></div>
-              <span class="color-name">{{ colorInputs.find((c) => c.value === color)?.label }}</span>
+              <div
+                class="color-preview"
+                :style="{ backgroundColor: colorInputs.find((c) => String(c.value) === String(color))?.maMau || '#ccc' }"
+              ></div>
+              <span class="color-name">{{ colorInputs.find((c) => String(c.value) === String(color))?.label }}</span>
             </div>
             <a-button type="outline" size="small" @click="showImageModal(color)">
               <template #icon>
@@ -369,6 +372,37 @@
       </div>
     </a-card>
 
+    <!-- Confirm Modal for Adding Variants -->
+    <a-modal
+      v-model:visible="showSubmitConfirm"
+      title="Xác nhận thêm biến thể"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmSubmit"
+      @cancel="cancelSubmit"
+    >
+      <template #default>
+        <div>
+          <div style="margin-bottom: 12px">
+            <icon-exclamation-circle-fill style="color: #ff7d00; font-size: 16px; margin-right: 8px" />
+            <strong>Bạn có chắc chắn muốn thêm các biến thể sản phẩm này?</strong>
+          </div>
+          <div style="margin-bottom: 8px">
+            Sản phẩm:
+            <strong>{{ formData.name }}</strong>
+          </div>
+          <div style="margin-bottom: 8px">
+            Số lượng biến thể:
+            <strong>{{ totalVariantsCount }} biến thể</strong>
+          </div>
+          <div style="color: #86909c; font-size: 12px">
+            <icon-info-circle style="margin-right: 4px" />
+            Sau khi thêm, bạn có thể chỉnh sửa hoặc xóa biến thể trong danh sách biến thể sản phẩm.
+          </div>
+        </div>
+      </template>
+    </a-modal>
+
     <!-- Quick Add Modal -->
     <a-modal v-model:visible="quickAddVisible" title="Thêm nhanh biến thể" width="600px" @ok="handleQuickAdd" @cancel="resetQuickAddForm">
       <a-form :model="quickAddForm" :rules="quickAddRules" ref="quickAddFormRef" layout="vertical">
@@ -384,7 +418,7 @@
               :value="color"
               :disabled="quickAddForm.selectedColors.includes('all')"
             >
-              {{ colorInputs.find((c) => c.value === color)?.label }}
+              {{ colorInputs.find((c) => String(c.value) === String(color))?.label }}
             </a-checkbox>
             <a-checkbox value="all" style="margin-top: 8px; font-weight: 500">Chọn tất cả màu</a-checkbox>
           </a-checkbox-group>
@@ -393,7 +427,7 @@
         <!-- Weight -->
         <a-form-item>
           <template #label>
-            <span class="required-field">Trọng lượng (kg)</span>
+            <span class="required-field">Trọng lượng (g)</span>
           </template>
           <a-input-number
             v-model="quickAddForm.weight"
@@ -454,11 +488,12 @@
         <div class="attribute-inputs-list">
           <div v-for="color in filteredColorInputs" :key="color.value" class="color-input-item">
             <a-checkbox
-              :checked="tempColors.includes(color.value)"
-              @change="(checked) => handleColorInputChange(color.value, checked)"
+              :model-value="tempColors.map(String).includes(String(color.value))"
+              @update:model-value="(checked) => handleColorInputChange(color.value, checked)"
               class="attribute-input-checkbox"
             >
               {{ color.label }}
+              <!-- Debug: {{ tempColors.map(String).includes(String(color.value)) ? '✓' : '✗' }} -->
             </a-checkbox>
             <input type="color" :value="color.maMau" disabled class="color-preview-input" />
           </div>
@@ -491,8 +526,8 @@
           <a-checkbox
             v-for="size in filteredSizeInputs"
             :key="size.value"
-            :checked="tempSizes.includes(size.value)"
-            @change="(checked) => handleSizeInputChange(size.value, checked)"
+            :model-value="tempSizes.map(String).includes(String(size.value))"
+            @update:model-value="(checked) => handleSizeInputChange(size.value, checked)"
             class="attribute-input-checkbox"
           >
             {{ size.label }}
@@ -590,7 +625,10 @@
       @cancel="closeAddColorModal"
     >
       <a-form ref="newColorFormRef" :model="newColorForm" :rules="newColorFormRules" layout="vertical">
-        <a-form-item field="maMau" label="Chọn màu">
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Chọn màu</span>
+          </template>
           <input
             type="color"
             :value="newColorForm.maMau"
@@ -613,7 +651,10 @@
       @cancel="closeAddSizeModal"
     >
       <a-form ref="newSizeFormRef" :model="newSizeForm" :rules="newSizeFormRules" layout="vertical">
-        <a-form-item field="tenKichThuoc" label="Tên kích thước">
+        <a-form-item>
+          <template #label>
+            <span class="required-field">Tên kích thước</span>
+          </template>
           <a-input v-model="newSizeForm.tenKichThuoc" placeholder="Nhập tên kích thước" />
         </a-form-item>
       </a-form>
@@ -622,7 +663,7 @@
     <!-- Image Management Modal -->
     <a-modal
       v-model:visible="imageModalVisible"
-      :title="`Quản lý ảnh - ${imageModalColor ? colorInputs.find((c) => c.value === imageModalColor)?.label : ''}`"
+      :title="`Quản lý ảnh - ${imageModalColor ? colorInputs.find((c) => String(c.value) === String(imageModalColor))?.label : ''}`"
       width="700px"
       :ok-loading="uploadingImages"
       :cancel-button-props="{ disabled: uploadingImages }"
@@ -728,6 +769,7 @@ import {
   getNhaSanXuatOptions,
   getXuatXuOptions,
   createBienTheSanPham,
+  updateBienTheSanPham,
   createDanhMucSanPham,
   createNhaSanXuat,
   createXuatXu,
@@ -736,6 +778,7 @@ import {
   createMauSac,
   createKichThuoc,
   themAnhChoBienThe,
+  getBienTheSanPhamList,
 } from '@/api/san-pham'
 import { getAnhSanPhamByMauAnh } from '@/api/san-pham/bien-the'
 import { uploadMutipartFile, getAnhSanPhamByTenMau } from '@/api/san-pham/thuoc-tinh/anh-san-pham'
@@ -749,6 +792,9 @@ const userStore = useUserStore()
 const loading = ref(false)
 const formRef = ref()
 const attributesFormRef = ref()
+
+// Confirm modal state
+const showSubmitConfirm = ref(false)
 
 // Quick add modal state
 const quickAddVisible = ref(false)
@@ -773,6 +819,10 @@ const addSizeModalVisible = ref(false)
 const colorSearchText = ref('')
 const sizeSearchText = ref('')
 
+// Selected items lists - Danh sách đã chọn với đầy đủ thông tin
+const selectedColorsList = ref<Array<{ id: string; label: string; maMau: string }>>([])
+const selectedSizesList = ref<Array<{ id: string; label: string }>>([])
+
 // Image management state
 const imageModalVisible = ref(false)
 const imageModalColor = ref<string | null>(null)
@@ -784,6 +834,7 @@ const newUploadImages = ref<any[]>([])
 const uploadingImages = ref(false)
 const uploadProgress = ref(0)
 const uploadProgressText = ref('')
+const MAX_IMAGES_PER_COLOR = 5 // Giới hạn tối đa 5 ảnh mỗi màu
 
 // Storage for uploaded image IDs per color - lưu IDs của ảnh đã upload
 const uploadedImageStore = ref<Record<string, number[]>>({})
@@ -882,68 +933,82 @@ const loadAllInputs = async () => {
     // Load product names for autocomplete
     const productResponse = await getSanPhamOptions()
     if (productResponse.data) {
-      productNameInputs.value = productResponse.data.map((item: any) => ({
-        label: item.tenSanPham,
-        value: item.tenSanPham,
-        id: item.id,
-        nhaSanXuat: item.nhaSanXuat,
-        xuatXu: item.xuatXu,
-      }))
+      productNameInputs.value = productResponse.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenSanPham,
+          value: item.tenSanPham,
+          id: item.id,
+          nhaSanXuat: item.nhaSanXuat,
+          xuatXu: item.xuatXu,
+        }))
     }
 
     // Load manufacturers
     const manufacturerResponse = await getNhaSanXuatOptions()
     if (manufacturerResponse.data && Array.isArray(manufacturerResponse.data)) {
-      manufacturerInputs.value = manufacturerResponse.data.map((item: any) => ({
-        label: item.tenNhaSanXuat,
-        value: item.id,
-      }))
+      manufacturerInputs.value = manufacturerResponse.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenNhaSanXuat,
+          value: item.id,
+        }))
     }
 
     // Load origins
     const originResponse = await getXuatXuOptions()
     if (originResponse.data && Array.isArray(originResponse.data)) {
-      originInputs.value = originResponse.data.map((item: any) => ({
-        label: item.tenXuatXu,
-        value: item.id,
-      }))
+      originInputs.value = originResponse.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenXuatXu,
+          value: item.id,
+        }))
     }
 
     // Load colors
     const colorResponse = await getMauSacOptions()
     if (colorResponse.data) {
-      colorInputs.value = colorResponse.data.map((item: any) => ({
-        label: item.tenMauSac,
-        value: item.id,
-        maMau: item.maMau,
-      }))
+      colorInputs.value = colorResponse.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenMauSac,
+          value: item.id,
+          maMau: item.maMau,
+        }))
     }
 
     // Load sizes
     const sizeResponse = await getKichThuocOptions()
     if (sizeResponse.data) {
-      sizeInputs.value = sizeResponse.data.map((item: any) => ({
-        label: item.tenKichThuoc,
-        value: item.id,
-      }))
+      sizeInputs.value = sizeResponse.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenKichThuoc,
+          value: item.id,
+        }))
     }
 
     // Load materials
     const materialResponse = await getChatLieuOptions()
     if (materialResponse.data) {
-      materialInputs.value = materialResponse.data.map((item: any) => ({
-        label: item.tenChatLieu,
-        value: item.id,
-      }))
+      materialInputs.value = materialResponse.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenChatLieu,
+          value: item.id,
+        }))
     }
 
     // Load shoe soles
     const shoeSoleResponse = await getDeGiayOptions()
     if (shoeSoleResponse.data) {
-      shoeSoleInputs.value = shoeSoleResponse.data.map((item: any) => ({
-        label: item.tenDeGiay,
-        value: item.id,
-      }))
+      shoeSoleInputs.value = shoeSoleResponse.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenDeGiay,
+          value: item.id,
+        }))
     }
   } catch (error) {
     Message.error(`Lỗi khi tải dữ liệu: ${error}`)
@@ -955,10 +1020,12 @@ const loadManufacturerInputs = async () => {
   try {
     const response = await getNhaSanXuatOptions()
     if (response.data && Array.isArray(response.data)) {
-      manufacturerInputs.value = response.data.map((item: any) => ({
-        label: item.tenNhaSanXuat,
-        value: item.id,
-      }))
+      manufacturerInputs.value = response.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenNhaSanXuat,
+          value: item.id,
+        }))
     }
   } catch (error) {
     console.error('Error loading manufacturer inputs:', error)
@@ -969,10 +1036,12 @@ const loadOriginInputs = async () => {
   try {
     const response = await getXuatXuOptions()
     if (response.data && Array.isArray(response.data)) {
-      originInputs.value = response.data.map((item: any) => ({
-        label: item.tenXuatXu,
-        value: item.id,
-      }))
+      originInputs.value = response.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenXuatXu,
+          value: item.id,
+        }))
     }
   } catch (error) {
     console.error('Error loading origin inputs:', error)
@@ -983,10 +1052,12 @@ const loadMaterialInputs = async () => {
   try {
     const response = await getChatLieuOptions()
     if (response.data) {
-      materialInputs.value = response.data.map((item: any) => ({
-        label: item.tenChatLieu,
-        value: item.id,
-      }))
+      materialInputs.value = response.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenChatLieu,
+          value: item.id,
+        }))
     }
   } catch (error) {
     console.error('Error loading material inputs:', error)
@@ -997,10 +1068,12 @@ const loadShoeSoleInputs = async () => {
   try {
     const response = await getDeGiayOptions()
     if (response.data) {
-      shoeSoleInputs.value = response.data.map((item: any) => ({
-        label: item.tenDeGiay,
-        value: item.id,
-      }))
+      shoeSoleInputs.value = response.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenDeGiay,
+          value: item.id,
+        }))
     }
   } catch (error) {
     console.error('Error loading shoe sole inputs:', error)
@@ -1011,11 +1084,13 @@ const loadColorInputs = async () => {
   try {
     const response = await getMauSacOptions()
     if (response.data) {
-      colorInputs.value = response.data.map((item: any) => ({
-        label: item.tenMauSac,
-        value: item.id,
-        maMau: item.maMau,
-      }))
+      colorInputs.value = response.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
+        .map((item: any) => ({
+          label: item.tenMauSac,
+          value: item.id,
+          maMau: item.maMau,
+        }))
     }
   } catch (error) {
     console.error('Error loading color inputs:', error)
@@ -1027,6 +1102,7 @@ const loadSizeInputs = async () => {
     const response = await getKichThuocOptions()
     if (response.data) {
       sizeInputs.value = response.data
+        .filter((item: any) => item.trangThai === true && item.deleted === false)
         .map((item: any) => ({
           label: item.tenKichThuoc,
           value: item.id,
@@ -1196,6 +1272,16 @@ const handleShoeSoleBlur = () => {
   }, 200)
 }
 
+// Editable variants ref that can be modified
+const variants = ref([])
+
+// Computed: Total variants count for confirmation
+const totalVariantsCount = computed(() => {
+  return variants.value.reduce((total, colorGroup) => {
+    return total + colorGroup.variants.length
+  }, 0)
+})
+
 // Computed properties for filtered inputs in modals
 const filteredColorInputs = computed(() => {
   if (!colorSearchText.value) return colorInputs.value
@@ -1228,13 +1314,16 @@ const baseVariants = computed(() => {
       // Basic info
       sku: `${formData.name.replace(/\s+/g, '-').toLowerCase()}-${color}-${size}`,
       productName: formData.name,
-      manufacturer: manufacturerInputs.value.find((m) => m.value === formData.manufacturer)?.label || 'Chưa chọn',
-      origin: originInputs.value.find((o) => o.value === formData.origin)?.label || 'Chưa chọn',
+      manufacturer: manufacturerInputs.value.find((m) => String(m.value) === String(formData.manufacturer))?.label || 'Chưa chọn',
+      origin: originInputs.value.find((o) => String(o.value) === String(formData.origin))?.label || 'Chưa chọn',
       attributes: [
-        { label: 'Màu sắc', value: colorInputs.value.find((c) => c.value === color)?.label || 'N/A' },
-        { label: 'Kích thước', value: sizeInputs.value.find((s) => s.value === size)?.label || 'N/A' },
-        { label: 'Chất liệu', value: materialInputs.value.find((m) => m.value === formData.material)?.label || 'Chưa chọn' },
-        { label: 'Đế giày', value: shoeSoleInputs.value.find((s) => s.value === formData.shoeSole)?.label || 'Chưa chọn' },
+        { label: 'Màu sắc', value: colorInputs.value.find((c) => String(c.value) === String(color))?.label || 'N/A' },
+        { label: 'Kích thước', value: sizeInputs.value.find((s) => String(s.value) === String(size))?.label || 'N/A' },
+        {
+          label: 'Chất liệu',
+          value: materialInputs.value.find((m) => String(m.value) === String(formData.material))?.label || 'Chưa chọn',
+        },
+        { label: 'Đế giày', value: shoeSoleInputs.value.find((s) => String(s.value) === String(formData.shoeSole))?.label || 'Chưa chọn' },
       ],
       weight: 0,
       stock: 0,
@@ -1251,9 +1340,6 @@ const baseVariants = computed(() => {
     }
   })
 })
-
-// Editable variants ref that can be modified
-const variants = ref([])
 
 // Sync base variants to editable variants when base variants change
 watch(
@@ -1297,7 +1383,7 @@ const variantColumns = [
     slotName: 'attributes',
   },
   {
-    title: 'Trọng lượng (kg)',
+    title: 'Trọng lượng (g)',
     dataIndex: 'weight',
     width: 120,
     slotName: 'weight',
@@ -1406,58 +1492,84 @@ const getColorHexValue = (colorValue: string) => {
 // Color modal methods
 const showColorModal = () => {
   tempColors.value = [...formData.colors]
+  colorSearchText.value = '' // Reset search khi mở modal
   colorModalVisible.value = true
 }
 
 const handleColorModalOk = () => {
   formData.colors = [...tempColors.value]
+
+  // Cập nhật selectedColorsList với đầy đủ thông tin
+  selectedColorsList.value = tempColors.value.map((colorId) => {
+    const colorInfo = colorInputs.value.find((c) => String(c.value) === String(colorId))
+    return {
+      id: colorId,
+      label: colorInfo?.label || '',
+      maMau: colorInfo?.maMau || '',
+    }
+  })
   colorModalVisible.value = false
 }
 
 const handleColorModalCancel = () => {
   // Reset temp colors to original values
   tempColors.value = [...formData.colors]
+  colorSearchText.value = '' // Reset search
   colorModalVisible.value = false
 }
 
 // Size modal methods
 const showSizeModal = () => {
   tempSizes.value = [...formData.sizes]
+  sizeSearchText.value = '' // Reset search khi mở modal
   sizeModalVisible.value = true
 }
 
 const handleSizeModalOk = () => {
   formData.sizes = [...tempSizes.value]
+  // Cập nhật selectedSizesList với đầy đủ thông tin
+  selectedSizesList.value = tempSizes.value.map((sizeId) => {
+    const sizeInfo = sizeInputs.value.find((s) => String(s.value) === String(sizeId))
+    return {
+      id: sizeId,
+      label: sizeInfo?.label || '',
+    }
+  })
   sizeModalVisible.value = false
 }
 
 const handleSizeModalCancel = () => {
   // Reset temp sizes to original values
   tempSizes.value = [...formData.sizes]
+  sizeSearchText.value = '' // Reset search
   sizeModalVisible.value = false
 }
 
 // Individual input change handlers
-const handleColorInputChange = (colorValue: string, checked: boolean) => {
+const handleColorInputChange = (colorValue: any, checked: boolean) => {
   if (checked) {
-    if (!tempColors.value.includes(colorValue)) {
+    // Check với String để tránh duplicate
+    if (!tempColors.value.map(String).includes(String(colorValue))) {
       tempColors.value.push(colorValue)
     }
   } else {
-    const index = tempColors.value.indexOf(colorValue)
+    // Tìm và xóa với String comparison
+    const index = tempColors.value.findIndex((c) => String(c) === String(colorValue))
     if (index > -1) {
       tempColors.value.splice(index, 1)
     }
   }
 }
 
-const handleSizeInputChange = (sizeValue: string, checked: boolean) => {
+const handleSizeInputChange = (sizeValue: any, checked: boolean) => {
   if (checked) {
-    if (!tempSizes.value.includes(sizeValue)) {
+    // Check với String để tránh duplicate
+    if (!tempSizes.value.map(String).includes(String(sizeValue))) {
       tempSizes.value.push(sizeValue)
     }
   } else {
-    const index = tempSizes.value.indexOf(sizeValue)
+    // Tìm và xóa với String comparison
+    const index = tempSizes.value.findIndex((s) => String(s) === String(sizeValue))
     if (index > -1) {
       tempSizes.value.splice(index, 1)
     }
@@ -1465,17 +1577,38 @@ const handleSizeInputChange = (sizeValue: string, checked: boolean) => {
 }
 
 // Remove methods for tags
-const removeColor = (color: string) => {
-  const index = formData.colors.indexOf(color)
+const removeColor = (color: any) => {
+  // Tìm với String comparison
+  const index = formData.colors.findIndex((c) => String(c) === String(color))
   if (index > -1) {
     formData.colors.splice(index, 1)
+
+    // Xóa khỏi selectedColorsList
+    const listIndex = selectedColorsList.value.findIndex((c) => String(c.id) === String(color))
+    if (listIndex > -1) {
+      selectedColorsList.value.splice(listIndex, 1)
+    }
+    // Xóa ảnh của màu này nếu có
+    const colorKey = String(color)
+    if (colorImages.value[colorKey]) {
+      delete colorImages.value[colorKey]
+    }
+    if (uploadedImageStore.value[colorKey]) {
+      delete uploadedImageStore.value[colorKey]
+    }
   }
 }
 
-const removeSize = (size: string) => {
-  const index = formData.sizes.indexOf(size)
+const removeSize = (size: any) => {
+  // Tìm với String comparison
+  const index = formData.sizes.findIndex((s) => String(s) === String(size))
   if (index > -1) {
     formData.sizes.splice(index, 1)
+    // Xóa khỏi selectedSizesList
+    const listIndex = selectedSizesList.value.findIndex((s) => String(s.id) === String(size))
+    if (listIndex > -1) {
+      selectedSizesList.value.splice(listIndex, 1)
+    }
   }
 }
 
@@ -1936,7 +2069,18 @@ const handleAddColor = async () => {
       // Additional timeout to ensure inputs are rendered
       setTimeout(() => {
         // Add to selected colors
-        formData.colors.push(response.data)
+        const newColorId = response.data
+        formData.colors.push(newColorId)
+
+        // Thêm vào selectedColorsList
+        const colorInfo = colorInputs.value.find((c) => String(c.value) === String(newColorId))
+        if (colorInfo) {
+          selectedColorsList.value.push({
+            id: newColorId,
+            label: colorInfo.label,
+            maMau: colorInfo.maMau,
+          })
+        }
       }, 100)
 
       closeAddColorModal()
@@ -1981,7 +2125,17 @@ const handleAddSize = async () => {
       // Additional timeout to ensure inputs are rendered
       setTimeout(() => {
         // Add to selected sizes
-        formData.sizes.push(response.data)
+        const newSizeId = response.data
+        formData.sizes.push(newSizeId)
+
+        // Thêm vào selectedSizesList
+        const sizeInfo = sizeInputs.value.find((s) => String(s.value) === String(newSizeId))
+        if (sizeInfo) {
+          selectedSizesList.value.push({
+            id: newSizeId,
+            label: sizeInfo.label,
+          })
+        }
       }, 100)
 
       closeAddSizeModal()
@@ -2002,15 +2156,23 @@ const showImageModal = async (colorId: string) => {
   imageModalColor.value = colorId
   imageModalVisible.value = true
 
-  // Reset selections
-  selectedExistingImages.value = []
-  newUploadImages.value = []
+  // Load lại các ảnh đã chọn trước đó (nếu có)
+  const existingSavedImages = colorImages.value[colorId] || []
+  selectedExistingImages.value = existingSavedImages.filter((img: any) => img.type === 'existing').map((img: any) => img.id)
+  newUploadImages.value = existingSavedImages
+    .filter((img: any) => img.type === 'new')
+    .map((img: any) => ({
+      url: img.url,
+      name: img.name,
+      originFile: null,
+    }))
+
   loadingExistingImages.value = true
 
   try {
     // Lấy tên màu từ colorId để gọi API
-    const colorInfo = colorInputs.value.find((c) => c.value === colorId)
-    const colorName = colorInfo?.label || colorId
+    const colorInfo = colorInputs.value.find((c) => String(c.value) === String(colorId))
+    const colorName = colorInfo?.label || String(colorId)
 
     // Gọi API để lấy ảnh có sẵn theo màu
     const response = await getAnhSanPhamByTenMau(colorName)
@@ -2028,6 +2190,12 @@ const showImageModal = async (colorId: string) => {
 const handleExistingImageSelect = (imageId: string) => {
   const index = selectedExistingImages.value.indexOf(imageId)
   if (index === -1) {
+    // Kiểm tra không vượt quá giới hạn
+    const totalImages = selectedExistingImages.value.length + newUploadImages.value.length
+    if (totalImages >= MAX_IMAGES_PER_COLOR) {
+      Message.warning(`Mỗi màu chỉ được chọn tối đa ${MAX_IMAGES_PER_COLOR} ảnh`)
+      return
+    }
     selectedExistingImages.value.push(imageId)
   } else {
     selectedExistingImages.value.splice(index, 1)
@@ -2036,6 +2204,13 @@ const handleExistingImageSelect = (imageId: string) => {
 
 // Xử lý trước khi upload ảnh mới
 const handleBeforeUpload = (file: File) => {
+  // Kiểm tra không vượt quá giới hạn
+  const totalImages = selectedExistingImages.value.length + newUploadImages.value.length
+  if (totalImages >= MAX_IMAGES_PER_COLOR) {
+    Message.warning(`Mỗi màu chỉ được upload tối đa ${MAX_IMAGES_PER_COLOR} ảnh`)
+    return false
+  }
+
   const isValidType = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)
   if (!isValidType) {
     Message.error('Chỉ được upload file ảnh (JPG, PNG, GIF, WebP)!')
@@ -2065,6 +2240,18 @@ const handleImageModalCancel = () => {
 
 // Xử lý OK modal ảnh - Upload ảnh mới và lưu IDs
 const handleImageModalOk = async () => {
+  // Kiểm tra tổng số ảnh (existing + new) không vượt quá 5
+  const totalImages = selectedExistingImages.value.length + newUploadImages.value.length
+  if (totalImages > MAX_IMAGES_PER_COLOR) {
+    Message.error(`Mỗi màu chỉ được chọn tối đa ${MAX_IMAGES_PER_COLOR} ảnh. Bạn đang chọn ${totalImages} ảnh.`)
+    return
+  }
+
+  if (totalImages === 0) {
+    Message.warning('Vui lòng chọn ít nhất 1 ảnh')
+    return
+  }
+
   uploadingImages.value = true
   uploadProgressText.value = 'Đang khởi tạo...'
 
@@ -2076,7 +2263,7 @@ const handleImageModalOk = async () => {
       const files = newUploadImages.value.map((item) => item.originFile || item.file)
 
       const colorInfo = colorInputs.value.find((c) => {
-        return c.value.toString() === imageModalColor.value?.toString()
+        return String(c.value) === String(imageModalColor.value)
       })
       const colorName = colorInfo?.label || 'Unknown Color'
 
@@ -2176,31 +2363,13 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate()
 
-    // First, create the product if it's pending
-    let productId = formData.selectedProductId
-    if (productId === 'pending' && pendingNewProduct.value) {
-      const productData = {
-        tenSanPham: pendingNewProduct.value.tenSanPham,
-        idNhaSanXuat: formData.manufacturer || 1, // Use selected manufacturer or default
-        idXuatXu: formData.origin || 1, // Use selected origin or default
-        trangThai: true,
-        deleted: false,
-        createAt: new Date().toISOString().split('T')[0],
-        createBy: userStore.id,
-      }
-      const productResponse = await createDanhMucSanPham(productData)
-      productId = productResponse.data.id
-      // Clear pending state
-      pendingNewProduct.value = null
-    }
-
-    // Validate required fields
+    // Validate required fields first
     if (!formData.name.trim()) {
       Message.error('Vui lòng nhập tên sản phẩm')
       return
     }
 
-    if (!productId) {
+    if (!formData.selectedProductId) {
       Message.error('Vui lòng chọn sản phẩm từ danh sách có sẵn')
       return
     }
@@ -2220,12 +2389,83 @@ const handleSubmit = async () => {
       return
     }
 
+    // Show confirmation modal
+    showSubmitConfirm.value = true
+  } catch (error) {
+    console.error('Validation error:', error)
+  }
+}
+
+// Helper function to check if variant already exists
+const checkExistingVariant = async (
+  productId: number,
+  mauSac: number,
+  kichThuoc: number,
+  chatLieu: number,
+  deGiay: number,
+  trongLuong: number
+) => {
+  try {
+    const response = await getBienTheSanPhamList(0, productId)
+    if (response.data && Array.isArray(response.data)) {
+      // Tìm biến thể trùng khớp tất cả thuộc tính
+      const existingVariant = response.data.find((variant: any) => {
+        // Chuyển TÊN từ response thành ID để so sánh
+        const variantMauSacId = colorInputs.value.find((c) => c.label === variant.tenMauSac)?.value
+        const variantKichThuocId = sizeInputs.value.find((s) => s.label === variant.tenKichThuoc)?.value
+        const variantChatLieuId = materialInputs.value.find((m) => m.label === variant.tenChatLieu)?.value
+        const variantDeGiayId = shoeSoleInputs.value.find((d) => d.label === variant.tenDeGiay)?.value
+
+        // So sánh ID với ID
+        const mauSacMatch = String(variantMauSacId) === String(mauSac)
+        const kichThuocMatch = String(variantKichThuocId) === String(kichThuoc)
+        const chatLieuMatch = String(variantChatLieuId) === String(chatLieu)
+        const deGiayMatch = String(variantDeGiayId) === String(deGiay)
+        const notDeleted = variant.deleted !== true
+        return mauSacMatch && kichThuocMatch && chatLieuMatch && deGiayMatch && notDeleted
+      })
+      return existingVariant
+    }
+    return null
+  } catch (error) {
+    console.error('Error checking existing variant:', error)
+    return null
+  }
+}
+
+// Confirm submit function
+const confirmSubmit = async () => {
+  try {
+    showSubmitConfirm.value = false
+
+    // First, create the product if it's pending
+    let productId = formData.selectedProductId
+    if (productId === 'pending' && pendingNewProduct.value) {
+      const productData = {
+        tenSanPham: pendingNewProduct.value.tenSanPham,
+        idNhaSanXuat: formData.manufacturer || 1, // Use selected manufacturer or default
+        idXuatXu: formData.origin || 1, // Use selected origin or default
+        trangThai: true,
+        deleted: false,
+        createAt: new Date().toISOString().split('T')[0],
+        createBy: userStore.id,
+      }
+      const productResponse = await createDanhMucSanPham(productData)
+      productId = productResponse.data.id
+      // Clear pending state
+      pendingNewProduct.value = null
+    }
+
     loading.value = true
 
     // Sử dụng trực tiếp uploadedImageStore để lấy danh sách image IDs cho mỗi màu
     const finalImageIds = { ...uploadedImageStore.value }
 
-    // Tạo danh sách promises cho việc tạo biến thể
+    // Counters for tracking
+    let createdCount = 0
+    let updatedCount = 0
+
+    // Tạo danh sách promises cho việc tạo/update biến thể
     const variantPromises = variants.value.flatMap((colorGroup) =>
       colorGroup.variants.map(async (variant) => {
         const variantData = {
@@ -2243,14 +2483,44 @@ const handleSubmit = async () => {
           createBy: userStore.id,
         }
 
-        // Create the variant first - WAIT for completion before proceeding
-        const variantResponse = await createBienTheSanPham(variantData)
-        if (!variantResponse?.success || !variantResponse.data) {
-          console.error('❌ Invalid variant response:', variantResponse)
-          throw new Error('Failed to create variant - no ID returned')
-        }
+        // Check if variant already exists
+        const existingVariant = await checkExistingVariant(
+          productId,
+          variant.color,
+          variant.size,
+          formData.material || 1,
+          formData.shoeSole || 1,
+          1
+        )
 
-        const variantId = variantResponse.data // ID is directly in data field
+        let variantResponse
+        let variantId
+
+        if (existingVariant) {
+          const updateData = {
+            ...variantData,
+            soLuong: existingVariant.soLuong + variant.stock, // CỘNG thêm số lượng
+            updateAt: new Date().toISOString().split('T')[0],
+            updateBy: userStore.id,
+          }
+
+          try {
+            variantResponse = await updateBienTheSanPham(existingVariant.id, updateData)
+            variantId = existingVariant.id
+            updatedCount += 1
+          } catch (error) {
+            console.error('❌ Lỗi khi update biến thể:', error)
+            throw error
+          }
+        } else {
+          variantResponse = await createBienTheSanPham(variantData)
+          if (!variantResponse?.success || !variantResponse.data) {
+            console.error('❌ Invalid variant response:', variantResponse)
+            throw new Error('Failed to create variant - no ID returned')
+          }
+          variantId = variantResponse.data // ID is directly in data field
+          createdCount += 1
+        }
 
         // NOW proceed with image linking - only after variant creation is complete
         const colorId = variant.color.toString()
@@ -2290,21 +2560,29 @@ const handleSubmit = async () => {
       })
     )
 
-    // Wait for all variants to be created and collect their IDs
+    // Wait for all variants to be created/updated and collect their IDs
     const variantResults = await Promise.all(variantPromises)
-    const createdVariantIds = variantResults.map((result) => result.variantId).filter(Boolean)
+    const allVariantIds = variantResults.map((result) => result.variantId).filter(Boolean)
     loading.value = false
-    Message.success(`Biến thể sản phẩm đã được tạo thành công! (${createdVariantIds.length} biến thể)`)
+
+    // Show success message with detailed info
+    if (updatedCount > 0 && createdCount > 0) {
+      Message.success(`Hoàn thành! Đã tạo mới ${createdCount} biến thể và cập nhật ${updatedCount} biến thể đã tồn tại.`)
+    } else if (updatedCount > 0) {
+      Message.success(`Đã cập nhật ${updatedCount} biến thể đã tồn tại.`)
+    } else {
+      Message.success(`Đã tạo mới ${createdCount} biến thể sản phẩm!`)
+    }
 
     // Clear uploaded image store after successful submission
     uploadedImageStore.value = {}
 
-    // Navigate to the product variants page for the selected product with created variant IDs
+    // Navigate to the product variants page for the selected product with variant IDs
     router.push({
       name: 'BienTheSanPham',
       params: { id: productId },
       query: {
-        newVariants: createdVariantIds.join(','),
+        newVariants: allVariantIds.join(','),
         highlight: 'true',
       },
     })
@@ -2313,6 +2591,11 @@ const handleSubmit = async () => {
     console.error('❌ Submission failed:', error.message)
     Message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message || error}`)
   }
+}
+
+// Cancel submit function
+const cancelSubmit = () => {
+  showSubmitConfirm.value = false
 }
 
 const handleCancel = () => {

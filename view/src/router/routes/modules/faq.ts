@@ -12,6 +12,7 @@ const FAQ: AppRouteRecordRaw = {
     icon: 'icon-question-circle',
     order: 9,
     roles: ['*'],
+    hideChildrenInMenu: true, // Ẩn submenu trong sidebar
   },
   children: [
     {
@@ -19,9 +20,10 @@ const FAQ: AppRouteRecordRaw = {
       name: 'FaqMain',
       component: () => import('../../../views/faq/faq.vue'),
       meta: {
-        locale: 'menu.faq.main',
+        locale: 'menu.faq',
         requiresAuth: true,
         roles: ['*'],
+        hideInMenu: true, // Ẩn item này trong menu
       },
     },
   ],

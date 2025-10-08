@@ -3,61 +3,6 @@
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
-      <a-card class="stat-card" :bordered="false">
-        <template #title>
-          <div class="stat-header">
-            <icon-file class="stat-icon" />
-            <span>Tổng hóa đơn</span>
-          </div>
-        </template>
-        <div class="stat-content">
-          <div class="stat-value">{{ totalInvoices }}</div>
-          <div class="stat-change">Hôm nay: +{{ todayInvoices }}</div>
-        </div>
-      </a-card>
-
-      <a-card class="stat-card" :bordered="false">
-        <template #title>
-          <div class="stat-header">
-            <icon-check-circle class="stat-icon success-icon" />
-            <span>Đã thanh toán</span>
-          </div>
-        </template>
-        <div class="stat-content">
-          <div class="stat-value">{{ paidInvoices }}</div>
-          <div class="stat-change">{{ Math.round((paidInvoices / totalInvoices) * 100) }}% tổng số</div>
-        </div>
-      </a-card>
-
-      <a-card class="stat-card" :bordered="false">
-        <template #title>
-          <div class="stat-header">
-            <icon-clock-circle class="stat-icon warning-icon" />
-            <span>Chờ thanh toán</span>
-          </div>
-        </template>
-        <div class="stat-content">
-          <div class="stat-value">{{ pendingInvoices }}</div>
-          <div class="stat-change">Cần xử lý</div>
-        </div>
-      </a-card>
-
-      <a-card class="stat-card" :bordered="false">
-        <template #title>
-          <div class="stat-header">
-            <icon-star class="stat-icon primary-icon" />
-            <span>Tổng doanh thu</span>
-          </div>
-        </template>
-        <div class="stat-content">
-          <div class="stat-value">{{ formatCurrency(totalRevenue) }}</div>
-          <div class="stat-change positive">Tất cả hóa đơn đã thanh toán</div>
-        </div>
-      </a-card>
-    </div>
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form layout="inline" :model="filters">
@@ -474,7 +419,7 @@ const calculateStatistics = () => {
     // Chỉ tính hóa đơn đã thanh toán (trangThai = true hoặc có ngayThanhToan)
     return invoice.trangThai === true || invoice.ngayThanhToan
   })
-  
+
   console.log('Tổng số hóa đơn đã thanh toán:', paidInvoicesAll.length)
   console.log('Chi tiết hóa đơn đã thanh toán:', paidInvoicesAll.map(inv => ({
     id: inv.id,
@@ -484,13 +429,13 @@ const calculateStatistics = () => {
     tongTienSauGiam: inv.tongTienSauGiam,
     tongTien: inv.tongTien
   })))
-  
+
   totalRevenue.value = paidInvoicesAll.reduce((sum, invoice) => {
     const amount = Number(invoice.tongTienSauGiam || invoice.tongTien || 0)
     console.log(`Hóa đơn ${invoice.id}: ${amount}`)
     return sum + amount
   }, 0)
-  
+
   console.log('Tổng doanh thu:', totalRevenue.value)
 }
 
@@ -500,7 +445,7 @@ const fetchInvoices = async () => {
     console.log('Đang gọi API: /api/hoa-don-management/playlist')
     const response = await axios.get('/api/hoa-don-management/playlist')
     console.log('Response từ backend:', response)
-    
+
     if (response.success) {
       invoicesList.value = response.data || []
       console.log('Dữ liệu hóa đơn:', invoicesList.value)
@@ -563,35 +508,35 @@ const cancelInvoice = () => {
 const testAPI = async () => {
   try {
     console.log('Testing API connection...')
-    
+
     // Test health check
     const healthResponse = await fetch('http://localhost:8080/api/public/health')
     const healthData = await healthResponse.json()
     console.log('Health check:', healthData)
-    
+
     // Test database connection
     const dbResponse = await fetch('http://localhost:8080/api/test/database')
     const dbData = await dbResponse.json()
     console.log('Database test:', dbData)
-    
+
     // Test invoice API
     const invoiceResponse = await fetch('http://localhost:8080/api/test/invoices')
     const invoiceData = await invoiceResponse.json()
     console.log('Invoice API:', invoiceData)
-    
+
     // Test product API
     const productResponse = await fetch('http://localhost:8080/api/test/products')
     const productData = await productResponse.json()
     console.log('Product API:', productData)
-    
+
     // Test customer API
     const customerResponse = await fetch('http://localhost:8080/api/test/customers')
     const customerData = await customerResponse.json()
     console.log('Customer API:', customerData)
-    
+
     // Refresh data
     await fetchInvoices()
-    
+
     alert('API test completed! Check console for details.')
   } catch (error) {
     console.error('API Test Error:', error)

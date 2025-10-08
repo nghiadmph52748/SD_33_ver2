@@ -106,11 +106,11 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-button type="text" danger @click="deleteMaterial(record)">
+            <!-- <a-button type="text" danger @click="deleteMaterial(record)">
               <template #icon>
                 <icon-delete />
               </template>
-            </a-button>
+            </a-button> -->
           </a-space>
         </template>
       </a-table>

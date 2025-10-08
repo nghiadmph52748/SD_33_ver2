@@ -12,6 +12,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
     icon: 'IconFolder',
     order: 3,
     roles: ['*'],
+    hideChildrenInMenu: true, // Ẩn submenu trong sidebar
   },
   children: [
     {
@@ -19,9 +20,10 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
       name: 'QuanLyHoaDonIndex',
       component: () => import('@/views/main-view/quan-ly-hoa-don/quan-ly-hoa-don.vue'),
       meta: {
-        locale: 'menu.quan-ly-hoa-don.index',
+        locale: 'menu.quan-ly-hoa-don',
         requiresAuth: true,
         roles: ['*'],
+        hideInMenu: true, // Ẩn item này trong menu
       },
     },
   ],

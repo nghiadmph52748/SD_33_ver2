@@ -219,4 +219,8 @@ onMounted(() => {
     }
   }
 }
+
+:deep(.arco-menu-vertical .arco-menu-inner, .arco-menu-inner) {
+  scrollbar-width: none !important;
+}
 </style>

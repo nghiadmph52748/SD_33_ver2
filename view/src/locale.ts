@@ -1,9 +1,7 @@
 import { createI18n } from 'vue-i18n'
 import vi from './locale/vi-VN'
 
-export const LOCALE_OPTIONS = [
-  { label: 'Tiếng Việt', value: 'vi-VN' },
-]
+export const LOCALE_OPTIONS = [{ label: 'Tiếng Việt', value: 'vi-VN' }]
 const defaultLocale = 'vi-VN'
 
 const i18n = createI18n({
