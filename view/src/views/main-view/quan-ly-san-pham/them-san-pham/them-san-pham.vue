@@ -256,12 +256,24 @@
     <!-- Product Variants -->
     <a-card v-if="variants.length > 0" title="Biến thể sản phẩm" class="product-form-card" style="margin-top: 16px">
       <div class="variants-header">
-        <a-button type="primary" @click="showQuickAddModal">
-          <template #icon>
-            <icon-plus />
-          </template>
-          Thêm nhanh
-        </a-button>
+        <div class="left-actions">
+          <a-space v-if="selectedVariants.size > 0">
+            <a-tag color="blue">Đã chọn: {{ selectedVariants.size }} biến thể</a-tag>
+            <a-button size="small" @click="bulkApplyValues">
+              <template #icon>
+                <icon-edit />
+              </template>
+              Áp dụng hàng loạt
+            </a-button>
+            <a-button size="small" status="danger" @click="bulkDeleteVariants">
+              <template #icon>
+                <icon-delete />
+              </template>
+              Xóa đã chọn
+            </a-button>
+            <a-button size="small" @click="clearSelection">Bỏ chọn tất cả</a-button>
+          </a-space>
+        </div>
       </div>
       <div v-for="colorVariant in variants" :key="colorVariant.color" class="color-variant">
         <h4>{{ colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label }}</h4>
@@ -278,6 +290,19 @@
           size="small"
           class="variant-table"
         >
+          <template #checkbox-title>
+            <a-checkbox
+              :model-value="isAllColorVariantsSelected(colorVariant.variants)"
+              :indeterminate="isSomeColorVariantsSelected(colorVariant.variants)"
+              @update:model-value="(checked) => handleSelectAllColorVariants(colorVariant.variants, checked)"
+            />
+          </template>
+          <template #checkbox="{ record }">
+            <a-checkbox
+              :model-value="selectedVariants.has(record.sku)"
+              @update:model-value="(checked) => handleVariantSelection(record.sku, checked)"
+            />
+          </template>
           <template #weight="{ record }">
             <a-input-number v-model="record.weight" :min="0" :step="0.1" size="small" style="width: 100px" :precision="1" />
           </template>
@@ -292,6 +317,7 @@
               size="small"
               style="width: 100px"
               :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
+              :parser="(value) => value.replace(/,/g, '')"
             />
           </template>
           <template #attributes="{ record }">
@@ -314,34 +340,38 @@
     </a-card>
 
     <!-- Image Management Card -->
-    <a-card v-if="formData.colors.length > 0" title="Quản lý ảnh sản phẩm theo màu" class="image-management-card" style="margin-top: 16px">
+    <a-card v-if="variants.length > 0" title="Quản lý ảnh sản phẩm theo màu" class="image-management-card" style="margin-top: 16px">
       <div class="color-image-grid">
-        <div v-for="color in formData.colors" :key="color" class="color-image-section">
+        <div v-for="colorVariant in variants" :key="colorVariant.color" class="color-image-section">
           <div class="color-header">
             <div class="color-info">
               <div
                 class="color-preview"
-                :style="{ backgroundColor: colorInputs.find((c) => String(c.value) === String(color))?.maMau || '#ccc' }"
+                :style="{
+                  backgroundColor: colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.maMau || '#ccc',
+                }"
               ></div>
-              <span class="color-name">{{ colorInputs.find((c) => String(c.value) === String(color))?.label }}</span>
+              <span class="color-name">{{
+                colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label
+              }}</span>
             </div>
-            <a-button type="outline" size="small" @click="showImageModal(color)">
+            <a-button type="outline" size="small" @click="showImageModal(colorVariant.color)">
               <template #icon>
                 <icon-camera />
               </template>
-              Thêm ảnh ({{ getColorImages(color).length }}/5)
+              Thêm ảnh ({{ getColorImages(colorVariant.color).length }}/5)
             </a-button>
           </div>
           <div class="color-images">
-            <div v-if="getColorImages(color).length === 0" class="no-images">
+            <div v-if="getColorImages(colorVariant.color).length === 0" class="no-images">
               <icon-folder />
               <span>Chưa có ảnh</span>
             </div>
             <div v-else class="image-thumbnails">
-              <div v-for="(image, index) in getColorImages(color)" :key="index" class="image-thumbnail">
+              <div v-for="(image, index) in getColorImages(colorVariant.color)" :key="index" class="image-thumbnail">
                 <img :src="image.url" :alt="image.name" />
                 <div class="image-overlay">
-                  <a-button type="text" size="mini" @click="removeColorImage(color, index)" danger>
+                  <a-button type="text" size="mini" @click="removeColorImage(colorVariant.color, index)" danger>
                     <template #icon>
                       <icon-delete />
                     </template>
@@ -457,6 +487,58 @@
             :min="0"
             :step="1000"
             placeholder="Nhập đơn giá"
+            :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
+            :parser="(value) => value.replace(/\$\s?|(,*)/g, '')"
+            style="width: 100%"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- Bulk Apply Modal -->
+    <a-modal
+      v-model:visible="bulkApplyVisible"
+      title="Áp dụng giá trị hàng loạt"
+      width="600px"
+      @ok="handleBulkApplyOk"
+      @cancel="resetBulkApplyForm"
+    >
+      <a-alert type="info" show-icon style="margin-bottom: 16px">
+        Đang áp dụng cho
+        <strong>{{ selectedVariants.size }} biến thể</strong>
+        đã chọn
+      </a-alert>
+
+      <a-form :model="bulkValues" ref="bulkApplyFormRef" layout="vertical">
+        <!-- Weight -->
+        <a-form-item label="Trọng lượng (g)">
+          <a-input-number
+            v-model="bulkValues.weight"
+            :min="0"
+            :step="0.1"
+            placeholder="Nhập trọng lượng (bỏ trống nếu không thay đổi)"
+            :precision="1"
+            style="width: 100%"
+          />
+        </a-form-item>
+
+        <!-- Stock -->
+        <a-form-item label="Số lượng">
+          <a-input-number
+            v-model="bulkValues.stock"
+            :min="0"
+            placeholder="Nhập số lượng (bỏ trống nếu không thay đổi)"
+            style="width: 100%"
+          />
+        </a-form-item>
+
+        <!-- Price -->
+        <a-form-item label="Đơn giá (VNĐ)">
+          <a-input-number
+            v-model="bulkValues.price"
+            :min="0"
+            :step="1000"
+            placeholder="Nhập đơn giá (bỏ trống nếu không thay đổi)"
             :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
             :parser="(value) => value.replace(/\$\s?|(,*)/g, '')"
             style="width: 100%"
@@ -744,7 +826,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { Message } from '@arco-design/web-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
@@ -757,6 +839,7 @@ import {
   IconCamera,
   IconFolder,
   IconSearch,
+  IconEdit,
 } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store'
 // Import API functions
@@ -780,7 +863,6 @@ import {
   themAnhChoBienThe,
   getBienTheSanPhamList,
 } from '@/api/san-pham'
-import { getAnhSanPhamByMauAnh } from '@/api/san-pham/bien-the'
 import { uploadMutipartFile, getAnhSanPhamByTenMau } from '@/api/san-pham/thuoc-tinh/anh-san-pham'
 
 // Breadcrumb setup
@@ -800,6 +882,10 @@ const showSubmitConfirm = ref(false)
 const quickAddVisible = ref(false)
 const quickAddFormRef = ref()
 
+// Bulk apply modal state
+const bulkApplyVisible = ref(false)
+const bulkApplyFormRef = ref()
+
 // Attribute modal states
 const colorModalVisible = ref(false)
 const sizeModalVisible = ref(false)
@@ -807,7 +893,6 @@ const tempColors = ref<string[]>([])
 const tempSizes = ref<string[]>([])
 
 // Add modals state
-const addProductModalVisible = ref(false)
 const addManufacturerModalVisible = ref(false)
 const addOriginModalVisible = ref(false)
 const addMaterialModalVisible = ref(false)
@@ -832,13 +917,11 @@ const loadingExistingImages = ref(false)
 const selectedExistingImages = ref<string[]>([])
 const newUploadImages = ref<any[]>([])
 const uploadingImages = ref(false)
-const uploadProgress = ref(0)
 const uploadProgressText = ref('')
 const MAX_IMAGES_PER_COLOR = 5 // Giới hạn tối đa 5 ảnh mỗi màu
 
 // Storage for uploaded image IDs per color - lưu IDs của ảnh đã upload
 const uploadedImageStore = ref<Record<string, number[]>>({})
-const uploadingFiles = ref<Set<string>>(new Set()) // Track uploading files
 
 // Form refs for add modals
 const newManufacturerFormRef = ref()
@@ -1028,6 +1111,7 @@ const loadManufacturerInputs = async () => {
         }))
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error loading manufacturer inputs:', error)
   }
 }
@@ -1044,6 +1128,7 @@ const loadOriginInputs = async () => {
         }))
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error loading origin inputs:', error)
   }
 }
@@ -1060,6 +1145,7 @@ const loadMaterialInputs = async () => {
         }))
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error loading material inputs:', error)
   }
 }
@@ -1076,6 +1162,7 @@ const loadShoeSoleInputs = async () => {
         }))
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error loading shoe sole inputs:', error)
   }
 }
@@ -1093,6 +1180,7 @@ const loadColorInputs = async () => {
         }))
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error loading color inputs:', error)
   }
 }
@@ -1117,6 +1205,7 @@ const loadSizeInputs = async () => {
         })
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error loading size inputs:', error)
   }
 }
@@ -1342,35 +1431,215 @@ const baseVariants = computed(() => {
 })
 
 // Sync base variants to editable variants when base variants change
+// ⭐ CHỈ sync lần đầu tiên, sau đó variants được quản lý độc lập để tránh mất data khi thay đổi thuộc tính
 watch(
   baseVariants,
-  (newBaseVariants) => {
-    variants.value = JSON.parse(JSON.stringify(newBaseVariants)) // Deep clone to avoid reference issues
+  (newBaseVariants, oldBaseVariants) => {
+    // Nếu đã có variants và user đã nhập data, chỉ thêm variants mới chứ không reset
+    if (variants.value.length > 0 && oldBaseVariants && oldBaseVariants.length > 0) {
+      // Tìm các màu mới được thêm vào
+      const existingColors = variants.value.map((v) => v.color)
+      const newColorGroups = newBaseVariants.filter((colorGroup) => !existingColors.includes(colorGroup.color))
+
+      // Chỉ thêm variants của màu mới, giữ nguyên data của màu cũ
+      if (newColorGroups.length > 0) {
+        variants.value = [...variants.value, ...JSON.parse(JSON.stringify(newColorGroups))]
+      }
+
+      // Xử lý thêm kích thước mới cho màu đã có
+      variants.value = variants.value.map((existingColorGroup) => {
+        const baseColorGroup = newBaseVariants.find((bcg) => bcg.color === existingColorGroup.color)
+        if (baseColorGroup) {
+          // Tìm các kích thước mới
+          const existingSizes = existingColorGroup.variants.map((v) => v.size)
+          const newSizeVariants = baseColorGroup.variants.filter((v) => !existingSizes.includes(v.size))
+
+          if (newSizeVariants.length > 0) {
+            return {
+              ...existingColorGroup,
+              variants: [...existingColorGroup.variants, ...JSON.parse(JSON.stringify(newSizeVariants))],
+            }
+          }
+        }
+        return existingColorGroup
+      })
+    } else {
+      // Lần đầu tiên tạo variants hoặc chưa có data
+      variants.value = JSON.parse(JSON.stringify(newBaseVariants))
+    }
   },
   { immediate: true }
 )
 
 // Delete variant by SKU
 const deleteVariant = (sku: string) => {
-  // Find which color group this variant belongs to
-  const updatedVariants = variants.value.map((colorGroup) => {
-    const variantIndex = colorGroup.variants.findIndex((v) => v.sku === sku)
-    if (variantIndex > -1) {
-      // Create new array without the deleted item to trigger reactivity
-      return {
-        ...colorGroup,
-        variants: colorGroup.variants.filter((v) => v.sku !== sku),
+  // Lưu lại danh sách màu trước khi xóa để kiểm tra màu nào bị xóa hết variants
+  const colorsBefore = variants.value.map((cg) => String(cg.color))
+
+  // Find which color group this variant belongs to and remove the variant
+  const updatedVariants = variants.value
+    .map((colorGroup) => {
+      const variantIndex = colorGroup.variants.findIndex((v) => v.sku === sku)
+      if (variantIndex > -1) {
+        // Create new array without the deleted item to trigger reactivity
+        return {
+          ...colorGroup,
+          variants: colorGroup.variants.filter((v) => v.sku !== sku),
+        }
       }
-    }
-    return colorGroup
+      return colorGroup
+    })
+    .filter((colorGroup) => colorGroup.variants.length > 0) // Remove color groups with no variants
+
+  // Tìm các màu bị xóa hoàn toàn (không còn variants)
+  const colorsAfter = updatedVariants.map((cg) => String(cg.color))
+  const deletedColors = colorsBefore.filter((color) => !colorsAfter.includes(color))
+
+  // Xóa ảnh của các màu bị xóa
+  deletedColors.forEach((colorId) => {
+    delete colorImages.value[colorId]
+    delete uploadedImageStore.value[colorId]
   })
 
   // Update variants to trigger reactivity
   variants.value = updatedVariants
+
+  // ⭐ KHÔNG xóa màu khỏi formData.colors và selectedColorsList
+  // Giữ nguyên thuộc tính đã chọn để tránh trigger watch và reset data các table khác
 }
 
 // Variant table columns
+// Selected variants for bulk actions
+const selectedVariants = ref<Set<string>>(new Set())
+
+// Bulk values for applying to multiple variants
+const bulkValues = ref({
+  weight: null as number | null,
+  stock: null as number | null,
+  price: null as number | null,
+})
+
+// Handle variant checkbox selection
+const handleVariantSelection = (sku: string, checked: boolean) => {
+  if (checked) {
+    selectedVariants.value.add(sku)
+  } else {
+    selectedVariants.value.delete(sku)
+  }
+}
+
+// Check if all variants in a color group are selected
+const isAllColorVariantsSelected = (colorVariants: any[]) => {
+  return colorVariants.every((variant) => selectedVariants.value.has(variant.sku))
+}
+
+// Check if some (but not all) variants in a color group are selected
+const isSomeColorVariantsSelected = (colorVariants: any[]) => {
+  const selectedCount = colorVariants.filter((variant) => selectedVariants.value.has(variant.sku)).length
+  return selectedCount > 0 && selectedCount < colorVariants.length
+}
+
+// Handle select all variants in a color group
+const handleSelectAllColorVariants = (colorVariants: any[], checked: boolean) => {
+  colorVariants.forEach((variant) => {
+    if (checked) {
+      selectedVariants.value.add(variant.sku)
+    } else {
+      selectedVariants.value.delete(variant.sku)
+    }
+  })
+}
+
+// Clear all selected variants
+const clearSelection = () => {
+  selectedVariants.value.clear()
+}
+
+// Bulk delete selected variants
+const bulkDeleteVariants = () => {
+  Modal.confirm({
+    title: 'Xác nhận xóa',
+    content: `Bạn có chắc chắn muốn xóa ${selectedVariants.value.size} biến thể đã chọn?`,
+    okText: 'Xóa',
+    cancelText: 'Hủy',
+    onOk: () => {
+      const skusToDelete = new Set(selectedVariants.value)
+
+      // Lưu lại danh sách màu trước khi xóa để kiểm tra màu nào bị xóa hết variants
+      const colorsBefore = variants.value.map((cg) => String(cg.color))
+
+      // Filter out deleted variants and remove empty color groups
+      const updatedVariants = variants.value
+        .map((colorGroup) => ({
+          ...colorGroup,
+          variants: colorGroup.variants.filter((v) => !skusToDelete.has(v.sku)),
+        }))
+        .filter((colorGroup) => colorGroup.variants.length > 0) // Remove empty color groups
+
+      // Tìm các màu bị xóa hoàn toàn (không còn variants)
+      const colorsAfter = updatedVariants.map((cg) => String(cg.color))
+      const deletedColors = colorsBefore.filter((color) => !colorsAfter.includes(color))
+
+      // Xóa ảnh của các màu bị xóa
+      deletedColors.forEach((colorId) => {
+        delete colorImages.value[colorId]
+        delete uploadedImageStore.value[colorId]
+      })
+
+      variants.value = updatedVariants
+
+      // ⭐ KHÔNG xóa màu khỏi formData.colors và selectedColorsList
+      // Giữ nguyên thuộc tính đã chọn để tránh trigger watch và reset data các table khác
+
+      selectedVariants.value.clear()
+      Message.success(`Đã xóa biến thể đã chọn`)
+    },
+  })
+}
+
+// Reset bulk apply form
+const resetBulkApplyForm = () => {
+  bulkValues.value = { weight: null, stock: null, price: null }
+  bulkApplyVisible.value = false
+}
+
+// Bulk apply values to selected variants
+const bulkApplyValues = () => {
+  if (selectedVariants.value.size === 0) {
+    Message.warning('Vui lòng chọn ít nhất một biến thể')
+    return
+  }
+  // Reset form values
+  bulkValues.value = { weight: null, stock: null, price: null }
+  bulkApplyVisible.value = true
+}
+
+// Handle bulk apply OK
+const handleBulkApplyOk = () => {
+  selectedVariants.value.forEach((sku) => {
+    variants.value.forEach((colorVariant) => {
+      const variant = colorVariant.variants.find((v) => v.sku === sku)
+      if (variant) {
+        if (bulkValues.value.weight !== null) variant.weight = bulkValues.value.weight
+        if (bulkValues.value.stock !== null) variant.stock = bulkValues.value.stock
+        if (bulkValues.value.price !== null) variant.price = bulkValues.value.price
+      }
+    })
+  })
+  Message.success('Đã áp dụng giá trị cho các biến thể đã chọn')
+  clearSelection()
+  resetBulkApplyForm()
+}
+
 const variantColumns = [
+  {
+    dataIndex: 'checkbox',
+    width: 50,
+    align: 'center',
+    slotName: 'checkbox',
+    titleSlotName: 'checkbox-title',
+    headerCellStyle: { textAlign: 'center' },
+  },
   {
     title: 'Tên sản phẩm',
     dataIndex: 'productName',
@@ -1432,18 +1701,7 @@ const formRules = {
   ],
 }
 
-// Rules for new items
-const newProductRules = {
-  tenSanPham: [
-    { required: true, message: 'Vui lòng nhập tên sản phẩm' },
-    { min: 2, max: 100, message: 'Tên sản phẩm phải từ 2-100 ký tự' },
-  ],
-  moTa: [
-    { required: true, message: 'Vui lòng nhập mô tả sản phẩm' },
-    { min: 10, max: 500, message: 'Mô tả phải từ 10-500 ký tự' },
-  ],
-}
-
+// Rules for new attributes
 const newAttributeRules = {
   tenNhaSanXuat: [
     { required: true, message: 'Vui lòng nhập tên nhà sản xuất' },
@@ -1472,21 +1730,6 @@ const newSizeFormRules = {
     { required: true, message: 'Vui lòng nhập tên kích thước' },
     { min: 1, max: 10, message: 'Tên kích thước phải từ 1-10 ký tự' },
   ],
-}
-
-// Helper function to get hex color value for color preview
-const getColorHexValue = (colorValue: string) => {
-  const colorMap: { [key: string]: string } = {
-    red: '#FF0000',
-    blue: '#0000FF',
-    green: '#00FF00',
-    yellow: '#FFFF00',
-    black: '#000000',
-    white: '#FFFFFF',
-    gray: '#808080',
-    purple: '#800080',
-  }
-  return colorMap[colorValue] || '#000000'
 }
 
 // Color modal methods
@@ -2178,6 +2421,7 @@ const showImageModal = async (colorId: string) => {
     const response = await getAnhSanPhamByTenMau(colorName)
     existingImages.value = response.data || []
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('❌ Failed to load existing images:', error)
     existingImages.value = []
     Message.error('Không thể tải ảnh có sẵn')
@@ -2299,6 +2543,7 @@ const handleImageModalOk = async () => {
       } catch (uploadError) {
         uploadProgressText.value = 'Upload thất bại!'
 
+        // eslint-disable-next-line no-console
         console.error('❌ Failed to upload images:', uploadError)
         if (uploadError.message.includes('timeout')) {
           Message.error('Upload ảnh quá thời gian cho phép (30s). Vui lòng thử lại.')
@@ -2343,6 +2588,7 @@ const handleImageModalOk = async () => {
     handleImageModalCancel()
     Message.success(`Đã lưu ${allImages.length} ảnh cho màu này`)
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('❌ Failed to process images:', error)
     Message.error(`Lỗi xử lý ảnh: ${error.message || 'Unknown error'}`)
   } finally {
@@ -2392,6 +2638,7 @@ const handleSubmit = async () => {
     // Show confirmation modal
     showSubmitConfirm.value = true
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Validation error:', error)
   }
 }
@@ -2402,8 +2649,7 @@ const checkExistingVariant = async (
   mauSac: number,
   kichThuoc: number,
   chatLieu: number,
-  deGiay: number,
-  trongLuong: number
+  deGiay: number
 ) => {
   try {
     const response = await getBienTheSanPhamList(0, productId)
@@ -2428,6 +2674,7 @@ const checkExistingVariant = async (
     }
     return null
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error checking existing variant:', error)
     return null
   }
@@ -2440,22 +2687,31 @@ const confirmSubmit = async () => {
 
     // First, create the product if it's pending
     let productId = formData.selectedProductId
-    if (productId === 'pending' && pendingNewProduct.value) {
-      const productData = {
-        tenSanPham: pendingNewProduct.value.tenSanPham,
-        idNhaSanXuat: formData.manufacturer || 1, // Use selected manufacturer or default
-        idXuatXu: formData.origin || 1, // Use selected origin or default
-        trangThai: true,
-        deleted: false,
-        createAt: new Date().toISOString().split('T')[0],
-        createBy: userStore.id,
-      }
-      const productResponse = await createDanhMucSanPham(productData)
-      productId = productResponse.data.id
-      // Clear pending state
-      pendingNewProduct.value = null
-    }
 
+    // Validate productId exists
+    if (!productId || productId === 'pending') {
+      if (productId === 'pending' && pendingNewProduct.value) {
+        // Create new product
+        const productData = {
+          tenSanPham: pendingNewProduct.value.tenSanPham,
+          idNhaSanXuat: formData.manufacturer || 1, // Use selected manufacturer or default
+          idXuatXu: formData.origin || 1, // Use selected origin or default
+          trangThai: true,
+          deleted: false,
+          createAt: new Date().toISOString().split('T')[0],
+          createBy: userStore.id,
+        }
+        const productResponse = await createDanhMucSanPham(productData)
+        productId = productResponse.data.id
+        // Clear pending state
+        pendingNewProduct.value = null
+      } else {
+        // No valid product selected
+        Message.error('Vui lòng chọn sản phẩm trước khi thêm biến thể')
+        loading.value = false
+        return
+      }
+    }
     loading.value = true
 
     // Sử dụng trực tiếp uploadedImageStore để lấy danh sách image IDs cho mỗi màu
@@ -2489,8 +2745,7 @@ const confirmSubmit = async () => {
           variant.color,
           variant.size,
           formData.material || 1,
-          formData.shoeSole || 1,
-          1
+          formData.shoeSole || 1
         )
 
         let variantResponse
@@ -2509,12 +2764,14 @@ const confirmSubmit = async () => {
             variantId = existingVariant.id
             updatedCount += 1
           } catch (error) {
+            // eslint-disable-next-line no-console
             console.error('❌ Lỗi khi update biến thể:', error)
             throw error
           }
         } else {
           variantResponse = await createBienTheSanPham(variantData)
           if (!variantResponse?.success || !variantResponse.data) {
+            // eslint-disable-next-line no-console
             console.error('❌ Invalid variant response:', variantResponse)
             throw new Error('Failed to create variant - no ID returned')
           }
@@ -2544,7 +2801,9 @@ const confirmSubmit = async () => {
               // WAIT for image linking to complete
               await themAnhChoBienThe(linkData)
             } catch (error) {
+              // eslint-disable-next-line no-console
               console.error(`❌ Failed to link images to variant ${variantId}:`, error.message)
+              // eslint-disable-next-line no-console
               console.error('🔍 Link error details:', error)
               // Don't stop the process for image linking errors, but log the error
             }
@@ -2577,10 +2836,15 @@ const confirmSubmit = async () => {
     // Clear uploaded image store after successful submission
     uploadedImageStore.value = {}
 
-    // Navigate to the product variants page for the selected product with variant IDs
+    // Validate productId before navigation
+    if (!productId) {
+      // eslint-disable-next-line no-console
+      console.error('❌ ProductId is missing after submission')
+      Message.error('Lỗi: Không tìm thấy ID sản phẩm')
+      return
+    }
     router.push({
-      name: 'BienTheSanPham',
-      params: { id: productId },
+      path: `/quan-ly-san-pham/bien-the/${productId}`,
       query: {
         newVariants: allVariantIds.join(','),
         highlight: 'true',
@@ -2588,7 +2852,8 @@ const confirmSubmit = async () => {
     })
   } catch (error) {
     loading.value = false
-    console.error('❌ Submission failed:', error.message)
+    // eslint-disable-next-line no-console
+    console.error('❌ Submission failed:', error.message || error)
     Message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message || error}`)
   }
 }
@@ -2926,6 +3191,13 @@ watch(
 
 .variants-header h3 {
   margin: 0;
+}
+
+.variants-header .left-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .variants-section h3 {

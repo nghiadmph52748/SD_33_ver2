@@ -348,7 +348,7 @@ const columns = [
     title: 'Trạng thái',
     dataIndex: 'is_active',
     slotName: 'status',
-    width: 400,
+    width: 100,
     // align: 'center',
   },
   {
