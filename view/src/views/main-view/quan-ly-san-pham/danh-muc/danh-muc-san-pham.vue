@@ -89,32 +89,10 @@
         }"
         :loading="loading"
         :scroll="{ x: 800 }"
+        :row-class="(record) => (isRowSelected(record.id) ? 'editing-row' : '')"
       >
         <template #checkbox="{ record }">
-          <a-checkbox
-            :checked="isRowSelected(record.id)"
-            @change="
-              (checked) => {
-                if (checked) {
-                  // Add to selection and initialize editing data with current values
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  if (!currentKeys.includes(record.id)) {
-                    selectedRowKeys.value = [...currentKeys, record.id]
-                  }
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = {
-                    tenSanPham: record.tenSanPham,
-                    trangThai: record.trangThai,
-                  }
-                } else {
-                  // Remove from selection and editing data
-                  const currentKeys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-                  selectedRowKeys.value = currentKeys.filter((id) => id !== record.id)
-                  delete editingData.value[record.id]
-                }
-              }
-            "
-          />
+          <a-checkbox :model-value="isRowSelected(record.id)" @change="(checked) => handleCheckboxChange(checked, record)" />
         </template>
 
         <template #index="{ rowIndex }">
@@ -125,15 +103,14 @@
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode -->
             <a-select
-              :model-value="editingData.value[record.id]?.trangThai ? 'active' : 'inactive'"
+              :model-value="editingData[record.id]?.trangThai ? 'active' : 'inactive'"
               @update:model-value="
                 (value) => {
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = { ...(editingData.value[record.id] || {}), trangThai: value === 'active' }
+                  editingData[record.id] = { ...(editingData[record.id] || {}), trangThai: value === 'active' }
                 }
               "
               size="mini"
-              style="width: 100px"
+              style="width: 120px"
             >
               <a-option value="active">Đang bán</a-option>
               <a-option value="inactive">Tạm ngưng bán</a-option>
@@ -148,15 +125,14 @@
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode for name -->
             <a-input
-              :model-value="editingData.value[record.id]?.tenSanPham || record.tenSanPham"
+              :model-value="editingData[record.id]?.tenSanPham || record.tenSanPham"
               @update:model-value="
                 (value) => {
-                  if (!editingData.value) editingData.value = {}
-                  editingData.value[record.id] = { ...(editingData.value[record.id] || {}), tenSanPham: value }
+                  editingData[record.id] = { ...(editingData[record.id] || {}), tenSanPham: value }
                 }
               "
               size="mini"
-              style="width: 200px"
+              style="width: 100%"
             />
           </div>
           <span v-else class="custom-name">{{ record.tenSanPham }}</span>
@@ -195,29 +171,7 @@
         </template>
 
         <template #checkbox-title>
-          <a-checkbox
-            :checked="selectedCount === (danhMucList?.length || 0) && (danhMucList?.length || 0) > 0"
-            :indeterminate="selectedCount > 0 && selectedCount < (danhMucList?.length || 0)"
-            @change="
-              (checked) => {
-                if (checked) {
-                  // Select all categories and initialize editing data
-                  selectedRowKeys.value = [...(danhMucList?.map((cat) => cat.id) || [])]
-                  if (!editingData.value) editingData.value = {}
-                  danhMucList?.forEach((category) => {
-                    editingData.value[category.id] = {
-                      tenSanPham: category.tenSanPham,
-                      trangThai: category.trangThai,
-                    }
-                  })
-                } else {
-                  // Deselect all
-                  selectedRowKeys.value = []
-                  editingData.value = {}
-                }
-              }
-            "
-          />
+          <a-checkbox :model-value="isAllSelected" :indeterminate="isSomeSelected" @change="handleSelectAllChange" />
         </template>
       </a-table>
     </a-card>
@@ -249,29 +203,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, h, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { debounce } from 'lodash'
 import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { getDanhMucSanPhamList, getNhaSanXuatOptions, getXuatXuOptions, updateDanhMucSanPham } from '@/api/san-pham/danh-muc'
-import type { DanhMucSanPham, DanhMucParams, NhaSanXuatOption, XuatXuOption, DanhMucResponse } from '@/api/san-pham/danh-muc'
-import {
-  IconPlus,
-  IconSearch,
-  IconRefresh,
-  IconDownload,
-  IconMore,
-  IconEye,
-  IconEdit,
-  IconDelete,
-  IconCheckCircle,
-  IconPauseCircle,
-  IconImage,
-  IconCheck,
-  IconClose,
-} from '@arco-design/web-vue/es/icon'
+import type { DanhMucParams, NhaSanXuatOption, XuatXuOption, DanhMucResponse } from '@/api/san-pham/danh-muc'
+import { IconPlus, IconRefresh, IconDownload, IconEye, IconCheckCircle, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 
@@ -280,10 +220,6 @@ import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
 
-const modalVisible = ref(false)
-const isEdit = ref(false)
-const formRef = ref()
-
 // Edit inline mode state
 const selectedRowKeys = ref<number[]>([])
 const editingData = ref<Record<number, { tenSanPham: string; trangThai: boolean }>>({}) // Updated to match backend
@@ -291,24 +227,6 @@ const editingData = ref<Record<number, { tenSanPham: string; trangThai: boolean 
 // Status toggle modal
 const showStatusConfirm = ref(false)
 const categoryToToggleStatus = ref(null)
-
-// Computed properties for safe access
-const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
-const hasSelectedRows = computed(() => selectedCount.value > 0)
-const isRowSelected = (id: number) => {
-  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-  return keys.includes(id)
-}
-
-// Form data
-const formData = reactive({
-  name: '',
-  description: '',
-  status: 'active',
-  image: '',
-})
-
-const fileList = ref([])
 
 // Filters
 const filters = reactive<DanhMucParams>({
@@ -413,6 +331,85 @@ const transformedDanhMucList = computed(() => {
   return result
 })
 
+// Computed properties for safe access
+const selectedCount = computed(() => (Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value.length : 0))
+const hasSelectedRows = computed(() => selectedCount.value > 0)
+const isRowSelected = (id: number) => {
+  const keys = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
+  return keys.includes(id)
+}
+
+// Computed for select all checkbox
+const currentPageData = computed(() => transformedDanhMucList.value || [])
+const isAllSelected = computed(() => {
+  const pageData = currentPageData.value
+  if (!pageData || pageData.length === 0) return false
+  return pageData.every((item) => isRowSelected(item.id))
+})
+const isSomeSelected = computed(() => {
+  const pageData = currentPageData.value
+  if (!pageData || pageData.length === 0) return false
+  const selectedInPage = pageData.filter((item) => isRowSelected(item.id)).length
+  return selectedInPage > 0 && selectedInPage < pageData.length
+})
+
+// Checkbox change handlers
+const handleCheckboxChange = (checked: boolean, record: any) => {
+  if (checked) {
+    // Add to selection - Create NEW array to trigger reactivity
+    if (!selectedRowKeys.value.includes(record.id)) {
+      selectedRowKeys.value = [...selectedRowKeys.value, record.id]
+    }
+    // Initialize editing data
+    editingData.value[record.id] = {
+      tenSanPham: record.tenSanPham,
+      trangThai: record.trangThai,
+    }
+  } else {
+    // Remove from selection - Create NEW array to trigger reactivity
+    selectedRowKeys.value = selectedRowKeys.value.filter((id) => id !== record.id)
+
+    // Remove editing data
+    delete editingData.value[record.id]
+
+    // Force reactivity update
+    editingData.value = { ...editingData.value }
+  }
+}
+
+const handleSelectAllChange = (checked: boolean) => {
+  const pageData = currentPageData.value
+  if (checked) {
+
+    // Collect all IDs to add
+    const newIds = pageData.filter((item) => !selectedRowKeys.value.includes(item.id)).map((item) => item.id)
+
+    // Create NEW array to trigger reactivity
+    selectedRowKeys.value = [...selectedRowKeys.value, ...newIds]
+
+    // Initialize editing data for all items
+    pageData.forEach((item) => {
+      editingData.value[item.id] = {
+        tenSanPham: item.tenSanPham,
+        trangThai: item.trangThai,
+      }
+    })
+  } else {
+    const pageIds = pageData.map((item) => item.id)
+
+    // Create NEW array to trigger reactivity
+    selectedRowKeys.value = selectedRowKeys.value.filter((id) => !pageIds.includes(id))
+
+    // Delete editing data
+    pageIds.forEach((id) => {
+      delete editingData.value[id]
+    })
+
+    // Force reactivity update for editingData
+    editingData.value = { ...editingData.value }
+  }
+}
+
 const loading = ref(false)
 
 const loadDanhMucList = async () => {
@@ -435,8 +432,9 @@ const loadDanhMucList = async () => {
         pagination.value.total = response.data.totalElements || 0
       }
     }
-  } catch (error) {
-    console.error('Error loading danh mục:', error)
+  } catch {
+    // eslint-disable-next-line no-console
+    // console.error('Error loading danh mục:', error)
     Message.error('Không thể tải danh sách danh mục sản phẩm')
     danhMucList.value = null
     pagination.value.total = 0
@@ -538,17 +536,6 @@ const columns = [
 
 // Pagination được xử lý trực tiếp trong table component
 
-// Form validation rules
-const formRules = {
-  name: [
-    { required: true, message: 'Vui lòng nhập tên danh mục' },
-    { min: 2, max: 50, message: 'Tên danh mục phải từ 2-50 ký tự' },
-  ],
-  description: [{ max: 200, message: 'Mô tả không được vượt quá 200 ký tự' }],
-}
-
-// Methods đã được định nghĩa ở phía dưới
-
 // Format price for display
 const formatPrice = (price: number) => {
   if (price >= 1000000) {
@@ -564,26 +551,6 @@ const formatPrice = (price: number) => {
 
 const navigateToAddProduct = () => {
   router.push({ name: 'ThemSanPham' })
-}
-
-const showCreateModal = () => {
-  isEdit.value = false
-  formData.name = ''
-  formData.description = ''
-  formData.status = 'active'
-  formData.image = ''
-  fileList.value = []
-  modalVisible.value = true
-}
-
-const editCategory = (category: any) => {
-  isEdit.value = true
-  formData.name = category.name
-  formData.description = category.description
-  formData.status = category.status
-  formData.image = category.image
-  fileList.value = category.image ? [{ url: category.image }] : []
-  modalVisible.value = true
 }
 
 const viewCategory = (category: any) => {
@@ -642,11 +609,13 @@ const performToggleStatus = async (record: any) => {
       const statusText = record.trangThai ? 'Đang bán' : 'Tạm ngưng bán'
       Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
     } else {
-      console.error('API response not successful:', response)
+      // eslint-disable-next-line no-console
+      // console.error('API response not successful:', response)
       Message.error('Cập nhật trạng thái thất bại')
     }
-  } catch (error) {
-    console.error('Error toggling status:', error)
+  } catch {
+    // eslint-disable-next-line no-console
+    // console.error('Error toggling status:', error)
     Message.error('Có lỗi xảy ra khi cập nhật trạng thái')
   } finally {
     // Remove loading state
@@ -665,25 +634,10 @@ const cancelToggleStatus = () => {
   categoryToToggleStatus.value = null
 }
 
-const handleSubmit = async () => {
-  try {
-    await formRef.value.validate()
-    modalVisible.value = false
-  } catch (error) {
-    Message.error('Có lỗi xảy ra khi lưu danh mục sản phẩm')
-  }
-}
-
-const handleCancel = () => {
-  modalVisible.value = false
-}
-
 // Load options cho dropdown
 const loadOptions = async () => {
   try {
-    // Debug: Starting loadOptions
     const [nhaSanXuatRes, xuatXuRes] = await Promise.all([getNhaSanXuatOptions(), getXuatXuOptions()])
-    // Debug: Options loaded
     nhaSanXuatOptions.value = nhaSanXuatRes.data
     xuatXuOptions.value = xuatXuRes.data
 
@@ -692,9 +646,9 @@ const loadOptions = async () => {
     xuatXuMap.value = new Map(xuatXuRes.data.map((item) => [item.id, item.tenXuatXu]))
 
     // Debug: loadOptions completed
-  } catch (error) {
-    // Error: Lỗi khi tải options
-    // Error details available in development
+  } catch {
+    // eslint-disable-next-line no-console
+    // console.error('Lỗi khi tải options:', error)
     Message.error('Không thể tải dữ liệu dropdown')
   }
 }
@@ -716,28 +670,73 @@ const resetFilters = () => {
   loadDanhMucList()
 }
 
-const handleTableChange = (paginationData: any, filtersData: any, sorter: any) => {
-  // Handle table change
-}
-
 const completeBulkUpdate = async () => {
   // Update selected items via API
   try {
-    // Debug: Starting completeBulkUpdate
-    // TODO: Implement bulk update API call
-    // Debug: Bulk update API not implemented yet, reloading list
-    // For now, just reload the list
-    await loadDanhMucList()
-    // Debug: completeBulkUpdate completed
-  } catch (error) {
-    // Error: Lỗi khi cập nhật hàng loạt
-    // Error details available in development
-    Message.error('Không thể cập nhật hàng loạt')
-  }
+    const userStore = useUserStore()
+    const updatePromises = []
 
-  // Clear selection and editing data
-  selectedRowKeys.value = []
-  editingData.value = {}
+    // Loop through each selected row and update
+    selectedRowKeys.value.forEach((recordId) => {
+      // Get edited data for this record
+      const editData = editingData.value[recordId]
+      if (!editData) return
+
+      // Find the original record to compare changes
+      const originalRecord = danhMucList.value?.data?.find((item) => item.id === recordId)
+      if (!originalRecord) return
+
+      // Check if there are any changes
+      const hasChanges = editData.tenSanPham !== originalRecord.tenSanPham || editData.trangThai !== originalRecord.trangThai
+
+      if (hasChanges) {
+        // Prepare update data - PHẢI GỬI ĐẦY ĐỦ TẤT CẢ FIELD
+        const updateData = {
+          id: recordId,
+          tenSanPham: editData.tenSanPham,
+          trangThai: editData.trangThai,
+          idNhaSanXuat: originalRecord.idNhaSanXuat, // Giữ nguyên
+          idXuatXu: originalRecord.idXuatXu, // Giữ nguyên
+          deleted: originalRecord.deleted || false, // Giữ nguyên
+          createAt: originalRecord.createAt, // Giữ nguyên
+          createBy: originalRecord.createBy, // Giữ nguyên
+          updateAt: new Date().toISOString().split('T')[0],
+          updateBy: userStore.id,
+        }
+        // Add to update promises
+        updatePromises.push(updateDanhMucSanPham(recordId, updateData))
+      }
+    })
+
+    // Execute all updates in parallel
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises)
+      Message.success(`Đã cập nhật thành công ${updatePromises.length} sản phẩm`)
+    } else {
+      Message.info('Không có thay đổi nào để cập nhật')
+    }
+
+    // Reload the list to reflect changes
+    await loadDanhMucList()
+
+    // Clear selection and editing data
+    selectedRowKeys.value = []
+    editingData.value = {}
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('❌ LỖI khi cập nhật hàng loạt:', error)
+    // eslint-disable-next-line no-console
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response,
+    })
+    Message.error('Không thể cập nhật hàng loạt. Vui lòng thử lại.')
+
+    // Clear selection even on error
+    selectedRowKeys.value = []
+    editingData.value = {}
+  }
 }
 
 const exportExcel = () => {
@@ -748,44 +747,24 @@ const exportExcel = () => {
     }
 
     exportToExcel(transformedDanhMucList.value, EXPORT_HEADERS.DANH_MUC, 'danh-muc-san-pham')
-  } catch (error) {
-    console.error('Lỗi khi xuất Excel:', error)
+  } catch {
+    // eslint-disable-next-line no-console
+    // console.error('Lỗi khi xuất Excel:', error)
     Message.error('Có lỗi xảy ra khi xuất Excel')
   }
 }
 
-const beforeUpload = (file: File) => {
-  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
-  if (!isJpgOrPng) {
-    // console.error('Chỉ được upload file JPG/PNG!')
-    return false
-  }
-  const isLt2M = file.size / 1024 / 1024 < 2
-  if (!isLt2M) {
-    // console.error('Ảnh phải nhỏ hơn 2MB!')
-    return false
-  }
-  return false // Prevent auto upload
-}
-
-const handleUploadChange = (info: any) => {}
-
 onMounted(async () => {
   try {
-    // Debug: Component mounted, initializing...
-
     // Ensure reactive state is properly initialized
     selectedRowKeys.value = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
     editingData.value = editingData.value && typeof editingData.value === 'object' ? editingData.value : {}
-    // Debug: Reactive state initialized
 
     // Load dữ liệu ban đầu
-    // Debug: Loading initial data...
     await Promise.all([loadOptions(), loadDanhMucList()])
-    // Debug: Initial data loaded successfully
-  } catch (error) {
-    // Error: Lỗi khi khởi tạo component
-    // Error details available in development
+  } catch {
+    // eslint-disable-next-line no-console
+    // console.error('Lỗi khi khởi tạo component:', error)
     Message.error('Không thể tải dữ liệu ban đầu')
   }
 })
@@ -927,6 +906,20 @@ onMounted(async () => {
 
 .custom-name {
   white-space: nowrap;
+}
+
+/* Edit inline mode styles */
+:deep(.editing-row) {
+  background-color: #f0f8ff !important;
+  border-left: 3px solid #1890ff;
+}
+
+:deep(.editing-row:hover) {
+  background-color: #e6f4ff !important;
+}
+
+:deep(.editing-row td) {
+  background-color: transparent !important;
 }
 
 .custom-price-range {
