@@ -172,9 +172,9 @@
 
         <template #validity_period="{ record }">
           <div class="validity-period">
-            <div>{{ formatDate(record.start_date) }}</div>
+            <div>{{ formatDateTime(record.start_date) }}</div>
             <div class="separator">-</div>
-            <div>{{ formatDate(record.end_date) }}</div>
+            <div>{{ formatDateTime(record.end_date) }}</div>
           </div>
         </template>
 
@@ -227,7 +227,7 @@
           {{ selectedCoupon?.max_discount_value ? formatCurrency(selectedCoupon.max_discount_value) : 'Không giới hạn' }}
         </a-descriptions-item>
         <a-descriptions-item label="Thời gian">
-          {{ formatDate(selectedCoupon?.start_date ?? '') }} - {{ formatDate(selectedCoupon?.end_date ?? '') }}
+          {{ formatDateTime(selectedCoupon?.start_date ?? '') }} - {{ formatDateTime(selectedCoupon?.end_date ?? '') }}
         </a-descriptions-item>
         <a-descriptions-item label="Số lượng">
           {{ selectedCoupon?.usage_limit ?? '∞' }}
@@ -301,8 +301,9 @@
         <a-form-item field="dateRange" label="Thời gian áp dụng">
           <a-range-picker
             v-model="couponEditForm.dateRange"
-            value-format="YYYY-MM-DD"
-            format="DD/MM/YYYY"
+            :show-time="true"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            format="DD/MM/YYYY HH:mm"
             allow-clear
             style="width: 100%"
           />
@@ -535,6 +536,26 @@ watch(
   }
 )
 
+// Real-time validation for discount value
+watch(
+  () => couponEditForm.discountValue,
+  (value) => {
+    if (value === null || value === undefined) return
+    
+    // Ensure value is positive
+    if (value < 0) {
+      couponEditForm.discountValue = 0
+      return
+    }
+    
+    // Cap percentage discount at 100%
+    if (isPercentEdit.value && value > 100) {
+      couponEditForm.discountValue = 100
+      Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+    }
+  }
+)
+
 const determineDiscountType = (coupon: CouponApiModel): 'percentage' | 'fixed' => {
   if (coupon.loaiPhieuGiamGia !== null && coupon.loaiPhieuGiamGia !== undefined) {
     return coupon.loaiPhieuGiamGia ? 'fixed' : 'percentage'
@@ -718,6 +739,23 @@ const formatDate = (dateString: string) => {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+  })
+}
+
+const formatDateTime = (dateString: string) => {
+  if (!dateString) {
+    return ''
+  }
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 

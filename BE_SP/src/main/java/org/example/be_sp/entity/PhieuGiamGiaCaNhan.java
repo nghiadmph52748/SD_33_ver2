@@ -1,6 +1,6 @@
 package org.example.be_sp.entity;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
@@ -47,10 +47,10 @@ public class PhieuGiamGiaCaNhan {
     private String tenPhieuGiamGiaCaNhan;
 
     @Column(name = "ngay_nhan")
-    private LocalDate ngayNhan;
+    private LocalDateTime ngayNhan;
 
     @Column(name = "ngay_het_han")
-    private LocalDate ngayHetHan;
+    private LocalDateTime ngayHetHan;
 
     @ColumnDefault("1")
     @Column(name = "trang_thai")

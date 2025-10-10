@@ -9,7 +9,7 @@ import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
 import org.springframework.cglib.core.Local;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -27,10 +27,10 @@ public class PhieuGiamGiaCaNhanResponse {
     private BigDecimal hoaDonToiThieu;
     private BigDecimal soTienToiDa;
     Integer soLuongSuDung;
-    LocalDate ngayBatDau;
-    LocalDate ngayKetThuc;
-    private LocalDate ngayNhan;
-    private LocalDate ngayHetHan;
+    LocalDateTime ngayBatDau;
+    LocalDateTime ngayKetThuc;
+    private LocalDateTime ngayNhan;
+    private LocalDateTime ngayHetHan;
     private Boolean trangThai;
     Boolean deleted;
 

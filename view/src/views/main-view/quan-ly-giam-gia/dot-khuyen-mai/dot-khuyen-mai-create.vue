@@ -22,25 +22,24 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item field="discountValue" label="Giá trị giảm (%)">
-              <a-input-number v-model="formState.discountValue" :min="1" :max="100" :precision="0" style="width: 100%" />
+            <a-form-item field="code" label="Mã">
+              <a-input v-model="formState.code" placeholder="Mã tự động" :disabled="true" />
             </a-form-item>
           </a-col>
         </a-row>
 
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item field="dateRange" label="Thời gian áp dụng">
-              <a-range-picker v-model="formState.dateRange" value-format="YYYY-MM-DD" format="DD/MM/YYYY" allow-clear style="width: 100%" />
+            <a-form-item field="discountValue" label="Giá trị giảm (%)">
+              <a-input-number v-model="formState.discountValue" :min="1" :max="100" :precision="0" style="width: 100%" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item field="active" label="Trạng thái">
-              <a-switch v-model="formState.active" checked-text="Bật" unchecked-text="Tắt" />
+            <a-form-item field="dateRange" label="Thời gian áp dụng">
+              <a-range-picker v-model="formState.dateRange" :show-time="true" value-format="YYYY-MM-DD HH:mm:ss" format="DD/MM/YYYY HH:mm" allow-clear style="width: 100%" />
             </a-form-item>
           </a-col>
         </a-row>
-
         <div class="form-footer">
           <a-space>
             <a-button @click="goBack">Hủy</a-button>
@@ -61,21 +60,17 @@
       cancel-text="Hủy"
       width="560px"
     >
-      <p style="margin-bottom: 16px; color: var(--color-text-2);">Vui lòng kiểm tra lại thông tin trước khi lưu:</p>
+      <p style="margin-bottom: 16px; color: var(--color-text-2)">Vui lòng kiểm tra lại thông tin trước khi lưu:</p>
       <a-descriptions :column="1" bordered>
         <a-descriptions-item label="Tên đợt khuyến mãi">
           {{ formState.name }}
         </a-descriptions-item>
-        <a-descriptions-item label="Giá trị giảm">
-          {{ formState.discountValue }}%
+        <a-descriptions-item label="Mã">
+          {{ formState.code }}
         </a-descriptions-item>
+        <a-descriptions-item label="Giá trị giảm">{{ formState.discountValue }}%</a-descriptions-item>
         <a-descriptions-item label="Thời gian áp dụng">
           {{ formatDateRange(formState.dateRange) }}
-        </a-descriptions-item>
-        <a-descriptions-item label="Trạng thái">
-          <a-tag :color="formState.active ? 'green' : 'gray'">
-            {{ formState.active ? 'Bật' : 'Tắt' }}
-          </a-tag>
         </a-descriptions-item>
       </a-descriptions>
     </a-modal>
@@ -83,13 +78,13 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted, watch } from 'vue'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
-import { createPromotionCampaign } from '@/api/discount-management'
+import { createPromotionCampaign, fetchPromotionCampaigns } from '@/api/discount-management'
 
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
@@ -100,10 +95,21 @@ const confirmSaveSubmitting = ref(false)
 
 const formState = reactive({
   name: '',
+  code: '',
   discountValue: 10,
   dateRange: [] as string[],
-  active: true,
 })
+
+// Real-time validation for discount value
+watch(
+  () => formState.discountValue,
+  (newValue) => {
+    if (newValue !== undefined && newValue !== null && newValue > 100) {
+      Message.warning('Giá trị giảm không được vượt quá 100%')
+      formState.discountValue = 100
+    }
+  }
+)
 
 const rules: FormRules = {
   name: [{ required: true, message: 'Vui lòng nhập tên đợt khuyến mãi' }],
@@ -151,6 +157,44 @@ const rules: FormRules = {
   ],
 }
 
+const generateNextCode = async () => {
+  try {
+    const promotions = await fetchPromotionCampaigns()
+
+    if (!promotions || promotions.length === 0) {
+      return 'DGG000001'
+    }
+
+    // Extract all codes that match the DGG pattern
+    const dggCodes = promotions
+      .map((p) => p.maDotGiamGia)
+      .filter((code) => code && code.startsWith('DGG'))
+      .map((code) => {
+        const numPart = code.substring(3)
+        return parseInt(numPart, 10)
+      })
+      .filter((num) => !Number.isNaN(num))
+
+    if (dggCodes.length === 0) {
+      return 'DGG000001'
+    }
+
+    // Find the maximum number and increment
+    const maxNum = Math.max(...dggCodes)
+    const nextNum = maxNum + 1
+
+    // Format with leading zeros (6 digits)
+    return `DGG${nextNum.toString().padStart(6, '0')}`
+  } catch {
+    // Fallback to DGG000001 if fetch fails
+    return 'DGG000001'
+  }
+}
+
+onMounted(async () => {
+  formState.code = await generateNextCode()
+})
+
 const goBack = () => {
   router.back()
 }
@@ -159,17 +203,20 @@ const formatDateRange = (dateRange: string[]) => {
   if (!dateRange || dateRange.length !== 2) return ''
   const [start, end] = dateRange
   if (!start || !end) return ''
-  
-  const formatDate = (dateStr: string) => {
+
+  const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('vi-VN', {
+    return date.toLocaleString('vi-VN', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     })
   }
-  
-  return `${formatDate(start)} - ${formatDate(end)}`
+
+  return `${formatDateTime(start)} - ${formatDateTime(end)}`
 }
 
 const handleSaveClick = async () => {
@@ -181,7 +228,7 @@ const handleSaveClick = async () => {
     if (errors) {
       return
     }
-  } catch (error) {
+  } catch {
     // Validation failed, errors are already displayed by the form
     return
   }
@@ -190,17 +237,27 @@ const handleSaveClick = async () => {
   confirmSaveVisible.value = true
 }
 
+const calculateStatus = (startDate: string, endDate: string): boolean => {
+  const now = new Date()
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+
+  // Status is true (active) if current datetime is within the datetime range
+  return now >= start && now <= end
+}
+
 const confirmSave = async () => {
   if (confirmSaveSubmitting.value) return
 
   const [startDate, endDate] = formState.dateRange
 
   const payload = {
+    maDotGiamGia: formState.code,
     tenDotGiamGia: formState.name.trim(),
     giaTriGiamGia: Number(formState.discountValue),
     ngayBatDau: startDate,
     ngayKetThuc: endDate,
-    trangThai: formState.active,
+    trangThai: calculateStatus(startDate, endDate),
     deleted: false,
   }
 

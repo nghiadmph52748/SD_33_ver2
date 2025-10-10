@@ -198,90 +198,97 @@ const recentActivities = ref<{ type: 'product' | 'order' | 'customer'; title: st
 const toRelativeTime = (date: Date) => {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
-  
+
   // Nếu thời gian trong tương lai hoặc quá xa, hiển thị thời gian tuyệt đối
   if (diffMs < 0) {
-    return date.toLocaleString('vi-VN', { 
-      day: '2-digit', 
-      month: '2-digit', 
+    return date.toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   }
-  
+
   const seconds = Math.floor(diffMs / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
-  
+
   if (seconds < 60) return 'Vừa xong'
   if (minutes < 60) return `${minutes} phút trước`
   if (hours < 24) return `${hours} giờ trước`
   if (days < 7) return `${days} ngày trước`
-  
+
   // Nếu quá 7 ngày, hiển thị ngày tháng
-  return date.toLocaleString('vi-VN', { 
-    day: '2-digit', 
-    month: '2-digit', 
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
 const buildRecentActivities = () => {
   const acts: { type: 'product' | 'order' | 'customer'; title: string; time: string; at: number }[] = []
-  console.log('Building activities from orders:', ordersList.value.length, 'products:', productsList.value.length, 'customers:', customersList.value.length)
-  
+  console.log(
+    'Building activities from orders:',
+    ordersList.value.length,
+    'products:',
+    productsList.value.length,
+    'customers:',
+    customersList.value.length
+  )
+
   // 1. Đơn hàng thành công mới (đã thanh toán)
   ordersList.value.forEach((o: any) => {
     if (o?.ngayThanhToan && (o?.trangThai === true || o?.ngayThanhToan)) {
       const dt = new Date(o.ngayThanhToan)
       if (!Number.isNaN(dt.getTime())) {
         const amount = Number(o?.tongTienSauGiam ?? o?.tongTien ?? 0)
-        acts.push({ 
-          type: 'order', 
-          title: `Đơn hàng thành công ${o?.tenHoaDon ?? `#${o?.id ?? ''}`} - ${formatCurrency(Number.isNaN(amount) ? 0 : amount)}`, 
-          time: toRelativeTime(dt), 
-          at: dt.getTime() 
+        acts.push({
+          type: 'order',
+          title: `Đơn hàng thành công ${o?.tenHoaDon ?? `#${o?.id ?? ''}`} - ${formatCurrency(Number.isNaN(amount) ? 0 : amount)}`,
+          time: toRelativeTime(dt),
+          at: dt.getTime(),
         })
       }
     }
   })
-  
+
   // 2. Thêm sản phẩm mới
   productsList.value.forEach((p: any) => {
     const createDate = p?.createAt || p?.create_at
     if (createDate) {
       const dt = new Date(createDate)
       if (!Number.isNaN(dt.getTime())) {
-        acts.push({ 
-          type: 'product', 
-          title: `Thêm sản phẩm mới: ${p?.tenSanPham ?? `#${p?.id ?? ''}`}`, 
-          time: toRelativeTime(dt), 
-          at: dt.getTime() 
+        acts.push({
+          type: 'product',
+          title: `Thêm sản phẩm mới: ${p?.tenSanPham ?? `#${p?.id ?? ''}`}`,
+          time: toRelativeTime(dt),
+          at: dt.getTime(),
         })
       }
     }
   })
-  
+
   // 3. Khách hàng mới
   customersList.value.forEach((c: any) => {
     const createDate = c?.createAt || c?.create_at
     if (createDate) {
       const dt = new Date(createDate)
       if (!Number.isNaN(dt.getTime())) {
-        acts.push({ 
-          type: 'customer', 
-          title: `Khách hàng mới: ${c?.tenKhachHang ?? `#${c?.id ?? ''}`}`, 
-          time: toRelativeTime(dt), 
-          at: dt.getTime() 
+        acts.push({
+          type: 'customer',
+          title: `Khách hàng mới: ${c?.tenKhachHang ?? `#${c?.id ?? ''}`}`,
+          time: toRelativeTime(dt),
+          at: dt.getTime(),
         })
       }
     }
   })
-  
+
   // Sắp xếp theo thời gian giảm dần (mới nhất lên đầu)
   acts.sort((a, b) => b.at - a.at)
   recentActivities.value = acts.slice(0, 10)
@@ -389,7 +396,7 @@ const buildTopProductsData = () => {
       items.forEach((it: any) => {
         const name = it?.tenSanPham ?? 'Không rõ'
         const qty = Number(it?.soLuong ?? 0)
-        const lineRevenue = Number(it?.thanhTien ?? (Number(it?.giaBan ?? 0) * qty))
+        const lineRevenue = Number(it?.thanhTien ?? Number(it?.giaBan ?? 0) * qty)
         if (!map[name]) {
           map[name] = { name, value: 0, revenue: 0 }
         }

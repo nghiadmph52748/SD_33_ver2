@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -21,8 +21,8 @@ public class PhieuGiamGiaRequest {
     BigDecimal hoaDonToiThieu;
     List<Integer> idKhachHang;
     Integer soLuongDung;
-    LocalDate ngayBatDau;
-    LocalDate ngayKetThuc;
+    LocalDateTime ngayBatDau;
+    LocalDateTime ngayKetThuc;
     Boolean trangThai;
     String moTa;
     Boolean deleted;

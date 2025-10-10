@@ -71,20 +71,16 @@
         :scroll="{ x: 1200 }"
         @change="xuLyThayDoiBang"
       >
-        
-
         <template #total_orders="{ record }">
           <span>{{ record.total_orders }}</span>
         </template>
-
-        
 
         <template #status="{ record }">
           <a-tag :color="record.status === 'active' ? 'green' : 'orange'">
             {{ record.status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
-       <template #diaChi="{ record }">
+        <template #diaChi="{ record }">
           {{ [record.diaChiCuThe, record.phuong, record.quan, record.thanhPho].filter(Boolean).join(', ') }}
         </template>
 
@@ -107,28 +103,20 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import axios from 'axios'
-import { useRouter } from "vue-router";
-import {
-  IconPlus,
-  IconRefresh,
-  IconDownload,
-  IconEye,
-  IconEdit,
-  IconDelete
-} from '@arco-design/web-vue/es/icon'
+import { useRouter } from 'vue-router'
+import { IconPlus, IconRefresh, IconDownload, IconEye, IconEdit, IconDelete } from '@arco-design/web-vue/es/icon'
 // ✅ Di chuyển lên đầu file <script>
 
-const router = useRouter();
+const router = useRouter()
 
 const chuyenTrangTaoMoi = () => {
-  router.push("/themkhachhang"); // ✅ thêm chữ "h"
-};
+  router.push('/themkhachhang') // ✅ thêm chữ "h"
+}
 const chinhSuaKhach = (khach: any) => {
   console.log('ID cần sửa:', khach.id)
   router.push(`/updatekhachhang/${khach.id}`)
@@ -140,14 +128,14 @@ const boLoc = ref({
   timKiem: '',
   gioiTinh: '',
   phanLoai: '',
-  trangThai: ''
+  trangThai: '',
 })
 
 const dangTai = ref(false)
 const phanTrang = ref({
   current: 1,
   pageSize: 10,
-  total: 0
+  total: 0,
 })
 
 const cotBang = [
@@ -156,11 +144,11 @@ const cotBang = [
   { title: 'Tên', dataIndex: 'name', width: 100 },
   { title: 'Ngày sinh', dataIndex: 'birthday', width: 120, align: 'center' },
   { title: 'Giới tính', dataIndex: 'gender', width: 80, align: 'center' },
-   { title: 'Địa chỉ', slotName: 'diaChi', width: 250 },
+  { title: 'Địa chỉ', slotName: 'diaChi', width: 250 },
   { title: 'Email', dataIndex: 'email', width: 150, align: 'center' },
   { title: 'SDT', dataIndex: 'soDienThoai', width: 120, align: 'center' },
   { title: 'Trạng thái', dataIndex: 'status', slotName: 'status', width: 120, align: 'center' },
-  { title: 'Thao tác', slotName: 'action', width: 80, fixed: 'right' }
+  { title: 'Thao tác', slotName: 'action', width: 80, fixed: 'right' },
 ]
 
 interface KhachHang {
@@ -173,7 +161,7 @@ interface KhachHang {
   total_spent?: number
   customer_type?: string
   status: string
-  email: string 
+  email: string
   soDienThoai: string
   thanhPho: string
   quan: string
@@ -181,11 +169,7 @@ interface KhachHang {
   diaChiCuThe: string
 }
 
-
-
 const danhSachKhachHang = ref<KhachHang[]>([])
-
-
 
 const timKiemKhachHang = async () => {
   try {
@@ -197,25 +181,25 @@ const timKiemKhachHang = async () => {
       // Filter theo tìm kiếm
       if (boLoc.value.timKiem.trim() !== '') {
         const search = boLoc.value.timKiem.toLowerCase()
-        filtered = filtered.filter(item => 
-          (item.maKhachHang?.toLowerCase().includes(search)) ||
-          (item.tenKhachHang?.toLowerCase().includes(search)) ||
-          (item.soDienThoai?.toLowerCase().includes(search)) ||
-          (item.email?.toLowerCase().includes(search))
+        filtered = filtered.filter(
+          (item) =>
+            item.maKhachHang?.toLowerCase().includes(search) ||
+            item.tenKhachHang?.toLowerCase().includes(search) ||
+            item.soDienThoai?.toLowerCase().includes(search) ||
+            item.email?.toLowerCase().includes(search)
         )
       }
 
       // Filter theo giới tính
       if (boLoc.value.gioiTinh !== '') {
-        filtered = filtered.filter(item => 
-          (item.gioiTinh ? 'Nam' : 'Nữ') === boLoc.value.gioiTinh
-        )
+        filtered = filtered.filter((item) => (item.gioiTinh ? 'Nam' : 'Nữ') === boLoc.value.gioiTinh)
       }
 
       // Filter theo trạng thái
       if (boLoc.value.trangThai !== '') {
-        filtered = filtered.filter(item =>
-          ((item.trangThaiText && item.trangThaiText.toLowerCase() === 'hoạt động') ? 'active' : 'inactive') === boLoc.value.trangThai
+        filtered = filtered.filter(
+          (item) =>
+            (item.trangThaiText && item.trangThaiText.toLowerCase() === 'hoạt động' ? 'active' : 'inactive') === boLoc.value.trangThai
         )
       }
 
@@ -234,7 +218,7 @@ const timKiemKhachHang = async () => {
           diaChiCuThe: diaChi.diaChiCuThe || '',
           email: item.email,
           soDienThoai: item.soDienThoai,
-          status: (item.trangThaiText && item.trangThaiText.toLowerCase() === 'hoạt động') ? 'active' : 'inactive',
+          status: item.trangThaiText && item.trangThaiText.toLowerCase() === 'hoạt động' ? 'active' : 'inactive',
         }
       })
       phanTrang.value.total = danhSachKhachHang.value.length
@@ -254,14 +238,12 @@ const timKiemKhachHang = async () => {
   }
 }
 
-
-
 const datLaiBoLoc = () => {
   boLoc.value = {
     timKiem: '',
     gioiTinh: '',
     phanLoai: '',
-    trangThai: ''
+    trangThai: '',
   }
   timKiemKhachHang()
 }
@@ -270,7 +252,7 @@ const xuLyThayDoiBang = (duLieuPhanTrang: any) => {
   phanTrang.value = {
     ...phanTrang.value,
     current: duLieuPhanTrang.current,
-    pageSize: duLieuPhanTrang.pageSize
+    pageSize: duLieuPhanTrang.pageSize,
   }
   timKiemKhachHang()
 }
@@ -281,18 +263,13 @@ const xemChiTietKhach = (khach: any) => {
   router.push(`/detailkhachhang/${khach.id}`)
 }
 
-
-
 const xoaKhach = (khach: any) => {}
 const xuatExcel = () => {}
-
 
 onMounted(() => {
   timKiemKhachHang()
 })
-
 </script>
-
 
 <style scoped>
 .customer-management-page {

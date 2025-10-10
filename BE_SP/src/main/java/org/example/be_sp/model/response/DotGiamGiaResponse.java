@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.example.be_sp.entity.DotGiamGia;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -17,8 +17,8 @@ public class DotGiamGiaResponse {
     String maDotGiamGia;
     String tenDotGiamGia;
     Integer giaTriGiamGia;
-    LocalDate ngayBatDau;
-    LocalDate ngayKetThuc;
+    LocalDateTime ngayBatDau;
+    LocalDateTime ngayKetThuc;
     Boolean trangThai;
     Boolean deleted;
 

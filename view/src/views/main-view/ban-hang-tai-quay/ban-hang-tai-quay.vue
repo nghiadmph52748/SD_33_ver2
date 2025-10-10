@@ -9,33 +9,59 @@
       <div class="products-panel">
         <!-- Product Search & Filter -->
         <div class="product-controls">
-          <a-input-search v-model="productSearch" placeholder="Tìm kiếm sản phẩm..." style="margin-bottom: 16px" allow-clear />
+          <a-space style="margin-bottom: 16px; width: 100%">
+            <a-input-search v-model="productSearch" placeholder="Tìm kiếm sản phẩm..." allow-clear style="flex: 1" />
+            <a-button type="primary" @click="showQRScanner = true">
+              <template #icon>
+                <icon-qrcode />
+              </template>
+              Quét QR
+            </a-button>
+          </a-space>
 
-          <a-space wrap>
-            <a-select v-model="selectedCategory" placeholder="Chọn danh mục" style="width: 150px" allow-clear>
-              <a-option value="sneaker">Giày sneaker</a-option>
-              <a-option value="boot">Giày boot</a-option>
-              <a-option value="heel">Giày cao gót</a-option>
-              <a-option value="sport">Giày thể thao</a-option>
-              <a-option value="sandal">Giày sandal</a-option>
-            </a-select>
+          <a-space wrap style="justify-content: space-between; width: 100%">
+            <a-space wrap>
+              <a-select v-model="selectedCategory" placeholder="Chọn danh mục" style="width: 150px" allow-clear>
+                <a-option value="sneaker">Giày sneaker</a-option>
+                <a-option value="boot">Giày boot</a-option>
+                <a-option value="heel">Giày cao gót</a-option>
+                <a-option value="sport">Giày thể thao</a-option>
+                <a-option value="sandal">Giày sandal</a-option>
+              </a-select>
 
-            <a-select v-model="sortBy" placeholder="Sắp xếp theo" style="width: 130px">
-              <a-option value="name">Tên A-Z</a-option>
-              <a-option value="price-low">Giá thấp</a-option>
-              <a-option value="price-high">Giá cao</a-option>
-              <a-option value="newest">Mới nhất</a-option>
-            </a-select>
+              <a-select v-model="sortBy" placeholder="Sắp xếp theo" style="width: 130px">
+                <a-option value="name">Tên A-Z</a-option>
+                <a-option value="price-low">Giá thấp</a-option>
+                <a-option value="price-high">Giá cao</a-option>
+                <a-option value="newest">Mới nhất</a-option>
+              </a-select>
+            </a-space>
+
+            <a-radio-group v-model="viewMode" type="button" size="small">
+              <a-radio value="grid">
+                <template #icon>
+                  <icon-apps />
+                </template>
+                Lưới
+              </a-radio>
+              <a-radio value="table">
+                <template #icon>
+                  <icon-menu />
+                </template>
+                Bảng
+              </a-radio>
+            </a-radio-group>
           </a-space>
         </div>
 
-        <!-- Products Grid -->
+        <!-- Loading State -->
         <div v-if="loading" class="loading-container">
           <a-spin size="large" />
           <p>Đang tải sản phẩm...</p>
         </div>
-        
-        <div v-else class="products-grid">
+
+        <!-- Grid View -->
+        <div v-else-if="viewMode === 'grid'" class="products-grid">
           <a-card v-for="product in filteredProducts" :key="product.id" class="product-card" hoverable @click="addToCart(product)">
             <template #cover>
               <img :src="getProductImage(product)" :alt="product.tenSanPham" class="product-image" />
@@ -62,6 +88,43 @@
             </template>
           </a-card>
         </div>
+
+        <!-- Table View -->
+        <div v-else class="products-table">
+          <a-table
+            :columns="productTableColumns"
+            :data="filteredProducts"
+            :pagination="productPagination"
+            row-key="id"
+            :scroll="{ y: 'calc(100vh - 300px)' }"
+          >
+            <template #image="{ record }">
+              <img :src="getProductImage(record)" :alt="record.tenSanPham" class="table-product-image" />
+            </template>
+
+            <template #name="{ record }">
+              <div class="table-product-name">
+                <strong>{{ record.tenSanPham }}</strong>
+                <div style="font-size: 12px; color: #86909c; margin-top: 2px">
+                  Mã: {{ record.maSanPham || `SP${String(record.id).padStart(5, '0')}` }}
+                </div>
+              </div>
+            </template>
+
+            <template #stock="{ record }">
+              <a-tag :color="getStockColor(record)">{{ getStockText(record) }}</a-tag>
+            </template>
+
+            <template #action="{ record }">
+              <a-button type="primary" size="small" @click="addToCart(record)">
+                <template #icon>
+                  <icon-plus />
+                </template>
+                Thêm
+              </a-button>
+            </template>
+          </a-table>
+        </div>
       </div>
 
       <!-- Right Panel - Cart & Checkout -->
@@ -70,13 +133,13 @@
         <a-card title="Thông tin khách hàng" class="customer-card" size="small">
           <div class="customer-info-section">
             <a-form layout="vertical" :model="customerForm" v-if="!isGuestCustomer">
-            <a-form-item label="Tên khách hàng">
-              <a-input v-model="customerForm.name" placeholder="Nhập tên khách hàng" allow-clear />
-            </a-form-item>
-            <a-form-item label="Số điện thoại">
-              <a-input v-model="customerForm.phone" placeholder="Nhập số điện thoại" allow-clear />
-            </a-form-item>
-          </a-form>
+              <a-form-item label="Tên khách hàng">
+                <a-input v-model="customerForm.name" placeholder="Nhập tên khách hàng" allow-clear />
+              </a-form-item>
+              <a-form-item label="Số điện thoại">
+                <a-input v-model="customerForm.phone" placeholder="Nhập số điện thoại" allow-clear />
+              </a-form-item>
+            </a-form>
 
             <div v-else class="guest-customer-display">
               <a-tag color="orange" size="large">
@@ -91,12 +154,12 @@
             <div class="customer-actions">
               <div class="button-group">
                 <a-button type="dashed" @click="showCustomerModal = true" style="flex: 1; margin-right: 8px">
-            <template #icon>
-              <icon-user-add />
-            </template>
-            Chọn khách hàng
-          </a-button>
-                
+                  <template #icon>
+                    <icon-user-add />
+                  </template>
+                  Chọn khách hàng
+                </a-button>
+
                 <a-button v-if="!isGuestCustomer" type="primary" @click="selectGuestCustomer" style="flex: 1">
                   <template #icon>
                     <icon-user />
@@ -104,7 +167,7 @@
                   Khách lạ
                 </a-button>
               </div>
-              
+
               <a-button v-if="isGuestCustomer" type="text" size="small" @click="clearCustomer" style="margin-top: 8px; width: 100%">
                 Xóa khách lạ
               </a-button>
@@ -210,7 +273,6 @@
           </div>
         </a-modal>
 
-
         <!-- Main Cart -->
         <a-card title="Giỏ hàng" class="cart-card">
           <div v-if="cartItems.length === 0" class="empty-cart">
@@ -252,7 +314,7 @@
               <span>Tạm tính:</span>
               <span>{{ formatCurrency(subtotal) }}</span>
             </div>
-            
+
             <!-- Applied Coupon -->
             <div v-if="appliedCoupon" class="summary-row discount-applied">
               <span>Giảm giá ({{ appliedCoupon.code }}):</span>
@@ -278,10 +340,12 @@
                 Xóa phiếu giảm giá
               </a-button>
             </div>
-            
+
             <div class="summary-row total">
               <span><strong>Tổng cộng:</strong></span>
-              <span><strong>{{ formatCurrency(total) }}</strong></span>
+              <span>
+                <strong>{{ formatCurrency(total) }}</strong>
+              </span>
             </div>
           </div>
         </a-card>
@@ -305,7 +369,7 @@
                 show-icon
                 style="margin-bottom: 16px"
               />
-              
+
               <a-form-item
                 label="Khách đưa"
                 :required="true"
@@ -346,20 +410,89 @@
             {{ paymentButtonLabel }}
           </a-button>
         </a-card>
-
       </div>
     </div>
+
+    <!-- QR Scanner Modal -->
+    <a-modal v-model:visible="showQRScanner" title="" :footer="null" width="600px" @cancel="closeQRScanner" unmount-on-close>
+      <div class="qr-scanner-container">
+        <div class="qr-modal-header">
+          <h3 class="modal-title">Quét mã QR sản phẩm</h3>
+          <p class="modal-subtitle">Đưa mã QR vào khung hình để quét</p>
+        </div>
+
+        <!-- Camera Preview -->
+        <div class="camera-preview">
+          <video ref="qrVideo" autoplay playsinline muted class="qr-video" @loadedmetadata="onVideoLoaded"></video>
+          <canvas ref="qrCanvas" class="qr-canvas"></canvas>
+
+          <!-- Scanning overlay -->
+          <div class="scanning-overlay">
+            <div class="scanning-frame">
+              <div class="corner corner-tl"></div>
+              <div class="corner corner-tr"></div>
+              <div class="corner corner-bl"></div>
+              <div class="corner corner-br"></div>
+              <div class="scanning-line" :class="{ active: isScanning }"></div>
+            </div>
+            <p class="scanning-text">
+              {{ isScanning ? 'Đang quét...' : cameraError ? cameraError : 'Đưa mã QR vào khung hình' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- QR Scanner Controls -->
+        <div class="qr-controls">
+          <a-space>
+            <a-button @click="toggleCamera" :disabled="!hasMultipleCameras">Đổi camera</a-button>
+            <a-button v-if="torchSupported" @click="toggleTorch">
+              {{ torchEnabled ? 'Tắt đèn pin' : 'Bật đèn pin' }}
+            </a-button>
+            <a-button @click="closeQRScanner">Đóng</a-button>
+          </a-space>
+        </div>
+
+        <!-- QR Result -->
+        <div v-if="qrResult" class="qr-result">
+          <a-result status="success" title="Đã thêm sản phẩm vào giỏ hàng!">
+            <template #subtitle>
+              <p class="result-text">
+                Mã QR:
+                <strong>{{ qrResult }}</strong>
+              </p>
+            </template>
+            <template #extra>
+              <a-space>
+                <a-button type="primary" @click="scanAgain">Quét sản phẩm khác</a-button>
+                <a-button @click="closeQRScanner">Đóng</a-button>
+              </a-space>
+            </template>
+          </a-result>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { createVnpayPayment, type CreateVnpayPaymentPayload } from '@/api/payment'
 import { Message } from '@arco-design/web-vue'
-import { IconPlus, IconUserAdd, IconStar, IconDelete, IconCheckCircle, IconTag, IconClose } from '@arco-design/web-vue/es/icon'
+import {
+  IconPlus,
+  IconUserAdd,
+  IconStar,
+  IconDelete,
+  IconCheckCircle,
+  IconTag,
+  IconClose,
+  IconQrcode,
+  IconApps,
+  IconMenu,
+} from '@arco-design/web-vue/es/icon'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -370,11 +503,11 @@ const todayRevenue = ref(0)
 const productsList = ref<any[]>([])
 const loading = ref(false)
 
-
 // Search & Filter
 const productSearch = ref('')
 const selectedCategory = ref('')
 const sortBy = ref('name')
+const viewMode = ref('table')
 
 // Customer info
 const customerForm = ref({
@@ -389,7 +522,6 @@ const customersList = ref<any[]>([])
 const customerLoading = ref(false)
 const selectedCustomer = ref<any>(null)
 const isGuestCustomer = ref(false)
-
 
 // Customer table columns
 const customerColumns = [
@@ -485,6 +617,87 @@ const couponPagination = ref({
   showTotal: (total: number) => `Tổng ${total} phiếu giảm giá`,
 })
 
+// Helper functions (defined before productTableColumns to avoid no-use-before-define)
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount)
+}
+
+const getProductPrice = (product: any) => {
+  // Sử dụng giá bán từ chi tiết sản phẩm
+  return Number(product.giaBan || 0)
+}
+
+const getProductImage = (product: any) => {
+  // Lấy ảnh đầu tiên từ danh sách ảnh sản phẩm
+  if (product.anhSanPham && product.anhSanPham.length > 0) {
+    return product.anhSanPham[0]
+  }
+  // Fallback về placeholder nếu không có ảnh
+  return `https://via.placeholder.com/200x150/1890ff/ffffff?text=${encodeURIComponent(product.tenSanPham || 'Sản phẩm')}`
+}
+
+const getStockColor = (product: any) => {
+  const stock = product.soLuong || 0
+  if (stock > 10) return 'green'
+  if (stock > 0) return 'orange'
+  return 'red'
+}
+
+const getStockText = (product: any) => {
+  const stock = product.soLuong || 0
+  return `${stock} sản phẩm`
+}
+
+// Product table columns
+const productTableColumns = [
+  {
+    title: 'Hình ảnh',
+    dataIndex: 'image',
+    key: 'image',
+    width: 80,
+    slotName: 'image',
+  },
+  {
+    title: 'Tên sản phẩm',
+    dataIndex: 'tenSanPham',
+    key: 'name',
+    slotName: 'name',
+  },
+  {
+    title: 'Giá',
+    key: 'price',
+    width: 150,
+    render: ({ record }: any) => formatCurrency(getProductPrice(record)),
+  },
+  {
+    title: 'Tồn kho',
+    dataIndex: 'soLuong',
+    key: 'stock',
+    width: 120,
+    slotName: 'stock',
+  },
+  {
+    title: 'Thao tác',
+    key: 'action',
+    width: 100,
+    fixed: 'right',
+    slotName: 'action',
+  },
+]
+
+// Product pagination
+const productPagination = ref({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `Tổng ${total} sản phẩm`,
+})
+
 // Cart
 const cartItems = ref<any[]>([])
 
@@ -502,6 +715,23 @@ const couponsList = ref<any[]>([])
 const couponLoading = ref(false)
 const selectedCoupon = ref<any>(null)
 const appliedCoupon = ref<any>(null)
+
+// QR Scanner variables
+const showQRScanner = ref(false)
+const qrVideo = ref<HTMLVideoElement | null>(null)
+const qrCanvas = ref<HTMLCanvasElement | null>(null)
+const qrResult = ref('')
+const isScanning = ref(false)
+const cameraError = ref('')
+const hasMultipleCameras = ref(false)
+const torchSupported = ref(false)
+const torchEnabled = ref(false)
+const currentCameraIndex = ref(0)
+
+let qrStream: MediaStream | null = null
+let animationFrameId: number | null = null
+let availableCameras: MediaDeviceInfo[] = []
+
 const vnpayBankOptions = [
   { label: 'VNPAY QR', value: 'VNPAYQR' },
   { label: 'Ngân hàng nội địa (ATM)', value: 'VNBANK' },
@@ -510,33 +740,6 @@ const vnpayBankOptions = [
 
 // Products data from API
 const products = computed(() => productsList.value)
-
-// Helper functions
-const getProductImage = (product: any) => {
-  // Lấy ảnh đầu tiên từ danh sách ảnh sản phẩm
-  if (product.anhSanPham && product.anhSanPham.length > 0) {
-    return product.anhSanPham[0]
-  }
-  // Fallback về placeholder nếu không có ảnh
-  return `https://via.placeholder.com/200x150/1890ff/ffffff?text=${encodeURIComponent(product.tenSanPham || 'Sản phẩm')}`
-}
-
-const getProductPrice = (product: any) => {
-  // Sử dụng giá bán từ chi tiết sản phẩm
-  return Number(product.giaBan || 0)
-}
-
-const getStockColor = (product: any) => {
-  const stock = product.soLuong || 0
-  if (stock > 10) return 'green'
-  if (stock > 0) return 'orange'
-  return 'red'
-}
-
-const getStockText = (product: any) => {
-  const stock = product.soLuong || 0
-  return `${stock} sản phẩm`
-}
 
 // Computed
 const filteredProducts = computed(() => {
@@ -568,6 +771,9 @@ const filteredProducts = computed(() => {
     }
   })
 
+  // Update pagination total
+  productPagination.value.total = filtered.length
+
   return filtered
 })
 
@@ -593,7 +799,7 @@ const filteredCustomers = computed(() => {
   if (!customerSearch.value) {
     return customersList.value
   }
-  
+
   const searchTerm = customerSearch.value.toLowerCase()
   return customersList.value.filter((customer) => {
     return (
@@ -612,21 +818,11 @@ const filteredCoupons = computed(() => {
 
   const searchTerm = couponSearch.value.toLowerCase()
   return couponsList.value.filter((coupon) => {
-    return (
-      coupon.maPhieuGiamGia?.toLowerCase().includes(searchTerm) ||
-      coupon.tenPhieuGiamGia?.toLowerCase().includes(searchTerm)
-    )
+    return coupon.maPhieuGiamGia?.toLowerCase().includes(searchTerm) || coupon.tenPhieuGiamGia?.toLowerCase().includes(searchTerm)
   })
 })
 
-// Methods
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount)
-}
-
+// Computed for payment
 const paymentButtonLabel = computed(() => {
   const amountLabel = formatCurrency(Math.max(total.value, 0))
   return paymentMethod.value === 'transfer' ? `Thanh toán VNPAY (${amountLabel})` : `Thanh toán (${amountLabel})`
@@ -667,7 +863,6 @@ const addToSingleCart = (product: any) => {
   }
 }
 
-
 const addToCart = (product: any) => {
   addToSingleCart(product)
 }
@@ -685,7 +880,7 @@ const fetchCustomers = async () => {
   try {
     customerLoading.value = true
     const response = await axios.get('/api/khach-hang-management/playlist')
-    
+
     if (response.data.success) {
       customersList.value = response.data.data || []
       customerPagination.value.total = customersList.value.length
@@ -700,7 +895,6 @@ const fetchCustomers = async () => {
 const searchCustomers = () => {
   // Search is handled by computed property
 }
-
 
 const handleCustomerRowClick = (record: any) => {
   selectedCustomer.value = record
@@ -744,8 +938,7 @@ const fetchCoupons = async () => {
       couponsList.value = response.data.data || []
       couponPagination.value.total = couponsList.value.length
     }
-  } catch (error) {
-    console.error('Error fetching coupons:', error)
+  } catch {
     Message.error('Không thể tải danh sách phiếu giảm giá')
   } finally {
     couponLoading.value = false
@@ -797,7 +990,6 @@ const removeCoupon = () => {
   appliedCoupon.value = null
   Message.info('Đã xóa phiếu giảm giá!')
 }
-
 
 const calculateChange = () => {
   change.value = Math.max(0, customerPaid.value - total.value)
@@ -890,7 +1082,6 @@ const processPayment = async () => {
   completeLocalPayment()
 }
 
-
 // Watch for payment method changes
 watch(paymentMethod, (method) => {
   if (method !== 'cash') {
@@ -908,14 +1099,13 @@ watch(total, () => {
   }
 })
 
-
 // API functions
 const fetchProducts = async () => {
   try {
     loading.value = true
     // Sử dụng API chi tiết sản phẩm để lấy ảnh
     const response = await axios.get('/api/chi-tiet-san-pham-management/playlist')
-    
+
     if (response.success) {
       productsList.value = response.data || []
     }
@@ -956,11 +1146,240 @@ const fetchTodayStats = async () => {
   }
 }
 
+// QR Scanner Functions
+// Helper functions first to avoid no-use-before-define errors
+const detectQRCode = (imageData: ImageData) => {
+  try {
+    if (typeof window !== 'undefined' && (window as any).jsQR) {
+      const code = (window as any).jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert',
+      })
+      return code ? code.data : null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+const stopCamera = async () => {
+  if (qrStream) {
+    qrStream.getTracks().forEach((track) => track.stop())
+    qrStream = null
+  }
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
+  }
+  isScanning.value = false
+  torchEnabled.value = false
+}
+
+const closeQRScanner = async () => {
+  await stopCamera()
+  showQRScanner.value = false
+  qrResult.value = ''
+  cameraError.value = ''
+}
+
+const addProductFromQR = async () => {
+  try {
+    if (!qrResult.value) {
+      Message.error('Không có mã QR để thêm sản phẩm')
+      return
+    }
+
+    const product = productsList.value.find((p) => {
+      const productCode = p.maSanPham || `SP${String(p.id).padStart(5, '0')}`
+      return (
+        productCode === qrResult.value || p.id.toString() === qrResult.value || productCode.toLowerCase() === qrResult.value.toLowerCase()
+      )
+    })
+
+    if (!product) {
+      Message.error(`Không tìm thấy sản phẩm với mã: ${qrResult.value}`)
+      // Clear result to allow scanning again
+      qrResult.value = ''
+      return
+    }
+
+    if (product.soLuong <= 0) {
+      Message.warning('Sản phẩm đã hết hàng')
+      // Clear result to allow scanning again
+      qrResult.value = ''
+      return
+    }
+
+    addToCart(product)
+    Message.success(`Đã thêm ${product.tenSanPham || 'sản phẩm'} vào giỏ hàng`)
+    // Close scanner automatically after successful addition
+    await closeQRScanner()
+  } catch {
+    Message.error('Có lỗi xảy ra khi thêm sản phẩm')
+    // Clear result to allow scanning again
+    qrResult.value = ''
+  }
+}
+
+const startScanning = (context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, video: HTMLVideoElement) => {
+  const scan = () => {
+    if (!isScanning.value || !showQRScanner.value) {
+      return
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+
+    const qrCode = detectQRCode(imageData)
+
+    if (qrCode) {
+      qrResult.value = qrCode
+      isScanning.value = false
+      Message.success('Quét QR thành công!')
+      // Automatically add product to cart
+      addProductFromQR()
+    } else {
+      animationFrameId = requestAnimationFrame(scan)
+    }
+  }
+
+  scan()
+}
+
+const initCamera = async () => {
+  try {
+    cameraError.value = ''
+    isScanning.value = false
+
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    availableCameras = devices.filter((device) => device.kind === 'videoinput')
+    hasMultipleCameras.value = availableCameras.length > 1
+
+    if (availableCameras.length === 0) {
+      cameraError.value = 'Không tìm thấy camera'
+      return
+    }
+
+    const constraints = {
+      video: {
+        deviceId: availableCameras[currentCameraIndex.value]?.deviceId,
+        facingMode: availableCameras.length > 1 ? 'environment' : 'user',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+    }
+
+    qrStream = await navigator.mediaDevices.getUserMedia(constraints)
+
+    // Check torch support after getting the stream
+    const track = qrStream.getVideoTracks()[0]
+    if (track) {
+      const capabilities = track.getCapabilities() as any
+      if (capabilities.torch) {
+        torchSupported.value = true
+      }
+    }
+
+    if (qrVideo.value) {
+      qrVideo.value.srcObject = qrStream
+      // Wait for video to be ready
+      await qrVideo.value.play()
+    }
+  } catch (error) {
+    const err = error as Error
+    if (err.name === 'NotAllowedError') {
+      cameraError.value = 'Vui lòng cho phép truy cập camera'
+    } else if (err.name === 'NotFoundError') {
+      cameraError.value = 'Không tìm thấy camera'
+    } else {
+      cameraError.value = 'Không thể kết nối camera'
+    }
+  }
+}
+
+const onVideoLoaded = () => {
+  if (qrVideo.value && qrCanvas.value) {
+    const video = qrVideo.value
+    const canvas = qrCanvas.value
+
+    // Make sure video has valid dimensions
+    if (!video.videoWidth || !video.videoHeight) {
+      return
+    }
+
+    const context = canvas.getContext('2d', { willReadFrequently: true })
+    if (!context) return
+
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+
+    isScanning.value = true
+    Message.success('Camera sẵn sàng! Bắt đầu quét...')
+    startScanning(context, canvas, video)
+  }
+}
+
+const toggleCamera = async () => {
+  if (hasMultipleCameras.value && availableCameras.length > 1) {
+    currentCameraIndex.value = (currentCameraIndex.value + 1) % availableCameras.length
+    await stopCamera()
+    await initCamera()
+  }
+}
+
+const toggleTorch = async () => {
+  if (torchSupported.value && qrStream) {
+    try {
+      const track = qrStream.getVideoTracks()[0]
+      const capabilities = track.getCapabilities() as any
+
+      if (capabilities.torch) {
+        await track.applyConstraints({
+          advanced: [{ torch: !torchEnabled.value } as any],
+        })
+        torchEnabled.value = !torchEnabled.value
+      }
+    } catch {
+      Message.error('Không thể bật/tắt đèn pin')
+    }
+  }
+}
+
+const scanAgain = () => {
+  qrResult.value = ''
+  isScanning.value = true
+  if (qrVideo.value && qrCanvas.value) {
+    const context = qrCanvas.value.getContext('2d', { willReadFrequently: true })
+    if (context) {
+      startScanning(context, qrCanvas.value, qrVideo.value)
+    }
+  }
+}
+
+// Watch for QR scanner modal open/close
+watch(showQRScanner, async (newVal) => {
+  if (newVal) {
+    await nextTick()
+    Message.info('Đang khởi tạo camera...')
+    await initCamera()
+    if (cameraError.value) {
+      Message.error(cameraError.value)
+    }
+  } else {
+    await stopCamera()
+  }
+})
+
 onMounted(() => {
   fetchProducts()
   fetchTodayStats()
   fetchCustomers()
   fetchCoupons()
+})
+
+// Cleanup camera on component unmount
+onUnmounted(async () => {
+  await stopCamera()
 })
 </script>
 
@@ -1288,4 +1707,174 @@ onMounted(() => {
   color: #40a9ff;
 }
 
+/* QR Scanner Styles */
+.qr-scanner-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.qr-modal-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.qr-modal-header .modal-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1d2129;
+}
+
+.qr-modal-header .modal-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #86909c;
+}
+
+.camera-preview {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.qr-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.qr-canvas {
+  display: none;
+}
+
+.scanning-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.scanning-frame {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #ffffff;
+}
+
+.corner-tl {
+  top: -2px;
+  left: -2px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.corner-tr {
+  top: -2px;
+  right: -2px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.corner-bl {
+  bottom: -2px;
+  left: -2px;
+  border-right: none;
+  border-top: none;
+}
+
+.corner-br {
+  bottom: -2px;
+  right: -2px;
+  border-left: none;
+  border-top: none;
+}
+
+.scanning-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(22, 119, 255, 0.8), transparent);
+  animation: scan 2s linear infinite;
+  opacity: 0;
+}
+
+.scanning-line.active {
+  opacity: 1;
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(250px);
+  }
+}
+
+.scanning-text {
+  margin-top: 20px;
+  color: #ffffff;
+  font-size: 14px;
+  text-align: center;
+  padding: 8px 16px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+}
+
+.qr-controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.qr-result {
+  text-align: center;
+}
+
+.result-text {
+  margin: 16px 0;
+  font-size: 16px;
+  color: #1d2129;
+}
+
+/* Product Table Styles */
+.products-table {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.table-product-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.table-product-name {
+  line-height: 1.4;
+}
+
+.table-product-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1890ff;
+}
 </style>

@@ -51,12 +51,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
-import { useRoute, useRouter } from "vue-router"
-import Breadcrumb from "@/components/breadcrumb/breadcrumb.vue"
-import useBreadcrumb from "@/hooks/breadcrumb"
-import axios from "axios"
-import { IconArrowLeft, IconEdit } from "@arco-design/web-vue/es/icon"
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import useBreadcrumb from '@/hooks/breadcrumb'
+import axios from 'axios'
+import { IconArrowLeft, IconEdit } from '@arco-design/web-vue/es/icon'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,30 +66,40 @@ const dangTai = ref(false)
 const khachHang = ref<any>(null)
 
 const dinhDangTien = (soTien: number) => {
-  if (!soTien) return "0 VND"
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
+  if (!soTien) return '0 VND'
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
   }).format(soTien)
 }
 
 const mauPhanLoai = (loai: string) => {
   switch (loai) {
-    case "vip": return "gold"
-    case "regular": return "blue"
-    case "new": return "green"
-    case "inactive": return "red"
-    default: return "default"
+    case 'vip':
+      return 'gold'
+    case 'regular':
+      return 'blue'
+    case 'new':
+      return 'green'
+    case 'inactive':
+      return 'red'
+    default:
+      return 'default'
   }
 }
 
 const tenPhanLoai = (loai: string) => {
   switch (loai) {
-    case "vip": return "VIP"
-    case "regular": return "Thường xuyên"
-    case "new": return "Mới"
-    case "inactive": return "Không hoạt động"
-    default: return loai
+    case 'vip':
+      return 'VIP'
+    case 'regular':
+      return 'Thường xuyên'
+    case 'new':
+      return 'Mới'
+    case 'inactive':
+      return 'Không hoạt động'
+    default:
+      return loai
   }
 }
 
@@ -97,31 +107,30 @@ const layChiTietKhachHang = async () => {
   try {
     dangTai.value = true
     const idKhach = route.params.id
-    console.log("ID Khách Hàng:", idKhach)  // In ra ID để kiểm tra
+    console.log('ID Khách Hàng:', idKhach) // In ra ID để kiểm tra
 
     const res = await axios.get(`/api/khach-hang-management/detail/${idKhach}`)
-    console.log("Dữ liệu từ API:", res.data)  // Kiểm tra dữ liệu trả về từ API
+    console.log('Dữ liệu từ API:', res.data) // Kiểm tra dữ liệu trả về từ API
 
     khachHang.value = {
       code: res.data.maKhachHang || '',
       name: res.data.tenKhachHang || '',
-      gender: res.data.gioiTinh ? "Nam" : "Nữ",
+      gender: res.data.gioiTinh ? 'Nam' : 'Nữ',
       birthday: res.data.ngaySinh || '',
       total_orders: res.data.tongDon || 0,
       total_spent: res.data.tongChiTieu || 0,
       customer_type: res.data.phanLoaiText || '',
-      status: res.data.trangThaiText === "Hoạt động" ? "active" : "inactive",
+      status: res.data.trangThaiText === 'Hoạt động' ? 'active' : 'inactive',
     }
   } catch (err) {
-    console.error("Lỗi lấy chi tiết khách:", err)
+    console.error('Lỗi lấy chi tiết khách:', err)
   } finally {
     dangTai.value = false
   }
 }
 
-
 const quayLai = () => {
-  router.push("/khach-hang-nhan-su/khach-hang") // quay lại danh sách
+  router.push('/khach-hang-nhan-su/khach-hang') // quay lại danh sách
 }
 
 const chinhSua = () => {

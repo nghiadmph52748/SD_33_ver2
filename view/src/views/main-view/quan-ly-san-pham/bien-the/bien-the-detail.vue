@@ -31,7 +31,9 @@
         <div class="variant-header">
           <div class="variant-image">
             <a-avatar
-              :image-url="Array.isArray(variant.anhSanPham) && variant.anhSanPham.length > 0 ? variant.anhSanPham[0] : '/default-product.png'"
+              :image-url="
+                Array.isArray(variant.anhSanPham) && variant.anhSanPham.length > 0 ? variant.anhSanPham[0] : '/default-product.png'
+              "
               :size="100"
               shape="square"
             />

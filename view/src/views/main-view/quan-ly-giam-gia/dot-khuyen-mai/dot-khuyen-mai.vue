@@ -105,7 +105,7 @@
         </template>
 
         <template #date_range="{ record }">
-          <div class="date-range">{{ formatDate(record.start_date) }} - {{ formatDate(record.end_date) }}</div>
+          <div class="date-range">{{ formatDateTime(record.start_date) }} - {{ formatDateTime(record.end_date) }}</div>
         </template>
 
         <template #status="{ record }">
@@ -142,7 +142,7 @@
         <a-descriptions-item label="Mã">{{ selectedPromotion?.code }}</a-descriptions-item>
         <a-descriptions-item label="Giá trị giảm">{{ selectedPromotion?.percentage }}%</a-descriptions-item>
         <a-descriptions-item label="Thời gian">
-          {{ formatDate(selectedPromotion?.start_date ?? '') }} - {{ formatDate(selectedPromotion?.end_date ?? '') }}
+          {{ formatDateTime(selectedPromotion?.start_date ?? '') }} - {{ formatDateTime(selectedPromotion?.end_date ?? '') }}
         </a-descriptions-item>
         <a-descriptions-item label="Trạng thái">{{ selectedPromotion ? getStatusText(selectedPromotion.status) : '' }}</a-descriptions-item>
       </a-descriptions>
@@ -166,8 +166,9 @@
         <a-form-item field="dateRange" label="Thời gian áp dụng">
           <a-range-picker
             v-model="promotionEditForm.dateRange"
-            value-format="YYYY-MM-DD"
-            format="DD/MM/YYYY"
+            :show-time="true"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            format="DD/MM/YYYY HH:mm"
             allow-clear
             style="width: 100%"
           />
@@ -202,7 +203,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
@@ -385,6 +386,26 @@ const promotionEditRules: FormRules = {
   ],
 }
 
+// Real-time validation for discount value
+watch(
+  () => promotionEditForm.discountValue,
+  (value) => {
+    if (value === null || value === undefined) return
+    
+    // Ensure value is positive
+    if (value < 0) {
+      promotionEditForm.discountValue = 0
+      return
+    }
+    
+    // Cap percentage discount at 100%
+    if (value > 100) {
+      promotionEditForm.discountValue = 100
+      Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+    }
+  }
+)
+
 const derivePromotionStatus = (promotion: PromotionApiModel): PromotionStatus => {
   if (promotion.deleted) {
     return 'inactive'
@@ -499,6 +520,23 @@ const formatDate = (dateString: string) => {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+  })
+}
+
+const formatDateTime = (dateString: string) => {
+  if (!dateString) {
+    return ''
+  }
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 

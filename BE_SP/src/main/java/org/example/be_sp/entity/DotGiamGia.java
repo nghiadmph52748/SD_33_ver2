@@ -1,6 +1,6 @@
 package org.example.be_sp.entity;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -42,10 +42,10 @@ public class DotGiamGia {
     private Integer giaTriGiamGia;
 
     @Column(name = "ngay_bat_dau")
-    private LocalDate ngayBatDau;
+    private LocalDateTime ngayBatDau;
 
     @Column(name = "ngay_ket_thuc")
-    private LocalDate ngayKetThuc;
+    private LocalDateTime ngayKetThuc;
 
     @ColumnDefault("1")
     @Column(name = "trang_thai")

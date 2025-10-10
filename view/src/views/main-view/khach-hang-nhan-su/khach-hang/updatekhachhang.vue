@@ -91,10 +91,7 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="Địa chỉ cụ thể">
-              <a-input
-                v-model="form.diaChiCuThe"
-                placeholder="Nhập địa chỉ cụ thể (số nhà, đường...)"
-              />
+              <a-input v-model="form.diaChiCuThe" placeholder="Nhập địa chỉ cụ thể (số nhà, đường...)" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -119,7 +116,6 @@
     </a-card>
   </div>
 </template>
-
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
@@ -149,30 +145,27 @@ const form = ref<any>({
   diaChiCuThe: '',
   email: '',
   soDienThoai: '',
-
 })
 
 const layChiTietKhach = async () => {
   try {
-  dangTai.value = true
-  const { id } = route.params
-  const res = await axios.get(`/api/khach-hang-management/detail/${id}`)
-  form.value = {
-  id: res.data.id,
-  code: res.data.maKhachHang,
-  name: res.data.tenKhachHang,
-  gender: res.data.gioiTinh ? 'Nam' : 'Nữ',
-  birthday: res.data.ngaySinh,
-  status: res.data.trangThaiText === 'Hoạt động' ? 'active' : 'inactive',
-  email: res.data.email,
-  soDienThoai: res.data.soDienThoai,
-  thanhPho: res.data.thanhPho || '',
-  quan: res.data.quan || '',
-  phuong: res.data.phuong || '',
-  diaChiCuThe: res.data.diaChiCuThe || ''
-}
-
-
+    dangTai.value = true
+    const { id } = route.params
+    const res = await axios.get(`/api/khach-hang-management/detail/${id}`)
+    form.value = {
+      id: res.data.id,
+      code: res.data.maKhachHang,
+      name: res.data.tenKhachHang,
+      gender: res.data.gioiTinh ? 'Nam' : 'Nữ',
+      birthday: res.data.ngaySinh,
+      status: res.data.trangThaiText === 'Hoạt động' ? 'active' : 'inactive',
+      email: res.data.email,
+      soDienThoai: res.data.soDienThoai,
+      thanhPho: res.data.thanhPho || '',
+      quan: res.data.quan || '',
+      phuong: res.data.phuong || '',
+      diaChiCuThe: res.data.diaChiCuThe || '',
+    }
   } catch (err) {
     console.error('Lỗi lấy chi tiết khách:', err)
   } finally {
@@ -195,8 +188,7 @@ const luuKhach = () => {
           gioiTinh: form.value.gender === 'Nam',
           ngaySinh: form.value.birthday,
           phanLoaiText: form.value.customer_type,
-          trangThaiText:
-            form.value.status === 'active' ? 'Hoạt động' : 'Không hoạt động',
+          trangThaiText: form.value.status === 'active' ? 'Hoạt động' : 'Không hoạt động',
           thanhPho: form.value.thanhPho,
           quan: form.value.quan,
           phuong: form.value.phuong,
@@ -224,18 +216,16 @@ const luuKhach = () => {
   })
 }
 
-
-
 const quayLai = () => {
   router.push('/khach-hang-nhan-su/khach-hang')
 }
 const loadProvinces = async () => {
-  const res = await fetch("https://provinces.open-api.vn/api/p/")
+  const res = await fetch('https://provinces.open-api.vn/api/p/')
   const data = await res.json()
   provinces.value = data.map((p: any) => ({
     value: p.name,
     label: p.name,
-    code: p.code
+    code: p.code,
   }))
 }
 loadProvinces()
@@ -243,32 +233,32 @@ loadProvinces()
 const onProvinceChange = async (value: string) => {
   districts.value = []
   wards.value = []
-  form.value.quan = ""
-  form.value.phuong = ""
+  form.value.quan = ''
+  form.value.phuong = ''
 
-  const province = provinces.value.find(p => p.value === value)
+  const province = provinces.value.find((p) => p.value === value)
   if (province) {
     const res = await fetch(`https://provinces.open-api.vn/api/p/${province.code}?depth=2`)
     const data = await res.json()
     districts.value = data.districts.map((d: any) => ({
       value: d.name,
       label: d.name,
-      code: d.code
+      code: d.code,
     }))
   }
 }
 
 const onDistrictChange = async (value: string) => {
   wards.value = []
-  form.value.phuong = ""
+  form.value.phuong = ''
 
-  const district = districts.value.find(d => d.value === value)
+  const district = districts.value.find((d) => d.value === value)
   if (district) {
     const res = await fetch(`https://provinces.open-api.vn/api/d/${district.code}?depth=2`)
     const data = await res.json()
     wards.value = data.wards.map((w: any) => ({
       value: w.name,
-      label: w.name
+      label: w.name,
     }))
   }
 }

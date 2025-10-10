@@ -22,6 +22,14 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
+            <a-form-item field="code" label="Mã">
+              <a-input v-model="formState.code" placeholder="Mã tự động" :disabled="true" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
             <a-form-item field="discountMode" label="Hình thức giảm giá">
               <a-radio-group v-model="formState.discountMode" type="button">
                 <a-radio value="percentage">Phần trăm (%)</a-radio>
@@ -29,9 +37,6 @@
               </a-radio-group>
             </a-form-item>
           </a-col>
-        </a-row>
-
-        <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="discountValue" label="Giá trị giảm">
               <a-input-number
@@ -43,35 +48,30 @@
               />
             </a-form-item>
           </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
           <a-col :span="12" v-if="isPercent">
             <a-form-item field="maxDiscount" label="Giảm tối đa (VNĐ)">
               <a-input-number v-model="formState.maxDiscount" :min="1" style="width: 100%" />
             </a-form-item>
           </a-col>
-        </a-row>
-
-        <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="minOrder" label="Đơn hàng tối thiểu (VNĐ)">
               <a-input-number v-model="formState.minOrder" :min="0" style="width: 100%" />
             </a-form-item>
           </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="quantity" label="Số lượng áp dụng">
               <a-input-number v-model="formState.quantity" :min="1" :precision="0" style="width: 100%" />
             </a-form-item>
           </a-col>
-        </a-row>
-
-        <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="dateRange" label="Thời gian áp dụng">
-              <a-range-picker v-model="formState.dateRange" value-format="YYYY-MM-DD" format="DD/MM/YYYY" allow-clear style="width: 100%" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item field="active" label="Trạng thái">
-              <a-switch v-model="formState.active" checked-text="Bật" unchecked-text="Tắt" />
+              <a-range-picker v-model="formState.dateRange" :show-time="true" value-format="YYYY-MM-DD HH:mm:ss" format="DD/MM/YYYY HH:mm" allow-clear style="width: 100%" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -100,10 +100,13 @@
       cancel-text="Hủy"
       width="560px"
     >
-      <p style="margin-bottom: 16px; color: var(--color-text-2);">Vui lòng kiểm tra lại thông tin trước khi lưu:</p>
+      <p style="margin-bottom: 16px; color: var(--color-text-2)">Vui lòng kiểm tra lại thông tin trước khi lưu:</p>
       <a-descriptions :column="1" bordered>
         <a-descriptions-item label="Tên phiếu giảm giá">
           {{ formState.name }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Mã">
+          {{ formState.code }}
         </a-descriptions-item>
         <a-descriptions-item label="Hình thức giảm giá">
           {{ isPercent ? 'Phần trăm (%)' : 'Số tiền (VNĐ)' }}
@@ -124,11 +127,6 @@
         <a-descriptions-item label="Thời gian áp dụng">
           {{ formatDateRange(formState.dateRange) }}
         </a-descriptions-item>
-        <a-descriptions-item label="Trạng thái">
-          <a-tag :color="formState.active ? 'green' : 'gray'">
-            {{ formState.active ? 'Bật' : 'Tắt' }}
-          </a-tag>
-        </a-descriptions-item>
         <a-descriptions-item v-if="formState.description" label="Mô tả">
           {{ formState.description }}
         </a-descriptions-item>
@@ -138,13 +136,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch, onMounted } from 'vue'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
-import { createCoupon } from '@/api/discount-management'
+import { createCoupon, fetchCoupons } from '@/api/discount-management'
 
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
@@ -155,6 +153,7 @@ const confirmSaveSubmitting = ref(false)
 
 const formState = reactive({
   name: '',
+  code: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: 10,
   maxDiscount: null as number | null,
@@ -162,7 +161,6 @@ const formState = reactive({
   quantity: 1,
   dateRange: [] as string[],
   description: '',
-  active: true,
 })
 
 const rules: FormRules = {
@@ -186,6 +184,55 @@ watch(
   }
 )
 
+// Real-time validation for discount value (percentage mode)
+watch(
+  () => formState.discountValue,
+  (newValue) => {
+    if (isPercent.value && newValue !== undefined && newValue !== null && newValue > 100) {
+      Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+      formState.discountValue = 100
+    }
+  }
+)
+
+const generateNextCode = async () => {
+  try {
+    const coupons = await fetchCoupons()
+
+    if (!coupons || coupons.length === 0) {
+      return 'PGG000001'
+    }
+
+    // Extract all codes that match the PGG pattern
+    const pggCodes = coupons
+      .map((p) => p.maPhieuGiamGia)
+      .filter((code) => code && code.startsWith('PGG'))
+      .map((code) => {
+        const numPart = code.substring(3)
+        return parseInt(numPart, 10)
+      })
+      .filter((num) => !Number.isNaN(num))
+
+    if (pggCodes.length === 0) {
+      return 'PGG000001'
+    }
+
+    // Find the maximum number and increment
+    const maxNum = Math.max(...pggCodes)
+    const nextNum = maxNum + 1
+
+    // Format with leading zeros (6 digits)
+    return `PGG${nextNum.toString().padStart(6, '0')}`
+  } catch {
+    // Fallback to PGG000001 if fetch fails
+    return 'PGG000001'
+  }
+}
+
+onMounted(async () => {
+  formState.code = await generateNextCode()
+})
+
 const goBack = () => {
   router.back()
 }
@@ -201,17 +248,20 @@ const formatDateRange = (dateRange: string[]) => {
   if (!dateRange || dateRange.length !== 2) return ''
   const [start, end] = dateRange
   if (!start || !end) return ''
-  
-  const formatDate = (dateStr: string) => {
+
+  const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('vi-VN', {
+    return date.toLocaleString('vi-VN', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     })
   }
-  
-  return `${formatDate(start)} - ${formatDate(end)}`
+
+  return `${formatDateTime(start)} - ${formatDateTime(end)}`
 }
 
 const handleSaveClick = async () => {
@@ -223,7 +273,7 @@ const handleSaveClick = async () => {
     if (errors) {
       return
     }
-  } catch (error) {
+  } catch {
     // Validation failed, errors are already displayed by the form
     return
   }
@@ -267,6 +317,15 @@ const handleSaveClick = async () => {
   confirmSaveVisible.value = true
 }
 
+const calculateStatus = (startDate: string, endDate: string): boolean => {
+  const now = new Date()
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+
+  // Status is true (active) if current datetime is within the datetime range
+  return now >= start && now <= end
+}
+
 const confirmSave = async () => {
   if (confirmSaveSubmitting.value) return
 
@@ -275,6 +334,7 @@ const confirmSave = async () => {
   const quantityValue = Number(formState.quantity)
 
   const payload = {
+    maPhieuGiamGia: formState.code,
     tenPhieuGiamGia: formState.name.trim(),
     loaiPhieuGiamGia: !isPercent.value,
     giaTriGiamGia: discountValue,
@@ -283,7 +343,7 @@ const confirmSave = async () => {
     soLuongDung: quantityValue,
     ngayBatDau: startDate,
     ngayKetThuc: endDate,
-    trangThai: formState.active,
+    trangThai: calculateStatus(startDate, endDate),
     moTa: formState.description.trim() || null,
     deleted: false,
     idKhachHang: [],

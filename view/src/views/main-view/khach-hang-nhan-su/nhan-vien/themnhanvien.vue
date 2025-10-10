@@ -1,7 +1,7 @@
 <template>
   <a-card title="Thêm Nhân Viên Mới">
     <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical" @finish="handleSubmit">
-      <a-row :gutter="24"> 
+      <a-row :gutter="24">
         <a-col :span="12">
           <a-form-item label="Tên nhân viên" name="tenNhanVien">
             <a-input v-model="formData.tenNhanVien" placeholder="Nhập tên nhân viên" />
@@ -24,7 +24,7 @@
               placeholder="-- Chọn quyền hạn --"
               :options="[
                 { value: 1, label: 'Admin' },
-                { value: 2, label: 'Nhân viên' }
+                { value: 2, label: 'Nhân viên' },
               ]"
             />
           </a-form-item>
@@ -95,8 +95,6 @@ const provinces = ref<{ value: string; label: string; code: number }[]>([])
 const districts = ref<{ value: string; label: string; code: number }[]>([])
 const wards = ref<{ value: string; label: string }[]>([])
 
-
-
 const uploadUrl = 'http://localhost:8080/api/file/upload'
 
 // Form data
@@ -121,7 +119,6 @@ const formData = ref({
   matKhau: '',
   anhNhanVien: null,
 })
-
 
 // Validation rules
 const formRules = {
@@ -213,7 +210,6 @@ const handleSubmit = async () => {
     // ✅ Điều hướng khi thành công
     Message.success('Thêm nhân viên thành công!')
     router.push('/khach-hang-nhan-su/nhan-vien')
-
   } catch (error: unknown) {
     const err = error as any
 

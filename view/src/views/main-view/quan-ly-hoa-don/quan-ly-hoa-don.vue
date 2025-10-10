@@ -421,14 +421,17 @@ const calculateStatistics = () => {
   })
 
   console.log('Tổng số hóa đơn đã thanh toán:', paidInvoicesAll.length)
-  console.log('Chi tiết hóa đơn đã thanh toán:', paidInvoicesAll.map(inv => ({
-    id: inv.id,
-    trangThai: inv.trangThai,
-    ngayThanhToan: inv.ngayThanhToan,
-    ngayTao: inv.ngayTao,
-    tongTienSauGiam: inv.tongTienSauGiam,
-    tongTien: inv.tongTien
-  })))
+  console.log(
+    'Chi tiết hóa đơn đã thanh toán:',
+    paidInvoicesAll.map((inv) => ({
+      id: inv.id,
+      trangThai: inv.trangThai,
+      ngayThanhToan: inv.ngayThanhToan,
+      ngayTao: inv.ngayTao,
+      tongTienSauGiam: inv.tongTienSauGiam,
+      tongTien: inv.tongTien,
+    }))
+  )
 
   totalRevenue.value = paidInvoicesAll.reduce((sum, invoice) => {
     const amount = Number(invoice.tongTienSauGiam || invoice.tongTien || 0)

@@ -86,13 +86,13 @@
             {{ getPositionText(record.position) }}
           </a-tag>
         </template>
-          <template #anhNhanVien="{ record }">
-            <img
-              :src="record.anhNhanVien || '/images/default-avatar.png'"
-              alt="Ảnh nhân viên"
-              style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"
-            />
-          </template>
+        <template #anhNhanVien="{ record }">
+          <img
+            :src="record.anhNhanVien || '/images/default-avatar.png'"
+            alt="Ảnh nhân viên"
+            style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover"
+          />
+        </template>
         <template #diaChi="{ record }">
           {{ [record.diaChi, record.phuong, record.quan, record.thanhPho].filter(Boolean).join(', ') }}
         </template>
@@ -155,16 +155,15 @@ const navigateToAddStaff = () => {
 }
 const viewDetail = (record: any) => {
   if (!record?.id) {
-    console.error("❌ record không có id:", record)
+    console.error('❌ record không có id:', record)
     return
   }
   router.push(`/detail/${record.id}`)
 }
 
-
 const goToEdit = (record: any) => {
   if (!record?.id) {
-    console.error("❌ record không có id:", record)
+    console.error('❌ record không có id:', record)
     return
   }
   router.push(`/updatenhanvien/${record.id}`)
@@ -173,7 +172,6 @@ const goToEdit = (record: any) => {
 const handleTableChange = (paginationData: any, filtersData: any, sorter: any) => {
   // Removed console.log
 }
-
 
 // Form dữ liệu nhân viên
 const formData = reactive({
@@ -196,14 +194,12 @@ const formData = reactive({
   trangThai: true,
 })
 
-
 // Bộ lọc tìm kiếm
 const filters = ref({
   timKiem: '', // Tìm kiếm theo tên, email, sđt...
   gioiTinh: '', // Nam / Nữ
   tenQuyenHan: '', // Nhân viên / Quản lý
   trangThai: '', // Hoạt động / Ngưng
-
 })
 
 // Mock data
@@ -256,7 +252,7 @@ const nhanVienCoSTT = computed(() => {
 const loading = ref(false)
 const columns = [
   { title: 'STT', dataIndex: 'stt', width: 50, align: 'center' },
-  { title: 'Ảnh',dataIndex: 'anhNhanVien',width: 80,align: 'center',slotName: 'anhNhanVien'},
+  { title: 'Ảnh', dataIndex: 'anhNhanVien', width: 80, align: 'center', slotName: 'anhNhanVien' },
   { title: 'Mã nhân viên', dataIndex: 'maNhanVien', width: 120 },
   { title: 'Tên nhân viên', dataIndex: 'tenNhanVien', width: 180 },
   { title: 'Email', dataIndex: 'email', width: 200 },
@@ -356,7 +352,6 @@ const deleteStaff = (staff: any) => {
         }),
   })
 }
-
 
 const exportExcel = () => {
   // Removed console.log

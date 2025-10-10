@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Email data transfer object for voucher assignment emails
@@ -23,8 +23,8 @@ public class VoucherEmailData {
     private BigDecimal discountValue;
     private BigDecimal maxDiscount;
     private BigDecimal minOrderValue;
-    private LocalDate validFrom;
-    private LocalDate validUntil;
+    private LocalDateTime validFrom;
+    private LocalDateTime validUntil;
     private Integer usageLimit;
     private String description;
 }

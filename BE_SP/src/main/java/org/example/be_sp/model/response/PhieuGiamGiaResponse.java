@@ -1,7 +1,7 @@
 package org.example.be_sp.model.response;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.example.be_sp.entity.PhieuGiamGia;
@@ -25,8 +25,8 @@ public class PhieuGiamGiaResponse {
     BigDecimal hoaDonToiThieu;
     List<Integer> idKhachHang;
     Integer soLuongDung;
-    LocalDate ngayBatDau;
-    LocalDate ngayKetThuc;
+    LocalDateTime ngayBatDau;
+    LocalDateTime ngayKetThuc;
     Boolean trangThai;
     String moTa;
     Boolean deleted;

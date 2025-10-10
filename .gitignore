@@ -5,6 +5,7 @@ AGENTS.md
 application.properties
 WARP.md
 node_modules
+*.md
 
 # Maven
 target/
