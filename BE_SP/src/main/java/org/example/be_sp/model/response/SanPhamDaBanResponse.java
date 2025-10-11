@@ -1,11 +1,11 @@
 package org.example.be_sp.model.response;
 
-import lombok.Getter;
-import lombok.Setter;
+import java.math.BigDecimal;
+
 import org.example.be_sp.entity.HoaDonChiTiet;
 
-import java.math.BigDecimal;
-import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -30,6 +30,7 @@ public class SanPhamDaBanResponse {
     private BigDecimal giaBan;
     private BigDecimal thanhTien;
     private String ghiChu;
+    private String anhSanPham;
 
     public SanPhamDaBanResponse(HoaDonChiTiet hoaDonChiTiet) {
         if (hoaDonChiTiet == null) {
@@ -95,6 +96,14 @@ public class SanPhamDaBanResponse {
             // Tạo tên sản phẩm chi tiết nếu chưa có
             if (this.tenSanPhamChiTiet == null || this.tenSanPhamChiTiet.trim().isEmpty()) {
                 this.tenSanPhamChiTiet = buildTenSanPhamChiTiet(chiTietSanPham);
+            }
+            
+            // Lấy ảnh sản phẩm đầu tiên từ chi_tiet_san_pham_anh
+            if (chiTietSanPham.getChiTietSanPhamAnhs() != null && !chiTietSanPham.getChiTietSanPhamAnhs().isEmpty()) {
+                var firstImage = chiTietSanPham.getChiTietSanPhamAnhs().iterator().next();
+                if (firstImage.getIdAnhSanPham() != null && firstImage.getIdAnhSanPham().getDuongDanAnh() != null) {
+                    this.anhSanPham = firstImage.getIdAnhSanPham().getDuongDanAnh();
+                }
             }
         }
     }

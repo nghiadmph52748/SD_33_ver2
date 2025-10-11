@@ -1,5 +1,11 @@
 package org.example.be_sp.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.example.be_sp.entity.HoaDon;
 import org.example.be_sp.entity.ThongTinDonHang;
 import org.example.be_sp.exception.ApiException;
@@ -11,19 +17,14 @@ import org.example.be_sp.repository.HoaDonRepository;
 import org.example.be_sp.repository.ThongTinDonHangRepository;
 import org.example.be_sp.repository.TrangThaiDonHangRepository;
 import org.example.be_sp.util.MapperUtils;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.hibernate.Hibernate;
-import lombok.extern.slf4j.Slf4j;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -149,6 +150,18 @@ public class ThongTinHoaDonService {
                             if (hdct.getIdChiTietSanPham().getIdTrongLuong() != null) {
                                 Hibernate.initialize(hdct.getIdChiTietSanPham().getIdTrongLuong());
                             }
+                            
+                            // Load quan hệ ảnh sản phẩm
+                            if (hdct.getIdChiTietSanPham().getChiTietSanPhamAnhs() != null) {
+                                Hibernate.initialize(hdct.getIdChiTietSanPham().getChiTietSanPhamAnhs());
+                                
+                                // Load quan hệ của ChiTietSanPhamAnh
+                                for (var ctspa : hdct.getIdChiTietSanPham().getChiTietSanPhamAnhs()) {
+                                    if (ctspa.getIdAnhSanPham() != null) {
+                                        Hibernate.initialize(ctspa.getIdAnhSanPham());
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -165,7 +178,7 @@ public class ThongTinHoaDonService {
         }
     }
     
-    /**
+    /**sssssss
      * Lấy danh sách sản phẩm đã bán theo ID hóa đơn
      */
     @Transactional(readOnly = true)
@@ -205,6 +218,18 @@ public class ThongTinHoaDonService {
                         }
                         if (hdct.getIdChiTietSanPham().getIdTrongLuong() != null) {
                             Hibernate.initialize(hdct.getIdChiTietSanPham().getIdTrongLuong());
+                        }
+                        
+                        // Load quan hệ ảnh sản phẩm
+                        if (hdct.getIdChiTietSanPham().getChiTietSanPhamAnhs() != null) {
+                            Hibernate.initialize(hdct.getIdChiTietSanPham().getChiTietSanPhamAnhs());
+                            
+                            // Load quan hệ của ChiTietSanPhamAnh
+                            for (var ctspa : hdct.getIdChiTietSanPham().getChiTietSanPhamAnhs()) {
+                                if (ctspa.getIdAnhSanPham() != null) {
+                                    Hibernate.initialize(ctspa.getIdAnhSanPham());
+                                }
+                            }
                         }
                     }
                 }

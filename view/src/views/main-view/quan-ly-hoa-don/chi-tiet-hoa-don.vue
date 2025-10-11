@@ -201,58 +201,6 @@
         </a-row>
       </a-card>
 
-      <!-- Danh sách sản phẩm đã bán -->
-      <a-card class="products-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
-            <span>Danh sách sản phẩm đã bán</span>
-            <span class="product-count">({{ getTotalProducts() }} sản phẩm)</span>
-          </div>
-        </template>
-
-        <a-table
-          :columns="productColumns"
-          :data="invoice.hoaDonChiTiets || []"
-          :pagination="false"
-          :loading="loading"
-          class="products-table"
-        >
-          <template #stt="{ record, index }">
-            <div class="stt-cell">{{ index + 1 }}</div>
-          </template>
-
-          <template #maHoaDonChiTiet="{ record }">
-            <div class="ma-hdct-cell">
-              <a-tag color="blue" class="ma-tag">{{ record.maHoaDonChiTiet || 'N/A' }}</a-tag>
-            </div>
-          </template>
-
-          <template #tenSanPhamChiTiet="{ record }">
-            <div class="product-info">
-              <div class="product-name">{{ record.tenSanPhamChiTiet || record.tenSanPham || 'Sản phẩm không xác định' }}</div>
-            </div>
-          </template>
-
-          <template #donGia="{ record }">
-            <div class="price-cell">
-              <span class="price-value">{{ formatCurrency(record.giaBan || record.donGia || 0) }}</span>
-            </div>
-          </template>
-
-          <template #soLuong="{ record }">
-            <div class="quantity-cell">
-              <a-tag color="blue" class="quantity-tag">{{ record.soLuong || 0 }}</a-tag>
-            </div>
-          </template>
-
-          <template #thanhTien="{ record }">
-            <div class="total-cell">
-              <span class="total-price">{{ formatCurrency(record.thanhTien || 0) }}</span>
-            </div>
-          </template>
-        </a-table>
-      </a-card>
 
       <!-- Lịch sử thanh toán -->
       <a-card class="payment-history-card" :bordered="false">
@@ -263,22 +211,22 @@
           </div>
         </template>
         <div class="payment-history">
-          <div v-if="invoice.lichSuThanhToan && invoice.lichSuThanhToan.length > 0" class="payment-list">
-            <div v-for="(payment, index) in invoice.lichSuThanhToan" :key="index" class="payment-item">
+          <div v-if="invoice" class="payment-list">
+            <div class="payment-item">
               <div class="payment-info">
                 <div class="payment-method">
-                  <strong>{{ payment.phuongThucThanhToan || 'Tiền mặt' }}</strong>
+                  <strong>Tiền mặt</strong>
                 </div>
                 <div class="payment-amount">
-                  {{ formatCurrency(payment.soTien || 0) }}
+                  {{ formatCurrency(invoice.tongTienSauGiam || invoice.tongTien || 0) }}
                 </div>
                 <div class="payment-date">
-                  {{ formatDate(payment.ngayThanhToan) }}
+                  {{ getTrangThaiDonText(invoice.trangThai) }}
                 </div>
               </div>
               <div class="payment-status">
-                <a-tag :color="payment.trangThai ? 'green' : 'orange'">
-                  {{ payment.trangThai ? 'Thành công' : 'Chờ xử lý' }}
+                <a-tag :color="getTrangThaiDonColor(invoice.trangThai)">
+                  {{ getTrangThaiDonText(invoice.trangThai) }}
                 </a-tag>
               </div>
             </div>
@@ -300,16 +248,8 @@
 
         <div class="summary-content">
           <div class="summary-row">
-            <span class="summary-label">Tổng số sản phẩm:</span>
-            <span class="summary-value">{{ getTotalProducts() }}</span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Tổng số lượng:</span>
-            <span class="summary-value">{{ getTotalQuantity() }}</span>
-          </div>
-          <div class="summary-row">
             <span class="summary-label">Tổng tiền hàng:</span>
-            <span class="summary-value">{{ formatCurrency(getSubtotal()) }}</span>
+            <span class="summary-value">{{ formatCurrency(invoice.tongTienHang || invoice.tongTien || 0) }}</span>
           </div>
           <div class="summary-row" v-if="invoice.phiVanChuyen && invoice.phiVanChuyen > 0">
             <span class="summary-label">Phí vận chuyển:</span>
@@ -342,8 +282,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import { IconArrowLeft, IconPrinter, IconFile, IconEdit, IconUser } from '@arco-design/web-vue/es/icon'
+import { IconArrowLeft, IconPrinter, IconFile, IconUser } from '@arco-design/web-vue/es/icon'
 
 const route = useRoute()
 const router = useRouter()
@@ -353,79 +292,8 @@ const invoice = ref<any>(null)
 const loading = ref(true)
 const invoiceId = ref(route.params.id as string)
 
-// Table columns
-const productColumns = [
-  {
-    title: 'STT',
-    slotName: 'stt',
-    width: 60,
-    align: 'center',
-  },
-  {
-    title: 'Mã HDCT',
-    slotName: 'maHoaDonChiTiet',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: 'Tên Sản phẩm chi tiết',
-    slotName: 'tenSanPhamChiTiet',
-    width: 300,
-  },
-  {
-    title: 'Đơn giá',
-    slotName: 'donGia',
-    width: 120,
-    align: 'right',
-  },
-  {
-    title: 'Số lượng',
-    slotName: 'soLuong',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: 'Thành tiền',
-    slotName: 'thanhTien',
-    width: 120,
-    align: 'right',
-  },
-]
 
 // Methods
-// Method để lấy danh sách sản phẩm đã bán
-const fetchSanPhamDaBan = async () => {
-  try {
-    const sanPhamResponse = await axios.get(`/api/thong-tin-hoa-don-management/san-pham-da-ban/${invoiceId.value}`)
-
-    if (sanPhamResponse.data && sanPhamResponse.data.data && sanPhamResponse.data.data.length > 0) {
-      invoice.value.hoaDonChiTiets = sanPhamResponse.data.data.map((item) => ({
-        id: item.id,
-        maHoaDonChiTiet: item.maHoaDonChiTiet,
-        tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
-        tenSanPham: item.tenSanPhamChiTiet || item.tenSanPham,
-        maSanPham: item.maSanPham,
-        tenMauSac: item.tenMauSac,
-        maMauSac: item.maMauSac,
-        tenKichThuoc: item.tenKichThuoc,
-        maKichThuoc: item.maKichThuoc,
-        tenDeGiay: item.tenDeGiay,
-        maDeGiay: item.maDeGiay,
-        tenChatLieu: item.tenChatLieu,
-        maChatLieu: item.maChatLieu,
-        tenTrongLuong: item.tenTrongLuong,
-        maTrongLuong: item.maTrongLuong,
-        donGia: item.giaBan,
-        giaBan: item.giaBan,
-        soLuong: item.soLuong,
-        thanhTien: item.thanhTien,
-        ghiChu: item.ghiChu,
-      }))
-    }
-  } catch (error: any) {
-    // Silent error handling
-  }
-}
 
 const fetchInvoiceDetail = async () => {
   try {
@@ -457,81 +325,15 @@ const fetchInvoiceDetail = async () => {
           invoice.value.soDienThoaiKhachHang = orderInfo.soDienThoaiKhachHang || invoice.value.soDienThoai
           invoice.value.diaChiKhachHang = orderInfo.diaChiKhachHang || invoice.value.diaChiKhachHang
 
-          // Cập nhật danh sách sản phẩm đã bán từ API thông tin đơn hàng
-          if (orderInfo.danhSachSanPhamDaBan && orderInfo.danhSachSanPhamDaBan.length > 0) {
-            invoice.value.hoaDonChiTiets = orderInfo.danhSachSanPhamDaBan.map((item) => ({
-              id: item.id,
-              maHoaDonChiTiet: item.maHoaDonChiTiet,
-              tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
-              tenSanPham: item.tenSanPhamChiTiet || item.tenSanPham,
-              maSanPham: item.maSanPham,
-              tenMauSac: item.tenMauSac,
-              maMauSac: item.maMauSac,
-              tenKichThuoc: item.tenKichThuoc,
-              maKichThuoc: item.maKichThuoc,
-              tenDeGiay: item.tenDeGiay,
-              maDeGiay: item.maDeGiay,
-              tenChatLieu: item.tenChatLieu,
-              maChatLieu: item.maChatLieu,
-              tenTrongLuong: item.tenTrongLuong,
-              maTrongLuong: item.maTrongLuong,
-              donGia: item.giaBan,
-              giaBan: item.giaBan,
-              soLuong: item.soLuong,
-              thanhTien: item.thanhTien,
-              ghiChu: item.ghiChu,
-            }))
-          } else {
-            // Nếu không có dữ liệu từ orderInfo, thử lấy trực tiếp từ API sản phẩm đã bán
-            try {
-              const sanPhamResponse = await axios.get(`/api/thong-tin-hoa-don-management/san-pham-da-ban/${invoiceId.value}`)
-
-              if (sanPhamResponse.data && sanPhamResponse.data.data && sanPhamResponse.data.data.length > 0) {
-                invoice.value.hoaDonChiTiets = sanPhamResponse.data.data.map((item) => ({
-                  id: item.id,
-                  maHoaDonChiTiet: item.maHoaDonChiTiet,
-                  tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
-                  tenSanPham: item.tenSanPhamChiTiet || item.tenSanPham,
-                  maSanPham: item.maSanPham,
-                  tenMauSac: item.tenMauSac,
-                  maMauSac: item.maMauSac,
-                  tenKichThuoc: item.tenKichThuoc,
-                  maKichThuoc: item.maKichThuoc,
-                  tenDeGiay: item.tenDeGiay,
-                  maDeGiay: item.maDeGiay,
-                  tenChatLieu: item.tenChatLieu,
-                  maChatLieu: item.maChatLieu,
-                  tenTrongLuong: item.tenTrongLuong,
-                  maTrongLuong: item.maTrongLuong,
-                  donGia: item.giaBan,
-                  giaBan: item.giaBan,
-                  soLuong: item.soLuong,
-                  thanhTien: item.thanhTien,
-                  ghiChu: item.ghiChu,
-                }))
-              }
-            } catch (sanPhamError: any) {
-              console.warn('⚠️ Không thể lấy danh sách sản phẩm đã bán:', sanPhamError.message)
-            }
-          }
         }
-      } catch (orderInfoError: any) {
+      } catch {
         // Silent error handling
       }
 
-      // Nếu không có danh sách sản phẩm, thử lấy trực tiếp từ API sản phẩm đã bán
-      if (!invoice.value.hoaDonChiTiets || invoice.value.hoaDonChiTiets.length === 0) {
-        await fetchSanPhamDaBan()
-      }
     } else if (invoiceResponse.data) {
       // Nếu response trực tiếp là dữ liệu (không có wrapper data)
       invoice.value = invoiceResponse.data
-      console.log('✅ Dữ liệu hóa đơn đã được tải (trực tiếp):', invoice.value)
 
-      // Nếu không có danh sách sản phẩm, thử lấy trực tiếp từ API sản phẩm đã bán
-      if (!invoice.value.hoaDonChiTiets || invoice.value.hoaDonChiTiets.length === 0) {
-        await fetchSanPhamDaBan()
-      }
 
       // Thử lấy thông tin đơn hàng từ API thông tin đơn hàng mới (không bắt buộc)
       try {
@@ -553,69 +355,11 @@ const fetchInvoiceDetail = async () => {
           invoice.value.soDienThoaiKhachHang = orderInfo.soDienThoaiKhachHang || invoice.value.soDienThoai
           invoice.value.diaChiKhachHang = orderInfo.diaChiKhachHang || invoice.value.diaChiKhachHang
 
-          // Cập nhật danh sách sản phẩm đã bán từ API thông tin đơn hàng
-          if (orderInfo.danhSachSanPhamDaBan && orderInfo.danhSachSanPhamDaBan.length > 0) {
-            invoice.value.hoaDonChiTiets = orderInfo.danhSachSanPhamDaBan.map((item) => ({
-              id: item.id,
-              maHoaDonChiTiet: item.maHoaDonChiTiet,
-              tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
-              tenSanPham: item.tenSanPhamChiTiet || item.tenSanPham,
-              maSanPham: item.maSanPham,
-              tenMauSac: item.tenMauSac,
-              maMauSac: item.maMauSac,
-              tenKichThuoc: item.tenKichThuoc,
-              maKichThuoc: item.maKichThuoc,
-              tenDeGiay: item.tenDeGiay,
-              maDeGiay: item.maDeGiay,
-              tenChatLieu: item.tenChatLieu,
-              maChatLieu: item.maChatLieu,
-              tenTrongLuong: item.tenTrongLuong,
-              maTrongLuong: item.maTrongLuong,
-              donGia: item.giaBan,
-              giaBan: item.giaBan,
-              soLuong: item.soLuong,
-              thanhTien: item.thanhTien,
-              ghiChu: item.ghiChu,
-            }))
-          } else {
-            // Nếu không có dữ liệu từ orderInfo, thử lấy trực tiếp từ API sản phẩm đã bán
-            try {
-              const sanPhamResponse = await axios.get(`/api/thong-tin-hoa-don-management/san-pham-da-ban/${invoiceId.value}`)
-
-              if (sanPhamResponse.data && sanPhamResponse.data.data && sanPhamResponse.data.data.length > 0) {
-                invoice.value.hoaDonChiTiets = sanPhamResponse.data.data.map((item) => ({
-                  id: item.id,
-                  maHoaDonChiTiet: item.maHoaDonChiTiet,
-                  tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
-                  tenSanPham: item.tenSanPhamChiTiet || item.tenSanPham,
-                  maSanPham: item.maSanPham,
-                  tenMauSac: item.tenMauSac,
-                  maMauSac: item.maMauSac,
-                  tenKichThuoc: item.tenKichThuoc,
-                  maKichThuoc: item.maKichThuoc,
-                  tenDeGiay: item.tenDeGiay,
-                  maDeGiay: item.maDeGiay,
-                  tenChatLieu: item.tenChatLieu,
-                  maChatLieu: item.maChatLieu,
-                  tenTrongLuong: item.tenTrongLuong,
-                  maTrongLuong: item.maTrongLuong,
-                  donGia: item.giaBan,
-                  giaBan: item.giaBan,
-                  soLuong: item.soLuong,
-                  thanhTien: item.thanhTien,
-                  ghiChu: item.ghiChu,
-                }))
-              }
-            } catch (sanPhamError: any) {
-              console.warn('⚠️ Không thể lấy danh sách sản phẩm đã bán:', sanPhamError.message)
-            }
-          }
         }
-      } catch (orderInfoError: any) {
+      } catch {
         // Silent error handling
       }
     } else {
-      console.log('⚠️ Không có dữ liệu từ API, sử dụng dữ liệu mẫu')
       // Fallback to sample data for testing
       invoice.value = {
         id: invoiceId.value,
@@ -648,9 +392,6 @@ const fetchInvoiceDetail = async () => {
       }
     }
   } catch (error: any) {
-    console.error('❌ Lỗi khi tải chi tiết hóa đơn:', error)
-    console.error('📋 Chi tiết lỗi:', error.response?.data || error.message)
-
     // Use sample data on error
     invoice.value = {
       id: invoiceId.value,
@@ -754,25 +495,6 @@ const getStatusText = (status: any) => {
   return 'Chưa xác định'
 }
 
-const getTotalProducts = () => {
-  return invoice.value?.hoaDonChiTiets?.length || 0
-}
-
-const getTotalQuantity = () => {
-  return (
-    invoice.value?.hoaDonChiTiets?.reduce((total: number, item: any) => {
-      return total + (item.soLuong || 0)
-    }, 0) || 0
-  )
-}
-
-const getSubtotal = () => {
-  return (
-    invoice.value?.hoaDonChiTiets?.reduce((total: number, item: any) => {
-      return total + (item.thanhTien || 0)
-    }, 0) || 0
-  )
-}
 
 const goBack = () => {
   router.back()
@@ -780,6 +502,28 @@ const goBack = () => {
 
 const printInvoice = () => {
   window.print()
+}
+
+// Lấy text trạng thái đơn
+const getTrangThaiDonText = (trangThai: boolean) => {
+  if (invoice.value?.ngayThanhToan && trangThai) {
+    return 'Đã thanh toán'
+  }
+  if (trangThai) {
+    return 'Đã xác nhận'
+  }
+  return 'Chờ xử lý'
+}
+
+// Lấy màu trạng thái đơn
+const getTrangThaiDonColor = (trangThai: boolean) => {
+  if (invoice.value?.ngayThanhToan && trangThai) {
+    return 'green'
+  }
+  if (trangThai) {
+    return 'blue'
+  }
+  return 'orange'
 }
 
 // Lifecycle
@@ -1161,75 +905,7 @@ onMounted(() => {
   border-bottom: none;
 }
 
-/* Products Card */
-.product-count {
-  font-size: 12px;
-  color: #86909c;
-  font-weight: normal;
-  margin-left: 8px;
-}
 
-.product-info {
-  padding: 6px 0;
-}
-
-.product-name {
-  font-weight: 500;
-  font-size: 14px;
-  color: #1d2129;
-  margin-bottom: 6px;
-}
-
-.product-specs {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.spec-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.spec-label {
-  font-size: 12px;
-  color: #86909c;
-  min-width: 50px;
-}
-
-.spec-value {
-  font-size: 12px;
-  color: #4e5969;
-  background: #f2f3f5;
-  padding: 1px 4px;
-  border-radius: 2px;
-}
-
-.stt-cell {
-  text-align: center;
-  font-weight: 500;
-  color: #4e5969;
-}
-
-.price-cell,
-.total-cell {
-  text-align: right;
-}
-
-.price-value,
-.total-price {
-  font-weight: 500;
-  color: #1d2129;
-}
-
-.quantity-cell {
-  text-align: center;
-}
-
-.quantity-tag {
-  font-weight: 500;
-}
 
 /* Payment History Card */
 .payment-history {
