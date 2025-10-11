@@ -5,69 +5,94 @@
 
     <!-- Statistics Cards -->
     <div class="stats-grid">
-      <a-card class="stat-card revenue-card" :bordered="false">
-        <template #title>
-          <div class="stat-header">
-            <icon-star class="stat-icon revenue-icon" />
-            <span>Tổng doanh thu</span>
+      <!-- Panel Hôm nay -->
+      <a-card class="stat-card today-card" :bordered="false">
+        <div class="today-header">
+          <div class="today-title-section">
+            <div class="today-icon-wrapper">
+              <icon-calendar class="today-icon" />
+            </div>
+            <div class="today-title">Hôm nay</div>
           </div>
-        </template>
-        <div class="stat-content">
-          <div class="stat-value">{{ formatCurrency(totalRevenue) }}</div>
-          <div class="stat-change positive">
-            <icon-arrow-up />
-            +12.5% so với tháng trước
+          <div class="today-revenue-section">
+            <div class="today-revenue-value">{{ formatCurrency(todayRevenue) }}</div>
+            <div class="today-revenue-change">
+              <icon-arrow-down class="change-icon" />
+              <span>0%</span>
+            </div>
           </div>
+        </div>
+        <div class="today-details">
+          <span class="today-detail-text">Sản phẩm đã bán: {{ todayProductsSold }} | Đơn hàng: {{ todayOrders }}</span>
         </div>
       </a-card>
 
-      <a-card class="stat-card orders-card" :bordered="false">
-        <template #title>
-          <div class="stat-header">
-            <icon-gift class="stat-icon orders-icon" />
-            <span>Đơn hàng</span>
+      <!-- Panel Tuần này -->
+      <a-card class="stat-card today-card" :bordered="false">
+        <div class="today-header">
+          <div class="today-title-section">
+            <div class="today-icon-wrapper week-icon-wrapper">
+              <icon-calendar class="today-icon" />
+            </div>
+            <div class="today-title">Tuần này</div>
           </div>
-        </template>
-        <div class="stat-content">
-          <div class="stat-value">{{ totalOrders }}</div>
-          <div class="stat-change positive">
-            <icon-arrow-up />
-            +8.2% so với tháng trước
+          <div class="today-revenue-section">
+            <div class="today-revenue-value">{{ formatCurrency(weekRevenue) }}</div>
+            <div class="today-revenue-change">
+              <icon-arrow-down class="change-icon" />
+              <span>0%</span>
+            </div>
           </div>
+        </div>
+        <div class="today-details">
+          <span class="today-detail-text">Sản phẩm đã bán: {{ weekProductsSold }} | Đơn hàng: {{ weekOrders }}</span>
         </div>
       </a-card>
 
-      <a-card class="stat-card products-card" :bordered="false">
-        <template #title>
-          <div class="stat-header">
-            <icon-archive class="stat-icon products-icon" />
-            <span>Sản phẩm</span>
+      <!-- Panel Tháng này -->
+      <a-card class="stat-card today-card" :bordered="false">
+        <div class="today-header">
+          <div class="today-title-section">
+            <div class="today-icon-wrapper month-icon-wrapper">
+              <icon-calendar class="today-icon" />
+            </div>
+            <div class="today-title">Tháng này</div>
           </div>
-        </template>
-        <div class="stat-content">
-          <div class="stat-value">{{ totalProducts }}</div>
-          <div class="stat-change neutral">
-            <icon-minus />
-            Không thay đổi
+          <div class="today-revenue-section">
+            <div class="today-revenue-value">{{ formatCurrency(monthRevenue) }}</div>
+            <div class="today-revenue-change">
+              <icon-arrow-down class="change-icon" />
+              <span>0%</span>
+            </div>
           </div>
+        </div>
+        <div class="today-details">
+          <span class="today-detail-text">Sản phẩm đã bán: {{ monthProductsSold }} | Đơn hàng: {{ monthOrders }}</span>
         </div>
       </a-card>
 
-      <a-card class="stat-card customers-card" :bordered="false">
-        <template #title>
-          <div class="stat-header">
-            <icon-user-group class="stat-icon customers-icon" />
-            <span>Khách hàng</span>
+      <!-- Panel Năm này -->
+      <a-card class="stat-card today-card" :bordered="false">
+        <div class="today-header">
+          <div class="today-title-section">
+            <div class="today-icon-wrapper year-icon-wrapper">
+              <icon-calendar class="today-icon" />
+            </div>
+            <div class="today-title">Năm này</div>
           </div>
-        </template>
-        <div class="stat-content">
-          <div class="stat-value">{{ totalCustomers }}</div>
-          <div class="stat-change positive">
-            <icon-arrow-up />
-            +15.3% so với tháng trước
+          <div class="today-revenue-section">
+            <div class="today-revenue-value">{{ formatCurrency(yearRevenue) }}</div>
+            <div class="today-revenue-change">
+              <icon-arrow-down class="change-icon" />
+              <span>0%</span>
+            </div>
           </div>
         </div>
+        <div class="today-details">
+          <span class="today-detail-text">Sản phẩm đã bán: {{ yearProductsSold }} | Đơn hàng: {{ yearOrders }}</span>
+        </div>
       </a-card>
+
     </div>
 
     <!-- Charts Section -->
@@ -145,15 +170,10 @@ import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
-  IconStar,
-  IconGift,
-  IconArchive,
-  IconUserGroup,
-  IconArrowUp,
   IconArrowDown,
-  IconMinus,
   IconUser,
   IconCheckCircle,
+  IconCalendar,
 } from '@arco-design/web-vue/es/icon'
 
 // ECharts setup
@@ -164,9 +184,26 @@ const { breadcrumbItems } = useBreadcrumb()
 
 // Mock data - trong thực tế sẽ fetch từ API
 const totalRevenue = ref(0)
-const totalOrders = ref(0)
-const totalProducts = ref(0)
-const totalCustomers = ref(0)
+
+// Dữ liệu hôm nay
+const todayProductsSold = ref(0)
+const todayOrders = ref(0)
+const todayRevenue = ref(0)
+
+// Dữ liệu tuần này
+const weekProductsSold = ref(0)
+const weekOrders = ref(0)
+const weekRevenue = ref(0)
+
+// Dữ liệu tháng này
+const monthProductsSold = ref(0)
+const monthOrders = ref(0)
+const monthRevenue = ref(0)
+
+// Dữ liệu năm này
+const yearProductsSold = ref(0)
+const yearOrders = ref(0)
+const yearRevenue = ref(0)
 
 const revenuePeriod = ref('6months')
 const topProductsPeriod = ref('month')
@@ -232,14 +269,6 @@ const toRelativeTime = (date: Date) => {
 
 const buildRecentActivities = () => {
   const acts: { type: 'product' | 'order' | 'customer'; title: string; time: string; at: number }[] = []
-  console.log(
-    'Building activities from orders:',
-    ordersList.value.length,
-    'products:',
-    productsList.value.length,
-    'customers:',
-    customersList.value.length
-  )
 
   // 1. Đơn hàng thành công mới (đã thanh toán)
   ordersList.value.forEach((o: any) => {
@@ -292,7 +321,6 @@ const buildRecentActivities = () => {
   // Sắp xếp theo thời gian giảm dần (mới nhất lên đầu)
   acts.sort((a, b) => b.at - a.at)
   recentActivities.value = acts.slice(0, 10)
-  console.log('Built activities:', recentActivities.value.length, 'First activity time:', recentActivities.value[0]?.time)
 }
 
 // Build revenue by month from ordersList and revenuePeriod
@@ -498,23 +526,106 @@ const customerChartOption = computed(() => ({
   ],
 }))
 
-const fetchProducts = async () => {
-  try {
-    const res = await axios.get('/api/san-pham-management/playlist')
-    const products = res.data ?? []
-    totalProducts.value = Array.isArray(products) ? products.length : 0
-    productsList.value = Array.isArray(products) ? products : []
-    buildRecentActivities()
-  } catch {
-    totalProducts.value = 0
+// Hàm tính dữ liệu theo khoảng thời gian
+const calculateTimePeriodData = (orders: any[]) => {
+  const now = new Date()
+
+  // Hôm nay
+  const todayStr = now.toISOString().split('T')[0]
+  const todayOrdersList = orders.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    const orderDateStr = orderDate.toISOString().split('T')[0]
+    return orderDateStr === todayStr
+  })
+
+  // Tuần này (từ thứ 2 đến chủ nhật)
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - now.getDay() + 1) // Thứ 2
+  startOfWeek.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6) // Chủ nhật
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const weekOrdersList = orders.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    return orderDate >= startOfWeek && orderDate <= endOfWeek
+  })
+
+  // Tháng này
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  endOfMonth.setHours(23, 59, 59, 999)
+
+  const monthOrdersList = orders.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    return orderDate >= startOfMonth && orderDate <= endOfMonth
+  })
+
+  // Năm này
+  const startOfYear = new Date(now.getFullYear(), 0, 1)
+  const endOfYear = new Date(now.getFullYear(), 11, 31)
+  endOfYear.setHours(23, 59, 59, 999)
+
+  const yearOrdersList = orders.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    return orderDate >= startOfYear && orderDate <= endOfYear
+  })
+
+  // Hàm tính sản phẩm đã bán
+  const calculateProductsSold = (orderList: any[]) => {
+    return orderList.reduce((total: number, order: any) => {
+      if (order.chiTietHoaDon && Array.isArray(order.chiTietHoaDon)) {
+        return (
+          total +
+          order.chiTietHoaDon.reduce((sum: number, detail: any) => {
+            return sum + (Number(detail.soLuong) || 0)
+          }, 0)
+        )
+      }
+      return total
+    }, 0)
   }
+
+  // Hàm tính doanh thu
+  const calculateRevenue = (orderList: any[]) => {
+    return orderList
+      .filter((order: any) => order.trangThai === true || order.ngayThanhToan)
+      .reduce((total: number, order: any) => {
+        const amount = Number(order.tongTienSauGiam ?? order.tongTien ?? 0)
+        return total + (Number.isNaN(amount) ? 0 : amount)
+      }, 0)
+  }
+
+  // Tính dữ liệu hôm nay
+  todayOrders.value = todayOrdersList.length
+  todayProductsSold.value = calculateProductsSold(todayOrdersList)
+  todayRevenue.value = calculateRevenue(todayOrdersList)
+
+  // Tính dữ liệu tuần này
+  weekOrders.value = weekOrdersList.length
+  weekProductsSold.value = calculateProductsSold(weekOrdersList)
+  weekRevenue.value = calculateRevenue(weekOrdersList)
+
+  // Tính dữ liệu tháng này
+  monthOrders.value = monthOrdersList.length
+  monthProductsSold.value = calculateProductsSold(monthOrdersList)
+  monthRevenue.value = calculateRevenue(monthOrdersList)
+
+  // Tính dữ liệu năm này
+  yearOrders.value = yearOrdersList.length
+  yearProductsSold.value = calculateProductsSold(yearOrdersList)
+  yearRevenue.value = calculateRevenue(yearOrdersList)
 }
+
 
 const fetchOrders = async () => {
   try {
     const res = await axios.get('/api/hoa-don-management/playlist')
     const orders = res.data ?? []
-    totalOrders.value = Array.isArray(orders) ? orders.length : 0
     ordersList.value = Array.isArray(orders) ? orders : []
     // Tính tổng doanh thu từ các hóa đơn đã thanh toán
     if (Array.isArray(orders)) {
@@ -528,31 +639,20 @@ const fetchOrders = async () => {
       totalRevenue.value = 0
     }
 
+    // Tính dữ liệu theo khoảng thời gian
+    calculateTimePeriodData(orders)
+
     buildRevenueData()
     buildTopProductsData()
     buildRecentActivities()
   } catch {
-    totalOrders.value = 0
     totalRevenue.value = 0
   }
 }
 
-const fetchCustomers = async () => {
-  try {
-    const res = await axios.get('/api/khach-hang-management/playlist')
-    const customers = res.data ?? []
-    totalCustomers.value = Array.isArray(customers) ? customers.length : 0
-    customersList.value = Array.isArray(customers) ? customers : []
-    buildRecentActivities()
-  } catch {
-    totalCustomers.value = 0
-  }
-}
 
 onMounted(() => {
-  fetchProducts()
   fetchOrders()
-  fetchCustomers()
   buildRecentActivities()
 })
 </script>
@@ -564,9 +664,9 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
 .stat-card {
@@ -582,21 +682,10 @@ onMounted(() => {
   font-size: 24px;
 }
 
-.revenue-icon {
-  color: #52c41a;
-}
-
-.orders-icon {
+.today-icon {
   color: #1890ff;
 }
 
-.products-icon {
-  color: #722ed1;
-}
-
-.customers-icon {
-  color: #fa8c16;
-}
 
 .stat-content {
   margin-top: 16px;
@@ -627,6 +716,86 @@ onMounted(() => {
 
 .stat-change.neutral {
   color: #86909c;
+}
+
+.today-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.today-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.today-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  background: #1890ff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.week-icon-wrapper {
+  background: #52c41a;
+}
+
+.month-icon-wrapper {
+  background: #fa8c16;
+}
+
+.year-icon-wrapper {
+  background: #722ed1;
+}
+
+.today-icon {
+  font-size: 20px;
+  color: white;
+}
+
+.today-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d2129;
+}
+
+.today-revenue-section {
+  text-align: right;
+}
+
+.today-revenue-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d2129;
+  margin-bottom: 4px;
+}
+
+.today-revenue-change {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 14px;
+  color: #86909c;
+}
+
+.change-icon {
+  font-size: 12px;
+}
+
+.today-details {
+  margin-top: 8px;
+}
+
+.today-detail-text {
+  font-size: 14px;
+  color: #86909c;
+  font-weight: 500;
 }
 
 .charts-section {
