@@ -30,7 +30,7 @@
                 <a-option value="year">Năm này</a-option>
                 <a-option value="custom">Tùy chọn</a-option>
               </a-select>
-              
+
               <!-- DatePicker cho tùy chọn -->
               <div v-if="selectedTimeRange === 'custom'" class="custom-date-picker">
                 <a-range-picker
@@ -44,17 +44,11 @@
             </div>
 
             <div class="chart-type-buttons">
-              <button 
-                :class="['chart-btn', { active: selectedChartType === 'line' }]"
-                @click="onChartTypeChange('line')"
-              >
+              <button :class="['chart-btn', { active: selectedChartType === 'line' }]" @click="onChartTypeChange('line')">
                 <icon-line class="chart-icon" />
                 Đường
               </button>
-              <button 
-                :class="['chart-btn', { active: selectedChartType === 'bar' }]"
-                @click="onChartTypeChange('bar')"
-              >
+              <button :class="['chart-btn', { active: selectedChartType === 'bar' }]" @click="onChartTypeChange('bar')">
                 <icon-bar class="chart-icon" />
                 Cột
               </button>
@@ -63,9 +57,7 @@
 
           <!-- Dòng 3: Summary và Actions -->
           <div class="filter-row-3">
-            <span class="summary-text">
-              Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}
-            </span>
+            <span class="summary-text">Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}</span>
 
             <div class="filter-actions">
               <a-button class="reset-btn" @click="resetFilter">
@@ -209,11 +201,7 @@
               </a-select>
             </template>
             <div class="top-products-list">
-              <div 
-                v-for="(product, index) in topProductsData" 
-                :key="product.name"
-                class="product-item"
-              >
+              <div v-for="(product, index) in topProductsData" :key="product.name" class="product-item">
                 <div class="product-rank">
                   <span class="rank-number">{{ index + 1 }}</span>
                 </div>
@@ -234,7 +222,7 @@
       </a-row>
 
       <a-row :gutter="16" style="margin-top: 16px">
-        <a-col :span="12">
+        <a-col :span="8">
           <a-card class="chart-card">
             <template #title>
               <div class="chart-title">
@@ -243,22 +231,11 @@
             </template>
             <template #extra>
               <div class="order-status-buttons">
-                <button 
-                  :class="['status-btn', { active: selectedOrderPeriod === 'day' }]"
-                  @click="onOrderPeriodChange('day')"
-                >
-                  Ngày
-                </button>
-                <button 
-                  :class="['status-btn', { active: selectedOrderPeriod === 'month' }]"
-                  @click="onOrderPeriodChange('month')"
-                >
+                <button :class="['status-btn', { active: selectedOrderPeriod === 'day' }]" @click="onOrderPeriodChange('day')">Ngày</button>
+                <button :class="['status-btn', { active: selectedOrderPeriod === 'month' }]" @click="onOrderPeriodChange('month')">
                   Tháng
                 </button>
-                <button 
-                  :class="['status-btn', { active: selectedOrderPeriod === 'year' }]"
-                  @click="onOrderPeriodChange('year')"
-                >
+                <button :class="['status-btn', { active: selectedOrderPeriod === 'year' }]" @click="onOrderPeriodChange('year')">
                   Năm
                 </button>
               </div>
@@ -269,7 +246,7 @@
           </a-card>
         </a-col>
 
-        <a-col :span="12">
+        <a-col :span="8">
           <a-card class="chart-card">
             <template #title>
               <div class="chart-title">
@@ -280,7 +257,19 @@
               <v-chart class="chart" :option="channelDistributionChartOption" autoresize />
             </div>
           </a-card>
-          
+        </a-col>
+
+        <a-col :span="8">
+          <a-card class="chart-card">
+            <template #title>
+              <div class="chart-title">
+                <span>Danh Mục Sản Phẩm Bán Chạy</span>
+              </div>
+            </template>
+            <div class="chart-container">
+              <v-chart class="chart" :option="categoryChartOption" autoresize />
+            </div>
+          </a-card>
         </a-col>
       </a-row>
 
@@ -297,7 +286,6 @@
             </a-timeline>
           </a-card>
         </a-col>
-
       </a-row>
     </div>
   </div>
@@ -313,15 +301,7 @@ import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from
 import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { 
-  IconArrowDown,
-  IconUser,
-  IconCheckCircle,
-  IconCalendar,
-  IconFilter,
-  IconRefresh,
-  IconExport,
-} from '@arco-design/web-vue/es/icon'
+import { IconArrowDown, IconCalendar, IconFilter, IconRefresh, IconExport } from '@arco-design/web-vue/es/icon'
 
 // ECharts setup
 use([CanvasRenderer, LineChart, BarChart, PieChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
@@ -389,6 +369,7 @@ const customersList = ref<any[]>([])
 
 const topProductsData = ref<{ name: string; value: number; revenue: number }[]>([])
 
+const categoryData = ref<{ name: string; value: number; color: string }[]>([])
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -557,53 +538,65 @@ const revenueChartOption = computed(() => ({
       type: selectedChartType.value,
       data: revenueData.value.map((item) => item.revenue),
       smooth: selectedChartType.value === 'line',
-      lineStyle: selectedChartType.value === 'line' ? {
-        color: '#1890ff',
-        width: 3,
-      } : undefined,
-      itemStyle: selectedChartType.value === 'line' ? {
-        color: '#1890ff',
-      } : {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: '#52c41a' },
-            { offset: 1, color: '#73d13d' },
-          ],
-        },
-      },
-      areaStyle: selectedChartType.value === 'line' ? {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
-            { offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
-          ],
-        },
-      } : undefined,
-      emphasis: selectedChartType.value === 'bar' ? {
-        itemStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: '#389e0d' },
-              { offset: 1, color: '#52c41a' },
-            ],
-          },
-        },
-      } : undefined,
+      lineStyle:
+        selectedChartType.value === 'line'
+          ? {
+              color: '#1890ff',
+              width: 3,
+            }
+          : undefined,
+      itemStyle:
+        selectedChartType.value === 'line'
+          ? {
+              color: '#1890ff',
+            }
+          : {
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: '#52c41a' },
+                  { offset: 1, color: '#73d13d' },
+                ],
+              },
+            },
+      areaStyle:
+        selectedChartType.value === 'line'
+          ? {
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                  { offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
+                ],
+              },
+            }
+          : undefined,
+      emphasis:
+        selectedChartType.value === 'bar'
+          ? {
+              itemStyle: {
+                color: {
+                  type: 'linear',
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    { offset: 0, color: '#389e0d' },
+                    { offset: 1, color: '#52c41a' },
+                  ],
+                },
+              },
+            }
+          : undefined,
     },
   ],
 }))
@@ -732,14 +725,135 @@ const updateChannelDistributionData = () => {
   ]
 }
 
+// Hàm phân loại sản phẩm dựa trên tên
+const categorizeProduct = (productName: string): string => {
+  const name = productName.toLowerCase()
+
+  // Danh mục giày thể thao
+  if (
+    name.includes('sneaker') ||
+    name.includes('giày thể thao') ||
+    name.includes('running') ||
+    name.includes('basketball') ||
+    name.includes('tennis') ||
+    name.includes('jogging')
+  ) {
+    return 'Giày Thể Thao'
+  }
+
+  // Danh mục giày chạy bộ
+  if (
+    name.includes('chạy') ||
+    name.includes('running') ||
+    name.includes('marathon') ||
+    name.includes('jogging') ||
+    name.includes('track')
+  ) {
+    return 'Giày Chạy Bộ'
+  }
+
+  // Danh mục giày bóng đá
+  if (
+    name.includes('bóng đá') ||
+    name.includes('football') ||
+    name.includes('soccer') ||
+    name.includes('cleats') ||
+    name.includes('futsal')
+  ) {
+    return 'Giày Bóng Đá'
+  }
+
+  // Danh mục giày bóng rổ
+  if (name.includes('bóng rổ') || name.includes('basketball') || name.includes('hoops')) {
+    return 'Giày Bóng Rổ'
+  }
+
+  // Danh mục giày tennis
+  if (name.includes('tennis') || name.includes('quần vợt')) {
+    return 'Giày Tennis'
+  }
+
+  // Danh mục giày lifestyle
+  if (
+    name.includes('lifestyle') ||
+    name.includes('casual') ||
+    name.includes('street') ||
+    name.includes('fashion') ||
+    name.includes('thời trang')
+  ) {
+    return 'Giày Lifestyle'
+  }
+
+  // Danh mục giày cao gót
+  if (name.includes('cao gót') || name.includes('heels') || name.includes('pumps')) {
+    return 'Giày Cao Gót'
+  }
+
+  // Danh mục giày boot
+  if (name.includes('boot') || name.includes('bốt') || name.includes('ankle')) {
+    return 'Giày Boot'
+  }
+
+  // Danh mục giày sandal
+  if (name.includes('sandal') || name.includes('dép') || name.includes('flip-flop')) {
+    return 'Giày Sandal'
+  }
+
+  // Danh mục khác
+  return 'Danh Mục Khác'
+}
+
+// Hàm cập nhật dữ liệu danh mục sản phẩm bán chạy
+const updateCategoryData = () => {
+  if (!ordersList.value || ordersList.value.length === 0) {
+    return
+  }
+
+  // Tạo map để đếm số lượng sản phẩm theo danh mục từ hóa đơn
+  const categoryCount = new Map<string, number>()
+
+  ordersList.value.forEach((order: any) => {
+    // Kiểm tra nếu hóa đơn có chi tiết sản phẩm
+    if (order.hoaDonChiTiets && Array.isArray(order.hoaDonChiTiets)) {
+      order.hoaDonChiTiets.forEach((detail: any) => {
+        // Lấy thông tin sản phẩm từ chi tiết hóa đơn
+        if (detail.idChiTietSanPham && detail.idChiTietSanPham.idSanPham && detail.idChiTietSanPham.idSanPham.tenSanPham) {
+          const productName = detail.idChiTietSanPham.idSanPham.tenSanPham
+          if (productName) {
+            // Phân loại sản phẩm dựa trên từ khóa trong tên
+            const category = categorizeProduct(productName)
+            const quantity = detail.soLuong || 0
+            categoryCount.set(category, (categoryCount.get(category) || 0) + quantity)
+          }
+        }
+      })
+    }
+  })
+
+  // Chuyển đổi thành mảng và sắp xếp theo số lượng giảm dần
+  const categoryArray = Array.from(categoryCount.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6) // Lấy top 6 danh mục
+
+  // Màu sắc cho các danh mục
+  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2']
+
+  categoryData.value = categoryArray.map((category, index) => ({
+    name: category.name,
+    value: category.value,
+    color: colors[index % colors.length],
+  }))
+}
+
 watch([ordersList, productsList, customersList, revenuePeriod], () => {
   buildRevenueData()
   buildTopProductsData()
   buildRecentActivities()
   updateOrderStatusData(selectedOrderPeriod.value)
   updateChannelDistributionData()
+  updateCategoryData()
 })
-
 
 // Order status chart option
 const orderStatusChartOption = computed(() => ({
@@ -779,7 +893,6 @@ const orderStatusChartOption = computed(() => ({
   ],
 }))
 
-
 // Hàm xử lý thay đổi period cho trạng thái đơn hàng
 const onOrderPeriodChange = (period: string) => {
   selectedOrderPeriod.value = period
@@ -805,6 +918,44 @@ const channelDistributionChartOption = computed(() => ({
       radius: ['40%', '70%'],
       center: ['60%', '50%'],
       data: channelDistributionData.value,
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)',
+        },
+      },
+      label: {
+        formatter: '{b}: {d}%',
+        fontSize: 12,
+      },
+      labelLine: {
+        show: true,
+        length: 10,
+        length2: 5,
+      },
+    },
+  ],
+}))
+
+// Category chart option
+const categoryChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'item',
+    formatter: '{a} <br/>{b}: {c} ({d}%)',
+  },
+  legend: {
+    orient: 'vertical',
+    left: 'left',
+    top: 'center',
+  },
+  series: [
+    {
+      name: 'Danh mục sản phẩm bán chạy',
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['60%', '50%'],
+      data: categoryData.value,
       emphasis: {
         itemStyle: {
           shadowBlur: 10,
@@ -980,6 +1131,17 @@ const fetchOrders = async () => {
   }
 }
 
+const fetchProducts = async () => {
+  try {
+    const res = await axios.get('/api/san-pham-management/playlist')
+    const products = res.data ?? []
+    productsList.value = Array.isArray(products) ? products : []
+  } catch (error) {
+    console.error('Error fetching products:', error)
+    productsList.value = []
+  }
+}
+
 // Computed properties cho dữ liệu hiển thị theo khoảng thời gian được chọn
 const displayData = computed(() => {
   switch (selectedTimeRange.value) {
@@ -1123,10 +1285,12 @@ const exportReport = () => {
 
 onMounted(() => {
   fetchOrders()
+  fetchProducts()
   buildRecentActivities()
   updateFilterSummary()
   updateOrderStatusData(selectedOrderPeriod.value)
   updateChannelDistributionData()
+  updateCategoryData()
 })
 </script>
 
@@ -1344,7 +1508,6 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-
 .stat-header {
   display: flex;
   align-items: center;
@@ -1358,7 +1521,6 @@ onMounted(() => {
 .today-icon {
   color: #1890ff;
 }
-
 
 .stat-content {
   margin-top: 16px;
@@ -1516,7 +1678,6 @@ onMounted(() => {
   }
 }
 
-
 /* Animation cho từng panel */
 .today-card:nth-child(1) {
   animation: fadeInUp 0.6s ease-out;
@@ -1533,7 +1694,6 @@ onMounted(() => {
 .today-card:nth-child(4) {
   animation: scaleIn 0.6s ease-out 0.3s both;
 }
-
 
 /* Hiệu ứng cascade cho các phần tử bên trong */
 .today-header {
