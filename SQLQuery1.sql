@@ -1,7 +1,13 @@
 USE [master]
 GO
-/****** Object:  Database [GearUp]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Database [GearUp]    Script Date: 10/12/2025 3:09:39 AM ******/
 CREATE DATABASE [GearUp]
+ CONTAINMENT = NONE
+ ON  PRIMARY 
+( NAME = N'GearUp', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.YINYANG\MSSQL\DATA\GearUp.mdf' , SIZE = 8192KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
+ LOG ON 
+( NAME = N'GearUp_log', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.YINYANG\MSSQL\DATA\GearUp_log.ldf' , SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
+ WITH CATALOG_COLLATION = DATABASE_DEFAULT, LEDGER = OFF
 GO
 ALTER DATABASE [GearUp] SET COMPATIBILITY_LEVEL = 160
 GO
@@ -78,7 +84,7 @@ ALTER DATABASE [GearUp] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_PO
 GO
 USE [GearUp]
 GO
-/****** Object:  Table [dbo].[anh_san_pham]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[anh_san_pham]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -100,7 +106,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[chat_lieu]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[chat_lieu]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -121,7 +127,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[chi_tiet_dot_giam_gia]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[chi_tiet_dot_giam_gia]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -142,7 +148,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[chi_tiet_san_pham]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[chi_tiet_san_pham]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -166,13 +172,14 @@ CREATE TABLE [dbo].[chi_tiet_san_pham](
 	[create_by] [int] NULL,
 	[update_at] [date] NULL,
 	[update_by] [int] NULL,
+	[ten_san_pham_chi_tiet] [nvarchar](500) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[chi_tiet_san_pham_anh]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[chi_tiet_san_pham_anh]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -193,7 +200,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[de_giay]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[de_giay]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -214,7 +221,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[dia_chi_khach_hang]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[dia_chi_khach_hang]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -236,7 +243,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[dot_giam_gia]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[dot_giam_gia]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -260,7 +267,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[hinh_thuc_thanh_toan]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[hinh_thuc_thanh_toan]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -280,7 +287,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[hoa_don]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[hoa_don]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -315,7 +322,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[hoa_don_chi_tiet]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[hoa_don_chi_tiet]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -341,7 +348,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[khach_hang]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[khach_hang]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -369,7 +376,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[kich_thuoc]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[kich_thuoc]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -390,7 +397,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[mau_sac]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[mau_sac]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -412,7 +419,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[nha_san_xuat]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[nha_san_xuat]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -433,7 +440,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[nhan_vien]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[nhan_vien]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -468,7 +475,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[phieu_giam_gia]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[phieu_giam_gia]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -498,7 +505,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[phieu_giam_gia_ca_nhan]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[phieu_giam_gia_ca_nhan]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -523,7 +530,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[phuong_thuc_thanh_toan]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[phuong_thuc_thanh_toan]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -544,7 +551,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[quyen_han]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[quyen_han]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -565,7 +572,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[san_pham]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[san_pham]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -588,7 +595,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[thong_tin_don_hang]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[thong_tin_don_hang]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -608,7 +615,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[token_blacklist]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[token_blacklist]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -625,7 +632,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[trang_thai_don_hang]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[trang_thai_don_hang]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -646,7 +653,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[trong_luong]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[trong_luong]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -667,7 +674,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[xuat_xu]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Table [dbo].[xuat_xu]    Script Date: 10/12/2025 3:09:40 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -687,6 +694,14 @@ PRIMARY KEY CLUSTERED
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
+GO
+SET IDENTITY_INSERT [dbo].[anh_san_pham] ON 
+GO
+INSERT [dbo].[anh_san_pham] ([id], [duong_dan_anh], [ten_anh], [mau_anh], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'https://res.cloudinary.com/dlgbdwd96/image/upload/v1759817800/SD_73/bb70c82e45f17b28c1d2fd401eefd419.png', N'Abc - Đen', N'Đen', 1, 0, CAST(N'2025-10-12' AS Date), 1, NULL, NULL)
+GO
+INSERT [dbo].[anh_san_pham] ([id], [duong_dan_anh], [ten_anh], [mau_anh], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'https://res.cloudinary.com/dlgbdwd96/image/upload/v1760208626/SD_73/01b279a2ca6826fb59139e3fa8ca3dac.jpg', N'Giày Nike Air Max 270 - Trắng', N'Trắng', 1, 0, CAST(N'2025-10-12' AS Date), 1, NULL, NULL)
+GO
+SET IDENTITY_INSERT [dbo].[anh_san_pham] OFF
 GO
 SET IDENTITY_INSERT [dbo].[chat_lieu] ON 
 GO
@@ -722,13 +737,43 @@ SET IDENTITY_INSERT [dbo].[chi_tiet_dot_giam_gia] OFF
 GO
 SET IDENTITY_INSERT [dbo].[chi_tiet_san_pham] ON 
 GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, 1, 1, 1, 1, NULL, 50, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (1, 1, 1, 1, 1, 1, 1, NULL, 50, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Đen - Size 39')
 GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 1, 2, 2, 1, 1, 1, NULL, 45, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (2, 1, 2, 2, 1, 1, 1, NULL, 45, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Trắng - Size 40')
 GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, 2, 3, 3, 2, 2, 2, NULL, 40, CAST(3200000.00 AS Decimal(18, 2)), 1, N'Giày chạy bộ Adidas', 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (3, 2, 3, 3, 2, 2, 2, NULL, 40, CAST(3200000.00 AS Decimal(18, 2)), 1, N'Giày chạy bộ Adidas', 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Adidas Ultraboost 22 - Đỏ - Size 41')
+GO
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (4, 4, 1, 3, 1, 1, 1, NULL, 1, CAST(100.00 AS Decimal(18, 2)), 1, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Abc - Đen - Size 41')
+GO
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (5, 4, 1, 2, 1, 1, 1, NULL, 1, CAST(100.00 AS Decimal(18, 2)), 1, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Abc - Đen - Size 40')
+GO
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (6, 1, 1, 3, 1, 1, 1, NULL, 6, CAST(100.00 AS Decimal(18, 2)), 1, NULL, 0, CAST(N'2025-10-11' AS Date), 1, CAST(N'2025-10-11' AS Date), 1, N'Giày Nike Air Max 270 - Đen - Size 41')
+GO
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (7, 1, 1, 2, 1, 1, 1, NULL, 5, CAST(100.00 AS Decimal(18, 2)), 1, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Đen - Size 40')
+GO
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (8, 1, 2, 2, 2, 1, 1, NULL, 1, CAST(1.00 AS Decimal(18, 2)), 1, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Trắng - Size 40')
+GO
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (9, 4, 2, 4, 2, 1, 1, NULL, 2, CAST(3.00 AS Decimal(18, 2)), 1, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Abc + Trắng + 38')
 GO
 SET IDENTITY_INSERT [dbo].[chi_tiet_san_pham] OFF
+GO
+SET IDENTITY_INSERT [dbo].[chi_tiet_san_pham_anh] ON 
+GO
+INSERT [dbo].[chi_tiet_san_pham_anh] ([id], [id_chi_tiet_san_pham], [id_anh_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 4, 1, 1, 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[chi_tiet_san_pham_anh] ([id], [id_chi_tiet_san_pham], [id_anh_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 5, 1, 1, 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[chi_tiet_san_pham_anh] ([id], [id_chi_tiet_san_pham], [id_anh_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, 6, 1, 1, 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[chi_tiet_san_pham_anh] ([id], [id_chi_tiet_san_pham], [id_anh_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, 7, 1, 1, 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[chi_tiet_san_pham_anh] ([id], [id_chi_tiet_san_pham], [id_anh_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (5, 6, 1, 1, 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[chi_tiet_san_pham_anh] ([id], [id_chi_tiet_san_pham], [id_anh_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (6, 8, 2, 1, 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[chi_tiet_san_pham_anh] ([id], [id_chi_tiet_san_pham], [id_anh_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (7, 9, 2, 1, 0, NULL, NULL, NULL, NULL)
+GO
+SET IDENTITY_INSERT [dbo].[chi_tiet_san_pham_anh] OFF
 GO
 SET IDENTITY_INSERT [dbo].[de_giay] ON 
 GO
@@ -750,15 +795,15 @@ SET IDENTITY_INSERT [dbo].[dia_chi_khach_hang] OFF
 GO
 SET IDENTITY_INSERT [dbo].[dot_giam_gia] ON 
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Khuyến mãi mùa thu', 15, CAST(N'2025-09-27 00:00:00' AS DateTime), CAST(N'2025-11-27 23:59:59' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Khuyến mãi mùa thu', 15, CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-11-27T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Flash Sale cuối tuần', 20, CAST(N'2025-10-11 00:00:00' AS DateTime), CAST(N'2025-10-13 23:59:59' AS DateTime), 1, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Flash Sale cuối tuần', 20, CAST(N'2025-10-11T00:00:00.000' AS DateTime), CAST(N'2025-10-13T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, N'Khuyến mãi Black Friday', 30, CAST(N'2025-11-25 00:00:00' AS DateTime), CAST(N'2025-11-30 23:59:59' AS DateTime), 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, N'Khuyến mãi Black Friday', 30, CAST(N'2025-11-25T00:00:00.000' AS DateTime), CAST(N'2025-11-30T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, N'Giảm giá Tết Nguyên Đán', 25, CAST(N'2026-01-20 00:00:00' AS DateTime), CAST(N'2026-02-10 23:59:59' AS DateTime), 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, N'Giảm giá Tết Nguyên Đán', 25, CAST(N'2026-01-20T00:00:00.000' AS DateTime), CAST(N'2026-02-10T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (5, N'Sale giữa năm', 10, CAST(N'2025-06-01 00:00:00' AS DateTime), CAST(N'2025-06-30 23:59:59' AS DateTime), 0, 0, CAST(N'2025-05-15' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (5, N'Sale giữa năm', 10, CAST(N'2025-06-01T00:00:00.000' AS DateTime), CAST(N'2025-06-30T23:59:59.000' AS DateTime), 0, 0, CAST(N'2025-05-15' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[dot_giam_gia] OFF
 GO
@@ -802,6 +847,8 @@ INSERT [dbo].[kich_thuoc] ([id], [ten_kich_thuoc], [trang_thai], [deleted], [cre
 GO
 INSERT [dbo].[kich_thuoc] ([id], [ten_kich_thuoc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, N'41', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
+INSERT [dbo].[kich_thuoc] ([id], [ten_kich_thuoc], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, N'38', 1, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL)
+GO
 SET IDENTITY_INSERT [dbo].[kich_thuoc] OFF
 GO
 SET IDENTITY_INSERT [dbo].[mau_sac] ON 
@@ -836,17 +883,17 @@ SET IDENTITY_INSERT [dbo].[nhan_vien] OFF
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia] ON 
 GO
-INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [so_tien_toi_da], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Giảm giá 10% cho đơn hàng đầu tiên', 0, CAST(10.00 AS Decimal(18, 2)), CAST(500000.00 AS Decimal(18, 2)), CAST(1000000.00 AS Decimal(18, 2)), 100, CAST(N'2025-09-27 00:00:00' AS DateTime), CAST(N'2025-12-27 23:59:59' AS DateTime), 1, N'Áp dụng cho khách hàng mới', 0, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [so_tien_toi_da], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Giảm giá 10% cho đơn hàng đầu tiên', 0, CAST(10.00 AS Decimal(18, 2)), CAST(500000.00 AS Decimal(18, 2)), CAST(1000000.00 AS Decimal(18, 2)), 100, CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-12-27T23:59:59.000' AS DateTime), 1, N'Áp dụng cho khách hàng mới', 0, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [so_tien_toi_da], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', 1, CAST(200000.00 AS Decimal(18, 2)), CAST(200000.00 AS Decimal(18, 2)), CAST(2000000.00 AS Decimal(18, 2)), 50, CAST(N'2025-09-27 00:00:00' AS DateTime), CAST(N'2025-11-27 23:59:59' AS DateTime), 1, N'Áp dụng cho tất cả khách hàng', 0, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [so_tien_toi_da], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', 1, CAST(200000.00 AS Decimal(18, 2)), CAST(200000.00 AS Decimal(18, 2)), CAST(2000000.00 AS Decimal(18, 2)), 50, CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-11-27T23:59:59.000' AS DateTime), 1, N'Áp dụng cho tất cả khách hàng', 0, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia] OFF
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia_ca_nhan] ON 
 GO
-INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, N'Phiếu giảm giá cá nhân - Khách 1', CAST(N'2025-09-27 00:00:00' AS DateTime), CAST(N'2025-12-27 23:59:59' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, N'Phiếu giảm giá cá nhân - Khách 1', CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-12-27T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 2, 2, N'Phiếu giảm giá cá nhân - Khách 2', CAST(N'2025-09-27 00:00:00' AS DateTime), CAST(N'2025-11-27 23:59:59' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 2, 2, N'Phiếu giảm giá cá nhân - Khách 2', CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-11-27T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia_ca_nhan] OFF
 GO
@@ -876,6 +923,8 @@ INSERT [dbo].[san_pham] ([id], [id_nha_san_xuat], [id_xuat_xu], [ten_san_pham], 
 GO
 INSERT [dbo].[san_pham] ([id], [id_nha_san_xuat], [id_xuat_xu], [ten_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, 3, 3, N'Giày Puma RS-X', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
+INSERT [dbo].[san_pham] ([id], [id_nha_san_xuat], [id_xuat_xu], [ten_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, 1, 1, N'Abc', 1, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL)
+GO
 SET IDENTITY_INSERT [dbo].[san_pham] OFF
 GO
 SET IDENTITY_INSERT [dbo].[thong_tin_don_hang] ON 
@@ -893,6 +942,12 @@ GO
 INSERT [dbo].[thong_tin_don_hang] ([id], [id_hoa_don], [id_trang_thai_don_hang], [thoi_gian], [ghi_chu], [trang_thai], [deleted]) VALUES (6, 2, 4, CAST(N'2025-09-27T09:00:00.000' AS DateTime), N'Đơn hàng đang được giao', 1, 0)
 GO
 SET IDENTITY_INSERT [dbo].[thong_tin_don_hang] OFF
+GO
+SET IDENTITY_INSERT [dbo].[token_blacklist] ON 
+GO
+INSERT [dbo].[token_blacklist] ([id], [token], [username], [expiry_date], [created_at]) VALUES (1, N'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTc2MDIwODg4OSwiZXhwIjoxNzYwMjEyNDg5fQ.rU2qfBk-MQNMkFAZPeDVdHtlhIgw7nkxUCIOAT2Lca0', N'admin', CAST(N'2025-10-12T02:54:49.0000000' AS DateTime2), CAST(N'2025-10-12T02:06:56.7199040' AS DateTime2))
+GO
+SET IDENTITY_INSERT [dbo].[token_blacklist] OFF
 GO
 SET IDENTITY_INSERT [dbo].[trang_thai_don_hang] ON 
 GO
@@ -930,7 +985,7 @@ SET IDENTITY_INSERT [dbo].[xuat_xu] OFF
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__anh_san___F73EF50133DB5381]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__anh_san___F73EF5018A400887]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[anh_san_pham] ADD UNIQUE NONCLUSTERED 
 (
 	[duong_dan_anh] ASC
@@ -938,7 +993,7 @@ ALTER TABLE [dbo].[anh_san_pham] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__chat_lie__47FA28724F2DA0B4]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__chat_lie__47FA28728CC9655E]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[chat_lieu] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_chat_lieu] ASC
@@ -946,7 +1001,7 @@ ALTER TABLE [dbo].[chat_lieu] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__de_giay__C3D409550B856CA2]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__de_giay__C3D409554500624B]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[de_giay] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_de_giay] ASC
@@ -954,7 +1009,7 @@ ALTER TABLE [dbo].[de_giay] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__dot_giam__E885712B3253FFD7]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__dot_giam__E885712B582EF1BD]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[dot_giam_gia] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_dot_giam_gia] ASC
@@ -962,7 +1017,7 @@ ALTER TABLE [dbo].[dot_giam_gia] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__khach_ha__17112F094C0BAFBB]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__khach_ha__17112F092BED8155]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_tai_khoan] ASC
@@ -970,7 +1025,7 @@ ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__khach_ha__AB6E6164B173E712]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__khach_ha__AB6E61646BB2E302]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED 
 (
 	[email] ASC
@@ -978,7 +1033,7 @@ ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__khach_ha__BD03D94C10878A5D]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__khach_ha__BD03D94C027C7ECA]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED 
 (
 	[so_dien_thoai] ASC
@@ -986,7 +1041,7 @@ ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__kich_thu__06BE2795D89F4306]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__kich_thu__06BE2795A9A4D306]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[kich_thuoc] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_kich_thuoc] ASC
@@ -994,7 +1049,7 @@ ALTER TABLE [dbo].[kich_thuoc] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__mau_sac__2576448562307D66]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__mau_sac__25764485DCF447EF]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[mau_sac] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_mau_sac] ASC
@@ -1002,7 +1057,7 @@ ALTER TABLE [dbo].[mau_sac] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__nha_san___700B0905F9FEED5D]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__nha_san___700B0905522F5C2E]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[nha_san_xuat] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_nha_san_xuat] ASC
@@ -1010,7 +1065,7 @@ ALTER TABLE [dbo].[nha_san_xuat] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__nhan_vie__17112F096534E70A]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__nhan_vie__17112F0955ED1F43]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_tai_khoan] ASC
@@ -1018,7 +1073,7 @@ ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__nhan_vie__AB6E6164C70E3CB5]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__nhan_vie__AB6E616472C56921]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED 
 (
 	[email] ASC
@@ -1026,7 +1081,7 @@ ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__nhan_vie__BD03D94CCDC4844F]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__nhan_vie__BD03D94C4D9D9A83]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED 
 (
 	[so_dien_thoai] ASC
@@ -1034,7 +1089,7 @@ ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__quyen_ha__1EABFF49E9D2AA0D]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__quyen_ha__1EABFF4956C1C261]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[quyen_han] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_quyen_han] ASC
@@ -1042,7 +1097,7 @@ ALTER TABLE [dbo].[quyen_han] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__san_pham__BA66C03166139142]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__san_pham__BA66C031656DB860]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[san_pham] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_san_pham] ASC
@@ -1050,13 +1105,13 @@ ALTER TABLE [dbo].[san_pham] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [uk_token_blacklist_token]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [uk_token_blacklist_token]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[token_blacklist] ADD  CONSTRAINT [uk_token_blacklist_token] UNIQUE NONCLUSTERED 
 (
 	[token] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [idx_token_blacklist_expiry_date]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [idx_token_blacklist_expiry_date]    Script Date: 10/12/2025 3:09:40 AM ******/
 CREATE NONCLUSTERED INDEX [idx_token_blacklist_expiry_date] ON [dbo].[token_blacklist]
 (
 	[expiry_date] ASC
@@ -1064,7 +1119,7 @@ CREATE NONCLUSTERED INDEX [idx_token_blacklist_expiry_date] ON [dbo].[token_blac
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [idx_token_blacklist_token]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [idx_token_blacklist_token]    Script Date: 10/12/2025 3:09:40 AM ******/
 CREATE NONCLUSTERED INDEX [idx_token_blacklist_token] ON [dbo].[token_blacklist]
 (
 	[token] ASC
@@ -1072,7 +1127,7 @@ CREATE NONCLUSTERED INDEX [idx_token_blacklist_token] ON [dbo].[token_blacklist]
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [idx_token_blacklist_username]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [idx_token_blacklist_username]    Script Date: 10/12/2025 3:09:40 AM ******/
 CREATE NONCLUSTERED INDEX [idx_token_blacklist_username] ON [dbo].[token_blacklist]
 (
 	[username] ASC
@@ -1080,7 +1135,7 @@ CREATE NONCLUSTERED INDEX [idx_token_blacklist_username] ON [dbo].[token_blackli
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__trong_lu__399742A0D45F9E48]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__trong_lu__399742A0B04F3192]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[trong_luong] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_trong_luong] ASC
@@ -1088,7 +1143,7 @@ ALTER TABLE [dbo].[trong_luong] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__xuat_xu__BA9B89247E6609B5]    Script Date: 9/30/2025 11:11:44 AM ******/
+/****** Object:  Index [UQ__xuat_xu__BA9B8924EEEE2B76]    Script Date: 10/12/2025 3:09:40 AM ******/
 ALTER TABLE [dbo].[xuat_xu] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_xuat_xu] ASC
@@ -1325,24 +1380,3 @@ USE [master]
 GO
 ALTER DATABASE [GearUp] SET  READ_WRITE 
 GO
-ALTER TABLE chi_tiet_san_pham 
-ADD ten_san_pham_chi_tiet NVARCHAR(500);
-Go
--- Cập nhật dữ liệu
-UPDATE chi_tiet_san_pham 
-SET ten_san_pham_chi_tiet = CONCAT(
-    sp.ten_san_pham,
-    ' - ',
-    ms.ten_mau_sac,
-    ' - Size ',
-    kt.ten_kich_thuoc
-)
-FROM chi_tiet_san_pham cts
-JOIN san_pham sp ON cts.id_san_pham = sp.id
-JOIN mau_sac ms ON cts.id_mau_sac = ms.id
-JOIN kich_thuoc kt ON cts.id_kich_thuoc = kt.id;
-
--- Kiểm tra kết quả
-SELECT TOP 5 id, ma_chi_tiet_san_pham, ten_san_pham_chi_tiet 
-FROM chi_tiet_san_pham;
-
