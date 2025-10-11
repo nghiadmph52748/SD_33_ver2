@@ -176,8 +176,13 @@
     <!-- Charts Section -->
     <div class="charts-section">
       <a-row :gutter="16">
-        <a-col :span="12">
-          <a-card title="Biểu đồ doanh thu" class="chart-card">
+        <a-col :span="17">
+          <a-card class="chart-card">
+            <template #title>
+              <div class="chart-title">
+                <span>Biểu Đồ Doanh Thu</span>
+              </div>
+            </template>
             <template #extra>
               <a-select v-model="revenuePeriod" style="width: 120px">
                 <a-option value="6months">6 tháng</a-option>
@@ -190,16 +195,39 @@
           </a-card>
         </a-col>
 
-        <a-col :span="12">
-          <a-card title="Sản phẩm bán chạy" class="chart-card">
+        <a-col :span="7">
+          <a-card class="chart-card">
+            <template #title>
+              <div class="chart-title">
+                <span>Sản Phẩm Bán Chạy</span>
+              </div>
+            </template>
             <template #extra>
               <a-select v-model="topProductsPeriod" style="width: 120px">
                 <a-option value="week">Tuần này</a-option>
                 <a-option value="month">Tháng này</a-option>
               </a-select>
             </template>
-            <div class="chart-container">
-              <v-chart class="chart" :option="topProductsChartOption" autoresize />
+            <div class="top-products-list">
+              <div 
+                v-for="(product, index) in topProductsData" 
+                :key="product.name"
+                class="product-item"
+              >
+                <div class="product-rank">
+                  <span class="rank-number">{{ index + 1 }}</span>
+                </div>
+                <div class="product-info">
+                  <div class="product-name">{{ product.name }}</div>
+                  <div class="product-stats">
+                    <span class="quantity">Số lượng: {{ product.value }}</span>
+                    <span class="revenue">Doanh thu: {{ formatCurrency(product.revenue) }}</span>
+                  </div>
+                </div>
+                <div class="product-badge">
+                  <span class="badge">Hot</span>
+                </div>
+              </div>
             </div>
           </a-card>
         </a-col>
@@ -207,31 +235,68 @@
 
       <a-row :gutter="16" style="margin-top: 16px">
         <a-col :span="12">
-          <a-card title="Phân loại khách hàng" class="chart-card">
+          <a-card class="chart-card">
+            <template #title>
+              <div class="chart-title">
+                <span>Phân Bố Trạng Thái Đơn Hàng</span>
+              </div>
+            </template>
+            <template #extra>
+              <div class="order-status-buttons">
+                <button 
+                  :class="['status-btn', { active: selectedOrderPeriod === 'day' }]"
+                  @click="onOrderPeriodChange('day')"
+                >
+                  Ngày
+                </button>
+                <button 
+                  :class="['status-btn', { active: selectedOrderPeriod === 'month' }]"
+                  @click="onOrderPeriodChange('month')"
+                >
+                  Tháng
+                </button>
+                <button 
+                  :class="['status-btn', { active: selectedOrderPeriod === 'year' }]"
+                  @click="onOrderPeriodChange('year')"
+                >
+                  Năm
+                </button>
+              </div>
+            </template>
             <div class="chart-container">
-              <v-chart class="chart" :option="customerChartOption" autoresize />
+              <v-chart class="chart" :option="orderStatusChartOption" autoresize />
             </div>
           </a-card>
         </a-col>
 
         <a-col :span="12">
+          <a-card class="chart-card"></a-card>
+            <template #title>
+              <div class="chart-title">
+                <span>Phân Phối Đa Kênh</span>
+              </div>
+            </template>
+            <div class="chart-container">
+              <v-chart class="chart" :option="channelDistributionChartOption" autoresize />
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <a-row :gutter="16" style="margin-top: 16px">
+        <a-col :span="24">
           <a-card title="Hoạt động gần đây" class="chart-card">
             <a-timeline>
               <a-timeline-item v-for="(act, idx) in recentActivities" :key="idx">
-                <template #dot>
-                  <icon-check-circle v-if="act.type === 'order'" />
-                  <icon-archive v-else-if="act.type === 'product'" />
-                  <icon-user v-else-if="act.type === 'customer'" />
-                  <icon-gift v-else />
-                </template>
                 <div class="activity-item">
                   <div class="activity-title">{{ act.title }}</div>
-                  <div class="activity-time">{{ act.time }}</div>
+                  <div class="activity-time">{{ toRelativeTime(new Date(act.time)) }}</div>
                 </div>
               </a-timeline-item>
             </a-timeline>
           </a-card>
         </a-col>
+
       </a-row>
     </div>
   </div>
@@ -255,10 +320,6 @@ import {
   IconFilter,
   IconRefresh,
   IconExport,
-  IconMinus,
-  IconPlus,
-  IconArrowRight,
-  IconArrowUp,
 } from '@arco-design/web-vue/es/icon'
 
 // ECharts setup
@@ -303,6 +364,22 @@ const customRevenue = ref(0)
 const revenuePeriod = ref('6months')
 const topProductsPeriod = ref('month')
 
+// Dữ liệu trạng thái đơn hàng
+const selectedOrderPeriod = ref('day')
+const orderStatusData = ref([
+  { name: 'Chờ xác nhận', value: 15, color: '#faad14' },
+  { name: 'Chờ giao hàng', value: 25, color: '#1890ff' },
+  { name: 'Đang giao', value: 20, color: '#52c41a' },
+  { name: 'Hoàn thành', value: 30, color: '#13c2c2' },
+  { name: 'Đã hủy', value: 10, color: '#ff4d4f' },
+])
+
+// Dữ liệu phân phối đa kênh
+const channelDistributionData = ref([
+  { name: 'Online', value: 0, color: '#1890ff' },
+  { name: 'Tại quầy', value: 0, color: '#52c41a' },
+])
+
 // Chart data
 const revenueData = ref<{ month: string; revenue: number }[]>([])
 const ordersList = ref<any[]>([])
@@ -311,12 +388,6 @@ const customersList = ref<any[]>([])
 
 const topProductsData = ref<{ name: string; value: number; revenue: number }[]>([])
 
-const customerData = ref([
-  { name: 'Khách hàng VIP', value: 15 },
-  { name: 'Khách hàng thường', value: 45 },
-  { name: 'Khách hàng mới', value: 25 },
-  { name: 'Khách hàng tiềm năng', value: 15 },
-])
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -482,17 +553,29 @@ const revenueChartOption = computed(() => ({
   series: [
     {
       name: 'Doanh thu',
-      type: 'line',
+      type: selectedChartType.value,
       data: revenueData.value.map((item) => item.revenue),
-      smooth: true,
-      lineStyle: {
+      smooth: selectedChartType.value === 'line',
+      lineStyle: selectedChartType.value === 'line' ? {
         color: '#1890ff',
         width: 3,
-      },
-      itemStyle: {
+      } : undefined,
+      itemStyle: selectedChartType.value === 'line' ? {
         color: '#1890ff',
+      } : {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: '#52c41a' },
+            { offset: 1, color: '#73d13d' },
+          ],
+        },
       },
-      areaStyle: {
+      areaStyle: selectedChartType.value === 'line' ? {
         color: {
           type: 'linear',
           x: 0,
@@ -504,7 +587,22 @@ const revenueChartOption = computed(() => ({
             { offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
           ],
         },
-      },
+      } : undefined,
+      emphasis: selectedChartType.value === 'bar' ? {
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: '#389e0d' },
+              { offset: 1, color: '#52c41a' },
+            ],
+          },
+        },
+      } : undefined,
     },
   ],
 }))
@@ -533,65 +631,117 @@ const buildTopProductsData = () => {
     .slice(0, 5)
 }
 
+// Hàm cập nhật dữ liệu trạng thái đơn hàng theo period
+const updateOrderStatusData = (period: string) => {
+  if (!ordersList.value || ordersList.value.length === 0) {
+    return
+  }
+
+  const now = new Date()
+  let filteredOrders: any[] = []
+
+  // Lọc đơn hàng theo period
+  switch (period) {
+    case 'day': {
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      filteredOrders = ordersList.value.filter((order: any) => {
+        const orderDate = new Date(order.ngayTao)
+        return orderDate >= today && orderDate < new Date(today.getTime() + 24 * 60 * 60 * 1000)
+      })
+      break
+    }
+    case 'month': {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+      filteredOrders = ordersList.value.filter((order: any) => {
+        const orderDate = new Date(order.ngayTao)
+        return orderDate >= startOfMonth && orderDate < endOfMonth
+      })
+      break
+    }
+    case 'year': {
+      const startOfYear = new Date(now.getFullYear(), 0, 1)
+      const endOfYear = new Date(now.getFullYear() + 1, 0, 1)
+      filteredOrders = ordersList.value.filter((order: any) => {
+        const orderDate = new Date(order.ngayTao)
+        return orderDate >= startOfYear && orderDate < endOfYear
+      })
+      break
+    }
+    default:
+      filteredOrders = ordersList.value
+  }
+
+  // Phân loại trạng thái đơn hàng
+  const statusCounts = {
+    'Chờ xác nhận': 0,
+    'Chờ giao hàng': 0,
+    'Đang giao': 0,
+    'Hoàn thành': 0,
+    'Đã hủy': 0,
+  }
+
+  filteredOrders.forEach((order: any) => {
+    // Logic phân loại trạng thái dựa trên dữ liệu hóa đơn
+    if (order.deleted === true) {
+      statusCounts['Đã hủy'] += 1
+    } else if (order.ngayThanhToan && order.trangThai === true) {
+      statusCounts['Hoàn thành'] += 1
+    } else if (order.trangThai === true && !order.ngayThanhToan) {
+      statusCounts['Chờ giao hàng'] += 1
+    } else if (order.trangThai === false) {
+      statusCounts['Chờ xác nhận'] += 1
+    } else {
+      statusCounts['Đang giao'] += 1
+    }
+  })
+
+  // Cập nhật dữ liệu biểu đồ
+  orderStatusData.value = [
+    { name: 'Chờ xác nhận', value: statusCounts['Chờ xác nhận'], color: '#faad14' },
+    { name: 'Chờ giao hàng', value: statusCounts['Chờ giao hàng'], color: '#1890ff' },
+    { name: 'Đang giao', value: statusCounts['Đang giao'], color: '#52c41a' },
+    { name: 'Hoàn thành', value: statusCounts['Hoàn thành'], color: '#13c2c2' },
+    { name: 'Đã hủy', value: statusCounts['Đã hủy'], color: '#ff4d4f' },
+  ]
+}
+
+// Hàm cập nhật dữ liệu phân phối đa kênh
+const updateChannelDistributionData = () => {
+  if (!ordersList.value || ordersList.value.length === 0) {
+    return
+  }
+
+  let onlineCount = 0
+  let offlineCount = 0
+
+  ordersList.value.forEach((order: any) => {
+    // Phân loại dựa trên loaiDon: true = Online, false = Tại quầy
+    if (order.loaiDon === true) {
+      onlineCount += 1
+    } else {
+      offlineCount += 1
+    }
+  })
+
+  // Cập nhật dữ liệu biểu đồ
+  channelDistributionData.value = [
+    { name: 'Online', value: onlineCount, color: '#1890ff' },
+    { name: 'Tại quầy', value: offlineCount, color: '#52c41a' },
+  ]
+}
+
 watch([ordersList, productsList, customersList, revenuePeriod], () => {
   buildRevenueData()
   buildTopProductsData()
   buildRecentActivities()
+  updateOrderStatusData(selectedOrderPeriod.value)
+  updateChannelDistributionData()
 })
 
-const topProductsChartOption = computed(() => ({
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: {
-      type: 'shadow',
-    },
-    formatter: (params: any) => {
-      const data = params[0]
-      const product = topProductsData.value[data.dataIndex]
-      return `${data.axisValue}<br/>Số lượng: ${data.value}<br/>Doanh thu: ${formatCurrency(product.revenue)}`
-    },
-  },
-  grid: {
-    left: '3%',
-    right: '4%',
-    bottom: '3%',
-    containLabel: true,
-  },
-  xAxis: {
-    type: 'category',
-    data: topProductsData.value.map((item) => item.name),
-    axisLabel: {
-      rotate: 45,
-      interval: 0,
-    },
-  },
-  yAxis: {
-    type: 'value',
-    name: 'Số lượng bán',
-  },
-  series: [
-    {
-      name: 'Số lượng bán',
-      type: 'bar',
-      data: topProductsData.value.map((item) => item.value),
-      itemStyle: {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: '#52c41a' },
-            { offset: 1, color: '#73d13d' },
-          ],
-        },
-      },
-    },
-  ],
-}))
 
-const customerChartOption = computed(() => ({
+// Order status chart option
+const orderStatusChartOption = computed(() => ({
   tooltip: {
     trigger: 'item',
     formatter: '{a} <br/>{b}: {c} ({d}%)',
@@ -599,14 +749,15 @@ const customerChartOption = computed(() => ({
   legend: {
     orient: 'vertical',
     left: 'left',
+    top: 'center',
   },
   series: [
     {
-      name: 'Phân loại khách hàng',
+      name: 'Trạng thái đơn hàng',
       type: 'pie',
-      radius: '50%',
-      center: ['50%', '50%'],
-      data: customerData.value,
+      radius: ['40%', '70%'],
+      center: ['60%', '50%'],
+      data: orderStatusData.value,
       emphasis: {
         itemStyle: {
           shadowBlur: 10,
@@ -616,6 +767,58 @@ const customerChartOption = computed(() => ({
       },
       label: {
         formatter: '{b}: {d}%',
+        fontSize: 12,
+      },
+      labelLine: {
+        show: true,
+        length: 10,
+        length2: 5,
+      },
+    },
+  ],
+}))
+
+
+// Hàm xử lý thay đổi period cho trạng thái đơn hàng
+const onOrderPeriodChange = (period: string) => {
+  selectedOrderPeriod.value = period
+  // Có thể thêm logic cập nhật dữ liệu theo period ở đây
+  updateOrderStatusData(period)
+}
+
+// Channel distribution chart option
+const channelDistributionChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'item',
+    formatter: '{a} <br/>{b}: {c} ({d}%)',
+  },
+  legend: {
+    orient: 'vertical',
+    left: 'left',
+    top: 'center',
+  },
+  series: [
+    {
+      name: 'Phân phối đa kênh',
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['60%', '50%'],
+      data: channelDistributionData.value,
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)',
+        },
+      },
+      label: {
+        formatter: '{b}: {d}%',
+        fontSize: 12,
+      },
+      labelLine: {
+        show: true,
+        length: 10,
+        length2: 5,
       },
     },
   ],
@@ -921,6 +1124,8 @@ onMounted(() => {
   fetchOrders()
   buildRecentActivities()
   updateFilterSummary()
+  updateOrderStatusData(selectedOrderPeriod.value)
+  updateChannelDistributionData()
 })
 </script>
 
@@ -1370,11 +1575,179 @@ onMounted(() => {
   height: 100%;
 }
 
+.chart-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.chart-title-icon {
+  font-size: 20px;
+  color: #1890ff;
+}
+
+.chart-title-icon:first-child {
+  color: #1890ff;
+}
+
+.chart-title-icon:last-child {
+  color: #52c41a;
+  margin-left: 4px;
+}
+
 .chart-container {
   height: 300px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* CSS cho danh sách sản phẩm bán chạy */
+.top-products-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.product-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.product-item:hover {
+  background: #f0f8ff;
+  border-color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+.product-item:last-child {
+  margin-bottom: 0;
+}
+
+.product-rank {
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.rank-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #1890ff;
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.product-item:nth-child(1) .rank-number {
+  background: #ff4d4f;
+}
+
+.product-item:nth-child(2) .rank-number {
+  background: #fa8c16;
+}
+
+.product-item:nth-child(3) .rank-number {
+  background: #52c41a;
+}
+
+.product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #666;
+}
+
+.quantity {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+.revenue {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.product-badge {
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #ff4d4f;
+  color: white;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* CSS cho buttons trạng thái đơn hàng */
+.order-status-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.status-btn {
+  padding: 6px 12px;
+  border: 1px solid #d9d9d9;
+  background: white;
+  color: #666;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 50px;
+  text-align: center;
+}
+
+.status-btn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+  background: #f0f8ff;
+}
+
+.status-btn.active {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.status-btn.active:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
 }
 
 .chart {
