@@ -3,6 +3,62 @@
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
+    <!-- Bộ lọc thống kê -->
+    <div class="filter-section">
+      <a-card class="filter-card" :bordered="false">
+        <div class="filter-header">
+          <div class="filter-title">
+            <icon-filter class="filter-icon" />
+            <span>Bộ Lọc Thống Kê</span>
+          </div>
+        </div>
+        
+        <div class="filter-content">
+          <!-- Dòng 1: Labels -->
+          <div class="filter-row-1">
+            <div class="filter-label">Khoảng thời gian thống kê</div>
+            <div class="filter-label">Loại biểu đồ</div>
+          </div>
+          
+          <!-- Dòng 2: Controls -->
+          <div class="filter-row-2">
+            <a-select v-model="selectedTimeRange" class="filter-select" @change="onTimeRangeChange">
+              <a-option value="today">Hôm nay</a-option>
+              <a-option value="week">Tuần này</a-option>
+              <a-option value="month">Tháng này</a-option>
+              <a-option value="year">Năm này</a-option>
+              <a-option value="custom">Tùy chọn</a-option>
+            </a-select>
+            
+            <a-select v-model="selectedChartType" class="filter-select" @change="onChartTypeChange">
+              <a-option value="line">Biểu đồ đường</a-option>
+              <a-option value="bar">Biểu đồ cột</a-option>
+              <a-option value="pie">Biểu đồ tròn</a-option>
+              <a-option value="area">Biểu đồ vùng</a-option>
+            </a-select>
+          </div>
+          
+          <!-- Dòng 3: Summary và Actions -->
+          <div class="filter-row-3">
+            <div class="filter-summary">
+              <span class="summary-text">Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}</span>
+            </div>
+            
+            <div class="filter-actions">
+              <a-button class="reset-btn" @click="resetFilter">
+                <icon-refresh class="action-icon" />
+                Đặt lại bộ lọc
+              </a-button>
+              <a-button type="primary" class="export-btn" @click="exportReport">
+                <icon-export class="action-icon" />
+                Xuất báo cáo
+              </a-button>
+            </div>
+          </div>
+        </div>
+      </a-card>
+    </div>
+
     <!-- Statistics Cards -->
     <div class="stats-grid">
       <!-- Panel Hôm nay -->
@@ -92,7 +148,6 @@
           <span class="today-detail-text">Sản phẩm đã bán: {{ yearProductsSold }} | Đơn hàng: {{ yearOrders }}</span>
         </div>
       </a-card>
-
     </div>
 
     <!-- Charts Section -->
@@ -169,11 +224,14 @@ import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from
 import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import {
-  IconArrowDown,
-  IconUser,
-  IconCheckCircle,
+import { 
+  IconArrowDown, 
+  IconUser, 
+  IconCheckCircle, 
   IconCalendar,
+  IconFilter,
+  IconRefresh,
+  IconExport
 } from '@arco-design/web-vue/es/icon'
 
 // ECharts setup
@@ -204,6 +262,12 @@ const monthRevenue = ref(0)
 const yearProductsSold = ref(0)
 const yearOrders = ref(0)
 const yearRevenue = ref(0)
+
+// Bộ lọc thống kê
+const selectedTimeRange = ref('today')
+const selectedChartType = ref('line')
+const totalOrdersCount = ref(0)
+const totalRevenueAmount = ref(0)
 
 const revenuePeriod = ref('6months')
 const topProductsPeriod = ref('month')
@@ -526,6 +590,31 @@ const customerChartOption = computed(() => ({
   ],
 }))
 
+// Hàm cập nhật tổng kết bộ lọc
+const updateFilterSummary = () => {
+  switch (selectedTimeRange.value) {
+    case 'today':
+      totalOrdersCount.value = todayOrders.value
+      totalRevenueAmount.value = todayRevenue.value
+      break
+    case 'week':
+      totalOrdersCount.value = weekOrders.value
+      totalRevenueAmount.value = weekRevenue.value
+      break
+    case 'month':
+      totalOrdersCount.value = monthOrders.value
+      totalRevenueAmount.value = monthRevenue.value
+      break
+    case 'year':
+      totalOrdersCount.value = yearOrders.value
+      totalRevenueAmount.value = yearRevenue.value
+      break
+    default:
+      totalOrdersCount.value = 0
+      totalRevenueAmount.value = 0
+  }
+}
+
 // Hàm tính dữ liệu theo khoảng thời gian
 const calculateTimePeriodData = (orders: any[]) => {
   const now = new Date()
@@ -619,8 +708,10 @@ const calculateTimePeriodData = (orders: any[]) => {
   yearOrders.value = yearOrdersList.length
   yearProductsSold.value = calculateProductsSold(yearOrdersList)
   yearRevenue.value = calculateRevenue(yearOrdersList)
-}
 
+  // Cập nhật tổng kết bộ lọc
+  updateFilterSummary()
+}
 
 const fetchOrders = async () => {
   try {
@@ -650,16 +741,148 @@ const fetchOrders = async () => {
   }
 }
 
+// Hàm xử lý thay đổi khoảng thời gian
+const onTimeRangeChange = (value: string) => {
+  selectedTimeRange.value = value
+  updateFilterSummary()
+}
+
+// Hàm xử lý thay đổi loại biểu đồ
+const onChartTypeChange = (value: string) => {
+  selectedChartType.value = value
+  // Có thể thêm logic cập nhật biểu đồ ở đây
+}
+
+// Hàm đặt lại bộ lọc
+const resetFilter = () => {
+  selectedTimeRange.value = 'today'
+  selectedChartType.value = 'line'
+  updateFilterSummary()
+}
+
+// Hàm xuất báo cáo
+const exportReport = () => {
+  // Logic xuất báo cáo
+  console.log('Exporting report...')
+}
 
 onMounted(() => {
   fetchOrders()
   buildRecentActivities()
+  updateFilterSummary()
 })
 </script>
 
 <style scoped>
 .general-statistics {
   padding: 0 20px 20px 20px;
+}
+
+/* CSS cho bộ lọc thống kê */
+.filter-section {
+  margin-bottom: 24px;
+}
+
+.filter-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e8e8e8;
+}
+
+.filter-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+}
+
+.filter-icon {
+  font-size: 20px;
+  color: #1890ff;
+}
+
+.filter-content {
+  padding: 24px;
+}
+
+/* Dòng 1: Labels */
+.filter-row-1 {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 12px;
+}
+
+.filter-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1d2129;
+  margin: 0;
+  flex: 1;
+}
+
+/* Dòng 2: Controls */
+.filter-row-2 {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.filter-select {
+  width: 200px;
+  flex: 1;
+}
+
+/* Dòng 3: Summary và Actions */
+.filter-row-3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.filter-summary {
+  flex: 1;
+}
+
+.summary-text {
+  font-size: 14px;
+  color: #1d2129;
+  font-weight: 500;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f5f5f5;
+  border-color: #d9d9d9;
+  color: #666;
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #52c41a;
+  border-color: #52c41a;
+}
+
+.action-icon {
+  font-size: 14px;
 }
 
 .stats-grid {
@@ -796,6 +1019,103 @@ onMounted(() => {
   font-size: 14px;
   color: #86909c;
   font-weight: 500;
+}
+
+/* Animation cho các panel */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+/* Animation cho từng panel */
+.today-card:nth-child(1) {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.today-card:nth-child(2) {
+  animation: fadeInLeft 0.6s ease-out 0.1s both;
+}
+
+.today-card:nth-child(3) {
+  animation: fadeInRight 0.6s ease-out 0.2s both;
+}
+
+.today-card:nth-child(4) {
+  animation: scaleIn 0.6s ease-out 0.3s both;
+}
+
+
+/* Hiệu ứng cascade cho các phần tử bên trong */
+.today-header {
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.today-details {
+  animation: fadeInUp 0.8s ease-out 0.6s both;
+}
+
+/* Hiệu ứng cho icon */
+.today-icon {
+  animation: scaleIn 0.5s ease-out 0.5s both;
+}
+
+/* Hiệu ứng cho doanh thu */
+.today-revenue-value {
+  animation: fadeInRight 0.6s ease-out 0.7s both;
+}
+
+.today-revenue-change {
+  animation: fadeInRight 0.6s ease-out 0.8s both;
+}
+
+/* Hiệu ứng cho title */
+.today-title {
+  animation: fadeInLeft 0.6s ease-out 0.5s both;
+}
+
+/* Hiệu ứng cho detail text */
+.today-detail-text {
+  animation: fadeInUp 0.6s ease-out 0.9s both;
 }
 
 .charts-section {
