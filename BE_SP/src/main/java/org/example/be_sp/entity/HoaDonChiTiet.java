@@ -1,6 +1,6 @@
 package org.example.be_sp.entity;
 
-import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
@@ -31,6 +31,7 @@ public class HoaDonChiTiet {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_hoa_don", nullable = false)
+    @JsonBackReference
     private HoaDon idHoaDon;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

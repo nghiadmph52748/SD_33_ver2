@@ -1,14 +1,16 @@
 package org.example.be_sp.model.response;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.example.be_sp.entity.HoaDon;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.example.be_sp.entity.HoaDon;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
 
 @Getter
 @Setter
@@ -121,10 +123,15 @@ public class HoaDonResponse {
                     .map(HinhThucThanhToanReponse::new)
                     .toList();
         }
-        this.ghiChus = hd.getHoaDonChiTiets()
-                .stream()
-                .map(ct -> ct.getGhiChu())
-                .toList();
+        // Mapping ghi chú từ chi tiết hóa đơn
+        if (hd.getHoaDonChiTiets() != null) {
+            this.ghiChus = hd.getHoaDonChiTiets()
+                    .stream()
+                    .map(ct -> ct.getGhiChu())
+                    .toList();
+        } else {
+            this.ghiChus = new ArrayList<>();
+        }
         // Nhân viên
         if (hd.getIdNhanVien() != null) {
             this.tenNhanVien = hd.getIdNhanVien().getTenNhanVien();

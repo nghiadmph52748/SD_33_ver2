@@ -31,6 +31,11 @@ public class HoaDonController {
         return new ResponseObject<>(hoaDonService.phanTrang(page, size));
     }
 
+    @GetMapping("/{id}")
+    public ResponseObject<?> getById(@PathVariable Integer id) {
+        return new ResponseObject<>(hoaDonService.getByid(id), "Lấy chi tiết hóa đơn thành công");
+    }
+
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody BanHangTaiQuayRequest request) {
         hoaDonService.add(request);
@@ -47,5 +52,11 @@ public class HoaDonController {
     public ResponseObject<?> delete(@PathVariable Integer id) {
         hoaDonService.delete(id);
         return new ResponseObject<>(null, "Xóa hóa đơn thành công");
+    }
+
+    @PostMapping("/add-sample-data")
+    public ResponseObject<?> addSampleData() {
+        hoaDonService.addSampleData();
+        return new ResponseObject<>(null, "Thêm dữ liệu mẫu thành công");
     }
 }

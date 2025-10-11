@@ -26,6 +26,17 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
         hideInMenu: true, // Ẩn item này trong menu
       },
     },
+    {
+      path: 'chi-tiet/:id',
+      name: 'HoaDonChiTiet',
+      component: () => import('@/views/main-view/quan-ly-hoa-don/simple-test.vue'),
+      meta: {
+        locale: 'menu.hoa-don-chi-tiet',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true, // Ẩn item này trong menu
+      },
+    },
   ],
 }
 

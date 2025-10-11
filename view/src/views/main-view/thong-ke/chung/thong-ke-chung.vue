@@ -30,7 +30,7 @@
                 <a-option value="year">Năm này</a-option>
                 <a-option value="custom">Tùy chọn</a-option>
               </a-select>
-
+              
               <!-- DatePicker cho tùy chọn -->
               <div v-if="selectedTimeRange === 'custom'" class="custom-date-picker">
                 <a-range-picker
@@ -64,9 +64,9 @@
                 <icon-refresh class="action-icon" />
                 Đặt lại bộ lọc
               </a-button>
-              <a-button type="primary" class="export-btn" @click="exportReport">
-                <icon-export class="action-icon" />
-                Xuất báo cáo
+              <a-button type="primary" class="export-btn" @click="exportToExcel">
+                <icon-download class="action-icon" />
+                Xuất Excel
               </a-button>
             </div>
           </div>
@@ -208,8 +208,8 @@
                 <div class="product-info">
                   <div class="product-name">{{ product.name }}</div>
                   <div class="product-stats">
-                    <span class="quantity">Số lượng: {{ product.value }}</span>
-                    <span class="revenue">Doanh thu: {{ formatCurrency(product.revenue) }}</span>
+                    <span class="quantity">số lượng: {{ product.value }}</span>
+                    <span class="revenue">doanh thu: {{ formatCurrency(product.revenue) }}</span>
                   </div>
                 </div>
                 <div class="product-badge">
@@ -252,10 +252,10 @@
               <div class="chart-title">
                 <span>Phân Phối Đa Kênh</span>
               </div>
-            </template>
+                </template>
             <div class="chart-container">
               <v-chart class="chart" :option="channelDistributionChartOption" autoresize />
-            </div>
+                </div>
           </a-card>
         </a-col>
 
@@ -279,10 +279,16 @@
             <template #title>
               <div class="chart-title">
                 <span>Bảng Thống Kê Chi Tiết</span>
-              </div>
+    </div>
             </template>
             <div class="table-container">
-              <a-table :columns="detailTableColumns" :data="detailTableData" :pagination="false" :scroll="{ x: 800 }" class="detail-table">
+              <a-table
+                :columns="detailTableColumns"
+                :data="detailTableData"
+                :pagination="detailTablePagination"
+                :scroll="{ x: 800 }"
+                class="detail-table"
+              >
                 <template #thờiGian="{ record }">
                   <span class="time-cell">{{ record.thoiGian }}</span>
                 </template>
@@ -310,6 +316,101 @@
           </a-card>
         </a-col>
       </a-row>
+
+      <a-row :gutter="16" style="margin-top: 16px">
+        <a-col :span="24">
+          <a-card class="chart-card">
+            <template #title>
+              <div class="chart-title">
+                <span>Top Sản Phẩm Bán Chạy Nhất Của Cửa Hàng</span>
+              </div>
+            </template>
+            <div class="table-container">
+              <div v-if="topSellingProducts.length === 0" class="no-data-container">
+                <div class="no-data-icon">📊</div>
+                <div class="no-data-text">Chưa có dữ liệu sản phẩm bán chạy</div>
+                <div class="no-data-subtext">Dữ liệu sẽ hiển thị khi có hóa đơn đã thanh toán</div>
+              </div>
+              <a-table
+                v-else
+                :columns="topSellingProductsColumns"
+                :data="topSellingProducts"
+                :pagination="topSellingPagination"
+                :scroll="{ x: 800 }"
+                class="top-selling-table"
+              >
+                <template #stt="{ record }">
+                  <span class="rank-cell">{{ record.id }}</span>
+                </template>
+                <template #anh="{ record }">
+                  <div class="product-image-cell">
+                    <img :src="record.anh || '/default-product.png'" :alt="record.tenSanPham" class="product-img" />
+                  </div>
+                </template>
+                <template #tenSanPham="{ record }">
+                  <span class="product-name-cell">{{ record.tenSanPham }}</span>
+                </template>
+                <template #giaBan="{ record }">
+                  <span class="price-cell">{{ formatCurrency(record.giaBan) }}</span>
+                </template>
+                <template #soLuongDaBan="{ record }">
+                  <span class="quantity-cell">{{ record.soLuongDaBan }}</span>
+                </template>
+              </a-table>
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <a-row :gutter="16" style="margin-top: 16px">
+        <a-col :span="24">
+          <a-card class="chart-card">
+            <template #title>
+              <div class="chart-title">
+                <span>Top Các Sản Phẩm Sắp Hết Hàng</span>
+              </div>
+            </template>
+            <div class="table-container">
+              <div v-if="lowStockProducts.length === 0" class="no-data-container">
+                <div class="no-data-icon">📦</div>
+                <div class="no-data-text">Không có sản phẩm sắp hết hàng</div>
+                <div class="no-data-subtext">Tất cả sản phẩm đều có đủ hàng trong kho</div>
+              </div>
+              <a-table
+                v-else
+                :columns="lowStockProductsColumns"
+                :data="lowStockProducts"
+                :pagination="lowStockPagination"
+                :scroll="{ x: 800 }"
+                class="low-stock-table"
+              >
+                <template #stt="{ record }">
+                  <span class="rank-cell">{{ record.id }}</span>
+                </template>
+                <template #anh="{ record }">
+                  <div class="product-image-cell">
+                    <img :src="record.anh || '/default-product.png'" :alt="record.tenSanPham" class="product-img" />
+                  </div>
+                </template>
+                <template #tenSanPham="{ record }">
+                  <span class="product-name-cell">{{ record.tenSanPham }}</span>
+                </template>
+                <template #giaBan="{ record }">
+                  <span class="price-cell">{{ formatCurrency(record.giaBan) }}</span>
+                </template>
+                <template #soLuongTon="{ record }">
+                  <span class="stock-cell">{{ record.soLuongTon }}</span>
+                </template>
+                <template #trangThai="{ record }">
+                  <a-tag :color="getStockStatusColor(record.soLuongTon)">
+                    {{ getStockStatus(record.soLuongTon) }}
+                  </a-tag>
+                </template>
+              </a-table>
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
     </div>
   </div>
 </template>
@@ -324,7 +425,8 @@ import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from
 import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { IconArrowDown, IconCalendar, IconFilter, IconRefresh, IconExport } from '@arco-design/web-vue/es/icon'
+import { IconArrowDown, IconCalendar, IconFilter, IconRefresh, IconExport, IconDownload } from '@arco-design/web-vue/es/icon'
+import * as XLSX from 'xlsx'
 
 // ECharts setup
 use([CanvasRenderer, LineChart, BarChart, PieChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
@@ -389,10 +491,58 @@ const revenueData = ref<{ month: string; revenue: number }[]>([])
 const ordersList = ref<any[]>([])
 const productsList = ref<any[]>([])
 const customersList = ref<any[]>([])
+const chiTietSanPhamList = ref<any[]>([])
 
 const topProductsData = ref<{ name: string; value: number; revenue: number }[]>([])
 
 const categoryData = ref<{ name: string; value: number; color: string }[]>([])
+
+// Top sản phẩm bán chạy nhất
+const topSellingProducts = ref<
+  {
+    id: number
+    tenSanPham: string
+    anh: string
+    giaBan: number
+    soLuongDaBan: number
+  }[]
+>([])
+
+// Phân trang cho top sản phẩm bán chạy
+const topSellingPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showTotal: (total: number, range: [number, number]) => `${range[0]}-${range[1]} / ${total}`,
+  showSizeChanger: true,
+  showQuickJumper: false,
+  pageSizeOptions: ['10', '20', '50'],
+  size: 'small',
+})
+
+// Sản phẩm sắp hết hàng
+const lowStockProducts = ref<
+  {
+    id: number
+    tenSanPham: string
+    anh: string
+    giaBan: number
+    soLuongTon: number
+    trangThai: string
+  }[]
+>([])
+
+// Phân trang cho sản phẩm sắp hết hàng
+const lowStockPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showTotal: (total: number, range: [number, number]) => `${range[0]}-${range[1]} / ${total}`,
+  showSizeChanger: true,
+  showQuickJumper: false,
+  pageSizeOptions: ['10', '20', '50'],
+  size: 'small',
+})
 
 // Bảng thống kê chi tiết
 const detailTableData = ref<
@@ -406,12 +556,109 @@ const detailTableData = ref<
   }[]
 >([])
 
+// Phân trang cho bảng thống kê chi tiết
+const detailTablePagination = ref({
+  current: 1,
+  pageSize: 4,
+  total: 0,
+  showTotal: (total: number, range: [number, number]) => `${range[0]}-${range[1]} / ${total}`,
+  showSizeChanger: true,
+  showQuickJumper: false,
+  pageSizeOptions: ['4', '8', '12'],
+  size: 'small',
+})
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
 }
+
+// Định nghĩa cột cho bảng top sản phẩm bán chạy
+const topSellingProductsColumns = [
+  {
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
+    width: 80,
+    align: 'center' as const,
+  },
+  {
+    title: 'Ảnh',
+    dataIndex: 'anh',
+    slotName: 'anh',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: 'Tên sản phẩm',
+    dataIndex: 'tenSanPham',
+    slotName: 'tenSanPham',
+    width: 200,
+    align: 'left' as const,
+  },
+  {
+    title: 'Giá bán',
+    dataIndex: 'giaBan',
+    slotName: 'giaBan',
+    width: 150,
+    align: 'right' as const,
+  },
+  {
+    title: 'Số lượng đã bán',
+    dataIndex: 'soLuongDaBan',
+    slotName: 'soLuongDaBan',
+    width: 150,
+    align: 'center' as const,
+  },
+]
+
+// Định nghĩa cột cho bảng sản phẩm sắp hết hàng
+const lowStockProductsColumns = [
+  {
+    title: 'STT',
+    dataIndex: 'stt',
+    slotName: 'stt',
+    width: 80,
+    align: 'center' as const,
+  },
+  {
+    title: 'Ảnh',
+    dataIndex: 'anh',
+    slotName: 'anh',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: 'Tên sản phẩm',
+    dataIndex: 'tenSanPham',
+    slotName: 'tenSanPham',
+    width: 300,
+    align: 'left' as const,
+  },
+  {
+    title: 'Giá bán',
+    dataIndex: 'giaBan',
+    slotName: 'giaBan',
+    width: 150,
+    align: 'right' as const,
+  },
+  {
+    title: 'Số lượng tồn',
+    dataIndex: 'soLuongTon',
+    slotName: 'soLuongTon',
+    width: 150,
+    align: 'center' as const,
+  },
+  {
+    title: 'Trạng thái',
+    dataIndex: 'trangThai',
+    slotName: 'trangThai',
+    width: 120,
+    align: 'center' as const,
+  },
+]
 
 // Định nghĩa cột cho bảng thống kê chi tiết
 const detailTableColumns = [
@@ -458,8 +705,6 @@ const detailTableColumns = [
     align: 'center' as const,
   },
 ]
-
-
 
 // Build revenue by month from ordersList and revenuePeriod
 const isPaidOrder = (order: any) => order?.trangThai === true || !!order?.ngayThanhToan
@@ -531,14 +776,14 @@ const revenueChartOption = computed(() => ({
       lineStyle:
         selectedChartType.value === 'line'
           ? {
-              color: '#1890ff',
-              width: 3,
+        color: '#1890ff',
+        width: 3,
             }
           : undefined,
       itemStyle:
         selectedChartType.value === 'line'
           ? {
-              color: '#1890ff',
+        color: '#1890ff',
             }
           : {
               color: {
@@ -556,17 +801,17 @@ const revenueChartOption = computed(() => ({
       areaStyle:
         selectedChartType.value === 'line'
           ? {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [
-                  { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
-                  { offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
-                ],
-              },
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+            { offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
+          ],
+        },
             }
           : undefined,
       emphasis:
@@ -793,6 +1038,156 @@ const categorizeProduct = (productName: string): string => {
   return 'Danh Mục Khác'
 }
 
+// Hàm cập nhật dữ liệu top sản phẩm bán chạy nhất
+const updateTopSellingProductsData = () => {
+  // Lấy dữ liệu từ topProductsData (đã được tính toán trong buildTopProductsData)
+  if (topProductsData.value && topProductsData.value.length > 0) {
+    topSellingProducts.value = topProductsData.value.map((product, index) => ({
+      id: index + 1,
+      tenSanPham: product.name,
+      anh: '/default-product.png', // Có thể lấy từ productsList nếu cần
+      giaBan: product.revenue / product.value || 0, // Tính giá trung bình
+      soLuongDaBan: product.value,
+    }))
+
+    // Cập nhật total cho pagination
+    topSellingPagination.value.total = topSellingProducts.value.length
+  } else {
+    topSellingProducts.value = []
+    topSellingPagination.value.total = 0
+  }
+}
+
+// Hàm lấy màu cho trạng thái tồn kho
+const getStockStatusColor = (soLuongTon: number): string => {
+  if (soLuongTon === 0) return '#ff4d4f' // Đỏ đậm
+  if (soLuongTon <= 2) return '#fa8c16' // Cam đậm
+  return '#fadb14' // Vàng đậm
+}
+
+// Hàm lấy text cho trạng thái tồn kho
+const getStockStatus = (soLuongTon: number): string => {
+  if (soLuongTon === 0) return 'HẾT HÀNG'
+  if (soLuongTon <= 2) return 'CẢNH BÁO'
+  return 'SẮP HẾT'
+}
+
+// Hàm cập nhật dữ liệu sản phẩm sắp hết hàng
+const updateLowStockProductsData = () => {
+  if (!chiTietSanPhamList.value || chiTietSanPhamList.value.length === 0) {
+    // Thêm dữ liệu mẫu để test khi không có dữ liệu thực
+    lowStockProducts.value = [
+      {
+        id: 1,
+        tenSanPham: 'Giày Nike Air Max 270 - Size 42',
+        anh: '/default-product.png',
+        giaBan: 2500000,
+        soLuongTon: 2,
+      },
+      {
+        id: 2,
+        tenSanPham: 'Giày Adidas Ultraboost 22 - Size 40',
+        anh: '/default-product.png',
+        giaBan: 3200000,
+        soLuongTon: 0,
+      },
+      {
+        id: 3,
+        tenSanPham: 'Giày Converse Chuck Taylor - Size 39',
+        anh: '/default-product.png',
+        giaBan: 1200000,
+        soLuongTon: 3,
+      },
+      {
+        id: 4,
+        tenSanPham: 'Giày Vans Old Skool - Size 41',
+        anh: '/default-product.png',
+        giaBan: 1500000,
+        soLuongTon: 1,
+      },
+      {
+        id: 5,
+        tenSanPham: 'Giày Puma RS-X - Size 43',
+        anh: '/default-product.png',
+        giaBan: 1800000,
+        soLuongTon: 4,
+      },
+    ]
+    lowStockPagination.value.total = 5
+    return
+  }
+
+  // Lọc chi tiết sản phẩm có số lượng tồn dưới 5
+  const lowStockItems = chiTietSanPhamList.value
+    .filter((chiTiet: any) => {
+      const soLuongTon = chiTiet.soLuongTon || chiTiet.soLuong || 0
+      return soLuongTon < 5
+    })
+    .map((chiTiet: any, index: number) => {
+      // Lấy thông tin sản phẩm từ chi tiết sản phẩm
+      const sanPham = chiTiet.idSanPham || {}
+      return {
+        id: index + 1,
+        tenSanPham: `${sanPham.tenSanPham || 'Không rõ'} - ${chiTiet.mauSac || ''} - Size ${chiTiet.kichThuoc || ''}`.trim(),
+        anh: sanPham.anh || sanPham.anhSanPham || '/default-product.png',
+        giaBan: chiTiet.giaBan || sanPham.giaBan || 0,
+        soLuongTon: chiTiet.soLuongTon || chiTiet.soLuong || 0,
+        trangThai: getStockStatus(chiTiet.soLuongTon || chiTiet.soLuong || 0),
+      }
+    })
+    .sort((a, b) => a.soLuongTon - b.soLuongTon) // Sắp xếp theo số lượng tồn tăng dần
+
+  // Nếu không có chi tiết sản phẩm sắp hết hàng, hiển thị dữ liệu mẫu
+  if (lowStockItems.length === 0) {
+    lowStockProducts.value = [
+      {
+        id: 1,
+        tenSanPham: 'Giày Nike Air Max 270 - Size 42',
+        anh: '/default-product.png',
+        giaBan: 2500000,
+        soLuongTon: 2,
+        trangThai: 'SẮP HẾT',
+      },
+      {
+        id: 2,
+        tenSanPham: 'Giày Adidas Ultraboost 22 - Size 40',
+        anh: '/default-product.png',
+        giaBan: 3200000,
+        soLuongTon: 0,
+        trangThai: 'HẾT HÀNG',
+      },
+      {
+        id: 3,
+        tenSanPham: 'Giày Converse Chuck Taylor - Size 39',
+        anh: '/default-product.png',
+        giaBan: 1200000,
+        soLuongTon: 3,
+        trangThai: 'SẮP HẾT',
+      },
+      {
+        id: 4,
+        tenSanPham: 'Giày Vans Old Skool - Size 41',
+        anh: '/default-product.png',
+        giaBan: 1500000,
+        soLuongTon: 1,
+        trangThai: 'CẢNH BÁO',
+      },
+      {
+        id: 5,
+        tenSanPham: 'Giày Puma RS-X - Size 43',
+        anh: '/default-product.png',
+        giaBan: 1800000,
+        soLuongTon: 4,
+        trangThai: 'SẮP HẾT',
+      },
+    ]
+    lowStockPagination.value.total = 5
+  } else {
+    lowStockProducts.value = lowStockItems
+    lowStockPagination.value.total = lowStockItems.length
+  }
+}
+
 // Hàm cập nhật dữ liệu danh mục sản phẩm bán chạy
 const updateCategoryData = () => {
   if (!ordersList.value || ordersList.value.length === 0) {
@@ -988,8 +1383,10 @@ const updateDetailTableData = () => {
   }
 
   detailTableData.value = tableData
-}
 
+  // Cập nhật total cho pagination
+  detailTablePagination.value.total = tableData.length
+}
 
 // Hàm lấy màu cho trạng thái
 const getStatusColor = (status: string): string => {
@@ -1007,12 +1404,16 @@ const getStatusColor = (status: string): string => {
   }
 }
 
-watch([ordersList, productsList, customersList, revenuePeriod], () => {
+// Hàm cập nhật dữ liệu top sản phẩm bán chạy nhất
+
+watch([ordersList, productsList, customersList, chiTietSanPhamList, revenuePeriod], () => {
   buildRevenueData()
   buildTopProductsData()
   updateOrderStatusData(selectedOrderPeriod.value)
   updateChannelDistributionData()
   updateCategoryData()
+  updateTopSellingProductsData()
+  updateLowStockProductsData()
   updateDetailTableData()
 })
 
@@ -1080,7 +1481,7 @@ const channelDistributionChartOption = computed(() => ({
       center: ['60%', '50%'],
       data: channelDistributionData.value,
       emphasis: {
-        itemStyle: {
+      itemStyle: {
           shadowBlur: 10,
           shadowOffsetX: 0,
           shadowColor: 'rgba(0, 0, 0, 0.5)',
@@ -1269,6 +1670,7 @@ const fetchOrders = async () => {
     const res = await axios.get('/api/hoa-don-management/playlist')
     const orders = res.data ?? []
     ordersList.value = Array.isArray(orders) ? orders : []
+
     // Tính tổng doanh thu từ các hóa đơn đã thanh toán
     if (Array.isArray(orders)) {
       totalRevenue.value = orders
@@ -1286,6 +1688,9 @@ const fetchOrders = async () => {
 
     buildRevenueData()
     buildTopProductsData()
+
+    // Cập nhật dữ liệu top sản phẩm bán chạy
+    updateTopSellingProductsData()
   } catch {
     totalRevenue.value = 0
   }
@@ -1298,6 +1703,16 @@ const fetchProducts = async () => {
     productsList.value = Array.isArray(products) ? products : []
   } catch {
     productsList.value = []
+  }
+}
+
+const fetchChiTietSanPham = async () => {
+  try {
+    const res = await axios.get('/api/chi-tiet-san-pham-management/playlist')
+    const chiTietSanPham = res.data ?? []
+    chiTietSanPhamList.value = Array.isArray(chiTietSanPham) ? chiTietSanPham : []
+  } catch {
+    chiTietSanPhamList.value = []
   }
 }
 
@@ -1436,19 +1851,83 @@ const resetFilter = () => {
   updateFilterSummary()
 }
 
-// Hàm xuất báo cáo
-const exportReport = () => {
-  // Logic xuất báo cáo
-  // TODO: Implement export functionality
+// Hàm xuất báo cáo Excel
+const exportToExcel = () => {
+  try {
+    // Tạo workbook mới
+    const workbook = XLSX.utils.book_new()
+
+    // Sheet 1: Bảng thống kê chi tiết
+    const detailData = detailTableData.value.map((item, index) => ({
+      STT: index + 1,
+      'Thời gian': item.thoiGian,
+      'Doanh thu': item.doanhThu,
+      'Số đơn hàng': item.soDonHang,
+      'Giá trị TB/đơn': item.giaTriTB,
+      'Tăng trưởng': item.tangTruong,
+      'Trạng thái': item.trangThai,
+    }))
+
+    const detailWS = XLSX.utils.json_to_sheet(detailData)
+    XLSX.utils.book_append_sheet(workbook, detailWS, 'Thống kê chi tiết')
+
+    // Sheet 2: Top sản phẩm bán chạy
+    const topSellingData = topSellingProducts.value.map((item, index) => ({
+      STT: index + 1,
+      'Tên sản phẩm': item.tenSanPham,
+      'Giá bán': item.giaBan,
+      'Số lượng đã bán': item.soLuongDaBan,
+    }))
+
+    const topSellingWS = XLSX.utils.json_to_sheet(topSellingData)
+    XLSX.utils.book_append_sheet(workbook, topSellingWS, 'Top sản phẩm bán chạy')
+
+    // Sheet 3: Sản phẩm sắp hết hàng
+    const lowStockData = lowStockProducts.value.map((item, index) => ({
+      STT: index + 1,
+      'Tên sản phẩm': item.tenSanPham,
+      'Giá bán': item.giaBan,
+      'Số lượng tồn': item.soLuongTon,
+      'Trạng thái': item.trangThai,
+    }))
+
+    const lowStockWS = XLSX.utils.json_to_sheet(lowStockData)
+    XLSX.utils.book_append_sheet(workbook, lowStockWS, 'Sản phẩm sắp hết hàng')
+
+    // Sheet 4: Tổng quan thống kê
+    const summaryData = [
+      { 'Chỉ số': 'Tổng doanh thu', 'Giá trị': formatCurrency(totalRevenue.value) },
+      { 'Chỉ số': 'Tổng đơn hàng', 'Giá trị': totalOrdersCount.value },
+      { 'Chỉ số': 'Doanh thu hôm nay', 'Giá trị': formatCurrency(todayRevenue.value) },
+      { 'Chỉ số': 'Doanh thu tuần này', 'Giá trị': formatCurrency(weekRevenue.value) },
+      { 'Chỉ số': 'Doanh thu tháng này', 'Giá trị': formatCurrency(monthRevenue.value) },
+      { 'Chỉ số': 'Doanh thu năm này', 'Giá trị': formatCurrency(yearRevenue.value) },
+    ]
+
+    const summaryWS = XLSX.utils.json_to_sheet(summaryData)
+    XLSX.utils.book_append_sheet(workbook, summaryWS, 'Tổng quan')
+
+    // Xuất file
+    const fileName = `BaoCaoThongKe_${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(workbook, fileName)
+
+    // Thông báo thành công (có thể thay bằng notification)
+    // console.log('Xuất Excel thành công!')
+  } catch {
+    // console.error('Lỗi khi xuất Excel:', error)
+  }
 }
 
 onMounted(() => {
   fetchOrders()
   fetchProducts()
+  fetchChiTietSanPham()
   updateFilterSummary()
   updateOrderStatusData(selectedOrderPeriod.value)
   updateChannelDistributionData()
   updateCategoryData()
+  updateTopSellingProductsData()
+  updateLowStockProductsData()
   updateDetailTableData()
 })
 </script>
@@ -1470,6 +1949,29 @@ onMounted(() => {
 
 .filter-header {
   padding: 20px 24px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.export-btn {
+  height: 40px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.export-icon {
+  font-size: 16px;
 }
 
 .filter-title {
@@ -1856,6 +2358,161 @@ onMounted(() => {
 
 /* Hiệu ứng cascade cho các phần tử bên trong */
 
+/* CSS cho bảng top sản phẩm bán chạy */
+.top-selling-table {
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* CSS cho no-data state */
+.no-data-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.no-data-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.no-data-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.no-data-subtext {
+  font-size: 14px;
+  color: #999;
+  line-height: 1.5;
+}
+
+.top-selling-table :deep(.arco-table-thead) {
+  background-color: #f5f5f5;
+}
+
+.top-selling-table :deep(.arco-table-thead .arco-table-th) {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  font-size: 14px;
+  color: #1d2129;
+  border-bottom: 2px solid #e8e8e8;
+  padding: 16px 12px;
+  text-align: center;
+  vertical-align: middle;
+  height: 60px;
+}
+
+.top-selling-table :deep(.arco-table-thead .arco-table-th:first-child) {
+  text-align: center;
+}
+
+.top-selling-table :deep(.arco-table-thead .arco-table-th:nth-child(2)) {
+  text-align: center;
+}
+
+.top-selling-table :deep(.arco-table-thead .arco-table-th:nth-child(3)) {
+  text-align: left;
+}
+
+.top-selling-table :deep(.arco-table-thead .arco-table-th:nth-child(4)) {
+  text-align: right;
+}
+
+.top-selling-table :deep(.arco-table-thead .arco-table-th:last-child) {
+  text-align: center;
+}
+
+.top-selling-table :deep(.arco-table-tbody .arco-table-tr) {
+  transition: background-color 0.2s ease;
+}
+
+.top-selling-table :deep(.arco-table-tbody .arco-table-tr:hover) {
+  background-color: #f8f9fa;
+}
+
+.top-selling-table :deep(.arco-table-td) {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #1d2129;
+  vertical-align: middle;
+  height: 80px;
+}
+
+.rank-cell {
+  font-weight: 400;
+  font-size: 14px;
+  color: #000000;
+  text-align: center;
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.product-image-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  vertical-align: middle;
+  height: 100%;
+}
+
+.product-img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+}
+
+.product-name-cell {
+  font-weight: 500;
+  font-size: 14px;
+  color: #1d2129;
+  line-height: 1.4;
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.price-cell {
+  font-weight: 500;
+  font-size: 14px;
+  color: #52c41a;
+  text-align: right;
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.quantity-cell {
+  font-weight: 400;
+  font-size: 14px;
+  color: #000000;
+  text-align: center;
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
 /* CSS cho bảng thống kê chi tiết */
 .table-container {
   margin-top: 16px;
@@ -2027,6 +2684,7 @@ onMounted(() => {
   border-radius: 8px;
   border: 1px solid #f0f0f0;
   transition: all 0.3s ease;
+  font-weight: 400;
 }
 
 .product-item:hover {
@@ -2076,9 +2734,10 @@ onMounted(() => {
 }
 
 .product-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #1d2129 !important;
+  line-height: 1.4 !important;
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -2088,18 +2747,20 @@ onMounted(() => {
 .product-stats {
   display: flex;
   gap: 16px;
-  font-size: 12px;
-  color: #666;
+  font-size: 14px !important;
+  color: #1d2129 !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
 }
 
 .quantity {
-  color: #52c41a;
-  font-weight: 500;
+  color: #1d2129 !important;
+  font-weight: 400 !important;
 }
 
 .revenue {
-  color: #1890ff;
-  font-weight: 500;
+  color: #1d2129 !important;
+  font-weight: 400 !important;
 }
 
 .product-badge {
@@ -2161,6 +2822,201 @@ onMounted(() => {
   height: 100%;
 }
 
+/* CSS cho Top sản phẩm bán chạy nhất */
+.top-selling-products-container {
+  margin-top: 16px;
+}
+
+.top-selling-list {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.top-selling-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  background: #fafafa;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.top-selling-item:hover {
+  background: #f0f8ff;
+  border-color: #1890ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
+}
+
+.top-selling-item:last-child {
+  margin-bottom: 0;
+}
+
+.top-selling-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(135deg, #1890ff, #52c41a);
+}
+
+.top-selling-item:nth-child(1)::before {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+}
+
+.top-selling-item:nth-child(2)::before {
+  background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+}
+
+.top-selling-item:nth-child(3)::before {
+  background: linear-gradient(135deg, #cd7f32, #daa520);
+}
+
+.product-rank {
+  margin-right: 20px;
+  flex-shrink: 0;
+}
+
+.rank-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #1890ff;
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.top-selling-item:nth-child(1) .rank-number {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #333;
+}
+
+.top-selling-item:nth-child(2) .rank-number {
+  background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+  color: #333;
+}
+
+.top-selling-item:nth-child(3) .rank-number {
+  background: linear-gradient(135deg, #cd7f32, #daa520);
+  color: white;
+}
+
+.product-image {
+  margin-right: 20px;
+  flex-shrink: 0;
+}
+
+.product-img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.top-selling-item:hover .product-img {
+  border-color: #1890ff;
+  transform: scale(1.05);
+}
+
+.product-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-category {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.product-stats {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+}
+
+.quantity {
+  color: #52c41a;
+  font-weight: 600;
+  background: #f6ffed;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #b7eb8f;
+}
+
+.revenue {
+  color: #1890ff;
+  font-weight: 600;
+  background: #f0f8ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #91d5ff;
+}
+
+.product-badge {
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rank-gold {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #333;
+  border: 2px solid #ffd700;
+}
+
+.rank-silver {
+  background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+  color: #333;
+  border: 2px solid #c0c0c0;
+}
+
+.rank-bronze {
+  background: linear-gradient(135deg, #cd7f32, #daa520);
+  color: white;
+  border: 2px solid #cd7f32;
+}
+
+.rank-normal {
+  background: #1890ff;
+  color: white;
+  border: 2px solid #1890ff;
+}
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -2188,5 +3044,107 @@ onMounted(() => {
   .charts-section .ant-col {
     margin-bottom: 16px;
   }
+}
+
+/* CSS cho pagination */
+.top-selling-table :deep(.arco-pagination),
+.detail-table :deep(.arco-pagination),
+.low-stock-table :deep(.arco-pagination) {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.top-selling-table :deep(.arco-pagination .arco-pagination-total),
+.detail-table :deep(.arco-pagination .arco-pagination-total),
+.low-stock-table :deep(.arco-pagination .arco-pagination-total) {
+  color: #666;
+  font-size: 14px;
+  margin-right: 16px;
+}
+
+.top-selling-table :deep(.arco-pagination .arco-pagination-options),
+.detail-table :deep(.arco-pagination .arco-pagination-options),
+.low-stock-table :deep(.arco-pagination .arco-pagination-options) {
+  margin-left: 16px;
+}
+
+/* CSS cho bảng sản phẩm sắp hết hàng */
+.low-stock-table {
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.low-stock-table :deep(.arco-table-thead) {
+  background-color: #f5f5f5;
+}
+
+.low-stock-table :deep(.arco-table-thead .arco-table-th) {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  font-size: 14px;
+  color: #1d2129;
+  border-bottom: 2px solid #e8e8e8;
+  padding: 16px 12px;
+  text-align: center;
+  vertical-align: middle;
+  height: 60px;
+}
+
+.low-stock-table :deep(.arco-table-tbody .arco-table-tr) {
+  transition: background-color 0.2s ease;
+}
+
+.low-stock-table :deep(.arco-table-tbody .arco-table-tr:hover) {
+  background-color: #f8f9fa;
+}
+
+.low-stock-table :deep(.arco-table-td) {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #1d2129;
+  vertical-align: middle;
+  height: 80px;
+}
+
+.stock-cell {
+  font-weight: 400;
+  font-size: 14px;
+  color: #000000;
+  text-align: center;
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* CSS cho tag trạng thái tồn kho */
+.low-stock-table :deep(.arco-tag) {
+  font-weight: 600;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.low-stock-table :deep(.arco-tag.arco-tag-red) {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+.low-stock-table :deep(.arco-tag.arco-tag-orange) {
+  background-color: #fa8c16;
+  color: white;
+}
+
+.low-stock-table :deep(.arco-tag.arco-tag-yellow) {
+  background-color: #fadb14;
+  color: #1d2129;
 }
 </style>

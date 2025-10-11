@@ -1,12 +1,13 @@
 package org.example.be_sp.model.response;
 
+import java.math.BigDecimal;
+import java.util.List;
+
+import org.example.be_sp.entity.HoaDonChiTiet;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.example.be_sp.entity.HoaDonChiTiet;
-
-import java.math.BigDecimal;
-import java.util.List;
 
 @Getter
 @Setter
@@ -65,34 +66,50 @@ public class HoaDonChiTietResponse {
     private ChiTietSanPhamFullResponse sanPham;
     public HoaDonChiTietResponse(HoaDonChiTiet d) {
         this.id = d.getId();
-        this.idmaKhachHang = d.getIdHoaDon().getIdKhachHang().getMaKhachHang();
-        this.idtenKhachHang = d.getIdHoaDon().getIdKhachHang().getTenKhachHang();
-        this.idmaPhieuGiamGia = d.getIdHoaDon().getIdPhieuGiamGia().getMaPhieuGiamGia();
-        this.idtenPhieuGiamGia = d.getIdHoaDon().getIdPhieuGiamGia().getTenPhieuGiamGia();
-        this.idmaNhanVien = d.getIdHoaDon().getIdNhanVien().getMaNhanVien();
-        this.idtenNhanVien = d.getIdHoaDon().getIdNhanVien().getTenNhanVien();
-        this.maHoaDon = d.getIdHoaDon().getMaHoaDon();
-        this.tenHoaDon = d.getIdHoaDon().getTenHoaDon();
-        this.loaiDon = d.getIdHoaDon().getLoaiDon();
-        this.phiVanChuyen = d.getIdHoaDon().getPhiVanChuyen();
-        this.tongTien = d.getIdHoaDon().getTongTien();
-        this.tongTienSauGiam = d.getIdHoaDon().getTongTienSauGiam();
-        this.tenNguoiNhan = d.getIdHoaDon().getTenNguoiNhan();
-        this.diaChiNguoiNhan = d.getIdHoaDon().getDiaChiNguoiNhan();
-        this.sdtNguoiNhan = d.getIdHoaDon().getSoDienThoaiNguoiNhan();
-        this.emailNguoiNhan = d.getIdHoaDon().getEmailNguoiNhan();
-        this.maSanPham = d.getIdChiTietSanPham().getIdSanPham().getMaSanPham();
-        this.tenSanPham = d.getIdChiTietSanPham().getIdSanPham().getTenSanPham();
-        this.maMauSac = d.getIdChiTietSanPham().getIdMauSac().getMaMauSac();
-        this.tenMauSac = d.getIdChiTietSanPham().getIdMauSac().getTenMauSac();
-        this.maKichThuoc = d.getIdChiTietSanPham().getIdKichThuoc().getMaKichThuoc();
-        this.tenKichThuoc = d.getIdChiTietSanPham().getIdKichThuoc().getTenKichThuoc();
-        this.maDeGiay = d.getIdChiTietSanPham().getIdDeGiay().getMaDeGiay();
-        this.tenDeGiay = d.getIdChiTietSanPham().getIdDeGiay().getTenDeGiay();
-        this.maChatLieu = d.getIdChiTietSanPham().getIdChatLieu().getMaChatLieu();
-        this.tenChatLieu = d.getIdChiTietSanPham().getIdChatLieu().getTenChatLieu();
-        this.maTrongLuong = d.getIdChiTietSanPham().getIdTrongLuong().getMaTrongLuong();
-        this.tenTrongLuong = d.getIdChiTietSanPham().getIdTrongLuong().getTenTrongLuong();
+        
+        // Hóa đơn thông tin
+        if (d.getIdHoaDon() != null) {
+            this.maHoaDon = d.getIdHoaDon().getMaHoaDon();
+            this.tenHoaDon = d.getIdHoaDon().getTenHoaDon();
+            this.loaiDon = d.getIdHoaDon().getLoaiDon();
+            this.phiVanChuyen = d.getIdHoaDon().getPhiVanChuyen();
+            this.tongTien = d.getIdHoaDon().getTongTien();
+            this.tongTienSauGiam = d.getIdHoaDon().getTongTienSauGiam();
+            this.tenNguoiNhan = d.getIdHoaDon().getTenNguoiNhan();
+            this.diaChiNguoiNhan = d.getIdHoaDon().getDiaChiNguoiNhan();
+            this.sdtNguoiNhan = d.getIdHoaDon().getSoDienThoaiNguoiNhan();
+            this.emailNguoiNhan = d.getIdHoaDon().getEmailNguoiNhan();
+            
+            // Khách hàng
+            if (d.getIdHoaDon().getIdKhachHang() != null) {
+                this.idmaKhachHang = d.getIdHoaDon().getIdKhachHang().getMaKhachHang();
+                this.idtenKhachHang = d.getIdHoaDon().getIdKhachHang().getTenKhachHang();
+            }
+            
+            // Phiếu giảm giá
+            if (d.getIdHoaDon().getIdPhieuGiamGia() != null) {
+                this.idmaPhieuGiamGia = d.getIdHoaDon().getIdPhieuGiamGia().getMaPhieuGiamGia();
+                this.idtenPhieuGiamGia = d.getIdHoaDon().getIdPhieuGiamGia().getTenPhieuGiamGia();
+            }
+            
+            // Nhân viên
+            if (d.getIdHoaDon().getIdNhanVien() != null) {
+                this.idmaNhanVien = d.getIdHoaDon().getIdNhanVien().getMaNhanVien();
+                this.idtenNhanVien = d.getIdHoaDon().getIdNhanVien().getTenNhanVien();
+            }
+        }
+        
+        // Chi tiết sản phẩm - lấy tên từ ghi chú
+        if (d.getIdChiTietSanPham() != null && d.getIdChiTietSanPham().getIdSanPham() != null) {
+            this.tenSanPham = d.getIdChiTietSanPham().getIdSanPham().getTenSanPham();
+        }
+        
+        // Ưu tiên lấy tên từ ghi chú nếu có
+        if (d.getGhiChu() != null && !d.getGhiChu().trim().isEmpty()) {
+            this.tenSanPham = d.getGhiChu();
+        }
+        
+        // Thông tin chi tiết hóa đơn
         this.soLuong = d.getSoLuong();
         this.giaBan = d.getGiaBan();
         this.maHoaDonChiTiet = d.getMaHoaDonChiTiet();
