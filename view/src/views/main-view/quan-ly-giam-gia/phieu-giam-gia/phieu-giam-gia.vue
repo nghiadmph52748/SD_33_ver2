@@ -1283,6 +1283,20 @@ const submitCouponEdit = async () => {
       Message.error('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
       return
     }
+    
+    // Validate: Max discount should not exceed min order value
+    const minOrderValue = Number(couponEditForm.minOrder || 0)
+    if (minOrderValue > 0 && capValue >= minOrderValue) {
+      Message.error('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
+      return
+    }
+  } else {
+    // For fixed amount discount
+    const minOrderValue = Number(couponEditForm.minOrder || 0)
+    if (minOrderValue > 0 && discountValue >= minOrderValue) {
+      Message.error('Giá trị giảm phải nhỏ hơn giá trị đơn hàng tối thiểu')
+      return
+    }
   }
 
   const quantityValue = Number(couponEditForm.quantity)
