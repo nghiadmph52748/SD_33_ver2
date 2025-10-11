@@ -816,7 +816,7 @@
     <!-- Upload Loading Overlay -->
     <div v-if="uploadingImages" class="upload-loading-overlay">
       <div class="upload-loading-content">
-        <a-spin size="large" />
+        <a-spin />
         <div class="upload-loading-text">
           <h3>Đang upload ảnh...</h3>
           <p>Vui lòng chờ trong giây lát. Quá trình này có thể mất tối đa 30 giây.</p>

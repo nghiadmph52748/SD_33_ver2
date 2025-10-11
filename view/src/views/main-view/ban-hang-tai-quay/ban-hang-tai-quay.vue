@@ -56,7 +56,7 @@
 
         <!-- Loading State -->
         <div v-if="loading" class="loading-container">
-          <a-spin size="large" />
+          <a-spin />
           <p>Đang tải sản phẩm...</p>
         </div>
 

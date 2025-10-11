@@ -38,7 +38,7 @@
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
-      <a-spin size="large" />
+      <a-spin />
       <p>Đang tải thông tin hóa đơn...</p>
     </div>
 
@@ -201,7 +201,6 @@
         </a-row>
       </a-card>
 
-
       <!-- Lịch sử thanh toán -->
       <a-card class="payment-history-card" :bordered="false">
         <template #title>
@@ -233,6 +232,29 @@
           </div>
           <div v-else class="no-payment">
             <p>Chưa có lịch sử thanh toán</p>
+          </div>
+        </div>
+      </a-card>
+
+      <!-- Danh sách sản phẩm đã bán -->
+      <a-card class="product-list-card" :bordered="false">
+        <template #title>
+          <div class="card-header">
+            <icon-file />
+            <span>Danh sách sản phẩm đã bán</span>
+          </div>
+        </template>
+        <div class="product-list">
+          <ProductTableFromInvoice
+            v-if="invoice && invoice.id"
+            :invoice-id="invoice.id"
+            :show-actions="false"
+            :page-size="10"
+            @view-detail="handleViewProductDetail"
+          />
+          <div v-else class="no-products">
+            <icon-file />
+            <p>Chưa có sản phẩm nào</p>
           </div>
         </div>
       </a-card>
@@ -292,14 +314,34 @@ const invoice = ref<any>(null)
 const loading = ref(true)
 const invoiceId = ref(route.params.id as string)
 
-
 // Methods
 
 const fetchInvoiceDetail = async () => {
   try {
     loading.value = true
 
-    // Lấy thông tin hóa đơn từ API hóa đơn
+    // Ưu tiên lấy từ API thông tin đơn hàng mới nhất (có đầy đủ hoaDonChiTiets)
+    try {
+      const orderInfoResponse = await axios.get(`/api/thong-tin-hoa-don-management/latest-by-hoa-don/${invoiceId.value}`)
+
+      if (orderInfoResponse.data && orderInfoResponse.data.data) {
+        const orderInfo = orderInfoResponse.data.data
+        invoice.value = orderInfo.idHoaDon
+
+        // Log để debug
+        if (invoice.value && invoice.value.hoaDonChiTiets) {
+          console.log('✅ HoaDonChiTiets loaded:', invoice.value.hoaDonChiTiets.length)
+        } else {
+          console.log('⚠️ HoaDonChiTiets not loaded')
+        }
+
+        return // Thành công, không cần fallback
+      }
+    } catch (orderInfoError) {
+      console.log('API thông tin đơn hàng không khả dụng, thử API hóa đơn trực tiếp')
+    }
+
+    // Fallback: thử API hóa đơn trực tiếp
     const invoiceResponse = await axios.get(`/api/hoa-don-management/${invoiceId.value}`)
 
     if (invoiceResponse.data && invoiceResponse.data.data) {
@@ -324,16 +366,13 @@ const fetchInvoiceDetail = async () => {
           invoice.value.emailKhachHang = orderInfo.emailKhachHang || invoice.value.email
           invoice.value.soDienThoaiKhachHang = orderInfo.soDienThoaiKhachHang || invoice.value.soDienThoai
           invoice.value.diaChiKhachHang = orderInfo.diaChiKhachHang || invoice.value.diaChiKhachHang
-
         }
       } catch {
         // Silent error handling
       }
-
     } else if (invoiceResponse.data) {
       // Nếu response trực tiếp là dữ liệu (không có wrapper data)
       invoice.value = invoiceResponse.data
-
 
       // Thử lấy thông tin đơn hàng từ API thông tin đơn hàng mới (không bắt buộc)
       try {
@@ -354,7 +393,6 @@ const fetchInvoiceDetail = async () => {
           invoice.value.emailKhachHang = orderInfo.emailKhachHang || invoice.value.email
           invoice.value.soDienThoaiKhachHang = orderInfo.soDienThoaiKhachHang || invoice.value.soDienThoai
           invoice.value.diaChiKhachHang = orderInfo.diaChiKhachHang || invoice.value.diaChiKhachHang
-
         }
       } catch {
         // Silent error handling
@@ -495,13 +533,17 @@ const getStatusText = (status: any) => {
   return 'Chưa xác định'
 }
 
-
 const goBack = () => {
   router.back()
 }
 
 const printInvoice = () => {
   window.print()
+}
+
+const handleViewProductDetail = (product: any) => {
+  console.log('Viewing product detail:', product)
+  // Có thể mở modal hoặc chuyển trang chi tiết sản phẩm
 }
 
 // Lấy text trạng thái đơn
@@ -905,8 +947,6 @@ onMounted(() => {
   border-bottom: none;
 }
 
-
-
 /* Payment History Card */
 .payment-history {
   padding: 12px 0;
@@ -1005,6 +1045,99 @@ onMounted(() => {
 .summary-value.total {
   color: #00b42a;
   font-size: 16px;
+}
+
+/* Product List */
+.product-list-card {
+  margin-bottom: 24px;
+}
+
+.product-list {
+  padding: 16px 0;
+}
+
+.product-table-container {
+  overflow-x: auto;
+}
+
+.product-table {
+  width: 100%;
+}
+
+.product-name {
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin-bottom: 4px;
+}
+
+.product-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-item {
+  font-size: 12px;
+  color: var(--color-text-3);
+  background: var(--color-fill-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.product-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.product-img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-2);
+}
+
+.no-image {
+  width: 60px;
+  height: 60px;
+  background: var(--color-fill-2);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--color-text-3);
+}
+
+.no-image .arco-icon {
+  font-size: 24px;
+}
+
+.quantity {
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.price {
+  font-weight: 500;
+  color: var(--color-text-2);
+}
+
+.total-price {
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.no-products {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--color-text-3);
+}
+
+.no-products .arco-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
 }
 
 /* Responsive */
