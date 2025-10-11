@@ -1,14 +1,23 @@
 <template>
   <div class="invoice-detail-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
+    <!-- Simple Breadcrumb -->
+    <div class="simple-breadcrumb">
+      <a-button @click="goBack" type="text" size="small">
+        <template #icon>
+          <icon-arrow-left />
+        </template>
+        Quản lý hóa đơn
+      </a-button>
+      <span class="breadcrumb-separator">/</span>
+      <span class="breadcrumb-current">Chi tiết hóa đơn</span>
+    </div>
 
     <!-- Page Header -->
     <div class="page-header">
       <div class="header-left">
         <h1 class="page-title">Chi tiết hóa đơn</h1>
         <a-tag :color="getStatusColor(invoice?.trangThai)" class="status-badge">
-          {{ invoice?.trangThai || 'Đang tải...' }}
+          {{ getStatusText(invoice?.trangThai) }}
         </a-tag>
       </div>
       <div class="header-right">
@@ -33,17 +42,43 @@
       <p>Đang tải thông tin hóa đơn...</p>
     </div>
 
+
     <!-- Invoice Content -->
     <div v-else-if="invoice" class="invoice-content">
-      <!-- Invoice Information -->
-      <a-card class="info-card" :bordered="false">
+      <!-- Trạng thái hóa đơn -->
+      <a-card class="status-card" :bordered="false">
         <template #title>
           <div class="card-header">
             <icon-file />
-            <span>Thông tin hóa đơn</span>
+            <span>Trạng thái hóa đơn</span>
           </div>
         </template>
+        <div class="status-content">
+          <div class="status-main">
+            <a-tag :color="getStatusColor(invoice.trangThai)" class="status-tag-large">
+              {{ getStatusText(invoice.trangThai) }}
+            </a-tag>
+            <div class="status-info">
+              <p><strong>Mã hóa đơn:</strong> {{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}</p>
+              <p><strong>Ngày tạo:</strong> {{ formatDate(invoice.ngayTao) }}</p>
+              <p><strong>Loại đơn:</strong> 
+                <a-tag :color="invoice.loaiDon ? 'blue' : 'green'">
+                  {{ invoice.loaiDon ? 'Online' : 'Tại quầy' }}
+                </a-tag>
+              </p>
+            </div>
+          </div>
+        </div>
+      </a-card>
 
+      <!-- Thông tin đơn hàng -->
+      <a-card class="order-info-card" :bordered="false">
+        <template #title>
+          <div class="card-header">
+            <icon-file />
+            <span>Thông tin đơn hàng</span>
+          </div>
+        </template>
         <a-row :gutter="24">
           <a-col :span="12">
             <div class="info-block">
@@ -58,38 +93,45 @@
                   <span class="value">{{ formatDate(invoice.ngayTao) }}</span>
                 </div>
                 <div class="info-item">
+                  <span class="label">Ngày thanh toán:</span>
+                  <span class="value">{{ formatDate(invoice.ngayThanhToan) }}</span>
+                </div>
+                <div class="info-item">
                   <span class="label">Nhân viên:</span>
                   <span class="value">{{ invoice.tenNhanVien || 'Chưa xác định' }}</span>
                 </div>
                 <div class="info-item">
-                  <span class="label">Khách hàng:</span>
-                  <span class="value">{{ invoice.tenKhachHang || 'Khách lẻ' }}</span>
+                  <span class="label">Ghi chú:</span>
+                  <span class="value">{{ invoice.ghiChu || 'Không có' }}</span>
                 </div>
               </div>
             </div>
           </a-col>
-
           <a-col :span="12">
             <div class="info-block">
               <h3 class="block-title">Thông tin thanh toán</h3>
               <div class="info-list">
                 <div class="info-item">
-                  <span class="label">Tổng tiền:</span>
-                  <span class="value total">{{ formatCurrency(invoice.tongTienSauGiam) }}</span>
+                  <span class="label">Tổng tiền hàng:</span>
+                  <span class="value">{{ formatCurrency(invoice.tongTien || 0) }}</span>
                 </div>
-                <div class="info-item">
+                <div class="info-item" v-if="invoice.phiVanChuyen && invoice.phiVanChuyen > 0">
+                  <span class="label">Phí vận chuyển:</span>
+                  <span class="value">{{ formatCurrency(invoice.phiVanChuyen) }}</span>
+                </div>
+                <div class="info-item" v-if="invoice.giaTriGiamGia && invoice.giaTriGiamGia > 0">
                   <span class="label">Giảm giá:</span>
-                  <span class="value">{{ formatCurrency(invoice.giamGia || 0) }}</span>
+                  <span class="value discount">-{{ formatCurrency(invoice.giaTriGiamGia) }}</span>
                 </div>
-                <div class="info-item">
-                  <span class="label">Phương thức:</span>
-                  <span class="value">{{ invoice.phuongThucThanhToan || 'Tiền mặt' }}</span>
+                <div class="info-item total-item">
+                  <span class="label">Thành tiền:</span>
+                  <span class="value total">{{ formatCurrency(invoice.tongTienSauGiam) }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">Trạng thái:</span>
                   <span class="value">
-                    <a-tag :color="getStatusColor(invoice.trangThai)">
-                      {{ invoice.trangThai }}
+                    <a-tag :color="getStatusColor(invoice.trangThai)" class="status-tag">
+                      {{ getStatusText(invoice.trangThai) }}
                     </a-tag>
                   </span>
                 </div>
@@ -99,12 +141,67 @@
         </a-row>
       </a-card>
 
-      <!-- Products List -->
+      <!-- Thông tin khách hàng -->
+      <a-card class="customer-info-card" :bordered="false">
+        <template #title>
+          <div class="card-header">
+            <icon-user />
+            <span>Thông tin khách hàng</span>
+          </div>
+        </template>
+        <a-row :gutter="24">
+          <a-col :span="12">
+            <div class="info-block">
+              <h3 class="block-title">Thông tin liên hệ</h3>
+              <div class="info-list">
+                <div class="info-item">
+                  <span class="label">Tên khách hàng:</span>
+                  <span class="value">{{ invoice.tenKhachHang || 'Khách lẻ' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Số điện thoại:</span>
+                  <span class="value">{{ invoice.soDienThoai || 'Chưa có' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Email:</span>
+                  <span class="value">{{ invoice.email || 'Chưa có' }}</span>
+                </div>
+              </div>
+            </div>
+          </a-col>
+          <a-col :span="12">
+            <div class="info-block">
+              <h3 class="block-title">Địa chỉ giao hàng</h3>
+              <div class="info-list">
+                <div class="info-item">
+                  <span class="label">Người nhận:</span>
+                  <span class="value">{{ invoice.tenNguoiNhan || invoice.tenKhachHang || 'Chưa có' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">SĐT người nhận:</span>
+                  <span class="value">{{ invoice.soDienThoaiNguoiNhan || invoice.soDienThoai || 'Chưa có' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Email người nhận:</span>
+                  <span class="value">{{ invoice.emailNguoiNhan || invoice.email || 'Chưa có' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Địa chỉ:</span>
+                  <span class="value">{{ invoice.diaChiNguoiNhan || 'Chưa có' }}</span>
+                </div>
+              </div>
+            </div>
+          </a-col>
+        </a-row>
+      </a-card>
+
+      <!-- Danh sách sản phẩm đã bán -->
       <a-card class="products-card" :bordered="false">
         <template #title>
           <div class="card-header">
             <icon-file />
-            <span>Sản phẩm trong hóa đơn</span>
+            <span>Danh sách sản phẩm đã bán</span>
+            <span class="product-count">({{ getTotalProducts() }} sản phẩm)</span>
           </div>
         </template>
 
@@ -116,60 +213,123 @@
           class="products-table"
         >
           <template #stt="{ record, index }">
-            <span class="stt-number">{{ index + 1 }}</span>
+            <div class="stt-cell">{{ index + 1 }}</div>
           </template>
 
           <template #tenSanPham="{ record }">
-            <div class="product-cell">
+            <div class="product-info">
               <div class="product-name">{{ record.tenSanPham || 'Sản phẩm không xác định' }}</div>
               <div class="product-specs">
-                <span v-if="record.mauSac" class="spec-item">{{ record.mauSac }}</span>
-                <span v-if="record.kichThuoc" class="spec-item">{{ record.kichThuoc }}</span>
+                <div class="spec-row" v-if="record.tenMauSac">
+                  <span class="spec-label">Màu sắc:</span>
+                  <span class="spec-value">{{ record.tenMauSac }}</span>
+                </div>
+                <div class="spec-row" v-if="record.tenKichThuoc">
+                  <span class="spec-label">Kích thước:</span>
+                  <span class="spec-value">{{ record.tenKichThuoc }}</span>
+                </div>
+                <div class="spec-row" v-if="record.tenDeGiay">
+                  <span class="spec-label">Đế giày:</span>
+                  <span class="spec-value">{{ record.tenDeGiay }}</span>
+                </div>
+                <div class="spec-row" v-if="record.tenChatLieu">
+                  <span class="spec-label">Chất liệu:</span>
+                  <span class="spec-value">{{ record.tenChatLieu }}</span>
+                </div>
+                <div class="spec-row" v-if="record.tenTrongLuong">
+                  <span class="spec-label">Trọng lượng:</span>
+                  <span class="spec-value">{{ record.tenTrongLuong }}</span>
+                </div>
               </div>
             </div>
           </template>
 
           <template #donGia="{ record }">
-            <span class="price-text">{{ formatCurrency(record.donGia || 0) }}</span>
+            <div class="price-cell">
+              <span class="price-value">{{ formatCurrency(record.giaBan || 0) }}</span>
+            </div>
           </template>
 
           <template #soLuong="{ record }">
-            <a-tag color="blue" class="quantity-tag">{{ record.soLuong || 0 }}</a-tag>
+            <div class="quantity-cell">
+              <a-tag color="blue" class="quantity-tag">{{ record.soLuong || 0 }}</a-tag>
+            </div>
           </template>
 
           <template #thanhTien="{ record }">
-            <span class="total-text">{{ formatCurrency(record.thanhTien || 0) }}</span>
+            <div class="total-cell">
+              <span class="total-price">{{ formatCurrency(record.thanhTien || 0) }}</span>
+            </div>
           </template>
         </a-table>
       </a-card>
 
-      <!-- Summary -->
+      <!-- Lịch sử thanh toán -->
+      <a-card class="payment-history-card" :bordered="false">
+        <template #title>
+          <div class="card-header">
+            <icon-file />
+            <span>Lịch sử thanh toán</span>
+          </div>
+        </template>
+        <div class="payment-history">
+          <div v-if="invoice.lichSuThanhToan && invoice.lichSuThanhToan.length > 0" class="payment-list">
+            <div v-for="(payment, index) in invoice.lichSuThanhToan" :key="index" class="payment-item">
+              <div class="payment-info">
+                <div class="payment-method">
+                  <strong>{{ payment.phuongThucThanhToan || 'Tiền mặt' }}</strong>
+                </div>
+                <div class="payment-amount">
+                  {{ formatCurrency(payment.soTien || 0) }}
+                </div>
+                <div class="payment-date">
+                  {{ formatDate(payment.ngayThanhToan) }}
+                </div>
+              </div>
+              <div class="payment-status">
+                <a-tag :color="payment.trangThai ? 'green' : 'orange'">
+                  {{ payment.trangThai ? 'Thành công' : 'Chờ xử lý' }}
+                </a-tag>
+              </div>
+            </div>
+          </div>
+          <div v-else class="no-payment">
+            <p>Chưa có lịch sử thanh toán</p>
+          </div>
+        </div>
+      </a-card>
+
+      <!-- Tổng kết đơn hàng -->
       <a-card class="summary-card" :bordered="false">
         <template #title>
           <div class="card-header">
             <icon-file />
-            <span>Tổng kết hóa đơn</span>
+            <span>Tổng kết đơn hàng</span>
           </div>
         </template>
 
         <div class="summary-content">
-          <div class="summary-item">
+          <div class="summary-row">
             <span class="summary-label">Tổng số sản phẩm:</span>
             <span class="summary-value">{{ getTotalProducts() }}</span>
           </div>
-          <div class="summary-item">
+          <div class="summary-row">
             <span class="summary-label">Tổng số lượng:</span>
             <span class="summary-value">{{ getTotalQuantity() }}</span>
           </div>
-          <div class="summary-item">
+          <div class="summary-row">
             <span class="summary-label">Tổng tiền hàng:</span>
             <span class="summary-value">{{ formatCurrency(getSubtotal()) }}</span>
           </div>
-          <div class="summary-item" v-if="invoice.giamGia && invoice.giamGia > 0">
-            <span class="summary-label">Giảm giá:</span>
-            <span class="summary-value discount">-{{ formatCurrency(invoice.giamGia) }}</span>
+          <div class="summary-row" v-if="invoice.phiVanChuyen && invoice.phiVanChuyen > 0">
+            <span class="summary-label">Phí vận chuyển:</span>
+            <span class="summary-value">{{ formatCurrency(invoice.phiVanChuyen) }}</span>
           </div>
-          <div class="summary-item final-total">
+          <div class="summary-row" v-if="invoice.giaTriGiamGia && invoice.giaTriGiamGia > 0">
+            <span class="summary-label">Giảm giá:</span>
+            <span class="summary-value discount">-{{ formatCurrency(invoice.giaTriGiamGia) }}</span>
+          </div>
+          <div class="summary-row total-row">
             <span class="summary-label">Thành tiền:</span>
             <span class="summary-value total">{{ formatCurrency(invoice.tongTienSauGiam) }}</span>
           </div>
@@ -203,22 +363,12 @@ import {
   IconArrowLeft,
   IconPrinter,
   IconFile,
+  IconEdit,
+  IconUser,
 } from '@arco-design/web-vue/es/icon'
 
 const route = useRoute()
 const router = useRouter()
-
-// Breadcrumb items
-const breadcrumbItems = ref([
-  {
-    locale: 'menu.quan-ly-hoa-don',
-    route: { name: 'QuanLyHoaDonIndex' },
-  },
-  {
-    title: 'Hóa đơn chi tiết',
-    route: { name: 'HoaDonChiTiet', params: { id: route.params.id as string } },
-  },
-] as any[])
 
 // Data
 const invoice = ref<any>(null)
@@ -262,12 +412,17 @@ const productColumns = [
 const fetchInvoiceDetail = async () => {
   try {
     loading.value = true
+    console.log('🔍 Đang tải chi tiết hóa đơn với ID:', invoiceId.value)
+    
     const response = await axios.get(`/api/hoa-don-management/${invoiceId.value}`)
+    console.log('📡 Response từ API:', response.data)
     
     if (response.data && response.data.data) {
       invoice.value = response.data.data
+      console.log('✅ Dữ liệu hóa đơn đã được tải:', invoice.value)
     } else {
-      // Sample data for testing
+      console.log('⚠️ Không có dữ liệu từ API, sử dụng dữ liệu mẫu')
+      // Fallback to sample data for testing
       invoice.value = {
         id: invoiceId.value,
         maHoaDon: `HD${String(invoiceId.value).padStart(6, '0')}`,
@@ -277,7 +432,7 @@ const fetchInvoiceDetail = async () => {
         tongTienSauGiam: 2500000,
         giamGia: 100000,
         phuongThucThanhToan: 'Tiền mặt',
-        trangThai: 'Hoàn thành',
+        trangThai: true, // true = Hoàn thành, false = Chờ xác nhận
         hoaDonChiTiets: [
           {
             tenSanPham: 'Giày Nike Air Max 270',
@@ -298,8 +453,10 @@ const fetchInvoiceDetail = async () => {
         ],
       }
     }
-  } catch (error) {
-    console.error('Lỗi khi tải chi tiết hóa đơn:', error)
+  } catch (error: any) {
+    console.error('❌ Lỗi khi tải chi tiết hóa đơn:', error)
+    console.error('📋 Chi tiết lỗi:', error.response?.data || error.message)
+    
     // Use sample data on error
     invoice.value = {
       id: invoiceId.value,
@@ -310,7 +467,7 @@ const fetchInvoiceDetail = async () => {
       tongTienSauGiam: 2500000,
       giamGia: 100000,
       phuongThucThanhToan: 'Tiền mặt',
-      trangThai: 'Hoàn thành',
+      trangThai: true, // true = Hoàn thành, false = Chờ xác nhận
       hoaDonChiTiets: [
         {
           tenSanPham: 'Giày Nike Air Max 270',
@@ -355,15 +512,52 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const getStatusColor = (status: string) => {
-  const statusColors: { [key: string]: string } = {
-    'Chờ xác nhận': 'orange',
-    'Chờ giao hàng': 'blue',
-    'Đang giao': 'purple',
-    'Hoàn thành': 'green',
-    'Đã hủy': 'red',
+const getStatusColor = (status: any) => {
+  // Xử lý cả boolean và string
+  if (typeof status === 'boolean') {
+    return status ? 'green' : 'orange'
   }
-  return statusColors[status] || 'gray'
+  
+  if (typeof status === 'string') {
+    const statusColors: { [key: string]: string } = {
+      'Chờ xác nhận': 'orange',
+      'Chờ giao hàng': 'blue', 
+      'Đang giao': 'purple',
+      'Hoàn thành': 'green',
+      'Đã hủy': 'red',
+      'Đã thanh toán': 'green',
+      'Chờ thanh toán': 'orange',
+      'true': 'green',
+      'false': 'orange',
+    }
+    return statusColors[status] || 'gray'
+  }
+  
+  return 'gray'
+}
+
+const getStatusText = (status: any) => {
+  // Xử lý cả boolean và string
+  if (typeof status === 'boolean') {
+    return status ? 'Hoàn thành' : 'Chờ xác nhận'
+  }
+  
+  if (typeof status === 'string') {
+    const statusTexts: { [key: string]: string } = {
+      'Chờ xác nhận': 'Chờ xác nhận',
+      'Chờ giao hàng': 'Chờ giao hàng',
+      'Đang giao': 'Đang giao',
+      'Hoàn thành': 'Hoàn thành',
+      'Đã hủy': 'Đã hủy',
+      'Đã thanh toán': 'Hoàn thành',
+      'Chờ thanh toán': 'Chờ xác nhận',
+      'true': 'Hoàn thành',
+      'false': 'Chờ xác nhận',
+    }
+    return statusTexts[status] || status || 'Chưa xác định'
+  }
+  
+  return 'Chưa xác định'
 }
 
 const getTotalProducts = () => {
@@ -390,6 +584,9 @@ const printInvoice = () => {
   window.print()
 }
 
+
+
+
 // Lifecycle
 onMounted(() => {
   fetchInvoiceDetail()
@@ -401,6 +598,26 @@ onMounted(() => {
   padding: 20px;
   background-color: var(--color-fill-2);
   min-height: calc(100vh - 80px);
+}
+
+/* Simple Breadcrumb */
+.simple-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 8px 0;
+}
+
+.breadcrumb-separator {
+  color: #86909c;
+  font-size: 14px;
+}
+
+.breadcrumb-current {
+  color: #1d2129;
+  font-weight: 500;
+  font-size: 14px;
 }
 
 /* Header */
@@ -460,6 +677,24 @@ onMounted(() => {
   margin-top: 16px;
   color: #86909c;
   font-size: 16px;
+}
+
+/* Debug Panel */
+.debug-panel {
+  margin-bottom: 20px;
+  background: #f0f8ff;
+  border: 1px solid #1890ff;
+}
+
+.debug-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.debug-content p {
+  margin: 0;
+  font-size: 14px;
 }
 
 /* Cards */
@@ -626,6 +861,279 @@ onMounted(() => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Status Card */
+.status-card {
+  background: #f7f8fa;
+  border: 1px solid #e5e6eb;
+}
+
+.status-content {
+  padding: 16px 0;
+}
+
+.status-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-tag-large {
+  font-size: 16px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-info p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #4e5969;
+}
+
+.status-info .arco-tag {
+  margin-left: 8px;
+}
+
+/* Order Info Card */
+.order-info-card .info-block {
+  margin-bottom: 16px;
+}
+
+.order-info-card .block-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: #1d2129;
+  border-bottom: 1px solid #e5e6eb;
+  padding-bottom: 6px;
+}
+
+.order-info-card .info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f2f3f5;
+}
+
+.order-info-card .info-item:last-child {
+  border-bottom: none;
+}
+
+.order-info-card .total-item {
+  background: #f7f8fa;
+  padding: 12px;
+  border-radius: 4px;
+  margin-top: 8px;
+  border: 1px solid #e5e6eb;
+}
+
+.order-info-card .total-item .label,
+.order-info-card .total-item .value {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.order-info-card .discount {
+  color: #f53f3f;
+}
+
+/* Customer Info Card */
+.customer-info-card .info-block {
+  margin-bottom: 16px;
+}
+
+.customer-info-card .block-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: #1d2129;
+  border-bottom: 1px solid #e5e6eb;
+  padding-bottom: 6px;
+}
+
+.customer-info-card .info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f2f3f5;
+}
+
+.customer-info-card .info-item:last-child {
+  border-bottom: none;
+}
+
+/* Products Card */
+.product-count {
+  font-size: 12px;
+  color: #86909c;
+  font-weight: normal;
+  margin-left: 8px;
+}
+
+.product-info {
+  padding: 6px 0;
+}
+
+.product-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: #1d2129;
+  margin-bottom: 6px;
+}
+
+.product-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.spec-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spec-label {
+  font-size: 12px;
+  color: #86909c;
+  min-width: 50px;
+}
+
+.spec-value {
+  font-size: 12px;
+  color: #4e5969;
+  background: #f2f3f5;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.stt-cell {
+  text-align: center;
+  font-weight: 500;
+  color: #4e5969;
+}
+
+.price-cell,
+.total-cell {
+  text-align: right;
+}
+
+.price-value,
+.total-price {
+  font-weight: 500;
+  color: #1d2129;
+}
+
+.quantity-cell {
+  text-align: center;
+}
+
+.quantity-tag {
+  font-weight: 500;
+}
+
+/* Payment History Card */
+.payment-history {
+  padding: 12px 0;
+}
+
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f7f8fa;
+  border-radius: 4px;
+  border: 1px solid #e5e6eb;
+}
+
+.payment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.payment-method {
+  font-size: 14px;
+  color: #1d2129;
+}
+
+.payment-amount {
+  font-size: 16px;
+  font-weight: 500;
+  color: #00b42a;
+}
+
+.payment-date {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.no-payment {
+  text-align: center;
+  padding: 32px;
+  color: #86909c;
+}
+
+/* Summary Card */
+.summary-content {
+  padding: 16px 0;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f2f3f5;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-row.total-row {
+  background: #f7f8fa;
+  padding: 16px;
+  border-radius: 4px;
+  margin-top: 12px;
+  border: 1px solid #e5e6eb;
+}
+
+.summary-row.total-row .summary-label,
+.summary-row.total-row .summary-value {
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.summary-label {
+  font-size: 14px;
+  color: #4e5969;
+}
+
+.summary-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2129;
+}
+
+.summary-value.discount {
+  color: #f53f3f;
+}
+
+.summary-value.total {
+  color: #00b42a;
+  font-size: 16px;
 }
 
 /* Responsive */

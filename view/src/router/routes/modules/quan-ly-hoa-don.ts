@@ -5,7 +5,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
   path: '/quan-ly-hoa-don',
   name: 'quan-ly-hoa-don',
   component: DEFAULT_LAYOUT,
-  redirect: { name: 'QuanLyHoaDonIndex' },
+  redirect: '/quan-ly-hoa-don/index',
   meta: {
     locale: 'menu.quan-ly-hoa-don',
     requiresAuth: true,
@@ -24,6 +24,29 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
         requiresAuth: true,
         roles: ['*'],
         hideInMenu: true, // Ẩn item này trong menu
+      },
+    },
+    {
+      path: 'chi-tiet/:id',
+      name: 'HoaDonChiTiet',
+      component: () => import('@/views/main-view/quan-ly-hoa-don/chi-tiet-hoa-don.vue'),
+      meta: {
+        locale: 'menu.hoa-don-chi-tiet',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+        activeMenu: 'QuanLyHoaDonIndex',
+      },
+    },
+    {
+      path: 'test-api',
+      name: 'TestApi',
+      component: () => import('@/views/main-view/quan-ly-hoa-don/test-api.vue'),
+      meta: {
+        locale: 'Test API',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
       },
     },
   ],
