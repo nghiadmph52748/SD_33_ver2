@@ -31,12 +31,29 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="discountValue" label="Giá trị giảm (%)">
-              <a-input-number v-model="formState.discountValue" :min="1" :max="100" :precision="0" style="width: 100%" />
+              <a-input-number
+                v-model="formState.discountValue"
+                :min="1"
+                :max="100"
+                :step="1"
+                :precision="0"
+                suffix="%"
+                placeholder="Nhập giá trị giảm..."
+                style="width: 100%"
+              />
+              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Giá trị từ 1-100</div>
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item field="dateRange" label="Thời gian áp dụng">
-              <a-range-picker v-model="formState.dateRange" :show-time="true" value-format="YYYY-MM-DD HH:mm:ss" format="DD/MM/YYYY HH:mm" allow-clear style="width: 100%" />
+              <a-range-picker
+                v-model="formState.dateRange"
+                :show-time="true"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                format="DD/MM/YYYY HH:mm"
+                allow-clear
+                style="width: 100%"
+              />
             </a-form-item>
           </a-col>
         </a-row>

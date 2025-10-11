@@ -161,7 +161,17 @@
           <a-input v-model="promotionEditForm.name" placeholder="Nhập tên đợt khuyến mãi" allow-clear />
         </a-form-item>
         <a-form-item field="discountValue" label="Giá trị giảm (%)">
-          <a-input-number v-model="promotionEditForm.discountValue" :min="1" :max="100" :precision="0" style="width: 100%" />
+          <a-input-number
+            v-model="promotionEditForm.discountValue"
+            :min="1"
+            :max="100"
+            :step="1"
+            :precision="0"
+            suffix="%"
+            placeholder="Nhập giá trị giảm..."
+            style="width: 100%"
+          />
+          <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Giá trị từ 1-100</div>
         </a-form-item>
         <a-form-item field="dateRange" label="Thời gian áp dụng">
           <a-range-picker
@@ -391,13 +401,13 @@ watch(
   () => promotionEditForm.discountValue,
   (value) => {
     if (value === null || value === undefined) return
-    
+
     // Ensure value is positive
     if (value < 0) {
       promotionEditForm.discountValue = 0
       return
     }
-    
+
     // Cap percentage discount at 100%
     if (value > 100) {
       promotionEditForm.discountValue = 100

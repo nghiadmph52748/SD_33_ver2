@@ -30,6 +30,7 @@ public class PhieuGiamGiaResponse {
     Boolean trangThai;
     String moTa;
     Boolean deleted;
+    Boolean featured;
 
     public PhieuGiamGiaResponse(PhieuGiamGia d) {
         this.id = d.getId();
@@ -51,5 +52,6 @@ public class PhieuGiamGiaResponse {
         this.trangThai = d.getTrangThai();
         this.moTa = d.getMoTa();
         this.deleted = d.getDeleted();
+        this.featured = d.getFeatured();
     }
 }

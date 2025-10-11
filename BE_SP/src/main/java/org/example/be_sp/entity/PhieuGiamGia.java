@@ -16,6 +16,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -73,10 +74,32 @@ public class PhieuGiamGia {
     @Column(name = "deleted")
     private Boolean deleted;
 
+    @ColumnDefault("0")
+    @Column(name = "noi_bat")
+    private Boolean featured;
+
     @OneToMany(mappedBy = "idPhieuGiamGia")
     private Set<HoaDon> hoaDons = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "idPhieuGiamGia")
     private Set<PhieuGiamGiaCaNhan> phieuGiamGiaCaNhans = new LinkedHashSet<>();
 
+    /**
+     * Set default values before persisting
+     */
+    @PrePersist
+    public void prePersist() {
+        if (this.deleted == null) {
+            this.deleted = false;
+        }
+        if (this.trangThai == null) {
+            this.trangThai = true;
+        }
+        if (this.featured == null) {
+            this.featured = false;
+        }
+        if (this.loaiPhieuGiamGia == null) {
+            this.loaiPhieuGiamGia = false;
+        }
+    }
 }

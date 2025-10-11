@@ -57,19 +57,32 @@
                 </div>
                 <div class="info-row">
                     <span class="info-label">Giảm giá:</span>
-                    <span class="info-value highlight" th:text="${voucher.discountAmount + ' VNĐ'}">100.000 VNĐ</span>
+                    <span class="info-value highlight" th:if="${voucher.voucherType == 'PERCENTAGE'}" th:text="${voucher.discountValue + '%'}">10%</span>
+                    <span class="info-value highlight" th:if="${voucher.voucherType == 'FIXED_AMOUNT'}" th:text="${#numbers.formatDecimal(voucher.discountValue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">100.000 VNĐ</span>
                 </div>
-                <div class="info-row" th:if="${voucher.minOrderAmount}">
+                <div class="info-row" th:if="${voucher.maxDiscount != null && voucher.voucherType == 'PERCENTAGE'}">
+                    <span class="info-label">Giảm tối đa:</span>
+                    <span class="info-value" th:text="${#numbers.formatDecimal(voucher.maxDiscount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">200.000 VNĐ</span>
+                </div>
+                <div class="info-row" th:if="${voucher.minOrderValue != null}">
                     <span class="info-label">Đơn hàng tối thiểu:</span>
-                    <span class="info-value" th:text="${#numbers.formatDecimal(voucher.minOrderAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">500.000 VNĐ</span>
+                    <span class="info-value" th:text="${#numbers.formatDecimal(voucher.minOrderValue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">500.000 VNĐ</span>
+                </div>
+                <div class="info-row" th:if="${voucher.usageLimit != null}">
+                    <span class="info-label">Số lần sử dụng:</span>
+                    <span class="info-value" th:text="${voucher.usageLimit + ' lần'}">1 lần</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Ngày bắt đầu:</span>
-                    <span class="info-value" th:text="${#temporals.format(voucher.startDate, 'dd/MM/yyyy')}">01/10/2024</span>
+                    <span class="info-value" th:text="${#temporals.format(voucher.validFrom, 'dd/MM/yyyy HH:mm')}">01/10/2024 00:00</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Ngày kết thúc:</span>
-                    <span class="info-value" th:text="${#temporals.format(voucher.endDate, 'dd/MM/yyyy')}">31/10/2024</span>
+                    <span class="info-value" th:text="${#temporals.format(voucher.validUntil, 'dd/MM/yyyy HH:mm')}">31/10/2024 23:59</span>
+                </div>
+                <div class="info-row" th:if="${voucher.description != null && !voucher.description.isEmpty()}">
+                    <span class="info-label">Mô tả:</span>
+                    <span class="info-value" th:text="${voucher.description}">Giảm giá đặc biệt</span>
                 </div>
             </div>
             <div style="text-align: center;">

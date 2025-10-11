@@ -147,7 +147,17 @@
 
     <!-- Coupons Table -->
     <a-card title="Danh sách phiếu giảm giá" class="table-card">
-      <a-table :columns="columns" :data="filteredCoupons" :pagination="pagination" :loading="loading" :scroll="{ x: 1300 }">
+      <a-table :columns="columns" :data="filteredCoupons" :pagination="pagination" :loading="loading" :scroll="{ x: 1400 }">
+        <template #featured="{ record }">
+          <div v-if="record.featured" class="featured-badge">
+            <icon-star :style="{ color: '#FFB800', fontSize: '18px' }" />
+          </div>
+          <div v-else class="not-featured">
+            <span style="color: var(--color-text-4); font-size: 14px">—</span>
+          </div>
+          <!-- DEBUG: {{ record.name }} - featured: {{ record.featured }} -->
+        </template>
+
         <template #discount_value="{ record }">
           <div class="discount-value">
             {{ record.discount_type === 'percentage' ? `${record.discount_value}%` : formatCurrency(record.discount_value) }}
@@ -238,6 +248,24 @@
         <a-descriptions-item label="Mô tả">
           {{ selectedCoupon?.source?.moTa || '—' }}
         </a-descriptions-item>
+        <a-descriptions-item label="Phiếu giảm giá nổi bật">
+          <a-tag v-if="selectedCoupon?.featured" color="orange">
+            <template #icon>
+              <icon-star />
+            </template>
+            Nổi bật
+          </a-tag>
+          <span v-else style="color: var(--color-text-3)">Không</span>
+        </a-descriptions-item>
+        <a-descriptions-item v-if="selectedCoupon?.featured" label="Số khách hàng áp dụng">
+          <div>
+            <strong>{{ selectedCoupon?.source?.idKhachHang?.length || 0 }}</strong>
+            khách hàng
+          </div>
+          <div v-if="selectedCoupon?.source?.idKhachHang && selectedCoupon.source.idKhachHang.length > 0" style="margin-top: 8px">
+            <a-button size="small" @click="viewAppliedCustomers">Xem danh sách</a-button>
+          </div>
+        </a-descriptions-item>
       </a-descriptions>
     </a-modal>
 
@@ -247,79 +275,201 @@
       :confirm-loading="couponEditSubmitting"
       @ok="submitCouponEdit"
       @cancel="couponEditVisible = false"
-      width="620px"
+      :width="couponEditForm.featured ? 1200 : 620"
+      :class="{ 'edit-modal-featured': couponEditForm.featured }"
     >
-      <a-form ref="couponEditFormRef" :model="couponEditForm" :rules="couponEditRules" layout="vertical">
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item field="name" label="Tên phiếu giảm giá">
-              <a-input v-model="couponEditForm.name" placeholder="Nhập tên phiếu" allow-clear />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item field="discountMode" label="Hình thức giảm giá">
-              <a-radio-group v-model="couponEditForm.discountMode" type="button">
-                <a-radio value="percentage">Phần trăm (%)</a-radio>
-                <a-radio value="amount">Số tiền (VNĐ)</a-radio>
-              </a-radio-group>
-            </a-form-item>
-          </a-col>
-        </a-row>
+      <div :class="couponEditForm.featured ? 'modal-two-columns' : ''">
+        <!-- Left Column: Form -->
+        <div :class="couponEditForm.featured ? 'modal-left-column' : ''">
+          <div v-if="couponEditForm.featured" class="modal-column-title">Thông tin phiếu giảm giá</div>
 
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item field="discountValue" label="Giá trị giảm">
-              <a-input-number
-                v-model="couponEditForm.discountValue"
-                :min="1"
-                :max="isPercentEdit ? 100 : undefined"
-                :precision="0"
+          <a-form ref="couponEditFormRef" :model="couponEditForm" :rules="couponEditRules" layout="vertical">
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item field="name" label="Tên phiếu giảm giá">
+                  <a-input v-model="couponEditForm.name" placeholder="Nhập tên phiếu" allow-clear />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item field="discountMode" label="Hình thức giảm giá">
+                  <a-radio-group v-model="couponEditForm.discountMode" type="button">
+                    <a-radio value="percentage">Phần trăm (%)</a-radio>
+                    <a-radio value="amount">Số tiền (VNĐ)</a-radio>
+                  </a-radio-group>
+                </a-form-item>
+              </a-col>
+            </a-row>
+
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item field="discountValue" label="Giá trị giảm">
+                  <a-input-number
+                    v-model="couponEditForm.discountValue"
+                    :min="1"
+                    :max="isPercentEdit ? 100 : 100000000"
+                    :step="isPercentEdit ? 1 : 1000"
+                    :precision="0"
+                    :formatter="isPercentEdit ? undefined : formatNumberWithSeparator"
+                    :parser="isPercentEdit ? undefined : parseFormattedNumber"
+                    :suffix="isPercentEdit ? '%' : 'VND'"
+                    placeholder="Nhập giá trị giảm..."
+                    style="width: 100%"
+                  />
+                  <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                    {{ isPercentEdit ? 'Giá trị từ 1-100' : 'Tối đa: 100.000.000 VND' }}
+                  </div>
+                </a-form-item>
+              </a-col>
+              <a-col :span="12" v-if="isPercentEdit">
+                <a-form-item field="maxDiscount" label="Giá trị giảm tối đa">
+                  <a-input-number
+                    v-model="couponEditForm.maxDiscount"
+                    :min="1"
+                    :max="50000000"
+                    :step="10000"
+                    :precision="0"
+                    :formatter="formatNumberWithSeparator"
+                    :parser="parseFormattedNumber"
+                    suffix="VND"
+                    placeholder="Nhập giá trị tối đa..."
+                    style="width: 100%"
+                  />
+                  <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 50.000.000 VND</div>
+                </a-form-item>
+              </a-col>
+            </a-row>
+
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item field="minOrder" label="Giá trị đơn hàng tối thiểu">
+                  <a-input-number
+                    v-model="couponEditForm.minOrder"
+                    :min="0"
+                    :max="500000000"
+                    :step="10000"
+                    :precision="0"
+                    :formatter="formatNumberWithSeparator"
+                    :parser="parseFormattedNumber"
+                    suffix="VND"
+                    placeholder="Nhập giá trị đơn hàng tối thiểu..."
+                    style="width: 100%"
+                  />
+                  <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 500.000.000 VND</div>
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item field="quantity" label="Số lượng phiếu">
+                  <a-input-number
+                    v-model="couponEditForm.quantity"
+                    :min="1"
+                    :max="100000"
+                    :precision="0"
+                    placeholder="Nhập số lượng phiếu..."
+                    style="width: 100%"
+                  />
+                  <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 100.000 phiếu</div>
+                </a-form-item>
+              </a-col>
+            </a-row>
+
+            <a-form-item field="dateRange" label="Thời gian áp dụng">
+              <a-range-picker
+                v-model="couponEditForm.dateRange"
+                :show-time="true"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                format="DD/MM/YYYY HH:mm"
+                allow-clear
                 style="width: 100%"
               />
             </a-form-item>
-          </a-col>
-          <a-col :span="12" v-if="isPercentEdit">
-            <a-form-item field="maxDiscount" label="Giảm tối đa (VNĐ)">
-              <a-input-number v-model="couponEditForm.maxDiscount" :min="1" style="width: 100%" />
+
+            <a-form-item field="description" label="Mô tả">
+              <a-textarea
+                v-model="couponEditForm.description"
+                placeholder="Nhập mô tả cho phiếu giảm giá..."
+                allow-clear
+                :max-length="500"
+                :auto-size="{ minRows: 3, maxRows: 6 }"
+              />
             </a-form-item>
-          </a-col>
-        </a-row>
 
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item field="minOrder" label="Đơn hàng tối thiểu (VNĐ)">
-              <a-input-number v-model="couponEditForm.minOrder" :min="0" style="width: 100%" />
+            <a-form-item field="active" label="Trạng thái">
+              <a-switch v-model="couponEditForm.active">
+                <template #checked>Hoạt động</template>
+                <template #unchecked>Tạm dừng</template>
+              </a-switch>
             </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item field="quantity" label="Số lượng áp dụng">
-              <a-input-number v-model="couponEditForm.quantity" :min="1" :precision="0" style="width: 100%" />
+
+            <a-form-item field="featured">
+              <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá nổi bật</a-checkbox>
+              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
+              </div>
             </a-form-item>
-          </a-col>
-        </a-row>
+          </a-form>
+        </div>
 
-        <a-form-item field="dateRange" label="Thời gian áp dụng">
-          <a-range-picker
-            v-model="couponEditForm.dateRange"
-            :show-time="true"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            format="DD/MM/YYYY HH:mm"
-            allow-clear
-            style="width: 100%"
-          />
-        </a-form-item>
+        <!-- Right Column: Customer Selection -->
+        <div v-if="couponEditForm.featured" class="modal-right-column">
+          <div class="modal-column-title">Chọn khách hàng</div>
+          <div class="customer-selection-section">
+            <a-input-search v-model="customerSearchQuery" placeholder="Tìm kiếm khách hàng..." allow-clear style="margin-bottom: 12px" />
 
-        <a-form-item field="description" label="Mô tả">
-          <a-textarea v-model="couponEditForm.description" allow-clear :max-length="500" auto-size />
-        </a-form-item>
+            <!-- Select All / Deselect All buttons -->
+            <div style="margin-bottom: 12px; display: flex; gap: 8px">
+              <a-button size="small" @click="selectAllEditCustomers">
+                <template #icon>
+                  <icon-plus />
+                </template>
+                Chọn tất cả
+              </a-button>
+              <a-button size="small" @click="deselectAllEditCustomers">
+                <template #icon>
+                  <icon-delete />
+                </template>
+                Bỏ chọn tất cả
+              </a-button>
+            </div>
 
-        <a-form-item field="active" label="Trạng thái">
-          <a-switch v-model="couponEditForm.active">
-            <template #checked>Hoạt động</template>
-            <template #unchecked>Tạm dừng</template>
-          </a-switch>
-        </a-form-item>
-      </a-form>
+            <a-table
+              row-key="id"
+              :columns="customerColumnsWithCheckbox"
+              :data="filteredCustomers"
+              :pagination="customerPagination"
+              :loading="customersLoading"
+              :scroll="{ y: 350 }"
+              size="small"
+              :bordered="{ cell: true }"
+            >
+              <template #selectHeader>
+                <a-checkbox
+                  :model-value="isAllEditCustomersSelected"
+                  :indeterminate="isSomeEditCustomersSelected && !isAllEditCustomersSelected"
+                  @change="toggleAllEditCustomers"
+                />
+              </template>
+              <template #select="{ record }">
+                <a-checkbox
+                  :model-value="couponEditForm.selectedCustomerIds.includes(record.id)"
+                  @change="toggleEditCustomerSelection(record.id)"
+                />
+              </template>
+            </a-table>
+
+            <div
+              v-if="!customersLoading && filteredCustomers.length === 0"
+              style="text-align: center; padding: 20px; color: var(--color-text-3)"
+            >
+              Không tìm thấy khách hàng nào
+            </div>
+            <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
+              Đã chọn:
+              <strong>{{ couponEditForm.selectedCustomerIds.length }}</strong>
+              khách hàng
+            </div>
+          </div>
+        </div>
+      </div>
     </a-modal>
 
     <a-modal
@@ -339,6 +489,32 @@
       </p>
       <p class="modal-note">Hành động này không thể hoàn tác.</p>
     </a-modal>
+
+    <!-- Applied Customers Modal -->
+    <a-modal v-model:visible="appliedCustomersVisible" title="Danh sách khách hàng áp dụng" :footer="false" width="600px">
+      <div v-if="appliedCustomersList.length > 0">
+        <a-list :data="appliedCustomersList" :bordered="false">
+          <template #item="{ item, index }">
+            <a-list-item>
+              <div style="display: flex; align-items: center; gap: 12px; width: 100%">
+                <div style="font-weight: 600; color: var(--color-text-3); min-width: 30px">
+                  {{ index + 1 }}
+                </div>
+                <div style="flex: 1">
+                  <div style="font-weight: 500; color: var(--color-text-1)">
+                    {{ item.tenKhachHang }}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-3); margin-top: 2px">
+                    {{ item.email || '—' }} | {{ item.soDienThoai || '—' }}
+                  </div>
+                </div>
+              </div>
+            </a-list-item>
+          </template>
+        </a-list>
+      </div>
+      <div v-else style="text-align: center; padding: 40px; color: var(--color-text-3)">Không có khách hàng nào</div>
+    </a-modal>
   </div>
 </template>
 
@@ -348,23 +524,16 @@ import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import {
-  IconPlus,
-  IconSearch,
-  IconDownload,
-  IconEdit,
-  IconEye,
-  IconMore,
-  IconCopy,
-  IconDelete,
-  IconStar,
-  IconGift,
-  IconCheckCircle,
-  IconClockCircle,
-  IconRefresh,
-} from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDownload, IconEdit, IconEye, IconDelete, IconStar, IconRefresh } from '@arco-design/web-vue/es/icon'
 import downloadCsv from '@/utils/export-csv'
-import { deleteCoupon as deleteCouponApi, fetchCoupons, type CouponApiModel, updateCoupon } from '@/api/discount-management'
+import {
+  deleteCoupon as deleteCouponApi,
+  fetchCoupons,
+  fetchCustomers,
+  type CouponApiModel,
+  type CustomerApiModel,
+  updateCoupon,
+} from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 
 // Breadcrumb setup
@@ -421,6 +590,13 @@ const columns = [
     title: 'Tên phiếu giảm giá',
     dataIndex: 'name',
     width: 200,
+  },
+  {
+    title: 'Nổi bật',
+    dataIndex: 'featured',
+    slotName: 'featured',
+    width: 100,
+    align: 'center',
   },
   {
     title: 'Giá trị giảm',
@@ -490,6 +666,7 @@ interface CouponRecord {
   start_date: string
   end_date: string
   status: CouponStatus
+  featured: boolean
   source: CouponApiModel
 }
 
@@ -502,6 +679,10 @@ const couponDeleteVisible = ref(false)
 const couponEditSubmitting = ref(false)
 const couponDeleteSubmitting = ref(false)
 
+// Applied customers modal
+const appliedCustomersVisible = ref(false)
+const appliedCustomersList = ref<CustomerApiModel[]>([])
+
 const couponEditFormRef = ref<FormInstance>()
 const couponEditForm = reactive({
   name: '',
@@ -513,6 +694,8 @@ const couponEditForm = reactive({
   dateRange: [] as string[],
   description: '',
   active: true,
+  featured: false,
+  selectedCustomerIds: [] as number[],
 })
 
 const couponEditRules: FormRules = {
@@ -541,17 +724,168 @@ watch(
   () => couponEditForm.discountValue,
   (value) => {
     if (value === null || value === undefined) return
-    
+
     // Ensure value is positive
     if (value < 0) {
       couponEditForm.discountValue = 0
       return
     }
-    
+
     // Cap percentage discount at 100%
     if (isPercentEdit.value && value > 100) {
       couponEditForm.discountValue = 100
       Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+    }
+  }
+)
+
+// Customer selection for edit form
+const customers = ref<CustomerApiModel[]>([])
+const customersLoading = ref(false)
+const customerSearchQuery = ref('')
+
+const customerColumns = [
+  {
+    title: 'Họ tên',
+    dataIndex: 'tenKhachHang',
+    ellipsis: true,
+    tooltip: true,
+  },
+  {
+    title: 'Email',
+    dataIndex: 'email',
+    ellipsis: true,
+    tooltip: true,
+  },
+  {
+    title: 'Số điện thoại',
+    dataIndex: 'soDienThoai',
+    width: 130,
+  },
+]
+
+const filteredCustomers = computed(() => {
+  if (!customerSearchQuery.value) {
+    return customers.value
+  }
+  const query = customerSearchQuery.value.toLowerCase()
+  return customers.value.filter(
+    (customer) =>
+      customer.tenKhachHang?.toLowerCase().includes(query) ||
+      customer.soDienThoai?.toLowerCase().includes(query) ||
+      customer.email?.toLowerCase().includes(query)
+  )
+})
+
+const customerPagination = computed(() => ({
+  pageSize: 5,
+  showTotal: true,
+  showPageSize: false,
+}))
+
+// Custom checkbox column for edit modal
+const customerColumnsWithCheckbox = computed(() => [
+  {
+    title: '',
+    dataIndex: 'select',
+    slotName: 'select',
+    width: 50,
+    align: 'center' as const,
+  },
+  ...customerColumns,
+])
+
+const isAllEditCustomersSelected = computed(() => {
+  if (filteredCustomers.value.length === 0) return false
+  return filteredCustomers.value.every((customer) => couponEditForm.selectedCustomerIds.includes(customer.id))
+})
+
+const isSomeEditCustomersSelected = computed(() => {
+  return couponEditForm.selectedCustomerIds.length > 0
+})
+
+const toggleEditCustomerSelection = (customerId: number) => {
+  const index = couponEditForm.selectedCustomerIds.indexOf(customerId)
+  if (index > -1) {
+    couponEditForm.selectedCustomerIds.splice(index, 1)
+  } else {
+    couponEditForm.selectedCustomerIds.push(customerId)
+  }
+}
+
+const toggleAllEditCustomers = () => {
+  if (isAllEditCustomersSelected.value) {
+    // Deselect all filtered customers
+    filteredCustomers.value.forEach((customer) => {
+      const index = couponEditForm.selectedCustomerIds.indexOf(customer.id)
+      if (index > -1) {
+        couponEditForm.selectedCustomerIds.splice(index, 1)
+      }
+    })
+  } else {
+    // Select all filtered customers
+    filteredCustomers.value.forEach((customer) => {
+      if (!couponEditForm.selectedCustomerIds.includes(customer.id)) {
+        couponEditForm.selectedCustomerIds.push(customer.id)
+      }
+    })
+  }
+}
+
+const selectAllEditCustomers = () => {
+  filteredCustomers.value.forEach((customer) => {
+    if (!couponEditForm.selectedCustomerIds.includes(customer.id)) {
+      couponEditForm.selectedCustomerIds.push(customer.id)
+    }
+  })
+}
+
+const deselectAllEditCustomers = () => {
+  filteredCustomers.value.forEach((customer) => {
+    const index = couponEditForm.selectedCustomerIds.indexOf(customer.id)
+    if (index > -1) {
+      couponEditForm.selectedCustomerIds.splice(index, 1)
+    }
+  })
+}
+
+const loadCustomers = async () => {
+  customersLoading.value = true
+  try {
+    const data = await fetchCustomers()
+
+    if (data && Array.isArray(data)) {
+      // Filter active customers
+      const activeCustomers = data.filter((c) => {
+        return c.trangThai !== false && c.trangThai !== 0
+      })
+      customers.value = activeCustomers
+
+      if (activeCustomers.length === 0) {
+        Message.info('Không có khách hàng hoạt động')
+      }
+    } else {
+      customers.value = []
+      Message.warning('Dữ liệu khách hàng không hợp lệ')
+    }
+  } catch {
+    Message.error('Không thể tải danh sách khách hàng')
+    customers.value = []
+  } finally {
+    customersLoading.value = false
+  }
+}
+
+// Load customers when featured is checked in edit form
+watch(
+  () => couponEditForm.featured,
+  (isFeatured) => {
+    if (isFeatured && customers.value.length === 0) {
+      loadCustomers()
+    }
+    // Clear selected customers when unchecking featured
+    if (!isFeatured) {
+      couponEditForm.selectedCustomerIds = []
     }
   }
 )
@@ -610,11 +944,29 @@ const toCouponRecord = (coupon: CouponApiModel, index: number): CouponRecord => 
     start_date: coupon.ngayBatDau ?? '',
     end_date: coupon.ngayKetThuc ?? '',
     status: deriveCouponStatus(coupon),
+    featured: coupon.featured ?? false,
     source: coupon,
   }
 }
 
 // Methods
+const formatNumberWithSeparator = (value: number | string | undefined) => {
+  if (value === null || value === undefined || value === '') return ''
+  // Convert to number first to handle any string input
+  const numValue = typeof value === 'string' ? parseFloat(value.replace(/\./g, '')) : value
+  if (Number.isNaN(numValue)) return ''
+  // Format with thousand separators
+  return numValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
+const parseFormattedNumber = (value: string | number | undefined) => {
+  if (typeof value === 'number') return value
+  if (!value || value === '') return undefined
+  const cleaned = String(value).replace(/\./g, '')
+  const parsed = Number(cleaned)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -719,8 +1071,39 @@ const loadCoupons = async () => {
   loading.value = true
   try {
     const data = await fetchCoupons()
-    coupons.value = data.map((item, index) => toCouponRecord(item, index))
-  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.log('[DEBUG] API Response - First 2 items:', data.slice(0, 2))
+    // eslint-disable-next-line no-console
+    console.log(
+      '[DEBUG] Featured field exists?',
+      data.some((item) => Object.prototype.hasOwnProperty.call(item, 'featured'))
+    )
+    // eslint-disable-next-line no-console
+    console.log(
+      '[DEBUG] Featured vouchers:',
+      data.filter((item) => item.featured)
+    )
+    // eslint-disable-next-line no-console
+    console.log(
+      '[DEBUG] All vouchers featured status:',
+      data.map((item) => ({ id: item.id, name: item.tenPhieuGiamGia, featured: item.featured }))
+    )
+
+    // Sort by featured status first (featured vouchers at top), then by id (newest first)
+    const sorted = data.sort((a, b) => {
+      // Featured vouchers always come first
+      if (a.featured && !b.featured) return -1
+      if (!a.featured && b.featured) return 1
+      // If both have same featured status, sort by ID descending (newest first)
+      return b.id - a.id
+    })
+    coupons.value = sorted.map((item, index) => toCouponRecord(item, index))
+    // eslint-disable-next-line no-console
+    console.log(
+      '[DEBUG] Rendered coupons with featured:',
+      coupons.value.filter((c) => c.featured)
+    )
+  } catch {
     Message.error({ content: 'Không thể tải danh sách phiếu giảm giá', duration: 5000 })
   } finally {
     loading.value = false
@@ -807,6 +1190,24 @@ const viewCoupon = (coupon: CouponRecord) => {
   couponDetailVisible.value = true
 }
 
+const viewAppliedCustomers = async () => {
+  if (!selectedCoupon.value?.source?.idKhachHang || selectedCoupon.value.source.idKhachHang.length === 0) {
+    Message.warning('Không có khách hàng nào')
+    return
+  }
+
+  // Load all customers if not loaded yet
+  if (customers.value.length === 0) {
+    await loadCustomers()
+  }
+
+  // Filter customers that are applied to this voucher
+  const customerIds = selectedCoupon.value.source.idKhachHang
+  appliedCustomersList.value = customers.value.filter((customer) => customerIds.includes(customer.id))
+
+  appliedCustomersVisible.value = true
+}
+
 const editCoupon = (coupon: CouponRecord) => {
   selectedCoupon.value = coupon
   couponEditForm.name = coupon.name ?? ''
@@ -818,6 +1219,14 @@ const editCoupon = (coupon: CouponRecord) => {
   couponEditForm.dateRange = [coupon.start_date ?? '', coupon.end_date ?? ''].filter(Boolean) as string[]
   couponEditForm.description = coupon.source?.moTa ?? ''
   couponEditForm.active = Boolean(coupon.source?.trangThai)
+  couponEditForm.featured = coupon.featured ?? false
+  couponEditForm.selectedCustomerIds = coupon.source?.idKhachHang ?? []
+
+  // Load customers if featured and not already loaded
+  if (coupon.featured && customers.value.length === 0) {
+    loadCustomers()
+  }
+
   couponEditVisible.value = true
 }
 
@@ -870,11 +1279,35 @@ const submitCouponEdit = async () => {
       Message.error('Vui lòng nhập mức giảm tối đa hợp lệ')
       return
     }
+    if (capValue > 50000000) {
+      Message.error('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
+      return
+    }
+    
+    // Validate: Max discount should not exceed min order value
+    const minOrderValue = Number(couponEditForm.minOrder || 0)
+    if (minOrderValue > 0 && capValue >= minOrderValue) {
+      Message.error('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
+      return
+    }
+  } else {
+    // For fixed amount discount
+    const minOrderValue = Number(couponEditForm.minOrder || 0)
+    if (minOrderValue > 0 && discountValue >= minOrderValue) {
+      Message.error('Giá trị giảm phải nhỏ hơn giá trị đơn hàng tối thiểu')
+      return
+    }
   }
 
   const quantityValue = Number(couponEditForm.quantity)
   if (!Number.isInteger(quantityValue) || quantityValue <= 0) {
     Message.error('Số lượng áp dụng phải lớn hơn 0')
+    return
+  }
+
+  // Validate customer selection for featured vouchers
+  if (couponEditForm.featured && couponEditForm.selectedCustomerIds.length === 0) {
+    Message.error('Vui lòng chọn ít nhất một khách hàng cho phiếu giảm giá nổi bật')
     return
   }
 
@@ -890,7 +1323,8 @@ const submitCouponEdit = async () => {
     trangThai: couponEditForm.active,
     moTa: couponEditForm.description.trim() || null,
     deleted: Boolean(selectedCoupon.value.source?.deleted),
-    idKhachHang: selectedCoupon.value.source?.idKhachHang ?? [],
+    idKhachHang: couponEditForm.featured ? couponEditForm.selectedCustomerIds : [],
+    featured: couponEditForm.featured,
   }
 
   couponEditSubmitting.value = true
@@ -1161,5 +1595,93 @@ onMounted(() => {
 
 .danger-item {
   color: #ff4d4f;
+}
+
+.featured-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.not-featured {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customer-selection-section {
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--color-bg-2);
+}
+
+.customer-selection-section :deep(.arco-table) {
+  border-radius: 4px;
+}
+
+.customer-selection-section :deep(.arco-table-th) {
+  background-color: var(--color-fill-2);
+  font-weight: 600;
+}
+
+/* Modal two-column layout */
+.edit-modal-featured :deep(.arco-modal-body) {
+  padding: 0;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.modal-two-columns {
+  display: flex;
+  gap: 0;
+  min-height: 500px;
+}
+
+.modal-left-column {
+  flex: 0 0 48%;
+  padding: 20px;
+  border-right: 1px solid var(--color-border-2);
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.modal-right-column {
+  flex: 0 0 52%;
+  padding: 20px;
+  background: var(--color-fill-1);
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.modal-column-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--color-primary-6);
+}
+
+.edit-modal-featured .customer-selection-section {
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+.edit-modal-featured .customer-selection-section :deep(.arco-table-container) {
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
 }
 </style>

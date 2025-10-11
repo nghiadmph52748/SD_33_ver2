@@ -88,6 +88,7 @@ export interface CouponApiModel {
   moTa: string | null
   deleted: boolean
   idKhachHang?: number[]
+  featured?: boolean
 }
 
 export const fetchPromotionCampaigns = () => requestJson<PromotionApiModel[]>('/dot-giam-gia-management/playlist')
@@ -121,7 +122,8 @@ export const deletePromotionCampaign = (id: number) =>
   })
 
 export interface CreateCouponPayload {
-  tenPhieuGiamGia: string
+  maPhieuGiamGia?: string
+  tenPhieuGiamGia?: string
   loaiPhieuGiamGia: boolean
   giaTriGiamGia: number
   soTienToiDa: number | null
@@ -133,6 +135,7 @@ export interface CreateCouponPayload {
   moTa?: string | null
   deleted?: boolean
   idKhachHang?: number[]
+  featured?: boolean
 }
 
 export const createCoupon = (payload: CreateCouponPayload) =>
@@ -151,3 +154,20 @@ export const deleteCoupon = (id: number) =>
   requestJson<null>(`/phieu-giam-gia-management/delete/${id}`, {
     method: 'DELETE',
   })
+
+// Customer API
+export interface CustomerApiModel {
+  id: number
+  maKhachHang?: string
+  tenKhachHang: string
+  tenTaiKhoan?: string
+  soDienThoai: string
+  email?: string
+  diaChi?: string
+  ngaySinh?: string
+  gioiTinh?: boolean
+  matKhau?: string
+  trangThai?: boolean | number
+}
+
+export const fetchCustomers = () => requestJson<CustomerApiModel[]>('/khach-hang-management/playlist')

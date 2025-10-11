@@ -123,7 +123,7 @@ public class PhieuGiamGiaService {
                     .customerEmail(khachHang.getEmail())
                     .voucherCode(pggcn.getMaPhieuGiamGiaCaNhan())
                     .voucherName(pgg.getTenPhieuGiamGia())
-                    .voucherType(pgg.getLoaiPhieuGiamGia() ? "PERCENTAGE" : "FIXED_AMOUNT")
+                    .voucherType(pgg.getLoaiPhieuGiamGia() ? "FIXED_AMOUNT" : "PERCENTAGE")
                     .discountValue(pgg.getGiaTriGiamGia())
                     .maxDiscount(pgg.getSoTienToiDa())
                     .minOrderValue(pgg.getHoaDonToiThieu())
