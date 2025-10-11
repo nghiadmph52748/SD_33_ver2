@@ -63,11 +63,9 @@
 
           <!-- Dòng 3: Summary và Actions -->
           <div class="filter-row-3">
-            <div class="filter-summary">
-              <span class="summary-text">
-                Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}
-              </span>
-            </div>
+            <span class="summary-text">
+              Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}
+            </span>
 
             <div class="filter-actions">
               <a-button class="reset-btn" @click="resetFilter">
@@ -179,7 +177,7 @@
     <div class="charts-section">
       <a-row :gutter="16">
         <a-col :span="12">
-          <a-card title="Doanh thu theo tháng" class="chart-card">
+          <a-card title="Biểu đồ doanh thu" class="chart-card">
             <template #extra>
               <a-select v-model="revenuePeriod" style="width: 120px">
                 <a-option value="6months">6 tháng</a-option>
@@ -193,7 +191,7 @@
         </a-col>
 
         <a-col :span="12">
-          <a-card title="Top sản phẩm bán chạy" class="chart-card">
+          <a-card title="Sản phẩm bán chạy" class="chart-card">
             <template #extra>
               <a-select v-model="topProductsPeriod" style="width: 120px">
                 <a-option value="week">Tuần này</a-option>
@@ -938,14 +936,11 @@ onMounted(() => {
 
 .filter-card {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
 }
 
 .filter-header {
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #e8e8e8;
 }
 
 .filter-title {
@@ -1068,23 +1063,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.filter-summary {
-  background: #fafafa;
-  padding: 16px 20px;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
-  flex: 1;
-  margin-right: 20px;
+  margin-top: 20px;
 }
 
 .summary-text {
-  font-size: 15px;
-  color: #333333;
+  font-size: 14px;
+  color: #666666;
   font-weight: 500;
   line-height: 1.4;
 }
