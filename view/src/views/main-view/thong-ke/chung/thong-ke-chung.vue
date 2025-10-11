@@ -270,7 +270,7 @@
         </a-col>
 
         <a-col :span="12">
-          <a-card class="chart-card"></a-card>
+          <a-card class="chart-card">
             <template #title>
               <div class="chart-title">
                 <span>Phân Phối Đa Kênh</span>
@@ -280,6 +280,7 @@
               <v-chart class="chart" :option="channelDistributionChartOption" autoresize />
             </div>
           </a-card>
+          
         </a-col>
       </a-row>
 
