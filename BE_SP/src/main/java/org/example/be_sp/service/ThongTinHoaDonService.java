@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.hibernate.Hibernate;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -76,20 +78,91 @@ public class ThongTinHoaDonService {
     /**
      * Lấy thông tin đơn hàng theo ID hóa đơn
      */
+    @Transactional(readOnly = true)
     public List<ThongTinDonHangResponse> getByHoaDonId(Integer hoaDonId) {
-        return thongTinDonHangRepository.findByHoaDonId(hoaDonId)
-            .stream()
-            .map(ThongTinDonHangResponse::new)
-            .toList();
+        try {
+            List<ThongTinDonHang> results = thongTinDonHangRepository.findByHoaDonId(hoaDonId);
+            if (results == null || results.isEmpty()) {
+                log.warn("Không tìm thấy thông tin đơn hàng cho hóa đơn ID: {}", hoaDonId);
+                return new ArrayList<>();
+            }
+            return results.stream()
+                .map(ThongTinDonHangResponse::new)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Lỗi khi lấy thông tin đơn hàng cho hóa đơn ID: {}", hoaDonId, e);
+            return new ArrayList<>();
+        }
     }
     
     /**
      * Lấy thông tin đơn hàng mới nhất theo ID hóa đơn
      */
+    @Transactional(readOnly = true)
     public ThongTinDonHangResponse getLatestByHoaDonId(Integer hoaDonId) {
-        return thongTinDonHangRepository.findLatestByHoaDonId(hoaDonId)
-            .map(ThongTinDonHangResponse::new)
-            .orElse(null);
+        try {
+            // Thử sử dụng method không có Pageable trước
+            List<ThongTinDonHang> results = thongTinDonHangRepository.findByHoaDonIdOrderByThoiGianDesc(hoaDonId);
+            
+            if (results == null || results.isEmpty()) {
+                log.warn("Không tìm thấy thông tin đơn hàng cho hóa đơn ID: {}", hoaDonId);
+                return null;
+            }
+            
+            ThongTinDonHang thongTinDonHang = results.get(0); // Lấy record đầu tiên (mới nhất)
+            
+            // Force load các quan hệ cần thiết
+            if (thongTinDonHang.getIdHoaDon() != null) {
+                Hibernate.initialize(thongTinDonHang.getIdHoaDon());
+                
+                // Load quan hệ của HoaDon
+                if (thongTinDonHang.getIdHoaDon().getIdKhachHang() != null) {
+                    Hibernate.initialize(thongTinDonHang.getIdHoaDon().getIdKhachHang());
+                }
+                if (thongTinDonHang.getIdHoaDon().getIdNhanVien() != null) {
+                    Hibernate.initialize(thongTinDonHang.getIdHoaDon().getIdNhanVien());
+                }
+                if (thongTinDonHang.getIdHoaDon().getHoaDonChiTiets() != null) {
+                    Hibernate.initialize(thongTinDonHang.getIdHoaDon().getHoaDonChiTiets());
+                    
+                    // Load quan hệ của HoaDonChiTiet
+                    for (var hdct : thongTinDonHang.getIdHoaDon().getHoaDonChiTiets()) {
+                        if (hdct.getIdChiTietSanPham() != null) {
+                            Hibernate.initialize(hdct.getIdChiTietSanPham());
+                            
+                            // Load quan hệ của ChiTietSanPham
+                            if (hdct.getIdChiTietSanPham().getIdSanPham() != null) {
+                                Hibernate.initialize(hdct.getIdChiTietSanPham().getIdSanPham());
+                            }
+                            if (hdct.getIdChiTietSanPham().getIdMauSac() != null) {
+                                Hibernate.initialize(hdct.getIdChiTietSanPham().getIdMauSac());
+                            }
+                            if (hdct.getIdChiTietSanPham().getIdKichThuoc() != null) {
+                                Hibernate.initialize(hdct.getIdChiTietSanPham().getIdKichThuoc());
+                            }
+                            if (hdct.getIdChiTietSanPham().getIdDeGiay() != null) {
+                                Hibernate.initialize(hdct.getIdChiTietSanPham().getIdDeGiay());
+                            }
+                            if (hdct.getIdChiTietSanPham().getIdChatLieu() != null) {
+                                Hibernate.initialize(hdct.getIdChiTietSanPham().getIdChatLieu());
+                            }
+                            if (hdct.getIdChiTietSanPham().getIdTrongLuong() != null) {
+                                Hibernate.initialize(hdct.getIdChiTietSanPham().getIdTrongLuong());
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (thongTinDonHang.getIdTrangThaiDonHang() != null) {
+                Hibernate.initialize(thongTinDonHang.getIdTrangThaiDonHang());
+            }
+            
+            return new ThongTinDonHangResponse(thongTinDonHang);
+        } catch (Exception e) {
+            log.error("Lỗi khi lấy thông tin đơn hàng mới nhất cho hóa đơn ID: {}", hoaDonId, e);
+            return null;
+        }
     }
     
     /**
