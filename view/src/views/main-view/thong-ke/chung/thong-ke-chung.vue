@@ -30,7 +30,7 @@
                 <a-option value="year">Năm này</a-option>
                 <a-option value="custom">Tùy chọn</a-option>
               </a-select>
-
+              
               <!-- DatePicker cho tùy chọn -->
               <div v-if="selectedTimeRange === 'custom'" class="custom-date-picker">
                 <a-range-picker
@@ -252,10 +252,10 @@
               <div class="chart-title">
                 <span>Phân Phối Đa Kênh</span>
               </div>
-            </template>
+                </template>
             <div class="chart-container">
               <v-chart class="chart" :option="channelDistributionChartOption" autoresize />
-            </div>
+                </div>
           </a-card>
         </a-col>
 
@@ -279,7 +279,7 @@
             <template #title>
               <div class="chart-title">
                 <span>Bảng Thống Kê Chi Tiết</span>
-              </div>
+    </div>
             </template>
             <div class="table-container">
               <a-table
@@ -631,7 +631,7 @@ const lowStockProductsColumns = [
     align: 'center' as const,
   },
   {
-    title: 'Tên sản phẩm',
+    title: 'Tên biến thể sản phẩm chi tiết',
     dataIndex: 'tenSanPham',
     slotName: 'tenSanPham',
     width: 300,
@@ -1074,56 +1074,14 @@ const getStockStatus = (soLuongTon: number): string => {
 
 // Hàm cập nhật dữ liệu sản phẩm sắp hết hàng
 const updateLowStockProductsData = () => {
-  if (!chiTietSanPhamList.value || chiTietSanPhamList.value.length === 0) {
-    // Thêm dữ liệu mẫu để test khi không có dữ liệu thực
-    lowStockProducts.value = [
-      {
-        id: 1,
-        tenSanPham: 'Giày Nike Air Max 270 - Đen - Size 42',
-        anh: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop',
-        giaBan: 2500000,
-        soLuongTon: 2,
-        trangThai: 'SẮP HẾT',
-      },
-      {
-        id: 2,
-        tenSanPham: 'Giày Adidas Ultraboost 22 - Trắng - Size 40',
-        anh: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=200&fit=crop',
-        giaBan: 3200000,
-        soLuongTon: 0,
-        trangThai: 'HẾT HÀNG',
-      },
-      {
-        id: 3,
-        tenSanPham: 'Giày Converse Chuck Taylor - Xanh - Size 39',
-        anh: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=200&h=200&fit=crop',
-        giaBan: 1200000,
-        soLuongTon: 3,
-        trangThai: 'SẮP HẾT',
-      },
-      {
-        id: 4,
-        tenSanPham: 'Giày Vans Old Skool - Đỏ - Size 41',
-        anh: 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=200&h=200&fit=crop',
-        giaBan: 1500000,
-        soLuongTon: 1,
-        trangThai: 'CẢNH BÁO',
-      },
-      {
-        id: 5,
-        tenSanPham: 'Giày Puma RS-X - Xám - Size 43',
-        anh: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&h=200&fit=crop',
-        giaBan: 1800000,
-        soLuongTon: 4,
-        trangThai: 'SẮP HẾT',
-      },
-    ]
-    lowStockPagination.value.total = 5
-    return
-  }
-
-  // Lọc chi tiết sản phẩm có số lượng tồn dưới 5
-  const lowStockItems = chiTietSanPhamList.value
+  console.log('=== CẬP NHẬT DỮ LIỆU SẢN PHẨM SẮP HẾT HÀNG ===')
+  console.log('Chi tiết sản phẩm từ API:', chiTietSanPhamList.value)
+  
+  // Ưu tiên sử dụng dữ liệu từ API
+  if (chiTietSanPhamList.value && chiTietSanPhamList.value.length > 0) {
+    console.log('Có dữ liệu từ API, xử lý...')
+    // Lọc chi tiết sản phẩm có số lượng tồn dưới 5
+    const lowStockItems = chiTietSanPhamList.value
     .filter((chiTiet: any) => {
       const soLuongTon = chiTiet.soLuongTon || chiTiet.soLuong || 0
       return soLuongTon < 5
@@ -1134,8 +1092,28 @@ const updateLowStockProductsData = () => {
       const mauSac = chiTiet.idMauSac?.tenMauSac || ''
       const kichThuoc = chiTiet.idKichThuoc?.tenKichThuoc || ''
 
-      // Tạo tên sản phẩm theo format: Tên sản phẩm + màu sắc + kích thước
-      const tenSanPham = `${sanPham.tenSanPham || 'Không rõ'}${mauSac ? ` - ${mauSac}` : ''}${kichThuoc ? ` - ${kichThuoc}` : ''}`.trim()
+      // Tạo tên biến thể sản phẩm chi tiết từ các thành phần
+      let tenSanPham = ''
+      
+      // Debug log để kiểm tra dữ liệu
+      console.log('--- Debug chi tiết sản phẩm ---')
+      console.log('chiTiet:', chiTiet)
+      console.log('chiTiet.tenSanPhamChiTiet:', chiTiet.tenSanPhamChiTiet)
+      console.log('sanPham:', sanPham)
+      console.log('sanPham.tenSanPham:', sanPham.tenSanPham)
+      console.log('mauSac:', mauSac)
+      console.log('kichThuoc:', kichThuoc)
+      
+      if (chiTiet.tenSanPhamChiTiet && chiTiet.tenSanPhamChiTiet.trim()) {
+        tenSanPham = chiTiet.tenSanPhamChiTiet
+        console.log('Sử dụng tenSanPhamChiTiet từ database:', tenSanPham)
+      } else {
+        const productName = sanPham.tenSanPham || 'Không rõ'
+        const colorPart = mauSac ? ` + ${mauSac}` : ''
+        const sizePart = kichThuoc ? ` + ${kichThuoc}` : ''
+        tenSanPham = `${productName}${colorPart}${sizePart}`.trim()
+        console.log('Tạo tên từ các thành phần:', tenSanPham)
+      }
 
       return {
         id: index + 1,
@@ -1155,12 +1133,19 @@ const updateLowStockProductsData = () => {
     })
     .sort((a, b) => a.soLuongTon - b.soLuongTon) // Sắp xếp theo số lượng tồn tăng dần
 
-  // Nếu không có chi tiết sản phẩm sắp hết hàng, hiển thị dữ liệu mẫu
-  if (lowStockItems.length === 0) {
+    console.log('Sản phẩm sắp hết hàng từ API:', lowStockItems)
+    
+    // Cập nhật dữ liệu từ API
+    lowStockProducts.value = lowStockItems
+    lowStockPagination.value.total = lowStockItems.length
+    console.log('Đã cập nhật dữ liệu từ API:', lowStockProducts.value)
+  } else {
+    console.log('Không có dữ liệu từ API, sử dụng dữ liệu mẫu')
+    // Chỉ sử dụng dữ liệu mẫu khi không có dữ liệu từ API
     lowStockProducts.value = [
       {
         id: 1,
-        tenSanPham: 'Giày Nike Air Max 270 - Đen - Size 42',
+        tenSanPham: 'Nike Air Max 270 + Đen + 42',
         anh: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop',
         giaBan: 2500000,
         soLuongTon: 2,
@@ -1168,7 +1153,7 @@ const updateLowStockProductsData = () => {
       },
       {
         id: 2,
-        tenSanPham: 'Giày Adidas Ultraboost 22 - Trắng - Size 40',
+        tenSanPham: 'Adidas Ultraboost 22 + Trắng + 40',
         anh: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=200&fit=crop',
         giaBan: 3200000,
         soLuongTon: 0,
@@ -1176,33 +1161,14 @@ const updateLowStockProductsData = () => {
       },
       {
         id: 3,
-        tenSanPham: 'Giày Converse Chuck Taylor - Xanh - Size 39',
+        tenSanPham: 'Converse Chuck Taylor + Xanh + 39',
         anh: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=200&h=200&fit=crop',
         giaBan: 1200000,
         soLuongTon: 3,
         trangThai: 'SẮP HẾT',
       },
-      {
-        id: 4,
-        tenSanPham: 'Giày Vans Old Skool - Đỏ - Size 41',
-        anh: 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=200&h=200&fit=crop',
-        giaBan: 1500000,
-        soLuongTon: 1,
-        trangThai: 'CẢNH BÁO',
-      },
-      {
-        id: 5,
-        tenSanPham: 'Giày Puma RS-X - Xám - Size 43',
-        anh: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&h=200&fit=crop',
-        giaBan: 1800000,
-        soLuongTon: 4,
-        trangThai: 'SẮP HẾT',
-      },
     ]
-    lowStockPagination.value.total = 5
-  } else {
-    lowStockProducts.value = lowStockItems
-    lowStockPagination.value.total = lowStockItems.length
+    lowStockPagination.value.total = 3
   }
 }
 
@@ -1729,7 +1695,27 @@ const fetchChiTietSanPham = async () => {
     const res = await axios.get('/api/chi-tiet-san-pham-management/playlist')
     const chiTietSanPham = res.data ?? []
     chiTietSanPhamList.value = Array.isArray(chiTietSanPham) ? chiTietSanPham : []
-  } catch {
+    
+    // Log để kiểm tra dữ liệu từ API
+    console.log('=== DỮ LIỆU CHI TIẾT SẢN PHẨM TỪ API ===')
+    console.log('Tổng số chi tiết sản phẩm:', chiTietSanPhamList.value.length)
+    chiTietSanPhamList.value.forEach((item, index) => {
+      console.log(`--- Chi tiết ${index + 1} ---`)
+      console.log('ID:', item.id)
+      console.log('Mã chi tiết:', item.maChiTietSanPham)
+      console.log('Tên sản phẩm:', item.tenSanPham)
+      console.log('Tên sản phẩm chi tiết:', item.tenSanPhamChiTiet)
+      console.log('Màu sắc:', item.tenMauSac)
+      console.log('Kích thước:', item.tenKichThuoc)
+      console.log('Số lượng:', item.soLuong)
+      console.log('Giá bán:', item.giaBan)
+      console.log('---')
+    })
+    
+    // Cập nhật dữ liệu sản phẩm sắp hết hàng sau khi load xong
+    updateLowStockProductsData()
+  } catch (error) {
+    console.error('Lỗi khi fetch chi tiết sản phẩm:', error)
     chiTietSanPhamList.value = []
   }
 }
@@ -1939,13 +1925,12 @@ const exportToExcel = () => {
 onMounted(() => {
   fetchOrders()
   fetchProducts()
-  fetchChiTietSanPham()
+  fetchChiTietSanPham() // Đã có updateLowStockProductsData() bên trong
   updateFilterSummary()
   updateOrderStatusData(selectedOrderPeriod.value)
   updateChannelDistributionData()
   updateCategoryData()
   updateTopSellingProductsData()
-  updateLowStockProductsData()
   updateDetailTableData()
 })
 </script>

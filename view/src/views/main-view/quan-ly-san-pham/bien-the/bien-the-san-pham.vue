@@ -189,6 +189,12 @@
           </div>
         </template>
 
+        <template #tenSanPhamChiTiet="{ record }">
+          <div class="product-detail-name">
+            {{ record.tenSanPhamChiTiet || `${record.tenSanPham} + ${record.tenMauSac} + ${record.tenKichThuoc}` }}
+          </div>
+        </template>
+
         <template #attributes="{ record }">
           <div class="attributes-cell">
             <div class="attribute-item">
@@ -547,6 +553,12 @@ const columns = [
     slotName: 'origin',
     width: 60,
     align: 'center',
+  },
+  {
+    title: 'Tên sản phẩm chi tiết',
+    dataIndex: 'tenSanPhamChiTiet',
+    slotName: 'tenSanPhamChiTiet',
+    width: 200,
   },
   {
     title: 'Thuộc tính sản phẩm',
@@ -1345,6 +1357,12 @@ watch(
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.product-detail-name {
+  font-weight: 500;
+  color: #1d2129;
+  line-height: 1.4;
 }
 
 .attributes-cell {

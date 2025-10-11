@@ -25,6 +25,8 @@ public class ChiTietSanPhamRequest {
     BigDecimal giaBan;
     Boolean trangThai;
     String ghiChu;
+    // Tạm thời comment trường này vì cột chưa tồn tại trong database
+    // String tenSanPhamChiTiet;
     @NotNull(message = "Trường deleted không được để trống")
     Boolean deleted;
     LocalDate createAt;

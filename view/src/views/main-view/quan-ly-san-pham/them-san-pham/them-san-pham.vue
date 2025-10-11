@@ -320,6 +320,11 @@
               :parser="(value) => value.replace(/,/g, '')"
             />
           </template>
+          <template #tenSanPhamChiTiet="{ record }">
+            <div class="product-detail-name">
+              {{ record.tenSanPhamChiTiet || `${record.productName} + ${record.attributes?.find(a => a.label === 'Màu sắc')?.value || ''} + ${record.attributes?.find(a => a.label === 'Kích thước')?.value || ''}` }}
+            </div>
+          </template>
           <template #attributes="{ record }">
             <div class="attributes-list">
               <div v-for="attr in record.attributes || []" :key="attr.label" class="attribute-line">
@@ -1644,6 +1649,11 @@ const variantColumns = [
     width: 150,
   },
   {
+    title: 'Tên sản phẩm chi tiết',
+    dataIndex: 'tenSanPhamChiTiet',
+    width: 200,
+  },
+  {
     title: 'Thuộc tính',
     dataIndex: 'attributes',
     width: 180,
@@ -1861,6 +1871,7 @@ const resetQuickAddForm = () => {
   quickAddForm.price = 0
 }
 
+// Quick add modal methods
 const showQuickAddModal = () => {
   quickAddVisible.value = true
   // Reset form
@@ -2716,6 +2727,12 @@ const confirmSubmit = async () => {
     // Tạo danh sách promises cho việc tạo/update biến thể
     const variantPromises = variants.value.flatMap((colorGroup) =>
       colorGroup.variants.map(async (variant) => {
+        // Tạo tên sản phẩm chi tiết
+        const productName = productNameInputs.value.find((p) => p.value === productId)?.label || formData.name
+        const colorName = colorInputs.value.find((c) => c.value === variant.color)?.label || ''
+        const sizeName = sizeInputs.value.find((s) => s.value === variant.size)?.label || ''
+        const tenSanPhamChiTiet = `${productName} + ${colorName} + ${sizeName}`.trim()
+
         const variantData = {
           idSanPham: productId,
           idMauSac: variant.color,
@@ -2725,6 +2742,7 @@ const confirmSubmit = async () => {
           idTrongLuong: 1, // You might need to add weight selection
           soLuong: variant.stock || 0,
           giaBan: variant.price || 0,
+          tenSanPhamChiTiet,
           trangThai: true,
           deleted: false,
           createAt: new Date().toISOString().split('T')[0],
@@ -2747,6 +2765,7 @@ const confirmSubmit = async () => {
           const updateData = {
             ...variantData,
             soLuong: existingVariant.soLuong + variant.stock, // CỘNG thêm số lượng
+            tenSanPhamChiTiet, // Cập nhật tên sản phẩm chi tiết
             updateAt: new Date().toISOString().split('T')[0],
             updateBy: userStore.id,
           }
@@ -3370,6 +3389,12 @@ watch(
 }
 
 /* Attributes list styles */
+.product-detail-name {
+  font-weight: 500;
+  color: #1d2129;
+  line-height: 1.4;
+}
+
 .attributes-list {
   display: flex;
   flex-direction: column;

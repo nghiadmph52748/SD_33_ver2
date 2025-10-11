@@ -22,6 +22,7 @@ public class ChiTietSanPhamFullResponse {
     private Integer id;
     private String maChiTietSanPham;
     private String tenSanPham;
+    private String tenSanPhamChiTiet;
     private List<String> anhSanPham;
     private String tenNhaSanXuat;
     private String tenXuatXu;
@@ -51,6 +52,18 @@ public class ChiTietSanPhamFullResponse {
         } else {
             this.tenSanPham = null;
         }
+        // Tạo tên sản phẩm chi tiết từ các thành phần
+        StringBuilder tenSanPhamChiTietBuilder = new StringBuilder();
+        if (s.getIdSanPham() != null && s.getIdSanPham().getTenSanPham() != null) {
+            tenSanPhamChiTietBuilder.append(s.getIdSanPham().getTenSanPham());
+        }
+        if (s.getIdMauSac() != null && s.getIdMauSac().getTenMauSac() != null) {
+            tenSanPhamChiTietBuilder.append(" - ").append(s.getIdMauSac().getTenMauSac());
+        }
+        if (s.getIdKichThuoc() != null && s.getIdKichThuoc().getTenKichThuoc() != null) {
+            tenSanPhamChiTietBuilder.append(" - Size ").append(s.getIdKichThuoc().getTenKichThuoc());
+        }
+        this.tenSanPhamChiTiet = tenSanPhamChiTietBuilder.toString();
         if (s.getChiTietSanPhamAnhs() != null) {
             this.anhSanPham = s.getChiTietSanPhamAnhs().stream()
                     .filter(anh -> anh != null && anh.getIdAnhSanPham() != null
@@ -123,7 +136,7 @@ public class ChiTietSanPhamFullResponse {
                     .filter(ct -> ct != null && ct.getIdDotGiamGia() != null && Boolean.FALSE.equals(ct.getDeleted())
                     && Boolean.TRUE.equals(ct.getTrangThai()))
                     .map(ct -> ct.getIdDotGiamGia().getId())
-                    .filter(id -> id != null)
+                    .filter(idValue -> idValue != null)
                     .findFirst()
                     .orElse(null);
         } else {
