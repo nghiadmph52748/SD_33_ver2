@@ -275,15 +275,38 @@
 
       <a-row :gutter="16" style="margin-top: 16px">
         <a-col :span="24">
-          <a-card title="Hoạt động gần đây" class="chart-card">
-            <a-timeline>
-              <a-timeline-item v-for="(act, idx) in recentActivities" :key="idx">
-                <div class="activity-item">
-                  <div class="activity-title">{{ act.title }}</div>
-                  <div class="activity-time">{{ toRelativeTime(new Date(act.time)) }}</div>
-                </div>
-              </a-timeline-item>
-            </a-timeline>
+          <a-card class="chart-card">
+            <template #title>
+              <div class="chart-title">
+                <span>Bảng Thống Kê Chi Tiết</span>
+              </div>
+            </template>
+            <div class="table-container">
+              <a-table :columns="detailTableColumns" :data="detailTableData" :pagination="false" :scroll="{ x: 800 }" class="detail-table">
+                <template #thờiGian="{ record }">
+                  <span class="time-cell">{{ record.thoiGian }}</span>
+                </template>
+                <template #doanhThu="{ record }">
+                  <span class="revenue-cell">{{ formatCurrency(record.doanhThu) }}</span>
+                </template>
+                <template #soDonHang="{ record }">
+                  <span class="order-count-cell">{{ record.soDonHang }}</span>
+                </template>
+                <template #giaTriTB="{ record }">
+                  <span class="avg-value-cell">{{ formatCurrency(record.giaTriTB) }}</span>
+                </template>
+                <template #tangTruong="{ record }">
+                  <span :class="['growth-cell', record.tangTruong >= 0 ? 'positive' : 'negative']">
+                    {{ record.tangTruong >= 0 ? '+' : '' }}{{ record.tangTruong }}%
+                  </span>
+                </template>
+                <template #trangThai="{ record }">
+                  <a-tag :color="getStatusColor(record.trangThai)">
+                    {{ record.trangThai }}
+                  </a-tag>
+                </template>
+              </a-table>
+            </div>
           </a-card>
         </a-col>
       </a-row>
@@ -371,6 +394,18 @@ const topProductsData = ref<{ name: string; value: number; revenue: number }[]>(
 
 const categoryData = ref<{ name: string; value: number; color: string }[]>([])
 
+// Bảng thống kê chi tiết
+const detailTableData = ref<
+  {
+    thoiGian: string
+    doanhThu: number
+    soDonHang: number
+    giaTriTB: number
+    tangTruong: number
+    trangThai: string
+  }[]
+>([])
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -378,98 +413,53 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const recentActivities = ref<{ type: 'product' | 'order' | 'customer'; title: string; time: string; at: number }[]>([])
+// Định nghĩa cột cho bảng thống kê chi tiết
+const detailTableColumns = [
+  {
+    title: 'Thời gian',
+    dataIndex: 'thoiGian',
+    slotName: 'thờiGian',
+    width: 120,
+    align: 'center' as const,
+  },
+  {
+    title: 'Doanh thu',
+    dataIndex: 'doanhThu',
+    slotName: 'doanhThu',
+    width: 150,
+    align: 'right' as const,
+  },
+  {
+    title: 'Số đơn hàng',
+    dataIndex: 'soDonHang',
+    slotName: 'soDonHang',
+    width: 120,
+    align: 'center' as const,
+  },
+  {
+    title: 'Giá trị TB/đơn',
+    dataIndex: 'giaTriTB',
+    slotName: 'giaTriTB',
+    width: 150,
+    align: 'right' as const,
+  },
+  {
+    title: 'Tăng trưởng',
+    dataIndex: 'tangTruong',
+    slotName: 'tangTruong',
+    width: 120,
+    align: 'center' as const,
+  },
+  {
+    title: 'Trạng thái',
+    dataIndex: 'trangThai',
+    slotName: 'trangThai',
+    width: 120,
+    align: 'center' as const,
+  },
+]
 
-const toRelativeTime = (date: Date) => {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
 
-  // Nếu thời gian trong tương lai hoặc quá xa, hiển thị thời gian tuyệt đối
-  if (diffMs < 0) {
-    return date.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
-  const seconds = Math.floor(diffMs / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (seconds < 60) return 'Vừa xong'
-  if (minutes < 60) return `${minutes} phút trước`
-  if (hours < 24) return `${hours} giờ trước`
-  if (days < 7) return `${days} ngày trước`
-
-  // Nếu quá 7 ngày, hiển thị ngày tháng
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-const buildRecentActivities = () => {
-  const acts: { type: 'product' | 'order' | 'customer'; title: string; time: string; at: number }[] = []
-
-  // 1. Đơn hàng thành công mới (đã thanh toán)
-  ordersList.value.forEach((o: any) => {
-    if (o?.ngayThanhToan && (o?.trangThai === true || o?.ngayThanhToan)) {
-      const dt = new Date(o.ngayThanhToan)
-      if (!Number.isNaN(dt.getTime())) {
-        const amount = Number(o?.tongTienSauGiam ?? o?.tongTien ?? 0)
-        acts.push({
-          type: 'order',
-          title: `Đơn hàng thành công ${o?.tenHoaDon ?? `#${o?.id ?? ''}`} - ${formatCurrency(Number.isNaN(amount) ? 0 : amount)}`,
-          time: toRelativeTime(dt),
-          at: dt.getTime(),
-        })
-      }
-    }
-  })
-
-  // 2. Thêm sản phẩm mới
-  productsList.value.forEach((p: any) => {
-    const createDate = p?.createAt || p?.create_at
-    if (createDate) {
-      const dt = new Date(createDate)
-      if (!Number.isNaN(dt.getTime())) {
-        acts.push({
-          type: 'product',
-          title: `Thêm sản phẩm mới: ${p?.tenSanPham ?? `#${p?.id ?? ''}`}`,
-          time: toRelativeTime(dt),
-          at: dt.getTime(),
-        })
-      }
-    }
-  })
-
-  // 3. Khách hàng mới
-  customersList.value.forEach((c: any) => {
-    const createDate = c?.createAt || c?.create_at
-    if (createDate) {
-      const dt = new Date(createDate)
-      if (!Number.isNaN(dt.getTime())) {
-        acts.push({
-          type: 'customer',
-          title: `Khách hàng mới: ${c?.tenKhachHang ?? `#${c?.id ?? ''}`}`,
-          time: toRelativeTime(dt),
-          at: dt.getTime(),
-        })
-      }
-    }
-  })
-
-  // Sắp xếp theo thời gian giảm dần (mới nhất lên đầu)
-  acts.sort((a, b) => b.at - a.at)
-  recentActivities.value = acts.slice(0, 10)
-}
 
 // Build revenue by month from ordersList and revenuePeriod
 const isPaidOrder = (order: any) => order?.trangThai === true || !!order?.ngayThanhToan
@@ -846,13 +836,184 @@ const updateCategoryData = () => {
   }))
 }
 
+// Hàm lấy dữ liệu hôm nay
+const getTodayData = () => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  const todayOrdersFiltered = ordersList.value.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    return orderDate >= today && orderDate < tomorrow
+  })
+
+  const revenue = todayOrdersFiltered
+    .filter((order: any) => order.trangThai === true || order.ngayThanhToan)
+    .reduce((sum: number, order: any) => {
+      const amount = Number(order.tongTienSauGiam ?? order.tongTien ?? 0)
+      return sum + (Number.isNaN(amount) ? 0 : amount)
+    }, 0)
+
+  return {
+    orders: todayOrdersFiltered,
+    revenue,
+    orderCount: todayOrdersFiltered.length,
+  }
+}
+
+// Hàm lấy dữ liệu tuần này
+const getWeekData = () => {
+  const now = new Date()
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - now.getDay())
+  startOfWeek.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 7)
+
+  const weekOrdersFiltered = ordersList.value.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    return orderDate >= startOfWeek && orderDate < endOfWeek
+  })
+
+  const revenue = weekOrdersFiltered
+    .filter((order: any) => order.trangThai === true || order.ngayThanhToan)
+    .reduce((sum: number, order: any) => {
+      const amount = Number(order.tongTienSauGiam ?? order.tongTien ?? 0)
+      return sum + (Number.isNaN(amount) ? 0 : amount)
+    }, 0)
+
+  return {
+    orders: weekOrdersFiltered,
+    revenue,
+    orderCount: weekOrdersFiltered.length,
+  }
+}
+
+// Hàm lấy dữ liệu tháng này
+const getMonthData = () => {
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+
+  const monthOrdersFiltered = ordersList.value.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    return orderDate >= startOfMonth && orderDate < endOfMonth
+  })
+
+  const revenue = monthOrdersFiltered
+    .filter((order: any) => order.trangThai === true || order.ngayThanhToan)
+    .reduce((sum: number, order: any) => {
+      const amount = Number(order.tongTienSauGiam ?? order.tongTien ?? 0)
+      return sum + (Number.isNaN(amount) ? 0 : amount)
+    }, 0)
+
+  return {
+    orders: monthOrdersFiltered,
+    revenue,
+    orderCount: monthOrdersFiltered.length,
+  }
+}
+
+// Hàm lấy dữ liệu năm này
+const getYearData = () => {
+  const now = new Date()
+  const startOfYear = new Date(now.getFullYear(), 0, 1)
+  const endOfYear = new Date(now.getFullYear() + 1, 0, 1)
+
+  const yearOrdersFiltered = ordersList.value.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    return orderDate >= startOfYear && orderDate < endOfYear
+  })
+
+  const revenue = yearOrdersFiltered
+    .filter((order: any) => order.trangThai === true || order.ngayThanhToan)
+    .reduce((sum: number, order: any) => {
+      const amount = Number(order.tongTienSauGiam ?? order.tongTien ?? 0)
+      return sum + (Number.isNaN(amount) ? 0 : amount)
+    }, 0)
+
+  return {
+    orders: yearOrdersFiltered,
+    revenue,
+    orderCount: yearOrdersFiltered.length,
+  }
+}
+
+// Hàm cập nhật dữ liệu bảng thống kê chi tiết
+const updateDetailTableData = () => {
+  if (!ordersList.value || ordersList.value.length === 0) {
+    detailTableData.value = []
+    return
+  }
+
+  const timePeriods = [
+    { key: 'today', label: 'Hôm nay', getData: () => getTodayData() },
+    { key: 'week', label: 'Tuần này', getData: () => getWeekData() },
+    { key: 'month', label: 'Tháng này', getData: () => getMonthData() },
+    { key: 'year', label: 'Năm này', getData: () => getYearData() },
+  ]
+
+  const tableData = timePeriods.map((period) => {
+    const data = period.getData()
+    const avgValue = data.orderCount > 0 ? data.revenue / data.orderCount : 0
+
+    return {
+      thoiGian: period.label,
+      doanhThu: data.revenue,
+      soDonHang: data.orderCount,
+      giaTriTB: avgValue,
+      tangTruong: 0, // Sẽ tính sau
+      trangThai: data.orderCount > 0 ? 'Hoạt động' : 'Không hoạt động',
+    }
+  })
+
+  // Tính tăng trưởng so với khoảng thời gian trước
+  for (let i = 0; i < tableData.length; i += 1) {
+    if (i === 0) {
+      tableData[i].tangTruong = 0
+    } else {
+      const prevRevenue = tableData[i - 1].doanhThu
+      const currentRevenue = tableData[i].doanhThu
+      if (prevRevenue > 0) {
+        tableData[i].tangTruong = Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100 * 100) / 100
+      } else {
+        tableData[i].tangTruong = currentRevenue > 0 ? 100 : 0
+      }
+    }
+  }
+
+  detailTableData.value = tableData
+}
+
+
+// Hàm lấy màu cho trạng thái
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case 'Hoạt động':
+      return 'green'
+    case 'Không hoạt động':
+      return 'red'
+    case 'Có đơn hàng nhưng chưa thanh toán':
+      return 'orange'
+    case 'Tạm dừng':
+      return 'orange'
+    default:
+      return 'blue'
+  }
+}
+
 watch([ordersList, productsList, customersList, revenuePeriod], () => {
   buildRevenueData()
   buildTopProductsData()
-  buildRecentActivities()
   updateOrderStatusData(selectedOrderPeriod.value)
   updateChannelDistributionData()
   updateCategoryData()
+  updateDetailTableData()
 })
 
 // Order status chart option
@@ -1125,7 +1286,6 @@ const fetchOrders = async () => {
 
     buildRevenueData()
     buildTopProductsData()
-    buildRecentActivities()
   } catch {
     totalRevenue.value = 0
   }
@@ -1136,8 +1296,7 @@ const fetchProducts = async () => {
     const res = await axios.get('/api/san-pham-management/playlist')
     const products = res.data ?? []
     productsList.value = Array.isArray(products) ? products : []
-  } catch (error) {
-    console.error('Error fetching products:', error)
+  } catch {
     productsList.value = []
   }
 }
@@ -1286,11 +1445,11 @@ const exportReport = () => {
 onMounted(() => {
   fetchOrders()
   fetchProducts()
-  buildRecentActivities()
   updateFilterSummary()
   updateOrderStatusData(selectedOrderPeriod.value)
   updateChannelDistributionData()
   updateCategoryData()
+  updateDetailTableData()
 })
 </script>
 
@@ -1696,6 +1855,92 @@ onMounted(() => {
 }
 
 /* Hiệu ứng cascade cho các phần tử bên trong */
+
+/* CSS cho bảng thống kê chi tiết */
+.table-container {
+  margin-top: 16px;
+}
+
+.detail-table {
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.detail-table :deep(.arco-table-thead) {
+  background-color: #f5f5f5;
+}
+
+.detail-table :deep(.arco-table-thead .arco-table-th) {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  font-size: 14px;
+  color: #1d2129;
+  border-bottom: 2px solid #e8e8e8;
+  padding: 12px 16px;
+}
+
+.detail-table :deep(.arco-table-tbody .arco-table-tr) {
+  transition: background-color 0.2s ease;
+}
+
+.detail-table :deep(.arco-table-tbody .arco-table-tr:hover) {
+  background-color: #f8f9fa;
+}
+
+.detail-table :deep(.arco-table-td) {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #1d2129;
+}
+
+.time-cell {
+  font-weight: 500;
+  font-size: 14px;
+  color: #000000;
+}
+
+.revenue-cell {
+  font-weight: 600;
+  font-size: 14px;
+  color: #000000;
+}
+
+.order-count-cell {
+  font-weight: 500;
+  font-size: 14px;
+  color: #000000;
+}
+
+.avg-value-cell {
+  font-weight: 500;
+  font-size: 14px;
+  color: #000000;
+}
+
+.growth-cell {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  min-width: 60px;
+  text-align: center;
+  color: #000000;
+}
+
+.growth-cell.positive {
+  background-color: #f6ffed;
+  color: #000000;
+  border: 1px solid #b7eb8f;
+}
+
+.growth-cell.negative {
+  background-color: #fff2f0;
+  color: #000000;
+  border: 1px solid #ffccc7;
+}
 .today-header {
   animation: fadeInUp 0.8s ease-out 0.4s both;
 }
@@ -1916,20 +2161,6 @@ onMounted(() => {
   height: 100%;
 }
 
-.activity-item {
-  margin-left: 8px;
-}
-
-.activity-title {
-  font-weight: 500;
-  color: #1d2129;
-  margin-bottom: 4px;
-}
-
-.activity-time {
-  font-size: 12px;
-  color: #86909c;
-}
 
 /* Responsive */
 @media (max-width: 768px) {
