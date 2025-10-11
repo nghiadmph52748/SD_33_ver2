@@ -12,38 +12,63 @@
             <span>Bộ Lọc Thống Kê</span>
           </div>
         </div>
-        
+
         <div class="filter-content">
           <!-- Dòng 1: Labels -->
           <div class="filter-row-1">
             <div class="filter-label">Khoảng thời gian thống kê</div>
             <div class="filter-label">Loại biểu đồ</div>
           </div>
-          
+
           <!-- Dòng 2: Controls -->
           <div class="filter-row-2">
-            <a-select v-model="selectedTimeRange" class="filter-select" @change="onTimeRangeChange">
-              <a-option value="today">Hôm nay</a-option>
-              <a-option value="week">Tuần này</a-option>
-              <a-option value="month">Tháng này</a-option>
-              <a-option value="year">Năm này</a-option>
-              <a-option value="custom">Tùy chọn</a-option>
-            </a-select>
-            
-            <a-select v-model="selectedChartType" class="filter-select" @change="onChartTypeChange">
-              <a-option value="line">Biểu đồ đường</a-option>
-              <a-option value="bar">Biểu đồ cột</a-option>
-              <a-option value="pie">Biểu đồ tròn</a-option>
-              <a-option value="area">Biểu đồ vùng</a-option>
-            </a-select>
+            <div class="time-range-container">
+              <a-select v-model="selectedTimeRange" class="filter-select" @change="onTimeRangeChange">
+                <a-option value="today">Hôm nay</a-option>
+                <a-option value="week">Tuần này</a-option>
+                <a-option value="month">Tháng này</a-option>
+                <a-option value="year">Năm này</a-option>
+                <a-option value="custom">Tùy chọn</a-option>
+              </a-select>
+              
+              <!-- DatePicker cho tùy chọn -->
+              <div v-if="selectedTimeRange === 'custom'" class="custom-date-picker">
+                <a-range-picker
+                  v-model="customDateRange"
+                  @change="onCustomDateChange"
+                  format="DD/MM/YYYY"
+                  placeholder="['Từ ngày', 'Đến ngày']"
+                  style="width: 300px"
+                />
+              </div>
+            </div>
+
+            <div class="chart-type-buttons">
+              <button 
+                :class="['chart-btn', { active: selectedChartType === 'line' }]"
+                @click="onChartTypeChange('line')"
+              >
+                <icon-line class="chart-icon" />
+                Đường
+              </button>
+              <button 
+                :class="['chart-btn', { active: selectedChartType === 'bar' }]"
+                @click="onChartTypeChange('bar')"
+              >
+                <icon-bar class="chart-icon" />
+                Cột
+              </button>
+            </div>
           </div>
-          
+
           <!-- Dòng 3: Summary và Actions -->
           <div class="filter-row-3">
             <div class="filter-summary">
-              <span class="summary-text">Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}</span>
+              <span class="summary-text">
+                Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}
+              </span>
             </div>
-            
+
             <div class="filter-actions">
               <a-button class="reset-btn" @click="resetFilter">
                 <icon-refresh class="action-icon" />
@@ -61,17 +86,17 @@
 
     <!-- Statistics Cards -->
     <div class="stats-grid">
-      <!-- Panel Hôm nay -->
+      <!-- Panel hiển thị dữ liệu theo khoảng thời gian được chọn -->
       <a-card class="stat-card today-card" :bordered="false">
         <div class="today-header">
           <div class="today-title-section">
-            <div class="today-icon-wrapper">
+            <div class="today-icon-wrapper" :class="getIconClass(selectedTimeRange)">
               <icon-calendar class="today-icon" />
             </div>
-            <div class="today-title">Hôm nay</div>
+            <div class="today-title">{{ displayData.title }}</div>
           </div>
           <div class="today-revenue-section">
-            <div class="today-revenue-value">{{ formatCurrency(todayRevenue) }}</div>
+            <div class="today-revenue-value">{{ formatCurrency(displayData.revenue) }}</div>
             <div class="today-revenue-change">
               <icon-arrow-down class="change-icon" />
               <span>0%</span>
@@ -79,11 +104,11 @@
           </div>
         </div>
         <div class="today-details">
-          <span class="today-detail-text">Sản phẩm đã bán: {{ todayProductsSold }} | Đơn hàng: {{ todayOrders }}</span>
+          <span class="today-detail-text">Sản phẩm đã bán: {{ displayData.productsSold }} | Đơn hàng: {{ displayData.orders }}</span>
         </div>
       </a-card>
 
-      <!-- Panel Tuần này -->
+      <!-- Panel cố định cho so sánh -->
       <a-card class="stat-card today-card" :bordered="false">
         <div class="today-header">
           <div class="today-title-section">
@@ -105,7 +130,7 @@
         </div>
       </a-card>
 
-      <!-- Panel Tháng này -->
+      <!-- Panel cố định cho so sánh -->
       <a-card class="stat-card today-card" :bordered="false">
         <div class="today-header">
           <div class="today-title-section">
@@ -127,7 +152,7 @@
         </div>
       </a-card>
 
-      <!-- Panel Năm này -->
+      <!-- Panel cố định cho so sánh -->
       <a-card class="stat-card today-card" :bordered="false">
         <div class="today-header">
           <div class="today-title-section">
@@ -225,13 +250,17 @@ import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { 
-  IconArrowDown, 
-  IconUser, 
-  IconCheckCircle, 
+  IconArrowDown,
+  IconUser,
+  IconCheckCircle,
   IconCalendar,
   IconFilter,
   IconRefresh,
-  IconExport
+  IconExport,
+  IconMinus,
+  IconPlus,
+  IconArrowRight,
+  IconArrowUp,
 } from '@arco-design/web-vue/es/icon'
 
 // ECharts setup
@@ -268,6 +297,10 @@ const selectedTimeRange = ref('today')
 const selectedChartType = ref('line')
 const totalOrdersCount = ref(0)
 const totalRevenueAmount = ref(0)
+const customDateRange = ref<any[]>([])
+const customProductsSold = ref(0)
+const customOrders = ref(0)
+const customRevenue = ref(0)
 
 const revenuePeriod = ref('6months')
 const topProductsPeriod = ref('month')
@@ -609,6 +642,10 @@ const updateFilterSummary = () => {
       totalOrdersCount.value = yearOrders.value
       totalRevenueAmount.value = yearRevenue.value
       break
+    case 'custom':
+      totalOrdersCount.value = customOrders.value
+      totalRevenueAmount.value = customRevenue.value
+      break
     default:
       totalOrdersCount.value = 0
       totalRevenueAmount.value = 0
@@ -741,10 +778,126 @@ const fetchOrders = async () => {
   }
 }
 
+// Computed properties cho dữ liệu hiển thị theo khoảng thời gian được chọn
+const displayData = computed(() => {
+  switch (selectedTimeRange.value) {
+    case 'today':
+      return {
+        productsSold: todayProductsSold.value,
+        orders: todayOrders.value,
+        revenue: todayRevenue.value,
+        title: 'Hôm nay',
+      }
+    case 'week':
+      return {
+        productsSold: weekProductsSold.value,
+        orders: weekOrders.value,
+        revenue: weekRevenue.value,
+        title: 'Tuần này',
+      }
+    case 'month':
+      return {
+        productsSold: monthProductsSold.value,
+        orders: monthOrders.value,
+        revenue: monthRevenue.value,
+        title: 'Tháng này',
+      }
+    case 'year':
+      return {
+        productsSold: yearProductsSold.value,
+        orders: yearOrders.value,
+        revenue: yearRevenue.value,
+        title: 'Năm này',
+      }
+    case 'custom':
+      return {
+        productsSold: customProductsSold.value,
+        orders: customOrders.value,
+        revenue: customRevenue.value,
+        title: 'Tùy chọn',
+      }
+    default:
+      return {
+        productsSold: todayProductsSold.value,
+        orders: todayOrders.value,
+        revenue: todayRevenue.value,
+        title: 'Hôm nay',
+      }
+  }
+})
+
+// Hàm lấy class icon theo khoảng thời gian
+const getIconClass = (timeRange: string) => {
+  switch (timeRange) {
+    case 'today':
+      return 'today-icon-wrapper'
+    case 'week':
+      return 'week-icon-wrapper'
+    case 'month':
+      return 'month-icon-wrapper'
+    case 'year':
+      return 'year-icon-wrapper'
+    default:
+      return 'today-icon-wrapper'
+  }
+}
+
 // Hàm xử lý thay đổi khoảng thời gian
 const onTimeRangeChange = (value: string) => {
   selectedTimeRange.value = value
   updateFilterSummary()
+}
+
+// Hàm tính toán dữ liệu cho custom date range
+const calculateCustomData = () => {
+  if (!customDateRange.value || customDateRange.value.length !== 2) {
+    customProductsSold.value = 0
+    customOrders.value = 0
+    customRevenue.value = 0
+    return
+  }
+
+  const startDate = new Date(customDateRange.value[0])
+  const endDate = new Date(customDateRange.value[1])
+  endDate.setHours(23, 59, 59, 999) // Đến cuối ngày
+
+  // Lọc đơn hàng trong khoảng thời gian tùy chọn
+  const customOrdersList = ordersList.value.filter((order: any) => {
+    if (!order.ngayTao) return false
+    const orderDate = new Date(order.ngayTao)
+    return orderDate >= startDate && orderDate <= endDate
+  })
+
+  // Tính dữ liệu
+  customOrders.value = customOrdersList.length
+  customProductsSold.value = customOrdersList.reduce((total: number, order: any) => {
+    if (order.chiTietHoaDon && Array.isArray(order.chiTietHoaDon)) {
+      return (
+        total +
+        order.chiTietHoaDon.reduce((sum: number, detail: any) => {
+          return sum + (Number(detail.soLuong) || 0)
+        }, 0)
+      )
+    }
+    return total
+  }, 0)
+
+  customRevenue.value = customOrdersList
+    .filter((order: any) => order.trangThai === true || order.ngayThanhToan)
+    .reduce((total: number, order: any) => {
+      const amount = Number(order.tongTienSauGiam ?? order.tongTien ?? 0)
+      return total + (Number.isNaN(amount) ? 0 : amount)
+    }, 0)
+
+  updateFilterSummary()
+}
+
+// Hàm xử lý khi chọn custom date range
+const onCustomDateChange = (dates: any[]) => {
+  if (dates && dates.length === 2) {
+    customDateRange.value = dates
+    calculateCustomData()
+  }
 }
 
 // Hàm xử lý thay đổi loại biểu đồ
@@ -763,7 +916,7 @@ const resetFilter = () => {
 // Hàm xuất báo cáo
 const exportReport = () => {
   // Logic xuất báo cáo
-  console.log('Exporting report...')
+  // TODO: Implement export functionality
 }
 
 onMounted(() => {
@@ -786,22 +939,22 @@ onMounted(() => {
 .filter-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e8e8e8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
 }
 
 .filter-header {
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e8e8e8;
 }
 
 .filter-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   font-size: 18px;
-  font-weight: 600;
-  color: #1d2129;
+  font-weight: 700;
+  color: #1a1a1a;
 }
 
 .filter-icon {
@@ -816,14 +969,14 @@ onMounted(() => {
 /* Dòng 1: Labels */
 .filter-row-1 {
   display: flex;
-  gap: 32px;
-  margin-bottom: 12px;
+  gap: 40px;
+  margin-bottom: 16px;
 }
 
 .filter-label {
   font-weight: 600;
   font-size: 14px;
-  color: #1d2129;
+  color: #333333;
   margin: 0;
   flex: 1;
 }
@@ -831,14 +984,83 @@ onMounted(() => {
 /* Dòng 2: Controls */
 .filter-row-2 {
   display: flex;
-  gap: 32px;
+  gap: 40px;
   margin-bottom: 20px;
-  align-items: center;
+  align-items: flex-start;
+}
+
+.time-range-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
 }
 
 .filter-select {
   width: 200px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+  font-size: 14px;
+}
+
+.custom-date-picker {
+  margin-top: 8px;
+}
+
+.custom-date-picker .arco-picker {
+  width: 300px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+}
+
+/* Chart type buttons */
+.chart-type-buttons {
+  display: flex;
+  gap: 12px;
   flex: 1;
+  justify-content: flex-start;
+}
+
+.chart-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid #d9d9d9;
+  background: white;
+  color: #666;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  height: 40px;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.chart-btn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+  background: #f0f8ff;
+}
+
+.chart-btn.active {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.chart-btn.active:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
+}
+
+.chart-icon {
+  font-size: 18px;
+  font-weight: 600;
 }
 
 /* Dòng 3: Summary và Actions */
@@ -846,43 +1068,83 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .filter-summary {
+  background: #fafafa;
+  padding: 16px 20px;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
   flex: 1;
+  margin-right: 20px;
 }
 
 .summary-text {
-  font-size: 14px;
-  color: #1d2129;
+  font-size: 15px;
+  color: #333333;
   font-weight: 500;
+  line-height: 1.4;
 }
 
 .filter-actions {
   display: flex;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .reset-btn {
+  background: #8c8c8c;
+  border-color: #8c8c8c;
+  color: white;
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: #f5f5f5;
-  border-color: #d9d9d9;
-  color: #666;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  height: 40px;
+  min-width: 140px;
+  justify-content: center;
+}
+
+.reset-btn:hover {
+  background: #737373;
+  border-color: #737373;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .export-btn {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: #52c41a;
-  border-color: #52c41a;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  height: 40px;
+  min-width: 140px;
+  justify-content: center;
+}
+
+.export-btn:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
 }
 
 .action-icon {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .stats-grid {
@@ -892,8 +1154,6 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.stat-card {
-}
 
 .stat-header {
   display: flex;
