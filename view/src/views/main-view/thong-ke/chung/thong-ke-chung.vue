@@ -30,7 +30,7 @@
                 <a-option value="year">Năm này</a-option>
                 <a-option value="custom">Tùy chọn</a-option>
               </a-select>
-              
+
               <!-- DatePicker cho tùy chọn -->
               <div v-if="selectedTimeRange === 'custom'" class="custom-date-picker">
                 <a-range-picker
@@ -252,10 +252,10 @@
               <div class="chart-title">
                 <span>Phân Phối Đa Kênh</span>
               </div>
-                </template>
+            </template>
             <div class="chart-container">
               <v-chart class="chart" :option="channelDistributionChartOption" autoresize />
-                </div>
+            </div>
           </a-card>
         </a-col>
 
@@ -279,7 +279,7 @@
             <template #title>
               <div class="chart-title">
                 <span>Bảng Thống Kê Chi Tiết</span>
-    </div>
+              </div>
             </template>
             <div class="table-container">
               <a-table
@@ -367,7 +367,7 @@
           <a-card class="chart-card">
             <template #title>
               <div class="chart-title">
-                <span>Top Các Sản Phẩm Sắp Hết Hàng</span>
+                <span>Sản phẩm sắp hết hàng</span>
               </div>
             </template>
             <div class="table-container">
@@ -425,7 +425,7 @@ import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from
 import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { IconArrowDown, IconCalendar, IconFilter, IconRefresh, IconExport, IconDownload } from '@arco-design/web-vue/es/icon'
+import { IconArrowDown, IconCalendar, IconFilter, IconRefresh, IconDownload } from '@arco-design/web-vue/es/icon'
 import * as XLSX from 'xlsx'
 
 // ECharts setup
@@ -1079,38 +1079,43 @@ const updateLowStockProductsData = () => {
     lowStockProducts.value = [
       {
         id: 1,
-        tenSanPham: 'Giày Nike Air Max 270 - Size 42',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Nike Air Max 270 - Đen - Size 42',
+        anh: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop',
         giaBan: 2500000,
         soLuongTon: 2,
+        trangThai: 'SẮP HẾT',
       },
       {
         id: 2,
-        tenSanPham: 'Giày Adidas Ultraboost 22 - Size 40',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Adidas Ultraboost 22 - Trắng - Size 40',
+        anh: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=200&fit=crop',
         giaBan: 3200000,
         soLuongTon: 0,
+        trangThai: 'HẾT HÀNG',
       },
       {
         id: 3,
-        tenSanPham: 'Giày Converse Chuck Taylor - Size 39',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Converse Chuck Taylor - Xanh - Size 39',
+        anh: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=200&h=200&fit=crop',
         giaBan: 1200000,
         soLuongTon: 3,
+        trangThai: 'SẮP HẾT',
       },
       {
         id: 4,
-        tenSanPham: 'Giày Vans Old Skool - Size 41',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Vans Old Skool - Đỏ - Size 41',
+        anh: 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=200&h=200&fit=crop',
         giaBan: 1500000,
         soLuongTon: 1,
+        trangThai: 'CẢNH BÁO',
       },
       {
         id: 5,
-        tenSanPham: 'Giày Puma RS-X - Size 43',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Puma RS-X - Xám - Size 43',
+        anh: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&h=200&fit=crop',
         giaBan: 1800000,
         soLuongTon: 4,
+        trangThai: 'SẮP HẾT',
       },
     ]
     lowStockPagination.value.total = 5
@@ -1126,10 +1131,23 @@ const updateLowStockProductsData = () => {
     .map((chiTiet: any, index: number) => {
       // Lấy thông tin sản phẩm từ chi tiết sản phẩm
       const sanPham = chiTiet.idSanPham || {}
+      const mauSac = chiTiet.idMauSac?.tenMauSac || ''
+      const kichThuoc = chiTiet.idKichThuoc?.tenKichThuoc || ''
+
+      // Tạo tên sản phẩm theo format: Tên sản phẩm + màu sắc + kích thước
+      const tenSanPham = `${sanPham.tenSanPham || 'Không rõ'}${mauSac ? ` - ${mauSac}` : ''}${kichThuoc ? ` - ${kichThuoc}` : ''}`.trim()
+
       return {
         id: index + 1,
-        tenSanPham: `${sanPham.tenSanPham || 'Không rõ'} - ${chiTiet.mauSac || ''} - Size ${chiTiet.kichThuoc || ''}`.trim(),
-        anh: sanPham.anh || sanPham.anhSanPham || '/default-product.png',
+        tenSanPham,
+        anh:
+          chiTiet.anh ||
+          chiTiet.anhSanPham ||
+          chiTiet.hinhAnh ||
+          sanPham.anh ||
+          sanPham.anhSanPham ||
+          sanPham.hinhAnh ||
+          '/default-product.png',
         giaBan: chiTiet.giaBan || sanPham.giaBan || 0,
         soLuongTon: chiTiet.soLuongTon || chiTiet.soLuong || 0,
         trangThai: getStockStatus(chiTiet.soLuongTon || chiTiet.soLuong || 0),
@@ -1142,40 +1160,40 @@ const updateLowStockProductsData = () => {
     lowStockProducts.value = [
       {
         id: 1,
-        tenSanPham: 'Giày Nike Air Max 270 - Size 42',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Nike Air Max 270 - Đen - Size 42',
+        anh: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop',
         giaBan: 2500000,
         soLuongTon: 2,
         trangThai: 'SẮP HẾT',
       },
       {
         id: 2,
-        tenSanPham: 'Giày Adidas Ultraboost 22 - Size 40',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Adidas Ultraboost 22 - Trắng - Size 40',
+        anh: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=200&fit=crop',
         giaBan: 3200000,
         soLuongTon: 0,
         trangThai: 'HẾT HÀNG',
       },
       {
         id: 3,
-        tenSanPham: 'Giày Converse Chuck Taylor - Size 39',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Converse Chuck Taylor - Xanh - Size 39',
+        anh: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=200&h=200&fit=crop',
         giaBan: 1200000,
         soLuongTon: 3,
         trangThai: 'SẮP HẾT',
       },
       {
         id: 4,
-        tenSanPham: 'Giày Vans Old Skool - Size 41',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Vans Old Skool - Đỏ - Size 41',
+        anh: 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=200&h=200&fit=crop',
         giaBan: 1500000,
         soLuongTon: 1,
         trangThai: 'CẢNH BÁO',
       },
       {
         id: 5,
-        tenSanPham: 'Giày Puma RS-X - Size 43',
-        anh: '/default-product.png',
+        tenSanPham: 'Giày Puma RS-X - Xám - Size 43',
+        anh: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&h=200&fit=crop',
         giaBan: 1800000,
         soLuongTon: 4,
         trangThai: 'SẮP HẾT',

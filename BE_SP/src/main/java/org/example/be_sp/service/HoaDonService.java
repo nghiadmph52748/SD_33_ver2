@@ -1,12 +1,23 @@
 package org.example.be_sp.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.example.be_sp.entity.ChiTietSanPham;
 import org.example.be_sp.entity.HoaDon;
 import org.example.be_sp.entity.HoaDonChiTiet;
+import org.example.be_sp.entity.KhachHang;
+import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
 import org.example.be_sp.model.response.HoaDonResponse;
 import org.example.be_sp.model.response.PagingResponse;
+import org.example.be_sp.repository.ChiTietSanPhamRepository;
+import org.example.be_sp.repository.HoaDonChiTietRepository;
 import org.example.be_sp.repository.HoaDonRepository;
 import org.example.be_sp.repository.KhachHangRepository;
 import org.example.be_sp.repository.NhanVienRepository;
@@ -15,13 +26,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import lombok.extern.slf4j.Slf4j;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -32,6 +38,10 @@ public class HoaDonService {
     KhachHangRepository khachHangRepository;
     @Autowired
     NhanVienRepository nhanVienRepository;
+    @Autowired
+    ChiTietSanPhamRepository chiTietSanPhamRepository;
+    @Autowired
+    HoaDonChiTietRepository hoaDonChiTietRepository;
     @Autowired
     PhieuGiamGiaService phieuGiamGiaService;
     @Autowired
@@ -203,6 +213,69 @@ public class HoaDonService {
             log.error("Failed to send order confirmation email for order: {}", 
                     hoaDon.getMaHoaDon(), e);
             // Don't throw exception - we don't want to rollback the order creation
+        }
+    }
+    
+    /**
+     * Thêm dữ liệu mẫu cho 3 hóa đơn
+     */
+    public void addSampleData() {
+        try {
+            log.info("Bắt đầu thêm dữ liệu mẫu...");
+            
+            // Lấy nhân viên đầu tiên
+            NhanVien nhanVien = nhanVienRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên", "404"));
+            
+            // Lấy khách hàng đầu tiên
+            KhachHang khachHang = khachHangRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new ApiException("Không tìm thấy khách hàng", "404"));
+            
+            // Lấy chi tiết sản phẩm đầu tiên
+            ChiTietSanPham chiTietSanPham = chiTietSanPhamRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm", "404"));
+            
+            // Tạo 3 hóa đơn mẫu
+            for (int i = 1; i <= 3; i++) {
+                HoaDon hoaDon = new HoaDon();
+                hoaDon.setIdKhachHang(khachHang);
+                hoaDon.setIdNhanVien(nhanVien);
+                hoaDon.setTenHoaDon("Hóa đơn mẫu " + i);
+                hoaDon.setLoaiDon(false); // Tại quầy
+                hoaDon.setPhiVanChuyen(BigDecimal.ZERO);
+                hoaDon.setTongTien(BigDecimal.valueOf(1000000 * i));
+                hoaDon.setTongTienSauGiam(BigDecimal.valueOf(1000000 * i));
+                hoaDon.setTenNguoiNhan("Khách hàng " + i);
+                hoaDon.setDiaChiNguoiNhan("Địa chỉ " + i + ", TP.HCM");
+                hoaDon.setSoDienThoaiNguoiNhan("012345678" + i);
+                hoaDon.setEmailNguoiNhan("khachhang" + i + "@email.com");
+                hoaDon.setNgayTao(LocalDate.now());
+                hoaDon.setTrangThai(true); // Hoàn thành
+                hoaDon.setDeleted(false);
+                
+                HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
+                
+                // Tạo chi tiết hóa đơn
+                HoaDonChiTiet hoaDonChiTiet = new HoaDonChiTiet();
+                hoaDonChiTiet.setIdHoaDon(savedHoaDon);
+                hoaDonChiTiet.setIdChiTietSanPham(chiTietSanPham);
+                hoaDonChiTiet.setSoLuong(i);
+                hoaDonChiTiet.setGiaBan(BigDecimal.valueOf(1000000));
+                hoaDonChiTiet.setThanhTien(BigDecimal.valueOf(1000000 * i));
+                hoaDonChiTiet.setTrangThai(true);
+                hoaDonChiTiet.setGhiChu("Sản phẩm mẫu " + i + " - Màu đen - Size 42");
+                hoaDonChiTiet.setDeleted(false);
+                
+                hoaDonChiTietRepository.save(hoaDonChiTiet);
+                
+                log.info("Đã tạo hóa đơn mẫu {} với ID: {}", i, savedHoaDon.getId());
+            }
+            
+            log.info("Hoàn thành thêm dữ liệu mẫu!");
+            
+        } catch (Exception e) {
+            log.error("Lỗi khi thêm dữ liệu mẫu: {}", e.getMessage(), e);
+            throw new ApiException("Lỗi khi thêm dữ liệu mẫu: " + e.getMessage(), "500");
         }
     }
 }
