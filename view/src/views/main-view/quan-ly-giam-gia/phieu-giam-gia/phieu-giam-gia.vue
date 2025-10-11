@@ -515,6 +515,24 @@
       </div>
       <div v-else style="text-align: center; padding: 40px; color: var(--color-text-3)">Không có khách hàng nào</div>
     </a-modal>
+
+    <!-- Export Confirmation Modal -->
+    <a-modal
+      v-model:visible="exportConfirmVisible"
+      title="Xác nhận xuất danh sách"
+      :confirm-loading="exportSubmitting"
+      ok-text="Xuất"
+      width="480px"
+      @ok="confirmExportCoupons"
+      @cancel="exportConfirmVisible = false"
+    >
+      <p>
+        Bạn có chắc chắn muốn xuất danh sách
+        <strong>{{ filteredCoupons.length }}</strong>
+        phiếu giảm giá?
+      </p>
+      <p class="modal-note">File CSV sẽ được tải xuống vào máy tính của bạn.</p>
+    </a-modal>
   </div>
 </template>
 
@@ -682,6 +700,10 @@ const couponDeleteSubmitting = ref(false)
 // Applied customers modal
 const appliedCustomersVisible = ref(false)
 const appliedCustomersList = ref<CustomerApiModel[]>([])
+
+// Export confirmation modal
+const exportConfirmVisible = ref(false)
+const exportSubmitting = ref(false)
 
 const couponEditFormRef = ref<FormInstance>()
 const couponEditForm = reactive({
@@ -1363,41 +1385,54 @@ const exportCoupons = () => {
     return
   }
 
-  const header = [
-    'STT',
-    'Mã phiếu',
-    'Tên phiếu giảm giá',
-    'Giá trị giảm',
-    'Giá trị tối thiểu',
-    'Giá trị tối đa',
-    'Ngày bắt đầu',
-    'Ngày kết thúc',
-    'Số lượng',
-    'Trạng thái',
-  ]
+  exportConfirmVisible.value = true
+}
 
-  const rows = filteredCoupons.value.map((coupon, index) => {
-    const discountDisplay = coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : formatCurrency(coupon.discount_value)
-    const minOrderDisplay = coupon.min_order_value != null ? formatCurrency(coupon.min_order_value) : 'Không giới hạn'
-    const maxDiscountDisplay = coupon.max_discount_value != null ? formatCurrency(coupon.max_discount_value) : 'Không giới hạn'
-    const quantityDisplay = coupon.usage_limit != null ? coupon.usage_limit : '∞'
+const confirmExportCoupons = () => {
+  exportSubmitting.value = true
 
-    return [
-      coupon.index ?? index + 1,
-      coupon.code ?? '',
-      coupon.name ?? '',
-      discountDisplay,
-      minOrderDisplay,
-      maxDiscountDisplay,
-      formatDate(coupon.start_date ?? ''),
-      formatDate(coupon.end_date ?? ''),
-      quantityDisplay,
-      getStatusText(coupon.status ?? ''),
+  try {
+    const header = [
+      'STT',
+      'Mã phiếu',
+      'Tên phiếu giảm giá',
+      'Giá trị giảm',
+      'Giá trị tối thiểu',
+      'Giá trị tối đa',
+      'Ngày bắt đầu',
+      'Ngày kết thúc',
+      'Số lượng',
+      'Trạng thái',
     ]
-  })
 
-  downloadCsv('phieu-giam-gia.csv', header, rows)
-  Message.success('Đã xuất danh sách phiếu giảm giá')
+    const rows = filteredCoupons.value.map((coupon, index) => {
+      const discountDisplay = coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : formatCurrency(coupon.discount_value)
+      const minOrderDisplay = coupon.min_order_value != null ? formatCurrency(coupon.min_order_value) : 'Không giới hạn'
+      const maxDiscountDisplay = coupon.max_discount_value != null ? formatCurrency(coupon.max_discount_value) : 'Không giới hạn'
+      const quantityDisplay = coupon.usage_limit != null ? coupon.usage_limit : '∞'
+
+      return [
+        coupon.index ?? index + 1,
+        coupon.code ?? '',
+        coupon.name ?? '',
+        discountDisplay,
+        minOrderDisplay,
+        maxDiscountDisplay,
+        formatDate(coupon.start_date ?? ''),
+        formatDate(coupon.end_date ?? ''),
+        quantityDisplay,
+        getStatusText(coupon.status ?? ''),
+      ]
+    })
+
+    downloadCsv('phieu-giam-gia.csv', header, rows)
+    Message.success('Đã xuất danh sách phiếu giảm giá')
+    exportConfirmVisible.value = false
+  } catch (error) {
+    Message.error('Không thể xuất danh sách')
+  } finally {
+    exportSubmitting.value = false
+  }
 }
 
 const resetFilters = async () => {
