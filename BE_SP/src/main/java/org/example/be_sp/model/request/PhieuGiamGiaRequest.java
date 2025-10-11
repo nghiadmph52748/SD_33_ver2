@@ -26,4 +26,5 @@ public class PhieuGiamGiaRequest {
     Boolean trangThai;
     String moTa;
     Boolean deleted;
+    Boolean featured;
 }

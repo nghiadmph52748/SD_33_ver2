@@ -30,7 +30,7 @@
                 <a-option value="year">Năm này</a-option>
                 <a-option value="custom">Tùy chọn</a-option>
               </a-select>
-              
+
               <!-- DatePicker cho tùy chọn -->
               <div v-if="selectedTimeRange === 'custom'" class="custom-date-picker">
                 <a-range-picker
@@ -44,17 +44,11 @@
             </div>
 
             <div class="chart-type-buttons">
-              <button 
-                :class="['chart-btn', { active: selectedChartType === 'line' }]"
-                @click="onChartTypeChange('line')"
-              >
+              <button :class="['chart-btn', { active: selectedChartType === 'line' }]" @click="onChartTypeChange('line')">
                 <icon-line class="chart-icon" />
                 Đường
               </button>
-              <button 
-                :class="['chart-btn', { active: selectedChartType === 'bar' }]"
-                @click="onChartTypeChange('bar')"
-              >
+              <button :class="['chart-btn', { active: selectedChartType === 'bar' }]" @click="onChartTypeChange('bar')">
                 <icon-bar class="chart-icon" />
                 Cột
               </button>
@@ -63,9 +57,7 @@
 
           <!-- Dòng 3: Summary và Actions -->
           <div class="filter-row-3">
-            <span class="summary-text">
-              Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}
-            </span>
+            <span class="summary-text">Số đơn hàng: {{ totalOrdersCount }} | Tổng doanh thu: {{ formatCurrency(totalRevenueAmount) }}</span>
 
             <div class="filter-actions">
               <a-button class="reset-btn" @click="resetFilter">
@@ -247,7 +239,7 @@ import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from
 import VChart from 'vue-echarts'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { 
+import {
   IconArrowDown,
   IconUser,
   IconCheckCircle,
@@ -1138,7 +1130,6 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-
 .stat-header {
   display: flex;
   align-items: center;
@@ -1152,7 +1143,6 @@ onMounted(() => {
 .today-icon {
   color: #1890ff;
 }
-
 
 .stat-content {
   margin-top: 16px;
@@ -1310,7 +1300,6 @@ onMounted(() => {
   }
 }
 
-
 /* Animation cho từng panel */
 .today-card:nth-child(1) {
   animation: fadeInUp 0.6s ease-out;
@@ -1327,7 +1316,6 @@ onMounted(() => {
 .today-card:nth-child(4) {
   animation: scaleIn 0.6s ease-out 0.3s both;
 }
-
 
 /* Hiệu ứng cascade cho các phần tử bên trong */
 .today-header {

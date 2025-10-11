@@ -380,7 +380,6 @@ const handleCheckboxChange = (checked: boolean, record: any) => {
 const handleSelectAllChange = (checked: boolean) => {
   const pageData = currentPageData.value
   if (checked) {
-
     // Collect all IDs to add
     const newIds = pageData.filter((item) => !selectedRowKeys.value.includes(item.id)).map((item) => item.id)
 

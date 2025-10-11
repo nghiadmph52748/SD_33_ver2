@@ -351,9 +351,7 @@
                   backgroundColor: colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.maMau || '#ccc',
                 }"
               ></div>
-              <span class="color-name">{{
-                colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label
-              }}</span>
+              <span class="color-name">{{ colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label }}</span>
             </div>
             <a-button type="outline" size="small" @click="showImageModal(colorVariant.color)">
               <template #icon>
@@ -2644,13 +2642,7 @@ const handleSubmit = async () => {
 }
 
 // Helper function to check if variant already exists
-const checkExistingVariant = async (
-  productId: number,
-  mauSac: number,
-  kichThuoc: number,
-  chatLieu: number,
-  deGiay: number
-) => {
+const checkExistingVariant = async (productId: number, mauSac: number, kichThuoc: number, chatLieu: number, deGiay: number) => {
   try {
     const response = await getBienTheSanPhamList(0, productId)
     if (response.data && Array.isArray(response.data)) {

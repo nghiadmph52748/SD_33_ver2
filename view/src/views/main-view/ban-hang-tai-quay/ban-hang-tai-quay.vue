@@ -192,6 +192,7 @@
               :loading="customerLoading"
               @row-click="handleCustomerRowClick"
               row-key="id"
+              :row-class="getCustomerRowClass"
             >
               <template #name="{ record }">
                 <div class="customer-name">
@@ -206,16 +207,6 @@
               <template #email="{ record }">
                 <span>{{ record.email || 'N/A' }}</span>
               </template>
-
-              <template #address="{ record }">
-                <span>{{ record.diaChi || 'N/A' }}</span>
-              </template>
-
-              <template #status="{ record }">
-                <a-tag :color="record.trangThai ? 'green' : 'red'">
-                  {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
-                </a-tag>
-              </template>
             </a-table>
           </div>
         </a-modal>
@@ -223,6 +214,22 @@
         <!-- Coupon Modal -->
         <a-modal v-model:visible="showCouponModal" title="Chọn phiếu giảm giá" width="800px" @ok="applyCoupon">
           <div class="coupon-modal">
+            <!-- Cart value info -->
+            <a-alert
+              v-if="subtotal > 0"
+              type="info"
+              style="margin-bottom: 16px"
+            >
+              Giá trị giỏ hàng hiện tại: <strong>{{ formatCurrency(subtotal) }}</strong>
+            </a-alert>
+            <a-alert
+              v-else
+              type="warning"
+              style="margin-bottom: 16px"
+            >
+              Giỏ hàng trống! Vui lòng thêm sản phẩm trước khi chọn phiếu giảm giá.
+            </a-alert>
+
             <a-input-search
               v-model="couponSearch"
               placeholder="Tìm kiếm phiếu giảm giá theo mã hoặc tên"
@@ -230,13 +237,26 @@
               @search="searchCoupons"
             />
 
+            <!-- Empty state when no applicable coupons -->
+            <a-empty
+              v-if="!couponLoading && filteredCoupons.length === 0 && couponsList.length > 0"
+              description="Không có phiếu giảm giá khả dụng cho giỏ hàng hiện tại"
+              style="padding: 40px 0"
+            >
+              <template #image>
+                <icon-tag style="font-size: 48px; color: #d9d9d9" />
+              </template>
+            </a-empty>
+
             <a-table
+              v-else
               :columns="couponColumns"
               :data="filteredCoupons"
               :pagination="couponPagination"
               :loading="couponLoading"
               @row-click="handleCouponRowClick"
               row-key="id"
+              :row-class="getCouponRowClass"
             >
               <template #code="{ record }">
                 <div class="coupon-code">
@@ -249,13 +269,13 @@
               </template>
 
               <template #type="{ record }">
-                <a-tag :color="record.loaiPhieuGiamGia ? 'blue' : 'green'">
-                  {{ record.loaiPhieuGiamGia ? 'Phần trăm' : 'Số tiền cố định' }}
+                <a-tag :color="record.loaiPhieuGiamGia ? 'orange' : 'blue'">
+                  {{ record.loaiPhieuGiamGia ? 'Số tiền cố định' : 'Phần trăm' }}
                 </a-tag>
               </template>
 
               <template #value="{ record }">
-                <span v-if="record.loaiPhieuGiamGia">{{ record.giaTriGiamGia }}%</span>
+                <span v-if="!record.loaiPhieuGiamGia">{{ record.giaTriGiamGia }}%</span>
                 <span v-else>{{ formatCurrency(Number(record.giaTriGiamGia)) }}</span>
               </template>
 
@@ -480,6 +500,7 @@ import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { createVnpayPayment, type CreateVnpayPaymentPayload } from '@/api/payment'
+import { fetchCustomers as fetchCustomersApi, fetchCoupons as fetchCouponsApi } from '@/api/discount-management'
 import { Message } from '@arco-design/web-vue'
 import {
   IconPlus,
@@ -528,32 +549,17 @@ const customerColumns = [
   {
     title: 'Tên khách hàng',
     dataIndex: 'tenKhachHang',
-    key: 'name',
-    slots: { customRender: 'name' },
+    slotName: 'name',
   },
   {
     title: 'Số điện thoại',
     dataIndex: 'soDienThoai',
-    key: 'phone',
-    slots: { customRender: 'phone' },
+    slotName: 'phone',
   },
   {
     title: 'Email',
     dataIndex: 'email',
-    key: 'email',
-    slots: { customRender: 'email' },
-  },
-  {
-    title: 'Địa chỉ',
-    dataIndex: 'diaChi',
-    key: 'address',
-    slots: { customRender: 'address' },
-  },
-  {
-    title: 'Trạng thái',
-    dataIndex: 'trangThai',
-    key: 'status',
-    slots: { customRender: 'status' },
+    slotName: 'email',
   },
 ]
 
@@ -562,38 +568,32 @@ const couponColumns = [
   {
     title: 'Mã phiếu',
     dataIndex: 'maPhieuGiamGia',
-    key: 'code',
-    slots: { customRender: 'code' },
+    slotName: 'code',
   },
   {
     title: 'Tên phiếu',
     dataIndex: 'tenPhieuGiamGia',
-    key: 'name',
-    slots: { customRender: 'name' },
+    slotName: 'name',
   },
   {
     title: 'Loại giảm giá',
     dataIndex: 'loaiPhieuGiamGia',
-    key: 'type',
-    slots: { customRender: 'type' },
+    slotName: 'type',
   },
   {
     title: 'Giá trị',
     dataIndex: 'giaTriGiamGia',
-    key: 'value',
-    slots: { customRender: 'value' },
+    slotName: 'value',
   },
   {
     title: 'Hóa đơn tối thiểu',
     dataIndex: 'hoaDonToiThieu',
-    key: 'minOrder',
-    slots: { customRender: 'minOrder' },
+    slotName: 'minOrder',
   },
   {
     title: 'Trạng thái',
     dataIndex: 'trangThai',
-    key: 'status',
-    slots: { customRender: 'status' },
+    slotName: 'status',
   },
 ]
 
@@ -810,16 +810,25 @@ const filteredCustomers = computed(() => {
   })
 })
 
-// Filtered coupons
+// Filtered coupons - only show applicable coupons based on cart subtotal
 const filteredCoupons = computed(() => {
-  if (!couponSearch.value) {
-    return couponsList.value
+  // Filter by minimum order value first
+  let filtered = couponsList.value.filter((coupon) => {
+    // Check if coupon has minimum order requirement
+    const minOrder = coupon.hoaDonToiThieu ? Number(coupon.hoaDonToiThieu) : 0
+    // Only show if cart subtotal meets minimum requirement
+    return subtotal.value >= minOrder
+  })
+
+  // Then filter by search term if exists
+  if (couponSearch.value) {
+    const searchTerm = couponSearch.value.toLowerCase()
+    filtered = filtered.filter((coupon) => {
+      return coupon.maPhieuGiamGia?.toLowerCase().includes(searchTerm) || coupon.tenPhieuGiamGia?.toLowerCase().includes(searchTerm)
+    })
   }
 
-  const searchTerm = couponSearch.value.toLowerCase()
-  return couponsList.value.filter((coupon) => {
-    return coupon.maPhieuGiamGia?.toLowerCase().includes(searchTerm) || coupon.tenPhieuGiamGia?.toLowerCase().includes(searchTerm)
-  })
+  return filtered
 })
 
 // Computed for payment
@@ -879,14 +888,21 @@ const removeFromCart = (itemIndex: number) => {
 const fetchCustomers = async () => {
   try {
     customerLoading.value = true
-    const response = await axios.get('/api/khach-hang-management/playlist')
-
-    if (response.data.success) {
-      customersList.value = response.data.data || []
-      customerPagination.value.total = customersList.value.length
+    const data = await fetchCustomersApi()
+    
+    if (data && Array.isArray(data)) {
+      // Filter active customers
+      const activeCustomers = data.filter((c) => {
+        return c.trangThai !== false && c.trangThai !== 0
+      })
+      customersList.value = activeCustomers
+      customerPagination.value.total = activeCustomers.length
+    } else {
+      customersList.value = []
     }
-  } catch {
-    // Handle error silently
+  } catch (error) {
+    Message.error('Không thể tải danh sách khách hàng')
+    customersList.value = []
   } finally {
     customerLoading.value = false
   }
@@ -898,6 +914,10 @@ const searchCustomers = () => {
 
 const handleCustomerRowClick = (record: any) => {
   selectedCustomer.value = record
+}
+
+const getCustomerRowClass = (record: any) => {
+  return selectedCustomer.value?.id === record.id ? 'selected-row' : ''
 }
 
 const selectCustomer = () => {
@@ -933,13 +953,40 @@ const clearCustomer = () => {
 const fetchCoupons = async () => {
   try {
     couponLoading.value = true
-    const response = await axios.get('/api/pos/coupons')
-    if (response.data && response.data.success) {
-      couponsList.value = response.data.data || []
-      couponPagination.value.total = couponsList.value.length
+    const data = await fetchCouponsApi()
+    
+    if (data && Array.isArray(data)) {
+      // Filter active coupons only
+      const now = new Date()
+      const activeCoupons = data.filter((coupon) => {
+        // Check if coupon is active
+        if (!coupon.trangThai) return false
+        
+        // Check if not deleted
+        if (coupon.deleted) return false
+        
+        // Check if within valid date range
+        const startDate = coupon.ngayBatDau ? new Date(coupon.ngayBatDau) : null
+        const endDate = coupon.ngayKetThuc ? new Date(coupon.ngayKetThuc) : null
+        
+        if (startDate && now < startDate) return false
+        if (endDate) {
+          const endOfDay = new Date(endDate)
+          endOfDay.setHours(23, 59, 59, 999)
+          if (now > endOfDay) return false
+        }
+        
+        return true
+      })
+      
+      couponsList.value = activeCoupons
+      couponPagination.value.total = activeCoupons.length
+    } else {
+      couponsList.value = []
     }
-  } catch {
+  } catch (error) {
     Message.error('Không thể tải danh sách phiếu giảm giá')
+    couponsList.value = []
   } finally {
     couponLoading.value = false
   }
@@ -951,6 +998,10 @@ const searchCoupons = () => {
 
 const handleCouponRowClick = (record: any) => {
   selectedCoupon.value = record
+}
+
+const getCouponRowClass = (record: any) => {
+  return selectedCoupon.value?.id === record.id ? 'selected-row' : ''
 }
 
 const applyCoupon = () => {
@@ -976,9 +1027,10 @@ const applyCoupon = () => {
   }
 
   // Apply coupon
+  // loaiPhieuGiamGia: false (0) = percentage, true (1) = fixed amount
   appliedCoupon.value = {
     code: selectedCoupon.value.maPhieuGiamGia,
-    type: selectedCoupon.value.loaiPhieuGiamGia ? 'percentage' : 'fixed',
+    type: selectedCoupon.value.loaiPhieuGiamGia ? 'fixed' : 'percentage',
     discount: Number(selectedCoupon.value.giaTriGiamGia),
   }
 
@@ -1705,6 +1757,28 @@ onUnmounted(async () => {
 
 .coupon-code:hover {
   color: #40a9ff;
+}
+
+/* Selected Row Highlight */
+:deep(.arco-table-tr.selected-row) td {
+  background-color: #e6f7ff !important;
+}
+
+:deep(.arco-table-tr.selected-row):hover td {
+  background-color: #bae7ff !important;
+}
+
+:deep(.arco-table-tr) {
+  cursor: pointer !important;
+  transition: background-color 0.2s ease;
+}
+
+:deep(.arco-table-tr):hover td {
+  background-color: #f5f5f5 !important;
+}
+
+:deep(.arco-table-body .arco-table-tr) {
+  cursor: pointer !important;
 }
 
 /* QR Scanner Styles */
