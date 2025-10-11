@@ -322,7 +322,10 @@
           </template>
           <template #tenSanPhamChiTiet="{ record }">
             <div class="product-detail-name">
-              {{ record.tenSanPhamChiTiet || `${record.productName} + ${record.attributes?.find(a => a.label === 'Màu sắc')?.value || ''} + ${record.attributes?.find(a => a.label === 'Kích thước')?.value || ''}` }}
+              {{
+                record.tenSanPhamChiTiet ||
+                `${record.productName} + ${record.attributes?.find((a) => a.label === 'Màu sắc')?.value || ''} + ${record.attributes?.find((a) => a.label === 'Kích thước')?.value || ''}`
+              }}
             </div>
           </template>
           <template #attributes="{ record }">

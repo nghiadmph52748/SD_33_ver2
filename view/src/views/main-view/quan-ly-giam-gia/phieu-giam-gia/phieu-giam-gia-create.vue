@@ -74,7 +74,6 @@
               </div>
             </a-form-item>
 
-
             <!-- Date range side by side -->
             <a-row :gutter="16">
               <a-col :span="12">
@@ -569,7 +568,7 @@ const handleSaveClick = async () => {
       Message.error('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
       return
     }
-    
+
     // Validate: Max discount should not exceed min order value
     const minOrderValue = Number(formState.minOrder || 0)
     if (minOrderValue > 0 && capValue >= minOrderValue) {

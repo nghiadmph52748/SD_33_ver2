@@ -166,6 +166,63 @@ public class ThongTinHoaDonService {
     }
     
     /**
+     * Lấy danh sách sản phẩm đã bán theo ID hóa đơn
+     */
+    @Transactional(readOnly = true)
+    public List<org.example.be_sp.model.response.SanPhamDaBanResponse> getSanPhamDaBanByHoaDonId(Integer hoaDonId) {
+        try {
+            // Lấy hóa đơn từ repository
+            var hoaDon = hoaDonService.getById(hoaDonId);
+            if (hoaDon == null) {
+                log.warn("Không tìm thấy hóa đơn với ID: {}", hoaDonId);
+                return new ArrayList<>();
+            }
+            
+            // Force load hóa đơn chi tiết
+            if (hoaDon.getHoaDonChiTiets() != null) {
+                Hibernate.initialize(hoaDon.getHoaDonChiTiets());
+                
+                // Load quan hệ của HoaDonChiTiet
+                for (var hdct : hoaDon.getHoaDonChiTiets()) {
+                    if (hdct.getIdChiTietSanPham() != null) {
+                        Hibernate.initialize(hdct.getIdChiTietSanPham());
+                        
+                        // Load quan hệ của ChiTietSanPham
+                        if (hdct.getIdChiTietSanPham().getIdSanPham() != null) {
+                            Hibernate.initialize(hdct.getIdChiTietSanPham().getIdSanPham());
+                        }
+                        if (hdct.getIdChiTietSanPham().getIdMauSac() != null) {
+                            Hibernate.initialize(hdct.getIdChiTietSanPham().getIdMauSac());
+                        }
+                        if (hdct.getIdChiTietSanPham().getIdKichThuoc() != null) {
+                            Hibernate.initialize(hdct.getIdChiTietSanPham().getIdKichThuoc());
+                        }
+                        if (hdct.getIdChiTietSanPham().getIdDeGiay() != null) {
+                            Hibernate.initialize(hdct.getIdChiTietSanPham().getIdDeGiay());
+                        }
+                        if (hdct.getIdChiTietSanPham().getIdChatLieu() != null) {
+                            Hibernate.initialize(hdct.getIdChiTietSanPham().getIdChatLieu());
+                        }
+                        if (hdct.getIdChiTietSanPham().getIdTrongLuong() != null) {
+                            Hibernate.initialize(hdct.getIdChiTietSanPham().getIdTrongLuong());
+                        }
+                    }
+                }
+                
+                return hoaDon.getHoaDonChiTiets().stream()
+                    .filter(item -> !item.getDeleted())
+                    .map(org.example.be_sp.model.response.SanPhamDaBanResponse::new)
+                    .collect(Collectors.toList());
+            }
+            
+            return new ArrayList<>();
+        } catch (Exception e) {
+            log.error("Lỗi khi lấy danh sách sản phẩm đã bán cho hóa đơn ID: {}", hoaDonId, e);
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
      * Helper method to send order status update email
      */
     private void sendOrderStatusUpdateEmail(ThongTinDonHang thongTinDonHang) {

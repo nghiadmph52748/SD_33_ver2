@@ -33,4 +33,10 @@ public class BanHangTaiQuayRequest {
     private Boolean trangThai;
     private Boolean deleted;
     private String ghiChu;
+    
+    // Các trường mới cho nhân viên và phiếu giảm giá
+    private String tenNhanVien;
+    private String maNhanVien;
+    private String tenPhieuGiamGia;
+    private String maPhieuGiamGia;
 }

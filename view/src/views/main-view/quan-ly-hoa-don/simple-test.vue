@@ -22,7 +22,7 @@
           </div>
           <span class="status-title">Trạng Thái Hóa Đơn</span>
         </div>
-        
+
         <div class="status-content">
           <div class="status-indicator">
             <div class="success-icon">
@@ -33,7 +33,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Thông tin đơn hàng -->
       <div class="order-info-panel">
         <a-card class="info-card" :bordered="false">
@@ -43,30 +43,30 @@
               <span>Thông tin đơn hàng</span>
             </div>
           </template>
-          
+
           <div class="info-content">
             <div class="info-item">
               <div class="info-label">Mã đơn hàng:</div>
               <div class="info-value">{{ invoiceData?.maHoaDon || `HD${String(invoiceId).padStart(6, '0')}` }}</div>
             </div>
-            
+
             <div class="info-item">
               <div class="info-label">Loại đơn:</div>
               <div class="info-value">{{ invoiceData?.loaiDon ? 'Online' : 'Tại quầy' }}</div>
             </div>
-            
+
             <div class="info-item">
               <div class="info-label">Trạng thái:</div>
               <div class="info-value">
                 <a-tag :color="getStatusColor(invoiceData?.trangThai)">{{ getStatusText(invoiceData?.trangThai) }}</a-tag>
               </div>
             </div>
-            
+
             <div class="info-item">
               <div class="info-label">Phiếu giảm giá:</div>
               <div class="info-value">{{ invoiceData?.idtenPhieuGiamGia || 'Không có' }}</div>
             </div>
-            
+
             <div class="info-item">
               <div class="info-label">Ngày đặt:</div>
               <div class="info-value">{{ formatDate(invoiceData?.ngayTao ? new Date(invoiceData.ngayTao) : new Date()) }}</div>
@@ -84,28 +84,28 @@
               <span>Thông tin khách hàng</span>
             </div>
           </template>
-          
+
           <div class="info-content">
             <div class="info-item">
               <div class="info-label">Tên khách hàng:</div>
               <div class="info-value">{{ invoiceData?.idtenKhachHang || invoiceData?.tenNguoiNhan || 'Không xác định' }}</div>
             </div>
-            
+
             <div class="info-item">
               <div class="info-label">Số điện thoại:</div>
               <div class="info-value">{{ invoiceData?.sdtNguoiNhan || 'Không có' }}</div>
             </div>
-            
+
             <div class="info-item">
               <div class="info-label">Địa chỉ:</div>
               <div class="info-value">{{ invoiceData?.diaChiNguoiNhan || 'Không có' }}</div>
             </div>
-            
+
             <div class="info-item">
               <div class="info-label">Email:</div>
               <div class="info-value">{{ invoiceData?.emailNguoiNhan || 'Không có' }}</div>
             </div>
-            
+
             <div class="info-item">
               <div class="info-label">Ghi chú:</div>
               <div class="info-value">{{ invoiceData?.ghiChu || 'Không có ghi chú' }}</div>
@@ -123,22 +123,17 @@
               <span>Danh sách sản phẩm</span>
             </div>
           </template>
-          
+
           <div class="product-table">
             <a-spin :loading="loading" style="width: 100%">
-              <a-table 
-                :columns="productColumns" 
-                :data="productList"
-                :pagination="false"
-                :bordered="false"
-              >
-              <template #price="{ record }">
-                <span class="price-text">{{ formatPrice(record.price) }}</span>
-              </template>
-              
-              <template #total="{ record }">
-                <span class="total-text">{{ formatPrice(record.total) }}</span>
-              </template>
+              <a-table :columns="productColumns" :data="productList" :pagination="false" :bordered="false">
+                <template #price="{ record }">
+                  <span class="price-text">{{ formatPrice(record.price) }}</span>
+                </template>
+
+                <template #total="{ record }">
+                  <span class="total-text">{{ formatPrice(record.total) }}</span>
+                </template>
               </a-table>
             </a-spin>
           </div>
@@ -219,10 +214,10 @@ const fetchInvoiceDetail = async () => {
   try {
     loading.value = true
     const response = await axios.get(`/api/hoa-don-management/${invoiceId.value}`)
-    
+
     if (response.data && response.data.data) {
       invoiceData.value = response.data.data
-      
+
       // Process product list from invoice details - đơn giản hóa
       if (response.data.data.items && response.data.data.items.length > 0) {
         productList.value = response.data.data.items.map((item, index) => ({
@@ -230,7 +225,7 @@ const fetchInvoiceDetail = async () => {
           name: item.tenSanPham || 'Sản phẩm không xác định',
           quantity: item.soLuong || 0,
           price: item.giaBan || 0,
-          total: item.thanhTien || ((item.soLuong || 0) * (item.giaBan || 0)),
+          total: item.thanhTien || (item.soLuong || 0) * (item.giaBan || 0),
         }))
       }
     }

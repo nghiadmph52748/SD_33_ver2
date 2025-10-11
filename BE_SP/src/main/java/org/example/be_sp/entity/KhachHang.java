@@ -93,4 +93,13 @@ public class KhachHang {
     @OneToMany(mappedBy = "idKhachHang")
     private Set<PhieuGiamGiaCaNhan> phieuGiamGiaCaNhans = new LinkedHashSet<>();
 
+    /**
+     * Lấy địa chỉ đầu tiên của khách hàng
+     */
+    public String getDiaChi() {
+        if (diaChiKhachHangs != null && !diaChiKhachHangs.isEmpty()) {
+            return diaChiKhachHangs.iterator().next().getDiaChi();
+        }
+        return null;
+    }
 }

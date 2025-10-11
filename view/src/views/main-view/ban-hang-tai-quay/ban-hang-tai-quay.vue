@@ -215,18 +215,11 @@
         <a-modal v-model:visible="showCouponModal" title="Chọn phiếu giảm giá" width="800px" @ok="applyCoupon">
           <div class="coupon-modal">
             <!-- Cart value info -->
-            <a-alert
-              v-if="subtotal > 0"
-              type="info"
-              style="margin-bottom: 16px"
-            >
-              Giá trị giỏ hàng hiện tại: <strong>{{ formatCurrency(subtotal) }}</strong>
+            <a-alert v-if="subtotal > 0" type="info" style="margin-bottom: 16px">
+              Giá trị giỏ hàng hiện tại:
+              <strong>{{ formatCurrency(subtotal) }}</strong>
             </a-alert>
-            <a-alert
-              v-else
-              type="warning"
-              style="margin-bottom: 16px"
-            >
+            <a-alert v-else type="warning" style="margin-bottom: 16px">
               Giỏ hàng trống! Vui lòng thêm sản phẩm trước khi chọn phiếu giảm giá.
             </a-alert>
 
@@ -889,7 +882,7 @@ const fetchCustomers = async () => {
   try {
     customerLoading.value = true
     const data = await fetchCustomersApi()
-    
+
     if (data && Array.isArray(data)) {
       // Filter active customers
       const activeCustomers = data.filter((c) => {
@@ -954,31 +947,31 @@ const fetchCoupons = async () => {
   try {
     couponLoading.value = true
     const data = await fetchCouponsApi()
-    
+
     if (data && Array.isArray(data)) {
       // Filter active coupons only
       const now = new Date()
       const activeCoupons = data.filter((coupon) => {
         // Check if coupon is active
         if (!coupon.trangThai) return false
-        
+
         // Check if not deleted
         if (coupon.deleted) return false
-        
+
         // Check if within valid date range
         const startDate = coupon.ngayBatDau ? new Date(coupon.ngayBatDau) : null
         const endDate = coupon.ngayKetThuc ? new Date(coupon.ngayKetThuc) : null
-        
+
         if (startDate && now < startDate) return false
         if (endDate) {
           const endOfDay = new Date(endDate)
           endOfDay.setHours(23, 59, 59, 999)
           if (now > endOfDay) return false
         }
-        
+
         return true
       })
-      
+
       couponsList.value = activeCoupons
       couponPagination.value.total = activeCoupons.length
     } else {

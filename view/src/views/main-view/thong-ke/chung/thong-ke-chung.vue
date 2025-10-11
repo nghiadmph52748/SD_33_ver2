@@ -30,7 +30,7 @@
                 <a-option value="year">Năm này</a-option>
                 <a-option value="custom">Tùy chọn</a-option>
               </a-select>
-              
+
               <!-- DatePicker cho tùy chọn -->
               <div v-if="selectedTimeRange === 'custom'" class="custom-date-picker">
                 <a-range-picker
@@ -252,10 +252,10 @@
               <div class="chart-title">
                 <span>Phân Phối Đa Kênh</span>
               </div>
-                </template>
+            </template>
             <div class="chart-container">
               <v-chart class="chart" :option="channelDistributionChartOption" autoresize />
-                </div>
+            </div>
           </a-card>
         </a-col>
 
@@ -279,7 +279,7 @@
             <template #title>
               <div class="chart-title">
                 <span>Bảng Thống Kê Chi Tiết</span>
-    </div>
+              </div>
             </template>
             <div class="table-container">
               <a-table
@@ -776,14 +776,14 @@ const revenueChartOption = computed(() => ({
       lineStyle:
         selectedChartType.value === 'line'
           ? {
-        color: '#1890ff',
-        width: 3,
+              color: '#1890ff',
+              width: 3,
             }
           : undefined,
       itemStyle:
         selectedChartType.value === 'line'
           ? {
-        color: '#1890ff',
+              color: '#1890ff',
             }
           : {
               color: {
@@ -801,17 +801,17 @@ const revenueChartOption = computed(() => ({
       areaStyle:
         selectedChartType.value === 'line'
           ? {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
-            { offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
-          ],
-        },
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                  { offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
+                ],
+              },
             }
           : undefined,
       emphasis:
@@ -1076,65 +1076,65 @@ const getStockStatus = (soLuongTon: number): string => {
 const updateLowStockProductsData = () => {
   console.log('=== CẬP NHẬT DỮ LIỆU SẢN PHẨM SẮP HẾT HÀNG ===')
   console.log('Chi tiết sản phẩm từ API:', chiTietSanPhamList.value)
-  
+
   // Ưu tiên sử dụng dữ liệu từ API
   if (chiTietSanPhamList.value && chiTietSanPhamList.value.length > 0) {
     console.log('Có dữ liệu từ API, xử lý...')
     // Lọc chi tiết sản phẩm có số lượng tồn dưới 5
     const lowStockItems = chiTietSanPhamList.value
-    .filter((chiTiet: any) => {
-      const soLuongTon = chiTiet.soLuongTon || chiTiet.soLuong || 0
-      return soLuongTon < 5
-    })
-    .map((chiTiet: any, index: number) => {
-      // Lấy thông tin sản phẩm từ chi tiết sản phẩm
-      const sanPham = chiTiet.idSanPham || {}
-      const mauSac = chiTiet.idMauSac?.tenMauSac || ''
-      const kichThuoc = chiTiet.idKichThuoc?.tenKichThuoc || ''
+      .filter((chiTiet: any) => {
+        const soLuongTon = chiTiet.soLuongTon || chiTiet.soLuong || 0
+        return soLuongTon < 5
+      })
+      .map((chiTiet: any, index: number) => {
+        // Lấy thông tin sản phẩm từ chi tiết sản phẩm
+        const sanPham = chiTiet.idSanPham || {}
+        const mauSac = chiTiet.idMauSac?.tenMauSac || ''
+        const kichThuoc = chiTiet.idKichThuoc?.tenKichThuoc || ''
 
-      // Tạo tên biến thể sản phẩm chi tiết từ các thành phần
-      let tenSanPham = ''
-      
-      // Debug log để kiểm tra dữ liệu
-      console.log('--- Debug chi tiết sản phẩm ---')
-      console.log('chiTiet:', chiTiet)
-      console.log('chiTiet.tenSanPhamChiTiet:', chiTiet.tenSanPhamChiTiet)
-      console.log('sanPham:', sanPham)
-      console.log('sanPham.tenSanPham:', sanPham.tenSanPham)
-      console.log('mauSac:', mauSac)
-      console.log('kichThuoc:', kichThuoc)
-      
-      if (chiTiet.tenSanPhamChiTiet && chiTiet.tenSanPhamChiTiet.trim()) {
-        tenSanPham = chiTiet.tenSanPhamChiTiet
-        console.log('Sử dụng tenSanPhamChiTiet từ database:', tenSanPham)
-      } else {
-        const productName = sanPham.tenSanPham || 'Không rõ'
-        const colorPart = mauSac ? ` + ${mauSac}` : ''
-        const sizePart = kichThuoc ? ` + ${kichThuoc}` : ''
-        tenSanPham = `${productName}${colorPart}${sizePart}`.trim()
-        console.log('Tạo tên từ các thành phần:', tenSanPham)
-      }
+        // Tạo tên biến thể sản phẩm chi tiết từ các thành phần
+        let tenSanPham = ''
 
-      return {
-        id: index + 1,
-        tenSanPham,
-        anh:
-          chiTiet.anh ||
-          chiTiet.anhSanPham ||
-          chiTiet.hinhAnh ||
-          sanPham.anh ||
-          sanPham.anhSanPham ||
-          sanPham.hinhAnh ||
-          '/default-product.png',
-        giaBan: chiTiet.giaBan || sanPham.giaBan || 0,
-        soLuongTon: chiTiet.soLuongTon || chiTiet.soLuong || 0,
-        trangThai: getStockStatus(chiTiet.soLuongTon || chiTiet.soLuong || 0),
-      }
-    })
-    .sort((a, b) => a.soLuongTon - b.soLuongTon) // Sắp xếp theo số lượng tồn tăng dần
+        // Debug log để kiểm tra dữ liệu
+        console.log('--- Debug chi tiết sản phẩm ---')
+        console.log('chiTiet:', chiTiet)
+        console.log('chiTiet.tenSanPhamChiTiet:', chiTiet.tenSanPhamChiTiet)
+        console.log('sanPham:', sanPham)
+        console.log('sanPham.tenSanPham:', sanPham.tenSanPham)
+        console.log('mauSac:', mauSac)
+        console.log('kichThuoc:', kichThuoc)
+
+        if (chiTiet.tenSanPhamChiTiet && chiTiet.tenSanPhamChiTiet.trim()) {
+          tenSanPham = chiTiet.tenSanPhamChiTiet
+          console.log('Sử dụng tenSanPhamChiTiet từ database:', tenSanPham)
+        } else {
+          const productName = sanPham.tenSanPham || 'Không rõ'
+          const colorPart = mauSac ? ` + ${mauSac}` : ''
+          const sizePart = kichThuoc ? ` + ${kichThuoc}` : ''
+          tenSanPham = `${productName}${colorPart}${sizePart}`.trim()
+          console.log('Tạo tên từ các thành phần:', tenSanPham)
+        }
+
+        return {
+          id: index + 1,
+          tenSanPham,
+          anh:
+            chiTiet.anh ||
+            chiTiet.anhSanPham ||
+            chiTiet.hinhAnh ||
+            sanPham.anh ||
+            sanPham.anhSanPham ||
+            sanPham.hinhAnh ||
+            '/default-product.png',
+          giaBan: chiTiet.giaBan || sanPham.giaBan || 0,
+          soLuongTon: chiTiet.soLuongTon || chiTiet.soLuong || 0,
+          trangThai: getStockStatus(chiTiet.soLuongTon || chiTiet.soLuong || 0),
+        }
+      })
+      .sort((a, b) => a.soLuongTon - b.soLuongTon) // Sắp xếp theo số lượng tồn tăng dần
 
     console.log('Sản phẩm sắp hết hàng từ API:', lowStockItems)
-    
+
     // Cập nhật dữ liệu từ API
     lowStockProducts.value = lowStockItems
     lowStockPagination.value.total = lowStockItems.length
@@ -1465,7 +1465,7 @@ const channelDistributionChartOption = computed(() => ({
       center: ['60%', '50%'],
       data: channelDistributionData.value,
       emphasis: {
-      itemStyle: {
+        itemStyle: {
           shadowBlur: 10,
           shadowOffsetX: 0,
           shadowColor: 'rgba(0, 0, 0, 0.5)',
@@ -1695,7 +1695,7 @@ const fetchChiTietSanPham = async () => {
     const res = await axios.get('/api/chi-tiet-san-pham-management/playlist')
     const chiTietSanPham = res.data ?? []
     chiTietSanPhamList.value = Array.isArray(chiTietSanPham) ? chiTietSanPham : []
-    
+
     // Log để kiểm tra dữ liệu từ API
     console.log('=== DỮ LIỆU CHI TIẾT SẢN PHẨM TỪ API ===')
     console.log('Tổng số chi tiết sản phẩm:', chiTietSanPhamList.value.length)
@@ -1711,7 +1711,7 @@ const fetchChiTietSanPham = async () => {
       console.log('Giá bán:', item.giaBan)
       console.log('---')
     })
-    
+
     // Cập nhật dữ liệu sản phẩm sắp hết hàng sau khi load xong
     updateLowStockProductsData()
   } catch (error) {

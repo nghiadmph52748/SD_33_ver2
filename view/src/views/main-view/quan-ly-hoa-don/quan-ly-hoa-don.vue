@@ -248,11 +248,7 @@ const invoicesList = ref<any[]>([
     tongTienSauGiam: 2250000,
     trangThai: true,
     ngayThanhToan: '2024-01-15',
-    hoaDonChiTiets: [
-      { soLuong: 2 },
-      { soLuong: 1 },
-      { soLuong: 3 }
-    ]
+    hoaDonChiTiets: [{ soLuong: 2 }, { soLuong: 1 }, { soLuong: 3 }],
   },
   {
     id: 2,
@@ -262,11 +258,8 @@ const invoicesList = ref<any[]>([
     tongTienSauGiam: 3000000,
     trangThai: true,
     ngayThanhToan: '2024-01-16',
-    hoaDonChiTiets: [
-      { soLuong: 1 },
-      { soLuong: 2 }
-    ]
-  }
+    hoaDonChiTiets: [{ soLuong: 1 }, { soLuong: 2 }],
+  },
 ])
 const totalInvoices = ref(0)
 const todayInvoices = ref(0)
@@ -478,7 +471,7 @@ const fetchInvoices = async () => {
     }
   } catch (error) {
     console.error('Lỗi khi gọi API hóa đơn:', error)
-    
+
     // Thêm dữ liệu mẫu khi API lỗi
     invoicesList.value = [
       {
@@ -489,11 +482,7 @@ const fetchInvoices = async () => {
         tongTienSauGiam: 2250000,
         trangThai: true,
         ngayThanhToan: '2024-01-15',
-        hoaDonChiTiets: [
-          { soLuong: 2 },
-          { soLuong: 1 },
-          { soLuong: 3 }
-        ]
+        hoaDonChiTiets: [{ soLuong: 2 }, { soLuong: 1 }, { soLuong: 3 }],
       },
       {
         id: 2,
@@ -503,11 +492,8 @@ const fetchInvoices = async () => {
         tongTienSauGiam: 3000000,
         trangThai: true,
         ngayThanhToan: '2024-01-16',
-        hoaDonChiTiets: [
-          { soLuong: 1 },
-          { soLuong: 2 }
-        ]
-      }
+        hoaDonChiTiets: [{ soLuong: 1 }, { soLuong: 2 }],
+      },
     ]
     calculateStatistics()
     pagination.value.total = invoicesList.value.length

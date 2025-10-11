@@ -42,7 +42,6 @@
       <p>Đang tải thông tin hóa đơn...</p>
     </div>
 
-
     <!-- Invoice Content -->
     <div v-else-if="invoice" class="invoice-content">
       <!-- Trạng thái hóa đơn -->
@@ -59,9 +58,16 @@
               {{ getStatusText(invoice.trangThai) }}
             </a-tag>
             <div class="status-info">
-              <p><strong>Mã hóa đơn:</strong> {{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}</p>
-              <p><strong>Ngày tạo:</strong> {{ formatDate(invoice.ngayTao) }}</p>
-              <p><strong>Loại đơn:</strong> 
+              <p>
+                <strong>Mã hóa đơn:</strong>
+                {{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}
+              </p>
+              <p>
+                <strong>Ngày tạo:</strong>
+                {{ formatDate(invoice.ngayTao) }}
+              </p>
+              <p>
+                <strong>Loại đơn:</strong>
                 <a-tag :color="invoice.loaiDon ? 'blue' : 'green'">
                   {{ invoice.loaiDon ? 'Online' : 'Tại quầy' }}
                 </a-tag>
@@ -323,15 +329,9 @@
 
     <!-- Error State -->
     <div v-else class="error-state">
-      <a-result
-        status="error"
-        title="Không tìm thấy hóa đơn"
-        sub-title="Hóa đơn bạn đang tìm kiếm không tồn tại hoặc đã bị xóa."
-      >
+      <a-result status="error" title="Không tìm thấy hóa đơn" sub-title="Hóa đơn bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.">
         <template #extra>
-          <a-button type="primary" @click="goBack">
-            Quay lại danh sách
-          </a-button>
+          <a-button type="primary" @click="goBack">Quay lại danh sách</a-button>
         </template>
       </a-result>
     </div>
@@ -343,13 +343,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import {
-  IconArrowLeft,
-  IconPrinter,
-  IconFile,
-  IconEdit,
-  IconUser,
-} from '@arco-design/web-vue/es/icon'
+import { IconArrowLeft, IconPrinter, IconFile, IconEdit, IconUser } from '@arco-design/web-vue/es/icon'
 
 const route = useRoute()
 const router = useRouter()
@@ -399,23 +393,54 @@ const productColumns = [
 ]
 
 // Methods
+// Method để lấy danh sách sản phẩm đã bán
+const fetchSanPhamDaBan = async () => {
+  try {
+    const sanPhamResponse = await axios.get(`/api/thong-tin-hoa-don-management/san-pham-da-ban/${invoiceId.value}`)
+
+    if (sanPhamResponse.data && sanPhamResponse.data.data && sanPhamResponse.data.data.length > 0) {
+      invoice.value.hoaDonChiTiets = sanPhamResponse.data.data.map((item) => ({
+        id: item.id,
+        maHoaDonChiTiet: item.maHoaDonChiTiet,
+        tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
+        tenSanPham: item.tenSanPhamChiTiet || item.tenSanPham,
+        maSanPham: item.maSanPham,
+        tenMauSac: item.tenMauSac,
+        maMauSac: item.maMauSac,
+        tenKichThuoc: item.tenKichThuoc,
+        maKichThuoc: item.maKichThuoc,
+        tenDeGiay: item.tenDeGiay,
+        maDeGiay: item.maDeGiay,
+        tenChatLieu: item.tenChatLieu,
+        maChatLieu: item.maChatLieu,
+        tenTrongLuong: item.tenTrongLuong,
+        maTrongLuong: item.maTrongLuong,
+        donGia: item.giaBan,
+        giaBan: item.giaBan,
+        soLuong: item.soLuong,
+        thanhTien: item.thanhTien,
+        ghiChu: item.ghiChu,
+      }))
+    }
+  } catch (error: any) {
+    // Silent error handling
+  }
+}
+
 const fetchInvoiceDetail = async () => {
   try {
     loading.value = true
-    console.log('🔍 Đang tải chi tiết hóa đơn với ID:', invoiceId.value)
-    
+
     // Lấy thông tin hóa đơn từ API hóa đơn
     const invoiceResponse = await axios.get(`/api/hoa-don-management/${invoiceId.value}`)
-    console.log('📡 Response từ API hóa đơn:', invoiceResponse.data)
-    
+
     if (invoiceResponse.data && invoiceResponse.data.data) {
       invoice.value = invoiceResponse.data.data
-      
+
       // Thử lấy thông tin đơn hàng từ API thông tin đơn hàng mới (không bắt buộc)
       try {
         const orderInfoResponse = await axios.get(`/api/thong-tin-hoa-don-management/latest-by-hoa-don/${invoiceId.value}`)
-        console.log('📡 Response từ API thông tin đơn hàng:', orderInfoResponse.data)
-        
+
         if (orderInfoResponse.data && orderInfoResponse.data.data) {
           const orderInfo = orderInfoResponse.data.data
           // Cập nhật thông tin từ API thông tin đơn hàng
@@ -424,17 +449,17 @@ const fetchInvoiceDetail = async () => {
           invoice.value.tenNhanVien = orderInfo.tenNhanVien || invoice.value.tenNhanVien
           invoice.value.maNhanVien = orderInfo.maNhanVien || invoice.value.maNhanVien
           invoice.value.tongTienHang = orderInfo.tongTienHang || invoice.value.tongTien
-          
+
           // Cập nhật thông tin khách hàng từ API thông tin đơn hàng
           invoice.value.tenKhachHang = orderInfo.tenKhachHang || invoice.value.tenKhachHang
           invoice.value.maKhachHang = orderInfo.maKhachHang || invoice.value.maKhachHang
           invoice.value.emailKhachHang = orderInfo.emailKhachHang || invoice.value.email
           invoice.value.soDienThoaiKhachHang = orderInfo.soDienThoaiKhachHang || invoice.value.soDienThoai
           invoice.value.diaChiKhachHang = orderInfo.diaChiKhachHang || invoice.value.diaChiKhachHang
-          
+
           // Cập nhật danh sách sản phẩm đã bán từ API thông tin đơn hàng
           if (orderInfo.danhSachSanPhamDaBan && orderInfo.danhSachSanPhamDaBan.length > 0) {
-            invoice.value.hoaDonChiTiets = orderInfo.danhSachSanPhamDaBan.map(item => ({
+            invoice.value.hoaDonChiTiets = orderInfo.danhSachSanPhamDaBan.map((item) => ({
               id: item.id,
               maHoaDonChiTiet: item.maHoaDonChiTiet,
               tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
@@ -454,29 +479,64 @@ const fetchInvoiceDetail = async () => {
               giaBan: item.giaBan,
               soLuong: item.soLuong,
               thanhTien: item.thanhTien,
-              ghiChu: item.ghiChu
+              ghiChu: item.ghiChu,
             }))
-            console.log('✅ Đã cập nhật danh sách sản phẩm từ hoa_don_chi_tiet:', invoice.value.hoaDonChiTiets)
+          } else {
+            // Nếu không có dữ liệu từ orderInfo, thử lấy trực tiếp từ API sản phẩm đã bán
+            try {
+              const sanPhamResponse = await axios.get(`/api/thong-tin-hoa-don-management/san-pham-da-ban/${invoiceId.value}`)
+
+              if (sanPhamResponse.data && sanPhamResponse.data.data && sanPhamResponse.data.data.length > 0) {
+                invoice.value.hoaDonChiTiets = sanPhamResponse.data.data.map((item) => ({
+                  id: item.id,
+                  maHoaDonChiTiet: item.maHoaDonChiTiet,
+                  tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
+                  tenSanPham: item.tenSanPhamChiTiet || item.tenSanPham,
+                  maSanPham: item.maSanPham,
+                  tenMauSac: item.tenMauSac,
+                  maMauSac: item.maMauSac,
+                  tenKichThuoc: item.tenKichThuoc,
+                  maKichThuoc: item.maKichThuoc,
+                  tenDeGiay: item.tenDeGiay,
+                  maDeGiay: item.maDeGiay,
+                  tenChatLieu: item.tenChatLieu,
+                  maChatLieu: item.maChatLieu,
+                  tenTrongLuong: item.tenTrongLuong,
+                  maTrongLuong: item.maTrongLuong,
+                  donGia: item.giaBan,
+                  giaBan: item.giaBan,
+                  soLuong: item.soLuong,
+                  thanhTien: item.thanhTien,
+                  ghiChu: item.ghiChu,
+                }))
+              }
+            } catch (sanPhamError: any) {
+              console.warn('⚠️ Không thể lấy danh sách sản phẩm đã bán:', sanPhamError.message)
+            }
           }
-          
-          console.log('✅ Đã merge thông tin từ API thông tin đơn hàng:', orderInfo)
         }
       } catch (orderInfoError: any) {
-        console.warn('⚠️ Không thể lấy thông tin đơn hàng từ API:', orderInfoError.message)
-        console.log('📋 Sử dụng thông tin từ API hóa đơn chính')
+        // Silent error handling
       }
-      
-      console.log('✅ Dữ liệu hóa đơn đã được tải:', invoice.value)
+
+      // Nếu không có danh sách sản phẩm, thử lấy trực tiếp từ API sản phẩm đã bán
+      if (!invoice.value.hoaDonChiTiets || invoice.value.hoaDonChiTiets.length === 0) {
+        await fetchSanPhamDaBan()
+      }
     } else if (invoiceResponse.data) {
       // Nếu response trực tiếp là dữ liệu (không có wrapper data)
       invoice.value = invoiceResponse.data
       console.log('✅ Dữ liệu hóa đơn đã được tải (trực tiếp):', invoice.value)
-      
+
+      // Nếu không có danh sách sản phẩm, thử lấy trực tiếp từ API sản phẩm đã bán
+      if (!invoice.value.hoaDonChiTiets || invoice.value.hoaDonChiTiets.length === 0) {
+        await fetchSanPhamDaBan()
+      }
+
       // Thử lấy thông tin đơn hàng từ API thông tin đơn hàng mới (không bắt buộc)
       try {
-        const orderInfoResponse = await axios.get(`/api/thong-tin-hoa-don-management/detail/${invoiceId.value}`)
-        console.log('📡 Response từ API thông tin đơn hàng:', orderInfoResponse.data)
-        
+        const orderInfoResponse = await axios.get(`/api/thong-tin-hoa-don-management/latest-by-hoa-don/${invoiceId.value}`)
+
         if (orderInfoResponse.data && orderInfoResponse.data.data) {
           const orderInfo = orderInfoResponse.data.data
           // Cập nhật thông tin từ API thông tin đơn hàng
@@ -485,17 +545,17 @@ const fetchInvoiceDetail = async () => {
           invoice.value.tenNhanVien = orderInfo.tenNhanVien || invoice.value.tenNhanVien
           invoice.value.maNhanVien = orderInfo.maNhanVien || invoice.value.maNhanVien
           invoice.value.tongTienHang = orderInfo.tongTienHang || invoice.value.tongTien
-          
+
           // Cập nhật thông tin khách hàng từ API thông tin đơn hàng
           invoice.value.tenKhachHang = orderInfo.tenKhachHang || invoice.value.tenKhachHang
           invoice.value.maKhachHang = orderInfo.maKhachHang || invoice.value.maKhachHang
           invoice.value.emailKhachHang = orderInfo.emailKhachHang || invoice.value.email
           invoice.value.soDienThoaiKhachHang = orderInfo.soDienThoaiKhachHang || invoice.value.soDienThoai
           invoice.value.diaChiKhachHang = orderInfo.diaChiKhachHang || invoice.value.diaChiKhachHang
-          
+
           // Cập nhật danh sách sản phẩm đã bán từ API thông tin đơn hàng
           if (orderInfo.danhSachSanPhamDaBan && orderInfo.danhSachSanPhamDaBan.length > 0) {
-            invoice.value.hoaDonChiTiets = orderInfo.danhSachSanPhamDaBan.map(item => ({
+            invoice.value.hoaDonChiTiets = orderInfo.danhSachSanPhamDaBan.map((item) => ({
               id: item.id,
               maHoaDonChiTiet: item.maHoaDonChiTiet,
               tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
@@ -515,16 +575,44 @@ const fetchInvoiceDetail = async () => {
               giaBan: item.giaBan,
               soLuong: item.soLuong,
               thanhTien: item.thanhTien,
-              ghiChu: item.ghiChu
+              ghiChu: item.ghiChu,
             }))
-            console.log('✅ Đã cập nhật danh sách sản phẩm từ hoa_don_chi_tiet:', invoice.value.hoaDonChiTiets)
+          } else {
+            // Nếu không có dữ liệu từ orderInfo, thử lấy trực tiếp từ API sản phẩm đã bán
+            try {
+              const sanPhamResponse = await axios.get(`/api/thong-tin-hoa-don-management/san-pham-da-ban/${invoiceId.value}`)
+
+              if (sanPhamResponse.data && sanPhamResponse.data.data && sanPhamResponse.data.data.length > 0) {
+                invoice.value.hoaDonChiTiets = sanPhamResponse.data.data.map((item) => ({
+                  id: item.id,
+                  maHoaDonChiTiet: item.maHoaDonChiTiet,
+                  tenSanPhamChiTiet: item.tenSanPhamChiTiet || item.tenSanPham,
+                  tenSanPham: item.tenSanPhamChiTiet || item.tenSanPham,
+                  maSanPham: item.maSanPham,
+                  tenMauSac: item.tenMauSac,
+                  maMauSac: item.maMauSac,
+                  tenKichThuoc: item.tenKichThuoc,
+                  maKichThuoc: item.maKichThuoc,
+                  tenDeGiay: item.tenDeGiay,
+                  maDeGiay: item.maDeGiay,
+                  tenChatLieu: item.tenChatLieu,
+                  maChatLieu: item.maChatLieu,
+                  tenTrongLuong: item.tenTrongLuong,
+                  maTrongLuong: item.maTrongLuong,
+                  donGia: item.giaBan,
+                  giaBan: item.giaBan,
+                  soLuong: item.soLuong,
+                  thanhTien: item.thanhTien,
+                  ghiChu: item.ghiChu,
+                }))
+              }
+            } catch (sanPhamError: any) {
+              console.warn('⚠️ Không thể lấy danh sách sản phẩm đã bán:', sanPhamError.message)
+            }
           }
-          
-          console.log('✅ Đã merge thông tin từ API thông tin đơn hàng:', orderInfo)
         }
       } catch (orderInfoError: any) {
-        console.warn('⚠️ Không thể lấy thông tin đơn hàng từ API:', orderInfoError.message)
-        console.log('📋 Sử dụng thông tin từ API hóa đơn chính')
+        // Silent error handling
       }
     } else {
       console.log('⚠️ Không có dữ liệu từ API, sử dụng dữ liệu mẫu')
@@ -562,7 +650,7 @@ const fetchInvoiceDetail = async () => {
   } catch (error: any) {
     console.error('❌ Lỗi khi tải chi tiết hóa đơn:', error)
     console.error('📋 Chi tiết lỗi:', error.response?.data || error.message)
-    
+
     // Use sample data on error
     invoice.value = {
       id: invoiceId.value,
@@ -623,22 +711,22 @@ const getStatusColor = (status: any) => {
   if (typeof status === 'boolean') {
     return status ? 'green' : 'orange'
   }
-  
+
   if (typeof status === 'string') {
     const statusColors: { [key: string]: string } = {
       'Chờ xác nhận': 'orange',
-      'Chờ giao hàng': 'blue', 
+      'Chờ giao hàng': 'blue',
       'Đang giao': 'purple',
       'Hoàn thành': 'green',
       'Đã hủy': 'red',
       'Đã thanh toán': 'green',
       'Chờ thanh toán': 'orange',
-      'true': 'green',
-      'false': 'orange',
+      true: 'green',
+      false: 'orange',
     }
     return statusColors[status] || 'gray'
   }
-  
+
   return 'gray'
 }
 
@@ -647,7 +735,7 @@ const getStatusText = (status: any) => {
   if (typeof status === 'boolean') {
     return status ? 'Hoàn thành' : 'Chờ xác nhận'
   }
-  
+
   if (typeof status === 'string') {
     const statusTexts: { [key: string]: string } = {
       'Chờ xác nhận': 'Chờ xác nhận',
@@ -657,12 +745,12 @@ const getStatusText = (status: any) => {
       'Đã hủy': 'Đã hủy',
       'Đã thanh toán': 'Hoàn thành',
       'Chờ thanh toán': 'Chờ xác nhận',
-      'true': 'Hoàn thành',
-      'false': 'Chờ xác nhận',
+      true: 'Hoàn thành',
+      false: 'Chờ xác nhận',
     }
     return statusTexts[status] || status || 'Chưa xác định'
   }
-  
+
   return 'Chưa xác định'
 }
 
@@ -671,15 +759,19 @@ const getTotalProducts = () => {
 }
 
 const getTotalQuantity = () => {
-  return invoice.value?.hoaDonChiTiets?.reduce((total: number, item: any) => {
-    return total + (item.soLuong || 0)
-  }, 0) || 0
+  return (
+    invoice.value?.hoaDonChiTiets?.reduce((total: number, item: any) => {
+      return total + (item.soLuong || 0)
+    }, 0) || 0
+  )
 }
 
 const getSubtotal = () => {
-  return invoice.value?.hoaDonChiTiets?.reduce((total: number, item: any) => {
-    return total + (item.thanhTien || 0)
-  }, 0) || 0
+  return (
+    invoice.value?.hoaDonChiTiets?.reduce((total: number, item: any) => {
+      return total + (item.thanhTien || 0)
+    }, 0) || 0
+  )
 }
 
 const goBack = () => {
@@ -689,9 +781,6 @@ const goBack = () => {
 const printInvoice = () => {
   window.print()
 }
-
-
-
 
 // Lifecycle
 onMounted(() => {

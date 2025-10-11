@@ -1,22 +1,22 @@
 <template>
   <div class="test-page">
     <h1>Test API Hóa Đơn</h1>
-    
+
     <div class="test-section">
       <h2>Test API Endpoints</h2>
-      
+
       <div class="test-buttons">
         <a-button @click="testInvoiceList" type="primary">Test Danh sách Hóa đơn</a-button>
         <a-button @click="testInvoiceDetail" type="primary">Test Chi tiết Hóa đơn</a-button>
         <a-button @click="testHealth" type="primary">Test Health Check</a-button>
       </div>
-      
+
       <div class="test-results">
         <h3>Kết quả:</h3>
         <pre>{{ testResult }}</pre>
       </div>
     </div>
-    
+
     <div class="invoice-list" v-if="invoices.length > 0">
       <h2>Danh sách Hóa đơn</h2>
       <a-table :columns="columns" :data="invoices" :pagination="false">
@@ -25,7 +25,7 @@
         </template>
       </a-table>
     </div>
-    
+
     <div class="invoice-detail" v-if="selectedInvoice">
       <h2>Chi tiết Hóa đơn ID: {{ selectedInvoice.id }}</h2>
       <pre>{{ JSON.stringify(selectedInvoice, null, 2) }}</pre>
@@ -66,7 +66,7 @@ const testInvoiceList = async () => {
     testResult.value = 'Testing invoice list...'
     const response = await axios.get('/api/hoa-don-management/playlist')
     testResult.value = `Invoice List Response: ${JSON.stringify(response.data, null, 2)}`
-    
+
     if (response.data && response.data.data) {
       invoices.value = response.data.data
     }
@@ -80,7 +80,7 @@ const testInvoiceDetail = async () => {
     testResult.value = 'Testing invoice detail...'
     const response = await axios.get('/api/hoa-don-management/1')
     testResult.value = `Invoice Detail Response: ${JSON.stringify(response.data, null, 2)}`
-    
+
     if (response.data && response.data.data) {
       selectedInvoice.value = response.data.data
     }
@@ -94,7 +94,7 @@ const viewDetail = async (id: number) => {
     testResult.value = `Loading invoice detail for ID: ${id}`
     const response = await axios.get(`/api/hoa-don-management/${id}`)
     testResult.value = `Invoice Detail Response: ${JSON.stringify(response.data, null, 2)}`
-    
+
     if (response.data && response.data.data) {
       selectedInvoice.value = response.data.data
     }

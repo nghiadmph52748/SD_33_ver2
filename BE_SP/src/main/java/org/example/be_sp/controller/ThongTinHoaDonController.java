@@ -48,4 +48,9 @@ public class ThongTinHoaDonController {
     public ResponseObject<?> getLatestByHoaDonId(@PathVariable Integer hoaDonId) {
         return new ResponseObject<>(thongTinHoaDonService.getLatestByHoaDonId(hoaDonId), "Lấy thông tin đơn hàng mới nhất thành công");
     }
+    
+    @GetMapping("/san-pham-da-ban/{hoaDonId}")
+    public ResponseObject<?> getSanPhamDaBan(@PathVariable Integer hoaDonId) {
+        return new ResponseObject<>(thongTinHoaDonService.getSanPhamDaBanByHoaDonId(hoaDonId), "Lấy danh sách sản phẩm đã bán thành công");
+    }
 }

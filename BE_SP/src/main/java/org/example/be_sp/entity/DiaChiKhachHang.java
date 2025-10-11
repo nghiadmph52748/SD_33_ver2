@@ -60,4 +60,31 @@ public class DiaChiKhachHang {
     @Column(name = "deleted")
     private Boolean deleted;
 
+    /**
+     * Lấy địa chỉ đầy đủ của khách hàng
+     */
+    public String getDiaChi() {
+        StringBuilder diaChi = new StringBuilder();
+        
+        if (diaChiCuThe != null && !diaChiCuThe.trim().isEmpty()) {
+            diaChi.append(diaChiCuThe);
+        }
+        
+        if (phuong != null && !phuong.trim().isEmpty()) {
+            if (diaChi.length() > 0) diaChi.append(", ");
+            diaChi.append(phuong);
+        }
+        
+        if (quan != null && !quan.trim().isEmpty()) {
+            if (diaChi.length() > 0) diaChi.append(", ");
+            diaChi.append(quan);
+        }
+        
+        if (thanhPho != null && !thanhPho.trim().isEmpty()) {
+            if (diaChi.length() > 0) diaChi.append(", ");
+            diaChi.append(thanhPho);
+        }
+        
+        return diaChi.toString();
+    }
 }
