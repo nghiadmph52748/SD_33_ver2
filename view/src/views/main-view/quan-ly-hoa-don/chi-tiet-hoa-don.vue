@@ -113,7 +113,7 @@
               <div class="info-list">
                 <div class="info-item">
                   <span class="label">Tổng tiền hàng:</span>
-                  <span class="value">{{ formatCurrency(invoice.tongTien || 0) }}</span>
+                  <span class="value">{{ formatCurrency(invoice.tongTienHang || invoice.tongTien || 0) }}</span>
                 </div>
                 <div class="info-item" v-if="invoice.phiVanChuyen && invoice.phiVanChuyen > 0">
                   <span class="label">Phí vận chuyển:</span>
@@ -414,12 +414,58 @@ const fetchInvoiceDetail = async () => {
     loading.value = true
     console.log('🔍 Đang tải chi tiết hóa đơn với ID:', invoiceId.value)
     
-    const response = await axios.get(`/api/hoa-don-management/${invoiceId.value}`)
-    console.log('📡 Response từ API:', response.data)
+    // Lấy thông tin hóa đơn từ API hóa đơn
+    const invoiceResponse = await axios.get(`/api/hoa-don-management/${invoiceId.value}`)
+    console.log('📡 Response từ API hóa đơn:', invoiceResponse.data)
     
-    if (response.data && response.data.data) {
-      invoice.value = response.data.data
+    if (invoiceResponse.data && invoiceResponse.data.data) {
+      invoice.value = invoiceResponse.data.data
+      
+      // Thử lấy thông tin đơn hàng từ API thông tin đơn hàng mới (không bắt buộc)
+      try {
+        const orderInfoResponse = await axios.get(`/api/thong-tin-hoa-don-management/latest-by-hoa-don/${invoiceId.value}`)
+        console.log('📡 Response từ API thông tin đơn hàng:', orderInfoResponse.data)
+        
+        if (orderInfoResponse.data && orderInfoResponse.data.data) {
+          const orderInfo = orderInfoResponse.data.data
+          // Cập nhật thông tin từ API thông tin đơn hàng
+          invoice.value.ngayTao = orderInfo.ngayTao || invoice.value.ngayTao
+          invoice.value.ngayThanhToan = orderInfo.ngayThanhToan || invoice.value.ngayThanhToan
+          invoice.value.tenNhanVien = orderInfo.tenNhanVien || invoice.value.tenNhanVien
+          invoice.value.maNhanVien = orderInfo.maNhanVien || invoice.value.maNhanVien
+          invoice.value.tongTienHang = orderInfo.tongTienHang || invoice.value.tongTien
+          console.log('✅ Đã merge thông tin từ API thông tin đơn hàng:', orderInfo)
+        }
+      } catch (orderInfoError: any) {
+        console.warn('⚠️ Không thể lấy thông tin đơn hàng từ API:', orderInfoError.message)
+        console.log('📋 Sử dụng thông tin từ API hóa đơn chính')
+      }
+      
       console.log('✅ Dữ liệu hóa đơn đã được tải:', invoice.value)
+    } else if (invoiceResponse.data) {
+      // Nếu response trực tiếp là dữ liệu (không có wrapper data)
+      invoice.value = invoiceResponse.data
+      console.log('✅ Dữ liệu hóa đơn đã được tải (trực tiếp):', invoice.value)
+      
+      // Thử lấy thông tin đơn hàng từ API thông tin đơn hàng mới (không bắt buộc)
+      try {
+        const orderInfoResponse = await axios.get(`/api/thong-tin-hoa-don-management/latest-by-hoa-don/${invoiceId.value}`)
+        console.log('📡 Response từ API thông tin đơn hàng:', orderInfoResponse.data)
+        
+        if (orderInfoResponse.data && orderInfoResponse.data.data) {
+          const orderInfo = orderInfoResponse.data.data
+          // Cập nhật thông tin từ API thông tin đơn hàng
+          invoice.value.ngayTao = orderInfo.ngayTao || invoice.value.ngayTao
+          invoice.value.ngayThanhToan = orderInfo.ngayThanhToan || invoice.value.ngayThanhToan
+          invoice.value.tenNhanVien = orderInfo.tenNhanVien || invoice.value.tenNhanVien
+          invoice.value.maNhanVien = orderInfo.maNhanVien || invoice.value.maNhanVien
+          invoice.value.tongTienHang = orderInfo.tongTienHang || invoice.value.tongTien
+          console.log('✅ Đã merge thông tin từ API thông tin đơn hàng:', orderInfo)
+        }
+      } catch (orderInfoError: any) {
+        console.warn('⚠️ Không thể lấy thông tin đơn hàng từ API:', orderInfoError.message)
+        console.log('📋 Sử dụng thông tin từ API hóa đơn chính')
+      }
     } else {
       console.log('⚠️ Không có dữ liệu từ API, sử dụng dữ liệu mẫu')
       // Fallback to sample data for testing

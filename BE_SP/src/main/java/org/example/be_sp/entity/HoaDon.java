@@ -87,6 +87,20 @@ public class HoaDon {
     @Column(name = "email_khach_hang", columnDefinition = "nvarchar(255)")
     private String emailNguoiNhan;
 
+    @Nationalized
+    @Column(name = "ten_nhan_vien")
+    private String tenNhanVien;
+
+    @Column(name = "ma_nhan_vien", length = 7)
+    private String maNhanVien;
+
+    @Nationalized
+    @Column(name = "ten_phieu_giam_gia")
+    private String tenPhieuGiamGia;
+
+    @Column(name = "ma_phieu_giam_gia", length = 8)
+    private String maPhieuGiamGia;
+
     @Column(name = "ngay_tao")
     private LocalDate ngayTao;
 

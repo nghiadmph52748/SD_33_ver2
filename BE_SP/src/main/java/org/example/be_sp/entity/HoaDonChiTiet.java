@@ -63,6 +63,13 @@ public class HoaDonChiTiet {
     @Column(name = "ghi_chu")
     private String ghiChu;
 
+    @Nationalized
+    @Column(name = "ten_san_pham_chi_tiet")
+    private String tenSanPhamChiTiet;
+
+    @Column(name = "ma_san_pham_chi_tiet", length = 20)
+    private String maSanPhamChiTiet;
+
     @ColumnDefault("0")
     @Column(name = "deleted")
     private Boolean deleted;

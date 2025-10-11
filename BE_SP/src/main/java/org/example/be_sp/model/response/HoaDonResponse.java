@@ -28,6 +28,7 @@ public class HoaDonResponse {
     private BigDecimal giaTriGiamGia;
     private BigDecimal soTienToiDa;
     private String tenNhanVien;
+    private String maNhanVien;
     private String tenHoaDon;
     private Boolean loaiDon;
     private BigDecimal phiVanChuyen;
@@ -135,7 +136,24 @@ public class HoaDonResponse {
         // Nhân viên
         if (hd.getIdNhanVien() != null) {
             this.tenNhanVien = hd.getIdNhanVien().getTenNhanVien();
+            this.maNhanVien = hd.getIdNhanVien().getMaNhanVien();
             this.idNhanVien = hd.getIdNhanVien().getId();
+        }
+        
+        // Ưu tiên lấy từ trường trực tiếp nếu có
+        if (hd.getTenNhanVien() != null && !hd.getTenNhanVien().trim().isEmpty()) {
+            this.tenNhanVien = hd.getTenNhanVien();
+        }
+        if (hd.getMaNhanVien() != null && !hd.getMaNhanVien().trim().isEmpty()) {
+            this.maNhanVien = hd.getMaNhanVien();
+        }
+        
+        // Ưu tiên lấy từ trường trực tiếp nếu có
+        if (hd.getTenPhieuGiamGia() != null && !hd.getTenPhieuGiamGia().trim().isEmpty()) {
+            this.tenPhieuGiamGia = hd.getTenPhieuGiamGia();
+        }
+        if (hd.getMaPhieuGiamGia() != null && !hd.getMaPhieuGiamGia().trim().isEmpty()) {
+            this.maPhieuGiamGia = hd.getMaPhieuGiamGia();
         }
         // Mapping chi tiết sản phẩm
 

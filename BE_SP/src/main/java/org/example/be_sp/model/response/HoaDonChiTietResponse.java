@@ -58,6 +58,8 @@ public class HoaDonChiTietResponse {
     private BigDecimal thanhTien;
     private Boolean trangThai;
     private String ghiChu;
+    private String tenSanPhamChiTiet;
+    private String maSanPhamChiTiet;
     private Boolean deleted;
     private Integer sanPhamId;
     private String tenNhaSanXuat;
@@ -116,6 +118,8 @@ public class HoaDonChiTietResponse {
         this.thanhTien = d.getThanhTien();
         this.trangThai = d.getTrangThai();
         this.ghiChu = d.getGhiChu();
+        this.tenSanPhamChiTiet = d.getTenSanPhamChiTiet();
+        this.maSanPhamChiTiet = d.getMaSanPhamChiTiet();
         this.deleted = d.getDeleted();
 //        if (d.getIdChiTietSanPham() != null) {
 //            this.sanPham = new ChiTietSanPhamFullResponse(d.getIdChiTietSanPham());

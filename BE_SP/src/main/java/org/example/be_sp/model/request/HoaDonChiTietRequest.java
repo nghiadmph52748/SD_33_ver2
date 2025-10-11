@@ -22,6 +22,10 @@ public class HoaDonChiTietRequest {
 
     private String ghiChu;
 
+    private String tenSanPhamChiTiet;
+
+    private String maSanPhamChiTiet;
+
     private Boolean deleted;
 
 }

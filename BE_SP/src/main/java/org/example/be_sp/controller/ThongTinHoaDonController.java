@@ -38,4 +38,14 @@ public class ThongTinHoaDonController {
         thongTinHoaDonService.delete(id);
         return new ResponseObject<>(null, "Xoa thanh cong");
     }
+    
+    @GetMapping("/by-hoa-don/{hoaDonId}")
+    public ResponseObject<?> getByHoaDonId(@PathVariable Integer hoaDonId) {
+        return new ResponseObject<>(thongTinHoaDonService.getByHoaDonId(hoaDonId), "Lấy thông tin đơn hàng theo hóa đơn thành công");
+    }
+    
+    @GetMapping("/latest-by-hoa-don/{hoaDonId}")
+    public ResponseObject<?> getLatestByHoaDonId(@PathVariable Integer hoaDonId) {
+        return new ResponseObject<>(thongTinHoaDonService.getLatestByHoaDonId(hoaDonId), "Lấy thông tin đơn hàng mới nhất thành công");
+    }
 }

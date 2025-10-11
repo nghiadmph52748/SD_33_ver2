@@ -23,6 +23,10 @@ public class HoaDonRequest {
     private String diaChiNhanHang;
     private String soDienThoaiNguoiNhan;
     private String emailNguoiNhan;
+    private String tenNhanVien;
+    private String maNhanVien;
+    private String tenPhieuGiamGia;
+    private String maPhieuGiamGia;
     private LocalDate ngayThanhToan;
     private LocalDate ngayTao;
     private Integer idKhachHang;     // chỉ cần id thay vì full object

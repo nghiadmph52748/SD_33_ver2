@@ -49,6 +49,12 @@ public class ThongTinHoaDonService {
         HoaDon hoaDon = hoaDonService.getById(thongTinHoaDonRequest.getIdHoaDon());
         ttdh.setIdHoaDon(hoaDon);
         ttdh.setIdTrangThaiDonHang(trangThaiDonHangService.getById(thongTinHoaDonRequest.getIdTrangThaiDonHang()));
+        
+        // Đảm bảo thời gian được set đúng
+        if (ttdh.getThoiGian() == null) {
+            ttdh.setThoiGian(java.time.LocalDate.now());
+        }
+        
         ThongTinDonHang saved = thongTinDonHangRepository.save(ttdh);
         
         // Send order status update email
@@ -65,6 +71,25 @@ public class ThongTinHoaDonService {
         ThongTinDonHang ttdh = thongTinDonHangRepository.findById(id).orElseThrow(()-> new ApiException("Không tìm thấy thông tin đơn hàng","404" ));
         ttdh.setDeleted(true);
         thongTinDonHangRepository.save(ttdh);
+    }
+    
+    /**
+     * Lấy thông tin đơn hàng theo ID hóa đơn
+     */
+    public List<ThongTinDonHangResponse> getByHoaDonId(Integer hoaDonId) {
+        return thongTinDonHangRepository.findByHoaDonId(hoaDonId)
+            .stream()
+            .map(ThongTinDonHangResponse::new)
+            .toList();
+    }
+    
+    /**
+     * Lấy thông tin đơn hàng mới nhất theo ID hóa đơn
+     */
+    public ThongTinDonHangResponse getLatestByHoaDonId(Integer hoaDonId) {
+        return thongTinDonHangRepository.findLatestByHoaDonId(hoaDonId)
+            .map(ThongTinDonHangResponse::new)
+            .orElse(null);
     }
     
     /**
@@ -112,7 +137,7 @@ public class ThongTinHoaDonService {
                             price = item.getGiaBan() != null ? item.getGiaBan() : BigDecimal.ZERO;
                         }
                         Integer quantity = item.getSoLuong() != null ? item.getSoLuong() : 0;
-                        BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
+                        BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity.longValue()));
                         
                         return OrderEmailData.OrderItemData.builder()
                             .productName(productName)

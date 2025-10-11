@@ -66,6 +66,27 @@ public class HoaDonService {
         hd.setIdKhachHang(khachHangRepository.findKhachHangById(request.getIdKhachHang()));
         hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
         hd.setIdNhanVien(nhanVienRepository.getById(request.getIdNhanVien()));
+        
+        // Tự động điền tên và mã nhân viên
+        if (hd.getIdNhanVien() != null) {
+            if (request.getTenNhanVien() == null || request.getTenNhanVien().trim().isEmpty()) {
+                hd.setTenNhanVien(hd.getIdNhanVien().getTenNhanVien());
+            }
+            if (request.getMaNhanVien() == null || request.getMaNhanVien().trim().isEmpty()) {
+                hd.setMaNhanVien(hd.getIdNhanVien().getMaNhanVien());
+            }
+        }
+        
+        // Tự động điền tên và mã phiếu giảm giá
+        if (hd.getIdPhieuGiamGia() != null) {
+            if (request.getTenPhieuGiamGia() == null || request.getTenPhieuGiamGia().trim().isEmpty()) {
+                hd.setTenPhieuGiamGia(hd.getIdPhieuGiamGia().getTenPhieuGiamGia());
+            }
+            if (request.getMaPhieuGiamGia() == null || request.getMaPhieuGiamGia().trim().isEmpty()) {
+                hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
+            }
+        }
+        
         HoaDon savedHoaDon = hoaDonRepository.save(hd);
         
         // Send order confirmation email
@@ -112,6 +133,18 @@ public class HoaDonService {
         if (request.getGhiChu() != null) {
             hd.setGhiChu(request.getGhiChu());
         }
+        if (request.getTenNhanVien() != null) {
+            hd.setTenNhanVien(request.getTenNhanVien());
+        }
+        if (request.getMaNhanVien() != null) {
+            hd.setMaNhanVien(request.getMaNhanVien());
+        }
+        if (request.getTenPhieuGiamGia() != null) {
+            hd.setTenPhieuGiamGia(request.getTenPhieuGiamGia());
+        }
+        if (request.getMaPhieuGiamGia() != null) {
+            hd.setMaPhieuGiamGia(request.getMaPhieuGiamGia());
+        }
 
         // Gán lại các quan hệ
         if (request.getIdKhachHang() != null) {
@@ -119,9 +152,29 @@ public class HoaDonService {
         }
         if (request.getIdPhieuGiamGia() != null) {
             hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
+            
+            // Tự động điền tên và mã phiếu giảm giá nếu chưa có
+            if (hd.getIdPhieuGiamGia() != null) {
+                if (hd.getTenPhieuGiamGia() == null || hd.getTenPhieuGiamGia().trim().isEmpty()) {
+                    hd.setTenPhieuGiamGia(hd.getIdPhieuGiamGia().getTenPhieuGiamGia());
+                }
+                if (hd.getMaPhieuGiamGia() == null || hd.getMaPhieuGiamGia().trim().isEmpty()) {
+                    hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
+                }
+            }
         }
         if (request.getIdNhanVien() != null) {
             hd.setIdNhanVien(nhanVienRepository.getById(request.getIdNhanVien()));
+            
+            // Tự động điền tên và mã nhân viên nếu chưa có
+            if (hd.getIdNhanVien() != null) {
+                if (hd.getTenNhanVien() == null || hd.getTenNhanVien().trim().isEmpty()) {
+                    hd.setTenNhanVien(hd.getIdNhanVien().getTenNhanVien());
+                }
+                if (hd.getMaNhanVien() == null || hd.getMaNhanVien().trim().isEmpty()) {
+                    hd.setMaNhanVien(hd.getIdNhanVien().getMaNhanVien());
+                }
+            }
         }
 
         hd.setUpdateAt(LocalDate.now());
