@@ -178,7 +178,7 @@ onMounted(async () => {
     const res = await axios.get(`http://localhost:8080/api/nhan-vien-management/detail/${id}`)
     formData.value = res.data
   } catch (err) {
-    console.error('Lỗi khi load dữ liệu:', err)
+    message.error('Không thể tải dữ liệu nhân viên')
   }
 })
 
@@ -202,9 +202,8 @@ const handleSubmit = () => {
             const msg =
               res?.data?.message && res?.data?.message !== 'null'
                 ? res.data.message
-                : JSON.stringify(res?.data) || 'Cập nhật thất bại, không có thông báo lỗi từ server'
+                : 'Cập nhật thất bại'
             message.error(msg)
-            console.error('Lỗi cập nhật:', res)
           }
         } else {
           message.error('Chưa có chức năng thêm mới')
@@ -212,7 +211,6 @@ const handleSubmit = () => {
       } catch (error: any) {
         const msg = error?.response?.data?.message || error?.message || 'Form chưa hợp lệ hoặc có lỗi xảy ra. Vui lòng kiểm tra lại.'
         message.error(msg)
-        console.error('❌ Lỗi khi gửi:', error)
       } finally {
         loading.value = false
       }
