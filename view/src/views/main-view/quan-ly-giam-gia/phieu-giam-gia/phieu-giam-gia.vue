@@ -406,6 +406,91 @@
                 Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
               </div>
             </a-form-item>
+
+            <a-form-item field="applyToProducts">
+              <a-checkbox v-model="couponEditForm.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
+              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                Nếu bật, phiếu giảm giá chỉ áp dụng cho các sản phẩm được chọn
+              </div>
+            </a-form-item>
+
+            <!-- Product Selection Section -->
+            <div v-if="couponEditForm.applyToProducts" class="product-selection-section">
+              <a-divider style="margin: 16px 0" />
+              <div style="font-weight: 600; margin-bottom: 12px">Chọn sản phẩm áp dụng</div>
+
+              <a-input-search
+                v-model="productSearchQuery"
+                placeholder="Tìm kiếm sản phẩm..."
+                allow-clear
+                style="margin-bottom: 12px"
+              />
+
+              <div style="margin-bottom: 12px; display: flex; gap: 8px">
+                <a-button size="small" @click="selectAllEditProducts">
+                  <template #icon>
+                    <icon-plus />
+                  </template>
+                  Chọn tất cả
+                </a-button>
+                <a-button size="small" @click="deselectAllEditProducts">
+                  <template #icon>
+                    <icon-delete />
+                  </template>
+                  Bỏ chọn tất cả
+                </a-button>
+              </div>
+
+              <a-table
+                row-key="id"
+                :key="`product-table-${couponEditForm.selectedProductIds.length}`"
+                :columns="productColumnsWithCheckbox"
+                :data="filteredProducts"
+                :pagination="productPagination"
+                :loading="productsLoading"
+                :scroll="{ y: 300 }"
+                size="small"
+                :bordered="{ cell: true }"
+              >
+                <template #selectHeader>
+                  <a-checkbox
+                    :model-value="isAllEditProductsSelected"
+                    :indeterminate="isSomeEditProductsSelected && !isAllEditProductsSelected"
+                    @change="toggleAllEditProducts"
+                  />
+                </template>
+                <template #select="{ record }">
+                  <a-checkbox
+                    :model-value="couponEditForm.selectedProductIds.includes(record.id)"
+                    @change="(checked) => {
+                      console.log('[DEBUG] Checkbox changed:', { 
+                        recordId: record.id, 
+                        recordIdType: typeof record.id,
+                        checked, 
+                        selectedIds: couponEditForm.selectedProductIds,
+                        selectedIdsTypes: couponEditForm.selectedProductIds.map(id => typeof id),
+                        includes: couponEditForm.selectedProductIds.includes(record.id)
+                      })
+                      toggleEditProductSelection(record.id)
+                    }"
+                  />
+                </template>
+                <template #tenSanPham="{ record }">
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
+                  </div>
+                </template>
+                <template #giaBan="{ record }">
+                  <span>{{ formatCurrency(record.giaBan || 0) }}</span>
+                </template>
+              </a-table>
+
+              <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
+                Đã chọn:
+                <strong>{{ couponEditForm.selectedProductIds.length }}</strong>
+                sản phẩm
+              </div>
+            </div>
           </a-form>
         </div>
 
@@ -540,6 +625,7 @@
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { IconPlus, IconDownload, IconEdit, IconEye, IconDelete, IconStar, IconRefresh } from '@arco-design/web-vue/es/icon'
@@ -717,7 +803,9 @@ const couponEditForm = reactive({
   description: '',
   active: true,
   featured: false,
+  applyToProducts: false,
   selectedCustomerIds: [] as number[],
+  selectedProductIds: [] as number[],
 })
 
 const couponEditRules: FormRules = {
@@ -908,6 +996,180 @@ watch(
     // Clear selected customers when unchecking featured
     if (!isFeatured) {
       couponEditForm.selectedCustomerIds = []
+    }
+  }
+)
+
+// Products
+interface ProductApiModel {
+  id: number
+  idSanPham?: {
+    tenSanPham?: string
+  }
+  tenSanPhamChiTiet?: string
+  maChiTietSanPham?: string
+  giaBan?: number
+  soLuong?: number
+  trangThai?: boolean
+}
+
+const products = ref<ProductApiModel[]>([])
+const productsLoading = ref(false)
+const productSearchQuery = ref('')
+
+const productColumns = [
+  {
+    title: 'Tên sản phẩm',
+    dataIndex: 'tenSanPham',
+    slotName: 'tenSanPham',
+    ellipsis: true,
+    tooltip: true,
+  },
+  {
+    title: 'Mã SP',
+    dataIndex: 'maChiTietSanPham',
+    width: 120,
+  },
+  {
+    title: 'Giá bán',
+    dataIndex: 'giaBan',
+    slotName: 'giaBan',
+    width: 150,
+    align: 'right' as const,
+  },
+]
+
+const filteredProducts = computed(() => {
+  if (!productSearchQuery.value) {
+    return products.value
+  }
+  const query = productSearchQuery.value.toLowerCase()
+  return products.value.filter(
+    (product) =>
+      product.idSanPham?.tenSanPham?.toLowerCase().includes(query) ||
+      product.tenSanPhamChiTiet?.toLowerCase().includes(query) ||
+      product.maChiTietSanPham?.toLowerCase().includes(query)
+  )
+})
+
+const productPagination = computed(() => ({
+  pageSize: 5,
+  showTotal: true,
+  showPageSize: false,
+}))
+
+const productColumnsWithCheckbox = computed(() => [
+  {
+    title: '',
+    dataIndex: 'select',
+    slotName: 'select',
+    width: 50,
+    align: 'center' as const,
+  },
+  ...productColumns,
+])
+
+const isAllEditProductsSelected = computed(() => {
+  if (filteredProducts.value.length === 0) return false
+  return filteredProducts.value.every((product) => couponEditForm.selectedProductIds.includes(product.id))
+})
+
+const isSomeEditProductsSelected = computed(() => {
+  return couponEditForm.selectedProductIds.length > 0
+})
+
+const toggleEditProductSelection = (productId: number) => {
+  const index = couponEditForm.selectedProductIds.indexOf(productId)
+  if (index > -1) {
+    couponEditForm.selectedProductIds.splice(index, 1)
+  } else {
+    couponEditForm.selectedProductIds.push(productId)
+  }
+}
+
+const toggleAllEditProducts = () => {
+  if (isAllEditProductsSelected.value) {
+    // Deselect all filtered products
+    filteredProducts.value.forEach((product) => {
+      const index = couponEditForm.selectedProductIds.indexOf(product.id)
+      if (index > -1) {
+        couponEditForm.selectedProductIds.splice(index, 1)
+      }
+    })
+  } else {
+    // Select all filtered products
+    filteredProducts.value.forEach((product) => {
+      if (!couponEditForm.selectedProductIds.includes(product.id)) {
+        couponEditForm.selectedProductIds.push(product.id)
+      }
+    })
+  }
+}
+
+const selectAllEditProducts = () => {
+  filteredProducts.value.forEach((product) => {
+    if (!couponEditForm.selectedProductIds.includes(product.id)) {
+      couponEditForm.selectedProductIds.push(product.id)
+    }
+  })
+}
+
+const deselectAllEditProducts = () => {
+  filteredProducts.value.forEach((product) => {
+    const index = couponEditForm.selectedProductIds.indexOf(product.id)
+    if (index > -1) {
+      couponEditForm.selectedProductIds.splice(index, 1)
+    }
+  })
+}
+
+const loadProducts = async () => {
+  productsLoading.value = true
+  try {
+    const response = await axios.get('/api/chi-tiet-san-pham-management/playlist')
+    
+    // API trả về ResponseObject { data: [...] }
+    const data = response.data.data || response.data
+
+    console.log('Raw API response:', response.data)
+    console.log('Extracted data:', data)
+
+    if (data && Array.isArray(data)) {
+      // Filter active products with stock
+      const activeProducts = data.filter((p: ProductApiModel) => {
+        return p.trangThai !== false && (p.soLuong || 0) > 0
+      })
+      products.value = activeProducts
+
+      console.log('Đã load sản phẩm:', activeProducts.length)
+      
+      if (activeProducts.length === 0) {
+        Message.info('Không có sản phẩm hoạt động')
+      }
+    } else {
+      products.value = []
+      console.error('Dữ liệu sản phẩm không hợp lệ:', response.data)
+      Message.warning('Dữ liệu sản phẩm không hợp lệ')
+    }
+  } catch (error) {
+    console.error('Lỗi khi load sản phẩm:', error)
+    Message.error('Không thể tải danh sách sản phẩm')
+    products.value = []
+  } finally {
+    productsLoading.value = false
+  }
+}
+
+// Load products when applyToProducts is checked in edit form
+watch(
+  () => couponEditForm.applyToProducts,
+  (shouldApply) => {
+    if (shouldApply && products.value.length === 0) {
+      loadProducts()
+    }
+    // Clear selected products when unchecking
+    if (!shouldApply) {
+      couponEditForm.selectedProductIds = []
     }
   }
 )
@@ -1230,7 +1492,7 @@ const viewAppliedCustomers = async () => {
   appliedCustomersVisible.value = true
 }
 
-const editCoupon = (coupon: CouponRecord) => {
+const editCoupon = async (coupon: CouponRecord) => {
   selectedCoupon.value = coupon
   couponEditForm.name = coupon.name ?? ''
   couponEditForm.discountMode = coupon.discount_type === 'percentage' ? 'percentage' : 'amount'
@@ -1249,6 +1511,55 @@ const editCoupon = (coupon: CouponRecord) => {
     loadCustomers()
   }
 
+  // Load products applied to this coupon
+  try {
+    const response = await axios.get(
+      `/api/chi-tiet-phieu-giam-gia-management/by-phieu-giam-gia/${coupon.id}`
+    )
+    console.log('[DEBUG] Loaded product details for coupon:', response.data)
+    
+    // Handle both ResponseObject format and direct array
+    let productDetails: any[] = []
+    
+    if (Array.isArray(response.data)) {
+      // Direct array response
+      productDetails = response.data
+      console.log('[DEBUG] Direct array response, length:', productDetails.length)
+    } else if (response.data?.isSuccess && response.data.data && Array.isArray(response.data.data)) {
+      // ResponseObject wrapper format
+      productDetails = response.data.data
+      console.log('[DEBUG] ResponseObject format, length:', productDetails.length)
+    }
+    
+    if (productDetails.length > 0) {
+      const shouldApply = true
+      
+      console.log('[DEBUG] Setting applyToProducts to:', shouldApply)
+      couponEditForm.applyToProducts = shouldApply
+      
+      // Clear and repopulate to ensure reactivity
+      couponEditForm.selectedProductIds.splice(0)
+      const productIds = productDetails.map((item: any) => item.idChiTietSanPham)
+      couponEditForm.selectedProductIds.push(...productIds)
+      
+      console.log('[DEBUG] Set selectedProductIds:', couponEditForm.selectedProductIds)
+      console.log('[DEBUG] applyToProducts is now:', couponEditForm.applyToProducts)
+    } else {
+      console.log('[DEBUG] No products found, setting applyToProducts to false')
+      couponEditForm.applyToProducts = false
+      couponEditForm.selectedProductIds.splice(0)
+    }
+  } catch (error) {
+    console.error('[ERROR] Failed to load product details:', error)
+    couponEditForm.applyToProducts = false
+    couponEditForm.selectedProductIds = []
+  }
+
+  // Load products list if not loaded
+  if (products.value.length === 0) {
+    await loadProducts()
+  }
+
   couponEditVisible.value = true
 }
 
@@ -1262,15 +1573,28 @@ const deleteCoupon = (coupon: CouponRecord) => {
 }
 
 const submitCouponEdit = async () => {
-  if (!selectedCoupon.value) return
-  if (couponEditSubmitting.value) return
+  console.log('[DEBUG] submitCouponEdit called')
+  if (!selectedCoupon.value) {
+    console.log('[DEBUG] No selected coupon')
+    return
+  }
+  if (couponEditSubmitting.value) {
+    console.log('[DEBUG] Already submitting')
+    return
+  }
 
   const form = couponEditFormRef.value
-  if (!form) return
+  if (!form) {
+    console.log('[DEBUG] No form ref')
+    return
+  }
 
+  console.log('[DEBUG] Validating form...')
   try {
     await form.validate()
+    console.log('[DEBUG] Form validation passed')
   } catch (error) {
+    console.log('[DEBUG] Form validation failed:', error)
     return
   }
 
@@ -1333,6 +1657,12 @@ const submitCouponEdit = async () => {
     return
   }
 
+  // Validate product selection
+  if (couponEditForm.applyToProducts && couponEditForm.selectedProductIds.length === 0) {
+    Message.error('Vui lòng chọn ít nhất một sản phẩm để áp dụng giảm giá!')
+    return
+  }
+
   const payload = {
     tenPhieuGiamGia: couponEditForm.name.trim(),
     loaiPhieuGiamGia: couponEditForm.discountMode === 'amount',
@@ -1352,11 +1682,36 @@ const submitCouponEdit = async () => {
   couponEditSubmitting.value = true
   try {
     await updateCoupon(selectedCoupon.value.id, payload)
+    
+    // Always update product selection (even if empty, to clear previous selections)
+    const productIds = couponEditForm.applyToProducts ? [...couponEditForm.selectedProductIds] : []
+    console.log('[DEBUG] Updating products for coupon:', selectedCoupon.value.id, 'with IDs:', productIds)
+    console.log('[DEBUG] Type check:', Array.isArray(productIds), 'Length:', productIds.length)
+    
+    const response = await axios.put(
+      '/api/chi-tiet-phieu-giam-gia-management/update-by-phieu-giam-gia',
+      productIds,
+      {
+        params: { idPhieuGiamGia: selectedCoupon.value.id }
+      }
+    )
+    console.log('[DEBUG] Update response:', response.data)
+    
+    console.log('[DEBUG] About to show success message')
     Message.success('Cập nhật phiếu giảm giá thành công')
+    console.log('[DEBUG] Success message shown')
+    
+    console.log('[DEBUG] Closing modal')
     couponEditVisible.value = false
+    
+    console.log('[DEBUG] Reloading coupons')
     await loadCoupons()
-  } catch (error) {
-    Message.error((error as Error).message || 'Không thể cập nhật phiếu giảm giá')
+    console.log('[DEBUG] Coupons reloaded')
+  } catch (error: any) {
+    console.error('[ERROR] Error updating coupon:', error)
+    console.error('[ERROR] Error response:', error.response?.data)
+    const errorMessage = error.response?.data?.message || error.message || 'Không thể cập nhật phiếu giảm giá'
+    Message.error(errorMessage)
   } finally {
     couponEditSubmitting.value = false
   }
@@ -1718,5 +2073,23 @@ onMounted(() => {
 .edit-modal-featured .customer-selection-section :deep(.arco-table-container) {
   border: 1px solid var(--color-border-2);
   border-radius: 4px;
+}
+
+/* Product selection section */
+.product-selection-section {
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--color-bg-2);
+  margin-top: 16px;
+}
+
+.product-selection-section :deep(.arco-table) {
+  border-radius: 4px;
+}
+
+.product-selection-section :deep(.arco-table-th) {
+  background-color: var(--color-fill-2);
+  font-weight: 600;
 }
 </style>

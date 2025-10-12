@@ -43,10 +43,11 @@ axios.interceptors.response.use(
     }
 
     const res = response.data
-    // Backend returns: { data: ..., message: "...", success: true/false }
+    // Backend returns: { data: ..., message: "...", isSuccess: true/false }
 
     // Check if request was successful
-    if (!res.success) {
+    // Backend uses 'isSuccess' not 'success'
+    if (res.isSuccess === false) {
       Message.error({
         content: res.message || 'Request failed',
         duration: 5 * 1000,

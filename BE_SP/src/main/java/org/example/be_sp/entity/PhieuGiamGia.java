@@ -84,6 +84,9 @@ public class PhieuGiamGia {
     @OneToMany(mappedBy = "idPhieuGiamGia")
     private Set<PhieuGiamGiaCaNhan> phieuGiamGiaCaNhans = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "idPhieuGiamGia")
+    private Set<ChiTietPhieuGiamGia> chiTietPhieuGiamGias = new LinkedHashSet<>();
+
     /**
      * Set default values before persisting
      */

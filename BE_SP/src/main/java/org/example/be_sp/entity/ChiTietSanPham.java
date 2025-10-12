@@ -80,10 +80,9 @@ public class ChiTietSanPham {
     @Column(name = "ghi_chu")
     private String ghiChu;
 
-    // Tạm thời comment trường này vì cột chưa tồn tại trong database
-    // @Nationalized
-    // @Column(name = "ten_san_pham_chi_tiet")
-    // private String tenSanPhamChiTiet;
+    @Nationalized
+    @Column(name = "ten_san_pham_chi_tiet", length = 500)
+    private String tenSanPhamChiTiet;
 
     @ColumnDefault("0")
     @Column(name = "deleted")

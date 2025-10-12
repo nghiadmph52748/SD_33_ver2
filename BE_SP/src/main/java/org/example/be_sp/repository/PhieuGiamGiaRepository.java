@@ -11,6 +11,10 @@ import org.springframework.stereotype.Repository;
 public interface PhieuGiamGiaRepository extends JpaRepository<PhieuGiamGia, Integer> {
     @Override
     PhieuGiamGia getById(Integer id);
+    
+    @Query("select n from PhieuGiamGia n where n.id = ?1")
+    PhieuGiamGia findPhieuGiamGiaById(Integer id);
+    
     @Query("select n from PhieuGiamGia n where n.deleted = ?1 and n.trangThai = ?2 and n.loaiPhieuGiamGia = ?3")
     List<PhieuGiamGia> findAllByDeletedFalseAndTrangThaiTrueAndLoaiPhieuGiamGiaTrue(Boolean deleted, Boolean trangThai, Boolean loaiPhieuGiamGia);
 }
