@@ -211,8 +211,9 @@ public class PhieuGiamGiaService {
                     .description(pgg.getMoTa())
                     .build();
                     
+                // Send email asynchronously - this returns immediately
                 emailService.sendVoucherAssignmentEmail(emailData);
-                log.info("Voucher assignment email sent to customer: {} for voucher: {}", 
+                log.info("Voucher assignment email queued for customer: {} (voucher: {}). Email will be sent in background.", 
                         khachHang.getEmail(), pggcn.getMaPhieuGiamGiaCaNhan());
             } else {
                 log.warn("Customer {} has no email address, skipping voucher email", khachHang.getId());

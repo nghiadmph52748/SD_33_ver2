@@ -138,7 +138,7 @@
               <template #icon>
                 <icon-download />
               </template>
-              Xuất danh sách
+              Xuất Excel
             </a-button>
           </a-space>
         </div>
@@ -339,13 +339,13 @@
       :confirm-loading="couponEditSubmitting"
       @ok="submitCouponEdit"
       @cancel="couponEditVisible = false"
-      :width="couponEditForm.featured ? 1200 : 620"
-      :class="{ 'edit-modal-featured': couponEditForm.featured }"
+      :width="modalWidth"
+      :class="{ 'edit-modal-multi-column': hasMultipleColumns }"
     >
-      <div :class="couponEditForm.featured ? 'modal-two-columns' : ''">
+      <div :class="modalLayoutClass">
         <!-- Left Column: Form -->
-        <div :class="couponEditForm.featured ? 'modal-left-column' : ''">
-          <div v-if="couponEditForm.featured" class="modal-column-title">Thông tin phiếu giảm giá</div>
+        <div :class="formColumnClass">
+          <div v-if="hasMultipleColumns" class="modal-column-title">Thông tin phiếu giảm giá</div>
 
           <a-form ref="couponEditFormRef" :model="couponEditForm" :rules="couponEditRules" layout="vertical">
             <a-row :gutter="16">
@@ -477,74 +477,11 @@
                 Nếu bật, phiếu giảm giá chỉ áp dụng cho các sản phẩm được chọn
               </div>
             </a-form-item>
-
-            <!-- Product Selection Section -->
-            <div v-if="couponEditForm.applyToProducts" class="product-selection-section">
-              <a-divider style="margin: 16px 0" />
-              <div style="font-weight: 600; margin-bottom: 12px">Chọn sản phẩm áp dụng</div>
-
-              <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
-
-              <div style="margin-bottom: 12px; display: flex; gap: 8px">
-                <a-button size="small" @click="selectAllEditProducts">
-                  <template #icon>
-                    <icon-plus />
-                  </template>
-                  Chọn tất cả
-                </a-button>
-                <a-button size="small" @click="deselectAllEditProducts">
-                  <template #icon>
-                    <icon-delete />
-                  </template>
-                  Bỏ chọn tất cả
-                </a-button>
-              </div>
-
-              <a-table
-                row-key="id"
-                :key="`product-table-${couponEditForm.selectedProductIds.length}`"
-                :columns="productColumnsWithCheckbox"
-                :data="filteredProducts"
-                :pagination="productPagination"
-                :loading="productsLoading"
-                :scroll="{ y: 300 }"
-                size="small"
-                :bordered="{ cell: true }"
-              >
-                <template #selectHeader>
-                  <a-checkbox
-                    :model-value="isAllEditProductsSelected"
-                    :indeterminate="isSomeEditProductsSelected && !isAllEditProductsSelected"
-                    @change="toggleAllEditProducts"
-                  />
-                </template>
-                <template #select="{ record }">
-                  <a-checkbox
-                    :model-value="couponEditForm.selectedProductIds.includes(record.id)"
-                    @change="() => toggleEditProductSelection(record.id)"
-                  />
-                </template>
-                <template #tenSanPham="{ record }">
-                  <div style="display: flex; align-items: center; gap: 8px">
-                    <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
-                  </div>
-                </template>
-                <template #giaBan="{ record }">
-                  <span>{{ formatCurrency(record.giaBan || 0) }}</span>
-                </template>
-              </a-table>
-
-              <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-                Đã chọn:
-                <strong>{{ couponEditForm.selectedProductIds.length }}</strong>
-                sản phẩm
-              </div>
-            </div>
           </a-form>
         </div>
 
-        <!-- Right Column: Customer Selection -->
-        <div v-if="couponEditForm.featured" class="modal-right-column">
+        <!-- Middle/Right Column: Customer Selection -->
+        <div v-if="couponEditForm.featured" :class="customerColumnClass">
           <div class="modal-column-title">Chọn khách hàng</div>
           <div class="customer-selection-section">
             <a-input-search v-model="customerSearchQuery" placeholder="Tìm kiếm khách hàng..." allow-clear style="margin-bottom: 12px" />
@@ -600,6 +537,76 @@
               Đã chọn:
               <strong>{{ couponEditForm.selectedCustomerIds.length }}</strong>
               khách hàng
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Product Selection -->
+        <div v-if="couponEditForm.applyToProducts && (couponEditForm.featured || !couponEditForm.featured)" :class="productColumnClass">
+          <div class="modal-column-title">Chọn sản phẩm áp dụng</div>
+          <div class="product-selection-section">
+            <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
+
+            <!-- Select All / Deselect All buttons -->
+            <div style="margin-bottom: 12px; display: flex; gap: 8px">
+              <a-button size="small" @click="selectAllEditProducts">
+                <template #icon>
+                  <icon-plus />
+                </template>
+                Chọn tất cả
+              </a-button>
+              <a-button size="small" @click="deselectAllEditProducts">
+                <template #icon>
+                  <icon-delete />
+                </template>
+                Bỏ chọn tất cả
+              </a-button>
+            </div>
+
+            <a-table
+              row-key="id"
+              :key="`product-table-${couponEditForm.selectedProductIds.length}`"
+              :columns="productColumnsWithCheckbox"
+              :data="filteredProducts"
+              :pagination="productPagination"
+              :loading="productsLoading"
+              :scroll="{ y: 350 }"
+              size="small"
+              :bordered="{ cell: true }"
+            >
+              <template #selectHeader>
+                <a-checkbox
+                  :model-value="isAllEditProductsSelected"
+                  :indeterminate="isSomeEditProductsSelected && !isAllEditProductsSelected"
+                  @change="toggleAllEditProducts"
+                />
+              </template>
+              <template #select="{ record }">
+                <a-checkbox
+                  :model-value="couponEditForm.selectedProductIds.includes(record.id)"
+                  @change="() => toggleEditProductSelection(record.id)"
+                />
+              </template>
+              <template #tenSanPham="{ record }">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
+                </div>
+              </template>
+              <template #giaBan="{ record }">
+                <span>{{ formatCurrency(record.giaBan || 0) }}</span>
+              </template>
+            </a-table>
+
+            <div
+              v-if="!productsLoading && filteredProducts.length === 0"
+              style="text-align: center; padding: 20px; color: var(--color-text-3)"
+            >
+              Không tìm thấy sản phẩm nào
+            </div>
+            <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
+              Đã chọn:
+              <strong>{{ couponEditForm.selectedProductIds.length }}</strong>
+              sản phẩm
             </div>
           </div>
         </div>
@@ -899,6 +906,37 @@ const couponEditRules: FormRules = {
 }
 
 const isPercentEdit = computed(() => couponEditForm.discountMode === 'percentage')
+
+// Modal layout computeds
+const hasMultipleColumns = computed(() => couponEditForm.featured || couponEditForm.applyToProducts)
+
+const modalWidth = computed(() => {
+  const bothEnabled = couponEditForm.featured && couponEditForm.applyToProducts
+  if (bothEnabled) return 1600 // 3 columns
+  if (couponEditForm.featured || couponEditForm.applyToProducts) return 1200 // 2 columns
+  return 620 // 1 column
+})
+
+const modalLayoutClass = computed(() => {
+  if (couponEditForm.featured && couponEditForm.applyToProducts) return 'modal-three-columns'
+  if (couponEditForm.featured || couponEditForm.applyToProducts) return 'modal-two-columns'
+  return ''
+})
+
+const formColumnClass = computed(() => {
+  if (couponEditForm.featured && couponEditForm.applyToProducts) return 'modal-left-column-three'
+  if (couponEditForm.featured || couponEditForm.applyToProducts) return 'modal-left-column'
+  return ''
+})
+
+const customerColumnClass = computed(() => {
+  if (couponEditForm.featured && couponEditForm.applyToProducts) return 'modal-middle-column'
+  return 'modal-right-column'
+})
+
+const productColumnClass = computed(() => {
+  return 'modal-right-column'
+})
 
 watch(
   () => couponEditForm.discountMode,
@@ -2131,19 +2169,28 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* Modal two-column layout */
-.edit-modal-featured :deep(.arco-modal-body) {
+/* Modal multi-column layout */
+.edit-modal-multi-column :deep(.arco-modal-body) {
   padding: 0;
   max-height: 70vh;
   overflow: hidden;
 }
 
+/* Two-column layout */
 .modal-two-columns {
   display: flex;
   gap: 0;
   min-height: 500px;
 }
 
+/* Three-column layout */
+.modal-three-columns {
+  display: flex;
+  gap: 0;
+  min-height: 500px;
+}
+
+/* Form column in 2-column layout */
 .modal-left-column {
   flex: 0 0 48%;
   padding: 20px;
@@ -2152,8 +2199,28 @@ onMounted(() => {
   max-height: 70vh;
 }
 
+/* Form column in 3-column layout */
+.modal-left-column-three {
+  flex: 0 0 33.33%;
+  padding: 20px;
+  border-right: 1px solid var(--color-border-2);
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+/* Middle column (customers) in 3-column layout */
+.modal-middle-column {
+  flex: 0 0 33.33%;
+  padding: 20px;
+  border-right: 1px solid var(--color-border-2);
+  background: var(--color-fill-1);
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+/* Right column (customers in 2-col or products in 2/3-col) */
 .modal-right-column {
-  flex: 0 0 52%;
+  flex: 1;
   padding: 20px;
   background: var(--color-fill-1);
   overflow-y: auto;
@@ -2169,24 +2236,27 @@ onMounted(() => {
   border-bottom: 2px solid var(--color-primary-6);
 }
 
-.edit-modal-featured .customer-selection-section {
+.edit-modal-multi-column .customer-selection-section {
   border: none;
   padding: 0;
   background: transparent;
 }
 
-.edit-modal-featured .customer-selection-section :deep(.arco-table-container) {
+.edit-modal-multi-column .customer-selection-section :deep(.arco-table-container) {
   border: 1px solid var(--color-border-2);
   border-radius: 4px;
 }
 
 /* Product selection section */
 .product-selection-section {
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+.edit-modal-multi-column .product-selection-section :deep(.arco-table-container) {
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--color-bg-2);
-  margin-top: 16px;
+  border-radius: 4px;
 }
 
 .product-selection-section :deep(.arco-table) {

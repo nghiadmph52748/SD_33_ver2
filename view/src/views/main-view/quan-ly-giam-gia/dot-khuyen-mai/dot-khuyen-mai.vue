@@ -10,7 +10,7 @@
         <a-row :gutter="16">
           <a-col :span="6">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tên khuyến mãi..." allow-clear @change="searchPromotions" />
+              <a-input v-model="filters.search" placeholder="Tên giảm giá..." allow-clear @change="searchPromotions" />
             </a-form-item>
           </a-col>
           <a-col :span="5">
@@ -80,7 +80,7 @@
               </template>
               Đặt lại
             </a-button>
-            <a-button @click="exportExcel">
+            <a-button @click="openExportConfirmModal">
               <template #icon>
                 <icon-download />
               </template>
@@ -90,7 +90,7 @@
               <template #icon>
                 <icon-plus />
               </template>
-              Thêm đợt khuyến mãi
+              Thêm đợt giảm giá
             </a-button>
           </a-space>
         </div>
@@ -98,7 +98,7 @@
     </a-card>
 
     <!-- Promotions Table -->
-    <a-card title="Danh sách khuyến mãi" class="table-card">
+    <a-card title="Danh sách giảm giá" class="table-card">
       <a-table :columns="columns" :data="filteredPromotions" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
         <template #percentage="{ record }">
           <span class="percentage-value">{{ record.percentage }}%</span>
@@ -144,7 +144,7 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt khuyến mãi" :footer="false" width="700px">
+    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt giảm giá" :footer="false" width="700px">
       <a-descriptions :column="1" layout="vertical">
         <a-descriptions-item label="Tên">{{ selectedPromotion?.name }}</a-descriptions-item>
         <a-descriptions-item label="Mã">{{ selectedPromotion?.code }}</a-descriptions-item>
@@ -205,15 +205,15 @@
 
     <a-modal
       v-model:visible="editVisible"
-      title="Chỉnh sửa đợt khuyến mãi"
+      title="Chỉnh sửa đợt giảm giá"
       :confirm-loading="editSubmitting"
       @ok="submitPromotionEdit"
       @cancel="editVisible = false"
       width="560px"
     >
       <a-form ref="promotionEditFormRef" :model="promotionEditForm" :rules="promotionEditRules" layout="vertical">
-        <a-form-item field="name" label="Tên đợt khuyến mãi">
-          <a-input v-model="promotionEditForm.name" placeholder="Nhập tên đợt khuyến mãi" allow-clear />
+        <a-form-item field="name" label="Tên đợt giảm giá">
+          <a-input v-model="promotionEditForm.name" placeholder="Nhập tên đợt giảm giá" allow-clear />
         </a-form-item>
         <a-form-item field="discountValue" label="Giá trị giảm (%)">
           <a-input-number
@@ -249,7 +249,7 @@
 
     <a-modal
       v-model:visible="deleteVisible"
-      title="Xóa đợt khuyến mãi"
+      title="Xóa đợt giảm giá"
       :confirm-loading="deleteSubmitting"
       width="420px"
       ok-text="Xóa"
@@ -258,11 +258,29 @@
       @cancel="deleteVisible = false"
     >
       <p>
-        Bạn chắc chắn muốn xóa đợt khuyến mãi
+        Bạn chắc chắn muốn xóa đợt giảm giá
         <strong>{{ selectedPromotion?.name }}</strong>
         ?
       </p>
       <p class="modal-note">Hành động này không thể hoàn tác.</p>
+    </a-modal>
+
+    <!-- Export Confirmation Modal -->
+    <a-modal
+      v-model:visible="exportConfirmVisible"
+      title="Xác nhận xuất danh sách"
+      :confirm-loading="exportSubmitting"
+      ok-text="Xuất"
+      width="480px"
+      @ok="confirmExportExcel"
+      @cancel="exportConfirmVisible = false"
+    >
+      <p>
+        Bạn có chắc chắn muốn xuất danh sách
+        <strong>{{ filteredPromotions.length }}</strong>
+        đợt giảm giá?
+      </p>
+      <p class="modal-note">File CSV sẽ được tải xuống vào máy tính của bạn.</p>
     </a-modal>
   </div>
 </template>
@@ -411,6 +429,10 @@ const deleteVisible = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
 
+// Export confirmation modal
+const exportConfirmVisible = ref(false)
+const exportSubmitting = ref(false)
+
 // History state
 const historyList = ref<PromotionHistoryApiModel[]>([])
 const isHistoryLoading = ref(false)
@@ -424,7 +446,7 @@ const promotionEditForm = reactive({
 })
 
 const promotionEditRules: FormRules = {
-  name: [{ required: true, message: 'Vui lòng nhập tên đợt khuyến mãi' }],
+  name: [{ required: true, message: 'Vui lòng nhập tên đợt giảm giá' }],
   discountValue: [
     { required: true, message: 'Vui lòng nhập giá trị giảm' },
     {
@@ -594,7 +616,7 @@ const loadPromotions = async () => {
     })
     promotions.value = sorted.map((item, index) => toPromotionRecord(item, index))
   } catch {
-    Message.error({ content: 'Không thể tải danh sách đợt khuyến mãi', duration: 5000 })
+    Message.error({ content: 'Không thể tải danh sách đợt giảm giá', duration: 5000 })
   } finally {
     loading.value = false
   }
@@ -734,25 +756,38 @@ const resetFilters = async () => {
   await loadPromotions()
 }
 
-const exportExcel = () => {
+const openExportConfirmModal = () => {
   if (!filteredPromotions.value.length) {
     Message.warning('Không có dữ liệu để xuất')
     return
   }
+  exportConfirmVisible.value = true
+}
 
-  const header = ['STT', 'Mã', 'Tên', 'Phần trăm giảm', 'Ngày bắt đầu', 'Ngày kết thúc', 'Trạng thái']
-  const rows = filteredPromotions.value.map((promotion, index) => [
-    promotion.index ?? index + 1,
-    promotion.code ?? '',
-    promotion.name ?? '',
-    promotion.percentage ?? '',
-    formatDate(promotion.start_date ?? ''),
-    formatDate(promotion.end_date ?? ''),
-    getStatusText(promotion.status ?? ''),
-  ])
+const confirmExportExcel = async () => {
+  if (exportSubmitting.value) return
 
-  downloadCsv('dot-khuyen-mai.csv', header, rows)
-  Message.success('Đã xuất danh sách đợt khuyến mãi')
+  exportSubmitting.value = true
+  try {
+    const header = ['STT', 'Mã', 'Tên', 'Phần trăm giảm', 'Ngày bắt đầu', 'Ngày kết thúc', 'Trạng thái']
+    const rows = filteredPromotions.value.map((promotion, index) => [
+      promotion.index ?? index + 1,
+      promotion.code ?? '',
+      promotion.name ?? '',
+      promotion.percentage ?? '',
+      formatDate(promotion.start_date ?? ''),
+      formatDate(promotion.end_date ?? ''),
+      getStatusText(promotion.status ?? ''),
+    ])
+
+    downloadCsv('dot-giam-gia.csv', header, rows)
+    Message.success('Xuất danh sách đợt giảm giá thành công')
+    exportConfirmVisible.value = false
+  } catch (error) {
+    Message.error('Không thể xuất danh sách đợt giảm giá')
+  } finally {
+    exportSubmitting.value = false
+  }
 }
 
 const submitPromotionEdit = async () => {
@@ -781,11 +816,11 @@ const submitPromotionEdit = async () => {
   editSubmitting.value = true
   try {
     await updatePromotionCampaign(selectedPromotion.value.id, payload)
-    Message.success('Cập nhật đợt khuyến mãi thành công')
+    Message.success('Cập nhật đợt giảm giá thành công')
     editVisible.value = false
     await loadPromotions()
   } catch {
-    Message.error('Không thể cập nhật đợt khuyến mãi')
+    Message.error('Không thể cập nhật đợt giảm giá')
   } finally {
     editSubmitting.value = false
   }
@@ -798,11 +833,11 @@ const confirmDeletePromotion = async () => {
   deleteSubmitting.value = true
   try {
     await deletePromotionCampaign(selectedPromotion.value.id)
-    Message.success('Đã xóa đợt khuyến mãi')
+    Message.success('Đã xóa đợt giảm giá')
     deleteVisible.value = false
     await loadPromotions()
   } catch {
-    Message.error('Không thể xóa đợt khuyến mãi')
+    Message.error('Không thể xóa đợt giảm giá')
   } finally {
     deleteSubmitting.value = false
   }
