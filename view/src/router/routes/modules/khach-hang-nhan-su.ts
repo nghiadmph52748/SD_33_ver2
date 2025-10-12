@@ -34,37 +34,37 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
       path: '/themnhanvien',
       name: 'ThemNhanVien',
       component: ThemNhanVien,
-      meta: { hideInMenu: true },
+      meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['*'] },
     },
     {
       path: '/updatenhanvien/:id',
       name: 'Updatenhanvien',
       component: Updatenhanvien,
-      meta: { hideInMenu: true },
+      meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['*'] },
     },
     {
       path: '/detail/:id', // dynamic route
       name: 'DetailNhanVien',
       component: Detail,
-      meta: { hideInMenu: true },
+      meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['*'] },
     },
     {
       path: '/themkhachhang',
       name: 'ThemKhachHang',
       component: ThemKhachHang,
-      meta: { hideInMenu: true },
+      meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['*'] },
     },
     {
       path: '/detailkhachhang/:id',
       name: 'ChiTietKhachHang',
       component: DetailKhachHang,
-      meta: { hideInMenu: true },
+      meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['*'] },
     },
     {
       path: '/updatekhachhang/:id',
       name: 'UpdateKhachHang',
       component: Updatekhachhang,
-      meta: { hideInMenu: true },
+      meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['*'] },
     },
     {
       path: 'nhan-vien',

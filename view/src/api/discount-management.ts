@@ -89,6 +89,8 @@ export interface CouponApiModel {
   deleted: boolean
   idKhachHang?: number[]
   featured?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export const fetchPromotionCampaigns = () => requestJson<PromotionApiModel[]>('/dot-giam-gia-management/playlist')
@@ -181,3 +183,18 @@ export interface CouponProductDetailApiModel {
 
 export const fetchCouponProductDetails = (couponId: number) =>
   requestJson<CouponProductDetailApiModel[]>(`/chi-tiet-phieu-giam-gia-management/by-phieu-giam-gia/${couponId}`)
+
+// Coupon History API
+export interface CouponHistoryApiModel {
+  id: number
+  idPhieuGiamGia: number
+  idNhanVien: number
+  tenNhanVien?: string
+  maNhanVien?: string
+  hanhDong: string
+  moTaThayDoi?: string
+  ngayThayDoi: string
+}
+
+export const fetchCouponHistory = (couponId: number) =>
+  requestJson<CouponHistoryApiModel[]>(`/phieu-giam-gia-management/history/${couponId}`)

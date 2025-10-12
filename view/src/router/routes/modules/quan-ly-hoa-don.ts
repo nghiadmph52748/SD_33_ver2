@@ -24,6 +24,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
         requiresAuth: true,
         roles: ['*'],
         hideInMenu: true, // Ẩn item này trong menu
+        activeMenu: 'quan-ly-hoa-don', // Highlight parent in menu
       },
     },
     {
@@ -59,6 +60,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
         requiresAuth: true,
         roles: ['*'],
         hideInMenu: true,
+        activeMenu: 'quan-ly-hoa-don',
       },
     },
   ],

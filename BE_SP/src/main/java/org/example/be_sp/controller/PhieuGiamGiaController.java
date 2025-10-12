@@ -68,4 +68,9 @@ public class PhieuGiamGiaController {
     public ResponseObject<?> getActiveForCustomer(@PathVariable Integer id) {
         return new ResponseObject<>(service.getActiveCouponsForCustomer(id));
     }
+    
+    @GetMapping("/history/{id}")
+    public ResponseObject<?> getHistory(@PathVariable Integer id) {
+        return new ResponseObject<>(service.getHistory(id), "Get history success");
+    }
 }

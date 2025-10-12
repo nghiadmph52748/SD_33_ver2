@@ -31,6 +31,8 @@ public class PhieuGiamGiaResponse {
     String moTa;
     Boolean deleted;
     Boolean featured;
+    LocalDateTime createdAt;
+    LocalDateTime updatedAt;
 
     public PhieuGiamGiaResponse(PhieuGiamGia d) {
         this.id = d.getId();
@@ -53,5 +55,7 @@ public class PhieuGiamGiaResponse {
         this.moTa = d.getMoTa();
         this.deleted = d.getDeleted();
         this.featured = d.getFeatured();
+        this.createdAt = d.getCreatedAt();
+        this.updatedAt = d.getUpdatedAt();
     }
 }

@@ -194,6 +194,18 @@
           </div>
         </template>
 
+        <template #created_at="{ record }">
+          <div class="timestamp-cell">
+            {{ record.created_at ? formatDateTime(record.created_at) : '—' }}
+          </div>
+        </template>
+
+        <template #updated_at="{ record }">
+          <div class="timestamp-cell">
+            {{ record.updated_at ? formatDateTime(record.updated_at) : '—' }}
+          </div>
+        </template>
+
         <template #status="{ record }">
           <a-tag :color="getStatusColor(record.status)">
             {{ getStatusText(record.status) }}
@@ -222,7 +234,7 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="couponDetailVisible" title="Chi tiết phiếu giảm giá" :footer="false" width="560px">
+    <a-modal v-model:visible="couponDetailVisible" title="Chi tiết phiếu giảm giá" :footer="false" width="700px">
       <a-descriptions :column="1" layout="vertical">
         <a-descriptions-item label="Tên">{{ selectedCoupon?.name }}</a-descriptions-item>
         <a-descriptions-item label="Mã">{{ selectedCoupon?.code }}</a-descriptions-item>
@@ -267,6 +279,58 @@
           </div>
         </a-descriptions-item>
       </a-descriptions>
+
+      <!-- History Section -->
+      <a-divider style="margin: 24px 0" />
+      <div class="history-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600">Lịch sử thay đổi</h3>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-spin v-if="isHistoryLoading" size="small" />
+            <a-button
+              v-else
+              size="small"
+              type="text"
+              @click="selectedCoupon && loadHistory(selectedCoupon.id)"
+            >
+              <template #icon>
+                <icon-refresh />
+              </template>
+              Tải lại
+            </a-button>
+          </div>
+        </div>
+
+        <div v-if="!isHistoryLoading && historyList.length === 0" style="text-align: center; padding: 32px; color: var(--color-text-3)">
+          <icon-empty style="font-size: 48px; margin-bottom: 8px" />
+          <div>Chưa có lịch sử thay đổi</div>
+        </div>
+
+        <a-timeline v-else-if="!isHistoryLoading">
+          <a-timeline-item v-for="history in historyList" :key="history.id" :dot-color="getActionColor(history.hanhDong)">
+            <template #dot>
+              <icon-plus-circle v-if="history.hanhDong.includes('TẠO')" style="font-size: 14px" />
+              <icon-edit v-else-if="history.hanhDong.includes('CẬP NHẬT')" style="font-size: 14px" />
+              <icon-delete v-else-if="history.hanhDong.includes('XÓA')" style="font-size: 14px" />
+            </template>
+
+            <div class="history-item">
+              <div class="history-header">
+                <strong>{{ history.hanhDong }}</strong>
+                <span class="history-time">{{ formatHistoryDate(history.ngayThayDoi) }}</span>
+              </div>
+              <div v-if="history.tenNhanVien" class="history-user">
+                <icon-user style="font-size: 12px; margin-right: 4px" />
+                {{ history.tenNhanVien }}
+                <span v-if="history.maNhanVien" style="color: var(--color-text-3)">({{ history.maNhanVien }})</span>
+              </div>
+              <div v-if="history.moTaThayDoi" class="history-description">
+                <pre style="margin: 0; font-family: inherit; white-space: pre-wrap">{{ history.moTaThayDoi }}</pre>
+              </div>
+            </div>
+          </a-timeline-item>
+        </a-timeline>
+      </div>
     </a-modal>
 
     <a-modal
@@ -419,12 +483,7 @@
               <a-divider style="margin: 16px 0" />
               <div style="font-weight: 600; margin-bottom: 12px">Chọn sản phẩm áp dụng</div>
 
-              <a-input-search
-                v-model="productSearchQuery"
-                placeholder="Tìm kiếm sản phẩm..."
-                allow-clear
-                style="margin-bottom: 12px"
-              />
+              <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
 
               <div style="margin-bottom: 12px; display: flex; gap: 8px">
                 <a-button size="small" @click="selectAllEditProducts">
@@ -462,17 +521,7 @@
                 <template #select="{ record }">
                   <a-checkbox
                     :model-value="couponEditForm.selectedProductIds.includes(record.id)"
-                    @change="(checked) => {
-                      console.log('[DEBUG] Checkbox changed:', { 
-                        recordId: record.id, 
-                        recordIdType: typeof record.id,
-                        checked, 
-                        selectedIds: couponEditForm.selectedProductIds,
-                        selectedIdsTypes: couponEditForm.selectedProductIds.map(id => typeof id),
-                        includes: couponEditForm.selectedProductIds.includes(record.id)
-                      })
-                      toggleEditProductSelection(record.id)
-                    }"
+                    @change="() => toggleEditProductSelection(record.id)"
                   />
                 </template>
                 <template #tenSanPham="{ record }">
@@ -628,14 +677,27 @@ import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { IconPlus, IconDownload, IconEdit, IconEye, IconDelete, IconStar, IconRefresh } from '@arco-design/web-vue/es/icon'
+import {
+  IconPlus,
+  IconDownload,
+  IconEdit,
+  IconEye,
+  IconDelete,
+  IconStar,
+  IconRefresh,
+  IconPlusCircle,
+  IconUser,
+  IconEmpty,
+} from '@arco-design/web-vue/es/icon'
 import downloadCsv from '@/utils/export-csv'
 import {
   deleteCoupon as deleteCouponApi,
   fetchCoupons,
   fetchCustomers,
+  fetchCouponHistory,
   type CouponApiModel,
   type CustomerApiModel,
+  type CouponHistoryApiModel,
   updateCoupon,
 } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
@@ -738,6 +800,20 @@ const columns = [
     align: 'center',
   },
   {
+    title: 'Ngày tạo',
+    dataIndex: 'created_at',
+    slotName: 'created_at',
+    width: 160,
+    align: 'center',
+  },
+  {
+    title: 'Ngày cập nhật',
+    dataIndex: 'updated_at',
+    slotName: 'updated_at',
+    width: 160,
+    align: 'center',
+  },
+  {
     title: 'Trạng thái',
     dataIndex: 'status',
     slotName: 'status',
@@ -771,6 +847,8 @@ interface CouponRecord {
   end_date: string
   status: CouponStatus
   featured: boolean
+  created_at?: string
+  updated_at?: string
   source: CouponApiModel
 }
 
@@ -786,6 +864,10 @@ const couponDeleteSubmitting = ref(false)
 // Applied customers modal
 const appliedCustomersVisible = ref(false)
 const appliedCustomersList = ref<CustomerApiModel[]>([])
+
+// History
+const historyList = ref<CouponHistoryApiModel[]>([])
+const isHistoryLoading = ref(false)
 
 // Export confirmation modal
 const exportConfirmVisible = ref(false)
@@ -1127,12 +1209,9 @@ const loadProducts = async () => {
   productsLoading.value = true
   try {
     const response = await axios.get('/api/chi-tiet-san-pham-management/playlist')
-    
+
     // API trả về ResponseObject { data: [...] }
     const data = response.data.data || response.data
-
-    console.log('Raw API response:', response.data)
-    console.log('Extracted data:', data)
 
     if (data && Array.isArray(data)) {
       // Filter active products with stock
@@ -1141,18 +1220,14 @@ const loadProducts = async () => {
       })
       products.value = activeProducts
 
-      console.log('Đã load sản phẩm:', activeProducts.length)
-      
       if (activeProducts.length === 0) {
         Message.info('Không có sản phẩm hoạt động')
       }
     } else {
       products.value = []
-      console.error('Dữ liệu sản phẩm không hợp lệ:', response.data)
       Message.warning('Dữ liệu sản phẩm không hợp lệ')
     }
-  } catch (error) {
-    console.error('Lỗi khi load sản phẩm:', error)
+  } catch {
     Message.error('Không thể tải danh sách sản phẩm')
     products.value = []
   } finally {
@@ -1229,6 +1304,8 @@ const toCouponRecord = (coupon: CouponApiModel, index: number): CouponRecord => 
     end_date: coupon.ngayKetThuc ?? '',
     status: deriveCouponStatus(coupon),
     featured: coupon.featured ?? false,
+    created_at: coupon.createdAt,
+    updated_at: coupon.updatedAt,
     source: coupon,
   }
 }
@@ -1358,6 +1435,13 @@ const loadCoupons = async () => {
     // eslint-disable-next-line no-console
     console.log('[DEBUG] API Response - First 2 items:', data.slice(0, 2))
     // eslint-disable-next-line no-console
+    console.log('[DEBUG] createdAt/updatedAt check:', data.slice(0, 2).map(d => ({
+      id: d.id,
+      name: d.tenPhieuGiamGia,
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt
+    })))
+    // eslint-disable-next-line no-console
     console.log(
       '[DEBUG] Featured field exists?',
       data.some((item) => Object.prototype.hasOwnProperty.call(item, 'featured'))
@@ -1465,13 +1549,51 @@ const searchCoupons = () => {
   // This function is called when filters change to trigger reactivity
 }
 
+// Load coupon history
+const loadHistory = async (couponId: number) => {
+  isHistoryLoading.value = true
+  try {
+    historyList.value = await fetchCouponHistory(couponId)
+  } catch {
+    Message.error('Không thể tải lịch sử thay đổi')
+    historyList.value = []
+  } finally {
+    isHistoryLoading.value = false
+  }
+}
+
+// Format datetime for history
+const formatHistoryDate = (dateString: string) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Get action color for timeline
+const getActionColor = (action: string) => {
+  if (action.includes('TẠO') || action.includes('CREATE')) return 'blue'
+  if (action.includes('CẬP NHẬT') || action.includes('UPDATE')) return 'orange'
+  if (action.includes('XÓA') || action.includes('DELETE')) return 'red'
+  return 'gray'
+}
+
 const openCreatePage = () => {
   router.push({ name: 'QuanLyPhieuGiamGiaCreate' })
 }
 
-const viewCoupon = (coupon: CouponRecord) => {
+const viewCoupon = async (coupon: CouponRecord) => {
   selectedCoupon.value = coupon
   couponDetailVisible.value = true
+
+  // Load history when viewing coupon
+  await loadHistory(coupon.id)
 }
 
 const viewAppliedCustomers = async () => {
@@ -1513,44 +1635,33 @@ const editCoupon = async (coupon: CouponRecord) => {
 
   // Load products applied to this coupon
   try {
-    const response = await axios.get(
-      `/api/chi-tiet-phieu-giam-gia-management/by-phieu-giam-gia/${coupon.id}`
-    )
-    console.log('[DEBUG] Loaded product details for coupon:', response.data)
-    
+    const response = await axios.get(`/api/chi-tiet-phieu-giam-gia-management/by-phieu-giam-gia/${coupon.id}`)
+
     // Handle both ResponseObject format and direct array
     let productDetails: any[] = []
-    
+
     if (Array.isArray(response.data)) {
       // Direct array response
       productDetails = response.data
-      console.log('[DEBUG] Direct array response, length:', productDetails.length)
     } else if (response.data?.isSuccess && response.data.data && Array.isArray(response.data.data)) {
       // ResponseObject wrapper format
       productDetails = response.data.data
-      console.log('[DEBUG] ResponseObject format, length:', productDetails.length)
     }
-    
+
     if (productDetails.length > 0) {
       const shouldApply = true
-      
-      console.log('[DEBUG] Setting applyToProducts to:', shouldApply)
+
       couponEditForm.applyToProducts = shouldApply
-      
+
       // Clear and repopulate to ensure reactivity
       couponEditForm.selectedProductIds.splice(0)
       const productIds = productDetails.map((item: any) => item.idChiTietSanPham)
       couponEditForm.selectedProductIds.push(...productIds)
-      
-      console.log('[DEBUG] Set selectedProductIds:', couponEditForm.selectedProductIds)
-      console.log('[DEBUG] applyToProducts is now:', couponEditForm.applyToProducts)
     } else {
-      console.log('[DEBUG] No products found, setting applyToProducts to false')
       couponEditForm.applyToProducts = false
       couponEditForm.selectedProductIds.splice(0)
     }
-  } catch (error) {
-    console.error('[ERROR] Failed to load product details:', error)
+  } catch {
     couponEditForm.applyToProducts = false
     couponEditForm.selectedProductIds = []
   }
@@ -1563,38 +1674,27 @@ const editCoupon = async (coupon: CouponRecord) => {
   couponEditVisible.value = true
 }
 
-const duplicateCoupon = (coupon: CouponRecord) => {
-  Message.info(`Tính năng nhân bản đang được phát triển cho "${coupon.name}"`)
-}
-
 const deleteCoupon = (coupon: CouponRecord) => {
   selectedCoupon.value = coupon
   couponDeleteVisible.value = true
 }
 
 const submitCouponEdit = async () => {
-  console.log('[DEBUG] submitCouponEdit called')
   if (!selectedCoupon.value) {
-    console.log('[DEBUG] No selected coupon')
     return
   }
   if (couponEditSubmitting.value) {
-    console.log('[DEBUG] Already submitting')
     return
   }
 
   const form = couponEditFormRef.value
   if (!form) {
-    console.log('[DEBUG] No form ref')
     return
   }
 
-  console.log('[DEBUG] Validating form...')
   try {
     await form.validate()
-    console.log('[DEBUG] Form validation passed')
-  } catch (error) {
-    console.log('[DEBUG] Form validation failed:', error)
+  } catch {
     return
   }
 
@@ -1663,6 +1763,13 @@ const submitCouponEdit = async () => {
     return
   }
 
+  // eslint-disable-next-line no-console
+  console.log('[FORM_SUBMIT] Current form values:', {
+    name: couponEditForm.name,
+    quantity: couponEditForm.quantity,
+    quantityParsed: quantityValue,
+  })
+  
   const payload = {
     tenPhieuGiamGia: couponEditForm.name.trim(),
     loaiPhieuGiamGia: couponEditForm.discountMode === 'amount',
@@ -1678,38 +1785,32 @@ const submitCouponEdit = async () => {
     idKhachHang: couponEditForm.featured ? couponEditForm.selectedCustomerIds : [],
     featured: couponEditForm.featured,
   }
+  
+  // eslint-disable-next-line no-console
+  console.log('[FORM_SUBMIT] Payload to send:', payload)
 
   couponEditSubmitting.value = true
   try {
     await updateCoupon(selectedCoupon.value.id, payload)
-    
+
     // Always update product selection (even if empty, to clear previous selections)
     const productIds = couponEditForm.applyToProducts ? [...couponEditForm.selectedProductIds] : []
-    console.log('[DEBUG] Updating products for coupon:', selectedCoupon.value.id, 'with IDs:', productIds)
-    console.log('[DEBUG] Type check:', Array.isArray(productIds), 'Length:', productIds.length)
-    
-    const response = await axios.put(
-      '/api/chi-tiet-phieu-giam-gia-management/update-by-phieu-giam-gia',
-      productIds,
-      {
-        params: { idPhieuGiamGia: selectedCoupon.value.id }
-      }
-    )
-    console.log('[DEBUG] Update response:', response.data)
-    
-    console.log('[DEBUG] About to show success message')
+
+    await axios.put('/api/chi-tiet-phieu-giam-gia-management/update-by-phieu-giam-gia', productIds, {
+      params: { idPhieuGiamGia: selectedCoupon.value.id },
+    })
+
     Message.success('Cập nhật phiếu giảm giá thành công')
-    console.log('[DEBUG] Success message shown')
-    
-    console.log('[DEBUG] Closing modal')
+
     couponEditVisible.value = false
-    
-    console.log('[DEBUG] Reloading coupons')
+
     await loadCoupons()
-    console.log('[DEBUG] Coupons reloaded')
+    
+    // Reload history if detail modal is still open
+    if (couponDetailVisible.value && selectedCoupon.value) {
+      await loadHistory(selectedCoupon.value.id)
+    }
   } catch (error: any) {
-    console.error('[ERROR] Error updating coupon:', error)
-    console.error('[ERROR] Error response:', error.response?.data)
     const errorMessage = error.response?.data?.message || error.message || 'Không thể cập nhật phiếu giảm giá'
     Message.error(errorMessage)
   } finally {
@@ -1727,8 +1828,8 @@ const confirmDeleteCoupon = async () => {
     Message.success('Đã xóa phiếu giảm giá')
     couponDeleteVisible.value = false
     await loadCoupons()
-  } catch (error) {
-    Message.error((error as Error).message || 'Không thể xóa phiếu giảm giá')
+  } catch {
+    Message.error('Không thể xóa phiếu giảm giá')
   } finally {
     couponDeleteSubmitting.value = false
   }
@@ -1783,7 +1884,7 @@ const confirmExportCoupons = () => {
     downloadCsv('phieu-giam-gia.csv', header, rows)
     Message.success('Đã xuất danh sách phiếu giảm giá')
     exportConfirmVisible.value = false
-  } catch (error) {
+  } catch {
     Message.error('Không thể xuất danh sách')
   } finally {
     exportSubmitting.value = false
@@ -2091,5 +2192,45 @@ onMounted(() => {
 .product-selection-section :deep(.arco-table-th) {
   background-color: var(--color-fill-2);
   font-weight: 600;
+}
+
+/* History section styles */
+.history-section {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding-bottom: 8px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.history-time {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.history-user {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: var(--color-text-2);
+  margin-bottom: 4px;
+}
+
+.history-description {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--color-fill-2);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-text-2);
+  line-height: 1.6;
 }
 </style>

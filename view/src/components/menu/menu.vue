@@ -113,7 +113,15 @@ export default defineComponent({
         const keySet = new Set([...menuOpenKeys, ...openKeys.value])
         openKeys.value = [...keySet]
 
-        selectedKey.value = [activeMenu || menuOpenKeys[menuOpenKeys.length - 1]]
+        // If activeMenu is specified, use it; otherwise use the first visible parent in the path
+        if (activeMenu) {
+          selectedKey.value = [activeMenu]
+        } else if (hideInMenu && menuOpenKeys.length > 0) {
+          // For hidden routes, select the top-level parent menu item
+          selectedKey.value = [menuOpenKeys[0]]
+        } else {
+          selectedKey.value = [menuOpenKeys[menuOpenKeys.length - 1]]
+        }
       }
     }, true)
     const setCollapse = (val: boolean) => {

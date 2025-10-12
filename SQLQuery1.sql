@@ -2,6 +2,11 @@
 -- GearUp Database Setup Script
 -- Description: Complete database schema and sample data
 -- Compatible with: SQL Server 2016 and later
+-- 
+-- Recent Updates:
+-- - Added phieu_giam_gia_history table for tracking coupon changes
+-- - Added created_at and updated_at audit columns to phieu_giam_gia
+-- - Support for tracking customer and product assignments
 -- =============================================
 
 USE [master]
@@ -452,6 +457,10 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY]
 GO
 /****** Object:  Table [dbo].[phieu_giam_gia]     ******/
+-- Coupon/Voucher management
+-- created_at: Timestamp when coupon was created (auto-set on insert)
+-- updated_at: Timestamp when coupon was last updated (auto-updated on save)
+-- noi_bat: Featured flag - when true, requires customer assignment via phieu_giam_gia_ca_nhan
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -471,6 +480,8 @@ CREATE TABLE [dbo].[phieu_giam_gia](
 	[mo_ta] [nvarchar](255) NULL,
 	[noi_bat] [bit] NULL,
 	[deleted] [bit] NULL,
+	[created_at] [datetime] NULL DEFAULT GETDATE(),
+	[updated_at] [datetime] NULL DEFAULT GETDATE(),
 	[create_at] [date] NULL,
 	[create_by] [int] NULL,
 	[update_at] [date] NULL,
@@ -480,6 +491,31 @@ PRIMARY KEY CLUSTERED
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[phieu_giam_gia_history]     ******/
+-- Change history tracking for coupon (phieu_giam_gia)
+-- Tracks all changes made to coupons including:
+--   - Basic field changes (name, value, quantity, dates, status, description)
+--   - Customer assignments (for featured coupons)
+--   - Product assignments (for product-specific coupons)
+-- hanh_dong: Action type (TẠO MỚI, CẬP NHẬT, XÓA)
+-- mo_ta_thay_doi: Detailed description of what changed (e.g., "Số lượng: 60 → 40")
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[phieu_giam_gia_history](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[id_phieu_giam_gia] [int] NOT NULL,
+	[id_nhan_vien] [int] NOT NULL,
+	[hanh_dong] [nvarchar](50) NOT NULL,
+	[mo_ta_thay_doi] [nvarchar](max) NULL,
+	[ngay_thay_doi] [datetime2](7) NOT NULL DEFAULT GETDATE(),
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 /****** Object:  Table [dbo].[phieu_giam_gia_ca_nhan]     ******/
 SET ANSI_NULLS ON
@@ -1325,6 +1361,12 @@ GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD FOREIGN KEY([id_phieu_giam_gia])
 REFERENCES [dbo].[phieu_giam_gia] ([id])
 GO
+ALTER TABLE [dbo].[phieu_giam_gia_history]  WITH CHECK ADD FOREIGN KEY([id_phieu_giam_gia])
+REFERENCES [dbo].[phieu_giam_gia] ([id])
+GO
+ALTER TABLE [dbo].[phieu_giam_gia_history]  WITH CHECK ADD FOREIGN KEY([id_nhan_vien])
+REFERENCES [dbo].[nhan_vien] ([id])
+GO
 ALTER TABLE [dbo].[san_pham]  WITH CHECK ADD FOREIGN KEY([id_nha_san_xuat])
 REFERENCES [dbo].[nha_san_xuat] ([id])
 GO
@@ -1381,6 +1423,22 @@ GO
 ALTER TABLE [dbo].[phieu_giam_gia]  WITH CHECK ADD CHECK  (([ngay_ket_thuc]>[ngay_bat_dau]))
 GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD CHECK  (([ngay_het_han]>[ngay_nhan]))
+GO
+
+-- =============================================
+-- Create Indexes for History Table
+-- =============================================
+
+CREATE NONCLUSTERED INDEX [idx_phieu_giam_gia_history_id_phieu] ON [dbo].[phieu_giam_gia_history]
+(
+	[id_phieu_giam_gia] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+
+CREATE NONCLUSTERED INDEX [idx_phieu_giam_gia_history_ngay_thay_doi] ON [dbo].[phieu_giam_gia_history]
+(
+	[ngay_thay_doi] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
 
 -- =============================================

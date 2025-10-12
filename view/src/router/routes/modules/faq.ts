@@ -24,6 +24,7 @@ const FAQ: AppRouteRecordRaw = {
         requiresAuth: true,
         roles: ['*'],
         hideInMenu: true, // Ẩn item này trong menu
+        activeMenu: 'faq', // Highlight parent in menu
       },
     },
   ],

@@ -24,6 +24,7 @@ const BAN_HANG_TAI_QUAY: AppRouteRecordRaw = {
         requiresAuth: true,
         roles: ['*'],
         hideInMenu: true, // Ẩn item này trong menu
+        activeMenu: 'ban-hang-tai-quay', // Highlight parent in menu
       },
     },
   ],

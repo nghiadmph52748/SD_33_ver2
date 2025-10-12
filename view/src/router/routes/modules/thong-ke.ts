@@ -24,6 +24,7 @@ const THONG_KE: AppRouteRecordRaw = {
         requiresAuth: true,
         roles: ['*'],
         hideInMenu: true, // Ẩn item này trong menu
+        activeMenu: 'thong-ke', // Highlight parent in menu
       },
     },
   ],
