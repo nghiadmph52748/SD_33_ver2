@@ -49,19 +49,19 @@ public class NhanVien {
     @Column(name = "ten_nhan_vien")
     private String tenNhanVien;
 
-    @Column(name = "ten_tai_khoan", columnDefinition = "nvarchar(255)")
+    @Column(name = "ten_tai_khoan")
     private String tenTaiKhoan;
 
-    @Column(name = "mat_khau", columnDefinition = "nvarchar(255)")
+    @Column(name = "mat_khau")
     private String matKhau;
 
-    @Column(name = "email", columnDefinition = "nvarchar(255)")
+    @Column(name = "email")
     private String email;
 
-    @Column(name = "so_dien_thoai", length = 12, columnDefinition = "nvarchar(12)")
+    @Column(name = "so_dien_thoai", length = 12)
     private String soDienThoai;
 
-    @Column(name = "anh_nhan_vien", columnDefinition = "nvarchar(255)")
+    @Column(name = "anh_nhan_vien")
     private String anhNhanVien;
 
     @Column(name = "ngay_sinh")
@@ -93,7 +93,7 @@ public class NhanVien {
     @Column(name = "gioi_tinh")
     private Boolean gioiTinh;  // true = Nam, false = Nữ
 
-    @Column(name = "cccd", length = 20, columnDefinition = "nvarchar(20)")
+    @Column(name = "cccd", length = 20)
     private String cccd;
 
     @ColumnDefault("1")

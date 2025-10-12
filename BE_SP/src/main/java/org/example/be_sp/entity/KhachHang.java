@@ -40,16 +40,16 @@ public class KhachHang {
     @Column(name = "ten_khach_hang")
     private String tenKhachHang;
 
-    @Column(name = "ten_tai_khoan", columnDefinition = "nvarchar(255)")
+    @Column(name = "ten_tai_khoan")
     private String tenTaiKhoan;
 
-    @Column(name = "mat_khau", columnDefinition = "nvarchar(255)")
+    @Column(name = "mat_khau")
     private String matKhau;
 
-    @Column(name = "email", columnDefinition = "nvarchar(255)")
+    @Column(name = "email")
     private String email;
 
-    @Column(name = "so_dien_thoai", length = 12, columnDefinition = "nvarchar(12)")
+    @Column(name = "so_dien_thoai", length = 12)
     private String soDienThoai;
 
     @Column(name = "gioi_tinh")
@@ -58,11 +58,11 @@ public class KhachHang {
     @Column(name = "ngay_sinh")
     private LocalDate ngaySinh;
 
-	@ColumnDefault("0")
+    @ColumnDefault("0")
     @Column(name = "phan_loai")
     private Integer phanLoai;
 
-	@ColumnDefault("1")
+    @ColumnDefault("1")
     @Column(name = "trang_thai")
     private Boolean trangThai;
 
@@ -81,6 +81,7 @@ public class KhachHang {
 
     @Column(name = "update_by")
     private Integer updateBy;
+
     @JsonBackReference
     @OneToMany(mappedBy = "idKhachHang")
     private Set<DiaChiKhachHang> diaChiKhachHangs = new LinkedHashSet<>();
@@ -92,6 +93,7 @@ public class KhachHang {
     @JsonBackReference
     @OneToMany(mappedBy = "idKhachHang")
     private Set<PhieuGiamGiaCaNhan> phieuGiamGiaCaNhans = new LinkedHashSet<>();
+
 
     /**
      * Lấy địa chỉ đầu tiên của khách hàng

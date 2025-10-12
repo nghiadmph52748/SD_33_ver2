@@ -1,6 +1,6 @@
 <template>
   <a-card title="Chỉnh Sửa Nhân Viên">
-    <a-form ref="formRef" :model="formData" layout="vertical" :rules="rules">
+    <a-form ref="formRef" :model="formData" layout="vertical">
       <a-row :gutter="24">
         <a-col :span="12">
           <a-form-item label="Tên nhân viên" name="tenNhanVien">
@@ -24,6 +24,10 @@
               <a-option :value="2">Nhân viên</a-option>
             </a-select>
           </a-form-item>
+          <a-form-item label="Tên tài khoản" name="tenTaiKhoan">
+            <a-input v-model="formData.tenTaiKhoan" placeholder="Nhập tên tài khoản" />
+          </a-form-item>
+
           <a-form-item label="Giới tính" name="gioiTinh">
             <a-switch v-model="formData.gioiTinh" checked-children="Nam" un-checked-children="Nữ" />
           </a-form-item>
@@ -67,7 +71,10 @@
           </a-form-item>
 
           <a-form-item label="Địa chỉ cụ thể" name="diaChiCuThe">
-            <a-input v-model="formData.diaChiCuThe" placeholder="Nhập địa chỉ cụ thể (số nhà, đường...)" />
+            <a-input v-model="formData.diaChiCuThe" placeholder="Nhập địa chỉ cụ thể" />
+          </a-form-item>
+          <a-form-item label="Mật khẩu" name="matKhau">
+            <a-input-password v-model="formData.matKhau" placeholder="Nhập mật khẩu mới" />
           </a-form-item>
           <!-- <a-form-item label="Giới tính" name="gioiTinh">
             <a-switch v-model="formData.gioiTinh" checked-children="Nam" un-checked-children="Nữ" />
@@ -89,7 +96,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { Modal, Message } from '@arco-design/web-vue'
+import { Modal, message } from 'ant-design-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,11 +107,6 @@ const districts = ref<{ value: string; label: string; code: number }[]>([])
 const wards = ref<{ value: string; label: string }[]>([])
 // lấy id từ params
 const { id } = route.params
-const rules = {
-  tenNhanVien: [{ required: true, message: 'Vui lòng nhập tên nhân viên' }],
-  email: [{ type: 'email', required: true, message: 'Email không hợp lệ' }],
-  soDienThoai: [{ required: true, message: 'Vui lòng nhập số điện thoại' }],
-}
 
 const formData = ref({
   id: null,
@@ -176,7 +178,7 @@ onMounted(async () => {
     const res = await axios.get(`http://localhost:8080/api/nhan-vien-management/detail/${id}`)
     formData.value = res.data
   } catch (err) {
-    Message.error('Lỗi khi tải dữ liệu nhân viên')
+    console.error('Lỗi khi load dữ liệu:', err)
   }
 })
 
@@ -188,17 +190,29 @@ const handleSubmit = () => {
     okText: 'Có',
     cancelText: 'Không',
     onOk: async () => {
+      loading.value = true
       try {
-        loading.value = true
-        const res = await axios.put(`http://localhost:8080/api/nhan-vien-management/update/${formData.value.id}`, formData.value)
-        if (res.data?.success) {
-          Message.success('Cập nhật thành công!')
-          router.push('/khach-hang-nhan-su/nhan-vien')
+        if (formData.value.id) {
+          const res = await axios.put(`http://localhost:8080/api/nhan-vien-management/update/${formData.value.id}`, formData.value)
+          // Thành công nếu res.data.success === true
+          if (res && res.data && res.data.success) {
+            message.success(res.data.message && res.data.message !== 'null' ? res.data.message : '✅ Cập nhật nhân viên thành công!')
+            router.push('/khach-hang-nhan-su/nhan-vien')
+          } else {
+            const msg =
+              res?.data?.message && res?.data?.message !== 'null'
+                ? res.data.message
+                : JSON.stringify(res?.data) || 'Cập nhật thất bại, không có thông báo lỗi từ server'
+            message.error(msg)
+            console.error('Lỗi cập nhật:', res)
+          }
         } else {
-          Message.error(`Cập nhật thất bại: ${res.data?.message || 'Không có thông báo lỗi từ server'}`)
+          message.error('Chưa có chức năng thêm mới')
         }
-      } catch (err) {
-        Message.error('Form chưa hợp lệ hoặc có lỗi xảy ra. Vui lòng kiểm tra lại.')
+      } catch (error: any) {
+        const msg = error?.response?.data?.message || error?.message || 'Form chưa hợp lệ hoặc có lỗi xảy ra. Vui lòng kiểm tra lại.'
+        message.error(msg)
+        console.error('❌ Lỗi khi gửi:', error)
       } finally {
         loading.value = false
       }

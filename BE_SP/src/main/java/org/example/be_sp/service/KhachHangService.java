@@ -57,6 +57,7 @@ public class KhachHangService {
             throw new ApiException("Mật khẩu không được để trống", "404");
         }
         KhachHang khachHang = MapperUtils.map(request, KhachHang.class);
+        khachHang.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : true);
         khachHang.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
         KhachHang saved = khachHangRepository.save(khachHang);
         List<DiaChi> listDiaChi = request.getListDiaChi();
@@ -149,10 +150,13 @@ public class KhachHangService {
     }
 
     public void updateStatus(Integer id) {
-        KhachHang kh = khachHangRepository.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng với id: " + id));
-        kh.setDeleted(true); // xóa mềm
+        KhachHang kh = khachHangRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng với id: " + id));
+        // Giả sử trangThai là trạng thái active/inactive
+        kh.setTrangThai(!kh.getTrangThai());
         khachHangRepository.save(kh);
     }
+
 
     // Helpers: determine whether address data is empty (all fields blank or null)
     private boolean isNullOrBlank(String s) {

@@ -25,4 +25,5 @@ public class KhachHangRequest {
     private LocalDate ngaySinh;
     private Boolean deleted;
     private List<DiaChi> listDiaChi;
+    private Boolean trangThai;
 }
