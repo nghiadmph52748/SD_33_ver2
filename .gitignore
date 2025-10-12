@@ -2,7 +2,6 @@
 .DS_Store
 .vscode
 AGENTS.md
-application.properties
 WARP.md
 node_modules
 *.md
@@ -21,7 +20,7 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
-application.properties
+application.properties.backup
 
 # Java
 *.class
