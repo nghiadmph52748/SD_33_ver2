@@ -5,20 +5,20 @@
     <a-card class="promotion-card">
       <div class="page-header">
         <div>
-          <h2 class="page-title">Tạo đợt khuyến mãi</h2>
-          <p class="page-description">Điền thông tin chi tiết cho đợt khuyến mãi mới trước khi lưu.</p>
+          <h2 class="page-title">Tạo đợt giảm giá</h2>
+          <p class="page-description">Điền thông tin chi tiết cho đợt giảm giá mới trước khi lưu.</p>
         </div>
         <a-space>
           <a-button @click="goBack">Quay lại</a-button>
-          <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu khuyến mãi</a-button>
+          <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu giảm giá</a-button>
         </a-space>
       </div>
 
       <a-form ref="formRef" :model="formState" :rules="rules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item field="name" label="Tên đợt khuyến mãi">
-              <a-input v-model="formState.name" placeholder="Nhập tên đợt khuyến mãi" allow-clear />
+            <a-form-item field="name" label="Tên đợt giảm giá">
+              <a-input v-model="formState.name" placeholder="Nhập tên đợt giảm giá" allow-clear />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -60,7 +60,7 @@
         <div class="form-footer">
           <a-space>
             <a-button @click="goBack">Hủy</a-button>
-            <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu khuyến mãi</a-button>
+            <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu giảm giá</a-button>
           </a-space>
         </div>
       </a-form>
@@ -69,7 +69,7 @@
     <!-- Confirmation Modal -->
     <a-modal
       v-model:visible="confirmSaveVisible"
-      title="Xác nhận tạo đợt khuyến mãi"
+      title="Xác nhận tạo đợt giảm giá"
       :confirm-loading="confirmSaveSubmitting"
       @ok="confirmSave"
       @cancel="confirmSaveVisible = false"
@@ -79,7 +79,7 @@
     >
       <p style="margin-bottom: 16px; color: var(--color-text-2)">Vui lòng kiểm tra lại thông tin trước khi lưu:</p>
       <a-descriptions :column="1" bordered>
-        <a-descriptions-item label="Tên đợt khuyến mãi">
+        <a-descriptions-item label="Tên đợt giảm giá">
           {{ formState.name }}
         </a-descriptions-item>
         <a-descriptions-item label="Mã">
@@ -129,7 +129,7 @@ watch(
 )
 
 const rules: FormRules = {
-  name: [{ required: true, message: 'Vui lòng nhập tên đợt khuyến mãi' }],
+  name: [{ required: true, message: 'Vui lòng nhập tên đợt giảm giá' }],
   discountValue: [
     { required: true, message: 'Vui lòng nhập giá trị giảm' },
     {
@@ -281,11 +281,11 @@ const confirmSave = async () => {
   confirmSaveSubmitting.value = true
   try {
     await createPromotionCampaign(payload)
-    Message.success('Tạo đợt khuyến mãi thành công')
+    Message.success('Tạo đợt giảm giá thành công')
     confirmSaveVisible.value = false
     router.push({ name: 'QuanLyDotKhuyenMai' })
   } catch (error) {
-    Message.error((error as Error).message || 'Không thể tạo đợt khuyến mãi')
+    Message.error((error as Error).message || 'Không thể tạo đợt giảm giá')
   } finally {
     confirmSaveSubmitting.value = false
   }
