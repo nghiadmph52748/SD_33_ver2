@@ -80,7 +80,7 @@
               </template>
               Đặt lại
             </a-button>
-            <a-button @click="exportExcel">
+            <a-button @click="openExportConfirmModal">
               <template #icon>
                 <icon-download />
               </template>
@@ -264,6 +264,24 @@
       </p>
       <p class="modal-note">Hành động này không thể hoàn tác.</p>
     </a-modal>
+
+    <!-- Export Confirmation Modal -->
+    <a-modal
+      v-model:visible="exportConfirmVisible"
+      title="Xác nhận xuất danh sách"
+      :confirm-loading="exportSubmitting"
+      ok-text="Xuất"
+      width="480px"
+      @ok="confirmExportExcel"
+      @cancel="exportConfirmVisible = false"
+    >
+      <p>
+        Bạn có chắc chắn muốn xuất danh sách
+        <strong>{{ filteredPromotions.length }}</strong>
+        đợt giảm giá?
+      </p>
+      <p class="modal-note">File CSV sẽ được tải xuống vào máy tính của bạn.</p>
+    </a-modal>
   </div>
 </template>
 
@@ -410,6 +428,10 @@ const editVisible = ref(false)
 const deleteVisible = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
+
+// Export confirmation modal
+const exportConfirmVisible = ref(false)
+const exportSubmitting = ref(false)
 
 // History state
 const historyList = ref<PromotionHistoryApiModel[]>([])
@@ -734,25 +756,38 @@ const resetFilters = async () => {
   await loadPromotions()
 }
 
-const exportExcel = () => {
+const openExportConfirmModal = () => {
   if (!filteredPromotions.value.length) {
     Message.warning('Không có dữ liệu để xuất')
     return
   }
+  exportConfirmVisible.value = true
+}
 
-  const header = ['STT', 'Mã', 'Tên', 'Phần trăm giảm', 'Ngày bắt đầu', 'Ngày kết thúc', 'Trạng thái']
-  const rows = filteredPromotions.value.map((promotion, index) => [
-    promotion.index ?? index + 1,
-    promotion.code ?? '',
-    promotion.name ?? '',
-    promotion.percentage ?? '',
-    formatDate(promotion.start_date ?? ''),
-    formatDate(promotion.end_date ?? ''),
-    getStatusText(promotion.status ?? ''),
-  ])
+const confirmExportExcel = async () => {
+  if (exportSubmitting.value) return
 
-  downloadCsv('dot-khuyen-mai.csv', header, rows)
-  Message.success('Đã xuất danh sách đợt giảm giá')
+  exportSubmitting.value = true
+  try {
+    const header = ['STT', 'Mã', 'Tên', 'Phần trăm giảm', 'Ngày bắt đầu', 'Ngày kết thúc', 'Trạng thái']
+    const rows = filteredPromotions.value.map((promotion, index) => [
+      promotion.index ?? index + 1,
+      promotion.code ?? '',
+      promotion.name ?? '',
+      promotion.percentage ?? '',
+      formatDate(promotion.start_date ?? ''),
+      formatDate(promotion.end_date ?? ''),
+      getStatusText(promotion.status ?? ''),
+    ])
+
+    downloadCsv('dot-giam-gia.csv', header, rows)
+    Message.success('Xuất danh sách đợt giảm giá thành công')
+    exportConfirmVisible.value = false
+  } catch (error) {
+    Message.error('Không thể xuất danh sách đợt giảm giá')
+  } finally {
+    exportSubmitting.value = false
+  }
 }
 
 const submitPromotionEdit = async () => {

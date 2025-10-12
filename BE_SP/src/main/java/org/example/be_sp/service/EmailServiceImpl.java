@@ -12,6 +12,7 @@ import org.example.be_sp.service.EmailService;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -98,16 +99,19 @@ public class EmailServiceImpl implements EmailService {
     }
     
     @Override
+    @Async("emailTaskExecutor")
     public void sendVoucherAssignmentEmail(VoucherEmailData voucherData) {
+        String threadName = Thread.currentThread().getName();
+        
         if (!emailConfig.isEnabled()) {
-            log.info("Email disabled. Skipping voucher assignment email for: {}", 
-                    voucherData.getCustomerEmail());
+            log.info("[{}] Email disabled. Skipping voucher assignment email for: {}", 
+                    threadName, voucherData.getCustomerEmail());
             return;
         }
         
         try {
-            log.info("Sending voucher assignment email to: {} - Voucher: {}", 
-                    voucherData.getCustomerEmail(), voucherData.getVoucherCode());
+            log.info("[{}] Sending voucher assignment email to: {} - Voucher: {}", 
+                    threadName, voucherData.getCustomerEmail(), voucherData.getVoucherCode());
             
             Context context = new Context();
             context.setVariable("voucher", voucherData);
@@ -121,26 +125,29 @@ public class EmailServiceImpl implements EmailService {
                 htmlContent
             );
             
-            log.info("Voucher assignment email sent successfully to: {}", 
-                    voucherData.getCustomerEmail());
+            log.info("[{}] Voucher assignment email sent successfully to: {}", 
+                    threadName, voucherData.getCustomerEmail());
             
         } catch (MailException | MessagingException e) {
-            log.error("Failed to send voucher assignment email to: {} - Voucher: {}", 
-                    voucherData.getCustomerEmail(), voucherData.getVoucherCode(), e);
+            log.error("[{}] Failed to send voucher assignment email to: {} - Voucher: {} - Error: {}", 
+                    threadName, voucherData.getCustomerEmail(), voucherData.getVoucherCode(), e.getMessage(), e);
         }
     }
     
     @Override
+    @Async("emailTaskExecutor")
     public void sendPromotionAnnouncementEmail(PromotionEmailData promotionData) {
+        String threadName = Thread.currentThread().getName();
+        
         if (!emailConfig.isEnabled()) {
-            log.info("Email disabled. Skipping promotion announcement email for: {}", 
-                    promotionData.getCustomerEmail());
+            log.info("[{}] Email disabled. Skipping promotion announcement email for: {}", 
+                    threadName, promotionData.getCustomerEmail());
             return;
         }
         
         try {
-            log.info("Sending promotion announcement email to: {} - Promotion: {}", 
-                    promotionData.getCustomerEmail(), promotionData.getPromotionName());
+            log.info("[{}] Sending promotion announcement email to: {} - Promotion: {}", 
+                    threadName, promotionData.getCustomerEmail(), promotionData.getPromotionName());
             
             Context context = new Context();
             context.setVariable("promotion", promotionData);
@@ -154,12 +161,12 @@ public class EmailServiceImpl implements EmailService {
                 htmlContent
             );
             
-            log.info("Promotion announcement email sent successfully to: {}", 
-                    promotionData.getCustomerEmail());
+            log.info("[{}] Promotion announcement email sent successfully to: {}", 
+                    threadName, promotionData.getCustomerEmail());
             
         } catch (MailException | MessagingException e) {
-            log.error("Failed to send promotion announcement email to: {} - Promotion: {}", 
-                    promotionData.getCustomerEmail(), promotionData.getPromotionName(), e);
+            log.error("[{}] Failed to send promotion announcement email to: {} - Promotion: {} - Error: {}", 
+                    threadName, promotionData.getCustomerEmail(), promotionData.getPromotionName(), e.getMessage(), e);
         }
     }
     

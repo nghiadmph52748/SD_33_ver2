@@ -138,7 +138,7 @@
               <template #icon>
                 <icon-download />
               </template>
-              Xuất danh sách
+              Xuất Excel
             </a-button>
           </a-space>
         </div>
