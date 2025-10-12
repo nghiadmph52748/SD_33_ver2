@@ -96,7 +96,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { Modal, message } from 'ant-design-vue'
+import { Modal, Message } from '@arco-design/web-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -177,8 +177,8 @@ onMounted(async () => {
   try {
     const res = await axios.get(`http://localhost:8080/api/nhan-vien-management/detail/${id}`)
     formData.value = res.data
-  } catch (err) {
-    message.error('Không thể tải dữ liệu nhân viên')
+  } catch {
+    Message.error('Không thể tải dữ liệu nhân viên')
   }
 })
 
@@ -196,21 +196,18 @@ const handleSubmit = () => {
           const res = await axios.put(`http://localhost:8080/api/nhan-vien-management/update/${formData.value.id}`, formData.value)
           // Thành công nếu res.data.success === true
           if (res && res.data && res.data.success) {
-            message.success(res.data.message && res.data.message !== 'null' ? res.data.message : '✅ Cập nhật nhân viên thành công!')
+            Message.success(res.data.message && res.data.message !== 'null' ? res.data.message : '✅ Cập nhật nhân viên thành công!')
             router.push('/khach-hang-nhan-su/nhan-vien')
           } else {
-            const msg =
-              res?.data?.message && res?.data?.message !== 'null'
-                ? res.data.message
-                : 'Cập nhật thất bại'
-            message.error(msg)
+            const msg = res?.data?.message && res?.data?.message !== 'null' ? res.data.message : 'Cập nhật thất bại'
+            Message.error(msg)
           }
         } else {
-          message.error('Chưa có chức năng thêm mới')
+          Message.error('Chưa có chức năng thêm mới')
         }
       } catch (error: any) {
         const msg = error?.response?.data?.message || error?.message || 'Form chưa hợp lệ hoặc có lỗi xảy ra. Vui lòng kiểm tra lại.'
-        message.error(msg)
+        Message.error(msg)
       } finally {
         loading.value = false
       }

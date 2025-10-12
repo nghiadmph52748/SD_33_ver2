@@ -74,7 +74,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { message, Modal } from 'ant-design-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 
 const router = useRouter()
 
@@ -157,11 +157,11 @@ const onDistrictChange = async (value: string) => {
 
 const addAddress = () => {
   if (!formData.value.diaChiCuThe) {
-    message.error('Vui lòng nhập địa chỉ cụ thể.')
+    Message.error('Vui lòng nhập địa chỉ cụ thể.')
     return
   }
   if (!formData.value.thanhPho || !formData.value.quan || !formData.value.phuong) {
-    message.error('Vui lòng chọn đầy đủ tỉnh/thành phố, quận/huyện, và phường/xã.')
+    Message.error('Vui lòng chọn đầy đủ tỉnh/thành phố, quận/huyện, và phường/xã.')
     return
   }
 
@@ -186,39 +186,39 @@ const handleSubmit = async () => {
 
     // Validate tất cả các trường
     if (!formData.value.tenKhachHang) {
-      message.error('Vui lòng nhập tên khách hàng.')
+      Message.error('Vui lòng nhập tên khách hàng.')
       return
     }
     if (!formData.value.email || !formData.value.email.includes('@')) {
-      message.error('Email không hợp lệ để tạo tài khoản.')
+      Message.error('Email không hợp lệ để tạo tài khoản.')
       return
     }
     if (!formData.value.ngaySinh) {
-      message.error('Vui lòng chọn ngày sinh.')
+      Message.error('Vui lòng chọn ngày sinh.')
       return
     }
     if (!formData.value.soDienThoai) {
-      message.error('Vui lòng nhập số điện thoại.')
+      Message.error('Vui lòng nhập số điện thoại.')
       return
     }
     if (formData.value.gioiTinh === null || formData.value.gioiTinh === undefined) {
-      message.error('Vui lòng chọn giới tính.')
+      Message.error('Vui lòng chọn giới tính.')
       return
     }
     if (!formData.value.thanhPho) {
-      message.error('Vui lòng chọn tỉnh/thành phố.')
+      Message.error('Vui lòng chọn tỉnh/thành phố.')
       return
     }
     if (!formData.value.quan) {
-      message.error('Vui lòng chọn quận/huyện.')
+      Message.error('Vui lòng chọn quận/huyện.')
       return
     }
     if (!formData.value.phuong) {
-      message.error('Vui lòng chọn phường/xã.')
+      Message.error('Vui lòng chọn phường/xã.')
       return
     }
     if (!formData.value.diaChiCuThe) {
-      message.error('Vui lòng nhập địa chỉ cụ thể.')
+      Message.error('Vui lòng nhập địa chỉ cụ thể.')
       return
     }
 
@@ -248,7 +248,7 @@ const handleSubmit = async () => {
     await axios.post('http://localhost:8080/api/khach-hang-management/add', payload)
     router.push('/khach-hang-nhan-su/khach-hang')
   } catch (error) {
-    message.error('Thêm khách hàng thất bại. Vui lòng kiểm tra lại thông tin.')
+    Message.error('Thêm khách hàng thất bại. Vui lòng kiểm tra lại thông tin.')
     console.error(error)
   }
 }

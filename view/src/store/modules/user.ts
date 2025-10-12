@@ -2,7 +2,6 @@ import { LoginData, login as userLogin, logout as userLogout } from '@/api/user'
 import { clearToken, setToken } from '@/utils/auth'
 import { removeRouteListener } from '@/utils/route-listener'
 import { defineStore } from 'pinia'
-import { Message } from '@arco-design/web-vue'
 import useAppStore from './app'
 import { UserState } from './user/types'
 
@@ -54,7 +53,7 @@ const useUserStore = defineStore('user', {
           return true
         }
         return false
-      } catch (error) {
+      } catch {
         clearToken()
         localStorage.removeItem('userId')
         this.resetInfo()
@@ -101,7 +100,7 @@ const useUserStore = defineStore('user', {
     async logout() {
       try {
         await userLogout()
-      } catch (error) {
+      } catch {
         // Ignore server errors
       } finally {
         const appStore = useAppStore()

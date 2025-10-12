@@ -59,8 +59,7 @@ const useAppStore = defineStore('app', {
           content: 'success',
           closable: true,
         })
-      } catch (error) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch {
         notifyInstance = Notification.error({
           id: 'menuNotice',
           content: 'error',

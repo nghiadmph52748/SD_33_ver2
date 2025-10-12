@@ -202,7 +202,6 @@ export function updateBienThe(data: UpdateBienTheRequest) {
 // Note: uploadAnhBienThe bây giờ trả về array ID của ảnh đã upload lên cloud
 
 export function uploadAnhBienThe(files: File[], tenAnh: string, mauAnh: string, createBy: number) {
-  console.log('uploadAnhBienThe called')
   const formData = new FormData()
   files.forEach((file) => {
     formData.append('file', file)

@@ -88,7 +88,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { message, Modal } from 'ant-design-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 
 // Router
 const router = useRouter()
@@ -192,12 +192,12 @@ const onDistrictChange = async (value: string) => {
 const beforeUpload = (file: File) => {
   const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
   if (!isJpgOrPng) {
-    message.error('Chỉ hỗ trợ file JPG/PNG!')
+    Message.error('Chỉ hỗ trợ file JPG/PNG!')
     return false
   }
   const isLt2M = file.size / 1024 / 1024 < 2
   if (!isLt2M) {
-    message.error('Ảnh phải nhỏ hơn 2MB!')
+    Message.error('Ảnh phải nhỏ hơn 2MB!')
     return false
   }
   return true
@@ -206,8 +206,6 @@ const handleUploadChange = () => {
   // Handle upload change if needed
 }
 
-
-
 // Handle submit
 const handleSubmit = async () => {
   try {
@@ -215,51 +213,51 @@ const handleSubmit = async () => {
 
     // Validate tất cả các trường
     if (!formData.value.tenNhanVien) {
-      message.error('Vui lòng nhập tên nhân viên.')
+      Message.error('Vui lòng nhập tên nhân viên.')
       return
     }
     if (!formData.value.ngaySinh) {
-      message.error('Vui lòng chọn ngày sinh.')
+      Message.error('Vui lòng chọn ngày sinh.')
       return
     }
     if (!formData.value.cccd) {
-      message.error('Vui lòng nhập CCCD.')
+      Message.error('Vui lòng nhập CCCD.')
       return
     }
     if (!/^\d{9,12}$/.test(formData.value.cccd)) {
-      message.error('CCCD phải là 9-12 chữ số.')
+      Message.error('CCCD phải là 9-12 chữ số.')
       return
     }
     if (!formData.value.soDienThoai) {
-      message.error('Vui lòng nhập số điện thoại.')
+      Message.error('Vui lòng nhập số điện thoại.')
       return
     }
     if (!/^(0|\+84)[0-9]{9}$/.test(formData.value.soDienThoai)) {
-      message.error('Số điện thoại không hợp lệ.')
+      Message.error('Số điện thoại không hợp lệ.')
       return
     }
     if (!formData.value.email || !formData.value.email.includes('@')) {
-      message.error('Email không hợp lệ để tạo tài khoản.')
+      Message.error('Email không hợp lệ để tạo tài khoản.')
       return
     }
     if (!formData.value.idQuyenHan) {
-      message.error('Vui lòng chọn quyền hạn.')
+      Message.error('Vui lòng chọn quyền hạn.')
       return
     }
     if (!formData.value.thanhPho) {
-      message.error('Vui lòng chọn tỉnh/thành phố.')
+      Message.error('Vui lòng chọn tỉnh/thành phố.')
       return
     }
     if (!formData.value.quan) {
-      message.error('Vui lòng chọn quận/huyện.')
+      Message.error('Vui lòng chọn quận/huyện.')
       return
     }
     if (!formData.value.phuong) {
-      message.error('Vui lòng chọn phường/xã.')
+      Message.error('Vui lòng chọn phường/xã.')
       return
     }
     if (!formData.value.diaChiCuThe) {
-      message.error('Vui lòng nhập địa chỉ cụ thể.')
+      Message.error('Vui lòng nhập địa chỉ cụ thể.')
       return
     }
 
@@ -278,9 +276,9 @@ const handleSubmit = async () => {
     const err = error as any
 
     if (err.response?.data?.message?.includes('tài khoản đã tồn tại')) {
-      message.error('❌ Email này đã được dùng để tạo tài khoản. Vui lòng dùng email khác.')
+      Message.error('❌ Email này đã được dùng để tạo tài khoản. Vui lòng dùng email khác.')
     } else {
-      message.error('❌ Thêm nhân viên thất bại. Vui lòng thử lại.')
+      Message.error('❌ Thêm nhân viên thất bại. Vui lòng thử lại.')
     }
   }
 }

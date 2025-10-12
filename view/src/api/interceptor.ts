@@ -1,6 +1,5 @@
-import { useUserStore } from '@/store'
 import { getToken, setToken } from '@/utils/auth'
-import { Message, Modal } from '@arco-design/web-vue'
+import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
 
 export interface HttpResponse<T = unknown> {

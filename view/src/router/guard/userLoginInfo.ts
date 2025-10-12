@@ -1,5 +1,5 @@
 import NProgress from 'nprogress' // progress bar
-import type { LocationQueryRaw, Router } from 'vue-router'
+import type { Router } from 'vue-router'
 
 import { useUserStore } from '@/store'
 import { isLogin } from '@/utils/auth'
