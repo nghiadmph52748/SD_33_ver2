@@ -21,6 +21,8 @@ public class DotGiamGiaResponse {
     LocalDateTime ngayKetThuc;
     Boolean trangThai;
     Boolean deleted;
+    LocalDateTime createdAt;
+    LocalDateTime updatedAt;
 
     public DotGiamGiaResponse(DotGiamGia d) {
         this.id = d.getId();
@@ -31,5 +33,7 @@ public class DotGiamGiaResponse {
         this.ngayKetThuc = d.getNgayKetThuc();
         this.trangThai = d.getTrangThai();
         this.deleted = d.getDeleted();
+        this.createdAt = d.getCreatedAt();
+        this.updatedAt = d.getUpdatedAt();
     }
 }

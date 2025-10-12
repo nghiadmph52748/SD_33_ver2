@@ -114,6 +114,14 @@
           </a-tag>
         </template>
 
+        <template #created_at="{ record }">
+          <div class="timestamp-value">{{ record.created_at ? formatDateTime(record.created_at) : '-' }}</div>
+        </template>
+
+        <template #updated_at="{ record }">
+          <div class="timestamp-value">{{ record.updated_at ? formatDateTime(record.updated_at) : '-' }}</div>
+        </template>
+
         <template #action="{ record }">
           <a-space>
             <a-button type="text" @click="viewPromotion(record)">
@@ -136,7 +144,7 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt khuyến mãi" :footer="false" width="520px">
+    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt khuyến mãi" :footer="false" width="700px">
       <a-descriptions :column="1" layout="vertical">
         <a-descriptions-item label="Tên">{{ selectedPromotion?.name }}</a-descriptions-item>
         <a-descriptions-item label="Mã">{{ selectedPromotion?.code }}</a-descriptions-item>
@@ -146,6 +154,53 @@
         </a-descriptions-item>
         <a-descriptions-item label="Trạng thái">{{ selectedPromotion ? getStatusText(selectedPromotion.status) : '' }}</a-descriptions-item>
       </a-descriptions>
+
+      <!-- History Section -->
+      <a-divider style="margin: 24px 0" />
+      <div class="history-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600">Lịch sử thay đổi</h3>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-spin v-if="isHistoryLoading" size="small" />
+            <a-button v-else size="small" type="text" @click="selectedPromotion && loadHistory(selectedPromotion.id)">
+              <template #icon>
+                <icon-refresh />
+              </template>
+              Tải lại
+            </a-button>
+          </div>
+        </div>
+
+        <div v-if="!isHistoryLoading && historyList.length === 0" style="text-align: center; padding: 32px; color: var(--color-text-3)">
+          <icon-empty style="font-size: 48px; margin-bottom: 8px" />
+          <div>Chưa có lịch sử thay đổi</div>
+        </div>
+
+        <a-timeline v-else-if="!isHistoryLoading">
+          <a-timeline-item v-for="history in historyList" :key="history.id" :dot-color="getActionColor(history.hanhDong)">
+            <template #dot>
+              <icon-plus-circle v-if="history.hanhDong.includes('TẠO')" style="font-size: 14px" />
+              <icon-edit v-else-if="history.hanhDong.includes('CẬP NHẬT')" style="font-size: 14px" />
+              <icon-delete v-else-if="history.hanhDong.includes('XÓA')" style="font-size: 14px" />
+            </template>
+
+            <div class="history-item">
+              <div class="history-header">
+                <strong>{{ history.hanhDong }}</strong>
+                <span class="history-time">{{ formatHistoryDate(history.ngayThayDoi) }}</span>
+              </div>
+              <div v-if="history.tenNhanVien" class="history-user">
+                <icon-user style="font-size: 12px; margin-right: 4px" />
+                {{ history.tenNhanVien }}
+                <span v-if="history.maNhanVien" style="color: var(--color-text-3)">({{ history.maNhanVien }})</span>
+              </div>
+              <div v-if="history.moTaThayDoi" class="history-description">
+                <pre style="margin: 0; font-family: inherit; white-space: pre-wrap">{{ history.moTaThayDoi }}</pre>
+              </div>
+            </div>
+          </a-timeline-item>
+        </a-timeline>
+      </div>
     </a-modal>
 
     <a-modal
@@ -222,25 +277,22 @@ import downloadCsv from '@/utils/export-csv'
 import {
   deletePromotionCampaign,
   fetchPromotionCampaigns,
+  fetchPromotionHistory,
   type PromotionApiModel,
+  type PromotionHistoryApiModel,
   updatePromotionCampaign,
 } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import {
   IconPlus,
-  IconSearch,
   IconRefresh,
   IconDownload,
   IconEye,
   IconEdit,
-  IconMore,
-  IconCopy,
   IconDelete,
-  IconStar,
-  IconSettings,
-  IconFolder,
-  IconClockCircle,
-  IconArrowUp,
+  IconPlusCircle,
+  IconUser,
+  IconEmpty,
 } from '@arco-design/web-vue/es/icon'
 
 // Breadcrumb setup
@@ -312,6 +364,20 @@ const columns = [
     align: 'center',
   },
   {
+    title: 'Ngày tạo',
+    dataIndex: 'created_at',
+    slotName: 'created_at',
+    width: 180,
+    align: 'center',
+  },
+  {
+    title: 'Ngày cập nhật',
+    dataIndex: 'updated_at',
+    slotName: 'updated_at',
+    width: 180,
+    align: 'center',
+  },
+  {
     title: 'Thao tác',
     slotName: 'action',
     width: 150,
@@ -331,6 +397,8 @@ interface PromotionRecord {
   start_date: string
   end_date: string
   status: PromotionStatus
+  created_at?: string
+  updated_at?: string
   source: PromotionApiModel
 }
 
@@ -342,6 +410,10 @@ const editVisible = ref(false)
 const deleteVisible = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
+
+// History state
+const historyList = ref<PromotionHistoryApiModel[]>([])
+const isHistoryLoading = ref(false)
 
 const promotionEditFormRef = ref<FormInstance>()
 const promotionEditForm = reactive({
@@ -449,6 +521,8 @@ const toPromotionRecord = (promotion: PromotionApiModel, index: number): Promoti
   start_date: promotion.ngayBatDau ?? '',
   end_date: promotion.ngayKetThuc ?? '',
   status: derivePromotionStatus(promotion),
+  created_at: promotion.createdAt,
+  updated_at: promotion.updatedAt,
   source: promotion,
 })
 
@@ -510,8 +584,16 @@ const loadPromotions = async () => {
   loading.value = true
   try {
     const data = await fetchPromotionCampaigns()
-    promotions.value = data.map((item, index) => toPromotionRecord(item, index))
-  } catch (error) {
+    // Sort by createdAt descending (newest first), fallback to id if createdAt is missing
+    const sorted = data.sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+      // Fallback to id descending if createdAt is not available
+      return b.id - a.id
+    })
+    promotions.value = sorted.map((item, index) => toPromotionRecord(item, index))
+  } catch {
     Message.error({ content: 'Không thể tải danh sách đợt khuyến mãi', duration: 5000 })
   } finally {
     loading.value = false
@@ -548,32 +630,6 @@ const formatDateTime = (dateString: string) => {
     hour: '2-digit',
     minute: '2-digit',
   })
-}
-
-const getPromotionTypeColor = (type: string) => {
-  switch (type) {
-    case 'percentage':
-      return 'blue'
-    case 'fixed':
-      return 'green'
-    case 'buy_x_get_y':
-      return 'orange'
-    default:
-      return 'default'
-  }
-}
-
-const getPromotionTypeText = (type: string) => {
-  switch (type) {
-    case 'percentage':
-      return 'Giảm %'
-    case 'fixed':
-      return 'Giảm tiền'
-    case 'buy_x_get_y':
-      return 'Mua X tặng Y'
-    default:
-      return type
-  }
 }
 
 const getStatusColor = (status: string) => {
@@ -615,9 +671,46 @@ const openCreatePage = () => {
   router.push({ name: 'QuanLyDotKhuyenMaiCreate' })
 }
 
-const viewPromotion = (promotion: any) => {
+// History related functions
+const loadHistory = async (promotionId: number) => {
+  isHistoryLoading.value = true
+  try {
+    const data = await fetchPromotionHistory(promotionId)
+    historyList.value = data
+  } catch {
+    Message.error({ content: 'Không thể tải lịch sử thay đổi', duration: 3000 })
+    historyList.value = []
+  } finally {
+    isHistoryLoading.value = false
+  }
+}
+
+const getActionColor = (action: string): string => {
+  if (action.includes('TẠO')) return 'green'
+  if (action.includes('CẬP NHẬT')) return 'blue'
+  if (action.includes('XÓA')) return 'red'
+  return 'gray'
+}
+
+const formatHistoryDate = (dateString: string): string => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return ''
+
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const viewPromotion = async (promotion: any) => {
   selectedPromotion.value = promotion
   detailVisible.value = true
+  // Load history when opening detail modal
+  await loadHistory(promotion.id)
 }
 
 const editPromotion = (promotion: any) => {
@@ -627,11 +720,6 @@ const editPromotion = (promotion: any) => {
   promotionEditForm.active = Boolean(promotion.source?.trangThai)
   promotionEditForm.dateRange = [promotion.start_date ?? '', promotion.end_date ?? ''].filter(Boolean) as string[]
   editVisible.value = true
-}
-
-const duplicatePromotion = (promotion: PromotionRecord) => {
-  // TODO: Implement duplication workflow when requirements are defined
-  Message.info(`Tính năng nhân bản đang được phát triển cho "${promotion.name}"`)
 }
 
 const deletePromotion = (promotion: any) => {
@@ -676,7 +764,7 @@ const submitPromotionEdit = async () => {
 
   try {
     await form.validate()
-  } catch (error) {
+  } catch {
     return
   }
 
@@ -696,8 +784,8 @@ const submitPromotionEdit = async () => {
     Message.success('Cập nhật đợt khuyến mãi thành công')
     editVisible.value = false
     await loadPromotions()
-  } catch (error) {
-    Message.error((error as Error).message || 'Không thể cập nhật đợt khuyến mãi')
+  } catch {
+    Message.error('Không thể cập nhật đợt khuyến mãi')
   } finally {
     editSubmitting.value = false
   }
@@ -713,8 +801,8 @@ const confirmDeletePromotion = async () => {
     Message.success('Đã xóa đợt khuyến mãi')
     deleteVisible.value = false
     await loadPromotions()
-  } catch (error) {
-    Message.error((error as Error).message || 'Không thể xóa đợt khuyến mãi')
+  } catch {
+    Message.error('Không thể xóa đợt khuyến mãi')
   } finally {
     deleteSubmitting.value = false
   }
@@ -915,5 +1003,48 @@ onMounted(() => {
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 14px;
+}
+
+/* History section styles */
+.history-section {
+  margin-top: 16px;
+}
+
+.history-item {
+  margin-bottom: 8px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.history-time {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.history-user {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text-2);
+  margin-bottom: 4px;
+}
+
+.history-description {
+  font-size: 13px;
+  color: var(--color-text-2);
+  padding: 8px 12px;
+  background: var(--color-fill-2);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.timestamp-value {
+  font-size: 13px;
+  color: var(--color-text-2);
 }
 </style>

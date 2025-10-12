@@ -5,8 +5,10 @@
 -- 
 -- Recent Updates:
 -- - Added phieu_giam_gia_history table for tracking coupon changes
--- - Added created_at and updated_at audit columns to phieu_giam_gia
+-- - Added dot_giam_gia_history table for tracking promotion campaign changes
+-- - Added created_at and updated_at audit columns to phieu_giam_gia and dot_giam_gia
 -- - Support for tracking customer and product assignments
+-- - Support for employee attribution in history records
 -- =============================================
 
 USE [master]
@@ -219,6 +221,9 @@ PRIMARY KEY CLUSTERED
 ) ON [PRIMARY]
 GO
 /****** Object:  Table [dbo].[dot_giam_gia]     ******/
+-- Promotion campaign management
+-- created_at: Timestamp when campaign was created (auto-set on insert)
+-- updated_at: Timestamp when campaign was last updated (auto-updated on save)
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -232,6 +237,8 @@ CREATE TABLE [dbo].[dot_giam_gia](
 	[ngay_ket_thuc] [datetime] NULL,
 	[trang_thai] [bit] NULL,
 	[deleted] [bit] NULL,
+	[created_at] [datetime] NULL DEFAULT GETDATE(),
+	[updated_at] [datetime] NULL DEFAULT GETDATE(),
 	[create_at] [date] NULL,
 	[create_by] [int] NULL,
 	[update_at] [date] NULL,
@@ -241,6 +248,29 @@ PRIMARY KEY CLUSTERED
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[dot_giam_gia_history]     ******/
+-- Change history tracking for promotion campaign (dot_giam_gia)
+-- Tracks all changes made to promotion campaigns including:
+--   - Basic field changes (name, discount value, dates, status)
+-- hanh_dong: Action type (TẠO MỚI, CẬP NHẬT, XÓA)
+-- mo_ta_thay_doi: Detailed description of what changed (e.g., "Giá trị giảm: 10% → 15%")
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[dot_giam_gia_history](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[id_dot_giam_gia] [int] NOT NULL,
+	[id_nhan_vien] [int] NOT NULL,
+	[hanh_dong] [nvarchar](50) NOT NULL,
+	[mo_ta_thay_doi] [nvarchar](max) NULL,
+	[ngay_thay_doi] [datetime2](7) NOT NULL DEFAULT GETDATE(),
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 /****** Object:  Table [dbo].[hinh_thuc_thanh_toan]     ******/
 SET ANSI_NULLS ON

@@ -149,6 +149,76 @@
                 Phiếu giảm giá nổi bật sẽ chỉ áp dụng cho khách hàng được chọn
               </div>
             </a-form-item>
+
+            <!-- Áp dụng cho sản phẩm cụ thể -->
+            <a-form-item field="applyToProducts">
+              <a-checkbox v-model="formState.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
+              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                Nếu bật, phiếu giảm giá chỉ áp dụng cho các sản phẩm được chọn
+              </div>
+            </a-form-item>
+
+            <!-- Product Selection Section -->
+            <div v-if="formState.applyToProducts" class="product-selection-section">
+              <a-divider style="margin: 16px 0" />
+              <div style="font-weight: 600; margin-bottom: 12px">Chọn sản phẩm áp dụng</div>
+
+              <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
+
+              <div style="margin-bottom: 12px; display: flex; gap: 8px">
+                <a-button size="small" @click="selectAllProducts">
+                  <template #icon>
+                    <icon-plus />
+                  </template>
+                  Chọn tất cả
+                </a-button>
+                <a-button size="small" @click="deselectAllProducts">
+                  <template #icon>
+                    <icon-delete />
+                  </template>
+                  Bỏ chọn tất cả
+                </a-button>
+              </div>
+
+              <a-table
+                row-key="id"
+                :columns="productColumnsWithCheckbox"
+                :data="filteredProducts"
+                :pagination="productPagination"
+                :loading="productsLoading"
+                :scroll="{ y: 300 }"
+                size="small"
+                :bordered="{ cell: true }"
+              >
+                <template #selectHeader>
+                  <a-checkbox
+                    :model-value="isAllProductsSelected"
+                    :indeterminate="isSomeProductsSelected && !isAllProductsSelected"
+                    @change="toggleAllProducts"
+                  />
+                </template>
+                <template #select="{ record }">
+                  <a-checkbox
+                    :model-value="formState.selectedProductIds.includes(record.id)"
+                    @change="() => toggleProductSelection(record.id)"
+                  />
+                </template>
+                <template #tenSanPham="{ record }">
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
+                  </div>
+                </template>
+                <template #giaBan="{ record }">
+                  <span>{{ formatCurrency(record.giaBan || 0) }}</span>
+                </template>
+              </a-table>
+
+              <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
+                Đã chọn:
+                <strong>{{ formState.selectedProductIds.length }}</strong>
+                sản phẩm
+              </div>
+            </div>
           </a-form>
         </div>
 
@@ -248,6 +318,19 @@
             Tổng: {{ formState.selectedCustomerIds.length }} khách hàng
           </div>
         </a-descriptions-item>
+        <a-descriptions-item label="Áp dụng cho sản phẩm cụ thể">
+          {{ formState.applyToProducts ? 'Có' : 'Không' }}
+        </a-descriptions-item>
+        <a-descriptions-item v-if="formState.applyToProducts" label="Sản phẩm được áp dụng">
+          <div style="max-height: 150px; overflow-y: auto">
+            <a-tag v-for="productId in formState.selectedProductIds" :key="productId" style="margin: 2px">
+              {{ getProductNameById(productId) }}
+            </a-tag>
+          </div>
+          <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+            Tổng: {{ formState.selectedProductIds.length }} sản phẩm
+          </div>
+        </a-descriptions-item>
       </a-descriptions>
     </a-modal>
   </div>
@@ -257,10 +340,12 @@
 import { computed, reactive, ref, watch, onMounted } from 'vue'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
+import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
 import { createCoupon, fetchCoupons, fetchCustomers, type CustomerApiModel } from '@/api/discount-management'
+import { IconPlus, IconDelete } from '@arco-design/web-vue/es/icon'
 
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
@@ -282,6 +367,8 @@ const formState = reactive({
   description: '',
   featured: false,
   selectedCustomerIds: [] as number[],
+  applyToProducts: false,
+  selectedProductIds: [] as number[],
 })
 
 const rules: FormRules = {
@@ -405,6 +492,173 @@ watch(
   }
 )
 
+// Products
+interface ProductApiModel {
+  id: number
+  idSanPham?: {
+    tenSanPham?: string
+  }
+  tenSanPhamChiTiet?: string
+  maChiTietSanPham?: string
+  giaBan?: number
+  soLuong?: number
+  trangThai?: boolean
+}
+
+const products = ref<ProductApiModel[]>([])
+const productsLoading = ref(false)
+const productSearchQuery = ref('')
+
+const filteredProducts = computed(() => {
+  if (!productSearchQuery.value) {
+    return products.value
+  }
+  const query = productSearchQuery.value.toLowerCase()
+  return products.value.filter(
+    (product) =>
+      product.idSanPham?.tenSanPham?.toLowerCase().includes(query) ||
+      product.tenSanPhamChiTiet?.toLowerCase().includes(query) ||
+      product.maChiTietSanPham?.toLowerCase().includes(query)
+  )
+})
+
+const productPagination = computed(() => ({
+  pageSize: 5,
+  showTotal: true,
+  showPageSize: false,
+}))
+
+const productColumns = [
+  {
+    title: 'Tên sản phẩm',
+    dataIndex: 'tenSanPham',
+    slotName: 'tenSanPham',
+    ellipsis: true,
+    tooltip: true,
+  },
+  {
+    title: 'Mã SP',
+    dataIndex: 'maChiTietSanPham',
+    width: 120,
+  },
+  {
+    title: 'Giá bán',
+    dataIndex: 'giaBan',
+    slotName: 'giaBan',
+    width: 150,
+    align: 'right' as const,
+  },
+]
+
+const productColumnsWithCheckbox = computed(() => [
+  {
+    title: '',
+    dataIndex: 'select',
+    slotName: 'select',
+    width: 50,
+    align: 'center' as const,
+  },
+  ...productColumns,
+])
+
+const isAllProductsSelected = computed(() => {
+  if (filteredProducts.value.length === 0) return false
+  return filteredProducts.value.every((product) => formState.selectedProductIds.includes(product.id))
+})
+
+const isSomeProductsSelected = computed(() => {
+  return formState.selectedProductIds.length > 0
+})
+
+const toggleProductSelection = (productId: number) => {
+  const index = formState.selectedProductIds.indexOf(productId)
+  if (index > -1) {
+    formState.selectedProductIds.splice(index, 1)
+  } else {
+    formState.selectedProductIds.push(productId)
+  }
+}
+
+const toggleAllProducts = () => {
+  if (isAllProductsSelected.value) {
+    // Deselect all filtered products
+    filteredProducts.value.forEach((product) => {
+      const index = formState.selectedProductIds.indexOf(product.id)
+      if (index > -1) {
+        formState.selectedProductIds.splice(index, 1)
+      }
+    })
+  } else {
+    // Select all filtered products
+    filteredProducts.value.forEach((product) => {
+      if (!formState.selectedProductIds.includes(product.id)) {
+        formState.selectedProductIds.push(product.id)
+      }
+    })
+  }
+}
+
+const selectAllProducts = () => {
+  filteredProducts.value.forEach((product) => {
+    if (!formState.selectedProductIds.includes(product.id)) {
+      formState.selectedProductIds.push(product.id)
+    }
+  })
+}
+
+const deselectAllProducts = () => {
+  filteredProducts.value.forEach((product) => {
+    const index = formState.selectedProductIds.indexOf(product.id)
+    if (index > -1) {
+      formState.selectedProductIds.splice(index, 1)
+    }
+  })
+}
+
+const loadProducts = async () => {
+  productsLoading.value = true
+  try {
+    const response = await axios.get('/api/chi-tiet-san-pham-management/playlist')
+
+    // API trả về ResponseObject { data: [...] }
+    const data = response.data.data || response.data
+
+    if (data && Array.isArray(data)) {
+      // Filter active products with stock
+      const activeProducts = data.filter((p: ProductApiModel) => {
+        return p.trangThai !== false && (p.soLuong || 0) > 0
+      })
+      products.value = activeProducts
+
+      if (activeProducts.length === 0) {
+        Message.info('Không có sản phẩm hoạt động')
+      }
+    } else {
+      products.value = []
+      Message.warning('Dữ liệu sản phẩm không hợp lệ')
+    }
+  } catch {
+    Message.error('Không thể tải danh sách sản phẩm')
+    products.value = []
+  } finally {
+    productsLoading.value = false
+  }
+}
+
+// Load products when applyToProducts is checked
+watch(
+  () => formState.applyToProducts,
+  (shouldApply) => {
+    if (shouldApply && products.value.length === 0) {
+      loadProducts()
+    }
+    // Clear selected products when unchecking
+    if (!shouldApply) {
+      formState.selectedProductIds = []
+    }
+  }
+)
+
 watch(
   () => formState.discountMode,
   (mode) => {
@@ -483,6 +737,11 @@ const goBack = () => {
 const getCustomerNameById = (customerId: number): string => {
   const customer = customers.value.find((c) => c.id === customerId)
   return customer ? `${customer.tenKhachHang} - ${customer.soDienThoai}` : `KH#${customerId}`
+}
+
+const getProductNameById = (productId: number): string => {
+  const product = products.value.find((p) => p.id === productId)
+  return product ? product.tenSanPhamChiTiet || product.idSanPham?.tenSanPham || `SP#${productId}` : `SP#${productId}`
 }
 
 const formatNumberWithSeparator = (value: number | string) => {
@@ -596,6 +855,12 @@ const handleSaveClick = async () => {
     return
   }
 
+  // Validate product selection when applyToProducts is enabled
+  if (formState.applyToProducts && formState.selectedProductIds.length === 0) {
+    Message.error('Vui lòng chọn ít nhất một sản phẩm')
+    return
+  }
+
   // All validations passed, show confirmation modal
   confirmSaveVisible.value = true
 }
@@ -630,6 +895,7 @@ const confirmSave = async () => {
     deleted: false,
     idKhachHang: formState.featured ? formState.selectedCustomerIds : [],
     featured: formState.featured,
+    idChiTietSanPham: formState.applyToProducts ? formState.selectedProductIds : [],
   }
 
   confirmSaveSubmitting.value = true
@@ -781,6 +1047,59 @@ const confirmSave = async () => {
 }
 
 .customer-selection-section :deep(.arco-table-th .arco-checkbox) {
+  pointer-events: auto !important;
+}
+
+/* Product Selection Section Styles */
+.product-selection-section {
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--color-bg-2);
+  margin-top: 16px;
+}
+
+.product-selection-section :deep(.arco-table) {
+  border-radius: 4px;
+}
+
+.product-selection-section :deep(.arco-table-container) {
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+}
+
+.product-selection-section :deep(.arco-table-th) {
+  background-color: var(--color-fill-2);
+  font-weight: 600;
+}
+
+.product-selection-section :deep(.arco-table-td) {
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.product-selection-section :deep(.arco-table-tr:hover) {
+  background-color: var(--color-fill-1);
+}
+
+.product-selection-section :deep(.arco-checkbox) {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.product-selection-section :deep(.arco-checkbox-icon) {
+  pointer-events: auto !important;
+}
+
+.product-selection-section :deep(.arco-table-cell) {
+  pointer-events: auto !important;
+}
+
+.product-selection-section :deep(.arco-table-td) {
+  position: relative;
+  z-index: 1;
+}
+
+.product-selection-section :deep(.arco-table-th .arco-checkbox) {
   pointer-events: auto !important;
 }
 </style>

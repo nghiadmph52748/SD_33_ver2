@@ -1457,12 +1457,16 @@ const loadCoupons = async () => {
       data.map((item) => ({ id: item.id, name: item.tenPhieuGiamGia, featured: item.featured }))
     )
 
-    // Sort by featured status first (featured vouchers at top), then by id (newest first)
+    // Sort by featured status first (featured vouchers at top), then by createdAt (newest first)
     const sorted = data.sort((a, b) => {
       // Featured vouchers always come first
       if (a.featured && !b.featured) return -1
       if (!a.featured && b.featured) return 1
-      // If both have same featured status, sort by ID descending (newest first)
+      // If both have same featured status, sort by createdAt descending (newest first)
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+      // Fallback to id descending if createdAt is not available
       return b.id - a.id
     })
     coupons.value = sorted.map((item, index) => toCouponRecord(item, index))

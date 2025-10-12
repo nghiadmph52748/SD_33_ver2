@@ -55,6 +55,12 @@ public class DotGiamGia {
     @Column(name = "deleted")
     private Boolean deleted;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @OneToMany(mappedBy = "idDotGiamGia")
     private Set<ChiTietDotGiamGia> chiTietDotGiamGias = new LinkedHashSet<>();
 

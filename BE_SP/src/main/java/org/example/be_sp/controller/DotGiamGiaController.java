@@ -64,4 +64,12 @@ public class DotGiamGiaController {
         dotGiamGiaService.delete(id);
         return new ResponseObject<>(null, "Xóa đợt giảm giá thành công");
     }
+    
+    /**
+     * Get change history for a promotion campaign
+     */
+    @GetMapping("/history/{id}")
+    public ResponseObject<?> getHistory(@PathVariable Integer id) {
+        return new ResponseObject<>(dotGiamGiaService.getHistory(id), "Lấy lịch sử thay đổi thành công");
+    }
 }

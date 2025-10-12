@@ -71,6 +71,8 @@ export interface PromotionApiModel {
   ngayKetThuc: string
   trangThai: boolean
   deleted: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface CouponApiModel {
@@ -198,3 +200,18 @@ export interface CouponHistoryApiModel {
 
 export const fetchCouponHistory = (couponId: number) =>
   requestJson<CouponHistoryApiModel[]>(`/phieu-giam-gia-management/history/${couponId}`)
+
+// Promotion Campaign History API
+export interface PromotionHistoryApiModel {
+  id: number
+  idDotGiamGia: number
+  idNhanVien: number
+  tenNhanVien?: string
+  maNhanVien?: string
+  hanhDong: string
+  moTaThayDoi?: string
+  ngayThayDoi: string
+}
+
+export const fetchPromotionHistory = (promotionId: number) =>
+  requestJson<PromotionHistoryApiModel[]>(`/dot-giam-gia-management/history/${promotionId}`)
