@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { message, Modal } from 'ant-design-vue'
@@ -100,10 +100,6 @@ const uploadUrl = 'http://localhost:8080/api/upload/avatar'
 
 // Form data
 const formRef = ref()
-const listQuyenHan = ref([
-  { id: 1, tenQuyenHan: 'Admin' },
-  { id: 2, tenQuyenHan: 'Nhân viên' },
-])
 
 const formData = ref({
   tenNhanVien: '',
@@ -207,6 +203,7 @@ const beforeUpload = (file: File) => {
   return true
 }
 const handleUploadChange = () => {
+  // Handle upload change if needed
 }
 
 
@@ -273,8 +270,6 @@ const handleSubmit = async () => {
     // ✅ Đặt mật khẩu mặc định
     formData.value.matKhau = '123456'
 
-    console.log('📤 Dữ liệu gửi API:', formData.value)
-
     await axios.post('http://localhost:8080/api/nhan-vien-management/add', formData.value)
 
     // ✅ Điều hướng khi thành công
@@ -298,9 +293,6 @@ const showConfirm = () => {
     cancelText: 'Hủy',
     onOk() {
       handleSubmit()
-    },
-    onCancel() {
-      console.log('Đã hủy lưu')
     },
   })
 }
