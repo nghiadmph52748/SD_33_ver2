@@ -11,6 +11,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.NhanVienRequest;
+import org.example.be_sp.model.request.TrangThaiRequest;
 import org.example.be_sp.model.response.NhanVienResponse;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.NhanVienService;
@@ -71,12 +72,14 @@ public class NhanVienController {
     @PostMapping("/add")
     public ResponseObject<?> createNhanVien(@RequestBody NhanVienRequest request) {
         try {
+            System.out.println("Ảnh nhân viên nhận được: " + request.getAnhNhanVien());  // check xem có nhận ảnh không
             nhanVienService.saveNhanVien(request, passwordEncoder);
             return new ResponseObject<>(true, null, "Thêm nhân viên mới thành công");
         } catch (Exception e) {
             return new ResponseObject<>(false, null, "Lỗi khi thêm nhân viên: " + e.getMessage());
         }
     }
+
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> updateNhanVien(@PathVariable Integer id, @RequestBody NhanVienRequest request) {
@@ -175,6 +178,15 @@ public class NhanVienController {
             return ResponseEntity.status(404).body("Không tìm thấy nhân viên: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi server: " + e.getMessage());
+        }
+    }
+    @PutMapping("/nhan-vien/{id}/status")
+    public ResponseObject<?> updateTrangThai(@PathVariable Integer id, @RequestBody TrangThaiRequest request) {
+        try {
+            nhanVienService.updateTrangThai(id, request.getTrangThai());
+            return new ResponseObject<>(true, null, "Cập nhật trạng thái nhân viên thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi cập nhật trạng thái nhân viên: " + e.getMessage());
         }
     }
 

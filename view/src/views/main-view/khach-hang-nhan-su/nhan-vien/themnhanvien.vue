@@ -32,8 +32,9 @@
             <a-upload name="file" :action="uploadUrl" :show-upload-list="false" :before-upload="beforeUpload" @change="handleUploadChange">
               <a-button icon="upload">Chọn ảnh</a-button>
             </a-upload>
-            <div v-if="formData.anhNhanVien">
-              <img :src="formData.anhNhanVien" alt="Ảnh nhân viên" style="max-width: 100px; margin-top: 10px" />
+
+            <div v-if="formData.anhNhanVien" class="mt-2">
+              <img :src="formData.anhNhanVien" alt="Ảnh nhân viên" style="max-width: 120px; border-radius: 8px; margin-top: 10px" />
             </div>
           </a-form-item>
         </a-col>
@@ -84,10 +85,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { Modal, Message } from '@arco-design/web-vue'
+import { message, Modal } from 'ant-design-vue'
 
 // Router
 const router = useRouter()
@@ -95,10 +96,14 @@ const provinces = ref<{ value: string; label: string; code: number }[]>([])
 const districts = ref<{ value: string; label: string; code: number }[]>([])
 const wards = ref<{ value: string; label: string }[]>([])
 
-const uploadUrl = 'http://localhost:8080/api/file/upload'
+const uploadUrl = 'http://localhost:8080/api/upload/avatar'
 
 // Form data
 const formRef = ref()
+const listQuyenHan = ref([
+  { id: 1, tenQuyenHan: 'Admin' },
+  { id: 2, tenQuyenHan: 'Nhân viên' },
+])
 
 const formData = ref({
   tenNhanVien: '',
@@ -117,7 +122,7 @@ const formData = ref({
   delete: false,
   tenTaiKhoan: '',
   matKhau: '',
-  anhNhanVien: null,
+  anhNhanVien: '' as string | null,
 })
 
 // Validation rules
@@ -187,36 +192,100 @@ const onDistrictChange = async (value: string) => {
     }))
   }
 }
+
+const beforeUpload = (file: File) => {
+  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
+  if (!isJpgOrPng) {
+    message.error('Chỉ hỗ trợ file JPG/PNG!')
+    return false
+  }
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isLt2M) {
+    message.error('Ảnh phải nhỏ hơn 2MB!')
+    return false
+  }
+  return true
+}
+const handleUploadChange = () => {
+}
+
+
+
 // Handle submit
 const handleSubmit = async () => {
   try {
     await formRef.value.validate()
 
-    // ⚠️ Kiểm tra email có hợp lệ để tạo tên tài khoản
+    // Validate tất cả các trường
+    if (!formData.value.tenNhanVien) {
+      message.error('Vui lòng nhập tên nhân viên.')
+      return
+    }
+    if (!formData.value.ngaySinh) {
+      message.error('Vui lòng chọn ngày sinh.')
+      return
+    }
+    if (!formData.value.cccd) {
+      message.error('Vui lòng nhập CCCD.')
+      return
+    }
+    if (!/^\d{9,12}$/.test(formData.value.cccd)) {
+      message.error('CCCD phải là 9-12 chữ số.')
+      return
+    }
+    if (!formData.value.soDienThoai) {
+      message.error('Vui lòng nhập số điện thoại.')
+      return
+    }
+    if (!/^(0|\+84)[0-9]{9}$/.test(formData.value.soDienThoai)) {
+      message.error('Số điện thoại không hợp lệ.')
+      return
+    }
     if (!formData.value.email || !formData.value.email.includes('@')) {
-      Message.error('Email không hợp lệ để tạo tài khoản.')
+      message.error('Email không hợp lệ để tạo tài khoản.')
+      return
+    }
+    if (!formData.value.idQuyenHan) {
+      message.error('Vui lòng chọn quyền hạn.')
+      return
+    }
+    if (!formData.value.thanhPho) {
+      message.error('Vui lòng chọn tỉnh/thành phố.')
+      return
+    }
+    if (!formData.value.quan) {
+      message.error('Vui lòng chọn quận/huyện.')
+      return
+    }
+    if (!formData.value.phuong) {
+      message.error('Vui lòng chọn phường/xã.')
+      return
+    }
+    if (!formData.value.diaChiCuThe) {
+      message.error('Vui lòng nhập địa chỉ cụ thể.')
       return
     }
 
     // ✅ Tự động tạo tên tài khoản từ email
-    const emailUsername = formData.value.email.split('@')[0] // "abc@gmail.com" => "abc"
+    const emailUsername = formData.value.email.split('@')[0]
     formData.value.tenTaiKhoan = emailUsername
 
     // ✅ Đặt mật khẩu mặc định
-    formData.value.matKhau = '123456' // hoặc sinh random nếu muốn
+    formData.value.matKhau = '123456'
+
+    console.log('📤 Dữ liệu gửi API:', formData.value)
 
     await axios.post('http://localhost:8080/api/nhan-vien-management/add', formData.value)
 
     // ✅ Điều hướng khi thành công
-    Message.success('Thêm nhân viên thành công!')
     router.push('/khach-hang-nhan-su/nhan-vien')
   } catch (error: unknown) {
     const err = error as any
 
     if (err.response?.data?.message?.includes('tài khoản đã tồn tại')) {
-      Message.error('Email này đã được dùng để tạo tài khoản. Vui lòng dùng email khác.')
+      message.error('❌ Email này đã được dùng để tạo tài khoản. Vui lòng dùng email khác.')
     } else {
-      Message.error('Thêm nhân viên thất bại. Vui lòng thử lại.')
+      message.error('❌ Thêm nhân viên thất bại. Vui lòng thử lại.')
     }
   }
 }
@@ -231,33 +300,9 @@ const showConfirm = () => {
       handleSubmit()
     },
     onCancel() {
-      // User cancelled
+      console.log('Đã hủy lưu')
     },
   })
-}
-
-const beforeUpload = (file: File) => {
-  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
-  if (!isJpgOrPng) {
-    Message.error('Chỉ hỗ trợ upload file JPG/PNG!')
-    return false
-  }
-  const isLt2M = file.size / 1024 / 1024 < 2
-  if (!isLt2M) {
-    Message.error('Ảnh phải nhỏ hơn 2MB!')
-    return false
-  }
-  return true
-}
-
-// Xử lý khi upload thay đổi (upload thành công, thất bại...)
-const handleUploadChange = (info: any) => {
-  if (info.file.status === 'done') {
-    // Giả sử server trả về URL ảnh ở info.file.response.url
-    formData.value.anhNhanVien = info.file.response.url
-  } else if (info.file.status === 'error') {
-    Message.error('Upload ảnh thất bại!')
-  }
 }
 
 // Handle cancel

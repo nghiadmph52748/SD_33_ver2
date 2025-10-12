@@ -31,7 +31,6 @@ public class KhachHangResponse {
     private LocalDate ngaySinh;
     private Integer phanLoai;
     private Boolean deleted;
-
     private Integer tongDon;
     private Long tongChiTieu;
     private String trangThaiText;

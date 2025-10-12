@@ -17,8 +17,8 @@
             <a-form-item label="Chức vụ">
               <a-select v-model="filters.tenQuyenHan" placeholder="Chọn chức vụ" allow-clear @change="searchStaff">
                 <a-option value="">Tất cả</a-option>
-                <a-option value="manager">Quản lý</a-option>
-                <a-option value="staff">Nhân viên</a-option>
+                <a-option value="Quản lý">Quản lý</a-option>
+                <a-option value="Nhân viên">Nhân viên</a-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -118,6 +118,14 @@
                 <icon-edit />
               </template>
             </a-button>
+            <a-switch
+              v-model="record.trangThai"
+              :checked-value="true"
+              :unchecked-value="false"
+              @change="() => toggleTrangThai(record)"
+              checked-text=""
+              unchecked-text=""
+            />
           </a-space>
         </template>
       </a-table>
@@ -131,6 +139,7 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { Modal, Message } from '@arco-design/web-vue'
 import axios from 'axios'
+import * as XLSX from 'xlsx';
 import {
   IconPlus,
   IconSearch,
@@ -145,6 +154,22 @@ import {
   IconStar,
 } from '@arco-design/web-vue/es/icon'
 import { useRouter } from 'vue-router'
+
+const toggleTrangThai = async (record: any) => {
+  const newStatus = record.trangThai
+  try {
+    await axios.put(`/api/nhan-vien-management/nhan-vien/${record.id}/status`, { trangThai: newStatus })
+    Message.success(`Trạng thái nhân viên đã được cập nhật thành ${newStatus ? 'Đang làm việc' : 'Nghỉ việc'}`)
+
+    // Reload lại toàn trang
+    window.location.reload()
+  } catch (error) {
+    record.trangThai = !newStatus
+    Message.error('Lỗi khi cập nhật trạng thái nhân viên.')
+    console.error('❌ Lỗi cập nhật trạng thái:', error)
+  }
+}
+
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 // Modal and for
@@ -262,19 +287,20 @@ const columns = [
   { title: 'Giới tính', dataIndex: 'gioiTinh', slotName: 'gioiTinh', width: 100, align: 'center' },
   { title: 'Chức vụ', dataIndex: 'tenQuyenHan', slotName: 'tenQuyenHan', width: 120, align: 'center' },
   { title: 'Trạng thái', dataIndex: 'trangThai', slotName: 'trangThai', width: 120, align: 'center' },
-  { title: 'Thao tác', slotName: 'action', width: 150, fixed: 'right' },
+  { title: 'Thao tác', slotName: 'action', width: 120, fixed: 'right' },
 ]
 
 // Pagination
 // Phân trang
-const phanTrang = computed(() => ({
-  current: 1, // Trang hiện tại
-  pageSize: 10, // Số bản ghi mỗi trang
-  total: nhanVien.value.length, // Tổng số nhân viên
+const phanTrang = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total: number) => `Tổng cộng ${total} nhân viên`, // ✅ ép kiểu number
-}))
+  showTotal: (total: number) => `Tổng cộng ${total} nhân viên`,
+})
+
 
 // Methods
 const formatCurrency = (amount: number) => {
@@ -333,30 +359,14 @@ const resetFilters = () => {
     trangThai: true, // true = Hoạt động, false = Ngưng
   })
 }
-const deleteStaff = (staff: any) => {
-  Modal.warning({
-    title: 'Xác nhận xoá nhân viên',
-    content: `Bạn chắc chắn muốn xoá "${staff.tenNhanVien}"?`,
-    okText: 'Xoá',
-    cancelText: 'Hủy',
-    onOk: () =>
-      axios
-        .delete(`/api/nhan-vien-management/nhan-vien/${staff.id}`)
-        .then(() => {
-          Message.success('Đã xoá nhân viên thành công.')
-          nhanVien.value = nhanVien.value.filter((nv) => nv.id !== staff.id)
-        })
-        .catch((error) => {
-          console.error('❌ Lỗi khi xoá nhân viên:', error)
-          Message.error('Lỗi khi xoá nhân viên.')
-        }),
-  })
-}
+
 
 const exportExcel = () => {
-  // Removed console.log
-}
-
+  const ws = XLSX.utils.json_to_sheet(nhanVien.value);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Danh sách nhân viên');
+  XLSX.writeFile(wb, 'danhsachnhanvien.xlsx');
+};
 onMounted(async () => {
   loading.value = true
   try {
@@ -365,7 +375,7 @@ onMounted(async () => {
 
     // Nếu backend trả về { data: [...] }
     const list = res.data.data || res.data || [] // 👈 fallback an toàn
-
+    phanTrang.value.total = nhanVien.value.length
     nhanVien.value = list.map((nv: any, index: number) => ({
       id: nv.id,
       stt: index + 1,

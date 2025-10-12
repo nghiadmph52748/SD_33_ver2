@@ -96,6 +96,13 @@
                 <icon-edit />
               </template>
             </a-button>
+            <a-switch
+              :checked="record.status === 'active'"
+              @change="onToggleStatus(record)"
+              checked-children="Hoạt động"
+              un-checked-children="Không hoạt động"
+              size="small"
+            />
           </a-space>
         </template>
       </a-table>
@@ -109,6 +116,7 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import * as XLSX from 'xlsx'
 import { IconPlus, IconRefresh, IconDownload, IconEye, IconEdit, IconDelete } from '@arco-design/web-vue/es/icon'
 // ✅ Di chuyển lên đầu file <script>
 
@@ -152,6 +160,7 @@ const cotBang = [
 ]
 
 interface KhachHang {
+  id: string
   index: number
   code: string
   name: string
@@ -256,6 +265,21 @@ const xuLyThayDoiBang = (duLieuPhanTrang: any) => {
   }
   timKiemKhachHang()
 }
+const onToggleStatus = async (record: KhachHang) => {
+  try {
+    // Gọi API PUT với id trong URL, không gửi body
+    await axios.put(`/api/khach-hang-management/update/status/${record.id}`)
+
+    // Cập nhật trạng thái local (đảo trạng thái)
+    record.status = record.status === 'active' ? 'inactive' : 'active'
+
+    // Nếu muốn reload lại danh sách đầy đủ:
+    // await timKiemKhachHang();
+  } catch (error) {
+    console.error('Lỗi cập nhật trạng thái:', error)
+    // Có thể hiện thông báo lỗi cho người dùng nếu muốn
+  }
+}
 
 const moModalTaoMoi = () => {}
 const xemChiTietKhach = (khach: any) => {
@@ -264,7 +288,30 @@ const xemChiTietKhach = (khach: any) => {
 }
 
 const xoaKhach = (khach: any) => {}
-const xuatExcel = () => {}
+
+const xuatExcel = () => {
+  // Tạo dữ liệu để xuất
+  const dataForExport = danhSachKhachHang.value.map((item: KhachHang) => ({
+    'Mã khách hàng': item.code,
+    'Tên': item.name,
+    'Ngày sinh': item.birthday,
+    'Giới tính': item.gender,
+    'Địa chỉ': [item.diaChiCuThe, item.phuong, item.quan, item.thanhPho].filter(Boolean).join(', '),
+    'Email': item.email,
+    'Số điện thoại': item.soDienThoai,
+    'Trạng thái': item.status === 'active' ? 'Hoạt động' : 'Không hoạt động',
+  }));
+
+  // Tạo một workbook mới
+  const ws = XLSX.utils.json_to_sheet(dataForExport);
+  const wb = XLSX.utils.book_new();
+
+  // Thêm sheet vào workbook
+  XLSX.utils.book_append_sheet(wb, ws, 'KhachHang');
+
+  // Tạo file và tải về
+  XLSX.writeFile(wb, 'DanhSachKhachHang.xlsx');
+}
 
 onMounted(() => {
   timKiemKhachHang()

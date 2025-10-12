@@ -23,8 +23,8 @@ public class NhanVienResponse {
     private String thanhPho;
     private String quan;
     private String phuong;
-    private Boolean gioiTinh;
     private String diaChiCuThe;
+    private Boolean gioiTinh;
     private Integer idQuyenHan;
     private String tenQuyenHan;
     private String anhNhanVien;

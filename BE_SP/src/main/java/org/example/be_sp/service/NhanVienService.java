@@ -66,7 +66,7 @@ public class NhanVienService {
         nv.setTrangThai(request.getTrangThai());
         nv.setDeleted(false);
         nv.setGioiTinh(request.getGioiTinh());
-
+        nv.setAnhNhanVien(request.getAnhNhanVien());
         // set quyền hạn
         nv.setIdQuyenHan(repository.findById(request.getIdQuyenHan())
                 .orElseThrow(() -> new ApiException("QuyenHan not found", "404")));
@@ -84,42 +84,38 @@ public class NhanVienService {
     }
 
 
-    public void updateNhanVien(Integer id, NhanVienRequest request, PasswordEncoder passwordEncoder) {
+    public NhanVienResponse updateNhanVien(Integer id, NhanVienRequest request, PasswordEncoder passwordEncoder) {
         NhanVien nv = nhanVienRepository.findById(id)
-                .orElseThrow(() -> new ApiException("NhanVien not found", "404"));
+                .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên với id: " + id, "404"));
 
-        nv.setTenNhanVien(request.getTenNhanVien());
-        nv.setEmail(request.getEmail());
-        nv.setSoDienThoai(request.getSoDienThoai());
-        nv.setDiaChiCuThe(request.getDiaChiCuThe());
-        nv.setThanhPho(request.getThanhPho());
-        nv.setQuan(request.getQuan());
-        nv.setPhuong(request.getPhuong());
-        nv.setCccd(request.getCccd());
-        nv.setNgaySinh(request.getNgaySinh());
-        nv.setTrangThai(request.getTrangThai());
-        nv.setDeleted(request.getDeleted());
-        nv.setGioiTinh(request.getGioiTinh());
-        // 👇 update ảnh nhân viên
-        if (request.getAnhNhanVien() != null) {
-            nv.setAnhNhanVien(request.getAnhNhanVien());
-        }
+        if (request.getTenNhanVien() != null) nv.setTenNhanVien(request.getTenNhanVien());
+        if (request.getEmail() != null) nv.setEmail(request.getEmail());
+        if (request.getSoDienThoai() != null) nv.setSoDienThoai(request.getSoDienThoai());
+        if (request.getDiaChiCuThe() != null) nv.setDiaChiCuThe(request.getDiaChiCuThe());
+        if (request.getThanhPho() != null) nv.setThanhPho(request.getThanhPho());
+        if (request.getQuan() != null) nv.setQuan(request.getQuan());
+        if (request.getPhuong() != null) nv.setPhuong(request.getPhuong());
+        if (request.getCccd() != null) nv.setCccd(request.getCccd());
+        if (request.getNgaySinh() != null) nv.setNgaySinh(request.getNgaySinh());
+        if (request.getTrangThai() != null) nv.setTrangThai(request.getTrangThai());
+        if (request.getDeleted() != null) nv.setDeleted(request.getDeleted());
+        if (request.getGioiTinh() != null) nv.setGioiTinh(request.getGioiTinh());
+        if (request.getAnhNhanVien() != null) nv.setAnhNhanVien(request.getAnhNhanVien());
 
         // update quyền hạn
-        nv.setIdQuyenHan(repository.findById(request.getIdQuyenHan())
-                .orElseThrow(() -> new ApiException("QuyenHan not found", "404")));
+        if (request.getIdQuyenHan() != null) {
+            nv.setIdQuyenHan(repository.findById(request.getIdQuyenHan())
+                    .orElseThrow(() -> new ApiException("Không tìm thấy quyền hạn với id: " + request.getIdQuyenHan(), "404")));
+        }
 
         // update tài khoản
-        if (request.getTenTaiKhoan() != null) {
-            nv.setTenTaiKhoan(request.getTenTaiKhoan());
-        }
+        if (request.getTenTaiKhoan() != null) nv.setTenTaiKhoan(request.getTenTaiKhoan());
 
         // update mật khẩu
-        if (request.getMatKhau() != null) {
-            nv.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
-        }
+        if (request.getMatKhau() != null) nv.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
 
         nhanVienRepository.save(nv);
+        return new NhanVienResponse(nv);
     }
 
 
@@ -207,6 +203,16 @@ public class NhanVienService {
         nhanVienRepository.delete(nv);  // Xóa cứng khỏi database
     }
 
+    public void updateTrangThai(Integer id, Boolean trangThai) {
+        Optional<NhanVien> optionalNhanVien = nhanVienRepository.findById(id);
+        if (!optionalNhanVien.isPresent()) {
+            throw new ApiException("Không tìm thấy nhân viên với ID: " + id, "NOT_FOUND");
+        }
+
+        NhanVien nhanVien = optionalNhanVien.get();
+        nhanVien.setTrangThai(trangThai);
+        nhanVienRepository.save(nhanVien);
+    }
 
 
 }
