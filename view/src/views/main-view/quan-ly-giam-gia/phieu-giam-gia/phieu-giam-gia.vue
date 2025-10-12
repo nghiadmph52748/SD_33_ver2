@@ -309,9 +309,11 @@
         <a-timeline v-else-if="!isHistoryLoading">
           <a-timeline-item v-for="history in historyList" :key="history.id" :dot-color="getActionColor(history.hanhDong)">
             <template #dot>
-              <icon-plus-circle v-if="history.hanhDong.includes('TẠO')" style="font-size: 14px" />
-              <icon-edit v-else-if="history.hanhDong.includes('CẬP NHẬT')" style="font-size: 14px" />
-              <icon-delete v-else-if="history.hanhDong.includes('XÓA')" style="font-size: 14px" />
+              <div class="timeline-icon-wrapper">
+                <icon-plus-circle v-if="history.hanhDong.includes('TẠO')" />
+                <icon-edit v-else-if="history.hanhDong.includes('CẬP NHẬT')" />
+                <icon-delete v-else-if="history.hanhDong.includes('XÓA')" />
+              </div>
             </template>
 
             <div class="history-item">
@@ -2272,6 +2274,53 @@ onMounted(() => {
 .history-section {
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: visible;
+  padding-left: 8px;
+  margin-left: -8px;
+}
+
+/* Ensure timeline has enough space */
+.history-section :deep(.arco-timeline) {
+  padding-left: 4px;
+}
+
+.history-section :deep(.arco-timeline-item) {
+  position: relative;
+}
+
+/* Fix timeline dot icon alignment */
+.history-section :deep(.arco-timeline-item-dot) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible !important;
+}
+
+.history-section :deep(.arco-timeline-item-dot-custom) {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-bg-2);
+  overflow: visible !important;
+}
+
+.timeline-icon-wrapper {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.timeline-icon-wrapper svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .history-item {
