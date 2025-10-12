@@ -234,8 +234,8 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="couponDetailVisible" title="Chi tiết phiếu giảm giá" :footer="false" width="700px">
-      <a-descriptions :column="1" layout="vertical">
+    <a-modal v-model:visible="couponDetailVisible" title="Chi tiết phiếu giảm giá" :footer="false" width="800px">
+      <a-descriptions :column="2" bordered>
         <a-descriptions-item label="Tên">{{ selectedCoupon?.name }}</a-descriptions-item>
         <a-descriptions-item label="Mã">{{ selectedCoupon?.code }}</a-descriptions-item>
         <a-descriptions-item label="Giá trị giảm">
@@ -248,17 +248,14 @@
         <a-descriptions-item label="Giảm tối đa">
           {{ selectedCoupon?.max_discount_value ? formatCurrency(selectedCoupon.max_discount_value) : 'Không giới hạn' }}
         </a-descriptions-item>
-        <a-descriptions-item label="Thời gian">
-          {{ formatDateTime(selectedCoupon?.start_date ?? '') }} - {{ formatDateTime(selectedCoupon?.end_date ?? '') }}
-        </a-descriptions-item>
         <a-descriptions-item label="Số lượng">
           {{ selectedCoupon?.usage_limit ?? '∞' }}
         </a-descriptions-item>
-        <a-descriptions-item label="Trạng thái">
-          {{ selectedCoupon ? getStatusText(selectedCoupon.status) : '' }}
+        <a-descriptions-item label="Thời gian" :span="2">
+          {{ formatDateTime(selectedCoupon?.start_date ?? '') }} - {{ formatDateTime(selectedCoupon?.end_date ?? '') }}
         </a-descriptions-item>
-        <a-descriptions-item label="Mô tả">
-          {{ selectedCoupon?.source?.moTa || '—' }}
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="getStatusColor(selectedCoupon?.status ?? '')">{{ selectedCoupon ? getStatusText(selectedCoupon.status) : '' }}</a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="Phiếu giảm giá nổi bật">
           <a-tag v-if="selectedCoupon?.featured" color="orange">
@@ -269,13 +266,16 @@
           </a-tag>
           <span v-else style="color: var(--color-text-3)">Không</span>
         </a-descriptions-item>
-        <a-descriptions-item v-if="selectedCoupon?.featured" label="Số khách hàng áp dụng">
-          <div>
-            <strong>{{ selectedCoupon?.source?.idKhachHang?.length || 0 }}</strong>
-            khách hàng
-          </div>
-          <div v-if="selectedCoupon?.source?.idKhachHang && selectedCoupon.source.idKhachHang.length > 0" style="margin-top: 8px">
-            <a-button size="small" @click="viewAppliedCustomers">Xem danh sách</a-button>
+        <a-descriptions-item label="Mô tả" :span="2">
+          {{ selectedCoupon?.source?.moTa || '—' }}
+        </a-descriptions-item>
+        <a-descriptions-item v-if="selectedCoupon?.featured" label="Số khách hàng áp dụng" :span="2">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span>
+              <strong>{{ selectedCoupon?.source?.idKhachHang?.length || 0 }}</strong>
+              khách hàng
+            </span>
+            <a-button v-if="selectedCoupon?.source?.idKhachHang && selectedCoupon.source.idKhachHang.length > 0" size="small" @click="viewAppliedCustomers">Xem danh sách</a-button>
           </div>
         </a-descriptions-item>
       </a-descriptions>

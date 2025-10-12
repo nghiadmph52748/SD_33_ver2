@@ -144,15 +144,19 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt giảm giá" :footer="false" width="700px">
-      <a-descriptions :column="1" layout="vertical">
+    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt giảm giá" :footer="false" width="800px">
+      <a-descriptions :column="2" bordered>
         <a-descriptions-item label="Tên">{{ selectedPromotion?.name }}</a-descriptions-item>
         <a-descriptions-item label="Mã">{{ selectedPromotion?.code }}</a-descriptions-item>
-        <a-descriptions-item label="Giá trị giảm">{{ selectedPromotion?.percentage }}%</a-descriptions-item>
-        <a-descriptions-item label="Thời gian">
+        <a-descriptions-item label="Giá trị giảm">
+          <span class="percentage-badge">{{ selectedPromotion?.percentage }}%</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="Trạng thái">
+          <a-tag :color="getStatusColor(selectedPromotion?.status ?? '')">{{ selectedPromotion ? getStatusText(selectedPromotion.status) : '' }}</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="Thời gian" :span="2">
           {{ formatDateTime(selectedPromotion?.start_date ?? '') }} - {{ formatDateTime(selectedPromotion?.end_date ?? '') }}
         </a-descriptions-item>
-        <a-descriptions-item label="Trạng thái">{{ selectedPromotion ? getStatusText(selectedPromotion.status) : '' }}</a-descriptions-item>
       </a-descriptions>
 
       <!-- History Section -->
@@ -952,6 +956,16 @@ onMounted(() => {
 .percentage-value {
   font-weight: 600;
   color: #1890ff;
+}
+
+.percentage-badge {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 16px;
+  color: #1890ff;
+  background: rgba(24, 144, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 6px;
 }
 
 .percentage-filter {
