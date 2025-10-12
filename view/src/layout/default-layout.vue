@@ -191,7 +191,7 @@ onMounted(() => {
       transition: all 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
       position: fixed;
       top: 0;
-      left: 250px;
+      left: 0;
       z-index: 100;
       width: 100%;
       min-width: @layout-max-width;
