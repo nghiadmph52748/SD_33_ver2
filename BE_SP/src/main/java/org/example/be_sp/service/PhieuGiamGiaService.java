@@ -13,6 +13,7 @@ import org.example.be_sp.model.request.PhieuGiamGiaRequest;
 import org.example.be_sp.model.response.PagingResponse;
 import org.example.be_sp.model.response.PhieuGiamGiaResponse;
 import org.example.be_sp.model.response.PhieuGiamGiaHistoryResponse;
+import org.example.be_sp.repository.ChiTietPhieuGiamGiaRepository;
 import org.example.be_sp.repository.KhachHangRepository;
 import org.example.be_sp.repository.PhieuGiamGiaHistoryRepository;
 import org.example.be_sp.repository.PhieuGiamGiaCaNhanRepository;
@@ -23,18 +24,26 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
 
 @Service
 @Slf4j
 public class PhieuGiamGiaService {
+    @PersistenceContext
+    private EntityManager entityManager;
+    
     @Autowired
     private PhieuGiamGiaRepository phieuGiamGiaRepository;
     @Autowired
     private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
+    @Autowired
+    private ChiTietPhieuGiamGiaRepository chiTietPhieuGiamGiaRepository;
     @Autowired
     private KhachHangRepository khachHangRepository;
     @Autowired
@@ -45,7 +54,9 @@ public class PhieuGiamGiaService {
     private ObjectMapper objectMapper;
 
     public List<PhieuGiamGiaResponse> getAll() {
-        return new ArrayList<>(phieuGiamGiaRepository.findAll().stream().map(PhieuGiamGiaResponse::new).toList());
+        return new ArrayList<>(phieuGiamGiaRepository.findAll().stream()
+                .map(PhieuGiamGiaResponse::new)
+                .toList());
     }
 
     public PhieuGiamGia getById(Integer id) {
@@ -59,7 +70,8 @@ public class PhieuGiamGiaService {
 
     public PagingResponse<PhieuGiamGiaResponse> paging(Integer page, Integer size) {
         return new PagingResponse<>(
-                phieuGiamGiaRepository.findAll(PageRequest.of(page, size)).map(PhieuGiamGiaResponse::new), page);
+                phieuGiamGiaRepository.findAll(PageRequest.of(page, size))
+                        .map(PhieuGiamGiaResponse::new), page);
     }
 
     public void add(PhieuGiamGiaRequest request) {
@@ -239,6 +251,7 @@ public class PhieuGiamGiaService {
         }
     }
 
+    @Transactional
     public void delete(Integer id) {
         // Verify the entity exists before deleting
         if (!phieuGiamGiaRepository.existsById(id)) {
@@ -246,18 +259,34 @@ public class PhieuGiamGiaService {
         }
         
         PhieuGiamGia pgg = phieuGiamGiaRepository.getById(id);
+        String couponName = pgg.getTenPhieuGiamGia();
         
         // Log deletion before actually deleting
-        logHistory(id, "XÓA", "Xóa phiếu giảm giá: " + pgg.getTenPhieuGiamGia());
+        logHistory(id, "XÓA", "Xóa phiếu giảm giá: " + couponName);
+        
+        // Flush and clear to ensure history is saved
+        entityManager.flush();
+        entityManager.clear();
 
-        // Hard delete associated personal coupons first (to maintain referential integrity)
+        // Delete associated records in order (to maintain referential integrity)
+        // 1. Delete chi_tiet_phieu_giam_gia (product associations)
+        chiTietPhieuGiamGiaRepository.deleteByIdPhieuGiamGia(id);
+        entityManager.flush();
+        
+        // 2. Delete phieu_giam_gia_ca_nhan (personal coupons)
         List<PhieuGiamGiaCaNhan> personalCoupons = phieuGiamGiaCaNhanRepository.findByIdPhieuGiamGiaId(id);
         for (PhieuGiamGiaCaNhan pggcn : personalCoupons) {
             phieuGiamGiaCaNhanRepository.deleteById(pggcn.getId());
         }
+        entityManager.flush();
+        
+        // 3. Delete phieu_giam_gia_history (history records)
+        historyRepository.hardDeleteByIdPhieuGiamGia(id);
+        entityManager.flush();
 
-        // Hard delete the coupon from database
+        // 4. Finally delete the coupon itself
         phieuGiamGiaRepository.deleteById(id);
+        entityManager.flush();
     }
 
     public List<PhieuGiamGiaResponse> getActiveCouponsForCustomer(Integer idKhachHang) {

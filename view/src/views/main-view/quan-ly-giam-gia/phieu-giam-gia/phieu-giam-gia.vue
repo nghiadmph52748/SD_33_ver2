@@ -147,7 +147,7 @@
 
     <!-- Coupons Table -->
     <a-card title="Danh sách phiếu giảm giá" class="table-card">
-      <a-table :columns="columns" :data="filteredCoupons" :pagination="pagination" :loading="loading" :scroll="{ x: 1400 }">
+      <a-table :columns="columns" :data="filteredCoupons" :pagination="pagination" :loading="loading">
         <template #featured="{ record }">
           <div v-if="record.featured" class="featured-badge">
             <icon-star :style="{ color: '#FFB800', fontSize: '18px' }" />
@@ -194,22 +194,12 @@
           </div>
         </template>
 
-        <template #created_at="{ record }">
-          <div class="timestamp-cell">
-            {{ record.created_at ? formatDateTime(record.created_at) : '—' }}
-          </div>
-        </template>
-
-        <template #updated_at="{ record }">
-          <div class="timestamp-cell">
-            {{ record.updated_at ? formatDateTime(record.updated_at) : '—' }}
-          </div>
-        </template>
-
         <template #status="{ record }">
-          <a-tag :color="getStatusColor(record.status)">
-            {{ getStatusText(record.status) }}
-          </a-tag>
+          <div class="status-tag-wrapper">
+            <a-tag :color="getStatusColor(record.status)">
+              {{ getStatusText(record.status) }}
+            </a-tag>
+          </div>
         </template>
 
         <template #action="{ record }">
@@ -268,6 +258,12 @@
         </a-descriptions-item>
         <a-descriptions-item label="Mô tả" :span="2">
           {{ selectedCoupon?.source?.moTa || '—' }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Ngày tạo">
+          {{ selectedCoupon?.created_at ? formatDateTime(selectedCoupon.created_at) : '—' }}
+        </a-descriptions-item>
+        <a-descriptions-item label="Ngày cập nhật">
+          {{ selectedCoupon?.updated_at ? formatDateTime(selectedCoupon.updated_at) : '—' }}
         </a-descriptions-item>
         <a-descriptions-item v-if="selectedCoupon?.featured" label="Số khách hàng áp dụng" :span="2">
           <div style="display: flex; align-items: center; gap: 12px;">
@@ -350,6 +346,9 @@
           <div v-if="hasMultipleColumns" class="modal-column-title">Thông tin phiếu giảm giá</div>
 
           <a-form ref="couponEditFormRef" :model="couponEditForm" :rules="couponEditRules" layout="vertical">
+            <a-form-item field="code" label="Mã phiếu giảm giá">
+              <a-input v-model="couponEditForm.code" placeholder="Mã tự động" readonly disabled />
+            </a-form-item>
             <a-row :gutter="16">
               <a-col :span="12">
                 <a-form-item field="name" label="Tên phiếu giảm giá">
@@ -466,20 +465,112 @@
               </a-switch>
             </a-form-item>
 
-            <a-form-item field="featured">
-              <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá nổi bật</a-checkbox>
-              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
-              </div>
-            </a-form-item>
-
-            <a-form-item field="applyToProducts">
-              <a-checkbox v-model="couponEditForm.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
-              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Nếu bật, phiếu giảm giá chỉ áp dụng cho các sản phẩm được chọn
-              </div>
-            </a-form-item>
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item field="featured">
+                  <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá nổi bật</a-checkbox>
+                  <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                    Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
+                  </div>
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item field="applyToProducts">
+                  <a-checkbox v-model="couponEditForm.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
+                  <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                    Nếu bật, phiếu giảm giá chỉ áp dụng cho các sản phẩm được chọn
+                  </div>
+                </a-form-item>
+              </a-col>
+            </a-row>
           </a-form>
+
+          <!-- Product Selection Section - inside left column -->
+          <div v-if="couponEditForm.applyToProducts" style="margin-top: 16px">
+            <a-divider style="margin: 16px 0" />
+            <div style="font-weight: 600; margin-bottom: 12px; font-size: 15px">
+              Chọn sản phẩm áp dụng
+            </div>
+            <div class="product-selection-section">
+              <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
+
+              <!-- Select All / Deselect All buttons -->
+              <div style="margin-bottom: 12px; display: flex; gap: 8px">
+                <a-button size="small" @click="selectAllEditProducts">
+                  <template #icon>
+                    <icon-plus />
+                  </template>
+                  Chọn tất cả
+                </a-button>
+                <a-button size="small" @click="deselectAllEditProducts">
+                  <template #icon>
+                    <icon-delete />
+                  </template>
+                  Bỏ chọn tất cả
+                </a-button>
+              </div>
+
+              <a-table
+                row-key="id"
+                :key="`product-table-${couponEditForm.selectedProductIds.length}`"
+                :columns="productColumnsWithCheckbox"
+                :data="filteredProducts"
+                :pagination="productPagination"
+                :loading="productsLoading"
+                :scroll="{ y: 300 }"
+                size="small"
+                :bordered="{ cell: true }"
+              >
+                <template #selectHeader>
+                  <a-checkbox
+                    :model-value="isAllEditProductsSelected"
+                    :indeterminate="isSomeEditProductsSelected && !isAllEditProductsSelected"
+                    @change="toggleAllEditProducts"
+                  />
+                </template>
+                <template #select="{ record }">
+                  <a-checkbox
+                    :model-value="couponEditForm.selectedProductIds.includes(record.id)"
+                    @change="() => toggleEditProductSelection(record.id)"
+                  />
+                </template>
+                <template #anhSanPham="{ record }">
+                  <div class="product-image-cell">
+                    <img
+                      v-if="record.anhSanPham && record.anhSanPham.length > 0"
+                      :src="record.anhSanPham[0]"
+                      :alt="record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham"
+                      class="product-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="product-image-placeholder">
+                      <icon-image :size="24" style="color: var(--color-text-4)" />
+                    </div>
+                  </div>
+                </template>
+                <template #tenSanPham="{ record }">
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
+                  </div>
+                </template>
+                <template #giaBan="{ record }">
+                  <span>{{ formatCurrency(record.giaBan || 0) }}</span>
+                </template>
+              </a-table>
+
+              <div
+                v-if="!productsLoading && filteredProducts.length === 0"
+                style="text-align: center; padding: 20px; color: var(--color-text-3)"
+              >
+                Không tìm thấy sản phẩm nào
+              </div>
+              <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
+                Đã chọn:
+                <strong>{{ couponEditForm.selectedProductIds.length }}</strong>
+                sản phẩm
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Middle/Right Column: Customer Selection -->
@@ -543,75 +634,6 @@
           </div>
         </div>
 
-        <!-- Right Column: Product Selection -->
-        <div v-if="couponEditForm.applyToProducts && (couponEditForm.featured || !couponEditForm.featured)" :class="productColumnClass">
-          <div class="modal-column-title">Chọn sản phẩm áp dụng</div>
-          <div class="product-selection-section">
-            <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
-
-            <!-- Select All / Deselect All buttons -->
-            <div style="margin-bottom: 12px; display: flex; gap: 8px">
-              <a-button size="small" @click="selectAllEditProducts">
-                <template #icon>
-                  <icon-plus />
-                </template>
-                Chọn tất cả
-              </a-button>
-              <a-button size="small" @click="deselectAllEditProducts">
-                <template #icon>
-                  <icon-delete />
-                </template>
-                Bỏ chọn tất cả
-              </a-button>
-            </div>
-
-            <a-table
-              row-key="id"
-              :key="`product-table-${couponEditForm.selectedProductIds.length}`"
-              :columns="productColumnsWithCheckbox"
-              :data="filteredProducts"
-              :pagination="productPagination"
-              :loading="productsLoading"
-              :scroll="{ y: 350 }"
-              size="small"
-              :bordered="{ cell: true }"
-            >
-              <template #selectHeader>
-                <a-checkbox
-                  :model-value="isAllEditProductsSelected"
-                  :indeterminate="isSomeEditProductsSelected && !isAllEditProductsSelected"
-                  @change="toggleAllEditProducts"
-                />
-              </template>
-              <template #select="{ record }">
-                <a-checkbox
-                  :model-value="couponEditForm.selectedProductIds.includes(record.id)"
-                  @change="() => toggleEditProductSelection(record.id)"
-                />
-              </template>
-              <template #tenSanPham="{ record }">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
-                </div>
-              </template>
-              <template #giaBan="{ record }">
-                <span>{{ formatCurrency(record.giaBan || 0) }}</span>
-              </template>
-            </a-table>
-
-            <div
-              v-if="!productsLoading && filteredProducts.length === 0"
-              style="text-align: center; padding: 20px; color: var(--color-text-3)"
-            >
-              Không tìm thấy sản phẩm nào
-            </div>
-            <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-              Đã chọn:
-              <strong>{{ couponEditForm.selectedProductIds.length }}</strong>
-              sản phẩm
-            </div>
-          </div>
-        </div>
       </div>
     </a-modal>
 
@@ -697,6 +719,7 @@ import {
   IconPlusCircle,
   IconUser,
   IconEmpty,
+  IconImage,
 } from '@arco-design/web-vue/es/icon'
 import downloadCsv from '@/utils/export-csv'
 import {
@@ -753,86 +776,73 @@ const columns = [
   {
     title: 'STT',
     dataIndex: 'index',
-    width: 70,
+    width: 60,
     align: 'center',
   },
   {
-    title: 'Mã phiếu',
+    title: 'Mã',
     dataIndex: 'code',
-    width: 120,
+    width: 105,
   },
   {
-    title: 'Tên phiếu giảm giá',
+    title: 'Tên phiếu',
     dataIndex: 'name',
-    width: 200,
+    ellipsis: true,
+    tooltip: true,
   },
   {
     title: 'Nổi bật',
     dataIndex: 'featured',
     slotName: 'featured',
+    width: 80,
+    align: 'center',
+  },
+  {
+    title: 'Giảm',
+    dataIndex: 'discount_value',
+    slotName: 'discount_value',
     width: 100,
     align: 'center',
   },
   {
-    title: 'Giá trị giảm',
-    dataIndex: 'discount_value',
-    slotName: 'discount_value',
-    width: 120,
-    align: 'center',
-  },
-  {
-    title: 'Giá trị tối thiểu',
+    title: 'ĐH tối thiểu',
     dataIndex: 'min_order_value',
     slotName: 'min_order_value',
-    width: 130,
-    align: 'center',
+    width: 120,
+    align: 'right',
   },
   {
-    title: 'Giá trị tối đa',
+    title: 'Giảm tối đa',
     dataIndex: 'max_discount_value',
     slotName: 'max_discount_value',
-    width: 130,
-    align: 'center',
+    width: 120,
+    align: 'right',
   },
   {
     title: 'Thời gian',
     dataIndex: 'start_date',
     slotName: 'validity_period',
-    width: 200,
+    width: 185,
     align: 'center',
   },
   {
-    title: 'Số lượng',
+    title: 'SL',
     dataIndex: 'quantity',
     slotName: 'quantity',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: 'Ngày tạo',
-    dataIndex: 'created_at',
-    slotName: 'created_at',
-    width: 160,
-    align: 'center',
-  },
-  {
-    title: 'Ngày cập nhật',
-    dataIndex: 'updated_at',
-    slotName: 'updated_at',
-    width: 160,
+    width: 70,
     align: 'center',
   },
   {
     title: 'Trạng thái',
     dataIndex: 'status',
     slotName: 'status',
-    width: 120,
+    width: 110,
     align: 'center',
   },
   {
     title: 'Thao tác',
     slotName: 'action',
-    width: 150,
+    width: 120,
     fixed: 'right',
     align: 'center',
   },
@@ -884,6 +894,7 @@ const exportSubmitting = ref(false)
 
 const couponEditFormRef = ref<FormInstance>()
 const couponEditForm = reactive({
+  code: '',
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: 10,
@@ -909,34 +920,25 @@ const couponEditRules: FormRules = {
 
 const isPercentEdit = computed(() => couponEditForm.discountMode === 'percentage')
 
-// Modal layout computeds
-const hasMultipleColumns = computed(() => couponEditForm.featured || couponEditForm.applyToProducts)
+// Modal layout computeds - only featured creates new column, products stay in form
+const hasMultipleColumns = computed(() => couponEditForm.featured)
 
 const modalWidth = computed(() => {
-  const bothEnabled = couponEditForm.featured && couponEditForm.applyToProducts
-  if (bothEnabled) return 1600 // 3 columns
-  if (couponEditForm.featured || couponEditForm.applyToProducts) return 1200 // 2 columns
-  return 620 // 1 column
+  if (couponEditForm.featured) return 1200 // 2 columns
+  return 700 // 1 column - comfortable width for 2-column checkbox layout
 })
 
 const modalLayoutClass = computed(() => {
-  if (couponEditForm.featured && couponEditForm.applyToProducts) return 'modal-three-columns'
-  if (couponEditForm.featured || couponEditForm.applyToProducts) return 'modal-two-columns'
+  if (couponEditForm.featured) return 'modal-two-columns'
   return ''
 })
 
 const formColumnClass = computed(() => {
-  if (couponEditForm.featured && couponEditForm.applyToProducts) return 'modal-left-column-three'
-  if (couponEditForm.featured || couponEditForm.applyToProducts) return 'modal-left-column'
+  if (couponEditForm.featured) return 'modal-left-column'
   return ''
 })
 
 const customerColumnClass = computed(() => {
-  if (couponEditForm.featured && couponEditForm.applyToProducts) return 'modal-middle-column'
-  return 'modal-right-column'
-})
-
-const productColumnClass = computed(() => {
   return 'modal-right-column'
 })
 
@@ -1130,6 +1132,7 @@ interface ProductApiModel {
   }
   tenSanPhamChiTiet?: string
   maChiTietSanPham?: string
+  anhSanPham?: string[]
   giaBan?: number
   soLuong?: number
   trangThai?: boolean
@@ -1140,6 +1143,13 @@ const productsLoading = ref(false)
 const productSearchQuery = ref('')
 
 const productColumns = [
+  {
+    title: 'Ảnh',
+    dataIndex: 'anhSanPham',
+    slotName: 'anhSanPham',
+    width: 80,
+    align: 'center' as const,
+  },
   {
     title: 'Tên sản phẩm',
     dataIndex: 'tenSanPham',
@@ -1373,6 +1383,16 @@ const formatCurrency = (amount: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
+}
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
+  // Show placeholder instead
+  const placeholder = img.parentElement?.querySelector('.product-image-placeholder')
+  if (placeholder) {
+    ;(placeholder as HTMLElement).style.display = 'flex'
+  }
 }
 
 // Filtered coupons computed
@@ -1660,6 +1680,7 @@ const viewAppliedCustomers = async () => {
 
 const editCoupon = async (coupon: CouponRecord) => {
   selectedCoupon.value = coupon
+  couponEditForm.code = coupon.code ?? ''
   couponEditForm.name = coupon.name ?? ''
   couponEditForm.discountMode = coupon.discount_type === 'percentage' ? 'percentage' : 'amount'
   couponEditForm.discountValue = Number(coupon.discount_value ?? 0)
@@ -2155,6 +2176,35 @@ onMounted(() => {
   justify-content: center;
 }
 
+/* Fix action buttons alignment */
+:deep(.arco-table-td) .arco-space {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.arco-table-td) .arco-btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Status tag wrapper to ensure proper rendering */
+.status-tag-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.status-tag-wrapper .arco-tag {
+  border-radius: 4px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: fit-content;
+}
+
 .customer-selection-section {
   border: 1px solid var(--color-border-2);
   border-radius: 8px;
@@ -2194,11 +2244,12 @@ onMounted(() => {
 
 /* Form column in 2-column layout */
 .modal-left-column {
-  flex: 0 0 48%;
+  flex: 0 0 50%;
   padding: 20px;
   border-right: 1px solid var(--color-border-2);
   overflow-y: auto;
   max-height: 70vh;
+  min-width: 0;
 }
 
 /* Form column in 3-column layout */
@@ -2222,11 +2273,12 @@ onMounted(() => {
 
 /* Right column (customers in 2-col or products in 2/3-col) */
 .modal-right-column {
-  flex: 1;
+  flex: 0 0 50%;
   padding: 20px;
   background: var(--color-fill-1);
   overflow-y: auto;
   max-height: 70vh;
+  min-width: 0;
 }
 
 .modal-column-title {
@@ -2268,6 +2320,64 @@ onMounted(() => {
 .product-selection-section :deep(.arco-table-th) {
   background-color: var(--color-fill-2);
   font-weight: 600;
+}
+
+.product-selection-section :deep(.arco-table-td) {
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.product-selection-section :deep(.arco-table-tr:hover) {
+  background-color: var(--color-fill-1);
+}
+
+.product-selection-section :deep(.arco-checkbox) {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.product-selection-section :deep(.arco-checkbox-icon) {
+  pointer-events: auto !important;
+}
+
+.product-selection-section :deep(.arco-table-cell) {
+  pointer-events: auto !important;
+}
+
+.product-selection-section :deep(.arco-table-td) {
+  position: relative;
+  z-index: 1;
+}
+
+.product-selection-section :deep(.arco-table-th .arco-checkbox) {
+  pointer-events: auto !important;
+}
+
+/* Product Image Styles */
+.product-image-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.product-thumbnail {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-2);
+}
+
+.product-image-placeholder {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-fill-2);
+  border-radius: 4px;
+  border: 1px dashed var(--color-border-3);
 }
 
 /* History section styles */
@@ -2355,5 +2465,48 @@ onMounted(() => {
   font-size: 13px;
   color: var(--color-text-2);
   line-height: 1.6;
+}
+
+/* Modal with fixed footer - applies to all modals */
+:deep(.arco-modal-wrapper .arco-modal) {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+:deep(.arco-modal-wrapper .arco-modal-body) {
+  max-height: calc(90vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+:deep(.arco-modal-wrapper .arco-modal-footer) {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-bg-1);
+  border-top: 1px solid var(--color-border-2);
+  margin-top: 0;
+  padding: 16px 20px;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+/* Edit modal specific adjustments */
+.edit-modal-multi-column :deep(.arco-modal-body) {
+  padding: 0;
+}
+
+/* Fix modal columns overflow */
+.modal-two-column-container,
+.modal-three-column-container {
+  max-height: calc(90vh - 140px);
+  overflow: hidden;
+}
+
+.modal-left-column,
+.modal-middle-column,
+.modal-right-column {
+  max-height: calc(90vh - 140px);
+  overflow-y: auto;
 }
 </style>

@@ -17,6 +17,10 @@ public interface ChiTietPhieuGiamGiaRepository extends JpaRepository<ChiTietPhie
     
     @Modifying
     @Query("UPDATE ChiTietPhieuGiamGia c SET c.deleted = true WHERE c.idPhieuGiamGia.id = :idPhieuGiamGia")
+    void softDeleteByIdPhieuGiamGia(@Param("idPhieuGiamGia") Integer idPhieuGiamGia);
+    
+    @Modifying
+    @Query("DELETE FROM ChiTietPhieuGiamGia c WHERE c.idPhieuGiamGia.id = :idPhieuGiamGia")
     void deleteByIdPhieuGiamGia(@Param("idPhieuGiamGia") Integer idPhieuGiamGia);
     
     @Query("SELECT c FROM ChiTietPhieuGiamGia c WHERE c.idChiTietSanPham.id = :idChiTietSanPham AND c.deleted = false")

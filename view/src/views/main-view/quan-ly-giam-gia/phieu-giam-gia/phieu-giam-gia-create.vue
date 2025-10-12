@@ -22,7 +22,7 @@
           <a-form ref="formRef" :model="formState" :rules="rules" layout="vertical">
             <!-- Mã phiếu giảm giá -->
             <a-form-item field="code" label="Mã phiếu giảm giá">
-              <a-input v-model="formState.code" placeholder="Mã tự động" :disabled="true" />
+              <a-input v-model="formState.code" placeholder="Nhập mã phiếu giảm giá" allow-clear />
             </a-form-item>
 
             <!-- Tên phiếu giảm giá -->
@@ -203,6 +203,20 @@
                     @change="() => toggleProductSelection(record.id)"
                   />
                 </template>
+                <template #anhSanPham="{ record }">
+                  <div class="product-image-cell">
+                    <img
+                      v-if="record.anhSanPham && record.anhSanPham.length > 0"
+                      :src="record.anhSanPham[0]"
+                      :alt="record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham"
+                      class="product-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="product-image-placeholder">
+                      <icon-image :size="24" style="color: var(--color-text-4)" />
+                    </div>
+                  </div>
+                </template>
                 <template #tenSanPham="{ record }">
                   <div style="display: flex; align-items: center; gap: 8px">
                     <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
@@ -345,7 +359,7 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
 import { createCoupon, fetchCoupons, fetchCustomers, type CustomerApiModel } from '@/api/discount-management'
-import { IconPlus, IconDelete } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete, IconImage } from '@arco-design/web-vue/es/icon'
 
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
@@ -529,6 +543,13 @@ const productPagination = computed(() => ({
 }))
 
 const productColumns = [
+  {
+    title: 'Ảnh',
+    dataIndex: 'anhSanPham',
+    slotName: 'anhSanPham',
+    width: 80,
+    align: 'center' as const,
+  },
   {
     title: 'Tên sản phẩm',
     dataIndex: 'tenSanPham',
@@ -763,6 +784,16 @@ const formatCurrency = (amount: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
+}
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
+  // Show placeholder instead
+  const placeholder = img.parentElement?.querySelector('.product-image-placeholder')
+  if (placeholder) {
+    ;(placeholder as HTMLElement).style.display = 'flex'
+  }
 }
 
 const formatDateRange = (startDate: string, endDate: string) => {
@@ -1101,5 +1132,33 @@ const confirmSave = async () => {
 
 .product-selection-section :deep(.arco-table-th .arco-checkbox) {
   pointer-events: auto !important;
+}
+
+/* Product Image Styles */
+.product-image-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.product-thumbnail {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-2);
+}
+
+.product-image-placeholder {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-fill-2);
+  border-radius: 4px;
+  border: 1px dashed var(--color-border-3);
 }
 </style>

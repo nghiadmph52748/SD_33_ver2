@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/chi-tiet-dot-giam-gia-management")
 @CrossOrigin(origins = "*")
@@ -57,5 +59,16 @@ public class ChiTietDotGiamGiaController {
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         service.updateStatus(id);
         return new ResponseObject<>(null, "Xoá chi tiết đợt giảm giá thành công");
+    }
+
+    @GetMapping("/by-dot-giam-gia/{id}")
+    public ResponseObject<?> getByDotGiamGiaId(@PathVariable Integer id) {
+        return new ResponseObject<>(service.getByDotGiamGiaId(id));
+    }
+
+    @PostMapping("/add-batch")
+    public ResponseObject<?> addBatch(@RequestBody List<ChiTietDotGiamGiaRequest> requests) {
+        service.addBatch(requests);
+        return new ResponseObject<>(null, "Thêm danh sách chi tiết đợt giảm giá thành công");
     }
 }

@@ -215,3 +215,27 @@ export interface PromotionHistoryApiModel {
 
 export const fetchPromotionHistory = (promotionId: number) =>
   requestJson<PromotionHistoryApiModel[]>(`/dot-giam-gia-management/history/${promotionId}`)
+
+// Promotion Product Detail API
+export interface PromotionProductDetailApiModel {
+  id: number
+  idDotGiamGia: number
+  idChiTietSanPham: number
+  tenSanPham?: string
+  maChiTietSanPham?: string
+}
+
+export interface CreatePromotionProductDetailPayload {
+  idDotGiamGia: number
+  idChiTietSanPham: number
+  deleted?: boolean
+}
+
+export const fetchPromotionProductDetails = (promotionId: number) =>
+  requestJson<PromotionProductDetailApiModel[]>(`/chi-tiet-dot-giam-gia-management/by-dot-giam-gia/${promotionId}`)
+
+export const createPromotionProductDetailsBatch = (payload: CreatePromotionProductDetailPayload[]) =>
+  requestJson<null>('/chi-tiet-dot-giam-gia-management/add-batch', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })

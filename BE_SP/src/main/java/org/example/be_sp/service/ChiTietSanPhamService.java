@@ -38,11 +38,11 @@ public class ChiTietSanPhamService {
     TrongLuongRepository trongLuong;
 
     public List<ChiTietSanPhamFullResponse> getAll() {
-        return repository.findAllByDeleted(false).stream().map(ChiTietSanPhamFullResponse::new).toList();
+        return repository.findAllByDeletedWithDetails(false).stream().map(ChiTietSanPhamFullResponse::new).toList();
     }
 
     public List<ChiTietSanPhamFullResponse> getAllByIdSanPham(Integer idSanPham) {
-        return repository.findAllByDeletedAndIdSanPham_Id(false, idSanPham).stream()
+        return repository.findAllByDeletedAndIdSanPhamIdWithDetails(false, idSanPham).stream()
                 .map(ChiTietSanPhamFullResponse::new).toList();
     }
 
@@ -58,7 +58,7 @@ public class ChiTietSanPhamService {
     }
 
     public ChiTietSanPhamFullResponse getById(Integer id) {
-        return repository.findById(id).map(ChiTietSanPhamFullResponse::new).orElseThrow(() -> new ApiException("Chi tiết sản phẩm không tồn tại", "404"));
+        return repository.findByIdWithDetails(id).map(ChiTietSanPhamFullResponse::new).orElseThrow(() -> new ApiException("Chi tiết sản phẩm không tồn tại", "404"));
     }
 
     public Integer updateStatus(Integer id) {

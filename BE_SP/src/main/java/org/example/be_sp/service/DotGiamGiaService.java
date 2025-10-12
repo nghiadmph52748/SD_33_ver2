@@ -40,6 +40,17 @@ public class DotGiamGiaService extends GenericCrudService<DotGiamGia, Integer, D
     NhanVienRepository nhanVienRepository;
     
     /**
+     * Override getAll to exclude soft-deleted records
+     */
+    @Override
+    public List<DotGiamGiaResponse> getAll() {
+        return repository.findAll().stream()
+                .filter(dgg -> !Boolean.TRUE.equals(dgg.getDeleted()))
+                .map(dgg -> MapperUtils.map(dgg, DotGiamGiaResponse.class))
+                .toList();
+    }
+    
+    /**
      * Override add to include timestamp and history logging
      */
     @Override
@@ -107,17 +118,17 @@ public class DotGiamGiaService extends GenericCrudService<DotGiamGia, Integer, D
 
     public void delete(Integer id) {
         // Verify the entity exists before deleting
-        if (!repository.existsById(id)) {
-            throw new ApiException("DotGiamGia not found", "404");
-        }
+        DotGiamGia dgg = repository.findById(id)
+                .orElseThrow(() -> new ApiException("DotGiamGia not found", "404"));
         
-        DotGiamGia dgg = repository.getById(id);
+        // Soft delete: set deleted = true instead of removing from database
+        dgg.setDeleted(true);
+        dgg.setTrangThai(false); // Also set status to inactive
+        dgg.setUpdatedAt(LocalDateTime.now());
+        repository.save(dgg);
         
-        // Log deletion before actually deleting
+        // Log deletion
         logHistory(id, "XÓA", "Xóa đợt giảm giá: " + dgg.getTenDotGiamGia());
-        
-        // Hard delete from database
-        repository.deleteById(id);
     }
     
     /**

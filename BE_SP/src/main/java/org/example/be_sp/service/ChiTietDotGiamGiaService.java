@@ -40,6 +40,13 @@ public class ChiTietDotGiamGiaService {
         ChiTietDotGiamGia e = MapperUtils.map(chiTietDotGiamGiaResponse, ChiTietDotGiamGia.class);
         e.setIdChiTietSanPham(chiTietSanPhamRepository.findChiTietSanPhamById(chiTietDotGiamGiaResponse.getIdChiTietSanPham()));
         e.setIdDotGiamGia(dotGiamGiaRepository.findDotGiamGiaById(chiTietDotGiamGiaResponse.getIdDotGiamGia()));
+        // Set default values if not provided
+        if (e.getTrangThai() == null) {
+            e.setTrangThai(true);
+        }
+        if (e.getDeleted() == null) {
+            e.setDeleted(false);
+        }
         repository.save(e);
     }
 
@@ -60,5 +67,18 @@ public class ChiTietDotGiamGiaService {
         ChiTietDotGiamGia c = repository.findById(id).orElseThrow(() -> new ApiException("Chi tiết đợt giảm giá không tồn tại", "404"));
         c.setDeleted(true);
         repository.save(c);
+    }
+
+    public List<ChiTietDotGiamGiaResponse> getByDotGiamGiaId(Integer idDotGiamGia) {
+        return repository.findByIdDotGiamGia_IdAndDeletedFalse(idDotGiamGia)
+                .stream()
+                .map(ChiTietDotGiamGiaResponse::new)
+                .toList();
+    }
+
+    public void addBatch(List<ChiTietDotGiamGiaRequest> requests) {
+        for (ChiTietDotGiamGiaRequest request : requests) {
+            add(request);
+        }
     }
 }

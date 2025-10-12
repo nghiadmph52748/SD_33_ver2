@@ -114,7 +114,7 @@ public class ChiTietSanPhamFullResponse {
         this.giaBan = s.getGiaBan();
         this.trangThai = s.getTrangThai();
         
-        // Lọc đợt khuyến mãi còn hiệu lực
+        // Lọc đợt khuyến mãi còn hiệu lực và chọn đợt có giá trị giảm cao nhất
         if (s.getChiTietDotGiamGias() != null) {
             LocalDateTime now = LocalDateTime.now();
             
@@ -131,7 +131,14 @@ public class ChiTietSanPhamFullResponse {
                                 || !now.isBefore(ct.getIdDotGiamGia().getNgayBatDau()))
                             && (ct.getIdDotGiamGia().getNgayKetThuc() == null 
                                 || !now.isAfter(ct.getIdDotGiamGia().getNgayKetThuc())))
-                    .findFirst();
+                    // Sắp xếp theo giá trị giảm giá giảm dần (cao nhất trước)
+                    .max((ct1, ct2) -> {
+                        Integer discount1 = ct1.getIdDotGiamGia().getGiaTriGiamGia();
+                        Integer discount2 = ct2.getIdDotGiamGia().getGiaTriGiamGia();
+                        if (discount1 == null) return -1;
+                        if (discount2 == null) return 1;
+                        return discount1.compareTo(discount2);
+                    });
             
             this.tenDotGiamGia = validPromotion
                     .map(ct -> ct.getIdDotGiamGia().getTenDotGiamGia())
