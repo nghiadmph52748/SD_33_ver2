@@ -64,13 +64,21 @@
         <div v-else-if="viewMode === 'grid'" class="products-grid">
           <a-card v-for="product in filteredProducts" :key="product.id" class="product-card" hoverable @click="addToCart(product)">
             <template #cover>
-              <img :src="getProductImage(product)" :alt="product.tenSanPham" class="product-image" />
+              <div class="product-image-wrapper">
+                <img :src="getProductImage(product)" :alt="product.tenSanPham" class="product-image" />
+                <a-tag v-if="hasPromotion(product)" class="promo-badge" color="red">{{ getPromotionLabel(product) }}</a-tag>
+              </div>
             </template>
 
             <a-card-meta :title="product.tenSanPham">
               <template #description>
                 <div class="product-info">
-                  <div class="product-price">{{ formatCurrency(getProductPrice(product)) }}</div>
+                  <div class="product-price-section">
+                    <div v-if="hasPromotion(product)" class="original-price">{{ formatCurrency(getOriginalPrice(product)) }}</div>
+                    <div class="product-price" :class="{ 'promo-price': hasPromotion(product) }">
+                      {{ formatCurrency(getProductPrice(product)) }}
+                    </div>
+                  </div>
                   <div class="product-stock">
                     <a-tag :color="getStockColor(product)">{{ getStockText(product) }}</a-tag>
                   </div>
@@ -254,6 +262,14 @@
               <template #code="{ record }">
                 <div class="coupon-code">
                   <strong>{{ record.maPhieuGiamGia }}</strong>
+                  <a-tag
+                    v-if="couponProductDetails.has(record.id) && (couponProductDetails.get(record.id)?.length || 0) > 0"
+                    color="purple"
+                    size="small"
+                    style="margin-left: 8px"
+                  >
+                    Sản phẩm cụ thể
+                  </a-tag>
                 </div>
               </template>
 
@@ -298,8 +314,16 @@
               <div class="item-info">
                 <img :src="item.image" :alt="item.name" class="item-image" />
                 <div class="item-details">
-                  <div class="item-name">{{ item.name }}</div>
-                  <div class="item-price">{{ formatCurrency(item.price) }}</div>
+                  <div class="item-name">
+                    {{ item.name }}
+                    <a-tag v-if="item.hasPromotion" color="red" size="small" style="margin-left: 4px">KM</a-tag>
+                  </div>
+                  <div class="item-price-section">
+                    <div v-if="item.hasPromotion" class="original-price small">{{ formatCurrency(item.originalPrice) }}</div>
+                    <div class="item-price" :class="{ 'promo-price': item.hasPromotion }">
+                      {{ formatCurrency(item.price) }}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -328,10 +352,22 @@
               <span>{{ formatCurrency(subtotal) }}</span>
             </div>
 
+            <!-- Promotion Savings -->
+            <div v-if="promotionSavings > 0" class="summary-row savings-info">
+              <div class="savings-label">
+                <span>Tiết kiệm từ khuyến mãi:</span>
+                <div class="savings-note">{{ promotionItemsCount }} sản phẩm</div>
+              </div>
+              <span class="savings-amount">-{{ formatCurrency(promotionSavings) }}</span>
+            </div>
+
             <!-- Applied Coupon -->
             <div v-if="appliedCoupon" class="summary-row discount-applied">
-              <span>Giảm giá ({{ appliedCoupon.code }}):</span>
-              <span>-{{ formatCurrency(discountAmount) }}</span>
+              <div class="discount-info">
+                <span>Giảm giá ({{ appliedCoupon.code }}):</span>
+                <div class="discount-note">{{ getApplicableProductsCount }} sản phẩm được áp dụng</div>
+              </div>
+              <span class="discount-amount">-{{ formatCurrency(discountAmount) }}</span>
             </div>
 
             <!-- Add Coupon Button -->
@@ -493,7 +529,7 @@ import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { createVnpayPayment, type CreateVnpayPaymentPayload } from '@/api/payment'
-import { fetchCustomers as fetchCustomersApi, fetchCoupons as fetchCouponsApi } from '@/api/discount-management'
+import { fetchCustomers as fetchCustomersApi, fetchCoupons as fetchCouponsApi, fetchCouponProductDetails } from '@/api/discount-management'
 import { Message } from '@arco-design/web-vue'
 import {
   IconPlus,
@@ -619,8 +655,26 @@ const formatCurrency = (amount: number) => {
 }
 
 const getProductPrice = (product: any) => {
-  // Sử dụng giá bán từ chi tiết sản phẩm
+  // Nếu có khuyến mãi, tính giá sau giảm
+  const originalPrice = Number(product.giaBan || 0)
+  if (product.idDotGiamGia && product.giaTriGiamGia) {
+    const discountPercent = Number(product.giaTriGiamGia)
+    return originalPrice - (originalPrice * discountPercent) / 100
+  }
+  return originalPrice
+}
+
+const getOriginalPrice = (product: any) => {
   return Number(product.giaBan || 0)
+}
+
+const hasPromotion = (product: any) => {
+  return Boolean(product.idDotGiamGia && product.giaTriGiamGia)
+}
+
+const getPromotionLabel = (product: any) => {
+  if (!hasPromotion(product)) return ''
+  return `-${product.giaTriGiamGia}%`
 }
 
 const getProductImage = (product: any) => {
@@ -709,6 +763,10 @@ const couponLoading = ref(false)
 const selectedCoupon = ref<any>(null)
 const appliedCoupon = ref<any>(null)
 
+// Coupon product restrictions
+const couponProductDetails = ref<Map<number, number[]>>(new Map())
+const appliedCouponProductIds = ref<number[]>([])
+
 // QR Scanner variables
 const showQRScanner = ref(false)
 const qrVideo = ref<HTMLVideoElement | null>(null)
@@ -774,13 +832,39 @@ const subtotal = computed(() => {
   return cartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
 })
 
+// Tổng giá trị các sản phẩm được áp dụng giảm giá
+const applicableCartSubtotal = computed(() => {
+  if (!appliedCoupon.value) return 0
+
+  // Nếu không có giới hạn sản phẩm => toàn bộ giỏ hàng
+  if (appliedCouponProductIds.value.length === 0) {
+    return subtotal.value
+  }
+
+  // Tính tổng chỉ các sản phẩm được phép
+  return cartItems.value
+    .filter((item) => appliedCouponProductIds.value.includes(item.id))
+    .reduce((sum, item) => sum + item.price * item.quantity, 0)
+})
+
+// Giá trị giảm giá thực tế
 const discountAmount = computed(() => {
   if (!appliedCoupon.value) return 0
 
+  const applicableAmount = applicableCartSubtotal.value
+
   if (appliedCoupon.value.type === 'percentage') {
-    return (subtotal.value * appliedCoupon.value.discount) / 100
+    const discount = (applicableAmount * appliedCoupon.value.discount) / 100
+
+    // Áp dụng cap nếu có
+    if (appliedCoupon.value.maxDiscount) {
+      return Math.min(discount, appliedCoupon.value.maxDiscount)
+    }
+    return discount
   }
-  return Math.min(appliedCoupon.value.discount, subtotal.value)
+
+  // Fixed amount
+  return Math.min(appliedCoupon.value.discount, applicableAmount)
 })
 
 const total = computed(() => {
@@ -824,6 +908,29 @@ const filteredCoupons = computed(() => {
   return filtered
 })
 
+// Promotion savings calculations
+const promotionSavings = computed(() => {
+  return cartItems.value.reduce((sum, item) => {
+    if (item.hasPromotion) {
+      return sum + (item.originalPrice - item.price) * item.quantity
+    }
+    return sum
+  }, 0)
+})
+
+const promotionItemsCount = computed(() => {
+  return cartItems.value.filter((item) => item.hasPromotion).length
+})
+
+// Helper utilities for discount UI
+const getApplicableProductsCount = computed(() => {
+  if (!appliedCoupon.value) return 0
+  if (appliedCouponProductIds.value.length === 0) {
+    return cartItems.value.length // All products
+  }
+  return cartItems.value.filter((item) => appliedCouponProductIds.value.includes(item.id)).length
+})
+
 // Computed for payment
 const paymentButtonLabel = computed(() => {
   const amountLabel = formatCurrency(Math.max(total.value, 0))
@@ -856,6 +963,9 @@ const addToSingleCart = (product: any) => {
       id: product.id,
       name: product.tenSanPham,
       price: getProductPrice(product),
+      originalPrice: getOriginalPrice(product),
+      hasPromotion: hasPromotion(product),
+      promotionLabel: getPromotionLabel(product),
       image: getProductImage(product),
       stock: product.soLuong || 0,
       quantity: 1,
@@ -893,7 +1003,7 @@ const fetchCustomers = async () => {
     } else {
       customersList.value = []
     }
-  } catch (error) {
+  } catch {
     Message.error('Không thể tải danh sách khách hàng')
     customersList.value = []
   } finally {
@@ -943,6 +1053,34 @@ const clearCustomer = () => {
 }
 
 // Coupon functions
+const loadCouponProductDetails = async (couponId: number): Promise<number[] | null> => {
+  // Check cache first
+  if (couponProductDetails.value.has(couponId)) {
+    const cached = couponProductDetails.value.get(couponId)
+    return cached && cached.length > 0 ? cached : null
+  }
+
+  try {
+    const details = await fetchCouponProductDetails(couponId)
+
+    // Nếu không có chi tiết => áp dụng cho tất cả sản phẩm
+    if (!details || details.length === 0) {
+      couponProductDetails.value.set(couponId, [])
+      return null // null = áp dụng toàn bộ
+    }
+
+    // Extract product IDs
+    const productIds = details.map((d) => d.idChiTietSanPham)
+    couponProductDetails.value.set(couponId, productIds)
+    return productIds
+  } catch {
+    // On error, assume applies to all products
+    // On error, assume applies to all products
+    couponProductDetails.value.set(couponId, [])
+    return null
+  }
+}
+
 const fetchCoupons = async () => {
   try {
     couponLoading.value = true
@@ -977,7 +1115,7 @@ const fetchCoupons = async () => {
     } else {
       couponsList.value = []
     }
-  } catch (error) {
+  } catch {
     Message.error('Không thể tải danh sách phiếu giảm giá')
     couponsList.value = []
   } finally {
@@ -997,42 +1135,70 @@ const getCouponRowClass = (record: any) => {
   return selectedCoupon.value?.id === record.id ? 'selected-row' : ''
 }
 
-const applyCoupon = () => {
+const applyCoupon = async () => {
   if (!selectedCoupon.value) {
     Message.warning('Vui lòng chọn một phiếu giảm giá!')
     return
   }
 
   if (subtotal.value <= 0) {
-    Message.warning('Giỏ hàng trống, không thể áp dụng phiếu giảm giá!')
+    Message.warning('Giỏ hàng trống!')
     return
   }
 
-  if (!selectedCoupon.value.trangThai) {
-    Message.warning('Phiếu giảm giá này không còn hoạt động!')
-    return
+  // Load product restrictions
+  couponLoading.value = true
+  const productIds = await loadCouponProductDetails(selectedCoupon.value.id)
+  couponLoading.value = false
+
+  // Kiểm tra sản phẩm trong giỏ
+  let hasApplicableProducts = true
+  if (productIds && productIds.length > 0) {
+    const cartProductIds = cartItems.value.map((item) => item.id)
+    hasApplicableProducts = productIds.some((id) => cartProductIds.includes(id))
+
+    if (!hasApplicableProducts) {
+      Message.warning('Giỏ hàng không có sản phẩm nào áp dụng được phiếu giảm giá này!')
+      return
+    }
   }
 
-  // Check minimum order amount
-  if (selectedCoupon.value.hoaDonToiThieu && subtotal.value < Number(selectedCoupon.value.hoaDonToiThieu)) {
-    Message.warning(`Hóa đơn tối thiểu phải từ ${formatCurrency(Number(selectedCoupon.value.hoaDonToiThieu))}!`)
+  // Store applicable product IDs
+  appliedCouponProductIds.value = productIds || []
+
+  // Tính subtotal của sản phẩm được áp dụng
+  const applicableAmount =
+    productIds && productIds.length > 0
+      ? cartItems.value.filter((item) => productIds.includes(item.id)).reduce((sum, item) => sum + item.price * item.quantity, 0)
+      : subtotal.value
+
+  // Check minimum order
+  const minOrder = selectedCoupon.value.hoaDonToiThieu ? Number(selectedCoupon.value.hoaDonToiThieu) : 0
+
+  if (applicableAmount < minOrder) {
+    Message.warning(`Tổng giá trị sản phẩm áp dụng phải từ ${formatCurrency(minOrder)}! (Hiện tại: ${formatCurrency(applicableAmount)})`)
     return
   }
 
   // Apply coupon
-  // loaiPhieuGiamGia: false (0) = percentage, true (1) = fixed amount
   appliedCoupon.value = {
     code: selectedCoupon.value.maPhieuGiamGia,
     type: selectedCoupon.value.loaiPhieuGiamGia ? 'fixed' : 'percentage',
     discount: Number(selectedCoupon.value.giaTriGiamGia),
+    maxDiscount: selectedCoupon.value.soTienToiDa ? Number(selectedCoupon.value.soTienToiDa) : null,
   }
 
   showCouponModal.value = false
-  Message.success('Áp dụng phiếu giảm giá thành công!')
+
+  const productCount = appliedCouponProductIds.value.length
+  const productNote = productCount > 0 ? ` (Áp dụng cho ${productCount} sản phẩm)` : ''
+
+  Message.success(`Áp dụng phiếu giảm giá thành công!${productNote}`)
 }
 
 const removeCoupon = () => {
   appliedCoupon.value = null
+  appliedCouponProductIds.value = []
   Message.info('Đã xóa phiếu giảm giá!')
 }
 
@@ -1046,6 +1212,7 @@ const resetCartState = () => {
   isGuestCustomer.value = false
   selectedCustomer.value = null
   appliedCoupon.value = null
+  appliedCouponProductIds.value = []
   customerPaid.value = 0
   change.value = 0
 }
@@ -1475,6 +1642,39 @@ onUnmounted(async () => {
   object-fit: cover;
 }
 
+.product-image-wrapper {
+  position: relative;
+}
+
+.promo-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.product-price-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.original-price {
+  font-size: 14px;
+  color: var(--color-text-3);
+  text-decoration: line-through;
+}
+
+.original-price.small {
+  font-size: 11px;
+}
+
+.promo-price {
+  color: #ff4d4f !important;
+  font-weight: 700;
+}
+
 .product-info {
   display: flex;
   justify-content: space-between;
@@ -1544,6 +1744,15 @@ onUnmounted(async () => {
   margin-bottom: 4px;
   font-size: 14px;
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.item-price-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .item-price {
@@ -1574,6 +1783,61 @@ onUnmounted(async () => {
   justify-content: space-between;
   margin-bottom: 8px;
   font-size: 14px;
+}
+
+.discount-applied {
+  background: rgba(var(--success-6), 0.05);
+  padding: 8px;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.discount-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.discount-note {
+  font-size: 11px;
+  color: var(--color-text-3);
+  font-style: italic;
+}
+
+.discount-amount {
+  color: var(--success-6);
+  font-weight: 600;
+}
+
+.coupon-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Promotion savings info */
+.savings-info {
+  background: rgba(255, 77, 79, 0.05);
+  padding: 8px;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.savings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.savings-note {
+  font-size: 11px;
+  color: var(--color-text-3);
+  font-style: italic;
+}
+
+.savings-amount {
+  color: #ff4d4f;
+  font-weight: 600;
 }
 
 .summary-row.total {

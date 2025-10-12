@@ -171,3 +171,13 @@ export interface CustomerApiModel {
 }
 
 export const fetchCustomers = () => requestJson<CustomerApiModel[]>('/khach-hang-management/playlist')
+
+// Coupon Product Detail API
+export interface CouponProductDetailApiModel {
+  id: number
+  idPhieuGiamGia: number
+  idChiTietSanPham: number
+}
+
+export const fetchCouponProductDetails = (couponId: number) =>
+  requestJson<CouponProductDetailApiModel[]>(`/chi-tiet-phieu-giam-gia-management/by-phieu-giam-gia/${couponId}`)

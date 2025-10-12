@@ -2,6 +2,7 @@ package org.example.be_sp.model.response;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -112,34 +113,38 @@ public class ChiTietSanPhamFullResponse {
         this.soLuong = s.getSoLuong();
         this.giaBan = s.getGiaBan();
         this.trangThai = s.getTrangThai();
+        
+        // Lọc đợt khuyến mãi còn hiệu lực
         if (s.getChiTietDotGiamGias() != null) {
-            this.tenDotGiamGia = s.getChiTietDotGiamGias().stream()
-                    .filter(ct -> ct != null && ct.getIdDotGiamGia() != null && Boolean.FALSE.equals(ct.getDeleted())
-                    && Boolean.TRUE.equals(ct.getTrangThai()))
+            LocalDateTime now = LocalDateTime.now();
+            
+            var validPromotion = s.getChiTietDotGiamGias().stream()
+                    .filter(ct -> ct != null 
+                            && ct.getIdDotGiamGia() != null 
+                            && Boolean.FALSE.equals(ct.getDeleted())
+                            && Boolean.TRUE.equals(ct.getTrangThai())
+                            // Kiểm tra đợt giảm giá còn hoạt động
+                            && Boolean.FALSE.equals(ct.getIdDotGiamGia().getDeleted())
+                            && Boolean.TRUE.equals(ct.getIdDotGiamGia().getTrangThai())
+                            // Kiểm tra thời gian hiệu lực
+                            && (ct.getIdDotGiamGia().getNgayBatDau() == null 
+                                || !now.isBefore(ct.getIdDotGiamGia().getNgayBatDau()))
+                            && (ct.getIdDotGiamGia().getNgayKetThuc() == null 
+                                || !now.isAfter(ct.getIdDotGiamGia().getNgayKetThuc())))
+                    .findFirst();
+            
+            this.tenDotGiamGia = validPromotion
                     .map(ct -> ct.getIdDotGiamGia().getTenDotGiamGia())
-                    .filter(ten -> ten != null)
-                    .findFirst()
                     .orElse(null);
-            this.giaTriGiamGia = s.getChiTietDotGiamGias().stream()
-                    .filter(ct -> ct != null && ct.getIdDotGiamGia() != null && Boolean.FALSE.equals(ct.getDeleted())
-                    && Boolean.TRUE.equals(ct.getTrangThai()))
+            this.giaTriGiamGia = validPromotion
                     .map(ct -> ct.getIdDotGiamGia().getGiaTriGiamGia())
-                    .filter(giaTri -> giaTri != null)
-                    .findFirst()
+                    .orElse(null);
+            this.idDotGiamGia = validPromotion
+                    .map(ct -> ct.getIdDotGiamGia().getId())
                     .orElse(null);
         } else {
             this.tenDotGiamGia = null;
             this.giaTriGiamGia = null;
-        }
-        if (s.getChiTietDotGiamGias() != null) {
-            this.idDotGiamGia = s.getChiTietDotGiamGias().stream()
-                    .filter(ct -> ct != null && ct.getIdDotGiamGia() != null && Boolean.FALSE.equals(ct.getDeleted())
-                    && Boolean.TRUE.equals(ct.getTrangThai()))
-                    .map(ct -> ct.getIdDotGiamGia().getId())
-                    .filter(idValue -> idValue != null)
-                    .findFirst()
-                    .orElse(null);
-        } else {
             this.idDotGiamGia = null;
         }
         this.ghiChu = s.getGhiChu();
