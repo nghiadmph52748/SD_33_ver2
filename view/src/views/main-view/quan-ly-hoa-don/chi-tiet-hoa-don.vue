@@ -27,7 +27,7 @@
           </template>
           Quay lại
         </a-button>
-        <a-button type="primary" @click="printInvoice" class="print-button">
+        <a-button type="primary" @click="goToPrintPage" class="print-button">
           <template #icon>
             <icon-printer />
           </template>
@@ -539,6 +539,19 @@ const goBack = () => {
 
 const printInvoice = () => {
   window.print()
+}
+
+const goToPrintPage = () => {
+  console.log('goToPrintPage called')
+  console.log('invoice.value:', invoice.value)
+  console.log('invoice.value.id:', invoice.value?.id)
+
+  if (invoice.value && invoice.value.id) {
+    console.log('Navigating to print page with ID:', invoice.value.id)
+    router.push({ name: 'InHoaDon', params: { id: invoice.value.id } })
+  } else {
+    console.error('No invoice ID available')
+  }
 }
 
 const handleViewProductDetail = (product: any) => {
@@ -1160,6 +1173,122 @@ onMounted(() => {
 
   .value {
     text-align: left;
+  }
+}
+
+/* Print Styles */
+@media print {
+  /* Ẩn tất cả menu, header, sidebar khi in */
+  .arco-layout-header,
+  .arco-layout-sider,
+  .arco-layout-aside,
+  .arco-menu,
+  .arco-menu-item,
+  .arco-menu-group,
+  .arco-menu-submenu,
+  .arco-layout-content,
+  .simple-breadcrumb,
+  .page-header,
+  .header-right,
+  .back-button,
+  .print-button {
+    display: none !important;
+  }
+
+  /* Ẩn các phần không cần thiết khi in */
+  .status-card,
+  .payment-history-card {
+    display: none !important;
+  }
+
+  /* Chỉ hiển thị nội dung chính */
+  .invoice-detail-page {
+    padding: 0;
+    background: white;
+    min-height: auto;
+    margin: 0;
+    width: 100%;
+  }
+
+  /* Hiển thị lại nội dung hóa đơn */
+  .invoice-content {
+    display: block !important;
+    margin: 0;
+    padding: 20px;
+  }
+
+  /* Tiêu đề biên lai */
+  .invoice-content::before {
+    content: 'BIÊN LAI BÁN HÀNG';
+    display: block;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 30px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #000;
+  }
+
+  /* Thông tin đơn hàng */
+  .info-card {
+    margin-bottom: 20px;
+    border: 1px solid #000;
+    page-break-inside: avoid;
+  }
+
+  .info-card .arco-card-header {
+    background: #f5f5f5;
+    border-bottom: 1px solid #000;
+  }
+
+  /* Danh sách sản phẩm */
+  .product-list-card {
+    margin-bottom: 20px;
+    border: 1px solid #000;
+    page-break-inside: avoid;
+  }
+
+  .product-list-card .arco-card-header {
+    background: #f5f5f5;
+    border-bottom: 1px solid #000;
+  }
+
+  /* Tổng kết đơn hàng */
+  .summary-card {
+    margin-bottom: 0;
+    border: 1px solid #000;
+    page-break-inside: avoid;
+  }
+
+  .summary-card .arco-card-header {
+    background: #f5f5f5;
+    border-bottom: 1px solid #000;
+  }
+
+  /* Đảm bảo table hiển thị đầy đủ */
+  .arco-table {
+    font-size: 12px;
+  }
+
+  .arco-table th,
+  .arco-table td {
+    border: 1px solid #000;
+    padding: 8px;
+  }
+
+  /* Ẩn pagination khi in */
+  .arco-pagination {
+    display: none !important;
+  }
+
+  /* Đảm bảo màu sắc hiển thị đúng */
+  * {
+    color: #000 !important;
+    background: white !important;
+  }
+
+  .arco-tag {
+    border: 1px solid #000;
   }
 }
 </style>

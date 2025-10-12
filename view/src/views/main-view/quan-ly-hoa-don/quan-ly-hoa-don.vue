@@ -67,10 +67,6 @@
             </a-button>
             <template #overlay>
               <a-menu>
-                <a-menu-item @click="printSelected">
-                  <icon-printer />
-                  In hóa đơn đã chọn
-                </a-menu-item>
                 <a-menu-item @click="cancelSelected">
                   <icon-close />
                   Hủy hóa đơn đã chọn
@@ -118,12 +114,6 @@
                 <icon-eye />
               </template>
               Xem
-            </a-button>
-            <a-button type="text" @click="printInvoice(record)">
-              <template #icon>
-                <icon-printer />
-              </template>
-              In
             </a-button>
           </a-space>
         </template>
@@ -227,7 +217,6 @@ import {
   IconDownload,
   IconMore,
   IconEye,
-  IconPrinter,
   IconEdit,
   IconClose,
 } from '@arco-design/web-vue/es/icon'
@@ -535,9 +524,6 @@ const viewInvoice = (invoice: any) => {
   router.push({ name: 'HoaDonChiTiet', params: { id: invoice.id } })
 }
 
-const printInvoice = () => {
-  // Implement print logic
-}
 
 const editInvoice = () => {
   // Implement edit logic
@@ -590,9 +576,6 @@ const exportExcel = () => {
   // Implement export logic
 }
 
-const printSelected = () => {
-  // Implement batch print logic
-}
 
 const cancelSelected = () => {
   // Implement batch cancel logic

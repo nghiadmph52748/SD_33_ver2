@@ -39,6 +39,18 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'in/:id',
+      name: 'InHoaDon',
+      component: () => import('@/views/main-view/quan-ly-hoa-don/invoice-print.vue'),
+      meta: {
+        locale: 'In hóa đơn',
+        requiresAuth: false,
+        roles: ['*'],
+        hideInMenu: true,
+        activeMenu: 'QuanLyHoaDonIndex',
+      },
+    },
+    {
       path: 'test-api',
       name: 'TestApi',
       component: () => import('@/views/main-view/quan-ly-hoa-don/test-api.vue'),
