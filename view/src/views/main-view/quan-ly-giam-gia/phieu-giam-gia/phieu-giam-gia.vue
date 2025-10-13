@@ -459,10 +459,11 @@
             </a-form-item>
 
             <a-form-item field="active" label="Trạng thái">
-              <a-switch v-model="couponEditForm.active">
-                <template #checked>Hoạt động</template>
-                <template #unchecked>Tạm dừng</template>
-              </a-switch>
+              <a-switch
+                v-model="couponEditForm.active"
+                checked-children="Hoạt động"
+                un-checked-children="Không hoạt động"
+              />
             </a-form-item>
 
             <a-row :gutter="16">

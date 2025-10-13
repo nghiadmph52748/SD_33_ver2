@@ -251,10 +251,11 @@
               />
             </a-form-item>
             <a-form-item field="active" label="Trạng thái">
-              <a-switch v-model="promotionEditForm.active">
-                <template #checked>Hoạt động</template>
-                <template #unchecked>Tạm dừng</template>
-              </a-switch>
+              <a-switch
+                v-model="promotionEditForm.active"
+                checked-children="Hoạt động"
+                un-checked-children="Không hoạt động"
+              />
             </a-form-item>
             <a-form-item field="applyToProducts">
               <a-checkbox v-model="promotionEditForm.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
