@@ -1,15 +1,14 @@
 package org.example.be_sp.model.request;
 
-import jdk.dynalink.linker.LinkerServices;
+import java.time.LocalDate;
+import java.util.List;
+
+import org.example.be_sp.model.DiaChi;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.example.be_sp.model.DiaChi;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Objects;
 
 @Getter
 @Setter
@@ -26,4 +25,9 @@ public class KhachHangRequest {
     private Boolean deleted;
     private List<DiaChi> listDiaChi;
     private Boolean trangThai;
+	 private Integer phanLoai;
+	 private LocalDate createAt;
+	 private Integer createBy;
+	 private LocalDate updateAt;
+	 private Integer updateBy;
 }

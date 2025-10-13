@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -19,6 +20,7 @@ import org.example.be_sp.model.request.NhanVienRequest;
 import org.example.be_sp.model.response.NhanVienResponse;
 import org.example.be_sp.repository.NhanVienRepository;
 import org.example.be_sp.repository.QuyenHanRepository;
+import org.example.be_sp.service.upload.UploadImageToCloudinary;
 import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class NhanVienService {
+
     @Autowired
     private NhanVienRepository nhanVienRepository;
     @Autowired
@@ -66,7 +69,20 @@ public class NhanVienService {
         nv.setTrangThai(request.getTrangThai());
         nv.setDeleted(false);
         nv.setGioiTinh(request.getGioiTinh());
-        nv.setAnhNhanVien(request.getAnhNhanVien());
+        nv.setCreateAt(request.getCreateAt());
+        nv.setCreateBy(request.getCreateBy());
+        try {
+            MultipartFile[] anhNhanVien = request.getAnhNhanVien();
+            if (anhNhanVien != null && anhNhanVien.length > 0) {
+                UploadImageToCloudinary uploadService = new UploadImageToCloudinary();
+                ArrayList<UploadImageToCloudinary.Image> anhNhanVienUrl = uploadService.uploadImage(anhNhanVien);
+                if (anhNhanVienUrl != null && !anhNhanVienUrl.isEmpty()) {
+                    nv.setAnhNhanVien(anhNhanVienUrl.get(0).getUrl());
+                }
+            }
+        } catch (Exception e) {
+            throw new ApiException("Lỗi khi upload ảnh nhân viên: " + e.getMessage(), "400");
+        }
         // set quyền hạn
         nv.setIdQuyenHan(repository.findById(request.getIdQuyenHan())
                 .orElseThrow(() -> new ApiException("QuyenHan not found", "404")));
@@ -83,24 +99,59 @@ public class NhanVienService {
         nhanVienRepository.save(nv);
     }
 
-
     public NhanVienResponse updateNhanVien(Integer id, NhanVienRequest request, PasswordEncoder passwordEncoder) {
         NhanVien nv = nhanVienRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên với id: " + id, "404"));
 
-        if (request.getTenNhanVien() != null) nv.setTenNhanVien(request.getTenNhanVien());
-        if (request.getEmail() != null) nv.setEmail(request.getEmail());
-        if (request.getSoDienThoai() != null) nv.setSoDienThoai(request.getSoDienThoai());
-        if (request.getDiaChiCuThe() != null) nv.setDiaChiCuThe(request.getDiaChiCuThe());
-        if (request.getThanhPho() != null) nv.setThanhPho(request.getThanhPho());
-        if (request.getQuan() != null) nv.setQuan(request.getQuan());
-        if (request.getPhuong() != null) nv.setPhuong(request.getPhuong());
-        if (request.getCccd() != null) nv.setCccd(request.getCccd());
-        if (request.getNgaySinh() != null) nv.setNgaySinh(request.getNgaySinh());
-        if (request.getTrangThai() != null) nv.setTrangThai(request.getTrangThai());
-        if (request.getDeleted() != null) nv.setDeleted(request.getDeleted());
-        if (request.getGioiTinh() != null) nv.setGioiTinh(request.getGioiTinh());
-        if (request.getAnhNhanVien() != null) nv.setAnhNhanVien(request.getAnhNhanVien());
+        if (request.getTenNhanVien() != null) {
+            nv.setTenNhanVien(request.getTenNhanVien());
+        }
+        if (request.getEmail() != null) {
+            nv.setEmail(request.getEmail());
+        }
+        if (request.getSoDienThoai() != null) {
+            nv.setSoDienThoai(request.getSoDienThoai());
+        }
+        if (request.getDiaChiCuThe() != null) {
+            nv.setDiaChiCuThe(request.getDiaChiCuThe());
+        }
+        if (request.getThanhPho() != null) {
+            nv.setThanhPho(request.getThanhPho());
+        }
+        if (request.getQuan() != null) {
+            nv.setQuan(request.getQuan());
+        }
+        if (request.getPhuong() != null) {
+            nv.setPhuong(request.getPhuong());
+        }
+        if (request.getCccd() != null) {
+            nv.setCccd(request.getCccd());
+        }
+        if (request.getNgaySinh() != null) {
+            nv.setNgaySinh(request.getNgaySinh());
+        }
+        if (request.getTrangThai() != null) {
+            nv.setTrangThai(request.getTrangThai());
+        }
+        if (request.getDeleted() != null) {
+            nv.setDeleted(request.getDeleted());
+        }
+        if (request.getGioiTinh() != null) {
+            nv.setGioiTinh(request.getGioiTinh());
+        }
+        // Upload ảnh mới nếu có
+        try {
+            MultipartFile[] anhNhanVien = request.getAnhNhanVien();
+            if (anhNhanVien != null && anhNhanVien.length > 0) {
+                UploadImageToCloudinary uploadService = new UploadImageToCloudinary();
+                ArrayList<UploadImageToCloudinary.Image> anhNhanVienUrl = uploadService.uploadImage(anhNhanVien);
+                if (anhNhanVienUrl != null && !anhNhanVienUrl.isEmpty()) {
+                    nv.setAnhNhanVien(anhNhanVienUrl.get(0).getUrl());
+                }
+            }
+        } catch (Exception e) {
+            throw new ApiException("Lỗi khi upload ảnh nhân viên: " + e.getMessage(), "400");
+        }
 
         // update quyền hạn
         if (request.getIdQuyenHan() != null) {
@@ -109,15 +160,31 @@ public class NhanVienService {
         }
 
         // update tài khoản
-        if (request.getTenTaiKhoan() != null) nv.setTenTaiKhoan(request.getTenTaiKhoan());
+        if (request.getTenTaiKhoan() != null) {
+            nv.setTenTaiKhoan(request.getTenTaiKhoan());
+        }
 
         // update mật khẩu
-        if (request.getMatKhau() != null) nv.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
+        if (request.getMatKhau() != null) {
+            nv.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
+        }
 
+        if (request.getCreateAt() != null) {
+            nv.setCreateAt(request.getCreateAt());
+        }
+        if (request.getCreateBy() != null) {
+            nv.setCreateBy(request.getCreateBy());
+        }
+
+        if (request.getUpdateAt() != null) {
+            nv.setUpdateAt(request.getUpdateAt());
+        }
+        if (request.getUpdateBy() != null) {
+            nv.setUpdateBy(request.getUpdateBy());
+        }
         nhanVienRepository.save(nv);
         return new NhanVienResponse(nv);
     }
-
 
     public boolean existsByEmail(String email) {
         return nhanVienRepository.existsByEmail(email);
@@ -127,11 +194,12 @@ public class NhanVienService {
         return nhanVienRepository.existsByTenTaiKhoan(tenTaiKhoan);
     }
 
-    public void updateStatus(Integer id){
+    public void updateStatus(Integer id) {
         NhanVien c = nhanVienRepository.findById(id).orElseThrow(() -> new ApiException("NhanVien not found", "404"));
         c.setDeleted(true);
         nhanVienRepository.save(c);
     }
+
     public void importNhanVienFromExcel(MultipartFile file, PasswordEncoder passwordEncoder) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -186,8 +254,11 @@ public class NhanVienService {
     public boolean existsById(Integer id) {
         return nhanVienRepository.existsById(id);  // Trả về true nếu tồn tại, false nếu không
     }
+
     private String getCellStringValue(Cell cell) {
-        if (cell == null) return null;
+        if (cell == null) {
+            return null;
+        }
         if (cell.getCellType() == CellType.STRING) {
             return cell.getStringCellValue().trim();
         } else if (cell.getCellType() == CellType.NUMERIC) {
@@ -213,6 +284,5 @@ public class NhanVienService {
         nhanVien.setTrangThai(trangThai);
         nhanVienRepository.save(nhanVien);
     }
-
 
 }

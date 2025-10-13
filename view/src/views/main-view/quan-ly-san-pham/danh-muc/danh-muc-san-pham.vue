@@ -2,7 +2,6 @@
   <div class="product-category-page">
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
-
     <!-- Search and Filter -->
     <a-card class="filters-card">
       <a-form :model="filters" layout="vertical">
@@ -41,7 +40,6 @@
           </a-col>
         </a-row>
       </a-form>
-
       <div class="reset-button-container">
         <div class="action-buttons">
           <a-space>
@@ -67,7 +65,6 @@
         </div>
       </div>
     </a-card>
-
     <!-- Categories Table -->
     <a-card title="Danh sách danh mục" class="table-card">
       <template #extra>
@@ -78,7 +75,6 @@
           Hoàn thành cập nhật
         </a-button>
       </template>
-
       <a-table
         :columns="columns"
         :data="transformedDanhMucList || []"
@@ -94,11 +90,9 @@
         <template #checkbox="{ record }">
           <a-checkbox :model-value="isRowSelected(record.id)" @change="(checked) => handleCheckboxChange(checked, record)" />
         </template>
-
         <template #index="{ rowIndex }">
           {{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}
         </template>
-
         <template #status="{ record }">
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode -->
@@ -120,7 +114,6 @@
             {{ record.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}
           </a-tag>
         </template>
-
         <template #name="{ record }">
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode for name -->
@@ -137,7 +130,6 @@
           </div>
           <span v-else class="custom-name">{{ record.tenSanPham }}</span>
         </template>
-
         <template #price_range="{ record }">
           <span class="custom-price-range">
             {{
@@ -147,7 +139,6 @@
             }}
           </span>
         </template>
-
         <template #action="{ record }">
           <a-space>
             <a-tooltip content="Thay đổi trạng thái">
@@ -169,13 +160,11 @@
             </a-tooltip>
           </a-space>
         </template>
-
         <template #checkbox-title>
           <a-checkbox :model-value="isAllSelected" :indeterminate="isSomeSelected" @change="handleSelectAllChange" />
         </template>
       </a-table>
     </a-card>
-
     <!-- Status Toggle Confirm Modal -->
     <a-modal
       v-model:visible="showStatusConfirm"
@@ -201,7 +190,6 @@
     </a-modal>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -214,16 +202,13 @@ import type { DanhMucParams, NhaSanXuatOption, XuatXuOption, DanhMucResponse } f
 import { IconPlus, IconRefresh, IconDownload, IconEye, IconCheckCircle, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
-
 // Form and modal
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
-
 // Edit inline mode state
 const selectedRowKeys = ref<number[]>([])
 const editingData = ref<Record<number, { tenSanPham: string; trangThai: boolean }>>({}) // Updated to match backend
-
 // Status toggle modal
 const showStatusConfirm = ref(false)
 const categoryToToggleStatus = ref(null)

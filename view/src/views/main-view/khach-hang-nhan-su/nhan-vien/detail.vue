@@ -28,7 +28,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import { layChiTietNhanVien, type NhanVienResponse } from '@/api/nhan-vien'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,7 +58,7 @@ onMounted(async () => {
 
     console.log('👉 id nhân viên:', id)
 
-    const res = await axios.get(`/api/nhan-vien-management/detail/${id}`)
+    const res = await layChiTietNhanVien(id)
     console.log('📌 Dữ liệu từ API:', res.data)
 
     const { data } = res

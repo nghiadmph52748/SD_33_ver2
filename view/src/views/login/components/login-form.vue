@@ -107,7 +107,8 @@ const handleSubmit = async ({ errors, values }: { errors: Record<string, Validat
       loginConfig.value.username = rememberPassword ? username : ''
       loginConfig.value.password = rememberPassword ? password : ''
     } catch (err) {
-      errorMessage.value = (err as Error).message
+		 errorMessage.value = (err as Error).message
+		console.error(err)
     } finally {
       setLoading(false)
     }

@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 @NoArgsConstructor
@@ -15,7 +16,7 @@ public class NhanVienRequest {
     private String matKhau;
     private String email;
     private String soDienThoai;
-    private String anhNhanVien;
+    private MultipartFile[] anhNhanVien;
     private LocalDate ngaySinh;
     private String thanhPho;
     private String quan;
@@ -26,4 +27,8 @@ public class NhanVienRequest {
     private Integer idQuyenHan;
     private Boolean trangThai;
     private Boolean deleted;
+    private LocalDate createAt;
+    private Integer createBy;
+    private LocalDate updateAt;
+    private Integer updateBy;
 }

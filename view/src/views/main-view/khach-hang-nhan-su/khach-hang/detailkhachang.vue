@@ -55,8 +55,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import axios from 'axios'
-import { IconArrowLeft, IconEdit } from '@arco-design/web-vue/es/icon'
+import { layChiTietKhachHang } from '@/api/khach-hang'
+import { IconArrowLeft } from '@arco-design/web-vue/es/icon'
 
 const route = useRoute()
 const router = useRouter()
@@ -103,14 +103,14 @@ const tenPhanLoai = (loai: string) => {
   }
 }
 
-const layChiTietKhachHang = async () => {
+const layChiTietKhach = async () => {
   try {
     dangTai.value = true
     const idKhach = route.params.id
-    console.log('ID Khách Hàng:', idKhach) // In ra ID để kiểm tra
+    // console.log('ID Khách Hàng:', idKhach) // In ra ID để kiểm tra
 
-    const res = await axios.get(`/api/khach-hang-management/detail/${idKhach}`)
-    console.log('Dữ liệu từ API:', res.data) // Kiểm tra dữ liệu trả về từ API
+    const res = await layChiTietKhachHang(Number(idKhach))
+    // console.log('Dữ liệu từ API:', res.data) // Kiểm tra dữ liệu trả về từ API
 
     khachHang.value = {
       code: res.data.maKhachHang || '',
@@ -123,7 +123,7 @@ const layChiTietKhachHang = async () => {
       status: res.data.trangThaiText === 'Hoạt động' ? 'active' : 'inactive',
     }
   } catch (err) {
-    console.error('Lỗi lấy chi tiết khách:', err)
+    // console.error('Lỗi lấy chi tiết khách:', err)
   } finally {
     dangTai.value = false
   }
@@ -133,12 +133,12 @@ const quayLai = () => {
   router.push('/khach-hang-nhan-su/khach-hang') // quay lại danh sách
 }
 
-const chinhSua = () => {
-  router.push(`/updatekhachhang/${khachHang.value.code}`)
-}
+// const chinhSua = () => {
+//   router.push(`/updatekhachhang/${khachHang.value.code}`)
+// }
 
 onMounted(() => {
-  layChiTietKhachHang()
+  layChiTietKhach()
 })
 </script>
 

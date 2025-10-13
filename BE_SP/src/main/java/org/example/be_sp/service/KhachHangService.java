@@ -1,5 +1,11 @@
 package org.example.be_sp.service;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -17,12 +23,6 @@ import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
 
 @Service
 public class KhachHangService {
@@ -68,10 +68,13 @@ public class KhachHangService {
                 if (isEmptyAddress(data)) continue;
                 DiaChiKhachHang diaChi = new DiaChiKhachHang();
                 diaChi.setThanhPho(data.getThanhPho());
+                diaChi.setTenDiaChi(data.getTenDiaChi());
                 diaChi.setQuan(data.getQuan());
                 diaChi.setPhuong(data.getPhuong());
                 diaChi.setDiaChiCuThe(data.getDiaChiCuThe());
                 diaChi.setIdKhachHang(saved);
+					 diaChi.setDeleted(false);
+					 diaChi.setMacDinh(data.getMacDinh());
                 repository.save(diaChi);
             }
         }
@@ -90,10 +93,13 @@ public class KhachHangService {
                 if (isEmptyAddress(data)) continue;
                 DiaChiKhachHang diaChi = new DiaChiKhachHang();
                 diaChi.setThanhPho(data.getThanhPho());
+                diaChi.setTenDiaChi(data.getTenDiaChi());
                 diaChi.setQuan(data.getQuan());
                 diaChi.setPhuong(data.getPhuong());
                 diaChi.setDiaChiCuThe(data.getDiaChiCuThe());
                 diaChi.setIdKhachHang(saved);
+                diaChi.setDeleted(false);
+                diaChi.setMacDinh(data.getMacDinh());
                 repository.save(diaChi);
             }
         }
@@ -138,11 +144,13 @@ public class KhachHangService {
                 if (!exists) {
                     DiaChiKhachHang diaChi = new DiaChiKhachHang();
                     diaChi.setThanhPho(data.getThanhPho());
+                    diaChi.setTenDiaChi(data.getTenDiaChi());
                     diaChi.setQuan(data.getQuan());
                     diaChi.setPhuong(data.getPhuong());
                     diaChi.setDiaChiCuThe(data.getDiaChiCuThe());
                     diaChi.setIdKhachHang(saved);
                     diaChi.setDeleted(false);
+                    diaChi.setMacDinh(data.getMacDinh());
                     repository.save(diaChi);
                 }
             }
@@ -166,6 +174,7 @@ public class KhachHangService {
     private boolean isEmptyAddress(DiaChi d) {
         return d == null
                 || (isNullOrBlank(d.getThanhPho())
+                && isNullOrBlank(d.getTenDiaChi())
                 && isNullOrBlank(d.getQuan())
                 && isNullOrBlank(d.getPhuong())
                 && isNullOrBlank(d.getDiaChiCuThe()));

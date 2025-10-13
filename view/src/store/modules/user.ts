@@ -65,6 +65,7 @@ const useUserStore = defineStore('user', {
     async login(loginForm: LoginData) {
       try {
         const res = await userLogin(loginForm)
+
         // Set JWT tokens
         if (res.data.accessToken) {
           setToken(res.data.accessToken)

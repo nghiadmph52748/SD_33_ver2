@@ -1,20 +1,18 @@
 package org.example.be_sp.model.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.example.be_sp.entity.KhachHang;
-import org.example.be_sp.model.DiaChi;
-
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toList;
+import org.example.be_sp.entity.KhachHang;
+import org.example.be_sp.model.DiaChi;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,7 +31,7 @@ public class KhachHangResponse {
     private Boolean deleted;
     private Integer tongDon;
     private Long tongChiTieu;
-    private String trangThaiText;
+    private Boolean trangThai;
     private String phanLoaiText;
 
     private List<DiaChi> listDiaChi;
@@ -57,10 +55,12 @@ public class KhachHangResponse {
                 .stream()
                 .filter(diaChi -> !Boolean.TRUE.equals(diaChi.getDeleted()))
                 .map(diaChi -> new DiaChi(
+                        diaChi.getTenDiaChi(),
                         diaChi.getDiaChiCuThe(),
                         diaChi.getThanhPho(),
                         diaChi.getQuan(),
-                        diaChi.getPhuong()
+                        diaChi.getPhuong(),
+                        diaChi.getMacDinh()
                 ))
                 .collect(Collectors.toList());
 
@@ -73,9 +73,8 @@ public class KhachHangResponse {
                 .filter(hd -> !Boolean.TRUE.equals(hd.getDeleted()))
                 .mapToLong(hd -> hd.getTongTien() != null ? hd.getTongTien().longValue() : 0L)
                 .sum();
-
         // Trạng thái
-        this.trangThaiText = e.getTrangThai() != null && e.getTrangThai() ? "Hoạt động" : "Không hoạt động";
+        this.trangThai = e.getTrangThai();
 
         // Phân loại
         this.phanLoaiText = Optional.ofNullable(e.getPhanLoai())

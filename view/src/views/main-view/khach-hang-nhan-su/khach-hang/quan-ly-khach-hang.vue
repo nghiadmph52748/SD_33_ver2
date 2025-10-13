@@ -69,15 +69,16 @@
         :pagination="phanTrang"
         :loading="dangTai"
         :scroll="{ x: 1200 }"
+        :default-sort-order="{ field: 'tongChiTieu', direction: 'descend' }"
         @change="xuLyThayDoiBang"
       >
-        <template #total_orders="{ record }">
-          <span>{{ record.total_orders }}</span>
+        <template #tongChiTieu="{ record }">
+          <span>{{ new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(record.tongChiTieu) }}</span>
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.status === 'active' ? 'green' : 'orange'">
-            {{ record.status === 'active' ? 'Hoạt động' : 'Không hoạt động' }}
+          <a-tag :color="record.trangThai ? 'green' : 'orange'">
+            {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
           </a-tag>
         </template>
         <template #diaChi="{ record }">
@@ -96,17 +97,53 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-switch
-              :checked="record.status === 'active'"
+            <!-- <a-switch
+              :model-value="record.trangThai"
               @change="onToggleStatus(record)"
               checked-children="Hoạt động"
               un-checked-children="Không hoạt động"
               size="small"
-            />
+            /> -->
+            <a-switch :model-value="record.trangThai" type="round" @click="onToggleStatus(record)" :loading="record.updating">
+              <template #checked-icon>
+                <icon-check />
+              </template>
+              <template #unchecked-icon>
+                <icon-close />
+              </template>
+            </a-switch>
           </a-space>
         </template>
       </a-table>
     </a-card>
+
+    <!-- Status Toggle Confirm Modal -->
+    <a-modal
+      v-model:visible="showStatusConfirm"
+      title="Xác nhận thay đổi trạng thái"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmToggleStatus"
+      @cancel="cancelToggleStatus"
+    >
+      <template #default>
+        <div v-if="khachHangToToggleStatus">
+          <div>Bạn có chắc chắn muốn {{ khachHangToToggleStatus.trangThai ? 'vô hiệu hóa' : 'kích hoạt' }} khách hàng này?</div>
+          <div>
+            Tên khách hàng:
+            <strong>{{ khachHangToToggleStatus.name }}</strong>
+          </div>
+          <div>
+            Mã khách hàng:
+            <strong>{{ khachHangToToggleStatus.code }}</strong>
+          </div>
+          <div>
+            Trạng thái hiện tại:
+            <strong>{{ khachHangToToggleStatus.trangThai ? 'Hoạt động' : 'Vô hiệu hóa' }}</strong>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -114,20 +151,41 @@
 import { ref, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import axios from 'axios'
 import { useRouter } from 'vue-router'
 import * as XLSX from 'xlsx'
-import { IconPlus, IconRefresh, IconDownload, IconEye, IconEdit, IconDelete } from '@arco-design/web-vue/es/icon'
-// ✅ Di chuyển lên đầu file <script>
+import { IconPlus, IconRefresh, IconDownload, IconEdit, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
+import { Message } from '@arco-design/web-vue'
+import { layDanhSachKhachHang, capNhatTrangThaiKhachHang, type KhachHangResponse } from '@/api/khach-hang'
+
+// Interface definitions
+interface KhachHang {
+  id: string | number
+  index: number
+  code: string
+  name: string
+  gender: string
+  birthday: string
+  tongDon: number
+  tongChiTieu: number
+  thanhPho: string
+  phuong: string
+  quan: string
+  diaChiCuThe: string
+  tenDiaChi: string
+  email: string
+  soDienThoai: string
+  trangThai: boolean
+  updating?: boolean
+}
 
 const router = useRouter()
 
 const chuyenTrangTaoMoi = () => {
-  router.push('/themkhachhang') // ✅ thêm chữ "h"
+  router.push({ name: 'ThemKhachHang' })
 }
 const chinhSuaKhach = (khach: any) => {
-  console.log('ID cần sửa:', khach.id)
-  router.push(`/updatekhachhang/${khach.id}`)
+  // console.log('ID cần sửa:', khach.id)
+  router.push({ name: 'UpdateKhachHang', params: { id: khach.id } })
 }
 
 const { breadcrumbItems } = useBreadcrumb()
@@ -146,44 +204,49 @@ const phanTrang = ref({
   total: 0,
 })
 
+const sapXep = ref({
+  field: 'tongChiTieu',
+  direction: 'descend',
+})
+
+// Status toggle modal
+const showStatusConfirm = ref(false)
+const khachHangToToggleStatus = ref<KhachHang | null>(null)
+
 const cotBang = [
   { title: 'STT', dataIndex: 'index', width: 40, align: 'center' },
-  { title: 'Mã', dataIndex: 'code', width: 100 },
-  { title: 'Tên', dataIndex: 'name', width: 100 },
-  { title: 'Ngày sinh', dataIndex: 'birthday', width: 120, align: 'center' },
-  { title: 'Giới tính', dataIndex: 'gender', width: 80, align: 'center' },
-  { title: 'Địa chỉ', slotName: 'diaChi', width: 250 },
-  { title: 'Email', dataIndex: 'email', width: 150, align: 'center' },
+  { title: 'Mã', dataIndex: 'code', width: 100, sortable: { sortDirections: ['ascend', 'descend'] } },
+  { title: 'Tên', dataIndex: 'name', width: 150, sortable: { sortDirections: ['ascend', 'descend'] } },
+  { title: 'Ngày sinh', dataIndex: 'birthday', width: 120, align: 'center', sortable: { sortDirections: ['ascend', 'descend'] } },
+  { title: 'Giới tính', dataIndex: 'gender', width: 60, align: 'center', sortable: { sortDirections: ['ascend', 'descend'] } },
+  { title: 'Địa chỉ', slotName: 'diaChi', width: 200 },
+  { title: 'Email', dataIndex: 'email', width: 150 },
   { title: 'SDT', dataIndex: 'soDienThoai', width: 120, align: 'center' },
-  { title: 'Trạng thái', dataIndex: 'status', slotName: 'status', width: 120, align: 'center' },
-  { title: 'Thao tác', slotName: 'action', width: 80, fixed: 'right' },
+  { title: 'Số đơn', dataIndex: 'tongDon', width: 80, align: 'center', sortable: { sortDirections: ['ascend', 'descend'] } },
+  {
+    title: 'Tổng chi tiêu',
+    dataIndex: 'tongChiTieu',
+    slotName: 'tongChiTieu',
+    width: 120,
+    align: 'center',
+    sortable: { sortDirections: ['ascend', 'descend'], defaultSortOrder: 'descend' },
+  },
+  {
+    title: 'Trạng thái',
+    dataIndex: 'status',
+    slotName: 'status',
+    width: 120,
+    align: 'center',
+  },
+  { title: 'Thao tác', slotName: 'action', width: 100, fixed: 'right' },
 ]
-
-interface KhachHang {
-  id: string
-  index: number
-  code: string
-  name: string
-  gender: string
-  birthday: string
-  total_orders?: number
-  total_spent?: number
-  customer_type?: string
-  status: string
-  email: string
-  soDienThoai: string
-  thanhPho: string
-  quan: string
-  phuong: string
-  diaChiCuThe: string
-}
 
 const danhSachKhachHang = ref<KhachHang[]>([])
 
 const timKiemKhachHang = async () => {
   try {
     dangTai.value = true
-    const res = await axios.get('/api/khach-hang-management/playlist')
+    const res = await layDanhSachKhachHang()
     if (Array.isArray(res.data)) {
       let filtered = res.data
 
@@ -191,7 +254,7 @@ const timKiemKhachHang = async () => {
       if (boLoc.value.timKiem.trim() !== '') {
         const search = boLoc.value.timKiem.toLowerCase()
         filtered = filtered.filter(
-          (item) =>
+          (item: KhachHangResponse) =>
             item.maKhachHang?.toLowerCase().includes(search) ||
             item.tenKhachHang?.toLowerCase().includes(search) ||
             item.soDienThoai?.toLowerCase().includes(search) ||
@@ -201,19 +264,18 @@ const timKiemKhachHang = async () => {
 
       // Filter theo giới tính
       if (boLoc.value.gioiTinh !== '') {
-        filtered = filtered.filter((item) => (item.gioiTinh ? 'Nam' : 'Nữ') === boLoc.value.gioiTinh)
+        filtered = filtered.filter((item: KhachHangResponse) => (item.gioiTinh ? 'Nam' : 'Nữ') === boLoc.value.gioiTinh)
       }
 
       // Filter theo trạng thái
       if (boLoc.value.trangThai !== '') {
-        filtered = filtered.filter(
-          (item) =>
-            (item.trangThaiText && item.trangThaiText.toLowerCase() === 'hoạt động' ? 'active' : 'inactive') === boLoc.value.trangThai
-        )
+        filtered = filtered.filter((item: KhachHangResponse) => (item.trangThai ? 'active' : 'inactive') === boLoc.value.trangThai)
       }
 
-      danhSachKhachHang.value = filtered.map((item: any, index: number) => {
-        const diaChi = item.listDiaChi?.[0] || {}
+      // Map dữ liệu
+      let mappedData = filtered.map((item: KhachHangResponse, index: number) => {
+        // Tìm địa chỉ mặc định, nếu không có thì lấy địa chỉ đầu tiên
+        const diaChi = item.listDiaChi?.find((addr) => addr.macDinh) || item.listDiaChi?.[0] || {}
         return {
           id: item.id,
           index: index + 1,
@@ -221,27 +283,54 @@ const timKiemKhachHang = async () => {
           name: item.tenKhachHang,
           gender: item.gioiTinh ? 'Nam' : 'Nữ',
           birthday: item.ngaySinh,
+          tongDon: item.tongDon,
+          tongChiTieu: item.tongChiTieu,
           thanhPho: diaChi.thanhPho || '',
           phuong: diaChi.phuong || '',
           quan: diaChi.quan || '',
           diaChiCuThe: diaChi.diaChiCuThe || '',
+          tenDiaChi: diaChi.tenDiaChi || '',
           email: item.email,
           soDienThoai: item.soDienThoai,
-          status: item.trangThaiText && item.trangThaiText.toLowerCase() === 'hoạt động' ? 'active' : 'inactive',
+          trangThai: item.trangThai,
+          updating: false,
         }
       })
+
+      // Áp dụng sắp xếp
+      if (sapXep.value.field) {
+        mappedData.sort((a: any, b: any) => {
+          const fieldA = a[sapXep.value.field]
+          const fieldB = b[sapXep.value.field]
+
+          let comparison = 0
+          if (fieldA > fieldB) {
+            comparison = 1
+          } else if (fieldA < fieldB) {
+            comparison = -1
+          }
+
+          return sapXep.value.direction === 'descend' ? -comparison : comparison
+        })
+      }
+
+      // Cập nhật lại index sau khi sort
+      mappedData = mappedData.map((item, index) => ({
+        ...item,
+        index: index + 1,
+      }))
+
+      danhSachKhachHang.value = mappedData
       phanTrang.value.total = danhSachKhachHang.value.length
     } else {
       danhSachKhachHang.value = []
       phanTrang.value.total = 0
-      console.error('Dữ liệu trả về không đúng định dạng:', res.data)
+      // console.error('Dữ liệu trả về không đúng định dạng:', res.data)
     }
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Lỗi gọi API:', error.response?.data || error.message)
-    } else {
-      console.error('Lỗi không xác định:', error)
-    }
+  } catch (error: any) {
+    // console.error('Lỗi gọi API:', error.response?.data || error.message)
+    danhSachKhachHang.value = []
+    phanTrang.value.total = 0
   } finally {
     dangTai.value = false
   }
@@ -257,60 +346,100 @@ const datLaiBoLoc = () => {
   timKiemKhachHang()
 }
 
-const xuLyThayDoiBang = (duLieuPhanTrang: any) => {
+const xuLyThayDoiBang = (duLieuPhanTrang: any, duLieuSapXep: any) => {
+  // Cập nhật phân trang
   phanTrang.value = {
     ...phanTrang.value,
     current: duLieuPhanTrang.current,
     pageSize: duLieuPhanTrang.pageSize,
   }
+
+  // Cập nhật sắp xếp nếu có
+  if (duLieuSapXep && duLieuSapXep.field) {
+    sapXep.value = {
+      field: duLieuSapXep.field,
+      direction: duLieuSapXep.direction,
+    }
+  }
+
   timKiemKhachHang()
 }
-const onToggleStatus = async (record: KhachHang) => {
+// Show confirm modal for status toggle
+const onToggleStatus = (record: KhachHang) => {
+  khachHangToToggleStatus.value = record
+  showStatusConfirm.value = true
+}
+
+// Actual toggle status implementation
+const performToggleStatus = async (record: KhachHang) => {
   try {
+    // Bật loading
+    record.updating = true
+
     // Gọi API PUT với id trong URL, không gửi body
-    await axios.put(`/api/khach-hang-management/update/status/${record.id}`)
+    await capNhatTrangThaiKhachHang(Number(record.id))
 
     // Cập nhật trạng thái local (đảo trạng thái)
-    record.status = record.status === 'active' ? 'inactive' : 'active'
+    record.trangThai = !record.trangThai
+
+    const statusText = record.trangThai ? 'Hoạt động' : 'Vô hiệu hóa'
+    Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
 
     // Nếu muốn reload lại danh sách đầy đủ:
     // await timKiemKhachHang();
   } catch (error) {
-    console.error('Lỗi cập nhật trạng thái:', error)
-    // Có thể hiện thông báo lỗi cho người dùng nếu muốn
+    // console.error('Lỗi cập nhật trạng thái:', error)
+    Message.error('Cập nhật trạng thái thất bại')
+  } finally {
+    // Tắt loading
+    record.updating = false
   }
 }
 
-const moModalTaoMoi = () => {}
-const xemChiTietKhach = (khach: any) => {
-  // Điều hướng sang trang detail theo mã khách hàng
-  router.push(`/detailkhachhang/${khach.id}`)
+const confirmToggleStatus = async () => {
+  if (khachHangToToggleStatus.value) {
+    await performToggleStatus(khachHangToToggleStatus.value)
+  }
+  showStatusConfirm.value = false
+  khachHangToToggleStatus.value = null
 }
 
-const xoaKhach = (khach: any) => {}
+const cancelToggleStatus = () => {
+  showStatusConfirm.value = false
+  khachHangToToggleStatus.value = null
+}
+
+// const moModalTaoMoi = () => {}
+// const xemChiTietKhach = (khach: any) => {
+//   // Điều hướng sang trang detail theo mã khách hàng
+//   router.push(`/detailkhachhang/${khach.id}`)
+// }
+// const xoaKhach = (khach: any) => {}
 
 const xuatExcel = () => {
   // Tạo dữ liệu để xuất
   const dataForExport = danhSachKhachHang.value.map((item: KhachHang) => ({
     'Mã khách hàng': item.code,
-    'Tên': item.name,
+    Tên: item.name,
     'Ngày sinh': item.birthday,
     'Giới tính': item.gender,
     'Địa chỉ': [item.diaChiCuThe, item.phuong, item.quan, item.thanhPho].filter(Boolean).join(', '),
-    'Email': item.email,
+    Email: item.email,
     'Số điện thoại': item.soDienThoai,
-    'Trạng thái': item.status === 'active' ? 'Hoạt động' : 'Không hoạt động',
-  }));
+    'Số đơn hàng': item.tongDon,
+    'Tổng chi tiêu': new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.tongChiTieu),
+    'Trạng thái': item.trangThai ? 'Hoạt động' : 'Không hoạt động',
+  }))
 
   // Tạo một workbook mới
-  const ws = XLSX.utils.json_to_sheet(dataForExport);
-  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(dataForExport)
+  const wb = XLSX.utils.book_new()
 
   // Thêm sheet vào workbook
-  XLSX.utils.book_append_sheet(wb, ws, 'KhachHang');
+  XLSX.utils.book_append_sheet(wb, ws, 'KhachHang')
 
   // Tạo file và tải về
-  XLSX.writeFile(wb, 'DanhSachKhachHang.xlsx');
+  XLSX.writeFile(wb, 'DanhSachKhachHang.xlsx')
 }
 
 onMounted(() => {
@@ -319,6 +448,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+:deep(.arco-table .arco-table-cell) {
+  padding: 6px 8px;
+}
 .customer-management-page {
   padding: 0 20px 20px 20px;
 }

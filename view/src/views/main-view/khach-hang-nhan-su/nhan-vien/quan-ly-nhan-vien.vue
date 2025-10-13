@@ -5,17 +5,17 @@
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
-      <a-form :model="filters" layout="vertical">
+      <a-form :model="boLoc" layout="vertical">
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.timKiem" placeholder="Mã, tên, email, SĐT..." allow-clear @change="searchStaff" />
+              <a-input v-model="boLoc.timKiem" placeholder="Mã, tên, SĐT, email..." allow-clear @change="timKiemNhanVien" />
             </a-form-item>
           </a-col>
 
           <a-col :span="8">
             <a-form-item label="Chức vụ">
-              <a-select v-model="filters.tenQuyenHan" placeholder="Chọn chức vụ" allow-clear @change="searchStaff">
+              <a-select v-model="boLoc.tenQuyenHan" placeholder="Chọn chức vụ" allow-clear @change="timKiemNhanVien">
                 <a-option value="">Tất cả</a-option>
                 <a-option value="Quản lý">Quản lý</a-option>
                 <a-option value="Nhân viên">Nhân viên</a-option>
@@ -25,10 +25,10 @@
 
           <a-col :span="8">
             <a-form-item label="Giới tính">
-              <a-radio-group v-model="filters.gioiTinh" type="button" @change="searchStaff">
+              <a-radio-group v-model="boLoc.gioiTinh" type="button" @change="timKiemNhanVien">
                 <a-radio value="">Tất cả</a-radio>
-                <a-radio :value="true">Nam</a-radio>
-                <a-radio :value="false">Nữ</a-radio>
+                <a-radio value="Nam">Nam</a-radio>
+                <a-radio value="Nữ">Nữ</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-col>
@@ -37,10 +37,10 @@
         <a-row :gutter="12">
           <a-col :span="24">
             <a-form-item label="Trạng thái">
-              <a-radio-group v-model="filters.trangThai" type="button" @change="searchStaff">
+              <a-radio-group v-model="boLoc.trangThai" type="button" @change="timKiemNhanVien">
                 <a-radio value="">Tất cả</a-radio>
-                <a-radio :value="true">Đang làm việc</a-radio>
-                <a-radio :value="false">Nghỉ việc</a-radio>
+                <a-radio value="active">Đang làm việc</a-radio>
+                <a-radio value="inactive">Nghỉ việc</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-col>
@@ -75,7 +75,7 @@
     <a-card title="Danh sách nhân viên" class="table-card">
       <a-table
         :columns="columns"
-        :data="nhanVienCoSTT"
+        :data="danhSachNhanVienPhanTrang"
         :pagination="phanTrang"
         :loading="loading"
         :scroll="{ x: 1200 }"
@@ -118,18 +118,46 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-switch
-              v-model="record.trangThai"
-              :checked-value="true"
-              :unchecked-value="false"
-              @change="() => toggleTrangThai(record)"
-              checked-text=""
-              unchecked-text=""
-            />
+            <a-switch :model-value="record.trangThai" type="round" @click="onToggleStatus(record)" :loading="record.updating">
+              <template #checked-icon>
+                <icon-check />
+              </template>
+              <template #unchecked-icon>
+                <icon-close />
+              </template>
+            </a-switch>
           </a-space>
         </template>
       </a-table>
     </a-card>
+
+    <!-- Status Toggle Confirm Modal -->
+    <a-modal
+      v-model:visible="showStatusConfirm"
+      title="Xác nhận thay đổi trạng thái"
+      ok-text="Xác nhận"
+      cancel-text="Huỷ"
+      @ok="confirmToggleStatus"
+      @cancel="cancelToggleStatus"
+    >
+      <template #default>
+        <div v-if="nhanVienToToggleStatus">
+          <div>Bạn có chắc chắn muốn {{ nhanVienToToggleStatus.trangThai ? 'nghỉ việc' : 'đang làm việc' }} nhân viên này?</div>
+          <div>
+            Tên nhân viên:
+            <strong>{{ nhanVienToToggleStatus.tenNhanVien }}</strong>
+          </div>
+          <div>
+            Mã nhân viên:
+            <strong>{{ nhanVienToToggleStatus.maNhanVien }}</strong>
+          </div>
+          <div>
+            Trạng thái hiện tại:
+            <strong>{{ nhanVienToToggleStatus.trangThai ? 'Đang làm việc' : 'Nghỉ việc' }}</strong>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -137,65 +165,122 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { Modal, Message } from '@arco-design/web-vue'
-import axios from 'axios'
-import * as XLSX from 'xlsx';
-import {
-  IconPlus,
-  IconSearch,
-  IconRefresh,
-  IconDownload,
-  IconEye,
-  IconEdit,
-  IconDelete,
-  IconLock,
-  IconUserGroup,
-  IconUser,
-  IconStar,
-} from '@arco-design/web-vue/es/icon'
+import { Message } from '@arco-design/web-vue'
+import * as XLSX from 'xlsx'
+import { layDanhSachNhanVien, capNhatNhanVien } from '@/api/nhan-vien'
+import { IconPlus, IconRefresh, IconDownload, IconEdit, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
 import { useRouter } from 'vue-router'
 
-const toggleTrangThai = async (record: any) => {
-  const newStatus = record.trangThai
-  try {
-    await axios.put(`/api/nhan-vien-management/nhan-vien/${record.id}/status`, { trangThai: newStatus })
-    Message.success(`Trạng thái nhân viên đã được cập nhật thành ${newStatus ? 'Đang làm việc' : 'Nghỉ việc'}`)
+// Reactive data - định nghĩa trước khi sử dụng
+const loading = ref(false)
+const danhSachNhanVien = ref<any[]>([])
+const phanTrang = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showTotal: true,
+  showJumper: true,
+  showPageSize: true,
+})
 
-    // Reload lại toàn trang
-    window.location.reload()
-  } catch (error) {
-    record.trangThai = !newStatus
-    Message.error('Lỗi khi cập nhật trạng thái nhân viên.')
-    console.error('❌ Lỗi cập nhật trạng thái:', error)
+// Modal confirm state
+const showStatusConfirm = ref(false)
+const nhanVienToToggleStatus = ref<any>(null)
+
+// Show confirm modal for status toggle
+const onToggleStatus = (record: any) => {
+  nhanVienToToggleStatus.value = record
+  showStatusConfirm.value = true
+}
+
+// Actual toggle status implementation
+const performToggleStatus = async (record: any) => {
+  try {
+    // Bật loading
+    record.updating = true
+    // Tạo FormData như backend expect @RequestParam
+    const formData = new FormData()
+    formData.append('tenNhanVien', record.tenNhanVien || '')
+    formData.append('email', record.email || '')
+    formData.append('soDienThoai', record.soDienThoai || '')
+    formData.append('ngaySinh', record.ngaySinh || '')
+    formData.append('cccd', record.cccd || '')
+    formData.append('gioiTinh', String(record.gioiTinh || false))
+    formData.append('thanhPho', record.thanhPho || '')
+    formData.append('quan', record.quan || '')
+    formData.append('phuong', record.phuong || '')
+    formData.append('diaChiCuThe', record.diaChiCuThe || '')
+    formData.append('idQuyenHan', String(record.idQuyenHan || 2))
+    formData.append('tenTaiKhoan', record.tenTaiKhoan || '')
+    formData.append('matKhau', record.matKhau || '')
+    formData.append('trangThai', String(!record.trangThai))
+
+    // Nếu có ảnh thì thêm file
+    if (record.anhNhanVien && record.anhNhanVien instanceof File) {
+      formData.append('file', record.anhNhanVien)
+    }
+    // Gọi API PUT với id trong URL
+    await capNhatNhanVien(record.id, formData)
+
+    // Cập nhật trạng thái local (đảo trạng thái)
+    record.trangThai = !record.trangThai
+
+    const statusText = record.trangThai ? 'Đang làm việc' : 'Nghỉ việc'
+    Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
+
+    // Nếu muốn reload lại danh sách đầy đủ:
+    // await loadNhanVienData();
+  } catch (_) {
+    // Error handled by Message.error below
+    Message.error('Cập nhật trạng thái thất bại')
+  } finally {
+    // Tắt loading
+    record.updating = false
   }
+}
+
+// Confirm status toggle
+const confirmToggleStatus = async () => {
+  if (nhanVienToToggleStatus.value) {
+    await performToggleStatus(nhanVienToToggleStatus.value)
+  }
+  showStatusConfirm.value = false
+  nhanVienToToggleStatus.value = null
+}
+
+// Cancel status toggle
+const cancelToggleStatus = () => {
+  showStatusConfirm.value = false
+  nhanVienToToggleStatus.value = null
 }
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 // Modal and for
 const router = useRouter()
+
+// Phân trang - phanTrang đã được định nghĩa ở trên
+
 // Form data
 const navigateToAddStaff = () => {
-  router.push('/themnhanvien') // Điều hướng tới trang thêm nhân viên
-}
-const viewDetail = (record: any) => {
-  if (!record?.id) {
-    console.error('❌ record không có id:', record)
-    return
-  }
-  router.push(`/detail/${record.id}`)
+  router.push({ name: 'ThemNhanVien' }) // Điều hướng tới trang thêm nhân viên
 }
 
 const goToEdit = (record: any) => {
   if (!record?.id) {
-    console.error('❌ record không có id:', record)
+    // console.error('❌ record không có id:', record)
     return
   }
-  router.push(`/updatenhanvien/${record.id}`)
+  router.push({ name: 'Updatenhanvien', params: { id: record.id } })
 }
 
-const handleTableChange = (paginationData: any, filtersData: any, sorter: any) => {
-  // Removed console.log
+const handleTableChange = (paginationData: any) => {
+  // Cập nhật phân trang
+  phanTrang.value = {
+    ...phanTrang.value,
+    current: paginationData.current,
+    pageSize: paginationData.pageSize,
+  }
 }
 
 // Form dữ liệu nhân viên
@@ -220,87 +305,110 @@ const formData = reactive({
 })
 
 // Bộ lọc tìm kiếm
-const filters = ref({
+const boLoc = ref({
   timKiem: '', // Tìm kiếm theo tên, email, sđt...
   gioiTinh: '', // Nam / Nữ
   tenQuyenHan: '', // Nhân viên / Quản lý
   trangThai: '', // Hoạt động / Ngưng
 })
 
-// Mock data
-const nhanVien = ref<any[]>([]) // staff bây giờ là mảng rỗng, chờ load từ API
+// Mock data - nhanVien đã được định nghĩa ở trên
 
-// Computed staff with filtering and index for STT
+const timKiemNhanVien = async () => {
+  try {
+    loading.value = true
+    const res = await layDanhSachNhanVien()
+    if (Array.isArray(res.data)) {
+      let filtered = res.data
 
-// Danh sách nhân viên kèm STT và áp dụng bộ lọc
-const nhanVienCoSTT = computed(() => {
-  let danhSachLoc = nhanVien.value
+      // Filter theo tìm kiếm
+      if (boLoc.value.timKiem.trim() !== '') {
+        const search = boLoc.value.timKiem.toLowerCase()
+        filtered = filtered.filter(
+          (item: any) =>
+            item.maNhanVien?.toLowerCase().includes(search) ||
+            item.tenNhanVien?.toLowerCase().includes(search) ||
+            item.soDienThoai?.toLowerCase().includes(search) ||
+            item.email?.toLowerCase().includes(search)
+        )
+      }
 
-  // Lọc theo từ khóa tìm kiếm (mã NV, tên, email, số điện thoại)
-  if (filters.value.timKiem) {
-    const tuKhoa = filters.value.timKiem.toLowerCase()
-    danhSachLoc = danhSachLoc.filter(
-      (nv) =>
-        nv.maNhanVien.toLowerCase().includes(tuKhoa) ||
-        nv.tenNhanVien.toLowerCase().includes(tuKhoa) ||
-        nv.email.toLowerCase().includes(tuKhoa) ||
-        nv.soDienThoai.toLowerCase().includes(tuKhoa)
-    )
+      // Filter theo giới tính
+      if (boLoc.value.gioiTinh !== '') {
+        filtered = filtered.filter((item: any) => {
+          let gioiTinhText = null
+          if (item.gioiTinh === null || item.gioiTinh === undefined) {
+            gioiTinhText = null
+          } else if (item.gioiTinh) {
+            gioiTinhText = 'Nam'
+          } else {
+            gioiTinhText = 'Nữ'
+          }
+          return gioiTinhText === boLoc.value.gioiTinh
+        })
+      }
+
+      // Filter theo trạng thái
+      if (boLoc.value.trangThai !== '') {
+        filtered = filtered.filter((item: any) => (item.trangThai ? 'active' : 'inactive') === boLoc.value.trangThai)
+      }
+
+      // Map dữ liệu
+      const mappedData = filtered.map((item: any, index: number) => {
+        return {
+          id: item.id,
+          stt: index + 1,
+          maNhanVien: item.maNhanVien,
+          tenNhanVien: item.tenNhanVien,
+          tenTaiKhoan: item.tenTaiKhoan,
+          email: item.email,
+          soDienThoai: item.soDienThoai,
+          ngaySinh: item.ngaySinh,
+          gioiTinh: item.gioiTinh === null || item.gioiTinh === undefined ? null : Boolean(item.gioiTinh),
+          thanhPho: item.thanhPho,
+          quan: item.quan,
+          phuong: item.phuong,
+          diaChi: item.diaChiCuThe,
+          tenQuyenHan: item.tenQuyenHan,
+          idQuyenHan: item.tenQuyenHan === 'Quản lý' ? 1 : 2,
+          trangThai: Boolean(item.trangThai),
+          anhNhanVien: item.anhNhanVien ? `/uploads/${item.anhNhanVien}` : null,
+          updating: false,
+        }
+      })
+
+      danhSachNhanVien.value = mappedData
+      phanTrang.total = mappedData.length
+    }
+  } catch (_) {
+    Message.error('Không thể tải dữ liệu nhân viên')
+  } finally {
+    loading.value = false
   }
+}
 
-  // Lọc theo quyền hạn
-  if (filters.value.tenQuyenHan && filters.value.tenQuyenHan !== '') {
-    danhSachLoc = danhSachLoc.filter((nv) => nv.tenQuyenHan === filters.value.tenQuyenHan)
-  }
-
-  // Lọc theo giới tính
-  // Lọc theo giới tính
-  if (filters.value.gioiTinh !== '') {
-    // filters.gioiTinh là true/false (hoặc '' nếu Tất cả)
-    danhSachLoc = danhSachLoc.filter((nv) => nv.gioiTinh === filters.value.gioiTinh)
-  }
-
-  // Lọc theo trạng thái
-  if (filters.value.trangThai !== '') {
-    // filters.trangThai là true/false (hoặc '' nếu Tất cả)
-    danhSachLoc = danhSachLoc.filter((nv) => nv.trangThai === filters.value.trangThai)
-  }
-
-  // Thêm chỉ số STT
-  return danhSachLoc.map((nv, index) => ({
-    ...nv,
-    stt: index + 1,
-  }))
+// Computed danh sách nhân viên với phân trang
+const danhSachNhanVienPhanTrang = computed(() => {
+  const startIndex = (phanTrang.current - 1) * phanTrang.pageSize
+  const endIndex = startIndex + phanTrang.pageSize
+  return danhSachNhanVien.value.slice(startIndex, endIndex)
 })
 
-// Table
-const loading = ref(false)
+// Table - loading đã được định nghĩa ở trên
 const columns = [
   { title: 'STT', dataIndex: 'stt', width: 50, align: 'center' },
   { title: 'Ảnh', dataIndex: 'anhNhanVien', width: 80, align: 'center', slotName: 'anhNhanVien' },
   { title: 'Mã nhân viên', dataIndex: 'maNhanVien', width: 120 },
-  { title: 'Tên nhân viên', dataIndex: 'tenNhanVien', width: 180 },
-  { title: 'Email', dataIndex: 'email', width: 200 },
-  { title: 'Số điện thoại', dataIndex: 'soDienThoai', width: 150 },
-  { title: 'Địa chỉ', slotName: 'diaChi', width: 250 },
-  { title: 'Ngày sinh', dataIndex: 'ngaySinh', width: 120, align: 'center' },
-  { title: 'Giới tính', dataIndex: 'gioiTinh', slotName: 'gioiTinh', width: 100, align: 'center' },
-  { title: 'Chức vụ', dataIndex: 'tenQuyenHan', slotName: 'tenQuyenHan', width: 120, align: 'center' },
+  { title: 'Tên nhân viên', dataIndex: 'tenNhanVien', width: 140 },
+  { title: 'Email', dataIndex: 'email', width: 150 },
+  { title: 'Số điện thoại', dataIndex: 'soDienThoai', width: 100 },
+  { title: 'Địa chỉ', slotName: 'diaChi', width: 200 },
+  { title: 'Ngày sinh', dataIndex: 'ngaySinh', width: 100, align: 'center' },
+  { title: 'Giới tính', dataIndex: 'gioiTinh', slotName: 'gioiTinh', width: 60, align: 'center' },
+  { title: 'Chức vụ', dataIndex: 'tenQuyenHan', slotName: 'tenQuyenHan', width: 85, align: 'center' },
   { title: 'Trạng thái', dataIndex: 'trangThai', slotName: 'trangThai', width: 120, align: 'center' },
-  { title: 'Thao tác', slotName: 'action', width: 120, fixed: 'right' },
+  { title: 'Thao tác', slotName: 'action', width: 100, fixed: 'right' },
 ]
-
-// Pagination
-// Phân trang
-const phanTrang = ref({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `Tổng cộng ${total} nhân viên`,
-})
-
 
 // Methods
 const formatCurrency = (amount: number) => {
@@ -336,17 +444,14 @@ const getPositionText = (position: string) => {
   }
 }
 
-const searchStaff = () => {
-  // Filtering is handled by computed property staffWithIndex
-  // This method is called when filters change (@change event)
-}
 const resetFilters = () => {
-  filters.value = {
+  boLoc.value = {
     timKiem: '', // tìm kiếm theo mã, tên, email, sđt
-    tenQuyenHan: '', // lọc theo quyền hạn
     gioiTinh: '', // lọc theo giới tính
+    tenQuyenHan: '', // lọc theo quyền hạn
     trangThai: '', // lọc theo trạng thái
   }
+  timKiemNhanVien()
 
   Object.assign(formData, {
     maNhanVien: '',
@@ -360,49 +465,21 @@ const resetFilters = () => {
   })
 }
 
-
 const exportExcel = () => {
-  const ws = XLSX.utils.json_to_sheet(nhanVien.value);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Danh sách nhân viên');
-  XLSX.writeFile(wb, 'danhsachnhanvien.xlsx');
-};
+  const ws = XLSX.utils.json_to_sheet(danhSachNhanVien.value)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Danh sách nhân viên')
+  XLSX.writeFile(wb, 'danhsachnhanvien.xlsx')
+}
 onMounted(async () => {
-  loading.value = true
-  try {
-    const res = await axios.get('/api/nhan-vien-management/playlist')
-    console.log('📌 Response từ backend:', res.data)
-
-    // Nếu backend trả về { data: [...] }
-    const list = res.data.data || res.data || [] // 👈 fallback an toàn
-    phanTrang.value.total = nhanVien.value.length
-    nhanVien.value = list.map((nv: any, index: number) => ({
-      id: nv.id,
-      stt: index + 1,
-      maNhanVien: nv.maNhanVien,
-      tenNhanVien: nv.tenNhanVien,
-      tenTaiKhoan: nv.tenTaiKhoan,
-      email: nv.email,
-      soDienThoai: nv.soDienThoai,
-      ngaySinh: nv.ngaySinh,
-      gioiTinh: nv.gioiTinh === null || nv.gioiTinh === undefined ? null : Boolean(nv.gioiTinh),
-      thanhPho: nv.thanhPho,
-      quan: nv.quan,
-      phuong: nv.phuong,
-      diaChi: nv.diaChiCuThe,
-      tenQuyenHan: nv.tenQuyenHan,
-      trangThai: Boolean(nv.trangThai),
-      anhNhanVien: nv.anhNhanVien ? `/uploads/${nv.anhNhanVien}` : null,
-    }))
-  } catch (error) {
-    console.error('❌ Lỗi load nhân viên:', error)
-  } finally {
-    loading.value = false
-  }
+  await timKiemNhanVien()
 })
 </script>
 
 <style scoped>
+:deep(.arco-table .arco-table-cell) {
+  padding: 6px 8px;
+}
 .staff-management-page {
   padding: 0 20px 20px 20px;
 }

@@ -22,6 +22,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "dia_chi_khach_hang")
 public class DiaChiKhachHang {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -57,6 +58,10 @@ public class DiaChiKhachHang {
     private String diaChiCuThe;
 
     @ColumnDefault("0")
+    @Column(name = "mac_dinh")
+    private Boolean macDinh;
+
+    @ColumnDefault("0")
     @Column(name = "deleted")
     private Boolean deleted;
 
@@ -65,26 +70,32 @@ public class DiaChiKhachHang {
      */
     public String getDiaChi() {
         StringBuilder diaChi = new StringBuilder();
-        
+
         if (diaChiCuThe != null && !diaChiCuThe.trim().isEmpty()) {
             diaChi.append(diaChiCuThe);
         }
-        
+
         if (phuong != null && !phuong.trim().isEmpty()) {
-            if (diaChi.length() > 0) diaChi.append(", ");
+            if (diaChi.length() > 0) {
+                diaChi.append(", ");
+            }
             diaChi.append(phuong);
         }
-        
+
         if (quan != null && !quan.trim().isEmpty()) {
-            if (diaChi.length() > 0) diaChi.append(", ");
+            if (diaChi.length() > 0) {
+                diaChi.append(", ");
+            }
             diaChi.append(quan);
         }
-        
+
         if (thanhPho != null && !thanhPho.trim().isEmpty()) {
-            if (diaChi.length() > 0) diaChi.append(", ");
+            if (diaChi.length() > 0) {
+                diaChi.append(", ");
+            }
             diaChi.append(thanhPho);
         }
-        
+
         return diaChi.toString();
     }
 }
