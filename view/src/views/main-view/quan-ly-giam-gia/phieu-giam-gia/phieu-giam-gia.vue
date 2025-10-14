@@ -214,7 +214,7 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-button type="text" class="danger-item" @click="deleteCoupon(record)">
+            <a-button v-if="isAdmin" type="text" class="danger-item" @click="deleteCoupon(record)">
               <template #icon>
                 <icon-delete />
               </template>
@@ -735,6 +735,7 @@ import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
+import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
@@ -766,6 +767,23 @@ import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
+const userStore = useUserStore()
+
+// Check if user is admin
+// Check both idQuyenHan and tenQuyenHan for flexibility
+const isAdmin = computed(() => {
+  const roleId = userStore.idQuyenHan
+  const roleName = userStore.tenQuyenHan?.toLowerCase()
+  
+  // Debug: Log role information
+  console.log('[Permission Check] User Role:', { roleId, roleName, tenQuyenHan: userStore.tenQuyenHan })
+  
+  // Admin if idQuyenHan is 1 OR role name contains 'admin'
+  const hasPermission = roleId === 1 || roleName?.includes('admin') || roleName?.includes('quản trị')
+  console.log('[Permission Check] isAdmin:', hasPermission)
+  
+  return hasPermission
+})
 
 // Filters
 const DEFAULT_PERCENT_RANGE: [number, number] = [0, 100]
