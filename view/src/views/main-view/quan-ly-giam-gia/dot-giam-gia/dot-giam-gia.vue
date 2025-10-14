@@ -1038,30 +1038,8 @@ const loadProductsForPromotion = async (promotionId: number) => {
 }
 
 const editPromotion = async (promotion: any) => {
-  selectedPromotion.value = promotion
-  promotionEditForm.code = promotion.code ?? ''
-  promotionEditForm.name = promotion.name ?? ''
-  promotionEditForm.discountValue = Number(promotion.percentage ?? 0)
-  promotionEditForm.active = Boolean(promotion.source?.trangThai)
-  promotionEditForm.dateRange = [promotion.start_date ?? '', promotion.end_date ?? ''].filter(Boolean) as string[]
-  promotionEditForm.lyDoThayDoi = ''
-  
-  // Load products for this promotion
-  await loadProductsForPromotion(promotion.id)
-  
-  // Set applyToProducts based on whether there are products
-  promotionEditForm.applyToProducts = promotionEditForm.selectedProducts.length > 0
-  
-  // Store original values for change detection
-  originalPromotionEditForm.code = promotionEditForm.code
-  originalPromotionEditForm.name = promotionEditForm.name
-  originalPromotionEditForm.discountValue = promotionEditForm.discountValue
-  originalPromotionEditForm.active = promotionEditForm.active
-  originalPromotionEditForm.dateRange = [...promotionEditForm.dateRange]
-  originalPromotionEditForm.selectedProducts = [...promotionEditForm.selectedProducts]
-  originalPromotionEditForm.applyToProducts = promotionEditForm.applyToProducts
-  
-  editVisible.value = true
+  // Navigate to edit page
+  router.push({ name: 'QuanLyDotGiamGiaEdit', params: { id: promotion.id } })
 }
 
 const deletePromotion = (promotion: any) => {
