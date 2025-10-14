@@ -44,25 +44,25 @@ public class DotGiamGiaController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody DotGiamGiaRequest request) {
         dotGiamGiaService.add(request);
-        return new ResponseObject<>(null, "Thêm đợt giảm giá thành công");
+        return new ResponseObject<>(true, null, "Thêm đợt giảm giá thành công");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@RequestBody DotGiamGiaRequest request, @PathVariable Integer id) {
         dotGiamGiaService.update(id, request);
-        return new ResponseObject<>(null, "Cập nhật đợt giảm giá thành công");
+        return new ResponseObject<>(true, null, "Cập nhật đợt giảm giá thành công");
     }
 
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         dotGiamGiaService.updateStatus(id);
-        return new ResponseObject<>(null, "Xoá đợt giảm giá thành công");
+        return new ResponseObject<>(true, null, "Xoá đợt giảm giá thành công");
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseObject<?> delete(@PathVariable Integer id) {
         dotGiamGiaService.delete(id);
-        return new ResponseObject<>(null, "Xóa đợt giảm giá thành công");
+        return new ResponseObject<>(true, null, "Xóa đợt giảm giá thành công");
     }
     
     /**

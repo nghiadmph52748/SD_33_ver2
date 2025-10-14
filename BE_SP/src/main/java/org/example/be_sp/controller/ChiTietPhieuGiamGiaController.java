@@ -46,20 +46,20 @@ public class ChiTietPhieuGiamGiaController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody ChiTietPhieuGiamGiaRequest request) {
         service.add(request);
-        return new ResponseObject<>(null, "Thêm chi tiết phiếu giảm giá thành công");
+        return new ResponseObject<>(true, null, "Thêm chi tiết phiếu giảm giá thành công");
     }
 
     @PostMapping("/add-multiple")
     public ResponseObject<?> addMultiple(@RequestParam Integer idPhieuGiamGia, 
                                          @RequestBody List<Integer> idChiTietSanPhams) {
         service.addMultiple(idPhieuGiamGia, idChiTietSanPhams);
-        return new ResponseObject<>(null, "Thêm sản phẩm vào phiếu giảm giá thành công");
+        return new ResponseObject<>(true, null, "Thêm sản phẩm vào phiếu giảm giá thành công");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody ChiTietPhieuGiamGiaRequest request) {
         service.update(id, request);
-        return new ResponseObject<>(null, "Cập nhật chi tiết phiếu giảm giá thành công");
+        return new ResponseObject<>(true, null, "Cập nhật chi tiết phiếu giảm giá thành công");
     }
 
     @PutMapping("/update-by-phieu-giam-gia")
@@ -68,13 +68,13 @@ public class ChiTietPhieuGiamGiaController {
         log.info("Updating products for coupon {} with product IDs: {}", idPhieuGiamGia, idChiTietSanPhams);
         service.updateByPhieuGiamGia(idPhieuGiamGia, idChiTietSanPhams);
         log.info("Successfully updated {} products for coupon {}", idChiTietSanPhams.size(), idPhieuGiamGia);
-        return new ResponseObject<>(null, "Cập nhật sản phẩm áp dụng giảm giá thành công");
+        return new ResponseObject<>(true, null, "Cập nhật sản phẩm áp dụng giảm giá thành công");
     }
 
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         service.updateStatus(id);
-        return new ResponseObject<>(null, "Xoá chi tiết phiếu giảm giá thành công");
+        return new ResponseObject<>(true, null, "Xoá chi tiết phiếu giảm giá thành công");
     }
 }
 

@@ -32,18 +32,18 @@ public class PhieuGiamGiaCaNhanController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody PhieuGiamGiaCaNhanRequest request) {
         service.add(request);
-        return new ResponseObject<>(null,"Add phieu giam gia ca nhan successfully");
+        return new ResponseObject<>(true, null,"Add phieu giam gia ca nhan successfully");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@RequestBody PhieuGiamGiaCaNhanRequest request, @PathVariable Integer id) {
         service.update(id, request);
-        return new ResponseObject<>(null,"Update phieu giam gia ca nhan successfully");
+        return new ResponseObject<>(true, null,"Update phieu giam gia ca nhan successfully");
     }
 
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         service.updateStatus(id);
-        return new ResponseObject<>(null,"Update status phieu giam gia ca nhan successfully");
+        return new ResponseObject<>(true, null,"Update status phieu giam gia ca nhan successfully");
     }
 }

@@ -98,7 +98,13 @@ public class DotGiamGiaService extends GenericCrudService<DotGiamGia, Integer, D
         
         // Build change description and log history
         String changes = buildChangeDescription(oldSnapshot, updatedDgg);
-        logHistory(id, "CẬP NHẬT", changes);
+        
+        // Use lyDoThayDoi from request if provided, otherwise use auto-generated changes
+        String description = (request.getLyDoThayDoi() != null && !request.getLyDoThayDoi().trim().isEmpty()) 
+                ? request.getLyDoThayDoi() + "\n\n" + changes
+                : changes;
+        
+        logHistory(id, "CẬP NHẬT", description);
         
         return saved;
     }

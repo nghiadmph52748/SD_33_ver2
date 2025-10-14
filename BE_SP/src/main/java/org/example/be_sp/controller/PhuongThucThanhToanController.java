@@ -28,16 +28,16 @@ public class PhuongThucThanhToanController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody PhuongThucThanhToanRequest phuongThucThanhToanRequest) {
         phuongThucThanhToanService.add(phuongThucThanhToanRequest);
-        return new ResponseObject<>(null, "Thêm mới thành công");
+        return new ResponseObject<>(true, null, "Thêm mới thành công");
     }
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody PhuongThucThanhToanRequest phuongThucThanhToanRequest) {
         phuongThucThanhToanService.update(id, phuongThucThanhToanRequest);
-        return new ResponseObject<>(null, "Cập nhật thành công id: "+ id);
+        return new ResponseObject<>(true, null, "Cập nhật thành công id: "+ id);
     }
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         phuongThucThanhToanService.updateStatus(id);
-        return new ResponseObject<>(null, "Xóa phương thức thanh toán thành công id: " + id);
+        return new ResponseObject<>(true, null, "Xóa phương thức thanh toán thành công id: " + id);
     }
 }

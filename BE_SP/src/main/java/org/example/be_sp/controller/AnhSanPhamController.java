@@ -167,12 +167,12 @@ public class AnhSanPhamController {
 			if (uploadDir.exists()) {
 				File[] files = uploadDir.listFiles();
 				int fileCount = files != null ? files.length : 0;
-				return new ResponseObject<>(null, "Thư mục uploads tồn tại, có " + fileCount + " files");
+				return new ResponseObject<>(true, null, "Thư mục uploads tồn tại, có " + fileCount + " files");
 			} else {
-				return new ResponseObject<>(null, "Thư mục uploads không tồn tại");
+				return new ResponseObject<>(true, null, "Thư mục uploads không tồn tại");
 			}
 		} catch (Exception e) {
-			return new ResponseObject<>(null, "Lỗi khi kiểm tra: " + e.getMessage());
+			return new ResponseObject<>(true, null, "Lỗi khi kiểm tra: " + e.getMessage());
 		}
 	}
 }

@@ -43,25 +43,25 @@ public class PhieuGiamGiaController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody PhieuGiamGiaRequest request) {
         service.add(request);
-        return new ResponseObject<>(null, "Add success");
+        return new ResponseObject<>(true, null, "Add success");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@RequestBody PhieuGiamGiaRequest request, @PathVariable Integer id) {
         service.update(id, request);
-        return new ResponseObject<>(null, "Update success");
+        return new ResponseObject<>(true, null, "Update success");
     }
 
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         service.updateStatus(id);
-        return new ResponseObject<>(null, "Update status success");
+        return new ResponseObject<>(true, null, "Update status success");
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseObject<?> delete(@PathVariable Integer id) {
         service.delete(id);
-        return new ResponseObject<>(null, "Delete success");
+        return new ResponseObject<>(true, null, "Delete success");
     }
 
     @GetMapping("/list/khach-hang/active/{id}")

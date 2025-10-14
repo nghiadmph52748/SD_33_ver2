@@ -46,10 +46,12 @@ const requestJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
   const payload = (await response.json()) as ApiEnvelope<T>
 
-  if (payload.data === undefined) {
+  // For update/delete operations, data might be null but message indicates success
+  if (payload.data === undefined && !payload.message) {
     throw new Error('Malformed response payload')
   }
 
+  // Check success flag - if false, check if message indicates success
   const successFlag = payload.isSuccess ?? payload.success
   if (successFlag === false) {
     const normalizedMessage = (payload.message ?? '').toLowerCase()
@@ -57,6 +59,8 @@ const requestJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
     if (!isPositive) {
       throw new Error(payload.message ?? 'Yêu cầu thất bại')
     }
+    // If message indicates success despite isSuccess=false, treat as success
+    // This handles the case where backend returns null data with success message
   }
 
   return payload.data
@@ -106,6 +110,7 @@ export interface CreatePromotionPayload {
   ngayKetThuc: string
   trangThai: boolean
   deleted?: boolean
+  lyDoThayDoi?: string
 }
 
 export const createPromotionCampaign = (payload: CreatePromotionPayload) =>
@@ -140,6 +145,7 @@ export interface CreateCouponPayload {
   deleted?: boolean
   idKhachHang?: number[]
   featured?: boolean
+  lyDoThayDoi?: string
 }
 
 export const createCoupon = (payload: CreateCouponPayload) =>

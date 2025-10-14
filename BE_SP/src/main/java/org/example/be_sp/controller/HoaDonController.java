@@ -39,24 +39,24 @@ public class HoaDonController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody BanHangTaiQuayRequest request) {
         hoaDonService.add(request);
-        return new ResponseObject<>(null, "Thêm hóa đơn thành công");
+        return new ResponseObject<>(true, null, "Thêm hóa đơn thành công");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody BanHangTaiQuayRequest request) {
         hoaDonService.update(id, request);
-        return new ResponseObject<>(null, "Cập nhật hóa đơn thành công");
+        return new ResponseObject<>(true, null, "Cập nhật hóa đơn thành công");
     }
 
     @PutMapping("/delete/{id}")
     public ResponseObject<?> delete(@PathVariable Integer id) {
         hoaDonService.delete(id);
-        return new ResponseObject<>(null, "Xóa hóa đơn thành công");
+        return new ResponseObject<>(true, null, "Xóa hóa đơn thành công");
     }
 
     @PostMapping("/add-sample-data")
     public ResponseObject<?> addSampleData() {
         hoaDonService.addSampleData();
-        return new ResponseObject<>(null, "Thêm dữ liệu mẫu thành công");
+        return new ResponseObject<>(true, null, "Thêm dữ liệu mẫu thành công");
     }
 }

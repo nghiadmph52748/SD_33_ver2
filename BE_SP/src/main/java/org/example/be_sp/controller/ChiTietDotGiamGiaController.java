@@ -46,19 +46,19 @@ public class ChiTietDotGiamGiaController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody ChiTietDotGiamGiaRequest request) {
         service.add(request);
-        return new ResponseObject<>(null, "Thêm chi tiết đợt giảm giá thành công");
+        return new ResponseObject<>(true, null, "Thêm chi tiết đợt giảm giá thành công");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody ChiTietDotGiamGiaRequest request) {
         service.update(id, request);
-        return new ResponseObject<>(null, "Cập nhật chi tiết đợt giảm giá thành công");
+        return new ResponseObject<>(true, null, "Cập nhật chi tiết đợt giảm giá thành công");
     }
 
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         service.updateStatus(id);
-        return new ResponseObject<>(null, "Xoá chi tiết đợt giảm giá thành công");
+        return new ResponseObject<>(true, null, "Xoá chi tiết đợt giảm giá thành công");
     }
 
     @GetMapping("/by-dot-giam-gia/{id}")
@@ -69,6 +69,6 @@ public class ChiTietDotGiamGiaController {
     @PostMapping("/add-batch")
     public ResponseObject<?> addBatch(@RequestBody List<ChiTietDotGiamGiaRequest> requests) {
         service.addBatch(requests);
-        return new ResponseObject<>(null, "Thêm danh sách chi tiết đợt giảm giá thành công");
+        return new ResponseObject<>(true, null, "Thêm danh sách chi tiết đợt giảm giá thành công");
     }
 }
