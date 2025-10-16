@@ -39,18 +39,18 @@ public class DiaChiKhachHangController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody DiaChiKhachHangRequest request) {
         service.add(request);
-        return new ResponseObject<>(null, "Thêm địa chỉ khách hàng thành công");
+        return new ResponseObject<>(true, null, "Thêm địa chỉ khách hàng thành công");
     }
 
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@RequestBody DiaChiKhachHangRequest request, @PathVariable Integer id) {
         service.update(id, request);
-        return new ResponseObject<>(null, "Cập nhật địa chỉ khách hàng thành công");
+        return new ResponseObject<>(true, null, "Cập nhật địa chỉ khách hàng thành công");
     }
 
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         service.updateStatus(id);
-        return new ResponseObject<>(null, "Cập nhật trạng thái địa chỉ khách hàng thành công");
+        return new ResponseObject<>(true, null, "Cập nhật trạng thái địa chỉ khách hàng thành công");
     }
 }

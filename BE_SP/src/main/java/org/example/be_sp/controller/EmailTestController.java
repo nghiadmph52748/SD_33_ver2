@@ -47,7 +47,7 @@ public class EmailTestController {
             
             emailService.sendPromotionAnnouncementEmail(promotionData);
             
-            return new ResponseObject<>(null, "Email promotion đã được gửi thành công đến: " + email);
+            return new ResponseObject<>(true, null, "Email promotion đã được gửi thành công đến: " + email);
             
         } catch (Exception e) {
             log.error("Error sending promotion email", e);

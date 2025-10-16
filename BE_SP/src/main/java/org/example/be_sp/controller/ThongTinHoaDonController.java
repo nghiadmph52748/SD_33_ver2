@@ -34,17 +34,17 @@ public class ThongTinHoaDonController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody org.example.be_sp.model.request.ThongTinHoaDonRequest thongTinHoaDonRequest) {
         thongTinHoaDonService.add(thongTinHoaDonRequest);
-        return new ResponseObject<>(null, "Them moi thanh cong");
+        return new ResponseObject<>(true, null, "Them moi thanh cong");
     }
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody org.example.be_sp.model.request.ThongTinHoaDonRequest thongTinHoaDonRequest) {
         thongTinHoaDonService.update(id, thongTinHoaDonRequest);
-        return new ResponseObject<>(null, "Cap nhat thanh cong");
+        return new ResponseObject<>(true, null, "Cap nhat thanh cong");
     }
     @PutMapping("/delete/{id}")
     public ResponseObject<?> delete(@PathVariable Integer id) {
         thongTinHoaDonService.delete(id);
-        return new ResponseObject<>(null, "Xoa thanh cong");
+        return new ResponseObject<>(true, null, "Xoa thanh cong");
     }
     
     @GetMapping("/by-hoa-don/{hoaDonId}")

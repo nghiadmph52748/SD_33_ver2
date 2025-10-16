@@ -18,4 +18,5 @@ public class DotGiamGiaRequest {
     LocalDateTime ngayKetThuc;
     Boolean trangThai;
     Boolean deleted;
+    String lyDoThayDoi;
 }

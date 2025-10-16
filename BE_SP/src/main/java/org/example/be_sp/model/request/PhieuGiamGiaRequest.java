@@ -27,4 +27,5 @@ public class PhieuGiamGiaRequest {
     String moTa;
     Boolean deleted;
     Boolean featured;
+    String lyDoThayDoi;
 }

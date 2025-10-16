@@ -198,8 +198,13 @@ public class PhieuGiamGiaService {
         
         String finalChanges = allChanges.length() > 0 ? allChanges.toString() : "Không có thay đổi";
         
+        // Use lyDoThayDoi from request if provided, prepend it to the auto-generated changes
+        String description = (request.getLyDoThayDoi() != null && !request.getLyDoThayDoi().trim().isEmpty()) 
+                ? request.getLyDoThayDoi() + "\n\n" + finalChanges
+                : finalChanges;
+        
         // Log history after save with all changes
-        logHistory(id, "CẬP NHẬT", finalChanges);
+        logHistory(id, "CẬP NHẬT", description);
     }
     
     /**

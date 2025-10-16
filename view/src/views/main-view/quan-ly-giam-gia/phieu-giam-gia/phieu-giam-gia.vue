@@ -214,7 +214,7 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-button type="text" class="danger-item" @click="deleteCoupon(record)">
+            <a-button v-if="isAdmin" type="text" class="danger-item" @click="deleteCoupon(record)">
               <template #icon>
                 <icon-delete />
               </template>
@@ -335,7 +335,7 @@
       v-model:visible="couponEditVisible"
       title="Chỉnh sửa phiếu giảm giá"
       :confirm-loading="couponEditSubmitting"
-      @ok="submitCouponEdit"
+      @before-ok="submitCouponEdit"
       @cancel="couponEditVisible = false"
       :width="modalWidth"
       :class="{ 'edit-modal-multi-column': hasMultipleColumns }"
@@ -484,6 +484,15 @@
                 </a-form-item>
               </a-col>
             </a-row>
+            <a-form-item field="lyDoThayDoi" label="Lý do thay đổi">
+              <a-textarea
+                v-model="couponEditForm.lyDoThayDoi"
+                placeholder="Nhập lý do thay đổi..."
+                allow-clear
+                :max-length="500"
+                :auto-size="{ minRows: 3, maxRows: 6 }"
+              />
+            </a-form-item>
           </a-form>
 
           <!-- Product Selection Section - inside left column -->
@@ -682,6 +691,25 @@
       <div v-else style="text-align: center; padding: 40px; color: var(--color-text-3)">Không có khách hàng nào</div>
     </a-modal>
 
+    <!-- Edit Confirmation Modal -->
+    <a-modal
+      v-model:visible="couponEditConfirmVisible"
+      title="Xác nhận chỉnh sửa phiếu giảm giá"
+      :confirm-loading="couponEditSubmitting"
+      ok-text="Xác nhận"
+      width="500px"
+      @ok="confirmCouponEdit"
+      @cancel="couponEditConfirmVisible = false"
+    >
+      <p>
+        Bạn có chắc chắn muốn chỉnh sửa phiếu giảm giá
+        <strong>{{ selectedCoupon?.name }}</strong>
+        ?
+      </p>
+      <p class="modal-note">Lý do thay đổi: <strong>{{ couponEditForm.lyDoThayDoi }}</strong></p>
+      <p class="modal-note">Hành động này sẽ cập nhật thông tin phiếu giảm giá.</p>
+    </a-modal>
+
     <!-- Export Confirmation Modal -->
     <a-modal
       v-model:visible="exportConfirmVisible"
@@ -707,6 +735,7 @@ import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
+import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
@@ -738,6 +767,23 @@ import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
+const userStore = useUserStore()
+
+// Check if user is admin
+// Check both idQuyenHan and tenQuyenHan for flexibility
+const isAdmin = computed(() => {
+  const roleId = userStore.idQuyenHan
+  const roleName = userStore.tenQuyenHan?.toLowerCase()
+  
+  // Debug: Log role information
+  console.log('[Permission Check] User Role:', { roleId, roleName, tenQuyenHan: userStore.tenQuyenHan })
+  
+  // Admin if idQuyenHan is 1 OR role name contains 'admin'
+  const hasPermission = roleId === 1 || roleName?.includes('admin') || roleName?.includes('quản trị')
+  console.log('[Permission Check] isAdmin:', hasPermission)
+  
+  return hasPermission
+})
 
 // Filters
 const DEFAULT_PERCENT_RANGE: [number, number] = [0, 100]
@@ -880,6 +926,7 @@ const couponEditVisible = ref(false)
 const couponDeleteVisible = ref(false)
 const couponEditSubmitting = ref(false)
 const couponDeleteSubmitting = ref(false)
+const couponEditConfirmVisible = ref(false)
 
 // Applied customers modal
 const appliedCustomersVisible = ref(false)
@@ -909,6 +956,25 @@ const couponEditForm = reactive({
   applyToProducts: false,
   selectedCustomerIds: [] as number[],
   selectedProductIds: [] as number[],
+  lyDoThayDoi: '',
+})
+
+// Store original values for change detection
+const originalCouponEditForm = reactive({
+  code: '',
+  name: '',
+  discountMode: 'percentage' as 'percentage' | 'amount',
+  discountValue: 10,
+  maxDiscount: null as number | null,
+  minOrder: 0,
+  quantity: 1,
+  dateRange: [] as string[],
+  description: '',
+  active: true,
+  featured: false,
+  applyToProducts: false,
+  selectedCustomerIds: [] as number[],
+  selectedProductIds: [] as number[],
 })
 
 const couponEditRules: FormRules = {
@@ -917,6 +983,7 @@ const couponEditRules: FormRules = {
   discountValue: [{ required: true, message: 'Vui lòng nhập giá trị giảm' }],
   quantity: [{ required: true, message: 'Vui lòng nhập số lượng áp dụng' }],
   dateRange: [{ required: true, type: 'array', message: 'Vui lòng chọn thời gian áp dụng' }],
+  lyDoThayDoi: [{ required: true, message: 'Vui lòng nhập lý do thay đổi' }],
 }
 
 const isPercentEdit = computed(() => couponEditForm.discountMode === 'percentage')
@@ -1680,64 +1747,8 @@ const viewAppliedCustomers = async () => {
 }
 
 const editCoupon = async (coupon: CouponRecord) => {
-  selectedCoupon.value = coupon
-  couponEditForm.code = coupon.code ?? ''
-  couponEditForm.name = coupon.name ?? ''
-  couponEditForm.discountMode = coupon.discount_type === 'percentage' ? 'percentage' : 'amount'
-  couponEditForm.discountValue = Number(coupon.discount_value ?? 0)
-  couponEditForm.maxDiscount = coupon.discount_type === 'percentage' ? (coupon.max_discount_value ?? null) : null
-  couponEditForm.minOrder = coupon.min_order_value ?? 0
-  couponEditForm.quantity = coupon.usage_limit ?? 1
-  couponEditForm.dateRange = [coupon.start_date ?? '', coupon.end_date ?? ''].filter(Boolean) as string[]
-  couponEditForm.description = coupon.source?.moTa ?? ''
-  couponEditForm.active = Boolean(coupon.source?.trangThai)
-  couponEditForm.featured = coupon.featured ?? false
-  couponEditForm.selectedCustomerIds = coupon.source?.idKhachHang ?? []
-
-  // Load customers if featured and not already loaded
-  if (coupon.featured && customers.value.length === 0) {
-    loadCustomers()
-  }
-
-  // Load products applied to this coupon
-  try {
-    const response = await axios.get(`/api/chi-tiet-phieu-giam-gia-management/by-phieu-giam-gia/${coupon.id}`)
-
-    // Handle both ResponseObject format and direct array
-    let productDetails: any[] = []
-
-    if (Array.isArray(response.data)) {
-      // Direct array response
-      productDetails = response.data
-    } else if (response.data?.isSuccess && response.data.data && Array.isArray(response.data.data)) {
-      // ResponseObject wrapper format
-      productDetails = response.data.data
-    }
-
-    if (productDetails.length > 0) {
-      const shouldApply = true
-
-      couponEditForm.applyToProducts = shouldApply
-
-      // Clear and repopulate to ensure reactivity
-      couponEditForm.selectedProductIds.splice(0)
-      const productIds = productDetails.map((item: any) => item.idChiTietSanPham)
-      couponEditForm.selectedProductIds.push(...productIds)
-    } else {
-      couponEditForm.applyToProducts = false
-      couponEditForm.selectedProductIds.splice(0)
-    }
-  } catch {
-    couponEditForm.applyToProducts = false
-    couponEditForm.selectedProductIds = []
-  }
-
-  // Load products list if not loaded
-  if (products.value.length === 0) {
-    await loadProducts()
-  }
-
-  couponEditVisible.value = true
+  // Navigate to edit page
+  router.push({ name: 'QuanLyPhieuGiamGiaEdit', params: { id: coupon.id } })
 }
 
 const deleteCoupon = (coupon: CouponRecord) => {
@@ -1747,87 +1758,124 @@ const deleteCoupon = (coupon: CouponRecord) => {
 
 const submitCouponEdit = async () => {
   if (!selectedCoupon.value) {
-    return
+    return false
   }
   if (couponEditSubmitting.value) {
-    return
+    return false
   }
 
   const form = couponEditFormRef.value
   if (!form) {
-    return
+    return false
   }
 
   try {
     await form.validate()
   } catch {
-    return
+    return false
   }
 
   const discountValue = Number(couponEditForm.discountValue)
   if (Number.isNaN(discountValue) || discountValue <= 0) {
     Message.error('Giá trị giảm phải lớn hơn 0')
-    return
+    return false
   }
 
   if (isPercentEdit.value && discountValue > 100) {
     Message.error('Giá trị giảm theo phần trăm tối đa 100%')
-    return
+    return false
   }
 
   const [startDate, endDate] = couponEditForm.dateRange
   if (!startDate || !endDate) {
     Message.error('Vui lòng chọn thời gian áp dụng')
-    return
+    return false
   }
   if (new Date(startDate) > new Date(endDate)) {
     Message.error('Ngày kết thúc phải sau ngày bắt đầu')
-    return
+    return false
   }
 
   if (isPercentEdit.value) {
     const capValue = Number(couponEditForm.maxDiscount)
     if (!capValue || Number.isNaN(capValue) || capValue <= 0) {
       Message.error('Vui lòng nhập mức giảm tối đa hợp lệ')
-      return
+      return false
     }
     if (capValue > 50000000) {
       Message.error('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
-      return
+      return false
     }
 
     // Validate: Max discount should not exceed min order value
     const minOrderValue = Number(couponEditForm.minOrder || 0)
     if (minOrderValue > 0 && capValue >= minOrderValue) {
       Message.error('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
-      return
+      return false
     }
   } else {
     // For fixed amount discount
     const minOrderValue = Number(couponEditForm.minOrder || 0)
     if (minOrderValue > 0 && discountValue >= minOrderValue) {
       Message.error('Giá trị giảm phải nhỏ hơn giá trị đơn hàng tối thiểu')
-      return
+      return false
     }
   }
 
   const quantityValue = Number(couponEditForm.quantity)
   if (!Number.isInteger(quantityValue) || quantityValue <= 0) {
     Message.error('Số lượng áp dụng phải lớn hơn 0')
-    return
+    return false
   }
 
   // Validate customer selection for featured vouchers
   if (couponEditForm.featured && couponEditForm.selectedCustomerIds.length === 0) {
     Message.error('Vui lòng chọn ít nhất một khách hàng cho phiếu giảm giá nổi bật')
-    return
+    return false
   }
 
   // Validate product selection
   if (couponEditForm.applyToProducts && couponEditForm.selectedProductIds.length === 0) {
     Message.error('Vui lòng chọn ít nhất một sản phẩm để áp dụng giảm giá!')
+    return false
+  }
+
+  // Check if any changes were made
+  const hasChanges = (
+    couponEditForm.name !== originalCouponEditForm.name ||
+    couponEditForm.discountMode !== originalCouponEditForm.discountMode ||
+    couponEditForm.discountValue !== originalCouponEditForm.discountValue ||
+    couponEditForm.maxDiscount !== originalCouponEditForm.maxDiscount ||
+    couponEditForm.minOrder !== originalCouponEditForm.minOrder ||
+    couponEditForm.quantity !== originalCouponEditForm.quantity ||
+    couponEditForm.dateRange[0] !== originalCouponEditForm.dateRange[0] ||
+    couponEditForm.dateRange[1] !== originalCouponEditForm.dateRange[1] ||
+    couponEditForm.description !== originalCouponEditForm.description ||
+    couponEditForm.active !== originalCouponEditForm.active ||
+    couponEditForm.featured !== originalCouponEditForm.featured ||
+    couponEditForm.applyToProducts !== originalCouponEditForm.applyToProducts ||
+    JSON.stringify([...couponEditForm.selectedCustomerIds].sort()) !== JSON.stringify([...originalCouponEditForm.selectedCustomerIds].sort()) ||
+    JSON.stringify([...couponEditForm.selectedProductIds].sort()) !== JSON.stringify([...originalCouponEditForm.selectedProductIds].sort())
+  )
+
+  if (!hasChanges) {
+    Message.warning('Không có thay đổi nào để cập nhật')
+    return false
+  }
+
+  // All validations passed - show confirmation modal
+  couponEditConfirmVisible.value = true
+  return false // Prevent auto-close, confirmation modal will handle actual submission
+}
+
+const confirmCouponEdit = async () => {
+  if (!selectedCoupon.value) {
     return
   }
+
+  const discountValue = Number(couponEditForm.discountValue)
+  const quantityValue = Number(couponEditForm.quantity)
+  const [startDate, endDate] = couponEditForm.dateRange
 
   // eslint-disable-next-line no-console
   console.log('[FORM_SUBMIT] Current form values:', {
@@ -1850,6 +1898,7 @@ const submitCouponEdit = async () => {
     deleted: Boolean(selectedCoupon.value.source?.deleted),
     idKhachHang: couponEditForm.featured ? couponEditForm.selectedCustomerIds : [],
     featured: couponEditForm.featured,
+    lyDoThayDoi: couponEditForm.lyDoThayDoi.trim(),
   }
   
   // eslint-disable-next-line no-console
@@ -1868,6 +1917,7 @@ const submitCouponEdit = async () => {
 
     Message.success('Cập nhật phiếu giảm giá thành công')
 
+    couponEditConfirmVisible.value = false
     couponEditVisible.value = false
 
     await loadCoupons()

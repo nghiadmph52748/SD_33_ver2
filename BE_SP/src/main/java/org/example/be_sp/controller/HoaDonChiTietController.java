@@ -28,16 +28,16 @@ public class HoaDonChiTietController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody HoaDonChiTietRequest hoaDonChiTietRequest) {
         hoaDonChiTietService.add(hoaDonChiTietRequest);
-        return new ResponseObject<>(null, "Thêm mới thành công");
+        return new ResponseObject<>(true, null, "Thêm mới thành công");
     }
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody HoaDonChiTietRequest hoaDonChiTietRequest) {
         hoaDonChiTietService.update(id, hoaDonChiTietRequest);
-        return new ResponseObject<>(null, "Cập nhật thành công id: "+ id);
+        return new ResponseObject<>(true, null, "Cập nhật thành công id: "+ id);
     }
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         hoaDonChiTietService.updateTrangThai(id);
-        return new ResponseObject<>(null, "Xóa hóa đơn chi tiết thành công id: " + id);
+        return new ResponseObject<>(true, null, "Xóa hóa đơn chi tiết thành công id: " + id);
     }
 }

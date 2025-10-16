@@ -58,6 +58,30 @@ const QUAN_LY_GIAM_GIA: AppRouteRecordRaw = {
         activeMenu: 'QuanLyPhieuGiamGia',
       },
     },
+    {
+      path: 'phieu-giam-gia/chinh-sua/:id',
+      name: 'QuanLyPhieuGiamGiaEdit',
+      component: () => import('@/views/main-view/quan-ly-giam-gia/phieu-giam-gia/phieu-giam-gia-edit.vue'),
+      meta: {
+        locale: 'menu.quan-ly-giam-gia.phieu-giam-gia.edit',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+        activeMenu: 'QuanLyPhieuGiamGia',
+      },
+    },
+    {
+      path: 'dot-giam-gia/chinh-sua/:id',
+      name: 'QuanLyDotGiamGiaEdit',
+      component: () => import('@/views/main-view/quan-ly-giam-gia/dot-giam-gia/dot-giam-gia-edit.vue'),
+      meta: {
+        locale: 'menu.quan-ly-giam-gia.dot-giam-gia.edit',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+        activeMenu: 'QuanLyDotGiamGia',
+      },
+    },
   ],
 }
 

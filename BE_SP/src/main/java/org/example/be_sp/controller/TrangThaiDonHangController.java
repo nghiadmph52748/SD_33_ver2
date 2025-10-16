@@ -28,17 +28,17 @@ public class TrangThaiDonHangController {
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody TrangThaiDonHangRequest trangThaiDonHangRequest) {
         trangThaiDonHangService.update(id, trangThaiDonHangRequest);
-        return new ResponseObject<>(null, "Cap nhat thanh cong");
+        return new ResponseObject<>(true, null, "Cap nhat thanh cong");
     }
     @PutMapping("/delete/{id}")
     public ResponseObject<?> delete(@PathVariable Integer id) {
         trangThaiDonHangService.updateStatus(id);
-        return new ResponseObject<>(null, "Xoa thanh cong");
+        return new ResponseObject<>(true, null, "Xoa thanh cong");
     }
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody TrangThaiDonHangRequest trangThaiDonHangRequest) {
         trangThaiDonHangService.add(trangThaiDonHangRequest);
-        return new ResponseObject<>(null, "Them moi thanh cong");
+        return new ResponseObject<>(true, null, "Them moi thanh cong");
     }
 
 }

@@ -128,7 +128,7 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-button type="text" status="danger" @click="deletePromotion(record)">
+            <a-button v-if="isAdmin" type="text" status="danger" @click="deletePromotion(record)">
               <template #icon>
                 <icon-delete />
               </template>
@@ -212,10 +212,11 @@
     <a-modal
       v-model:visible="editVisible"
       title="Chỉnh sửa đợt giảm giá"
-      :confirm-loading="editSubmitting"
-      @ok="submitPromotionEdit"
+      @before-ok="handleEditOkClick"
       @cancel="editVisible = false"
       :width="editModalWidth"
+      ok-text="Đồng ý"
+      cancel-text="Hủy"
     >
       <div class="modal-edit-layout">
         <!-- Left Column: Form -->
@@ -262,6 +263,15 @@
               <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
                 Nếu không chọn, đợt giảm giá sẽ không áp dụng cho sản phẩm cụ thể
               </div>
+            </a-form-item>
+            <a-form-item field="lyDoThayDoi" label="Lý do thay đổi">
+              <a-textarea
+                v-model="promotionEditForm.lyDoThayDoi"
+                placeholder="Nhập lý do thay đổi..."
+                allow-clear
+                :max-length="500"
+                :auto-size="{ minRows: 3, maxRows: 6 }"
+              />
             </a-form-item>
           </a-form>
         </div>
@@ -345,6 +355,25 @@
       </div>
     </a-modal>
 
+    <!-- Confirmation Modal for Edit -->
+    <a-modal
+      v-model:visible="editConfirmVisible"
+      title="Xác nhận cập nhật"
+      :confirm-loading="editSubmitting"
+      width="480px"
+      ok-text="Xác nhận"
+      cancel-text="Hủy"
+      @ok="submitPromotionEdit"
+      @cancel="editConfirmVisible = false"
+    >
+      <p>
+        Bạn chắc chắn muốn cập nhật đợt giảm giá
+        <strong>{{ selectedPromotion?.name }}</strong>
+        ?
+      </p>
+      <p class="modal-note">Thay đổi sẽ được ghi lại vào lịch sử.</p>
+    </a-modal>
+
     <a-modal
       v-model:visible="deleteVisible"
       title="Xóa đợt giảm giá"
@@ -387,6 +416,7 @@
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import downloadCsv from '@/utils/export-csv'
@@ -419,6 +449,23 @@ import {
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
+const userStore = useUserStore()
+
+// Check if user is admin
+// Check both idQuyenHan and tenQuyenHan for flexibility
+const isAdmin = computed(() => {
+  const roleId = userStore.idQuyenHan
+  const roleName = userStore.tenQuyenHan?.toLowerCase()
+  
+  // Debug: Log role information
+  console.log('[Permission Check] User Role:', { roleId, roleName, tenQuyenHan: userStore.tenQuyenHan })
+  
+  // Admin if idQuyenHan is 1 OR role name contains 'admin'
+  const hasPermission = roleId === 1 || roleName?.includes('admin') || roleName?.includes('quản trị')
+  console.log('[Permission Check] isAdmin:', hasPermission)
+  
+  return hasPermission
+})
 
 type PromotionStatus = 'active' | 'expired' | 'upcoming' | 'inactive'
 
@@ -514,6 +561,7 @@ const selectedPromotion = ref<PromotionRecord | null>(null)
 
 const detailVisible = ref(false)
 const editVisible = ref(false)
+const editConfirmVisible = ref(false)
 const deleteVisible = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
@@ -534,6 +582,18 @@ const originalProductIds = ref<number[]>([])
 const promotionEditFormRef = ref<FormInstance>()
 const productSearchQuery = ref('')
 const promotionEditForm = reactive({
+  code: '',
+  name: '',
+  discountValue: 10,
+  dateRange: [] as string[],
+  active: true,
+  selectedProducts: [] as number[],
+  applyToProducts: false,
+  lyDoThayDoi: '',
+})
+
+// Store original values for change detection
+const originalPromotionEditForm = reactive({
   code: '',
   name: '',
   discountValue: 10,
@@ -586,6 +646,7 @@ const promotionEditRules: FormRules = {
       },
     },
   ],
+  lyDoThayDoi: [{ required: true, message: 'Vui lòng nhập lý do thay đổi' }],
 }
 
 // Real-time validation for discount value
@@ -995,20 +1056,8 @@ const loadProductsForPromotion = async (promotionId: number) => {
 }
 
 const editPromotion = async (promotion: any) => {
-  selectedPromotion.value = promotion
-  promotionEditForm.code = promotion.code ?? ''
-  promotionEditForm.name = promotion.name ?? ''
-  promotionEditForm.discountValue = Number(promotion.percentage ?? 0)
-  promotionEditForm.active = Boolean(promotion.source?.trangThai)
-  promotionEditForm.dateRange = [promotion.start_date ?? '', promotion.end_date ?? ''].filter(Boolean) as string[]
-  
-  // Load products for this promotion
-  await loadProductsForPromotion(promotion.id)
-  
-  // Set applyToProducts based on whether there are products
-  promotionEditForm.applyToProducts = promotionEditForm.selectedProducts.length > 0
-  
-  editVisible.value = true
+  // Navigate to edit page
+  router.push({ name: 'QuanLyDotGiamGiaEdit', params: { id: promotion.id } })
 }
 
 const deletePromotion = (promotion: any) => {
@@ -1057,18 +1106,44 @@ const confirmExportExcel = async () => {
   }
 }
 
-const submitPromotionEdit = async () => {
-  if (!selectedPromotion.value) return
-  if (editSubmitting.value) return
+const handleEditOkClick = async () => {
+  if (!selectedPromotion.value) return false
+  if (editSubmitting.value) return false
 
   const form = promotionEditFormRef.value
-  if (!form) return
+  if (!form) return false
 
   try {
     await form.validate()
   } catch {
-    return
+    Message.error('Vui lòng kiểm tra lại các trường thông tin')
+    return false
   }
+
+  // Check if any changes were made
+  const hasChanges = (
+    promotionEditForm.name !== originalPromotionEditForm.name ||
+    promotionEditForm.discountValue !== originalPromotionEditForm.discountValue ||
+    promotionEditForm.active !== originalPromotionEditForm.active ||
+    promotionEditForm.dateRange[0] !== originalPromotionEditForm.dateRange[0] ||
+    promotionEditForm.dateRange[1] !== originalPromotionEditForm.dateRange[1] ||
+    promotionEditForm.applyToProducts !== originalPromotionEditForm.applyToProducts ||
+    JSON.stringify([...promotionEditForm.selectedProducts].sort()) !== JSON.stringify([...originalPromotionEditForm.selectedProducts].sort())
+  )
+
+  if (!hasChanges) {
+    Message.warning('Không có thay đổi nào để cập nhật')
+    return false
+  }
+
+  // Validation passed, show confirmation modal
+  editConfirmVisible.value = true
+  return false // Prevent auto-close, confirmation modal will handle actual submission
+}
+
+const submitPromotionEdit = async () => {
+  if (!selectedPromotion.value) return
+  if (editSubmitting.value) return
 
   const [startDate, endDate] = promotionEditForm.dateRange
   const payload = {
@@ -1078,6 +1153,7 @@ const submitPromotionEdit = async () => {
     ngayKetThuc: endDate,
     trangThai: promotionEditForm.active,
     deleted: Boolean(selectedPromotion.value.source?.deleted),
+    lyDoThayDoi: promotionEditForm.lyDoThayDoi.trim(),
   }
 
   editSubmitting.value = true
@@ -1106,6 +1182,7 @@ const submitPromotionEdit = async () => {
     // This can be implemented if needed
 
     Message.success('Cập nhật đợt giảm giá thành công')
+    editConfirmVisible.value = false
     editVisible.value = false
     await loadPromotions()
   } catch {

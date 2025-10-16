@@ -27,16 +27,16 @@ public class HinhThucThanhToanController {
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody org.example.be_sp.model.request.HinhThucThanhToanRequest hinhThucThanhToanRequest) {
         hinhThucChuyenKhoanService.add(hinhThucThanhToanRequest);
-        return new ResponseObject<>(null, "Them moi thanh cong");
+        return new ResponseObject<>(true, null, "Them moi thanh cong");
     }
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody org.example.be_sp.model.request.HinhThucThanhToanRequest hinhThucThanhToanRequest) {
         hinhThucChuyenKhoanService.update(id, hinhThucThanhToanRequest);
-        return new ResponseObject<>(null, "Cap nhat thanh cong");
+        return new ResponseObject<>(true, null, "Cap nhat thanh cong");
     }
     @PutMapping("/delete/{id}")
     public ResponseObject<?> delete(@PathVariable Integer id) {
         hinhThucChuyenKhoanService.trangThai(id);
-        return new ResponseObject<>(null, "Xoa thanh cong");
+        return new ResponseObject<>(true, null, "Xoa thanh cong");
     }
 }
