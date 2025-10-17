@@ -1,20 +1,19 @@
 package org.example.be_sp.service.upload;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.example.be_sp.exception.ApiException;
+import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class UploadImageToCloudinary {
@@ -27,7 +26,7 @@ public class UploadImageToCloudinary {
             "cloud_name", CLOUD_NAME,
             "api_key", API_KEY,
             "api_secret", API_SECRET
-        ));
+    ));
 
     @Getter
     @Setter
@@ -46,15 +45,13 @@ public class UploadImageToCloudinary {
                 String hash = DigestUtils.md5DigestAsHex(files[i].getBytes());
                 Map uploadResult = cloudinary.uploader().upload(files[i].getBytes(),
                         ObjectUtils.asMap(
-                                "folder", "SD_73",
+                                "folder", "SD_73/images",
                                 "public_id", hash,
                                 "resource_type", "image",
                                 "colors", true
                         )
                 );
-
                 String primaryVietnameseColor = getPrimaryVietnameseColor(uploadResult.get("colors"));
-
                 urls.add(new Image(
                         i + 1,
                         uploadResult.get("secure_url").toString(),
@@ -65,6 +62,22 @@ public class UploadImageToCloudinary {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    public String uploadQrCode(byte[] qrCodeBytes) {
+        try {
+            String hash = DigestUtils.md5DigestAsHex(qrCodeBytes);
+            Map uploadResult = cloudinary.uploader().upload(qrCodeBytes,
+                    ObjectUtils.asMap(
+                            "folder", "SD_73/qr_codes",
+                            "public_id", hash,
+                            "resource_type", "image"
+                    )
+            );
+            return uploadResult.get("secure_url").toString();
+        } catch (Exception e) {
+            throw new ApiException("Fail  to upload Qrcode to Cloudinary: " + e.getMessage(), "CLOUDINARY_UPLOAD_ERROR");
         }
     }
 
@@ -89,7 +102,10 @@ public class UploadImageToCloudinary {
                         Object w = inner.get(1);
                         if (w instanceof Number) weight = ((Number) w).doubleValue();
                         else {
-                            try { weight = Double.parseDouble(w.toString()); } catch (Exception ignored) {}
+                            try {
+                                weight = Double.parseDouble(w.toString());
+                            } catch (Exception ignored) {
+                            }
                         }
                     }
                     if (hex != null && hex.startsWith("#")) {

@@ -42,11 +42,11 @@ axios.interceptors.response.use(
     }
 
     const res = response.data
-    // Backend returns: { data: ..., message: "...", success: true/false }
-    // Note: Backend field 'isSuccess' is serialized as 'success' by Jackson
+    // Backend returns: { data: ..., message: "...", isSuccess: true/false }
+    // Note: Backend field 'isSuccess' is serialized as 'isSuccess' by Jackson
 
     // Check if request was successful
-    if (res.success === false) {
+    if (res.isSuccess === false) {
       Message.error({
         content: res.message || 'Request failed',
         duration: 5 * 1000,

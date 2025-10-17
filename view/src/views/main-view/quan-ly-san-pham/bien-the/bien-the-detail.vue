@@ -64,7 +64,13 @@
                 {{ variant.maChiTietSanPham }}
               </a-descriptions-item>
               <a-descriptions-item label="Giá bán">
-                <span class="price-text">{{ formatCurrency(variant.giaBan) }}</span>
+                <div v-if="variant.giaTriGiamGia && variant.giaTriGiamGia > 0" class="price-container">
+                  <span class="original-price">{{ formatCurrency(variant.giaBan) }}</span>
+                  <span class="discount-price">{{ formatCurrency(variant.giaBan * (1 - variant.giaTriGiamGia / 100)) }}</span>
+                </div>
+                <div v-else class="price-container">
+                  <span class="discount-price">{{ formatCurrency(variant.giaBan) }}</span>
+                </div>
               </a-descriptions-item>
               <a-descriptions-item label="Giá trị giảm giá">{{ variant.giaTriGiamGia || 0 }}%</a-descriptions-item>
               <a-descriptions-item label="Số lượng tồn kho">
@@ -265,6 +271,25 @@ onMounted(() => {
 }
 
 .price-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f53f3f;
+}
+
+.price-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.original-price {
+  font-size: 12px;
+  color: #999;
+  text-decoration: line-through;
+  font-weight: normal;
+}
+
+.discount-price {
   font-size: 18px;
   font-weight: 600;
   color: #f53f3f;

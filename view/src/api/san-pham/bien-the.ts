@@ -224,6 +224,26 @@ export function deleteAnhBienThe(idBienThe: number, idAnh: number) {
   return axios.put(`/api/chi-tiet-san-pham-anh-management/update/status/${idAnh}`)
 }
 
+// Delete image link (update status)
+export function deleteAnhBienTheLink(imageDetailId: number) {
+  return axios.put(`/api/chi-tiet-san-pham-anh-management/update/status/${imageDetailId}`)
+}
+
+// Get all image details to find IDs by URL matching
+export function getAllAnhBienTheDetails() {
+  return axios.get<AnhSanPhamBienThe[]>(`/api/chi-tiet-san-pham-anh-management/playlist`)
+}
+
+// Add images to variant (liên kết ảnh với biến thể)
+export function addAnhToBienThe(idBienThe: number, imageIds: number[]) {
+  return axios.post(`/api/chi-tiet-san-pham-anh-management/add`, {
+    idChiTietSanPham: idBienThe,
+    idAnhSanPhamList: imageIds,
+    trangThai: true,
+    deleted: false,
+  })
+}
+
 // ==================== LẤY OPTIONS CHO DROPDOWN ====================
 export function getSanPhamOptions() {
   return axios.get<SanPham[]>('/api/san-pham-management/playlist')
@@ -250,8 +270,9 @@ export function getTrongLuongOptions() {
 }
 
 // ==================== LẤY ẢNH SẢN PHẨM THEO BIẾN THỂ ====================
+// Note: Endpoint này không tồn tại trong controller, dữ liệu lấy từ getBienTheById response
 export function getAnhBienThe(idBienThe: number) {
-  return axios.get<AnhSanPhamBienThe[]>(`/api/chi-tiet-san-pham-anh-management/list/${idBienThe}`)
+  return axios.get<AnhSanPhamBienThe[]>(`/api/chi-tiet-san-pham-management/get/${idBienThe}`)
 }
 
 // ==================== THÊM/XÓA ẢNH CHO BIẾN THỂ ====================

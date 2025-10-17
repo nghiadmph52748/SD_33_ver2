@@ -322,10 +322,7 @@
           </template>
           <template #tenSanPhamChiTiet="{ record }">
             <div class="product-detail-name">
-              {{
-                record.tenSanPhamChiTiet ||
-                `${record.productName} + ${record.attributes?.find((a) => a.label === 'Màu sắc')?.value || ''} + ${record.attributes?.find((a) => a.label === 'Kích thước')?.value || ''}`
-              }}
+              {{ getVariantDetailName(record) }}
             </div>
           </template>
           <template #attributes="{ record }">
@@ -1016,6 +1013,22 @@ const sizeInputs = ref<{ label: string; value: any }[]>([])
 const materialInputs = ref<{ label: string; value: any }[]>([])
 const shoeSoleInputs = ref<{ label: string; value: any }[]>([])
 
+// Hàm tính realtime tên sản phẩm chi tiết cho biến thể
+function getVariantDetailName(record: any) {
+  // Lấy tên sản phẩm chính từ record
+  const productName = record.productName || formData.name || 'Sản phẩm'
+  // Lấy tên màu từ attributes
+  const colorAttr = record.attributes?.find((a: any) => a.label === 'Màu sắc')
+  const colorName = colorAttr?.value || ''
+  // Lấy tên kích thước từ attributes
+  const sizeAttr = record.attributes?.find((a: any) => a.label === 'Kích thước')
+  const sizeName = sizeAttr?.value || ''
+  // Ghép tên chi tiết
+  const parts = [productName, colorName, sizeName].filter((p) => p && p.trim())
+  const result = parts.join(' - ').trim() || 'Tên sản phẩm chi tiết'
+  return result
+}
+
 // Load all data from APIs
 const loadAllInputs = async () => {
   try {
@@ -1654,7 +1667,8 @@ const variantColumns = [
   {
     title: 'Tên sản phẩm chi tiết',
     dataIndex: 'tenSanPhamChiTiet',
-    width: 200,
+    width: 250,
+    slotName: 'tenSanPhamChiTiet',
   },
   {
     title: 'Thuộc tính',
@@ -1872,13 +1886,6 @@ const resetQuickAddForm = () => {
   quickAddForm.weight = 0
   quickAddForm.stock = 0
   quickAddForm.price = 0
-}
-
-// Quick add modal methods
-const showQuickAddModal = () => {
-  quickAddVisible.value = true
-  // Reset form
-  resetQuickAddForm()
 }
 
 // Handle color selection changes
@@ -2730,12 +2737,12 @@ const confirmSubmit = async () => {
     // Tạo danh sách promises cho việc tạo/update biến thể
     const variantPromises = variants.value.flatMap((colorGroup) =>
       colorGroup.variants.map(async (variant) => {
-        // Tạo tên sản phẩm chi tiết
-        const productName = productNameInputs.value.find((p) => p.value === productId)?.label || formData.name
-        const colorName = colorInputs.value.find((c) => c.value === variant.color)?.label || ''
-        const sizeName = sizeInputs.value.find((s) => s.value === variant.size)?.label || ''
+        // Tạo tên sản phẩm chi tiết (luôn lấy label, không lấy id)
+        const productName =
+          productNameInputs.value.find((p) => String(p.value) === String(productId))?.label || formData.name || 'Tên sản phẩm'
+        const colorName = colorInputs.value.find((c) => String(c.value) === String(variant.color))?.label || 'Màu'
+        const sizeName = sizeInputs.value.find((s) => String(s.value) === String(variant.size))?.label || 'Size'
         const tenSanPhamChiTiet = `${productName} + ${colorName} + ${sizeName}`.trim()
-
         const variantData = {
           idSanPham: productId,
           idMauSac: variant.color,
@@ -3246,8 +3253,30 @@ watch(
   margin-bottom: 16px;
 }
 
-.variant-table .arco-table-td {
-  padding: 8px 12px;
+.variant-table :deep(.arco-table-td) {
+  padding: 8px 12px !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+  max-width: 250px;
+}
+
+.variant-table :deep(.arco-table-td-content) {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  width: 100%;
+}
+
+.product-detail-name {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.4;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Variant table pagination */

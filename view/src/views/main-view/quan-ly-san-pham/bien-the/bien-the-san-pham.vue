@@ -10,9 +10,16 @@
         <a-row :gutter="16">
           <!-- Row 1: Search - NSX - XX -->
           <a-col :span="8">
-            <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tên sản phẩm, mã SKU..." allow-clear @input="onSearchInput" />
-            </a-form-item>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
+              <a-form-item label="Tìm kiếm" style="flex: 1; margin-bottom: 0">
+                <a-input v-model="filters.search" placeholder="Tên sản phẩm, mã SKU..." allow-clear @input="onSearchInput" />
+              </a-form-item>
+              <a-button @click="showScanQRModal = true" type="primary" style="margin-top: 30px; padding: 0 12px">
+                <template #icon>
+                  <icon-scan />
+                </template>
+              </a-button>
+            </div>
           </a-col>
           <a-col :span="8">
             <a-form-item label="Nhà sản xuất">
@@ -98,9 +105,6 @@
               </div>
             </a-form-item>
           </a-col>
-          <a-col :span="8">
-            <!-- Empty column for balance -->
-          </a-col>
         </a-row>
 
         <!-- Reset Button Outside Grid -->
@@ -132,7 +136,14 @@
             </template>
             {{ newVariantIds.length }} biến thể mới được tạo (hiển thị ở đầu danh sách)
           </a-tag>
-          <!-- Edit mode buttons removed -->
+          <!-- Download QR Code Button -->
+          <a-button v-if="selectedVariants.length > 0" @click="downloadQRCodes" :loading="downloadingQR">
+            <template #icon>
+              <icon-download />
+            </template>
+            Tải mã QR ({{ selectedVariants.length }})
+          </a-button>
+          <!-- Show all variants button -->
           <a-button @click="toggleShowAllVariants">
             <template #icon>
               <icon-eye />
@@ -158,8 +169,31 @@
         @page-change="handlePageChange"
         @page-size-change="handlePageChange"
       >
+        <template #checkbox-title>
+          <a-checkbox v-model="selectAllCheckbox" :indeterminate="isPartialSelected" />
+        </template>
+        <template #selection="{ record }">
+          <a-checkbox
+            :model-value="selectedVariants.includes(String(record.id))"
+            @change="
+              (checked) => {
+                const id = String(record.id)
+                if (checked) {
+                  if (!selectedVariants.includes(id)) {
+                    selectedVariants.push(id)
+                  }
+                } else {
+                  const idx = selectedVariants.indexOf(id)
+                  if (idx > -1) {
+                    selectedVariants.splice(idx, 1)
+                  }
+                }
+              }
+            "
+          />
+        </template>
         <template #stt="{ rowIndex }">
-          <div>{{ rowIndex + 1 }}</div>
+          <div>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</div>
         </template>
 
         <template #product_image="{ record }">
@@ -321,25 +355,29 @@
         </div>
       </template>
     </a-modal>
+
+    <!-- QR Code Scanner Modal -->
+    <a-modal v-model:visible="showScanQRModal" title="Quét Mã QR Sản Phẩm" width="600px" :footer="false" @open="initQRScanner">
+      <div class="qr-scanner-container" style="display: flex; flex-direction: column; align-items: center">
+        <div
+          id="qr-scanner"
+          style="width: 100%; max-width: 500px; height: 500px; border: 2px solid #1890ff; border-radius: 4px; overflow: hidden"
+        ></div>
+        <div style="margin-top: 16px; text-align: center; color: #86909c">
+          <div style="font-size: 12px; margin-bottom: 8px">🎯 Hướng camera vào mã QR để quét</div>
+          <a-button @click="stopQRScanner" type="secondary">Đóng Quét</a-button>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Message, Modal } from '@arco-design/web-vue'
+import { Message } from '@arco-design/web-vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
-import {
-  IconEdit,
-  IconCheck,
-  IconClose,
-  IconRefresh,
-  IconDelete,
-  IconDownload,
-  IconEye,
-  IconImage,
-  IconSettings,
-} from '@arco-design/web-vue/es/icon'
+import { IconEdit, IconCheck, IconClose, IconRefresh, IconDownload, IconEye, IconScan } from '@arco-design/web-vue/es/icon'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
@@ -350,15 +388,14 @@ import {
   getDeGiayOptions,
   getTrongLuongOptions,
   type BienTheSanPham,
-  type BienTheResponse,
   type SanPham,
   type MauSac,
   type KichThuoc,
   type ChatLieu,
   type DeGiay,
   type TrongLuong,
-  type CreateBienTheSanPhamRequest,
 } from '@/api/san-pham/bien-the'
+import { Html5Qrcode } from 'html5-qrcode'
 import { deleteBienTheSanPham, getBienTheSanPhamPage, updateBienTheSanPham } from '../../../../api/san-pham/bien-the'
 
 // Breadcrumb setup
@@ -501,7 +538,39 @@ const weightOptions = computed(() => {
 // Computed title for variants table
 // Table
 const loading = ref(false)
+const downloadingQR = ref(false)
 const selectedVariants = ref<string[]>([])
+
+// QR Scanner state
+const showScanQRModal = ref(false)
+let qrScannerInstance: any = null
+
+// Computed properties for select all checkbox
+const isAllSelected = computed(() => {
+  if (sortedVariants.value.length === 0) return false
+  const visibleIds = sortedVariants.value.map((v) => String(v.id))
+  return visibleIds.length > 0 && visibleIds.every((id) => selectedVariants.value.includes(id))
+})
+
+const isPartialSelected = computed(() => {
+  if (selectedVariants.value.length === 0) return false
+  if (isAllSelected.value) return false
+  return selectedVariants.value.length > 0
+})
+
+// Checkbox for select all - with getter and setter
+const selectAllCheckbox = computed({
+  get: () => isAllSelected.value,
+  set: (checked: boolean) => {
+    if (checked) {
+      // Select all visible variants
+      selectedVariants.value = sortedVariants.value.map((v) => String(v.id))
+    } else {
+      // Deselect all
+      selectedVariants.value = []
+    }
+  },
+})
 // Edit mode removed
 const showAllVariants = ref(false)
 
@@ -520,6 +589,14 @@ const variantsTableTitle = computed(() => {
 })
 
 const columns = [
+  {
+    dataIndex: 'checkbox',
+    slotName: 'selection',
+    width: 40,
+    align: 'center',
+    titleSlotName: 'checkbox-title',
+    headerCellStyle: { textAlign: 'center' },
+  },
   {
     title: 'STT',
     dataIndex: 'stt',
@@ -558,12 +635,12 @@ const columns = [
     title: 'Tên sản phẩm chi tiết',
     dataIndex: 'tenSanPhamChiTiet',
     slotName: 'tenSanPhamChiTiet',
-    width: 200,
+    width: 150,
   },
   {
     title: 'Thuộc tính sản phẩm',
     slotName: 'attributes',
-    width: 120,
+    width: 140,
   },
   {
     title: 'Số lượng',
@@ -628,8 +705,7 @@ const loadBienTheList = async () => {
       pagination.value.total = 0
       originalVariants.value = { data: [] }
     }
-  } catch (error) {
-    console.error('Error loading biến thể:', error)
+  } catch (_) {
     // Error loading biến thể
     Message.error('Không thể tải danh sách biến thể sản phẩm')
     variants.value = []
@@ -656,9 +732,6 @@ const loadAllVariantsForHighlight = async () => {
         pagination.value.total = apiData.totalElements || 0
         pagination.value.current = 1
         pagination.value.pageSize = apiData.data.length // Show all loaded data
-        // Check if new variants are present
-        const newIds = newVariantIds.value.map((id) => Number(id))
-        // foundNewVariants removed as it was unused
       } else {
         variants.value = []
         pagination.value.total = 0
@@ -670,8 +743,7 @@ const loadAllVariantsForHighlight = async () => {
       pagination.value.total = 0
       originalVariants.value = { data: [] }
     }
-  } catch (error) {
-    console.error('Error loading ALL variants for highlighting:', error)
+  } catch (_) {
     Message.error('Không thể tải danh sách biến thể sản phẩm')
     variants.value = []
     pagination.value.total = 0
@@ -699,7 +771,7 @@ const loadAllOptions = async () => {
     chatLieuOptions.value = (chatLieu.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
     deGiayOptions.value = (deGiay.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
     trongLuongOptions.value = (trongLuong.data || []).filter((item: any) => item.trangThai === true && item.deleted === false)
-  } catch (error) {
+  } catch (_) {
     Message.error('Không thể tải danh sách lựa chọn')
   }
 }
@@ -733,8 +805,7 @@ const loadAllVariants = async () => {
       pagination.value.total = 0
       originalVariants.value = { data: [] }
     }
-  } catch (error) {
-    console.error('Error loading all variants:', error)
+  } catch (_) {
     Message.error('Không thể tải danh sách biến thể sản phẩm')
     variants.value = []
     pagination.value.total = 0
@@ -940,9 +1011,211 @@ const exportExcel = () => {
     }
 
     exportToExcel(variants.value, EXPORT_HEADERS.BIEN_THE, 'bien-the-san-pham')
-  } catch (error) {
-    console.error('Lỗi khi xuất Excel:', error)
+  } catch (_) {
     Message.error('Có lỗi xảy ra khi xuất Excel')
+  }
+}
+
+// QR Scanner Functions
+const initQRScanner = async () => {
+  try {
+    const html5QrCode = new Html5Qrcode('qr-scanner')
+    qrScannerInstance = html5QrCode
+
+    await html5QrCode.start(
+      { facingMode: 'environment' },
+      {
+        fps: 10,
+        qrbox: { width: 300, height: 300 },
+        aspectRatio: 1,
+      },
+      (decodedText) => {
+        // When QR code is successfully decoded
+        const variantId = Number(decodedText)
+        const foundVariant = variants.value.find((v) => Number(v.id) === variantId)
+
+        if (foundVariant) {
+          // Stop scanner and redirect
+          html5QrCode.stop().catch(() => {
+            // Ignore stop errors
+          })
+          showScanQRModal.value = false
+          router.push(`/quan-ly-san-pham/bien-the/detail/${foundVariant.id}`)
+          Message.success(`Quét thành công! Đang chuyển đến chi tiết biến thể...`)
+        } else {
+          // Try to find by code
+          const foundByCode = variants.value.find((v) => v.maChiTietSanPham === decodedText)
+          if (foundByCode) {
+            html5QrCode.stop().catch(() => {
+              // Ignore stop errors
+            })
+            showScanQRModal.value = false
+            router.push(`/quan-ly-san-pham/bien-the/detail/${foundByCode.id}`)
+            Message.success(`Quét thành công! Đang chuyển đến chi tiết biến thể...`)
+          } else {
+            Message.warning(`Không tìm thấy biến thể với mã: ${decodedText}`)
+          }
+        }
+      },
+      () => {
+        // Ignore error messages
+      }
+    )
+  } catch (_) {
+    Message.error('Không thể khởi tạo camera. Vui lòng kiểm tra quyền truy cập camera và thử lại.')
+    showScanQRModal.value = false
+  }
+}
+
+const stopQRScanner = async () => {
+  if (qrScannerInstance) {
+    try {
+      await qrScannerInstance.stop()
+      await qrScannerInstance.clear()
+    } catch (_) {
+      // Ignore cleanup errors
+    }
+    qrScannerInstance = null
+  }
+  showScanQRModal.value = false
+}
+
+// Initialize QR scanner modal
+watch(showScanQRModal, async (isOpen) => {
+  if (!isOpen && qrScannerInstance) {
+    // Cleanup when modal closes
+    await stopQRScanner()
+  }
+})
+
+// Download single QR code
+const downloadSingleQR = async (qrData: any) => {
+  try {
+    // Fetch image from URL as blob
+    const response = await fetch(qrData.qrcode, { mode: 'cors' })
+    if (!response.ok) throw new Error('Failed to fetch QR code')
+
+    const blob = await response.blob()
+
+    // Create blob URL and download
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `QR_${qrData.maChiTietSanPham}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // Cleanup
+    setTimeout(() => URL.revokeObjectURL(url), 100)
+  } catch (_) {
+    Message.error(`Không thể tải mã QR: ${qrData.maChiTietSanPham}`)
+  }
+}
+
+// Download multiple QR codes as zip
+const downloadMultipleQRs = async (qrCodes: any[]) => {
+  try {
+    // Dynamic import of JSZip library
+    const JSZip = (await import('jszip')).default
+    const zip = new JSZip()
+
+    // Fetch all QR codes in parallel
+    const fetchPromises = qrCodes.map(async (qrData) => {
+      try {
+        const response = await fetch(qrData.qrcode, { mode: 'cors' })
+        if (!response.ok) throw new Error(`Failed to fetch ${qrData.maChiTietSanPham}`)
+        const blob = await response.blob()
+        return { qrData, blob }
+      } catch (err) {
+        Message.warning(`Không thể tải: ${qrData.maChiTietSanPham}`)
+        return null
+      }
+    })
+
+    const results = await Promise.all(fetchPromises)
+
+    // Filter out failed downloads
+    const successfulResults = results.filter((r) => r !== null)
+
+    if (successfulResults.length === 0) {
+      Message.error('Không thể tải bất kỳ mã QR nào')
+      return
+    }
+
+    // Add each QR code to the zip
+    successfulResults.forEach(({ qrData, blob }) => {
+      zip.file(`QR_${qrData.maChiTietSanPham}.png`, blob)
+    })
+
+    // Generate and download zip file
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    const url = URL.createObjectURL(zipBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `qr_codes_${new Date().getTime()}.zip`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // Cleanup
+    setTimeout(() => URL.revokeObjectURL(url), 100)
+  } catch (_) {
+    // Fallback: download QR codes individually
+    Message.warning('Không thể tạo file zip, sẽ tải từng mã QR riêng lẻ')
+
+    // Download each QR code with delay between downloads
+    qrCodes.reduce((promise, qrData, index) => {
+      return promise.then(() => {
+        const delayTime = index === 0 ? 0 : 100
+        return new Promise((resolve) => {
+          setTimeout(async () => {
+            await downloadSingleQR(qrData)
+            resolve(null)
+          }, delayTime)
+        })
+      })
+    }, Promise.resolve(null))
+  }
+}
+
+// Download QR Codes
+const downloadQRCodes = async () => {
+  try {
+    if (selectedVariants.value.length === 0) {
+      Message.warning('Vui lòng chọn ít nhất một biến thể')
+      return
+    }
+
+    downloadingQR.value = true
+
+    // Convert selected variant IDs to numbers
+    const variantIds = selectedVariants.value.map((id) => Number(id))
+    const selectedVariantData = variants.value.filter((variant) => variantIds.includes(Number(variant.id)))
+    const selectedVariantQR = selectedVariantData.map((variant) => ({
+      maChiTietSanPham: variant.maChiTietSanPham,
+      qrcode: variant.qrcode,
+    }))
+
+    if (selectedVariantQR.length === 0) {
+      Message.warning('Không có mã QR nào để tải')
+      downloadingQR.value = false
+      return
+    }
+
+    // If single QR code, download directly
+    if (selectedVariantQR.length === 1) {
+      await downloadSingleQR(selectedVariantQR[0])
+      Message.success('Đã tải xuống mã QR')
+    } else {
+      // If multiple QR codes, create a zip file
+      await downloadMultipleQRs(selectedVariantQR)
+      Message.success(`Đã tải xuống ${selectedVariantQR.length} mã QR`)
+    }
+  } catch (_) {
+    Message.error('Có lỗi xảy ra khi tải mã QR')
+  } finally {
+    downloadingQR.value = false
   }
 }
 
@@ -972,24 +1245,6 @@ const checkAndAdjustPagination = () => {
   }
 
   return false
-}
-
-// Selection methods
-const onSelectChange = (selectedRowKeys: string[]) => {
-  selectedVariants.value = selectedRowKeys
-}
-
-const onRowSelect = (id: string, checked: boolean) => {
-  if (checked) {
-    if (!selectedVariants.value.includes(id)) {
-      selectedVariants.value.push(id)
-    }
-  } else {
-    const index = selectedVariants.value.indexOf(id)
-    if (index > -1) {
-      selectedVariants.value.splice(index, 1)
-    }
-  }
 }
 
 // Edit mode removed
@@ -1079,11 +1334,9 @@ const performToggleStatus = async (record: any) => {
       Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
     } else {
       // Revert the local change if API fails
-      console.error('API response not successful:', response)
       Message.error('Cập nhật trạng thái thất bại')
     }
-  } catch (error) {
-    console.error('Error toggling status:', error)
+  } catch (_) {
     Message.error('Có lỗi xảy ra khi cập nhật trạng thái')
   } finally {
     // Remove loading state
@@ -1114,7 +1367,7 @@ const deleteVariant = async (variant: any) => {
           originalVariants.value.data = originalVariants.value.data.filter((v) => v.id !== variant.id)
         }
         // Check if page adjustment needed and perform search to refresh
-        const wasAdjusted = checkAndAdjustPagination()
+        checkAndAdjustPagination()
         performSearch()
       } else {
         const currentPageItems = sortedVariants.value.length
@@ -1135,7 +1388,7 @@ const deleteVariant = async (variant: any) => {
     } else {
       Message.error('Xoá biến thể thất bại')
     }
-  } catch (error) {
+  } catch (_) {
     Message.error('Có lỗi xảy ra khi xóa biến thể')
   }
 }
@@ -1143,11 +1396,6 @@ const deleteVariant = async (variant: any) => {
 // Delete confirm modal state
 const showDeleteConfirm = ref(false)
 const variantToDelete = ref(null)
-
-const onDeleteClick = (variant) => {
-  variantToDelete.value = variant
-  showDeleteConfirm.value = true
-}
 
 const confirmDelete = async () => {
   deleteVariant(variantToDelete.value)
@@ -1238,6 +1486,26 @@ watch(
     }
   },
   { deep: true }
+)
+
+// Watch for selectedVariants changes to keep header checkbox in sync
+watch(
+  () => selectedVariants.value,
+  () => {
+    // This watcher ensures the computed property isAllSelected is triggered
+    // When individual checkboxes change, the header checkbox will update automatically
+  },
+  { deep: true }
+)
+
+// Watch for sortedVariants changes to handle pagination
+watch(
+  () => sortedVariants.value,
+  () => {
+    // When variants list changes (pagination/filtering),
+    // automatically deselect all to prevent confusion
+    selectedVariants.value = []
+  }
 )
 
 // Watch for productId changes (khi nhấn xem biến thể từ danh mục sản phẩm)
@@ -1435,6 +1703,10 @@ watch(
 
 :deep(.new-variant-row:hover) {
   background-color: #f0f9ff !important;
+}
+
+:deep(.arco-table-size-small .arco-table-cell) {
+  padding: 5px 8px;
 }
 
 @keyframes highlightFade {

@@ -496,7 +496,7 @@ const performUpdate = async () => {
       updateAt: new Date().toISOString().split('T')[0],
       updateBy: userStore.id,
     }
-
+    console.log('Update data:', updateData)
     const response = await updateBienThe(updateData)
     if (response.success) {
       Message.success('Cập nhật biến thể thành công!')

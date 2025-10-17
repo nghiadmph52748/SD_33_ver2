@@ -31,7 +31,7 @@
     </properties>
     <dependencies>
         <!-- dotenv-java for loading .env files -->
-        <dependency>
+		<dependency>
             <groupId>io.github.cdimascio</groupId>
             <artifactId>dotenv-java</artifactId>
             <version>3.0.0</version>
@@ -73,8 +73,8 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.4.0</version>
         </dependency>
-        <!-- JWT Dependencies -->
-        <dependency>
+		<!-- JWT Dependencies -->
+		<dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
             <version>0.11.5</version>
@@ -120,16 +120,27 @@
             <artifactId>cloudinary-http44</artifactId>
             <version>1.32.2</version>
         </dependency>
-        <!-- Spring Boot Mail Starter -->
-        <dependency>
+		<!-- Spring Boot Mail Starter -->
+		<dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
-        <!-- Thymeleaf for HTML Email Templates -->
-        <dependency>
+		<!-- Thymeleaf for HTML Email Templates -->
+		<dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
+		<!-- Qrcode generation dependence-->
+		<dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.2</version>
+        </dependency><dependency><groupId>org.jetbrains</groupId><artifactId>annotations</artifactId><version>RELEASE</version><scope>compile</scope></dependency>
     </dependencies>
 
     <build>

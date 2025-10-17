@@ -1,15 +1,5 @@
 package org.example.be_sp.service;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import org.example.be_sp.entity.AnhSanPham;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.AnhSanPhamRequest;
@@ -25,6 +15,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, AnhSanPhamResponse, AnhSanPhamRequest> {
@@ -71,10 +71,9 @@ public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, A
 	public AnhSanPham addAnhSanPham(AnhSanPhamRequest request) {
 		try {
 			AnhSanPham entity = MapperUtils.map(request, AnhSanPham.class);
-			AnhSanPham savedEntity = anhSanPhamRepository.save(entity);
-			return savedEntity;
+            return anhSanPhamRepository.save(entity);
 		} catch (Exception e) {
-			System.err.println("❌ Lỗi tạo ảnh sản phẩm: " + e.getMessage());
+			System.err.println("Lỗi tạo ảnh sản phẩm: " + e.getMessage());
 			throw e;
 		}
 	}
@@ -109,7 +108,8 @@ public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, A
 			}
 			return savedIds;
 		} catch (Exception e) {
-			throw e;
+			System.out.println("Lỗi thêm ảnh sản phẩm từ cloud: " + e.getMessage());
+			return null;
 		}
 	}
 

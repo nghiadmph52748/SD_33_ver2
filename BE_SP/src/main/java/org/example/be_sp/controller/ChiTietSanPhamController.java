@@ -1,5 +1,6 @@
 package org.example.be_sp.controller;
 
+import com.google.zxing.WriterException;
 import org.example.be_sp.model.request.ChiTietSanPhamRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.ChiTietSanPhamService;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/chi-tiet-san-pham-management")
@@ -51,7 +54,7 @@ public class ChiTietSanPhamController {
     }
 
     @PostMapping("/add")
-    public ResponseObject<?> add(@RequestBody ChiTietSanPhamRequest request) {
+    public ResponseObject<?> add(@RequestBody ChiTietSanPhamRequest request) throws IOException, WriterException {
         Integer id = service.add(request);
         return new ResponseObject<>(true, id, "Thêm chi tiết sản phẩm thành công");
     }

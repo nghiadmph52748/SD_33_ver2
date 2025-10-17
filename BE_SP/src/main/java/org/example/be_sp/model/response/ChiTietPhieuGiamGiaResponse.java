@@ -22,7 +22,7 @@ public class ChiTietPhieuGiamGiaResponse {
         this.id = d.getId();
         this.idPhieuGiamGia = d.getIdPhieuGiamGia().getId();
         this.idChiTietSanPham = d.getIdChiTietSanPham().getId();
-        this.tenChiTietSanPham = d.getIdChiTietSanPham().getTenSanPhamChiTiet();
+        this.tenChiTietSanPham = d.getIdChiTietSanPham().getTenChiTietSanPham();
         this.maChiTietSanPham = d.getIdChiTietSanPham().getMaChiTietSanPham();
         this.deleted = d.getDeleted();
     }

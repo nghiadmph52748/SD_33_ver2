@@ -171,6 +171,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.trong-luong',
             requiresAuth: true,
+            hideInMenu: true,
             roles: ['*'],
           },
         },

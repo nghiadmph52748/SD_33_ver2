@@ -31,6 +31,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "chi_tiet_san_pham")
 public class ChiTietSanPham {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -65,12 +66,23 @@ public class ChiTietSanPham {
     @Column(name = "ma_chi_tiet_san_pham", length = 20)
     private String maChiTietSanPham;
 
+    @Nationalized
+    @Column(name = "ten_chi_tiet_san_pham", length = 255)
+    private String tenChiTietSanPham;
+
+    @Nationalized
+    @Column(name = "ten_san_pham_chi_tiet")
+    private String tenSanPhamChiTiet;
+
     @ColumnDefault("0")
     @Column(name = "so_luong")
     private Integer soLuong;
 
     @Column(name = "gia_ban", precision = 18, scale = 2)
     private BigDecimal giaBan;
+
+    @Column(name = "qrcode")
+    private String qrcode;
 
     @ColumnDefault("1")
     @Column(name = "trang_thai")
@@ -79,10 +91,6 @@ public class ChiTietSanPham {
     @Nationalized
     @Column(name = "ghi_chu")
     private String ghiChu;
-
-    @Nationalized
-    @Column(name = "ten_san_pham_chi_tiet", length = 500)
-    private String tenSanPhamChiTiet;
 
     @ColumnDefault("0")
     @Column(name = "deleted")

@@ -2,12 +2,6 @@ USE [master]
 GO
 /****** Object:  Database [GearUp]    Script Date: 10/13/2025 11:09:19 PM ******/
 CREATE DATABASE [GearUp]
- CONTAINMENT = NONE
- ON  PRIMARY 
-( NAME = N'GearUp', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SV08\MSSQL\DATA\GearUp.mdf' , SIZE = 73728KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
- LOG ON 
-( NAME = N'GearUp_log', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SV08\MSSQL\DATA\GearUp_log.ldf' , SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
- WITH CATALOG_COLLATION = DATABASE_DEFAULT, LEDGER = OFF
 GO
 ALTER DATABASE [GearUp] SET COMPATIBILITY_LEVEL = 160
 GO
@@ -188,6 +182,7 @@ CREATE TABLE [dbo].[chi_tiet_san_pham](
 	[gia_ban] [decimal](18, 2) NULL,
 	[trang_thai] [bit] NULL,
 	[ghi_chu] [nvarchar](255) NULL,
+	[qrcode] [varchar](255) NULL,
 	[deleted] [bit] NULL,
 	[create_at] [date] NULL,
 	[create_by] [int] NULL,
