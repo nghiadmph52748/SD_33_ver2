@@ -1,10 +1,10 @@
 export default {
   'login.form.title': 'Login to Vue Admin Arco',
-  'login.form.userName.errMsg': 'Username cannot be empty',
+  'login.form.userName.errMsg': 'Username or email cannot be empty',
   'login.form.password.errMsg': 'Password cannot be empty',
   'login.form.login.errMsg': 'Login error, refresh and try again',
   'login.form.login.success': 'welcome to use',
-  'login.form.userName.placeholder': 'Username: admin',
+  'login.form.userName.placeholder': 'Username or email',
   'login.form.password.placeholder': 'Password: admin',
   'login.form.rememberPassword': 'Remember password',
   'login.form.forgetPassword': 'Forgot password',
