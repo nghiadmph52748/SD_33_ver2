@@ -33,15 +33,16 @@
             <a-form-item field="discountValue" label="Giá trị giảm (%)">
               <a-input-number
                 v-model="formState.discountValue"
-                :min="1"
+                :min="0.01"
                 :max="100"
-                :step="1"
-                :precision="0"
-                suffix="%"
+                :step="0.01"
+                :precision="2"
                 placeholder="Nhập giá trị giảm..."
                 style="width: 100%"
-              />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Giá trị từ 1-100</div>
+              >
+                <template #suffix>%</template>
+              </a-input-number>
+              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Giá trị từ 0.01-100</div>
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -58,19 +59,8 @@
           </a-col>
         </a-row>
 
-        <a-row :gutter="16">
-          <a-col :span="24">
-            <a-form-item field="applyToProducts">
-              <a-checkbox v-model="formState.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
-              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Nếu không chọn, đợt giảm giá sẽ được tạo nhưng chưa áp dụng cho sản phẩm cụ thể
-              </div>
-            </a-form-item>
-          </a-col>
-        </a-row>
-
         <!-- Product Selection Section -->
-        <div v-if="formState.applyToProducts" class="product-selection-section">
+        <div class="product-selection-section">
           <a-divider style="margin: 16px 0" />
           <div style="font-weight: 600; margin-bottom: 12px">Chọn sản phẩm áp dụng</div>
 
@@ -216,7 +206,7 @@ const formState = reactive({
   discountValue: 10,
   dateRange: [] as string[],
   selectedProducts: [] as number[],
-  applyToProducts: false,
+  applyToProducts: true,
 })
 
 // Real-time validation for discount value
@@ -231,6 +221,7 @@ watch(
 )
 
 const rules: FormRules = {
+  code: [{ required: true, message: 'Vui lòng nhập mã đợt giảm giá' }],
   name: [{ required: true, message: 'Vui lòng nhập tên đợt giảm giá' }],
   discountValue: [
     { required: true, message: 'Vui lòng nhập giá trị giảm' },
@@ -453,22 +444,11 @@ const fetchProducts = async () => {
   }
 }
 
-// Load products when applyToProducts is checked
-watch(
-  () => formState.applyToProducts,
-  (shouldApply) => {
-    if (shouldApply && productOptions.value.length === 0) {
-      fetchProducts()
-    }
-    // Clear selected products when unchecking
-    if (!shouldApply) {
-      formState.selectedProducts = []
-    }
-  }
-)
 
 onMounted(async () => {
   formState.code = await generateNextCode()
+  // Load products since applyToProducts is true by default
+  await fetchProducts()
 })
 
 const goBack = () => {
@@ -509,8 +489,8 @@ const handleSaveClick = async () => {
     return
   }
 
-  // Validate product selection when applyToProducts is enabled
-  if (formState.applyToProducts && formState.selectedProducts.length === 0) {
+  // Validate product selection
+  if (formState.selectedProducts.length === 0) {
     Message.error('Vui lòng chọn ít nhất một sản phẩm')
     return
   }

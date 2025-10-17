@@ -26,7 +26,6 @@ public class HoaDonResponse {
     private String tenPhieuGiamGia;
     private Boolean loaiPhieuGiamGia;
     private BigDecimal giaTriGiamGia;
-    private BigDecimal soTienToiDa;
     private String tenNhanVien;
     private String maNhanVien;
     private String tenHoaDon;
@@ -70,7 +69,6 @@ public class HoaDonResponse {
             this.tenPhieuGiamGia = hd.getIdPhieuGiamGia().getTenPhieuGiamGia();
             this.loaiPhieuGiamGia = hd.getIdPhieuGiamGia().getLoaiPhieuGiamGia();
             this.giaTriGiamGia = hd.getIdPhieuGiamGia().getGiaTriGiamGia();
-            this.soTienToiDa = hd.getIdPhieuGiamGia().getSoTienToiDa();
         }
 
 

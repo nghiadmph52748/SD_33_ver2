@@ -1,86 +1,7 @@
-USE [master]
-GO
-/****** Object:  Database [GearUp]    Script Date: 10/13/2025 11:09:19 PM ******/
+-- SQL Server script compatible with macOS
+-- Removed Windows-specific file paths and settings
+
 CREATE DATABASE [GearUp]
- CONTAINMENT = NONE
- ON  PRIMARY 
-( NAME = N'GearUp', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SV08\MSSQL\DATA\GearUp.mdf' , SIZE = 73728KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
- LOG ON 
-( NAME = N'GearUp_log', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SV08\MSSQL\DATA\GearUp_log.ldf' , SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
- WITH CATALOG_COLLATION = DATABASE_DEFAULT, LEDGER = OFF
-GO
-ALTER DATABASE [GearUp] SET COMPATIBILITY_LEVEL = 160
-GO
-IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
-begin
-EXEC [GearUp].[dbo].[sp_fulltext_database] @action = 'enable'
-end
-GO
-ALTER DATABASE [GearUp] SET ANSI_NULL_DEFAULT OFF 
-GO
-ALTER DATABASE [GearUp] SET ANSI_NULLS OFF 
-GO
-ALTER DATABASE [GearUp] SET ANSI_PADDING OFF 
-GO
-ALTER DATABASE [GearUp] SET ANSI_WARNINGS OFF 
-GO
-ALTER DATABASE [GearUp] SET ARITHABORT OFF 
-GO
-ALTER DATABASE [GearUp] SET AUTO_CLOSE OFF 
-GO
-ALTER DATABASE [GearUp] SET AUTO_SHRINK OFF 
-GO
-ALTER DATABASE [GearUp] SET AUTO_UPDATE_STATISTICS ON 
-GO
-ALTER DATABASE [GearUp] SET CURSOR_CLOSE_ON_COMMIT OFF 
-GO
-ALTER DATABASE [GearUp] SET CURSOR_DEFAULT  GLOBAL 
-GO
-ALTER DATABASE [GearUp] SET CONCAT_NULL_YIELDS_NULL OFF 
-GO
-ALTER DATABASE [GearUp] SET NUMERIC_ROUNDABORT OFF 
-GO
-ALTER DATABASE [GearUp] SET QUOTED_IDENTIFIER OFF 
-GO
-ALTER DATABASE [GearUp] SET RECURSIVE_TRIGGERS OFF 
-GO
-ALTER DATABASE [GearUp] SET  ENABLE_BROKER 
-GO
-ALTER DATABASE [GearUp] SET AUTO_UPDATE_STATISTICS_ASYNC OFF 
-GO
-ALTER DATABASE [GearUp] SET DATE_CORRELATION_OPTIMIZATION OFF 
-GO
-ALTER DATABASE [GearUp] SET TRUSTWORTHY OFF 
-GO
-ALTER DATABASE [GearUp] SET ALLOW_SNAPSHOT_ISOLATION OFF 
-GO
-ALTER DATABASE [GearUp] SET PARAMETERIZATION SIMPLE 
-GO
-ALTER DATABASE [GearUp] SET READ_COMMITTED_SNAPSHOT OFF 
-GO
-ALTER DATABASE [GearUp] SET HONOR_BROKER_PRIORITY OFF 
-GO
-ALTER DATABASE [GearUp] SET RECOVERY FULL 
-GO
-ALTER DATABASE [GearUp] SET  MULTI_USER 
-GO
-ALTER DATABASE [GearUp] SET PAGE_VERIFY CHECKSUM  
-GO
-ALTER DATABASE [GearUp] SET DB_CHAINING OFF 
-GO
-ALTER DATABASE [GearUp] SET FILESTREAM( NON_TRANSACTED_ACCESS = OFF ) 
-GO
-ALTER DATABASE [GearUp] SET TARGET_RECOVERY_TIME = 60 SECONDS 
-GO
-ALTER DATABASE [GearUp] SET DELAYED_DURABILITY = DISABLED 
-GO
-ALTER DATABASE [GearUp] SET ACCELERATED_DATABASE_RECOVERY = OFF  
-GO
-EXEC sys.sp_db_vardecimal_storage_format N'GearUp', N'ON'
-GO
-ALTER DATABASE [GearUp] SET QUERY_STORE = ON
-GO
-ALTER DATABASE [GearUp] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30), DATA_FLUSH_INTERVAL_SECONDS = 900, INTERVAL_LENGTH_MINUTES = 60, MAX_STORAGE_SIZE_MB = 1000, QUERY_CAPTURE_MODE = AUTO, SIZE_BASED_CLEANUP_MODE = AUTO, MAX_PLANS_PER_QUERY = 200, WAIT_STATS_CAPTURE_MODE = ON)
 GO
 USE [GearUp]
 GO
@@ -272,7 +193,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[dot_giam_gia](
 	[id] [int] IDENTITY(1,1) NOT NULL,
-	[ma_dot_giam_gia]  AS ('DGG'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ma_dot_giam_gia] [nvarchar](50) NOT NULL,
 	[ten_dot_giam_gia] [nvarchar](255) NOT NULL,
 	[gia_tri_giam_gia] [int] NULL,
 	[ngay_bat_dau] [datetime] NULL,
@@ -530,11 +451,10 @@ SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[phieu_giam_gia](
 	[id] [int] IDENTITY(1,1) NOT NULL,
-	[ma_phieu_giam_gia]  AS ('PGG'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ma_phieu_giam_gia] [nvarchar](50) NOT NULL,
 	[ten_phieu_giam_gia] [nvarchar](255) NULL,
 	[loai_phieu_giam_gia] [bit] NULL,
 	[gia_tri_giam_gia] [decimal](18, 2) NULL,
-	[so_tien_toi_da] [decimal](18, 2) NULL,
 	[hoa_don_toi_thieu] [decimal](18, 2) NULL,
 	[so_luong_dung] [int] NULL,
 	[ngay_bat_dau] [datetime] NULL,
@@ -951,9 +871,9 @@ SET IDENTITY_INSERT [dbo].[nhan_vien] OFF
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia] ON 
 GO
-INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [so_tien_toi_da], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Giảm giá 10% cho đơn hàng đầu tiên', 0, CAST(10.00 AS Decimal(18, 2)), CAST(500000.00 AS Decimal(18, 2)), CAST(1000000.00 AS Decimal(18, 2)), 100, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho khách hàng mới', 0, 0, CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Giảm giá 10% cho đơn hàng đầu tiên', 0, CAST(10.00 AS Decimal(18, 2)), CAST(1000000.00 AS Decimal(18, 2)), 100, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho khách hàng mới', 0, 0, CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [so_tien_toi_da], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', 1, CAST(200000.00 AS Decimal(18, 2)), CAST(200000.00 AS Decimal(18, 2)), CAST(2000000.00 AS Decimal(18, 2)), 50, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho tất cả khách hàng', 0, 0, CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', 1, CAST(200000.00 AS Decimal(18, 2)), CAST(2000000.00 AS Decimal(18, 2)), 50, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho tất cả khách hàng', 0, 0, CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia] OFF
 GO
@@ -1147,6 +1067,14 @@ GO
 ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED 
 (
 	[so_dien_thoai] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [UQ_phieu_giam_gia_ma]    Script Date: 10/17/2025 10:13:00 AM ******/
+ALTER TABLE [dbo].[phieu_giam_gia] ADD  CONSTRAINT [UQ_phieu_giam_gia_ma] UNIQUE NONCLUSTERED 
+(
+	[ma_phieu_giam_gia] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
 /****** Object:  Index [idx_phieu_giam_gia_history_id_phieu]    Script Date: 10/13/2025 11:09:19 PM ******/
@@ -1444,6 +1372,8 @@ ALTER TABLE [dbo].[dot_giam_gia]  WITH CHECK ADD CHECK  (([gia_tri_giam_gia]>=(0
 GO
 ALTER TABLE [dbo].[dot_giam_gia]  WITH CHECK ADD CHECK  (([ngay_ket_thuc]>[ngay_bat_dau]))
 GO
+ALTER TABLE [dbo].[dot_giam_gia] ADD CONSTRAINT UQ_dot_giam_gia_ma UNIQUE (ma_dot_giam_gia)
+GO
 ALTER TABLE [dbo].[hinh_thuc_thanh_toan]  WITH CHECK ADD CHECK  (([tien_chuyen_khoan]>=(0)))
 GO
 ALTER TABLE [dbo].[hinh_thuc_thanh_toan]  WITH CHECK ADD CHECK  (([tien_mat]>=(0)))
@@ -1470,9 +1400,10 @@ ALTER TABLE [dbo].[phieu_giam_gia]  WITH CHECK ADD CHECK  (([hoa_don_toi_thieu]>
 GO
 ALTER TABLE [dbo].[phieu_giam_gia]  WITH CHECK ADD CHECK  (([so_luong_dung]>=(0)))
 GO
-ALTER TABLE [dbo].[phieu_giam_gia]  WITH CHECK ADD CHECK  (([so_tien_toi_da]>=(0)))
 GO
 ALTER TABLE [dbo].[phieu_giam_gia]  WITH CHECK ADD CHECK  (([ngay_ket_thuc]>[ngay_bat_dau]))
+GO
+ALTER TABLE [dbo].[phieu_giam_gia] ADD CONSTRAINT UQ_phieu_giam_gia_ma UNIQUE (ma_phieu_giam_gia)
 GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD CHECK  (([ngay_het_han]>[ngay_nhan]))
 GO

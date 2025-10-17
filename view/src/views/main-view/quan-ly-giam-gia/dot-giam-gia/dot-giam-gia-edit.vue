@@ -22,11 +22,11 @@
     <!-- Main Content -->
     <a-row :gutter="[16, 16]">
       <!-- Left Column: Form -->
-      <a-col :span="promotionEditForm.applyToProducts ? 12 : 24">
+      <a-col :span="12">
         <a-card title="Thông tin đợt giảm giá">
           <a-form ref="promotionEditFormRef" :model="promotionEditForm" :rules="promotionEditRules" layout="vertical">
             <a-form-item field="code" label="Mã đợt giảm giá">
-              <a-input v-model="promotionEditForm.code" placeholder="Mã tự động" readonly disabled />
+              <a-input v-model="promotionEditForm.code" placeholder="Nhập mã đợt giảm giá" allow-clear />
             </a-form-item>
             <a-form-item field="name" label="Tên đợt giảm giá">
               <a-input v-model="promotionEditForm.name" placeholder="Nhập tên đợt giảm giá" allow-clear />
@@ -34,15 +34,16 @@
             <a-form-item field="discountValue" label="Giá trị giảm (%)">
               <a-input-number
                 v-model="promotionEditForm.discountValue"
-                :min="1"
+                :min="0.01"
                 :max="100"
-                :step="1"
-                :precision="0"
-                suffix="%"
+                :step="0.01"
+                :precision="2"
                 placeholder="Nhập giá trị giảm..."
                 style="width: 100%"
-              />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Giá trị từ 1-100</div>
+              >
+                <template #suffix>%</template>
+              </a-input-number>
+              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Giá trị từ 0.01-100</div>
             </a-form-item>
             <a-form-item field="dateRange" label="Thời gian áp dụng">
               <a-range-picker
@@ -56,12 +57,6 @@
             </a-form-item>
             <a-form-item field="active" label="Trạng thái">
               <a-switch v-model="promotionEditForm.active" checked-children="Hoạt động" un-checked-children="Không hoạt động" />
-            </a-form-item>
-            <a-form-item field="applyToProducts">
-              <a-checkbox v-model="promotionEditForm.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
-              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Nếu không chọn, đợt giảm giá sẽ không áp dụng cho sản phẩm cụ thể
-              </div>
             </a-form-item>
             <a-form-item field="lyDoThayDoi" label="Lý do thay đổi">
               <a-textarea
@@ -85,7 +80,7 @@
       </a-col>
 
       <!-- Right Column: Product Selection -->
-      <a-col :span="12" v-if="promotionEditForm.applyToProducts">
+      <a-col :span="12">
         <a-card title="Chọn sản phẩm áp dụng">
           <div class="product-selection-section">
             <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
@@ -231,7 +226,7 @@ const promotionEditForm = reactive({
   dateRange: [] as string[],
   active: true,
   selectedProducts: [] as number[],
-  applyToProducts: false,
+  applyToProducts: true,
   lyDoThayDoi: '',
 })
 
@@ -243,7 +238,7 @@ const originalPromotionEditForm = reactive({
   dateRange: [] as string[],
   active: true,
   selectedProducts: [] as number[],
-  applyToProducts: false,
+  applyToProducts: true,
 })
 
 const promotionEditRules: FormRules = {
@@ -539,18 +534,6 @@ const submitPromotionEdit = async () => {
     submitting.value = false
   }
 }
-
-watch(
-  () => promotionEditForm.applyToProducts,
-  (shouldApply) => {
-    if (shouldApply && productOptions.value.length === 0) {
-      fetchProducts()
-    }
-    if (!shouldApply) {
-      promotionEditForm.selectedProducts = []
-    }
-  }
-)
 
 onMounted(async () => {
   await fetchProducts()

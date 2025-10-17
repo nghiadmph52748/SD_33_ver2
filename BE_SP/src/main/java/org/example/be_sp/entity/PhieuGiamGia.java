@@ -6,8 +6,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
 import org.hibernate.annotations.Nationalized;
 
 import jakarta.persistence.Column;
@@ -31,9 +29,7 @@ public class PhieuGiamGia {
     @Column(name = "id", nullable = false)
     private Integer id;
 
-    @Generated(GenerationTime.ALWAYS)
-    @ColumnDefault("'PGG'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
-    @Column(name = "ma_phieu_giam_gia", length = 8)
+    @Column(name = "ma_phieu_giam_gia", length = 50, nullable = false, unique = true)
     private String maPhieuGiamGia;
 
     @Nationalized
@@ -46,9 +42,6 @@ public class PhieuGiamGia {
 
     @Column(name = "gia_tri_giam_gia", precision = 18, scale = 2)
     private BigDecimal giaTriGiamGia;
-
-    @Column(name = "so_tien_toi_da", precision = 18, scale = 2)
-    private BigDecimal soTienToiDa;
 
     @Column(name = "hoa_don_toi_thieu", precision = 18, scale = 2)
     private BigDecimal hoaDonToiThieu;

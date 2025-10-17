@@ -5,8 +5,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
 import org.hibernate.annotations.Nationalized;
 
 import jakarta.persistence.Column;
@@ -29,9 +27,7 @@ public class DotGiamGia {
     @Column(name = "id", nullable = false)
     private Integer id;
 
-    @ColumnDefault("'DGG'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
-    @Generated(GenerationTime.ALWAYS)
-    @Column(name = "ma_dot_giam_gia", length = 8)
+    @Column(name = "ma_dot_giam_gia", length = 50, nullable = false)
     private String maDotGiamGia;
 
     @Nationalized

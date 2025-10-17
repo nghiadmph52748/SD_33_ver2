@@ -17,4 +17,7 @@ public interface PhieuGiamGiaRepository extends JpaRepository<PhieuGiamGia, Inte
     
     @Query("select n from PhieuGiamGia n where n.deleted = ?1 and n.trangThai = ?2 and n.loaiPhieuGiamGia = ?3")
     List<PhieuGiamGia> findAllByDeletedFalseAndTrangThaiTrueAndLoaiPhieuGiamGiaTrue(Boolean deleted, Boolean trangThai, Boolean loaiPhieuGiamGia);
+    
+    @Query("select count(h) from HoaDon h where h.idPhieuGiamGia.id = ?1 and h.deleted = false")
+    Long countUsageByPhieuGiamGiaId(Integer phieuGiamGiaId);
 }

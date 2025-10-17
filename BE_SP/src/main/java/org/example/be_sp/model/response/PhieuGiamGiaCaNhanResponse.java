@@ -25,7 +25,6 @@ public class PhieuGiamGiaCaNhanResponse {
     Boolean loaiPhieuGiamGia; // true la phan tram, false la so tien
     BigDecimal giaTriGiamGia;
     private BigDecimal hoaDonToiThieu;
-    private BigDecimal soTienToiDa;
     Integer soLuongSuDung;
     LocalDateTime ngayBatDau;
     LocalDateTime ngayKetThuc;
@@ -44,7 +43,6 @@ public class PhieuGiamGiaCaNhanResponse {
         this.loaiPhieuGiamGia = r.getIdPhieuGiamGia().getLoaiPhieuGiamGia();
         this.giaTriGiamGia = r.getIdPhieuGiamGia().getGiaTriGiamGia();
         this.hoaDonToiThieu = r.getIdPhieuGiamGia().getHoaDonToiThieu();
-        this.soTienToiDa = r.getIdPhieuGiamGia().getSoTienToiDa();
         this.soLuongSuDung = r.getIdPhieuGiamGia().getSoLuongDung();
         this.ngayBatDau = r.getIdPhieuGiamGia().getNgayBatDau();
         this.ngayKetThuc = r.getIdPhieuGiamGia().getNgayKetThuc();

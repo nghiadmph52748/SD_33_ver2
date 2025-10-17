@@ -99,21 +99,52 @@
 
     <!-- Promotions Table -->
     <a-card title="Danh sách giảm giá" class="table-card">
-      <a-table :columns="columns" :data="filteredPromotions" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
+      <template #extra>
+        <a-input-search
+          v-model="tableSearch"
+          placeholder="Tìm kiếm trong bảng..."
+          allow-clear
+          style="width: 300px"
+          @search="handleTableSearch"
+          @clear="handleTableSearch"
+        />
+      </template>
+      <a-table :columns="columns" :data="filteredPromotions" :pagination="pagination" :loading="loading" :scroll="{ x: 1400 }">
+        <template #code="{ record }">
+          <div class="code-cell">
+            {{ record.code }}
+          </div>
+        </template>
+
+        <template #name="{ record }">
+          <div class="name-cell">
+            {{ record.name }}
+          </div>
+        </template>
+
         <template #percentage="{ record }">
-          <span class="percentage-value">{{ record.percentage }}%</span>
+          <span class="percentage-value">{{ Number(record.percentage).toFixed(2) }}%</span>
         </template>
 
         <template #date_range="{ record }">
-          <div class="date-range">{{ formatDateTime(record.start_date) }} - {{ formatDateTime(record.end_date) }}</div>
+          <div class="date-range">
+            <div>{{ formatDateTime(record.start_date) }}</div>
+            <div>{{ formatDateTime(record.end_date) }}</div>
+          </div>
         </template>
 
         <template #status="{ record }">
-          <div class="status-tag-wrapper">
-            <a-tag :color="getStatusColor(record.status)">
-              {{ getStatusText(record.status) }}
-            </a-tag>
+          <div class="status-cell" :class="`status-${record.status}`">
+            {{ getStatusText(record.status) }}
           </div>
+        </template>
+
+        <template #created_at="{ record }">
+          <div>{{ record.created_at ? formatDateTime(record.created_at) : '—' }}</div>
+        </template>
+
+        <template #updated_at="{ record }">
+          <div>{{ record.updated_at ? formatDateTime(record.updated_at) : '—' }}</div>
         </template>
 
         <template #action="{ record }">
@@ -489,6 +520,7 @@ const createDefaultFilters = (): PromotionFilters => ({
 
 // Filters
 const filters = ref<PromotionFilters>(createDefaultFilters())
+const tableSearch = ref('')
 
 // Table
 const loading = ref(false)
@@ -503,11 +535,13 @@ const columns = [
   {
     title: 'Mã',
     dataIndex: 'code',
+    slotName: 'code',
     width: 100,
   },
   {
     title: 'Tên',
     dataIndex: 'name',
+    slotName: 'name',
     width: 200,
   },
   {
@@ -529,6 +563,20 @@ const columns = [
     dataIndex: 'status',
     slotName: 'status',
     width: 110,
+    align: 'center',
+  },
+  {
+    title: 'Ngày tạo',
+    dataIndex: 'created_at',
+    slotName: 'created_at',
+    width: 180,
+    align: 'center',
+  },
+  {
+    title: 'Ngày cập nhật',
+    dataIndex: 'updated_at',
+    slotName: 'updated_at',
+    width: 180,
     align: 'center',
   },
   {
@@ -711,6 +759,14 @@ const toPromotionRecord = (promotion: PromotionApiModel, index: number): Promoti
 const filteredPromotions = computed(() => {
   let filtered = promotions.value
 
+  // Filter by table search
+  if (tableSearch.value) {
+    const searchTerm = tableSearch.value.toLowerCase()
+    filtered = filtered.filter(
+      (promotion) => promotion.name.toLowerCase().includes(searchTerm) || promotion.code.toLowerCase().includes(searchTerm)
+    )
+  }
+
   // Filter by search term
   if (filters.value.search) {
     const searchTerm = filters.value.search.toLowerCase()
@@ -846,6 +902,11 @@ const getStatusText = (status: string) => {
 const searchPromotions = () => {
   // Filtering is now handled by the computed filteredPromotions property
   // This function is called when filters change to trigger reactivity
+}
+
+const handleTableSearch = () => {
+  // Table search is reactive via tableSearch ref
+  // This function is called when user types or clears the search input
 }
 
 const openCreatePage = () => {
@@ -1370,9 +1431,59 @@ onMounted(() => {
 }
 
 .date-range {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.code-cell {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-weight: 600;
+  font-size: 12px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.name-cell {
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.status-cell {
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.3;
+  font-size: 11px;
   text-align: center;
-  font-size: 14px;
-  color: var(--color-text-1);
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.status-active {
+  color: #52c41a;
+  background-color: rgba(82, 196, 26, 0.1);
+}
+
+.status-expired {
+  color: #ff4d4f;
+  background-color: rgba(255, 77, 79, 0.1);
+}
+
+.status-upcoming {
+  color: #fa8c16;
+  background-color: rgba(250, 140, 22, 0.1);
+}
+
+.status-inactive {
+  color: #8c8c8c;
+  background-color: rgba(140, 140, 140, 0.1);
 }
 
 .danger-item {
