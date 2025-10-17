@@ -259,6 +259,11 @@ public class DotGiamGiaService extends GenericCrudService<DotGiamGia, Integer, D
                         return nhanVienRepository.findByTenTaiKhoan(username)
                                 .map(org.example.be_sp.entity.NhanVien::getId)
                                 .orElseGet(() -> {
+                                    // If not found, check if it's hardcoded admin
+                                    if ("admin".equals(username)) {
+                                        log.debug("Using hardcoded admin (ID: 1)");
+                                        return 1;
+                                    }
                                     log.warn("No employee found for username: {}", username);
                                     return null;
                                 });

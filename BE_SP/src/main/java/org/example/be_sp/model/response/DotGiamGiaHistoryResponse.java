@@ -42,7 +42,14 @@ public class DotGiamGiaHistoryResponse {
         // Lookup employee info
         try {
             NhanVien nhanVien = nhanVienRepository.findById(entity.getIdNhanVien()).orElse(null);
-            if (nhanVien != null) {
+            
+            // Only use hardcoded admin if employee doesn't exist in database
+            if (nhanVien == null && entity.getIdNhanVien() != null && entity.getIdNhanVien() == 1) {
+                // Employee ID 1 doesn't exist - this must be our hardcoded admin
+                response.setTenNhanVien("Administrator");
+                response.setMaNhanVien("ADMIN001");
+            } else if (nhanVien != null) {
+                // Use actual employee info from database
                 response.setTenNhanVien(nhanVien.getTenNhanVien());
                 response.setMaNhanVien(nhanVien.getMaNhanVien());
             }
