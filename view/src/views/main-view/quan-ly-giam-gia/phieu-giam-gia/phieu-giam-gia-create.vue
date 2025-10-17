@@ -53,33 +53,17 @@
               </div>
             </a-form-item>
 
-            <!-- Date range side by side -->
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-form-item field="startDate" label="Ngày bắt đầu">
-                  <a-date-picker
-                    v-model="formState.startDate"
-                    :show-time="true"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                    format="DD/MM/YYYY HH:mm"
-                    allow-clear
-                    style="width: 100%"
-                  />
-                </a-form-item>
-              </a-col>
-              <a-col :span="12">
-                <a-form-item field="endDate" label="Ngày kết thúc">
-                  <a-date-picker
-                    v-model="formState.endDate"
-                    :show-time="true"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                    format="DD/MM/YYYY HH:mm"
-                    allow-clear
-                    style="width: 100%"
-                  />
-                </a-form-item>
-              </a-col>
-            </a-row>
+            <!-- Thời gian áp dụng -->
+            <a-form-item field="dateRange" label="Thời gian áp dụng">
+              <a-range-picker
+                v-model="formState.dateRange"
+                :show-time="true"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                format="DD/MM/YYYY HH:mm"
+                allow-clear
+                style="width: 100%"
+              />
+            </a-form-item>
 
             <!-- Giá trị đơn hàng tối thiểu -->
             <a-form-item field="minOrder" label="Giá trị đơn hàng tối thiểu">
@@ -200,7 +184,7 @@
           {{ formState.minOrder ? formatCurrency(formState.minOrder) : 'Không giới hạn' }}
         </a-descriptions-item>
         <a-descriptions-item label="Thời gian áp dụng">
-          {{ formatDateRange(formState.startDate, formState.endDate) }}
+          {{ formatDateRange(formState.dateRange[0], formState.dateRange[1]) }}
         </a-descriptions-item>
         <a-descriptions-item label="Số lượng phiếu">
           {{ formState.quantity }}
@@ -223,13 +207,28 @@
         </a-descriptions-item>
       </a-descriptions>
     </a-modal>
+
+    <!-- Scroll to Top Button -->
+    <a-button
+      v-show="showScrollTop"
+      class="scroll-to-top-btn"
+      type="primary"
+      shape="circle"
+      size="large"
+      @click="scrollToTop"
+    >
+      <template #icon>
+        <icon-up />
+      </template>
+    </a-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch, onMounted } from 'vue'
+import { computed, reactive, ref, watch, onMounted, onUnmounted } from 'vue'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
+import { IconUp } from '@arco-design/web-vue/es/icon'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
@@ -248,8 +247,7 @@ const formState = reactive({
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: 0,
   minOrder: 0,
-  startDate: '',
-  endDate: '',
+  dateRange: [] as string[],
   quantity: 1,
   description: '',
   featured: false,
@@ -262,8 +260,7 @@ const rules: FormRules = {
   discountMode: [{ required: true, message: 'Vui lòng chọn hình thức giảm giá' }],
   discountValue: [{ required: true, message: 'Vui lòng nhập giá trị giảm' }],
   quantity: [{ required: true, message: 'Vui lòng nhập số lượng áp dụng' }],
-  startDate: [{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }],
-  endDate: [{ required: true, message: 'Vui lòng chọn ngày kết thúc' }],
+  dateRange: [{ required: true, message: 'Vui lòng chọn khoảng thời gian áp dụng' }],
 }
 
 const isPercent = computed(() => formState.discountMode === 'percentage')
@@ -593,8 +590,27 @@ const generateNextCode = async () => {
   }
 }
 
+// Scroll to top functionality
+const showScrollTop = ref(false)
+
+const handleScroll = () => {
+  showScrollTop.value = window.scrollY > 300
+}
+
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  })
+}
+
 onMounted(async () => {
   formState.code = await generateNextCode()
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 
 const goBack = () => {
@@ -656,11 +672,11 @@ const handleSaveClick = async () => {
     return
   }
 
-  if (!formState.startDate || !formState.endDate) {
+  if (!formState.dateRange || formState.dateRange.length !== 2 || !formState.dateRange[0] || !formState.dateRange[1]) {
     Message.error('Vui lòng chọn thời gian áp dụng')
     return
   }
-  if (new Date(formState.startDate) > new Date(formState.endDate)) {
+  if (new Date(formState.dateRange[0]) > new Date(formState.dateRange[1])) {
     Message.error('Ngày kết thúc phải sau ngày bắt đầu')
     return
   }
@@ -713,9 +729,9 @@ const confirmSave = async () => {
     soTienToiDa: null,
     hoaDonToiThieu: formState.minOrder ? Number(formState.minOrder) : 0,
     soLuongDung: quantityValue,
-    ngayBatDau: formState.startDate,
-    ngayKetThuc: formState.endDate,
-    trangThai: calculateStatus(formState.startDate, formState.endDate),
+    ngayBatDau: formState.dateRange[0],
+    ngayKetThuc: formState.dateRange[1],
+    trangThai: calculateStatus(formState.dateRange[0], formState.dateRange[1]),
     moTa: formState.description.trim() || null,
     deleted: false,
     idKhachHang: formState.featured ? formState.selectedCustomerIds : [],
@@ -872,5 +888,28 @@ const confirmSave = async () => {
 
 .customer-selection-section :deep(.arco-table-th .arco-checkbox) {
   pointer-events: auto !important;
+}
+
+/* Scroll to Top Button */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background-color: #4ade80 !important;
+  border-color: #4ade80 !important;
+  transition: all 0.3s ease;
+}
+
+.scroll-to-top-btn:hover {
+  background-color: #22c55e !important;
+  border-color: #22c55e !important;
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.scroll-to-top-btn:active {
+  transform: translateY(-2px);
 }
 </style>

@@ -54,32 +54,16 @@
               </div>
             </a-form-item>
 
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-form-item field="startDate" label="Ngày bắt đầu">
-                  <a-date-picker
-                    v-model="couponEditForm.dateRange[0]"
-                    :show-time="true"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                    format="DD/MM/YYYY HH:mm"
-                    allow-clear
-                    style="width: 100%"
-                  />
-                </a-form-item>
-              </a-col>
-              <a-col :span="12">
-                <a-form-item field="endDate" label="Ngày kết thúc">
-                  <a-date-picker
-                    v-model="couponEditForm.dateRange[1]"
-                    :show-time="true"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                    format="DD/MM/YYYY HH:mm"
-                    allow-clear
-                    style="width: 100%"
-                  />
-                </a-form-item>
-              </a-col>
-            </a-row>
+            <a-form-item field="dateRange" label="Thời gian áp dụng">
+              <a-range-picker
+                v-model="couponEditForm.dateRange"
+                :show-time="true"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                format="DD/MM/YYYY HH:mm"
+                allow-clear
+                style="width: 100%"
+              />
+            </a-form-item>
 
             <a-form-item field="minOrder" label="Giá trị đơn hàng tối thiểu">
               <a-input
@@ -225,11 +209,25 @@
       </p>
       <p class="modal-note">Hành động này sẽ cập nhật thông tin phiếu giảm giá.</p>
     </a-modal>
+
+    <!-- Scroll to Top Button -->
+    <a-button
+      v-show="showScrollTop"
+      class="scroll-to-top-btn"
+      type="primary"
+      shape="circle"
+      size="large"
+      @click="scrollToTop"
+    >
+      <template #icon>
+        <icon-up />
+      </template>
+    </a-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
@@ -237,7 +235,7 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { fetchCustomers, type CustomerApiModel, updateCoupon } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
-import { IconPlus, IconDelete, IconLeft } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete, IconLeft, IconUp } from '@arco-design/web-vue/es/icon'
 
 // Router
 const router = useRouter()
@@ -1048,8 +1046,27 @@ const confirmCouponEdit = async () => {
   }
 }
 
+// Scroll to top functionality
+const showScrollTop = ref(false)
+
+const handleScroll = () => {
+  showScrollTop.value = window.scrollY > 300
+}
+
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  })
+}
+
 onMounted(() => {
   loadCouponData()
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
@@ -1133,5 +1150,28 @@ onMounted(() => {
 .modal-note {
   margin-top: 4px;
   color: var(--color-text-3);
+}
+
+/* Scroll to Top Button */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background-color: #4ade80 !important;
+  border-color: #4ade80 !important;
+  transition: all 0.3s ease;
+}
+
+.scroll-to-top-btn:hover {
+  background-color: #22c55e !important;
+  border-color: #22c55e !important;
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.scroll-to-top-btn:active {
+  transform: translateY(-2px);
 }
 </style>
