@@ -14,10 +14,10 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PhieuGiamGiaRequest {
+    String maPhieuGiamGia;
     String tenPhieuGiamGia;
     Boolean loaiPhieuGiamGia;
     BigDecimal giaTriGiamGia;
-    BigDecimal soTienToiDa;
     BigDecimal hoaDonToiThieu;
     List<Integer> idKhachHang;
     Integer soLuongDung;

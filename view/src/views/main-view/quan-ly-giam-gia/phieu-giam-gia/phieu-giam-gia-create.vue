@@ -40,37 +40,16 @@
 
             <!-- Giá trị giảm -->
             <a-form-item field="discountValue" label="Giá trị giảm">
-              <a-input-number
-                v-model="formState.discountValue"
-                :min="1"
-                :max="isPercent ? 100 : 100000000"
-                :precision="isPercent ? 2 : 0"
-                :formatter="(value) => (isPercent ? value : formatNumberWithSeparator(value))"
-                :parser="(value) => parseFormattedNumber(value)"
-                :suffix="isPercent ? '%' : 'VND'"
+              <a-input
+                v-model="displayDiscountValue"
+                @blur="handleDiscountBlur"
+                @focus="handleDiscountFocus"
+                @input="handleDiscountInput"
                 placeholder="Nhập giá trị giảm..."
                 style="width: 100%"
               />
               <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                {{ isPercent ? 'Giá trị từ 1-100' : 'Tối đa: 100.000.000 VND' }}
-              </div>
-            </a-form-item>
-
-            <!-- Giá trị tối đa (for percentage) -->
-            <a-form-item v-if="isPercent" field="maxDiscount" label="Giá trị giảm tối đa">
-              <a-input-number
-                v-model="formState.maxDiscount"
-                :min="1"
-                :max="50000000"
-                :precision="0"
-                :formatter="formatNumberWithSeparator"
-                :parser="parseFormattedNumber"
-                suffix="VND"
-                placeholder="Nhập giá trị tối đa..."
-                style="width: 100%"
-              />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Giá trị giảm tối đa không được vượt quá 50.000.000 VND
+                {{ isPercent ? 'Giá trị từ 0-100' : 'Tối đa: 100.000.000 VND' }}
               </div>
             </a-form-item>
 
@@ -104,14 +83,11 @@
 
             <!-- Giá trị đơn hàng tối thiểu -->
             <a-form-item field="minOrder" label="Giá trị đơn hàng tối thiểu">
-              <a-input-number
-                v-model="formState.minOrder"
-                :min="0"
-                :max="500000000"
-                :precision="0"
-                :formatter="formatNumberWithSeparator"
-                :parser="parseFormattedNumber"
-                suffix="VND"
+              <a-input
+                v-model="displayMinOrder"
+                @blur="handleMinOrderBlur"
+                @focus="handleMinOrderFocus"
+                @input="handleMinOrderInput"
                 placeholder="Nhập giá trị đơn hàng tối thiểu..."
                 style="width: 100%"
               />
@@ -149,90 +125,6 @@
                 Phiếu giảm giá nổi bật sẽ chỉ áp dụng cho khách hàng được chọn
               </div>
             </a-form-item>
-
-            <!-- Áp dụng cho sản phẩm cụ thể -->
-            <a-form-item field="applyToProducts">
-              <a-checkbox v-model="formState.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
-              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Nếu bật, phiếu giảm giá chỉ áp dụng cho các sản phẩm được chọn
-              </div>
-            </a-form-item>
-
-            <!-- Product Selection Section -->
-            <div v-if="formState.applyToProducts" class="product-selection-section">
-              <a-divider style="margin: 16px 0" />
-              <div style="font-weight: 600; margin-bottom: 12px">Chọn sản phẩm áp dụng</div>
-
-              <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
-
-              <div style="margin-bottom: 12px; display: flex; gap: 8px">
-                <a-button size="small" @click="selectAllProducts">
-                  <template #icon>
-                    <icon-plus />
-                  </template>
-                  Chọn tất cả
-                </a-button>
-                <a-button size="small" @click="deselectAllProducts">
-                  <template #icon>
-                    <icon-delete />
-                  </template>
-                  Bỏ chọn tất cả
-                </a-button>
-              </div>
-
-              <a-table
-                row-key="id"
-                :columns="productColumnsWithCheckbox"
-                :data="filteredProducts"
-                :pagination="productPagination"
-                :loading="productsLoading"
-                :scroll="{ y: 300 }"
-                size="small"
-                :bordered="{ cell: true }"
-              >
-                <template #selectHeader>
-                  <a-checkbox
-                    :model-value="isAllProductsSelected"
-                    :indeterminate="isSomeProductsSelected && !isAllProductsSelected"
-                    @change="toggleAllProducts"
-                  />
-                </template>
-                <template #select="{ record }">
-                  <a-checkbox
-                    :model-value="formState.selectedProductIds.includes(record.id)"
-                    @change="() => toggleProductSelection(record.id)"
-                  />
-                </template>
-                <template #anhSanPham="{ record }">
-                  <div class="product-image-cell">
-                    <img
-                      v-if="record.anhSanPham && record.anhSanPham.length > 0"
-                      :src="record.anhSanPham[0]"
-                      :alt="record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham"
-                      class="product-thumbnail"
-                      @error="handleImageError"
-                    />
-                    <div v-else class="product-image-placeholder">
-                      <icon-image :size="24" style="color: var(--color-text-4)" />
-                    </div>
-                  </div>
-                </template>
-                <template #tenSanPham="{ record }">
-                  <div style="display: flex; align-items: center; gap: 8px">
-                    <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
-                  </div>
-                </template>
-                <template #giaBan="{ record }">
-                  <span>{{ formatCurrency(record.giaBan || 0) }}</span>
-                </template>
-              </a-table>
-
-              <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-                Đã chọn:
-                <strong>{{ formState.selectedProductIds.length }}</strong>
-                sản phẩm
-              </div>
-            </div>
           </a-form>
         </div>
 
@@ -304,9 +196,6 @@
           <span v-if="isPercent">{{ formState.discountValue }}%</span>
           <span v-else>{{ formatCurrency(formState.discountValue) }}</span>
         </a-descriptions-item>
-        <a-descriptions-item v-if="isPercent && formState.maxDiscount" label="Giá trị giảm tối đa">
-          {{ formatCurrency(formState.maxDiscount) }}
-        </a-descriptions-item>
         <a-descriptions-item label="Giá trị đơn hàng tối thiểu">
           {{ formState.minOrder ? formatCurrency(formState.minOrder) : 'Không giới hạn' }}
         </a-descriptions-item>
@@ -332,19 +221,6 @@
             Tổng: {{ formState.selectedCustomerIds.length }} khách hàng
           </div>
         </a-descriptions-item>
-        <a-descriptions-item label="Áp dụng cho sản phẩm cụ thể">
-          {{ formState.applyToProducts ? 'Có' : 'Không' }}
-        </a-descriptions-item>
-        <a-descriptions-item v-if="formState.applyToProducts" label="Sản phẩm được áp dụng">
-          <div style="max-height: 150px; overflow-y: auto">
-            <a-tag v-for="productId in formState.selectedProductIds" :key="productId" style="margin: 2px">
-              {{ getProductNameById(productId) }}
-            </a-tag>
-          </div>
-          <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-            Tổng: {{ formState.selectedProductIds.length }} sản phẩm
-          </div>
-        </a-descriptions-item>
       </a-descriptions>
     </a-modal>
   </div>
@@ -354,12 +230,10 @@
 import { computed, reactive, ref, watch, onMounted } from 'vue'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
-import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
 import { createCoupon, fetchCoupons, fetchCustomers, type CustomerApiModel } from '@/api/discount-management'
-import { IconPlus, IconDelete, IconImage } from '@arco-design/web-vue/es/icon'
 
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
@@ -372,8 +246,7 @@ const formState = reactive({
   code: '',
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
-  discountValue: 10,
-  maxDiscount: null as number | null,
+  discountValue: 0,
   minOrder: 0,
   startDate: '',
   endDate: '',
@@ -381,11 +254,10 @@ const formState = reactive({
   description: '',
   featured: false,
   selectedCustomerIds: [] as number[],
-  applyToProducts: false,
-  selectedProductIds: [] as number[],
 })
 
 const rules: FormRules = {
+  code: [{ required: true, message: 'Vui lòng nhập mã phiếu giảm giá' }],
   name: [{ required: true, message: 'Vui lòng nhập tên phiếu giảm giá' }],
   discountMode: [{ required: true, message: 'Vui lòng chọn hình thức giảm giá' }],
   discountValue: [{ required: true, message: 'Vui lòng nhập giá trị giảm' }],
@@ -484,13 +356,21 @@ const loadCustomers = async () => {
       customers.value = []
       Message.warning('Dữ liệu khách hàng không hợp lệ')
     }
-  } catch (error) {
+  } catch {
     Message.error('Không thể tải danh sách khách hàng')
     customers.value = []
   } finally {
     customersLoading.value = false
   }
 }
+
+const formatNumberWithSeparator = (value: number | string) => {
+  if (value === null || value === undefined || value === '') return ''
+  const numValue = typeof value === 'string' ? parseInt(value.replace(/\./g, ''), 10) : value
+  if (Number.isNaN(numValue)) return ''
+  return numValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
 
 // Load customers when featured is checked
 watch(
@@ -506,189 +386,166 @@ watch(
   }
 )
 
-// Products
-interface ProductApiModel {
-  id: number
-  idSanPham?: {
-    tenSanPham?: string
-  }
-  tenSanPhamChiTiet?: string
-  maChiTietSanPham?: string
-  giaBan?: number
-  soLuong?: number
-  trangThai?: boolean
-}
-
-const products = ref<ProductApiModel[]>([])
-const productsLoading = ref(false)
-const productSearchQuery = ref('')
-
-const filteredProducts = computed(() => {
-  if (!productSearchQuery.value) {
-    return products.value
-  }
-  const query = productSearchQuery.value.toLowerCase()
-  return products.value.filter(
-    (product) =>
-      product.idSanPham?.tenSanPham?.toLowerCase().includes(query) ||
-      product.tenSanPhamChiTiet?.toLowerCase().includes(query) ||
-      product.maChiTietSanPham?.toLowerCase().includes(query)
-  )
-})
-
-const productPagination = computed(() => ({
-  pageSize: 5,
-  showTotal: true,
-  showPageSize: false,
-}))
-
-const productColumns = [
-  {
-    title: 'Ảnh',
-    dataIndex: 'anhSanPham',
-    slotName: 'anhSanPham',
-    width: 80,
-    align: 'center' as const,
-  },
-  {
-    title: 'Tên sản phẩm',
-    dataIndex: 'tenSanPham',
-    slotName: 'tenSanPham',
-    ellipsis: true,
-    tooltip: true,
-  },
-  {
-    title: 'Mã SP',
-    dataIndex: 'maChiTietSanPham',
-    width: 120,
-  },
-  {
-    title: 'Giá bán',
-    dataIndex: 'giaBan',
-    slotName: 'giaBan',
-    width: 150,
-    align: 'right' as const,
-  },
-]
-
-const productColumnsWithCheckbox = computed(() => [
-  {
-    title: '',
-    dataIndex: 'select',
-    slotName: 'select',
-    width: 50,
-    align: 'center' as const,
-  },
-  ...productColumns,
-])
-
-const isAllProductsSelected = computed(() => {
-  if (filteredProducts.value.length === 0) return false
-  return filteredProducts.value.every((product) => formState.selectedProductIds.includes(product.id))
-})
-
-const isSomeProductsSelected = computed(() => {
-  return formState.selectedProductIds.length > 0
-})
-
-const toggleProductSelection = (productId: number) => {
-  const index = formState.selectedProductIds.indexOf(productId)
-  if (index > -1) {
-    formState.selectedProductIds.splice(index, 1)
-  } else {
-    formState.selectedProductIds.push(productId)
-  }
-}
-
-const toggleAllProducts = () => {
-  if (isAllProductsSelected.value) {
-    // Deselect all filtered products
-    filteredProducts.value.forEach((product) => {
-      const index = formState.selectedProductIds.indexOf(product.id)
-      if (index > -1) {
-        formState.selectedProductIds.splice(index, 1)
-      }
-    })
-  } else {
-    // Select all filtered products
-    filteredProducts.value.forEach((product) => {
-      if (!formState.selectedProductIds.includes(product.id)) {
-        formState.selectedProductIds.push(product.id)
-      }
-    })
-  }
-}
-
-const selectAllProducts = () => {
-  filteredProducts.value.forEach((product) => {
-    if (!formState.selectedProductIds.includes(product.id)) {
-      formState.selectedProductIds.push(product.id)
-    }
-  })
-}
-
-const deselectAllProducts = () => {
-  filteredProducts.value.forEach((product) => {
-    const index = formState.selectedProductIds.indexOf(product.id)
-    if (index > -1) {
-      formState.selectedProductIds.splice(index, 1)
-    }
-  })
-}
-
-const loadProducts = async () => {
-  productsLoading.value = true
-  try {
-    const response = await axios.get('/api/chi-tiet-san-pham-management/playlist')
-
-    // API trả về ResponseObject { data: [...] }
-    const data = response.data.data || response.data
-
-    if (data && Array.isArray(data)) {
-      // Filter active products with stock
-      const activeProducts = data.filter((p: ProductApiModel) => {
-        return p.trangThai !== false && (p.soLuong || 0) > 0
-      })
-      products.value = activeProducts
-
-      if (activeProducts.length === 0) {
-        Message.info('Không có sản phẩm hoạt động')
-      }
-    } else {
-      products.value = []
-      Message.warning('Dữ liệu sản phẩm không hợp lệ')
-    }
-  } catch {
-    Message.error('Không thể tải danh sách sản phẩm')
-    products.value = []
-  } finally {
-    productsLoading.value = false
-  }
-}
-
-// Load products when applyToProducts is checked
 watch(
-  () => formState.applyToProducts,
-  (shouldApply) => {
-    if (shouldApply && products.value.length === 0) {
-      loadProducts()
-    }
-    // Clear selected products when unchecking
-    if (!shouldApply) {
-      formState.selectedProductIds = []
+  () => formState.discountMode,
+  (mode) => {
+    if (mode === 'percentage' && formState.discountValue > 100) {
+      formState.discountValue = 100
     }
   }
 )
 
+// Display value for discount input (with % or VND symbol)
+const displayDiscountValue = ref('0.00%')
+const isEditingDiscount = ref(false)
+
+// Handle focus - remove % or VND for easy editing
+const handleDiscountFocus = () => {
+  isEditingDiscount.value = true
+  displayDiscountValue.value = String(formState.discountValue)
+}
+
+const handleDiscountInput = () => {
+  if (!isEditingDiscount.value) return
+
+  if (isPercent.value) {
+    // For percentage, keep numbers and decimal point
+    const digits = displayDiscountValue.value.replace(/[^0-9.]/g, '')
+    // Ensure only one decimal point
+    const parts = digits.split('.')
+    if (parts.length > 2) {
+      displayDiscountValue.value = `${parts[0]}.${parts.slice(1).join('')}`
+    } else {
+      displayDiscountValue.value = digits
+    }
+  } else {
+    // For amount, format with thousand separators (no VND while typing)
+    // Remove all dots first to get clean digits
+    const cleanValue = displayDiscountValue.value.replace(/\\./g, '')
+    const digits = cleanValue.replace(/[^0-9]/g, '')
+
+    if (digits === '' || digits === '0') {
+      displayDiscountValue.value = digits
+      return
+    }
+
+    const formatted = formatNumberWithSeparator(parseInt(digits, 10))
+    displayDiscountValue.value = formatted
+  }
+}
+
+// Handle blur - format with .00% or VND
+const handleDiscountBlur = () => {
+  isEditingDiscount.value = false
+
+  if (isPercent.value) {
+    // Percentage mode - parse as float to handle decimals
+    const value = parseFloat(displayDiscountValue.value.replace(/[^0-9.]/g, ''))
+
+    if (Number.isNaN(value) || value < 0) {
+      formState.discountValue = 0
+    } else if (value > 100) {
+      formState.discountValue = 100
+      Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+    } else {
+      formState.discountValue = value
+    }
+    displayDiscountValue.value = `${formState.discountValue.toFixed(2)}%`
+  } else {
+    // Amount mode - remove thousand separators (dots) then parse
+    const cleanValue = displayDiscountValue.value.replace(/\./g, '').replace(/[^0-9]/g, '')
+    const value = parseInt(cleanValue, 10)
+
+    if (Number.isNaN(value) || value < 0) {
+      formState.discountValue = 0
+    } else if (value > 100000000) {
+      formState.discountValue = 100000000
+      Message.warning('Giá trị giảm không được vượt quá 100.000.000 VND')
+    } else {
+      formState.discountValue = Math.round(value)
+    }
+    displayDiscountValue.value = `${formatNumberWithSeparator(formState.discountValue)} VND`
+  }
+}
+
+// Watch discountValue changes to update display
+watch(
+  () => formState.discountValue,
+  (newValue) => {
+    if (!isEditingDiscount.value) {
+      if (isPercent.value) {
+        displayDiscountValue.value = `${newValue.toFixed(2)}%`
+      } else {
+        displayDiscountValue.value = `${formatNumberWithSeparator(newValue)} VND`
+      }
+    }
+  },
+  { immediate: true }
+)
+
+// Watch mode changes
 watch(
   () => formState.discountMode,
-  (mode) => {
-    if (mode === 'amount') {
-      formState.maxDiscount = null
-    } else if (formState.discountValue > 100) {
-      formState.discountValue = 100
+  () => {
+    if (isPercent.value) {
+      displayDiscountValue.value = `${formState.discountValue.toFixed(2)}%`
+    } else {
+      displayDiscountValue.value = `${formatNumberWithSeparator(formState.discountValue)} VND`
     }
   }
+)
+
+// Display value for minOrder field
+const displayMinOrder = ref('0 VND')
+const isEditingMinOrder = ref(false)
+
+const handleMinOrderFocus = () => {
+  isEditingMinOrder.value = true
+  displayMinOrder.value = String(formState.minOrder || 0)
+}
+
+const handleMinOrderInput = () => {
+  if (!isEditingMinOrder.value) return
+
+  // Remove all dots first to get clean digits
+  const cleanValue = displayMinOrder.value.replace(/\./g, '')
+  const digits = cleanValue.replace(/[^0-9]/g, '')
+
+  if (digits === '' || digits === '0') {
+    displayMinOrder.value = digits
+    return
+  }
+
+  // Format with thousand separators (no VND while typing)
+  const formatted = formatNumberWithSeparator(parseInt(digits, 10))
+  displayMinOrder.value = formatted
+}
+
+const handleMinOrderBlur = () => {
+  isEditingMinOrder.value = false
+  const cleanValue = displayMinOrder.value.replace(/\./g, '').replace(/[^0-9]/g, '')
+  const value = parseInt(cleanValue, 10)
+
+  if (Number.isNaN(value) || value < 0) {
+    formState.minOrder = 0
+  } else if (value > 500000000) {
+    formState.minOrder = 500000000
+    Message.warning('Giá trị đơn hàng tối thiểu không được vượt quá 500.000.000 VND')
+  } else {
+    formState.minOrder = Math.round(value)
+  }
+
+  displayMinOrder.value = `${formatNumberWithSeparator(formState.minOrder)} VND`
+}
+
+watch(
+  () => formState.minOrder,
+  (newValue) => {
+    if (!isEditingMinOrder.value) {
+      displayMinOrder.value = `${formatNumberWithSeparator(newValue)} VND`
+    }
+  },
+  { immediate: true }
 )
 
 // Real-time validation for discount value (percentage mode)
@@ -698,17 +555,6 @@ watch(
     if (isPercent.value && newValue !== undefined && newValue !== null && newValue > 100) {
       Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
       formState.discountValue = 100
-    }
-  }
-)
-
-// Real-time validation for max discount value
-watch(
-  () => formState.maxDiscount,
-  (newValue) => {
-    if (newValue !== undefined && newValue !== null && newValue > 50000000) {
-      Message.warning('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
-      formState.maxDiscount = 50000000
     }
   }
 )
@@ -760,40 +606,11 @@ const getCustomerNameById = (customerId: number): string => {
   return customer ? `${customer.tenKhachHang} - ${customer.soDienThoai}` : `KH#${customerId}`
 }
 
-const getProductNameById = (productId: number): string => {
-  const product = products.value.find((p) => p.id === productId)
-  return product ? product.tenSanPhamChiTiet || product.idSanPham?.tenSanPham || `SP#${productId}` : `SP#${productId}`
-}
-
-const formatNumberWithSeparator = (value: number | string) => {
-  if (value === null || value === undefined || value === '') return ''
-  const stringValue = String(value)
-  const parts = stringValue.split('.')
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  return parts.join('.')
-}
-
-const parseFormattedNumber = (value: string | number) => {
-  if (typeof value === 'number') return value
-  if (!value) return 0
-  return Number(value.replace(/\./g, ''))
-}
-
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
-}
-
-const handleImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.style.display = 'none'
-  // Show placeholder instead
-  const placeholder = img.parentElement?.querySelector('.product-image-placeholder')
-  if (placeholder) {
-    ;(placeholder as HTMLElement).style.display = 'flex'
-  }
 }
 
 const formatDateRange = (startDate: string, endDate: string) => {
@@ -848,24 +665,7 @@ const handleSaveClick = async () => {
     return
   }
 
-  if (isPercent.value) {
-    const capValue = Number(formState.maxDiscount)
-    if (!capValue || Number.isNaN(capValue) || capValue <= 0) {
-      Message.error('Vui lòng nhập mức giảm tối đa hợp lệ')
-      return
-    }
-    if (capValue > 50000000) {
-      Message.error('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
-      return
-    }
-
-    // Validate: Max discount should not exceed min order value
-    const minOrderValue = Number(formState.minOrder || 0)
-    if (minOrderValue > 0 && capValue >= minOrderValue) {
-      Message.error('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
-      return
-    }
-  } else {
+  if (!isPercent.value) {
     // For fixed amount discount
     const minOrderValue = Number(formState.minOrder || 0)
     if (minOrderValue > 0 && discountValue >= minOrderValue) {
@@ -883,12 +683,6 @@ const handleSaveClick = async () => {
   // Validate customer selection for featured vouchers
   if (formState.featured && formState.selectedCustomerIds.length === 0) {
     Message.error('Vui lòng chọn ít nhất một khách hàng cho phiếu giảm giá nổi bật')
-    return
-  }
-
-  // Validate product selection when applyToProducts is enabled
-  if (formState.applyToProducts && formState.selectedProductIds.length === 0) {
-    Message.error('Vui lòng chọn ít nhất một sản phẩm')
     return
   }
 
@@ -916,7 +710,7 @@ const confirmSave = async () => {
     tenPhieuGiamGia: formState.name.trim(),
     loaiPhieuGiamGia: !isPercent.value,
     giaTriGiamGia: discountValue,
-    soTienToiDa: isPercent.value ? Number(formState.maxDiscount ?? 0) : null,
+    soTienToiDa: null,
     hoaDonToiThieu: formState.minOrder ? Number(formState.minOrder) : 0,
     soLuongDung: quantityValue,
     ngayBatDau: formState.startDate,
@@ -926,7 +720,6 @@ const confirmSave = async () => {
     deleted: false,
     idKhachHang: formState.featured ? formState.selectedCustomerIds : [],
     featured: formState.featured,
-    idChiTietSanPham: formState.applyToProducts ? formState.selectedProductIds : [],
   }
 
   confirmSaveSubmitting.value = true
@@ -1079,86 +872,5 @@ const confirmSave = async () => {
 
 .customer-selection-section :deep(.arco-table-th .arco-checkbox) {
   pointer-events: auto !important;
-}
-
-/* Product Selection Section Styles */
-.product-selection-section {
-  border: 1px solid var(--color-border-2);
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--color-bg-2);
-  margin-top: 16px;
-}
-
-.product-selection-section :deep(.arco-table) {
-  border-radius: 4px;
-}
-
-.product-selection-section :deep(.arco-table-container) {
-  border: 1px solid var(--color-border-2);
-  border-radius: 4px;
-}
-
-.product-selection-section :deep(.arco-table-th) {
-  background-color: var(--color-fill-2);
-  font-weight: 600;
-}
-
-.product-selection-section :deep(.arco-table-td) {
-  border-bottom: 1px solid var(--color-border-2);
-}
-
-.product-selection-section :deep(.arco-table-tr:hover) {
-  background-color: var(--color-fill-1);
-}
-
-.product-selection-section :deep(.arco-checkbox) {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-.product-selection-section :deep(.arco-checkbox-icon) {
-  pointer-events: auto !important;
-}
-
-.product-selection-section :deep(.arco-table-cell) {
-  pointer-events: auto !important;
-}
-
-.product-selection-section :deep(.arco-table-td) {
-  position: relative;
-  z-index: 1;
-}
-
-.product-selection-section :deep(.arco-table-th .arco-checkbox) {
-  pointer-events: auto !important;
-}
-
-/* Product Image Styles */
-.product-image-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.product-thumbnail {
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid var(--color-border-2);
-}
-
-.product-image-placeholder {
-  width: 50px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-fill-2);
-  border-radius: 4px;
-  border: 1px dashed var(--color-border-3);
 }
 </style>

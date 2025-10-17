@@ -147,7 +147,29 @@
 
     <!-- Coupons Table -->
     <a-card title="Danh sách phiếu giảm giá" class="table-card">
+      <template #extra>
+        <a-input-search
+          v-model="tableSearch"
+          placeholder="Tìm kiếm trong bảng..."
+          allow-clear
+          style="width: 300px"
+          @search="handleTableSearch"
+          @clear="handleTableSearch"
+        />
+      </template>
       <a-table :columns="columns" :data="filteredCoupons" :pagination="pagination" :loading="loading">
+        <template #code="{ record }">
+          <div class="code-cell">
+            {{ record.code }}
+          </div>
+        </template>
+
+        <template #name="{ record }">
+          <div class="name-cell">
+            {{ record.name }}
+          </div>
+        </template>
+
         <template #featured="{ record }">
           <div v-if="record.featured" class="featured-badge">
             <icon-star :style="{ color: '#FFB800', fontSize: '18px' }" />
@@ -156,6 +178,12 @@
             <span style="color: var(--color-text-4); font-size: 14px">—</span>
           </div>
           <!-- DEBUG: {{ record.name }} - featured: {{ record.featured }} -->
+        </template>
+
+        <template #discount_type="{ record }">
+          <a-tag :color="record.discount_type === 'percentage' ? 'blue' : 'green'">
+            {{ record.discount_type === 'percentage' ? 'Giảm %' : 'Giảm tiền' }}
+          </a-tag>
         </template>
 
         <template #discount_value="{ record }">
@@ -170,12 +198,6 @@
           </div>
         </template>
 
-        <template #max_discount_value="{ record }">
-          <div class="max-discount-value">
-            {{ record.max_discount_value ? formatCurrency(record.max_discount_value) : 'Không giới hạn' }}
-          </div>
-        </template>
-
         <template #usage_limits="{ record }">
           <div class="usage-limits">{{ record.total_used }}/{{ record.total_usage_limit || '∞' }} tổng</div>
         </template>
@@ -183,22 +205,24 @@
         <template #validity_period="{ record }">
           <div class="validity-period">
             <div>{{ formatDateTime(record.start_date) }}</div>
-            <div class="separator">-</div>
             <div>{{ formatDateTime(record.end_date) }}</div>
           </div>
         </template>
 
         <template #quantity="{ record }">
           <div class="quantity-cell">
-            {{ record.usage_limit || '∞' }}
+            <template v-if="record.usage_limit !== null">
+              <div>{{ record.usage_limit - (record.total_used || 0) }}/{{ record.usage_limit }}</div>
+            </template>
+            <template v-else>
+              ∞
+            </template>
           </div>
         </template>
 
         <template #status="{ record }">
-          <div class="status-tag-wrapper">
-            <a-tag :color="getStatusColor(record.status)">
-              {{ getStatusText(record.status) }}
-            </a-tag>
+          <div class="status-cell" :class="`status-${record.status}`">
+            {{ getStatusText(record.status) }}
           </div>
         </template>
 
@@ -234,9 +258,6 @@
         </a-descriptions-item>
         <a-descriptions-item label="Đơn hàng tối thiểu">
           {{ selectedCoupon?.min_order_value ? formatCurrency(selectedCoupon.min_order_value) : 'Không giới hạn' }}
-        </a-descriptions-item>
-        <a-descriptions-item label="Giảm tối đa">
-          {{ selectedCoupon?.max_discount_value ? formatCurrency(selectedCoupon.max_discount_value) : 'Không giới hạn' }}
         </a-descriptions-item>
         <a-descriptions-item label="Số lượng">
           {{ selectedCoupon?.usage_limit ?? '∞' }}
@@ -466,24 +487,12 @@
               />
             </a-form-item>
 
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-form-item field="featured">
-                  <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá nổi bật</a-checkbox>
-                  <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                    Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
-                  </div>
-                </a-form-item>
-              </a-col>
-              <a-col :span="12">
-                <a-form-item field="applyToProducts">
-                  <a-checkbox v-model="couponEditForm.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
-                  <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                    Nếu bật, phiếu giảm giá chỉ áp dụng cho các sản phẩm được chọn
-                  </div>
-                </a-form-item>
-              </a-col>
-            </a-row>
+            <a-form-item field="featured">
+              <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá nổi bật</a-checkbox>
+              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
+              </div>
+            </a-form-item>
             <a-form-item field="lyDoThayDoi" label="Lý do thay đổi">
               <a-textarea
                 v-model="couponEditForm.lyDoThayDoi"
@@ -494,93 +503,6 @@
               />
             </a-form-item>
           </a-form>
-
-          <!-- Product Selection Section - inside left column -->
-          <div v-if="couponEditForm.applyToProducts" style="margin-top: 16px">
-            <a-divider style="margin: 16px 0" />
-            <div style="font-weight: 600; margin-bottom: 12px; font-size: 15px">
-              Chọn sản phẩm áp dụng
-            </div>
-            <div class="product-selection-section">
-              <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
-
-              <!-- Select All / Deselect All buttons -->
-              <div style="margin-bottom: 12px; display: flex; gap: 8px">
-                <a-button size="small" @click="selectAllEditProducts">
-                  <template #icon>
-                    <icon-plus />
-                  </template>
-                  Chọn tất cả
-                </a-button>
-                <a-button size="small" @click="deselectAllEditProducts">
-                  <template #icon>
-                    <icon-delete />
-                  </template>
-                  Bỏ chọn tất cả
-                </a-button>
-              </div>
-
-              <a-table
-                row-key="id"
-                :key="`product-table-${couponEditForm.selectedProductIds.length}`"
-                :columns="productColumnsWithCheckbox"
-                :data="filteredProducts"
-                :pagination="productPagination"
-                :loading="productsLoading"
-                :scroll="{ y: 300 }"
-                size="small"
-                :bordered="{ cell: true }"
-              >
-                <template #selectHeader>
-                  <a-checkbox
-                    :model-value="isAllEditProductsSelected"
-                    :indeterminate="isSomeEditProductsSelected && !isAllEditProductsSelected"
-                    @change="toggleAllEditProducts"
-                  />
-                </template>
-                <template #select="{ record }">
-                  <a-checkbox
-                    :model-value="couponEditForm.selectedProductIds.includes(record.id)"
-                    @change="() => toggleEditProductSelection(record.id)"
-                  />
-                </template>
-                <template #anhSanPham="{ record }">
-                  <div class="product-image-cell">
-                    <img
-                      v-if="record.anhSanPham && record.anhSanPham.length > 0"
-                      :src="record.anhSanPham[0]"
-                      :alt="record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham"
-                      class="product-thumbnail"
-                      @error="handleImageError"
-                    />
-                    <div v-else class="product-image-placeholder">
-                      <icon-image :size="24" style="color: var(--color-text-4)" />
-                    </div>
-                  </div>
-                </template>
-                <template #tenSanPham="{ record }">
-                  <div style="display: flex; align-items: center; gap: 8px">
-                    <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
-                  </div>
-                </template>
-                <template #giaBan="{ record }">
-                  <span>{{ formatCurrency(record.giaBan || 0) }}</span>
-                </template>
-              </a-table>
-
-              <div
-                v-if="!productsLoading && filteredProducts.length === 0"
-                style="text-align: center; padding: 20px; color: var(--color-text-3)"
-              >
-                Không tìm thấy sản phẩm nào
-              </div>
-              <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-                Đã chọn:
-                <strong>{{ couponEditForm.selectedProductIds.length }}</strong>
-                sản phẩm
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Middle/Right Column: Customer Selection -->
@@ -816,6 +738,7 @@ const createDefaultFilters = (): CouponFilters => ({
 })
 
 const filters = ref<CouponFilters>(createDefaultFilters())
+const tableSearch = ref('')
 
 // Table
 const loading = ref(false)
@@ -829,19 +752,27 @@ const columns = [
   {
     title: 'Mã',
     dataIndex: 'code',
-    width: 105,
+    slotName: 'code',
+    width: 100,
   },
   {
     title: 'Tên phiếu',
     dataIndex: 'name',
-    ellipsis: true,
-    tooltip: true,
+    slotName: 'name',
+    width: 200,
   },
   {
     title: 'Nổi bật',
     dataIndex: 'featured',
     slotName: 'featured',
     width: 80,
+    align: 'center',
+  },
+  {
+    title: 'Loại',
+    dataIndex: 'discount_type',
+    slotName: 'discount_type',
+    width: 90,
     align: 'center',
   },
   {
@@ -855,28 +786,21 @@ const columns = [
     title: 'ĐH tối thiểu',
     dataIndex: 'min_order_value',
     slotName: 'min_order_value',
-    width: 120,
-    align: 'right',
-  },
-  {
-    title: 'Giảm tối đa',
-    dataIndex: 'max_discount_value',
-    slotName: 'max_discount_value',
-    width: 120,
+    width: 115,
     align: 'right',
   },
   {
     title: 'Thời gian',
     dataIndex: 'start_date',
     slotName: 'validity_period',
-    width: 185,
+    width: 180,
     align: 'center',
   },
   {
     title: 'SL',
     dataIndex: 'quantity',
     slotName: 'quantity',
-    width: 70,
+    width: 65,
     align: 'center',
   },
   {
@@ -905,7 +829,6 @@ interface CouponRecord {
   discount_type: 'percentage' | 'fixed'
   discount_value: number
   min_order_value: number | null
-  max_discount_value: number | null
   usage_limit: number | null
   total_used?: number
   total_usage_limit?: number | null
@@ -946,16 +869,13 @@ const couponEditForm = reactive({
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: 10,
-  maxDiscount: null as number | null,
   minOrder: 0,
   quantity: 1,
   dateRange: [] as string[],
   description: '',
   active: true,
   featured: false,
-  applyToProducts: false,
   selectedCustomerIds: [] as number[],
-  selectedProductIds: [] as number[],
   lyDoThayDoi: '',
 })
 
@@ -965,16 +885,13 @@ const originalCouponEditForm = reactive({
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: 10,
-  maxDiscount: null as number | null,
   minOrder: 0,
   quantity: 1,
   dateRange: [] as string[],
   description: '',
   active: true,
   featured: false,
-  applyToProducts: false,
   selectedCustomerIds: [] as number[],
-  selectedProductIds: [] as number[],
 })
 
 const couponEditRules: FormRules = {
@@ -1013,9 +930,7 @@ const customerColumnClass = computed(() => {
 watch(
   () => couponEditForm.discountMode,
   (mode) => {
-    if (mode === 'amount') {
-      couponEditForm.maxDiscount = null
-    } else if (couponEditForm.discountValue > 100) {
+    if (mode === 'percentage' && couponEditForm.discountValue > 100) {
       couponEditForm.discountValue = 100
     }
   }
@@ -1192,181 +1107,6 @@ watch(
   }
 )
 
-// Products
-interface ProductApiModel {
-  id: number
-  idSanPham?: {
-    tenSanPham?: string
-  }
-  tenSanPhamChiTiet?: string
-  maChiTietSanPham?: string
-  anhSanPham?: string[]
-  giaBan?: number
-  soLuong?: number
-  trangThai?: boolean
-}
-
-const products = ref<ProductApiModel[]>([])
-const productsLoading = ref(false)
-const productSearchQuery = ref('')
-
-const productColumns = [
-  {
-    title: 'Ảnh',
-    dataIndex: 'anhSanPham',
-    slotName: 'anhSanPham',
-    width: 80,
-    align: 'center' as const,
-  },
-  {
-    title: 'Tên sản phẩm',
-    dataIndex: 'tenSanPham',
-    slotName: 'tenSanPham',
-    ellipsis: true,
-    tooltip: true,
-  },
-  {
-    title: 'Mã SP',
-    dataIndex: 'maChiTietSanPham',
-    width: 120,
-  },
-  {
-    title: 'Giá bán',
-    dataIndex: 'giaBan',
-    slotName: 'giaBan',
-    width: 150,
-    align: 'right' as const,
-  },
-]
-
-const filteredProducts = computed(() => {
-  if (!productSearchQuery.value) {
-    return products.value
-  }
-  const query = productSearchQuery.value.toLowerCase()
-  return products.value.filter(
-    (product) =>
-      product.idSanPham?.tenSanPham?.toLowerCase().includes(query) ||
-      product.tenSanPhamChiTiet?.toLowerCase().includes(query) ||
-      product.maChiTietSanPham?.toLowerCase().includes(query)
-  )
-})
-
-const productPagination = computed(() => ({
-  pageSize: 5,
-  showTotal: true,
-  showPageSize: false,
-}))
-
-const productColumnsWithCheckbox = computed(() => [
-  {
-    title: '',
-    dataIndex: 'select',
-    slotName: 'select',
-    width: 50,
-    align: 'center' as const,
-  },
-  ...productColumns,
-])
-
-const isAllEditProductsSelected = computed(() => {
-  if (filteredProducts.value.length === 0) return false
-  return filteredProducts.value.every((product) => couponEditForm.selectedProductIds.includes(product.id))
-})
-
-const isSomeEditProductsSelected = computed(() => {
-  return couponEditForm.selectedProductIds.length > 0
-})
-
-const toggleEditProductSelection = (productId: number) => {
-  const index = couponEditForm.selectedProductIds.indexOf(productId)
-  if (index > -1) {
-    couponEditForm.selectedProductIds.splice(index, 1)
-  } else {
-    couponEditForm.selectedProductIds.push(productId)
-  }
-}
-
-const toggleAllEditProducts = () => {
-  if (isAllEditProductsSelected.value) {
-    // Deselect all filtered products
-    filteredProducts.value.forEach((product) => {
-      const index = couponEditForm.selectedProductIds.indexOf(product.id)
-      if (index > -1) {
-        couponEditForm.selectedProductIds.splice(index, 1)
-      }
-    })
-  } else {
-    // Select all filtered products
-    filteredProducts.value.forEach((product) => {
-      if (!couponEditForm.selectedProductIds.includes(product.id)) {
-        couponEditForm.selectedProductIds.push(product.id)
-      }
-    })
-  }
-}
-
-const selectAllEditProducts = () => {
-  filteredProducts.value.forEach((product) => {
-    if (!couponEditForm.selectedProductIds.includes(product.id)) {
-      couponEditForm.selectedProductIds.push(product.id)
-    }
-  })
-}
-
-const deselectAllEditProducts = () => {
-  filteredProducts.value.forEach((product) => {
-    const index = couponEditForm.selectedProductIds.indexOf(product.id)
-    if (index > -1) {
-      couponEditForm.selectedProductIds.splice(index, 1)
-    }
-  })
-}
-
-const loadProducts = async () => {
-  productsLoading.value = true
-  try {
-    const response = await axios.get('/api/chi-tiet-san-pham-management/playlist')
-
-    // API trả về ResponseObject { data: [...] }
-    const data = response.data.data || response.data
-
-    if (data && Array.isArray(data)) {
-      // Filter active products with stock
-      const activeProducts = data.filter((p: ProductApiModel) => {
-        return p.trangThai !== false && (p.soLuong || 0) > 0
-      })
-      products.value = activeProducts
-
-      if (activeProducts.length === 0) {
-        Message.info('Không có sản phẩm hoạt động')
-      }
-    } else {
-      products.value = []
-      Message.warning('Dữ liệu sản phẩm không hợp lệ')
-    }
-  } catch {
-    Message.error('Không thể tải danh sách sản phẩm')
-    products.value = []
-  } finally {
-    productsLoading.value = false
-  }
-}
-
-// Load products when applyToProducts is checked in edit form
-watch(
-  () => couponEditForm.applyToProducts,
-  (shouldApply) => {
-    if (shouldApply && products.value.length === 0) {
-      loadProducts()
-    }
-    // Clear selected products when unchecking
-    if (!shouldApply) {
-      couponEditForm.selectedProductIds = []
-    }
-  }
-)
-
 const determineDiscountType = (coupon: CouponApiModel): 'percentage' | 'fixed' => {
   if (coupon.loaiPhieuGiamGia !== null && coupon.loaiPhieuGiamGia !== undefined) {
     return coupon.loaiPhieuGiamGia ? 'fixed' : 'percentage'
@@ -1403,8 +1143,8 @@ const toCouponRecord = (coupon: CouponApiModel, index: number): CouponRecord => 
   const discountType = determineDiscountType(coupon)
   const discountValue = Number(coupon.giaTriGiamGia ?? 0)
   const minOrder = coupon.hoaDonToiThieu != null ? Number(coupon.hoaDonToiThieu) : null
-  const maxDiscount = coupon.soTienToiDa != null ? Number(coupon.soTienToiDa) : null
   const usageLimit = coupon.soLuongDung ?? null
+  const usedCount = coupon.soLuongDaDung ?? 0
 
   return {
     id: coupon.id,
@@ -1414,9 +1154,8 @@ const toCouponRecord = (coupon: CouponApiModel, index: number): CouponRecord => 
     discount_type: discountType,
     discount_value: discountValue,
     min_order_value: minOrder,
-    max_discount_value: maxDiscount,
     usage_limit: usageLimit,
-    total_used: undefined,
+    total_used: usedCount,
     total_usage_limit: usageLimit,
     start_date: coupon.ngayBatDau ?? '',
     end_date: coupon.ngayKetThuc ?? '',
@@ -1451,16 +1190,6 @@ const formatCurrency = (amount: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
-}
-
-const handleImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.style.display = 'none'
-  // Show placeholder instead
-  const placeholder = img.parentElement?.querySelector('.product-image-placeholder')
-  if (placeholder) {
-    ;(placeholder as HTMLElement).style.display = 'flex'
-  }
 }
 
 // Filtered coupons computed
@@ -1540,6 +1269,21 @@ const filteredCoupons = computed(() => {
       const limit = coupon.usage_limit ?? Number.POSITIVE_INFINITY
       const appliedMax = quantityMax === DEFAULT_QUANTITY_RANGE[1] ? Number.POSITIVE_INFINITY : quantityMax
       return limit >= quantityMin && limit <= appliedMax
+    })
+  }
+
+  // Table search filter
+  if (tableSearch.value) {
+    const searchTerm = tableSearch.value.toLowerCase()
+    filtered = filtered.filter((coupon) => {
+      const discountValueStr = coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : formatCurrency(coupon.discount_value)
+      const minOrderStr = coupon.min_order_value ? formatCurrency(coupon.min_order_value) : 'không giới hạn'
+      return (
+        coupon.code.toLowerCase().includes(searchTerm) ||
+        coupon.name.toLowerCase().includes(searchTerm) ||
+        discountValueStr.toLowerCase().includes(searchTerm) ||
+        minOrderStr.toLowerCase().includes(searchTerm)
+      )
     })
   }
 
@@ -1679,6 +1423,11 @@ const getStatusText = (status: string) => {
 const searchCoupons = () => {
   // Filtering is now handled by the computed filteredCoupons property
   // This function is called when filters change to trigger reactivity
+}
+
+const handleTableSearch = () => {
+  // Filtering is handled reactively by filteredCoupons
+  // This function is called when the table search input changes
 }
 
 // Load coupon history
@@ -1834,12 +1583,6 @@ const submitCouponEdit = async () => {
     return false
   }
 
-  // Validate product selection
-  if (couponEditForm.applyToProducts && couponEditForm.selectedProductIds.length === 0) {
-    Message.error('Vui lòng chọn ít nhất một sản phẩm để áp dụng giảm giá!')
-    return false
-  }
-
   // Check if any changes were made
   const hasChanges = (
     couponEditForm.name !== originalCouponEditForm.name ||
@@ -1853,9 +1596,7 @@ const submitCouponEdit = async () => {
     couponEditForm.description !== originalCouponEditForm.description ||
     couponEditForm.active !== originalCouponEditForm.active ||
     couponEditForm.featured !== originalCouponEditForm.featured ||
-    couponEditForm.applyToProducts !== originalCouponEditForm.applyToProducts ||
-    JSON.stringify([...couponEditForm.selectedCustomerIds].sort()) !== JSON.stringify([...originalCouponEditForm.selectedCustomerIds].sort()) ||
-    JSON.stringify([...couponEditForm.selectedProductIds].sort()) !== JSON.stringify([...originalCouponEditForm.selectedProductIds].sort())
+    JSON.stringify([...couponEditForm.selectedCustomerIds].sort()) !== JSON.stringify([...originalCouponEditForm.selectedCustomerIds].sort())
   )
 
   if (!hasChanges) {
@@ -1907,14 +1648,6 @@ const confirmCouponEdit = async () => {
   couponEditSubmitting.value = true
   try {
     await updateCoupon(selectedCoupon.value.id, payload)
-
-    // Always update product selection (even if empty, to clear previous selections)
-    const productIds = couponEditForm.applyToProducts ? [...couponEditForm.selectedProductIds] : []
-
-    await axios.put('/api/chi-tiet-phieu-giam-gia-management/update-by-phieu-giam-gia', productIds, {
-      params: { idPhieuGiamGia: selectedCoupon.value.id },
-    })
-
     Message.success('Cập nhật phiếu giảm giá thành công')
 
     couponEditConfirmVisible.value = false
@@ -2191,13 +1924,72 @@ onMounted(() => {
 
 .validity-period {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
-.separator {
-  color: #86909c;
+.code-cell {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-weight: 600;
+  font-size: 12px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.name-cell {
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.quantity-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.status-cell {
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.3;
+  font-size: 11px;
+  text-align: center;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.status-active {
+  color: #52c41a;
+  background-color: rgba(82, 196, 26, 0.1);
+}
+
+.status-expired {
+  color: #ff4d4f;
+  background-color: rgba(255, 77, 79, 0.1);
+}
+
+.status-used_up {
+  color: #fa8c16;
+  background-color: rgba(250, 140, 22, 0.1);
+}
+
+.status-upcoming {
+  color: #fa8c16;
+  background-color: rgba(250, 140, 22, 0.1);
+}
+
+.status-inactive {
+  color: #8c8c8c;
+  background-color: rgba(140, 140, 140, 0.1);
 }
 
 .danger-item {
@@ -2254,6 +2046,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   min-width: fit-content;
+  white-space: nowrap;
 }
 
 .customer-selection-section {

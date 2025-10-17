@@ -55,7 +55,12 @@ public class PhieuGiamGiaService {
 
     public List<PhieuGiamGiaResponse> getAll() {
         return new ArrayList<>(phieuGiamGiaRepository.findAll().stream()
-                .map(PhieuGiamGiaResponse::new)
+                .map(pgg -> {
+                    PhieuGiamGiaResponse response = new PhieuGiamGiaResponse(pgg);
+                    Long usageCount = phieuGiamGiaRepository.countUsageByPhieuGiamGiaId(pgg.getId());
+                    response.setSoLuongDaDung(usageCount != null ? usageCount.intValue() : 0);
+                    return response;
+                })
                 .toList());
     }
 
@@ -64,8 +69,12 @@ public class PhieuGiamGiaService {
     }
 
     public PhieuGiamGiaResponse getByIdResponse(Integer id) {
-        return phieuGiamGiaRepository.findById(id).map(PhieuGiamGiaResponse::new)
-                .orElseThrow(() -> new ApiException("PhieuGiamGia not found", "404"));
+        return phieuGiamGiaRepository.findById(id).map(pgg -> {
+            PhieuGiamGiaResponse response = new PhieuGiamGiaResponse(pgg);
+            Long usageCount = phieuGiamGiaRepository.countUsageByPhieuGiamGiaId(id);
+            response.setSoLuongDaDung(usageCount != null ? usageCount.intValue() : 0);
+            return response;
+        }).orElseThrow(() -> new ApiException("PhieuGiamGia not found", "404"));
     }
 
     public PagingResponse<PhieuGiamGiaResponse> paging(Integer page, Integer size) {
@@ -112,7 +121,6 @@ public class PhieuGiamGiaService {
         oldSnapshot.setTenPhieuGiamGia(existingPgg.getTenPhieuGiamGia());
         oldSnapshot.setGiaTriGiamGia(existingPgg.getGiaTriGiamGia());
         oldSnapshot.setLoaiPhieuGiamGia(existingPgg.getLoaiPhieuGiamGia());
-        oldSnapshot.setSoTienToiDa(existingPgg.getSoTienToiDa());
         oldSnapshot.setHoaDonToiThieu(existingPgg.getHoaDonToiThieu());
         oldSnapshot.setSoLuongDung(existingPgg.getSoLuongDung());
         oldSnapshot.setNgayBatDau(existingPgg.getNgayBatDau());
@@ -220,7 +228,7 @@ public class PhieuGiamGiaService {
                     .voucherName(pgg.getTenPhieuGiamGia())
                     .voucherType(pgg.getLoaiPhieuGiamGia() ? "FIXED_AMOUNT" : "PERCENTAGE")
                     .discountValue(pgg.getGiaTriGiamGia())
-                    .maxDiscount(pgg.getSoTienToiDa())
+                    .maxDiscount(null)
                     .minOrderValue(pgg.getHoaDonToiThieu())
                     .validFrom(pgg.getNgayBatDau())
                     .validUntil(pgg.getNgayKetThuc())
@@ -377,12 +385,6 @@ public class PhieuGiamGiaService {
             String oldType = Boolean.TRUE.equals(oldPgg.getLoaiPhieuGiamGia()) ? "Số tiền" : "Phần trăm";
             String newType = Boolean.TRUE.equals(newPgg.getLoaiPhieuGiamGia()) ? "Số tiền" : "Phần trăm";
             changes.append(String.format("Loại giảm giá: %s → %s\n", oldType, newType));
-        }
-        
-        // Số tiền tối đa
-        if (!safeEquals(oldPgg.getSoTienToiDa(), newPgg.getSoTienToiDa())) {
-            changes.append(String.format("Giảm tối đa: %s → %s\n", 
-                    formatNumber(oldPgg.getSoTienToiDa()), formatNumber(newPgg.getSoTienToiDa())));
         }
         
         // Hóa đơn tối thiểu

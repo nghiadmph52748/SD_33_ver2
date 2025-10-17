@@ -26,106 +26,85 @@
         <a-card title="Thông tin phiếu giảm giá">
           <a-form ref="couponEditFormRef" :model="couponEditForm" :rules="couponEditRules" layout="vertical">
             <a-form-item field="code" label="Mã phiếu giảm giá">
-              <a-input v-model="couponEditForm.code" placeholder="Mã tự động" readonly disabled />
+              <a-input v-model="couponEditForm.code" placeholder="Nhập mã phiếu giảm giá" allow-clear />
             </a-form-item>
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-form-item field="name" label="Tên phiếu giảm giá">
-                  <a-input v-model="couponEditForm.name" placeholder="Nhập tên phiếu" allow-clear />
-                </a-form-item>
-              </a-col>
-              <a-col :span="12">
-                <a-form-item field="discountMode" label="Hình thức giảm giá">
-                  <a-radio-group v-model="couponEditForm.discountMode" type="button">
-                    <a-radio value="percentage">Phần trăm (%)</a-radio>
-                    <a-radio value="amount">Số tiền (VNĐ)</a-radio>
-                  </a-radio-group>
-                </a-form-item>
-              </a-col>
-            </a-row>
 
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-form-item field="discountValue" label="Giá trị giảm">
-                  <a-input-number
-                    v-model="couponEditForm.discountValue"
-                    :min="1"
-                    :max="isPercentEdit ? 100 : 100000000"
-                    :step="isPercentEdit ? 1 : 1000"
-                    :precision="0"
-                    :formatter="isPercentEdit ? undefined : formatNumberWithSeparator"
-                    :parser="isPercentEdit ? undefined : parseFormattedNumber"
-                    :suffix="isPercentEdit ? '%' : 'VND'"
-                    placeholder="Nhập giá trị giảm..."
-                    style="width: 100%"
-                  />
-                  <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                    {{ isPercentEdit ? 'Giá trị từ 1-100' : 'Tối đa: 100.000.000 VND' }}
-                  </div>
-                </a-form-item>
-              </a-col>
-              <a-col :span="12" v-if="isPercentEdit">
-                <a-form-item field="maxDiscount" label="Giá trị giảm tối đa">
-                  <a-input-number
-                    v-model="couponEditForm.maxDiscount"
-                    :min="1"
-                    :max="50000000"
-                    :step="10000"
-                    :precision="0"
-                    :formatter="formatNumberWithSeparator"
-                    :parser="parseFormattedNumber"
-                    suffix="VND"
-                    placeholder="Nhập giá trị tối đa..."
-                    style="width: 100%"
-                  />
-                  <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 50.000.000 VND</div>
-                </a-form-item>
-              </a-col>
-            </a-row>
+            <a-form-item field="name" label="Tên phiếu giảm giá">
+              <a-input v-model="couponEditForm.name" placeholder="Nhập tên phiếu" allow-clear />
+            </a-form-item>
 
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-form-item field="minOrder" label="Giá trị đơn hàng tối thiểu">
-                  <a-input-number
-                    v-model="couponEditForm.minOrder"
-                    :min="0"
-                    :max="500000000"
-                    :step="10000"
-                    :precision="0"
-                    :formatter="formatNumberWithSeparator"
-                    :parser="parseFormattedNumber"
-                    suffix="VND"
-                    placeholder="Nhập giá trị đơn hàng tối thiểu..."
-                    style="width: 100%"
-                  />
-                  <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 500.000.000 VND</div>
-                </a-form-item>
-              </a-col>
-              <a-col :span="12">
-                <a-form-item field="quantity" label="Số lượng phiếu">
-                  <a-input-number
-                    v-model="couponEditForm.quantity"
-                    :min="1"
-                    :max="100000"
-                    :precision="0"
-                    placeholder="Nhập số lượng phiếu..."
-                    style="width: 100%"
-                  />
-                  <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 100.000 phiếu</div>
-                </a-form-item>
-              </a-col>
-            </a-row>
+            <a-form-item field="discountMode" label="Loại giảm giá">
+              <a-select v-model="couponEditForm.discountMode" placeholder="Chọn loại giảm giá">
+                <a-option value="percentage">Giảm theo phần trăm</a-option>
+                <a-option value="amount">Giảm theo số tiền</a-option>
+              </a-select>
+            </a-form-item>
 
-            <a-form-item field="dateRange" label="Thời gian áp dụng">
-              <a-range-picker
-                v-model="couponEditForm.dateRange"
-                :show-time="true"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                format="DD/MM/YYYY HH:mm"
-                allow-clear
+            <a-form-item field="discountValue" label="Giá trị giảm">
+              <a-input
+                v-model="displayDiscountValue"
+                @blur="handleDiscountBlur"
+                @focus="handleDiscountFocus"
+                @input="handleDiscountInput"
+                placeholder="Nhập giá trị giảm..."
                 style="width: 100%"
               />
+              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                {{ isPercentEdit ? 'Giá trị từ 0-100' : 'Tối đa: 100.000.000 VND' }}
+              </div>
             </a-form-item>
+
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item field="startDate" label="Ngày bắt đầu">
+                  <a-date-picker
+                    v-model="couponEditForm.dateRange[0]"
+                    :show-time="true"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    format="DD/MM/YYYY HH:mm"
+                    allow-clear
+                    style="width: 100%"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item field="endDate" label="Ngày kết thúc">
+                  <a-date-picker
+                    v-model="couponEditForm.dateRange[1]"
+                    :show-time="true"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    format="DD/MM/YYYY HH:mm"
+                    allow-clear
+                    style="width: 100%"
+                  />
+                </a-form-item>
+              </a-col>
+            </a-row>
+
+            <a-form-item field="minOrder" label="Giá trị đơn hàng tối thiểu">
+              <a-input
+                v-model="displayMinOrder"
+                @blur="handleMinOrderBlur"
+                @focus="handleMinOrderFocus"
+                @input="handleMinOrderInput"
+                placeholder="Nhập giá trị đơn hàng tối thiểu..."
+                style="width: 100%"
+              />
+              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 500.000.000 VND</div>
+            </a-form-item>
+
+            <a-form-item field="quantity" label="Số lượng phiếu">
+              <a-input-number
+                v-model="couponEditForm.quantity"
+                :min="1"
+                :max="100000"
+                :precision="0"
+                placeholder="Nhập số lượng phiếu..."
+                style="width: 100%"
+              />
+              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 100.000 phiếu</div>
+            </a-form-item>
+
 
             <a-form-item field="description" label="Mô tả">
               <a-textarea
@@ -141,24 +120,12 @@
               <a-switch v-model="couponEditForm.active" checked-children="Hoạt động" un-checked-children="Không hoạt động" />
             </a-form-item>
 
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-form-item field="featured">
-                  <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá nổi bật</a-checkbox>
-                  <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                    Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
-                  </div>
-                </a-form-item>
-              </a-col>
-              <a-col :span="12">
-                <a-form-item field="applyToProducts">
-                  <a-checkbox v-model="couponEditForm.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
-                  <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                    Nếu bật, phiếu giảm giá chỉ áp dụng cho các sản phẩm được chọn
-                  </div>
-                </a-form-item>
-              </a-col>
-            </a-row>
+            <a-form-item field="featured">
+              <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá nổi bật</a-checkbox>
+              <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
+                Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
+              </div>
+            </a-form-item>
 
             <a-form-item field="lyDoThayDoi" label="Lý do thay đổi">
               <a-textarea
@@ -169,83 +136,6 @@
                 :auto-size="{ minRows: 3, maxRows: 6 }"
               />
             </a-form-item>
-
-            <!-- Product Selection Section -->
-            <div v-if="couponEditForm.applyToProducts">
-              <a-divider />
-              <div style="font-weight: 600; margin-bottom: 12px; font-size: 15px">Chọn sản phẩm áp dụng</div>
-              <div class="product-selection-section">
-                <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
-
-                <div style="margin-bottom: 12px; display: flex; gap: 8px">
-                  <a-button size="small" @click="selectAllEditProducts">
-                    <template #icon>
-                      <icon-plus />
-                    </template>
-                    Chọn tất cả
-                  </a-button>
-                  <a-button size="small" @click="deselectAllEditProducts">
-                    <template #icon>
-                      <icon-delete />
-                    </template>
-                    Bỏ chọn tất cả
-                  </a-button>
-                </div>
-
-                <a-table
-                  row-key="id"
-                  :columns="productColumnsWithCheckbox"
-                  :data="filteredProducts"
-                  :pagination="productPagination"
-                  :loading="productsLoading"
-                  :scroll="{ y: 300 }"
-                  size="small"
-                  :bordered="{ cell: true }"
-                >
-                  <template #selectHeader>
-                    <a-checkbox
-                      :model-value="isAllEditProductsSelected"
-                      :indeterminate="isSomeEditProductsSelected && !isAllEditProductsSelected"
-                      @change="toggleAllEditProducts"
-                    />
-                  </template>
-                  <template #select="{ record }">
-                    <a-checkbox
-                      :model-value="couponEditForm.selectedProductIds.includes(record.id)"
-                      @change="() => toggleEditProductSelection(record.id)"
-                    />
-                  </template>
-                  <template #anhSanPham="{ record }">
-                    <div class="product-image-cell">
-                      <img
-                        v-if="record.anhSanPham && record.anhSanPham.length > 0"
-                        :src="record.anhSanPham[0]"
-                        :alt="record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham"
-                        class="product-thumbnail"
-                        @error="handleImageError"
-                      />
-                      <div v-else class="product-image-placeholder">
-                        <icon-image :size="24" style="color: var(--color-text-4)" />
-                      </div>
-                    </div>
-                  </template>
-                  <template #tenSanPham="{ record }">
-                    <div style="display: flex; align-items: center; gap: 8px">
-                      <span>{{ record.tenSanPhamChiTiet || record.idSanPham?.tenSanPham || 'N/A' }}</span>
-                    </div>
-                  </template>
-                  <template #giaBan="{ record }">
-                    <span>{{ formatCurrency(record.giaBan || 0) }}</span>
-                  </template>
-                </a-table>
-
-                <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-                  Đã chọn:
-                  <strong>{{ couponEditForm.selectedProductIds.length }}</strong>
-                  sản phẩm
-                </div>
-              </div>
-            </div>
           </a-form>
 
           <!-- Action Buttons -->
@@ -347,7 +237,7 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { fetchCustomers, type CustomerApiModel, updateCoupon } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
-import { IconPlus, IconDelete, IconLeft, IconImage } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete, IconLeft } from '@arco-design/web-vue/es/icon'
 
 // Router
 const router = useRouter()
@@ -369,16 +259,13 @@ const couponEditForm = reactive({
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: 10,
-  maxDiscount: null as number | null,
   minOrder: 0,
   quantity: 1,
   dateRange: [] as string[],
   description: '',
   active: true,
   featured: false,
-  applyToProducts: false,
   selectedCustomerIds: [] as number[],
-  selectedProductIds: [] as number[],
   lyDoThayDoi: '',
 })
 
@@ -388,16 +275,13 @@ const originalCouponEditForm = reactive({
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: 10,
-  maxDiscount: null as number | null,
   minOrder: 0,
   quantity: 1,
   dateRange: [] as string[],
   description: '',
   active: true,
   featured: false,
-  applyToProducts: false,
   selectedCustomerIds: [] as number[],
-  selectedProductIds: [] as number[],
 })
 
 const couponEditRules: FormRules = {
@@ -728,9 +612,7 @@ watch(
 watch(
   () => couponEditForm.discountMode,
   (mode) => {
-    if (mode === 'amount') {
-      couponEditForm.maxDiscount = null
-    } else if (couponEditForm.discountValue > 100) {
+    if (mode === 'percentage' && couponEditForm.discountValue > 100) {
       couponEditForm.discountValue = 100
     }
   }
@@ -756,7 +638,7 @@ watch(
 // Methods
 const formatNumberWithSeparator = (value: number | string | undefined) => {
   if (value === null || value === undefined || value === '') return ''
-  const numValue = typeof value === 'string' ? parseFloat(value.replace(/\./g, '')) : value
+  const numValue = typeof value === 'string' ? parseInt(value.replace(/\./g, ''), 10) : value
   if (Number.isNaN(numValue)) return ''
   return numValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
@@ -768,6 +650,159 @@ const parseFormattedNumber = (value: string | number | undefined) => {
   const parsed = Number(cleaned)
   return Number.isNaN(parsed) ? undefined : parsed
 }
+
+// Display value for discount input (with % or VND symbol)
+const displayDiscountValue = ref('0.00%')
+const isEditingDiscount = ref(false)
+
+// Handle focus - remove % or VND for easy editing
+const handleDiscountFocus = () => {
+  isEditingDiscount.value = true
+  displayDiscountValue.value = String(couponEditForm.discountValue)
+}
+
+const handleDiscountInput = () => {
+  if (!isEditingDiscount.value) return
+
+  if (isPercentEdit.value) {
+    // For percentage, keep numbers and decimal point
+    const digits = displayDiscountValue.value.replace(/[^0-9.]/g, '')
+    // Ensure only one decimal point
+    const parts = digits.split('.')
+    if (parts.length > 2) {
+      displayDiscountValue.value = `${parts[0]}.${parts.slice(1).join('')}`
+    } else {
+      displayDiscountValue.value = digits
+    }
+  } else {
+    // For amount, format with thousand separators (no VND while typing)
+    // Remove all dots first to get clean digits
+    const cleanValue = displayDiscountValue.value.replace(/\./g, '')
+    const digits = cleanValue.replace(/[^0-9]/g, '')
+
+    if (digits === '' || digits === '0') {
+      displayDiscountValue.value = digits
+      return
+    }
+
+    const formatted = formatNumberWithSeparator(parseInt(digits, 10))
+    displayDiscountValue.value = formatted
+  }
+}
+
+// Handle blur - format with .00% or VND
+const handleDiscountBlur = () => {
+  isEditingDiscount.value = false
+
+  if (isPercentEdit.value) {
+    // Percentage mode - parse as float to handle decimals
+    const value = parseFloat(displayDiscountValue.value.replace(/[^0-9.]/g, ''))
+
+    if (Number.isNaN(value) || value < 0) {
+      couponEditForm.discountValue = 0
+    } else if (value > 100) {
+      couponEditForm.discountValue = 100
+      Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+    } else {
+      couponEditForm.discountValue = value
+    }
+    displayDiscountValue.value = `${couponEditForm.discountValue.toFixed(2)}%`
+  } else {
+    // Amount mode - remove thousand separators (dots) then parse
+    const cleanValue = displayDiscountValue.value.replace(/\\./g, '').replace(/[^0-9]/g, '')
+    const value = parseInt(cleanValue, 10)
+
+    if (Number.isNaN(value) || value < 0) {
+      couponEditForm.discountValue = 0
+    } else if (value > 100000000) {
+      couponEditForm.discountValue = 100000000
+      Message.warning('Giá trị giảm không được vượt quá 100.000.000 VND')
+    } else {
+      couponEditForm.discountValue = Math.round(value)
+    }
+    displayDiscountValue.value = `${formatNumberWithSeparator(couponEditForm.discountValue)} VND`
+  }
+}
+
+// Watch discountValue changes to update display
+watch(
+  () => couponEditForm.discountValue,
+  (newValue) => {
+    if (!isEditingDiscount.value) {
+      if (isPercentEdit.value) {
+        displayDiscountValue.value = `${newValue.toFixed(2)}%`
+      } else {
+        displayDiscountValue.value = `${formatNumberWithSeparator(newValue)} VND`
+      }
+    }
+  },
+  { immediate: true }
+)
+
+// Watch mode changes
+watch(
+  () => couponEditForm.discountMode,
+  () => {
+    if (isPercentEdit.value) {
+      displayDiscountValue.value = `${couponEditForm.discountValue.toFixed(2)}%`
+    } else {
+      displayDiscountValue.value = `${formatNumberWithSeparator(couponEditForm.discountValue)} VND`
+    }
+  }
+)
+
+// Display value for minOrder field
+const displayMinOrder = ref('0 VND')
+const isEditingMinOrder = ref(false)
+
+const handleMinOrderFocus = () => {
+  isEditingMinOrder.value = true
+  displayMinOrder.value = String(couponEditForm.minOrder || 0)
+}
+
+const handleMinOrderInput = () => {
+  if (!isEditingMinOrder.value) return
+
+  // Remove all dots first to get clean digits
+  const cleanValue = displayMinOrder.value.replace(/\./g, '')
+  const digits = cleanValue.replace(/[^0-9]/g, '')
+
+  if (digits === '' || digits === '0') {
+    displayMinOrder.value = digits
+    return
+  }
+
+  // Format with thousand separators (no VND while typing)
+  const formatted = formatNumberWithSeparator(parseInt(digits, 10))
+  displayMinOrder.value = formatted
+}
+
+const handleMinOrderBlur = () => {
+  isEditingMinOrder.value = false
+  const cleanValue = displayMinOrder.value.replace(/\./g, '').replace(/[^0-9]/g, '')
+  const value = parseInt(cleanValue, 10)
+
+  if (Number.isNaN(value) || value < 0) {
+    couponEditForm.minOrder = 0
+  } else if (value > 500000000) {
+    couponEditForm.minOrder = 500000000
+    Message.warning('Giá trị đơn hàng tối thiểu không được vượt quá 500.000.000 VND')
+  } else {
+    couponEditForm.minOrder = Math.round(value)
+  }
+
+  displayMinOrder.value = `${formatNumberWithSeparator(couponEditForm.minOrder)} VND`
+}
+
+watch(
+  () => couponEditForm.minOrder,
+  (newValue) => {
+    if (!isEditingMinOrder.value) {
+      displayMinOrder.value = `${formatNumberWithSeparator(newValue)} VND`
+    }
+  },
+  { immediate: true }
+)
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -802,7 +837,6 @@ const loadCouponData = async () => {
     const discountType = coupon.loaiPhieuGiamGia ? 'fixed' : 'percentage'
     couponEditForm.discountMode = discountType === 'percentage' ? 'percentage' : 'amount'
     couponEditForm.discountValue = Number(coupon.giaTriGiamGia ?? 0)
-    couponEditForm.maxDiscount = discountType === 'percentage' ? (coupon.soTienToiDa ?? null) : null
     couponEditForm.minOrder = coupon.hoaDonToiThieu ?? 0
     couponEditForm.quantity = coupon.soLuongDung ?? 1
     couponEditForm.dateRange = [coupon.ngayBatDau ?? '', coupon.ngayKetThuc ?? ''].filter(Boolean) as string[]
@@ -817,7 +851,6 @@ const loadCouponData = async () => {
       name: couponEditForm.name,
       discountMode: couponEditForm.discountMode,
       discountValue: couponEditForm.discountValue,
-      maxDiscount: couponEditForm.maxDiscount,
       minOrder: couponEditForm.minOrder,
       quantity: couponEditForm.quantity,
       dateRange: [...couponEditForm.dateRange],
@@ -908,23 +941,7 @@ const handleSubmit = async () => {
     return
   }
 
-  if (isPercentEdit.value) {
-    const capValue = Number(couponEditForm.maxDiscount)
-    if (!capValue || Number.isNaN(capValue) || capValue <= 0) {
-      Message.error('Vui lòng nhập mức giảm tối đa hợp lệ')
-      return
-    }
-    if (capValue > 50000000) {
-      Message.error('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
-      return
-    }
-
-    const minOrderValue = Number(couponEditForm.minOrder || 0)
-    if (minOrderValue > 0 && capValue >= minOrderValue) {
-      Message.error('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
-      return
-    }
-  } else {
+  if (!isPercentEdit.value) {
     const minOrderValue = Number(couponEditForm.minOrder || 0)
     if (minOrderValue > 0 && discountValue >= minOrderValue) {
       Message.error('Giá trị giảm phải nhỏ hơn giá trị đơn hàng tối thiểu')
@@ -953,7 +970,6 @@ const handleSubmit = async () => {
     couponEditForm.name !== originalCouponEditForm.name ||
     couponEditForm.discountMode !== originalCouponEditForm.discountMode ||
     couponEditForm.discountValue !== originalCouponEditForm.discountValue ||
-    couponEditForm.maxDiscount !== originalCouponEditForm.maxDiscount ||
     couponEditForm.minOrder !== originalCouponEditForm.minOrder ||
     couponEditForm.quantity !== originalCouponEditForm.quantity ||
     couponEditForm.dateRange[0] !== originalCouponEditForm.dateRange[0] ||
@@ -975,6 +991,13 @@ const handleSubmit = async () => {
 }
 
 const confirmCouponEdit = async () => {
+  // Validate lý do thay đổi before submission
+  if (!couponEditForm.lyDoThayDoi || !couponEditForm.lyDoThayDoi.trim()) {
+    Message.error('Vui lòng nhập lý do thay đổi')
+    couponEditConfirmVisible.value = false
+    return
+  }
+
   const discountValue = Number(couponEditForm.discountValue)
   const quantityValue = Number(couponEditForm.quantity)
   const [startDate, endDate] = couponEditForm.dateRange
@@ -983,7 +1006,7 @@ const confirmCouponEdit = async () => {
     tenPhieuGiamGia: couponEditForm.name.trim(),
     loaiPhieuGiamGia: couponEditForm.discountMode === 'amount',
     giaTriGiamGia: discountValue,
-    soTienToiDa: isPercentEdit.value ? Number(couponEditForm.maxDiscount ?? 0) : null,
+    soTienToiDa: null,
     hoaDonToiThieu: couponEditForm.minOrder ? Number(couponEditForm.minOrder) : 0,
     soLuongDung: quantityValue,
     ngayBatDau: startDate,
