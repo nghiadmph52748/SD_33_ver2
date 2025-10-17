@@ -45,12 +45,9 @@
                 @blur="handleDiscountBlur"
                 @focus="handleDiscountFocus"
                 @input="handleDiscountInput"
-                placeholder="Nhập giá trị giảm..."
+                :placeholder="isPercent ? 'Giá trị từ 0 - 100' : 'Giá trị từ 0 - 100.000.000 VND'"
                 style="width: 100%"
               />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                {{ isPercent ? 'Giá trị từ 0-100' : 'Tối đa: 100.000.000 VND' }}
-              </div>
             </a-form-item>
 
             <!-- Thời gian áp dụng -->
@@ -72,10 +69,9 @@
                 @blur="handleMinOrderBlur"
                 @focus="handleMinOrderFocus"
                 @input="handleMinOrderInput"
-                placeholder="Nhập giá trị đơn hàng tối thiểu..."
+                placeholder="Giá trị từ 0 - 500.000.000 VND"
                 style="width: 100%"
               />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 500.000.000 VND</div>
             </a-form-item>
 
             <!-- Số lượng phiếu -->
@@ -85,10 +81,9 @@
                 :min="1"
                 :max="100000"
                 :precision="0"
-                placeholder="Nhập số lượng phiếu..."
+                placeholder="Tối đa: 100.000 phiếu"
                 style="width: 100%"
               />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 100.000 phiếu</div>
             </a-form-item>
 
             <!-- Mô tả -->
@@ -245,8 +240,8 @@ const formState = reactive({
   code: '',
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
-  discountValue: 0,
-  minOrder: 0,
+  discountValue: null as number | null,
+  minOrder: null as number | null,
   dateRange: [] as string[],
   quantity: 1,
   description: '',
@@ -393,13 +388,13 @@ watch(
 )
 
 // Display value for discount input (with % or VND symbol)
-const displayDiscountValue = ref('0.00%')
+const displayDiscountValue = ref('')
 const isEditingDiscount = ref(false)
 
 // Handle focus - remove % or VND for easy editing
 const handleDiscountFocus = () => {
   isEditingDiscount.value = true
-  displayDiscountValue.value = String(formState.discountValue)
+  displayDiscountValue.value = formState.discountValue !== null ? String(formState.discountValue) : ''
 }
 
 const handleDiscountInput = () => {
@@ -470,7 +465,9 @@ watch(
   () => formState.discountValue,
   (newValue) => {
     if (!isEditingDiscount.value) {
-      if (isPercent.value) {
+      if (newValue === null || newValue === undefined) {
+        displayDiscountValue.value = ''
+      } else if (isPercent.value) {
         displayDiscountValue.value = `${newValue.toFixed(2)}%`
       } else {
         displayDiscountValue.value = `${formatNumberWithSeparator(newValue)} VND`
@@ -484,7 +481,9 @@ watch(
 watch(
   () => formState.discountMode,
   () => {
-    if (isPercent.value) {
+    if (formState.discountValue === null || formState.discountValue === undefined) {
+      displayDiscountValue.value = ''
+    } else if (isPercent.value) {
       displayDiscountValue.value = `${formState.discountValue.toFixed(2)}%`
     } else {
       displayDiscountValue.value = `${formatNumberWithSeparator(formState.discountValue)} VND`
@@ -493,7 +492,7 @@ watch(
 )
 
 // Display value for minOrder field
-const displayMinOrder = ref('0 VND')
+const displayMinOrder = ref('')
 const isEditingMinOrder = ref(false)
 
 const handleMinOrderFocus = () => {
@@ -539,7 +538,11 @@ watch(
   () => formState.minOrder,
   (newValue) => {
     if (!isEditingMinOrder.value) {
-      displayMinOrder.value = `${formatNumberWithSeparator(newValue)} VND`
+      if (newValue === null || newValue === undefined) {
+        displayMinOrder.value = ''
+      } else {
+        displayMinOrder.value = `${formatNumberWithSeparator(newValue)} VND`
+      }
     }
   },
   { immediate: true }

@@ -34,16 +34,15 @@
             <a-form-item field="discountValue" label="Giá trị giảm (%)">
               <a-input-number
                 v-model="promotionEditForm.discountValue"
-                :min="0.01"
+                :min="1"
                 :max="100"
                 :step="0.01"
                 :precision="2"
-                placeholder="Nhập giá trị giảm..."
+                placeholder="Giá trị từ 1 - 100"
                 style="width: 100%"
               >
                 <template #suffix>%</template>
               </a-input-number>
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Giá trị từ 0.01-100</div>
             </a-form-item>
             <a-form-item field="dateRange" label="Thời gian áp dụng">
               <a-range-picker
@@ -222,7 +221,7 @@ const productSearchQuery = ref('')
 const promotionEditForm = reactive({
   code: '',
   name: '',
-  discountValue: 10,
+  discountValue: null as number | null,
   dateRange: [] as string[],
   active: true,
   selectedProducts: [] as number[],
@@ -230,11 +229,27 @@ const promotionEditForm = reactive({
   lyDoThayDoi: '',
 })
 
+watch(
+  () => promotionEditForm.discountValue,
+  (newValue) => {
+    if (newValue === undefined || newValue === null) return
+    if (newValue < 1) {
+      Message.warning('Giá trị giảm tối thiểu 1%')
+      promotionEditForm.discountValue = 1
+      return
+    }
+    if (newValue > 100) {
+      Message.warning('Giá trị giảm không được vượt quá 100%')
+      promotionEditForm.discountValue = 100
+    }
+  }
+)
+
 // Store original values for change detection
 const originalPromotionEditForm = reactive({
   code: '',
   name: '',
-  discountValue: 10,
+  discountValue: null as number | null,
   dateRange: [] as string[],
   active: true,
   selectedProducts: [] as number[],
@@ -247,13 +262,13 @@ const promotionEditRules: FormRules = {
   discountValue: [
     { required: true, message: 'Vui lòng nhập giá trị giảm' },
     {
-      validator: (value: number, callback: (msg?: string) => void) => {
+      validator: (value: number | null, callback: (msg?: string) => void) => {
         if (value === undefined || value === null || Number.isNaN(Number(value))) {
           callback('Vui lòng nhập giá trị giảm')
           return
         }
-        if (value <= 0) {
-          callback('Giá trị giảm phải lớn hơn 0')
+        if (value < 1) {
+          callback('Giá trị giảm tối thiểu 1%')
           return
         }
         if (value > 100) {
