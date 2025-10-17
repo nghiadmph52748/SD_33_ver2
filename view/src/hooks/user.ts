@@ -10,12 +10,21 @@ export default function useUser() {
     await userStore.logout()
     const currentRoute = router.currentRoute.value
     Message.success('Đăng xuất thành công')
+
+    // Lưu thông tin redirect vào sessionStorage thay vì URL (bảo mật)
+    if (currentRoute.name && currentRoute.name !== 'login') {
+      sessionStorage.setItem(
+        'redirectAfterLogin',
+        JSON.stringify({
+          name: currentRoute.name,
+          query: currentRoute.query,
+          params: currentRoute.params,
+        })
+      )
+    }
+
     router.push({
       name: logoutTo && typeof logoutTo === 'string' ? logoutTo : 'login',
-      query: {
-        ...router.currentRoute.value.query,
-        redirect: currentRoute.name as string,
-      },
     })
   }
   return {
