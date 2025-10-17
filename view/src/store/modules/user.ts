@@ -1,4 +1,4 @@
-import { LoginData, login as userLogin, logout as userLogout } from '@/api/user'
+import { LoginData, login as userLogin, logout as userLogout, getUserInfo } from '@/api/user'
 import { clearToken, setToken } from '@/utils/auth'
 import { removeRouteListener } from '@/utils/route-listener'
 import { defineStore } from 'pinia'
@@ -40,20 +40,38 @@ const useUserStore = defineStore('user', {
     async initUserFromToken() {
       try {
         const token = localStorage.getItem('token')
-        const userId = localStorage.getItem('userId')
 
-        if (token && userId) {
-          const parsedUserId = parseInt(userId, 10)
+        if (!token) {
+          return false
+        }
 
-          // Khôi phục thông tin user từ localStorage (chỉ ID và token, các thông tin khác có thể load sau)
-          this.setInfo({
-            id: parsedUserId,
+        // Fetch full user info from backend using the token
+        const res = await getUserInfo()
+        
+        if (res.data) {
+          // Set full user info including role information
+          const userInfo = {
+            id: res.data.id,
+            maNhanVien: res.data.maNhanVien,
+            name: res.data.tenNhanVien,
+            tenTaiKhoan: res.data.tenTaiKhoan,
+            email: res.data.email,
+            idQuyenHan: res.data.idQuyenHan,
+            tenQuyenHan: res.data.tenQuyenHan,
             accessToken: token,
-          })
+            refreshToken: res.data.refreshToken,
+          }
+          this.setInfo(userInfo)
+          
+          // Update userId in localStorage in case it changed
+          localStorage.setItem('userId', res.data.id.toString())
+          
           return true
         }
+        
         return false
-      } catch {
+      } catch (error) {
+        // Token is invalid or expired, clear everything
         clearToken()
         localStorage.removeItem('userId')
         this.resetInfo()
@@ -65,6 +83,16 @@ const useUserStore = defineStore('user', {
     async login(loginForm: LoginData) {
       try {
         const res = await userLogin(loginForm)
+        
+        // Debug: log the response structure
+        console.log('Login response:', res)
+        console.log('Response data:', res.data)
+
+        // Check if we have valid response with data
+        if (!res || !res.data || !res.data.id) {
+          console.error('Invalid response structure:', { res, data: res?.data })
+          throw new Error('Đăng nhập thất bại - không nhận được thông tin người dùng')
+        }
 
         // Set JWT tokens
         if (res.data.accessToken) {

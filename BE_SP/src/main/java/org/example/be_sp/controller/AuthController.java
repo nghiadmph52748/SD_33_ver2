@@ -71,8 +71,22 @@ public class AuthController {
                 return new ResponseObject<>(false, null, "Tên tài khoản không tồn tại");
             }
 
-            // Kiểm tra mật khẩu (so sánh với hash trong database)
-            if (!passwordEncoder.matches(loginRequest.getPassword(), nhanVien.getMatKhau())) {
+            // Kiểm tra mật khẩu - hỗ trợ cả plain text và BCrypt
+            String storedPassword = nhanVien.getMatKhau();
+            String inputPassword = loginRequest.getPassword();
+            
+            boolean passwordMatches = false;
+            
+            // Kiểm tra xem mật khẩu trong DB có phải BCrypt không
+            if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
+                // Mật khẩu đã được mã hóa BCrypt
+                passwordMatches = passwordEncoder.matches(inputPassword, storedPassword);
+            } else {
+                // Mật khẩu plain text (cho môi trường dev/test)
+                passwordMatches = inputPassword.equals(storedPassword);
+            }
+            
+            if (!passwordMatches) {
                 return new ResponseObject<>(false, null, "Mật khẩu không đúng");
             }
 
@@ -188,6 +202,51 @@ public class AuthController {
 
         public void setRefreshToken(String refreshToken) {
             this.refreshToken = refreshToken;
+        }
+    }
+
+    @PostMapping("/me")
+    public ResponseObject<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return new ResponseObject<>(false, null, "No token provided");
+            }
+
+            String token = authHeader.substring(7);
+            String username = jwtUtils.getUsernameFromToken(token);
+
+            if (!jwtUtils.validateToken(token, username)) {
+                return new ResponseObject<>(false, null, "Invalid token");
+            }
+
+            // Tìm nhân viên theo tên tài khoản
+            NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);
+
+            if (nhanVien == null) {
+                return new ResponseObject<>(false, null, "User not found");
+            }
+
+            // Kiểm tra trạng thái
+            if (!Boolean.TRUE.equals(nhanVien.getTrangThai())) {
+                return new ResponseObject<>(false, null, "Account is disabled");
+            }
+
+            // Tạo response data
+            LoginResponseData responseData = new LoginResponseData();
+            responseData.setId(nhanVien.getId());
+            responseData.setMaNhanVien(nhanVien.getMaNhanVien());
+            responseData.setTenNhanVien(nhanVien.getTenNhanVien());
+            responseData.setTenTaiKhoan(nhanVien.getTenTaiKhoan());
+            responseData.setEmail(nhanVien.getEmail());
+            responseData.setIdQuyenHan(nhanVien.getIdQuyenHan().getId());
+            responseData.setTenQuyenHan(nhanVien.getIdQuyenHan().getTenQuyenHan());
+            responseData.setAccessToken(token);
+            responseData.setRefreshToken(null); // Don't send refresh token in /me response
+
+            return new ResponseObject<>(true, responseData, "User info retrieved successfully");
+
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Error retrieving user info: " + e.getMessage());
         }
     }
 
