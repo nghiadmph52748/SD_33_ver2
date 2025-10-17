@@ -33,16 +33,15 @@
             <a-form-item field="discountValue" label="Giá trị giảm (%)">
               <a-input-number
                 v-model="formState.discountValue"
-                :min="0.01"
+                :min="1"
                 :max="100"
                 :step="0.01"
                 :precision="2"
-                placeholder="Nhập giá trị giảm..."
+                placeholder="Giá trị từ 1 - 100"
                 style="width: 100%"
               >
                 <template #suffix>%</template>
               </a-input-number>
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Giá trị từ 0.01-100</div>
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -162,7 +161,10 @@
         <a-descriptions-item label="Mã">
           {{ formState.code }}
         </a-descriptions-item>
-        <a-descriptions-item label="Giá trị giảm">{{ formState.discountValue }}%</a-descriptions-item>
+        <a-descriptions-item label="Giá trị giảm">
+          <template v-if="formState.discountValue !== null">{{ formState.discountValue }}%</template>
+          <template v-else>--</template>
+        </a-descriptions-item>
         <a-descriptions-item label="Thời gian áp dụng">
           {{ formatDateRange(formState.dateRange) }}
         </a-descriptions-item>
@@ -203,7 +205,7 @@ const productSearchQuery = ref('')
 const formState = reactive({
   name: '',
   code: '',
-  discountValue: 10,
+  discountValue: null as number | null,
   dateRange: [] as string[],
   selectedProducts: [] as number[],
   applyToProducts: true,
@@ -213,7 +215,15 @@ const formState = reactive({
 watch(
   () => formState.discountValue,
   (newValue) => {
-    if (newValue !== undefined && newValue !== null && newValue > 100) {
+    if (newValue === undefined || newValue === null) {
+      return
+    }
+    if (newValue < 1) {
+      Message.warning('Giá trị giảm tối thiểu 1%')
+      formState.discountValue = 1
+      return
+    }
+    if (newValue > 100) {
       Message.warning('Giá trị giảm không được vượt quá 100%')
       formState.discountValue = 100
     }
@@ -232,8 +242,8 @@ const rules: FormRules = {
           return
         }
         const numeric = Number(value)
-        if (Number.isNaN(numeric) || numeric <= 0) {
-          callback('Giá trị giảm phải lớn hơn 0')
+        if (Number.isNaN(numeric) || numeric < 1) {
+          callback('Giá trị giảm tối thiểu 1%')
           return
         }
         if (numeric > 100) {

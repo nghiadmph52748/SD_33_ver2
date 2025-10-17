@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.example.be_sp.entity.KhachHang;
+import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.entity.PhieuGiamGia;
 import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
 import org.example.be_sp.entity.PhieuGiamGiaHistory;
@@ -15,6 +16,7 @@ import org.example.be_sp.model.response.PhieuGiamGiaResponse;
 import org.example.be_sp.model.response.PhieuGiamGiaHistoryResponse;
 import org.example.be_sp.repository.ChiTietPhieuGiamGiaRepository;
 import org.example.be_sp.repository.KhachHangRepository;
+import org.example.be_sp.repository.NhanVienRepository;
 import org.example.be_sp.repository.PhieuGiamGiaHistoryRepository;
 import org.example.be_sp.repository.PhieuGiamGiaCaNhanRepository;
 import org.example.be_sp.repository.PhieuGiamGiaRepository;
@@ -50,6 +52,8 @@ public class PhieuGiamGiaService {
     private EmailService emailService;
     @Autowired
     private PhieuGiamGiaHistoryRepository historyRepository;
+    @Autowired
+    private NhanVienRepository nhanVienRepository;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -530,11 +534,24 @@ public class PhieuGiamGiaService {
                 if (principal instanceof Integer) {
                     return (Integer) principal;
                 }
-                // Add more extraction logic based on your auth setup
+                
+                // Get username from authentication
                 String username = authentication.getName();
-                // You might need to fetch user from database by username
                 log.debug("Authenticated user: {}", username);
-                return 1; // Default to admin for now - UPDATE THIS based on your auth
+                
+                // Look up user ID from database by username
+                NhanVien nhanVien = nhanVienRepository.findByTenTaiKhoan(username).orElse(null);
+                if (nhanVien != null) {
+                    return nhanVien.getId();
+                }
+                
+                // If not found by username, check if it's the hardcoded admin
+                if ("admin".equals(username)) {
+                    // Return 1 for hardcoded admin (will show "Administrator" if ID 1 doesn't exist in DB)
+                    return 1;
+                }
+                
+                log.warn("User not found in database: {}", username);
             }
         } catch (Exception e) {
             log.error("Error getting current user ID", e);

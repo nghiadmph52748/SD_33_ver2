@@ -48,13 +48,18 @@ public class PhieuGiamGiaHistoryResponse {
                 .moTaThayDoi(history.getMoTaThayDoi())
                 .ngayThayDoi(history.getNgayThayDoi());
 
-        // Add employee info if available
-        if (nhanVien != null) {
-            builder.tenNhanVien(nhanVien.getTenNhanVien())
-                   .maNhanVien(nhanVien.getMaNhanVien());
-        } else if (history.getNhanVien() != null) {
-            builder.tenNhanVien(history.getNhanVien().getTenNhanVien())
-                   .maNhanVien(history.getNhanVien().getMaNhanVien());
+        // Get employee info
+        NhanVien actualEmployee = nhanVien != null ? nhanVien : history.getNhanVien();
+        
+        // Only use hardcoded admin if employee doesn't exist in database
+        if (actualEmployee == null && history.getIdNhanVien() != null && history.getIdNhanVien() == 1) {
+            // Employee ID 1 doesn't exist - this must be our hardcoded admin
+            builder.tenNhanVien("Administrator")
+                   .maNhanVien("ADMIN001");
+        } else if (actualEmployee != null) {
+            // Use actual employee info from database
+            builder.tenNhanVien(actualEmployee.getTenNhanVien())
+                   .maNhanVien(actualEmployee.getMaNhanVien());
         }
 
         return builder.build();

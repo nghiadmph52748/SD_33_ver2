@@ -83,14 +83,9 @@ const useUserStore = defineStore('user', {
     async login(loginForm: LoginData) {
       try {
         const res = await userLogin(loginForm)
-        
-        // Debug: log the response structure
-        console.log('Login response:', res)
-        console.log('Response data:', res.data)
 
         // Check if we have valid response with data
         if (!res || !res.data || !res.data.id) {
-          console.error('Invalid response structure:', { res, data: res?.data })
           throw new Error('Đăng nhập thất bại - không nhận được thông tin người dùng')
         }
 

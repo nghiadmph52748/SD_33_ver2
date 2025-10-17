@@ -44,6 +44,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/pos/**").permitAll() // Allow POS endpoints without auth for testing
                 .requestMatchers("/api/test/**").permitAll() // Allow test endpoints without auth
                 .requestMatchers("/api/email-test/**").permitAll() // Allow email test endpoints without auth
+                .requestMatchers("/api/dot-giam-gia-management/**").permitAll() // Allow discount management without auth for testing
+                .requestMatchers("/api/phieu-giam-gia-management/**").permitAll() // Allow coupon management without auth for testing
+                .requestMatchers("/api/chi-tiet-phieu-giam-gia-management/**").permitAll() // Allow coupon detail management without auth for testing
+                .requestMatchers("/api/bien-the/**").permitAll() // Allow product variants without auth for testing
                 .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

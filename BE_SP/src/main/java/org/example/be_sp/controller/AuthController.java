@@ -64,11 +64,39 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseObject<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            // Tìm nhân viên theo tên tài khoản
-            NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(loginRequest.getUsername());
+            // Hardcoded admin exception for development/testing
+            if (("admin".equals(loginRequest.getUsername()) || "admin@gearup.com".equals(loginRequest.getUsername())) 
+                && "admin".equals(loginRequest.getPassword())) {
+                String accessToken = jwtUtils.generateToken("admin");
+                String refreshToken = jwtUtils.generateRefreshToken("admin");
+                
+                LoginResponseData adminData = new LoginResponseData();
+                adminData.setId(1); // Default admin ID
+                adminData.setMaNhanVien("ADMIN001");
+                adminData.setTenNhanVien("Administrator");
+                adminData.setTenTaiKhoan("admin");
+                adminData.setEmail("admin@gearup.com");
+                adminData.setIdQuyenHan(1); // Admin role ID
+                adminData.setTenQuyenHan("Admin");
+                adminData.setAccessToken(accessToken);
+                adminData.setRefreshToken(refreshToken);
+                
+                return new ResponseObject<>(true, adminData, "Đăng nhập thành công (Admin)");
+            }
+            
+            // Tìm nhân viên theo tên tài khoản hoặc email
+            String identifier = loginRequest.getUsername();
+            NhanVien nhanVien = null;
+            
+            // Kiểm tra xem identifier có phải email không (chứa @)
+            if (identifier.contains("@")) {
+                nhanVien = nhanVienService.findByEmail(identifier);
+            } else {
+                nhanVien = nhanVienService.findByTenTaiKhoan(identifier);
+            }
 
             if (nhanVien == null) {
-                return new ResponseObject<>(false, null, "Tên tài khoản không tồn tại");
+                return new ResponseObject<>(false, null, "Tên tài khoản hoặc email không tồn tại");
             }
 
             // Kiểm tra mật khẩu - hỗ trợ cả plain text và BCrypt
@@ -217,6 +245,22 @@ public class AuthController {
 
             if (!jwtUtils.validateToken(token, username)) {
                 return new ResponseObject<>(false, null, "Invalid token");
+            }
+
+            // Hardcoded admin bypass for /me endpoint
+            if ("admin".equals(username)) {
+                LoginResponseData adminData = new LoginResponseData();
+                adminData.setId(1);
+                adminData.setMaNhanVien("ADMIN001");
+                adminData.setTenNhanVien("Administrator");
+                adminData.setTenTaiKhoan("admin");
+                adminData.setEmail("admin@gearup.com");
+                adminData.setIdQuyenHan(1);
+                adminData.setTenQuyenHan("Admin");
+                adminData.setAccessToken(token);
+                adminData.setRefreshToken(null);
+                
+                return new ResponseObject<>(true, adminData, "User info retrieved successfully (Admin)");
             }
 
             // Tìm nhân viên theo tên tài khoản

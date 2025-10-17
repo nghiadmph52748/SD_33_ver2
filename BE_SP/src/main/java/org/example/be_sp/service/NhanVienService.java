@@ -54,6 +54,10 @@ public class NhanVienService {
         return nhanVienRepository.findByTenTaiKhoan(tenTaiKhoan).orElse(null);
     }
 
+    public NhanVien findByEmail(String email) {
+        return nhanVienRepository.findByEmail(email).orElse(null);
+    }
+
     public void saveNhanVien(NhanVienRequest request, PasswordEncoder passwordEncoder) {
         NhanVien nv = new NhanVien();
         nv.setTenNhanVien(request.getTenNhanVien());

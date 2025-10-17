@@ -46,12 +46,9 @@
                 @blur="handleDiscountBlur"
                 @focus="handleDiscountFocus"
                 @input="handleDiscountInput"
-                placeholder="Nhập giá trị giảm..."
+                :placeholder="isPercentEdit ? 'Giá trị từ 0 - 100' : 'Giá trị từ 0 - 100.000.000 VND'"
                 style="width: 100%"
               />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                {{ isPercentEdit ? 'Giá trị từ 0-100' : 'Tối đa: 100.000.000 VND' }}
-              </div>
             </a-form-item>
 
             <a-form-item field="dateRange" label="Thời gian áp dụng">
@@ -71,10 +68,9 @@
                 @blur="handleMinOrderBlur"
                 @focus="handleMinOrderFocus"
                 @input="handleMinOrderInput"
-                placeholder="Nhập giá trị đơn hàng tối thiểu..."
+                placeholder="Giá trị từ 0 - 500.000.000 VND"
                 style="width: 100%"
               />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 500.000.000 VND</div>
             </a-form-item>
 
             <a-form-item field="quantity" label="Số lượng phiếu">
@@ -83,10 +79,9 @@
                 :min="1"
                 :max="100000"
                 :precision="0"
-                placeholder="Nhập số lượng phiếu..."
+                placeholder="Tối đa: 100.000 phiếu"
                 style="width: 100%"
               />
-              <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">Tối đa: 100.000 phiếu</div>
             </a-form-item>
 
 

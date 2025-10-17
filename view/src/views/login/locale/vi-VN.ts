@@ -1,10 +1,10 @@
 export default {
   'login.form.title': 'Cổng Đăng Nhập',
-  'login.form.userName.errMsg': 'Tên người dùng không được để trống',
+  'login.form.userName.errMsg': 'Tên đăng nhập hoặc email không được để trống',
   'login.form.password.errMsg': 'Mật khẩu không được để trống',
   'login.form.login.errMsg': 'Lỗi đăng nhập, làm mới và thử lại',
   'login.form.login.success': 'Chào mừng sử dụng',
-  'login.form.userName.placeholder': 'Tên người dùng: admin',
+  'login.form.userName.placeholder': 'Tên đăng nhập hoặc email',
   'login.form.password.placeholder': 'Mật khẩu: admin',
   'login.form.rememberPassword': 'Ghi nhớ mật khẩu',
   'login.form.forgetPassword': 'Quên mật khẩu',
