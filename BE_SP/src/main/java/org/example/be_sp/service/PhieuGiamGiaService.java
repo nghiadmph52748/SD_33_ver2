@@ -145,9 +145,6 @@ public class PhieuGiamGiaService {
         // Map request to new entity
         PhieuGiamGia updatedPgg = MapperUtils.map(request, PhieuGiamGia.class);
         updatedPgg.setId(id);
-
-        // Preserve the generated maPhieuGiamGia field
-        updatedPgg.setMaPhieuGiamGia(existingPgg.getMaPhieuGiamGia());
         
         // Preserve createdAt and update updatedAt
         updatedPgg.setCreatedAt(existingPgg.getCreatedAt());

@@ -285,6 +285,7 @@ const originalCouponEditForm = reactive({
 })
 
 const couponEditRules: FormRules = {
+  code: [{ required: true, message: 'Vui lòng nhập mã phiếu giảm giá' }],
   name: [{ required: true, message: 'Vui lòng nhập tên phiếu giảm giá' }],
   discountMode: [{ required: true, message: 'Vui lòng chọn hình thức giảm giá' }],
   discountValue: [{ required: true, message: 'Vui lòng nhập giá trị giảm' }],
@@ -920,6 +921,12 @@ const handleSubmit = async () => {
     return
   }
 
+  // Explicitly check lyDoThayDoi
+  if (!couponEditForm.lyDoThayDoi || !couponEditForm.lyDoThayDoi.trim()) {
+    Message.error('Vui lòng nhập lý do thay đổi')
+    return
+  }
+
   const discountValue = Number(couponEditForm.discountValue)
   if (Number.isNaN(discountValue) || discountValue <= 0) {
     Message.error('Giá trị giảm phải lớn hơn 0')
@@ -967,6 +974,7 @@ const handleSubmit = async () => {
 
   // Check if any changes were made
   const hasChanges =
+    couponEditForm.code !== originalCouponEditForm.code ||
     couponEditForm.name !== originalCouponEditForm.name ||
     couponEditForm.discountMode !== originalCouponEditForm.discountMode ||
     couponEditForm.discountValue !== originalCouponEditForm.discountValue ||
@@ -1003,6 +1011,7 @@ const confirmCouponEdit = async () => {
   const [startDate, endDate] = couponEditForm.dateRange
 
   const payload = {
+    maPhieuGiamGia: couponEditForm.code.trim(),
     tenPhieuGiamGia: couponEditForm.name.trim(),
     loaiPhieuGiamGia: couponEditForm.discountMode === 'amount',
     giaTriGiamGia: discountValue,

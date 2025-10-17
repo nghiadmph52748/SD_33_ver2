@@ -857,15 +857,15 @@ SET IDENTITY_INSERT [dbo].[dia_chi_khach_hang] OFF
 GO
 SET IDENTITY_INSERT [dbo].[dot_giam_gia] ON 
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Khuyến mãi mùa thu', 15, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.027' AS DateTime), CAST(N'2025-10-13T14:42:01.027' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ma_dot_giam_gia], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'DGG000001', N'Khuyến mãi mùa thu', 15, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.027' AS DateTime), CAST(N'2025-10-13T14:42:01.027' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Flash Sale cuối tuần', 20, CAST(N'2025-10-10T00:00:00.000' AS DateTime), CAST(N'2025-11-30T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.030' AS DateTime), CAST(N'2025-10-13T14:42:01.030' AS DateTime), CAST(N'2025-10-10' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ma_dot_giam_gia], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'DGG000002', N'Flash Sale cuối tuần', 20, CAST(N'2025-10-10T00:00:00.000' AS DateTime), CAST(N'2025-11-30T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.030' AS DateTime), CAST(N'2025-10-13T14:42:01.030' AS DateTime), CAST(N'2025-10-10' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (3, N'Khuyến mãi Black Friday', 30, CAST(N'2025-11-25T00:00:00.000' AS DateTime), CAST(N'2025-11-30T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.033' AS DateTime), CAST(N'2025-10-13T14:42:01.033' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ma_dot_giam_gia], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (3, N'DGG000003', N'Khuyến mãi Black Friday', 30, CAST(N'2025-11-25T00:00:00.000' AS DateTime), CAST(N'2025-11-30T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.033' AS DateTime), CAST(N'2025-10-13T14:42:01.033' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (4, N'Giảm giá Tết Nguyên Đán', 25, CAST(N'2026-01-20T00:00:00.000' AS DateTime), CAST(N'2026-02-10T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.037' AS DateTime), CAST(N'2025-10-13T14:42:01.037' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ma_dot_giam_gia], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (4, N'DGG000004', N'Giảm giá Tết Nguyên Đán', 25, CAST(N'2026-01-20T00:00:00.000' AS DateTime), CAST(N'2026-02-10T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.037' AS DateTime), CAST(N'2025-10-13T14:42:01.037' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[dot_giam_gia] ([id], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (5, N'Sale giữa năm', 10, CAST(N'2025-06-01T00:00:00.000' AS DateTime), CAST(N'2025-06-30T23:59:59.000' AS DateTime), 0, 0, CAST(N'2025-10-13T14:42:01.037' AS DateTime), CAST(N'2025-10-13T14:42:01.037' AS DateTime), CAST(N'2025-05-15' AS Date), 1, NULL, NULL)
+INSERT [dbo].[dot_giam_gia] ([id], [ma_dot_giam_gia], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (5, N'DGG000005', N'Sale giữa năm', 10, CAST(N'2025-06-01T00:00:00.000' AS DateTime), CAST(N'2025-06-30T23:59:59.000' AS DateTime), 0, 0, CAST(N'2025-10-13T14:42:01.037' AS DateTime), CAST(N'2025-10-13T14:42:01.037' AS DateTime), CAST(N'2025-05-15' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[dot_giam_gia] OFF
 GO
@@ -945,9 +945,9 @@ SET IDENTITY_INSERT [dbo].[nhan_vien] OFF
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia] ON 
 GO
-INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Giảm giá 10% cho đơn hàng đầu tiên', 0, CAST(10.00 AS Decimal(18, 2)), CAST(1000000.00 AS Decimal(18, 2)), 100, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho khách hàng mới', 0, 0, CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia] ([id], [ma_phieu_giam_gia], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'PGG00001', N'Giảm giá 10% cho đơn hàng đầu tiên', 0, CAST(10.00 AS Decimal(18, 2)), CAST(1000000.00 AS Decimal(18, 2)), 100, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho khách hàng mới', 0, 0, CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[phieu_giam_gia] ([id], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', 1, CAST(200000.00 AS Decimal(18, 2)), CAST(2000000.00 AS Decimal(18, 2)), 50, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho tất cả khách hàng', 0, 0, CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia] ([id], [ma_phieu_giam_gia], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'PGG00002', N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', 1, CAST(200000.00 AS Decimal(18, 2)), CAST(2000000.00 AS Decimal(18, 2)), 50, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho tất cả khách hàng', 0, 0, CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia] OFF
 GO
@@ -1446,7 +1446,10 @@ ALTER TABLE [dbo].[dot_giam_gia]  WITH CHECK ADD CHECK  (([gia_tri_giam_gia]>=(0
 GO
 ALTER TABLE [dbo].[dot_giam_gia]  WITH CHECK ADD CHECK  (([ngay_ket_thuc]>[ngay_bat_dau]))
 GO
-ALTER TABLE [dbo].[dot_giam_gia] ADD CONSTRAINT UQ_dot_giam_gia_ma UNIQUE (ma_dot_giam_gia)
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ_dot_giam_gia_ma' AND object_id = OBJECT_ID('dbo.dot_giam_gia'))
+BEGIN
+    ALTER TABLE [dbo].[dot_giam_gia] ADD CONSTRAINT UQ_dot_giam_gia_ma UNIQUE (ma_dot_giam_gia)
+END
 GO
 ALTER TABLE [dbo].[hinh_thuc_thanh_toan]  WITH CHECK ADD CHECK  (([tien_chuyen_khoan]>=(0)))
 GO
@@ -1477,7 +1480,10 @@ GO
 GO
 ALTER TABLE [dbo].[phieu_giam_gia]  WITH CHECK ADD CHECK  (([ngay_ket_thuc]>[ngay_bat_dau]))
 GO
-ALTER TABLE [dbo].[phieu_giam_gia] ADD CONSTRAINT UQ_phieu_giam_gia_ma UNIQUE (ma_phieu_giam_gia)
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ_phieu_giam_gia_ma' AND object_id = OBJECT_ID('dbo.phieu_giam_gia'))
+BEGIN
+    ALTER TABLE [dbo].[phieu_giam_gia] ADD CONSTRAINT UQ_phieu_giam_gia_ma UNIQUE (ma_phieu_giam_gia)
+END
 GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD CHECK  (([ngay_het_han]>[ngay_nhan]))
 GO

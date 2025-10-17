@@ -87,9 +87,6 @@ public class DotGiamGiaService extends GenericCrudService<DotGiamGia, Integer, D
         DotGiamGia updatedDgg = MapperUtils.map(request, DotGiamGia.class);
         updatedDgg.setId(id);
         
-        // Preserve generated field
-        updatedDgg.setMaDotGiamGia(existingDgg.getMaDotGiamGia());
-        
         // Preserve createdAt and update updatedAt
         updatedDgg.setCreatedAt(existingDgg.getCreatedAt());
         updatedDgg.setUpdatedAt(LocalDateTime.now());

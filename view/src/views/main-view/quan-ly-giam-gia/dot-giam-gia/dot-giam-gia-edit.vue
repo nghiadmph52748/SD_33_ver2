@@ -242,6 +242,7 @@ const originalPromotionEditForm = reactive({
 })
 
 const promotionEditRules: FormRules = {
+  code: [{ required: true, message: 'Vui lòng nhập mã đợt giảm giá' }],
   name: [{ required: true, message: 'Vui lòng nhập tên đợt giảm giá' }],
   discountValue: [
     { required: true, message: 'Vui lòng nhập giá trị giảm' },
@@ -472,8 +473,15 @@ const handleSubmit = async () => {
     return
   }
 
+  // Explicitly check lyDoThayDoi
+  if (!promotionEditForm.lyDoThayDoi || !promotionEditForm.lyDoThayDoi.trim()) {
+    Message.error('Vui lòng nhập lý do thay đổi')
+    return
+  }
+
   // Check if any changes were made
   const hasChanges =
+    promotionEditForm.code !== originalPromotionEditForm.code ||
     promotionEditForm.name !== originalPromotionEditForm.name ||
     promotionEditForm.discountValue !== originalPromotionEditForm.discountValue ||
     promotionEditForm.active !== originalPromotionEditForm.active ||
@@ -495,6 +503,7 @@ const handleSubmit = async () => {
 const submitPromotionEdit = async () => {
   const [startDate, endDate] = promotionEditForm.dateRange
   const payload = {
+    maDotGiamGia: promotionEditForm.code.trim(),
     tenDotGiamGia: promotionEditForm.name.trim(),
     giaTriGiamGia: Number(promotionEditForm.discountValue),
     ngayBatDau: startDate,
