@@ -3,21 +3,15 @@
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
-    <!-- Page Header -->
-    <a-card class="header-card">
-      <div class="page-header">
-        <div>
-          <h2 class="page-title">Chỉnh sửa phiếu giảm giá</h2>
-          <p class="page-description">Cập nhật thông tin phiếu giảm giá</p>
-        </div>
-        <a-button @click="goBack">
-          <template #icon>
-            <icon-left />
-          </template>
-          Quay lại
-        </a-button>
-      </div>
-    </a-card>
+    <!-- Back Button -->
+    <div style="margin-bottom: 16px">
+      <a-button @click="goBack">
+        <template #icon>
+          <icon-left />
+        </template>
+        Quay lại
+      </a-button>
+    </div>
 
     <!-- Main Content -->
     <a-row :gutter="[16, 16]">
@@ -58,6 +52,7 @@
                 value-format="YYYY-MM-DD HH:mm:ss"
                 format="DD/MM/YYYY HH:mm"
                 allow-clear
+                :disabled-date="disablePastDates"
                 style="width: 100%"
               />
             </a-form-item>
@@ -79,11 +74,11 @@
                 :min="1"
                 :max="100000"
                 :precision="0"
-                placeholder="Tối đa: 100.000 phiếu"
+                :disabled="couponEditForm.featured"
+                :placeholder="couponEditForm.featured ? 'Tự động theo số khách hàng' : 'Tối đa: 100.000 phiếu'"
                 style="width: 100%"
               />
             </a-form-item>
-
 
             <a-form-item field="description" label="Mô tả">
               <a-textarea
@@ -96,13 +91,22 @@
             </a-form-item>
 
             <a-form-item field="active" label="Trạng thái">
-              <a-switch v-model="couponEditForm.active" checked-children="Hoạt động" un-checked-children="Không hoạt động" />
+              <div class="status-switch-wrapper">
+                <a-switch v-model="couponEditForm.active" type="round">
+                  <template #checked-icon>
+                    <icon-check />
+                  </template>
+                  <template #unchecked-icon>
+                    <icon-close />
+                  </template>
+                </a-switch>
+              </div>
             </a-form-item>
 
             <a-form-item field="featured">
-              <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá nổi bật</a-checkbox>
+              <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá riêng tư</a-checkbox>
               <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Phiếu giảm giá nổi bật sẽ được hiển thị ở đầu danh sách
+                Phiếu giảm giá riêng tư chỉ áp dụng cho khách hàng được chọn
               </div>
             </a-form-item>
 
@@ -206,14 +210,7 @@
     </a-modal>
 
     <!-- Scroll to Top Button -->
-    <a-button
-      v-show="showScrollTop"
-      class="scroll-to-top-btn"
-      type="primary"
-      shape="circle"
-      size="large"
-      @click="scrollToTop"
-    >
+    <a-button v-show="showScrollTop" class="scroll-to-top-btn" type="primary" shape="circle" size="large" @click="scrollToTop">
       <template #icon>
         <icon-up />
       </template>
@@ -223,22 +220,21 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import router from '@/router'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { fetchCustomers, type CustomerApiModel, updateCoupon } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
-import { IconPlus, IconDelete, IconLeft, IconUp } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete, IconLeft, IconUp, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
+import dayjs from 'dayjs'
 
 // Router
-const router = useRouter()
-const route = useRoute()
 const { breadcrumbItems } = useBreadcrumb()
 
 // Get coupon ID from route params
-const couponId = computed(() => Number(route.params.id))
+const couponId = computed(() => Number(router.currentRoute.value.params.id))
 
 // Loading state
 const loading = ref(false)
@@ -262,6 +258,11 @@ const couponEditForm = reactive({
   lyDoThayDoi: '',
 })
 
+const disablePastDates = (current: Date | string) => {
+  if (!current) return false
+  return dayjs(current).isBefore(dayjs().startOf('day'))
+}
+
 // Store original values for change detection
 const originalCouponEditForm = reactive({
   code: '',
@@ -283,7 +284,31 @@ const couponEditRules: FormRules = {
   discountMode: [{ required: true, message: 'Vui lòng chọn hình thức giảm giá' }],
   discountValue: [{ required: true, message: 'Vui lòng nhập giá trị giảm' }],
   quantity: [{ required: true, message: 'Vui lòng nhập số lượng áp dụng' }],
-  dateRange: [{ required: true, type: 'array', message: 'Vui lòng chọn thời gian áp dụng' }],
+  dateRange: [
+    { required: true, type: 'array', message: 'Vui lòng chọn thời gian áp dụng' },
+    {
+      validator: (value: string[], callback: (msg?: string) => void) => {
+        if (!Array.isArray(value) || value.length !== 2) {
+          callback('Vui lòng chọn thời gian áp dụng')
+          return
+        }
+        const [start, end] = value
+        if (!start || !end) {
+          callback('Vui lòng chọn thời gian áp dụng')
+          return
+        }
+        if (dayjs(start).isBefore(dayjs().startOf('day'))) {
+          callback('Ngày bắt đầu phải từ hôm nay trở đi')
+          return
+        }
+        if (dayjs(start).isAfter(dayjs(end))) {
+          callback('Ngày kết thúc phải sau ngày bắt đầu')
+          return
+        }
+        callback()
+      },
+    },
+  ],
   lyDoThayDoi: [{ required: true, message: 'Vui lòng nhập lý do thay đổi' }],
 }
 
@@ -430,6 +455,16 @@ watch(
     }
     if (!isFeatured) {
       couponEditForm.selectedCustomerIds = []
+    }
+  }
+)
+
+// Auto-update quantity based on selected customers for private vouchers
+watch(
+  () => couponEditForm.selectedCustomerIds.length,
+  (count) => {
+    if (couponEditForm.featured) {
+      couponEditForm.quantity = count > 0 ? count : 1
     }
   }
 )
@@ -956,7 +991,7 @@ const handleSubmit = async () => {
   }
 
   if (couponEditForm.featured && couponEditForm.selectedCustomerIds.length === 0) {
-    Message.error('Vui lòng chọn ít nhất một khách hàng cho phiếu giảm giá nổi bật')
+    Message.error('Vui lòng chọn ít nhất một khách hàng cho phiếu giảm giá riêng tư')
     return
   }
 
@@ -1168,5 +1203,21 @@ onUnmounted(() => {
 
 .scroll-to-top-btn:active {
   transform: translateY(-2px);
+}
+
+.status-switch-wrapper {
+  display: inline-flex;
+  justify-content: center;
+  width: 72px;
+}
+
+.status-switch-wrapper .arco-switch {
+  width: 100%;
+  max-width: 72px;
+  justify-content: center;
+}
+
+.status-switch-wrapper .arco-switch::before {
+  inset-inline-start: 4px;
 }
 </style>

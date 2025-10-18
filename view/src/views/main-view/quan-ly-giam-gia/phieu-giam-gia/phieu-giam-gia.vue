@@ -171,13 +171,11 @@
         </template>
 
         <template #featured="{ record }">
-          <div v-if="record.featured" class="featured-badge">
-            <icon-star :style="{ color: '#FFB800', fontSize: '18px' }" />
+          <div class="privacy-badge" :class="{ 'privacy-badge-private': record.featured }">
+            <icon-lock v-if="record.featured" class="privacy-icon" />
+            <icon-public v-else class="privacy-icon" />
+            <span>{{ record.featured ? 'Riêng tư' : 'Công khai' }}</span>
           </div>
-          <div v-else class="not-featured">
-            <span style="color: var(--color-text-4); font-size: 14px">—</span>
-          </div>
-          <!-- DEBUG: {{ record.name }} - featured: {{ record.featured }} -->
         </template>
 
         <template #discount_type="{ record }">
@@ -187,14 +185,16 @@
         </template>
 
         <template #discount_value="{ record }">
-          <div class="discount-value">
-            {{ record.discount_type === 'percentage' ? `${record.discount_value}%` : formatCurrency(record.discount_value) }}
+          <div class="numeric-cell numeric-cell--discount">
+            <span class="numeric-cell__main">{{ discountMain(record) }}</span>
+            <span v-if="discountUnit(record)" class="numeric-cell__suffix">{{ discountUnit(record) }}</span>
           </div>
         </template>
 
         <template #min_order_value="{ record }">
-          <div class="min-order-value">
-            {{ record.min_order_value ? formatCurrency(record.min_order_value) : 'Không giới hạn' }}
+          <div class="numeric-cell">
+            <span class="numeric-cell__main">{{ minOrderMain(record) }}</span>
+            <span v-if="minOrderUnit(record)" class="numeric-cell__suffix">{{ minOrderUnit(record) }}</span>
           </div>
         </template>
 
@@ -214,9 +214,7 @@
             <template v-if="record.usage_limit !== null">
               <div>{{ record.usage_limit - (record.total_used || 0) }}/{{ record.usage_limit }}</div>
             </template>
-            <template v-else>
-              ∞
-            </template>
+            <template v-else>∞</template>
           </div>
         </template>
 
@@ -238,17 +236,27 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-button v-if="isAdmin" type="text" class="danger-item" @click="deleteCoupon(record)">
-              <template #icon>
-                <icon-delete />
+            <a-switch
+              v-if="isAdmin"
+              type="round"
+              :model-value="record.enabled"
+              :loading="isCouponStatusUpdating(record.id)"
+              :disabled="!canToggleCouponStatus(record)"
+              @change="(value) => handleCouponStatusToggle(record, value)"
+            >
+              <template #checked-icon>
+                <icon-check />
               </template>
-            </a-button>
+              <template #unchecked-icon>
+                <icon-close />
+              </template>
+            </a-switch>
           </a-space>
         </template>
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="couponDetailVisible" title="Chi tiết phiếu giảm giá" :footer="false" width="800px">
+    <a-modal v-model:visible="couponDetailVisible" title="Chi tiết phiếu giảm giá" :footer="false" width="900px" :body-style="{ maxHeight: '80vh', overflowY: 'auto' }">
       <a-descriptions :column="2" bordered>
         <a-descriptions-item label="Tên">{{ selectedCoupon?.name }}</a-descriptions-item>
         <a-descriptions-item label="Mã">{{ selectedCoupon?.code }}</a-descriptions-item>
@@ -266,7 +274,9 @@
           {{ formatDateTime(selectedCoupon?.start_date ?? '') }} - {{ formatDateTime(selectedCoupon?.end_date ?? '') }}
         </a-descriptions-item>
         <a-descriptions-item label="Trạng thái">
-          <a-tag :color="getStatusColor(selectedCoupon?.status ?? '')">{{ selectedCoupon ? getStatusText(selectedCoupon.status) : '' }}</a-tag>
+          <a-tag :color="getStatusColor(selectedCoupon?.status ?? '')">
+            {{ selectedCoupon ? getStatusText(selectedCoupon.status) : '' }}
+          </a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="Phiếu giảm giá nổi bật">
           <a-tag v-if="selectedCoupon?.featured" color="orange">
@@ -287,12 +297,18 @@
           {{ selectedCoupon?.updated_at ? formatDateTime(selectedCoupon.updated_at) : '—' }}
         </a-descriptions-item>
         <a-descriptions-item v-if="selectedCoupon?.featured" label="Số khách hàng áp dụng" :span="2">
-          <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px">
             <span>
               <strong>{{ selectedCoupon?.source?.idKhachHang?.length || 0 }}</strong>
               khách hàng
             </span>
-            <a-button v-if="selectedCoupon?.source?.idKhachHang && selectedCoupon.source.idKhachHang.length > 0" size="small" @click="viewAppliedCustomers">Xem danh sách</a-button>
+            <a-button
+              v-if="selectedCoupon?.source?.idKhachHang && selectedCoupon.source.idKhachHang.length > 0"
+              size="small"
+              @click="viewAppliedCustomers"
+            >
+              Xem danh sách
+            </a-button>
           </div>
         </a-descriptions-item>
       </a-descriptions>
@@ -304,12 +320,7 @@
           <h3 style="margin: 0; font-size: 16px; font-weight: 600">Lịch sử thay đổi</h3>
           <div style="display: flex; align-items: center; gap: 8px">
             <a-spin v-if="isHistoryLoading" size="small" />
-            <a-button
-              v-else
-              size="small"
-              type="text"
-              @click="selectedCoupon && loadHistory(selectedCoupon.id)"
-            >
+            <a-button v-else size="small" type="text" @click="selectedCoupon && loadHistory(selectedCoupon.id)">
               <template #icon>
                 <icon-refresh />
               </template>
@@ -480,11 +491,7 @@
             </a-form-item>
 
             <a-form-item field="active" label="Trạng thái">
-              <a-switch
-                v-model="couponEditForm.active"
-                checked-children="Hoạt động"
-                un-checked-children="Không hoạt động"
-              />
+              <a-switch v-model="couponEditForm.active" checked-children="Hoạt động" un-checked-children="Không hoạt động" />
             </a-form-item>
 
             <a-form-item field="featured">
@@ -565,30 +572,11 @@
             </div>
           </div>
         </div>
-
       </div>
     </a-modal>
 
-    <a-modal
-      v-model:visible="couponDeleteVisible"
-      title="Xóa phiếu giảm giá"
-      :confirm-loading="couponDeleteSubmitting"
-      width="440px"
-      ok-text="Xóa"
-      :ok-button-props="{ status: 'danger' }"
-      @ok="confirmDeleteCoupon"
-      @cancel="couponDeleteVisible = false"
-    >
-      <p>
-        Bạn chắc chắn muốn xóa phiếu giảm giá
-        <strong>{{ selectedCoupon?.name }}</strong>
-        ?
-      </p>
-      <p class="modal-note">Hành động này không thể hoàn tác.</p>
-    </a-modal>
-
     <!-- Applied Customers Modal -->
-    <a-modal v-model:visible="appliedCustomersVisible" title="Danh sách khách hàng áp dụng" :footer="false" width="600px">
+    <a-modal v-model:visible="appliedCustomersVisible" title="Danh sách khách hàng áp dụng" :footer="false" width="700px" :body-style="{ maxHeight: '70vh', overflowY: 'auto' }">
       <div v-if="appliedCustomersList.length > 0">
         <a-list :data="appliedCustomersList" :bordered="false">
           <template #item="{ item, index }">
@@ -628,7 +616,10 @@
         <strong>{{ selectedCoupon?.name }}</strong>
         ?
       </p>
-      <p class="modal-note">Lý do thay đổi: <strong>{{ couponEditForm.lyDoThayDoi }}</strong></p>
+      <p class="modal-note">
+        Lý do thay đổi:
+        <strong>{{ couponEditForm.lyDoThayDoi }}</strong>
+      </p>
       <p class="modal-note">Hành động này sẽ cập nhật thông tin phiếu giảm giá.</p>
     </a-modal>
 
@@ -654,12 +645,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
-import axios from 'axios'
+
 import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import router from '@/router'
 import {
   IconPlus,
   IconDownload,
@@ -671,11 +662,13 @@ import {
   IconPlusCircle,
   IconUser,
   IconEmpty,
-  IconImage,
+  IconCheck,
+  IconClose,
+  IconLock,
+  IconPublic,
 } from '@arco-design/web-vue/es/icon'
 import downloadCsv from '@/utils/export-csv'
 import {
-  deleteCoupon as deleteCouponApi,
   fetchCoupons,
   fetchCustomers,
   fetchCouponHistory,
@@ -688,24 +681,17 @@ import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
-const router = useRouter()
 const userStore = useUserStore()
 
-// Check if user is admin
-// Check both idQuyenHan and tenQuyenHan for flexibility
 const isAdmin = computed(() => {
   const roleId = userStore.idQuyenHan
   const roleName = userStore.tenQuyenHan?.toLowerCase()
-  
-  // Debug: Log role information
-  console.log('[Permission Check] User Role:', { roleId, roleName, tenQuyenHan: userStore.tenQuyenHan })
-  
-  // Admin if idQuyenHan is 1 OR role name contains 'admin'
-  const hasPermission = roleId === 1 || roleName?.includes('admin') || roleName?.includes('quản trị')
-  console.log('[Permission Check] isAdmin:', hasPermission)
-  
-  return hasPermission
+
+  return roleId === 1 || roleName?.includes('admin') || roleName?.includes('quản trị')
 })
+
+// Check if user is admin
+// Check both idQuyenHan and tenQuyenHan for flexibility
 
 // Filters
 const DEFAULT_PERCENT_RANGE: [number, number] = [0, 100]
@@ -746,74 +732,73 @@ const columns = [
   {
     title: 'STT',
     dataIndex: 'index',
-    width: 60,
+    width: 56,
     align: 'center',
   },
   {
     title: 'Mã',
     dataIndex: 'code',
     slotName: 'code',
-    width: 100,
+    width: 85,
   },
   {
     title: 'Tên phiếu',
     dataIndex: 'name',
     slotName: 'name',
-    width: 200,
   },
   {
-    title: 'Nổi bật',
+    title: 'Riêng tư',
     dataIndex: 'featured',
     slotName: 'featured',
-    width: 80,
+    width: 100,
     align: 'center',
   },
   {
     title: 'Loại',
     dataIndex: 'discount_type',
     slotName: 'discount_type',
-    width: 90,
+    width: 80,
     align: 'center',
   },
   {
     title: 'Giảm',
     dataIndex: 'discount_value',
     slotName: 'discount_value',
-    width: 100,
+    width: 85,
     align: 'center',
   },
   {
     title: 'ĐH tối thiểu',
     dataIndex: 'min_order_value',
     slotName: 'min_order_value',
-    width: 115,
+    width: 105,
     align: 'right',
   },
   {
     title: 'Thời gian',
     dataIndex: 'start_date',
     slotName: 'validity_period',
-    width: 180,
+    width: 155,
     align: 'center',
   },
   {
     title: 'SL',
     dataIndex: 'quantity',
     slotName: 'quantity',
-    width: 65,
+    width: 55,
     align: 'center',
   },
   {
     title: 'Trạng thái',
     dataIndex: 'status',
     slotName: 'status',
-    width: 110,
+    width: 100,
     align: 'center',
   },
   {
     title: 'Thao tác',
     slotName: 'action',
-    width: 120,
+    width: 105,
     fixed: 'right',
     align: 'center',
   },
@@ -836,6 +821,7 @@ interface CouponRecord {
   end_date: string
   status: CouponStatus
   featured: boolean
+  enabled: boolean
   created_at?: string
   updated_at?: string
   source: CouponApiModel
@@ -846,10 +832,9 @@ const selectedCoupon = ref<CouponRecord | null>(null)
 
 const couponDetailVisible = ref(false)
 const couponEditVisible = ref(false)
-const couponDeleteVisible = ref(false)
 const couponEditSubmitting = ref(false)
-const couponDeleteSubmitting = ref(false)
 const couponEditConfirmVisible = ref(false)
+const couponStatusUpdatingIds = ref<number[]>([])
 
 // Applied customers modal
 const appliedCustomersVisible = ref(false)
@@ -1139,12 +1124,37 @@ const deriveCouponStatus = (coupon: CouponApiModel): CouponStatus => {
   return coupon.trangThai ? 'active' : 'inactive'
 }
 
+const resolveCouponEnabled = (coupon: CouponApiModel, status: CouponStatus): boolean => {
+  const raw = (coupon as unknown as { trangThai?: unknown }).trangThai
+
+  if (typeof raw === 'boolean') {
+    return raw
+  }
+
+  if (typeof raw === 'number') {
+    return raw !== 0
+  }
+
+  if (typeof raw === 'string') {
+    const normalized = raw.trim().toLowerCase()
+    if (['true', '1', 'active', 'đang hoạt động', 'dang hoat dong'].includes(normalized)) {
+      return true
+    }
+    if (['false', '0', 'inactive', 'không hoạt động', 'khong hoat dong'].includes(normalized)) {
+      return false
+    }
+  }
+
+  return status === 'active' || status === 'upcoming'
+}
+
 const toCouponRecord = (coupon: CouponApiModel, index: number): CouponRecord => {
   const discountType = determineDiscountType(coupon)
   const discountValue = Number(coupon.giaTriGiamGia ?? 0)
   const minOrder = coupon.hoaDonToiThieu != null ? Number(coupon.hoaDonToiThieu) : null
   const usageLimit = coupon.soLuongDung ?? null
   const usedCount = coupon.soLuongDaDung ?? 0
+  const status = deriveCouponStatus(coupon)
 
   return {
     id: coupon.id,
@@ -1159,11 +1169,12 @@ const toCouponRecord = (coupon: CouponApiModel, index: number): CouponRecord => 
     total_usage_limit: usageLimit,
     start_date: coupon.ngayBatDau ?? '',
     end_date: coupon.ngayKetThuc ?? '',
-    status: deriveCouponStatus(coupon),
+    status,
     featured: coupon.featured ?? false,
+    enabled: resolveCouponEnabled(coupon, status),
     created_at: coupon.createdAt,
     updated_at: coupon.updatedAt,
-    source: coupon,
+    source: { ...coupon },
   }
 }
 
@@ -1190,6 +1201,50 @@ const formatCurrency = (amount: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
+}
+
+const extractCurrencyParts = (amount: number | null | undefined) => {
+  if (amount === null || amount === undefined) {
+    return null
+  }
+  const formatted = formatCurrency(Number(amount))
+  const normalized = formatted.replace(/\u00a0/g, ' ').trim()
+  const parts = normalized.split(' ')
+  if (parts.length === 1) {
+    return { numeric: parts[0], unit: '' }
+  }
+  return {
+    numeric: parts.slice(0, -1).join(' '),
+    unit: parts.at(-1) ?? '',
+  }
+}
+
+const discountMain = (record: CouponRecord) => {
+  if (record.discount_type === 'percentage') {
+    return `${record.discount_value}%`
+  }
+  return extractCurrencyParts(record.discount_value)?.numeric ?? formatCurrency(record.discount_value)
+}
+
+const discountUnit = (record: CouponRecord) => {
+  if (record.discount_type === 'percentage') {
+    return ''
+  }
+  return extractCurrencyParts(record.discount_value)?.unit ?? ''
+}
+
+const minOrderMain = (record: CouponRecord) => {
+  if (record.min_order_value === null) {
+    return 'Không giới hạn'
+  }
+  return extractCurrencyParts(record.min_order_value)?.numeric ?? formatCurrency(record.min_order_value)
+}
+
+const minOrderUnit = (record: CouponRecord) => {
+  if (record.min_order_value === null) {
+    return ''
+  }
+  return extractCurrencyParts(record.min_order_value)?.unit ?? ''
 }
 
 // Filtered coupons computed
@@ -1304,30 +1359,6 @@ const loadCoupons = async () => {
   loading.value = true
   try {
     const data = await fetchCoupons()
-    // eslint-disable-next-line no-console
-    console.log('[DEBUG] API Response - First 2 items:', data.slice(0, 2))
-    // eslint-disable-next-line no-console
-    console.log('[DEBUG] createdAt/updatedAt check:', data.slice(0, 2).map(d => ({
-      id: d.id,
-      name: d.tenPhieuGiamGia,
-      createdAt: d.createdAt,
-      updatedAt: d.updatedAt
-    })))
-    // eslint-disable-next-line no-console
-    console.log(
-      '[DEBUG] Featured field exists?',
-      data.some((item) => Object.prototype.hasOwnProperty.call(item, 'featured'))
-    )
-    // eslint-disable-next-line no-console
-    console.log(
-      '[DEBUG] Featured vouchers:',
-      data.filter((item) => item.featured)
-    )
-    // eslint-disable-next-line no-console
-    console.log(
-      '[DEBUG] All vouchers featured status:',
-      data.map((item) => ({ id: item.id, name: item.tenPhieuGiamGia, featured: item.featured }))
-    )
 
     // Sort by featured status first (featured vouchers at top), then by createdAt (newest first)
     const sorted = data.sort((a, b) => {
@@ -1430,6 +1461,75 @@ const handleTableSearch = () => {
   // This function is called when the table search input changes
 }
 
+const isCouponStatusUpdating = (id: number) => couponStatusUpdatingIds.value.includes(id)
+
+const canToggleCouponStatus = (coupon: CouponRecord) => {
+  // Allow toggling for active/inactive/upcoming vouchers; lock expired or exhausted vouchers
+  return coupon.status !== 'expired' && coupon.status !== 'used_up'
+}
+
+const handleCouponStatusToggle = async (coupon: CouponRecord, nextValue: boolean) => {
+  if (!coupon) return
+
+  const previousValue = coupon.enabled
+  if (nextValue === previousValue) {
+    return
+  }
+
+  if (!canToggleCouponStatus(coupon)) {
+    Message.warning('Không thể thay đổi trạng thái của phiếu giảm giá này')
+    return
+  }
+
+  if (isCouponStatusUpdating(coupon.id)) {
+    return
+  }
+
+  couponStatusUpdatingIds.value.push(coupon.id)
+
+  const previousStatus = coupon.status
+  coupon.source.trangThai = nextValue
+  coupon.enabled = nextValue
+  coupon.status = deriveCouponStatus({ ...coupon.source, trangThai: nextValue })
+  if (selectedCoupon.value?.id === coupon.id) {
+    selectedCoupon.value = { ...coupon }
+  }
+
+  const payload = {
+    maPhieuGiamGia: coupon.source.maPhieuGiamGia ?? coupon.code,
+    tenPhieuGiamGia: coupon.source.tenPhieuGiamGia ?? coupon.name,
+    loaiPhieuGiamGia: Boolean(coupon.source.loaiPhieuGiamGia),
+    giaTriGiamGia: Number(coupon.source.giaTriGiamGia ?? coupon.discount_value),
+    hoaDonToiThieu:
+      coupon.source.hoaDonToiThieu !== null && coupon.source.hoaDonToiThieu !== undefined ? Number(coupon.source.hoaDonToiThieu) : null,
+    soLuongDung: coupon.source.soLuongDung ?? null,
+    ngayBatDau: coupon.source.ngayBatDau ?? coupon.start_date,
+    ngayKetThuc: coupon.source.ngayKetThuc ?? coupon.end_date,
+    trangThai: nextValue,
+    moTa: coupon.source.moTa ?? null,
+    deleted: Boolean(coupon.source.deleted),
+    idKhachHang: coupon.source.idKhachHang ?? [],
+    featured: Boolean(coupon.source.featured),
+    lyDoThayDoi: 'Cập nhật trạng thái phiếu giảm giá',
+  }
+
+  try {
+    await updateCoupon(coupon.id, payload)
+    Message.success(nextValue ? 'Đã bật phiếu giảm giá' : 'Đã tắt phiếu giảm giá')
+  } catch (error: any) {
+    coupon.source.trangThai = previousValue
+    coupon.enabled = previousValue
+    coupon.status = previousStatus
+    if (selectedCoupon.value?.id === coupon.id) {
+      selectedCoupon.value = { ...coupon, status: previousStatus }
+    }
+    const errorMessage = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái phiếu giảm giá'
+    Message.error(errorMessage)
+  } finally {
+    couponStatusUpdatingIds.value = couponStatusUpdatingIds.value.filter((id) => id !== coupon.id)
+  }
+}
+
 // Load coupon history
 const loadHistory = async (couponId: number) => {
   isHistoryLoading.value = true
@@ -1498,11 +1598,6 @@ const viewAppliedCustomers = async () => {
 const editCoupon = async (coupon: CouponRecord) => {
   // Navigate to edit page
   router.push({ name: 'QuanLyPhieuGiamGiaEdit', params: { id: coupon.id } })
-}
-
-const deleteCoupon = (coupon: CouponRecord) => {
-  selectedCoupon.value = coupon
-  couponDeleteVisible.value = true
 }
 
 const submitCouponEdit = async () => {
@@ -1584,7 +1679,7 @@ const submitCouponEdit = async () => {
   }
 
   // Check if any changes were made
-  const hasChanges = (
+  const hasChanges =
     couponEditForm.name !== originalCouponEditForm.name ||
     couponEditForm.discountMode !== originalCouponEditForm.discountMode ||
     couponEditForm.discountValue !== originalCouponEditForm.discountValue ||
@@ -1596,8 +1691,8 @@ const submitCouponEdit = async () => {
     couponEditForm.description !== originalCouponEditForm.description ||
     couponEditForm.active !== originalCouponEditForm.active ||
     couponEditForm.featured !== originalCouponEditForm.featured ||
-    JSON.stringify([...couponEditForm.selectedCustomerIds].sort()) !== JSON.stringify([...originalCouponEditForm.selectedCustomerIds].sort())
-  )
+    JSON.stringify([...couponEditForm.selectedCustomerIds].sort()) !==
+      JSON.stringify([...originalCouponEditForm.selectedCustomerIds].sort())
 
   if (!hasChanges) {
     Message.warning('Không có thay đổi nào để cập nhật')
@@ -1619,12 +1714,12 @@ const confirmCouponEdit = async () => {
   const [startDate, endDate] = couponEditForm.dateRange
 
   // eslint-disable-next-line no-console
-  console.log('[FORM_SUBMIT] Current form values:', {
+  console.log('[DEBUG] Edit form data:', {
     name: couponEditForm.name,
     quantity: couponEditForm.quantity,
     quantityParsed: quantityValue,
   })
-  
+
   const payload = {
     tenPhieuGiamGia: couponEditForm.name.trim(),
     loaiPhieuGiamGia: couponEditForm.discountMode === 'amount',
@@ -1641,9 +1736,6 @@ const confirmCouponEdit = async () => {
     featured: couponEditForm.featured,
     lyDoThayDoi: couponEditForm.lyDoThayDoi.trim(),
   }
-  
-  // eslint-disable-next-line no-console
-  console.log('[FORM_SUBMIT] Payload to send:', payload)
 
   couponEditSubmitting.value = true
   try {
@@ -1654,7 +1746,7 @@ const confirmCouponEdit = async () => {
     couponEditVisible.value = false
 
     await loadCoupons()
-    
+
     // Reload history if detail modal is still open
     if (couponDetailVisible.value && selectedCoupon.value) {
       await loadHistory(selectedCoupon.value.id)
@@ -1664,23 +1756,6 @@ const confirmCouponEdit = async () => {
     Message.error(errorMessage)
   } finally {
     couponEditSubmitting.value = false
-  }
-}
-
-const confirmDeleteCoupon = async () => {
-  if (!selectedCoupon.value) return
-  if (couponDeleteSubmitting.value) return
-
-  couponDeleteSubmitting.value = true
-  try {
-    await deleteCouponApi(selectedCoupon.value.id)
-    Message.success('Đã xóa phiếu giảm giá')
-    couponDeleteVisible.value = false
-    await loadCoupons()
-  } catch {
-    Message.error('Không thể xóa phiếu giảm giá')
-  } finally {
-    couponDeleteSubmitting.value = false
   }
 }
 
@@ -1910,9 +1985,28 @@ onMounted(() => {
   color: #86909c;
 }
 
-.discount-value {
-  text-align: center;
+.numeric-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.15;
+}
+
+.numeric-cell__main {
   font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.numeric-cell__suffix {
+  font-size: 11px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+}
+
+.numeric-cell--discount .numeric-cell__main {
   color: #1890ff;
 }
 
@@ -1996,27 +2090,27 @@ onMounted(() => {
   color: #ff4d4f;
 }
 
-.featured-badge {
+.privacy-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  animation: pulse 2s ease-in-out infinite;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-1);
+  white-space: nowrap;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+.privacy-badge-private {
+  font-weight: 600;
 }
 
-.not-featured {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.privacy-badge-private .privacy-icon {
+  color: #165dff;
+}
+
+.privacy-icon {
+  font-size: 16px;
+  color: var(--color-text-3);
 }
 
 /* Fix action buttons alignment */

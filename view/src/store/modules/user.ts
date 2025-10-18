@@ -47,7 +47,7 @@ const useUserStore = defineStore('user', {
 
         // Fetch full user info from backend using the token
         const res = await getUserInfo()
-        
+
         if (res.data) {
           // Set full user info including role information
           const userInfo = {
@@ -62,13 +62,13 @@ const useUserStore = defineStore('user', {
             refreshToken: res.data.refreshToken,
           }
           this.setInfo(userInfo)
-          
+
           // Update userId in localStorage in case it changed
           localStorage.setItem('userId', res.data.id.toString())
-          
+
           return true
         }
-        
+
         return false
       } catch (error) {
         // Token is invalid or expired, clear everything

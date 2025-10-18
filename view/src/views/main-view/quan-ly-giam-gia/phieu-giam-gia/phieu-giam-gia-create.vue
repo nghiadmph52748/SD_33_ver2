@@ -3,16 +3,6 @@
     <Breadcrumb :items="breadcrumbItems" />
 
     <a-card class="coupon-card" :class="{ 'featured-layout': formState.featured }">
-      <div class="page-header">
-        <div>
-          <h2 class="page-title">Tạo phiếu giảm giá</h2>
-          <p class="page-description">Cấu hình mã giảm giá trước khi phân phối đến khách hàng.</p>
-        </div>
-        <a-space>
-          <a-button @click="goBack">Quay lại</a-button>
-          <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu phiếu giảm giá</a-button>
-        </a-space>
-      </div>
 
       <div :class="formState.featured ? 'two-column-container' : ''">
         <!-- Left Column: Form -->
@@ -58,6 +48,7 @@
                 value-format="YYYY-MM-DD HH:mm:ss"
                 format="DD/MM/YYYY HH:mm"
                 allow-clear
+                :disabled-date="disablePastDates"
                 style="width: 100%"
               />
             </a-form-item>
@@ -81,7 +72,8 @@
                 :min="1"
                 :max="100000"
                 :precision="0"
-                placeholder="Tối đa: 100.000 phiếu"
+                :disabled="formState.featured"
+                :placeholder="formState.featured ? 'Tự động theo số khách hàng' : 'Tối đa: 100.000 phiếu'"
                 style="width: 100%"
               />
             </a-form-item>
@@ -97,11 +89,11 @@
               />
             </a-form-item>
 
-            <!-- Phiếu giảm giá nổi bật -->
+            <!-- Phiếu giảm giá riêng tư -->
             <a-form-item field="featured">
-              <a-checkbox v-model="formState.featured">Phiếu giảm giá nổi bật</a-checkbox>
+              <a-checkbox v-model="formState.featured">Phiếu giảm giá riêng tư</a-checkbox>
               <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Phiếu giảm giá nổi bật sẽ chỉ áp dụng cho khách hàng được chọn
+                Phiếu giảm giá riêng tư chỉ áp dụng cho khách hàng được chọn
               </div>
             </a-form-item>
           </a-form>
@@ -149,6 +141,13 @@
       </div>
     </a-card>
 
+    <div class="page-actions">
+      <a-space>
+        <a-button @click="goBack">Quay lại</a-button>
+        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu phiếu giảm giá</a-button>
+      </a-space>
+    </div>
+
     <!-- Confirmation Modal -->
     <a-modal
       v-model:visible="confirmSaveVisible"
@@ -187,7 +186,7 @@
         <a-descriptions-item v-if="formState.description" label="Mô tả">
           {{ formState.description }}
         </a-descriptions-item>
-        <a-descriptions-item label="Phiếu giảm giá nổi bật">
+        <a-descriptions-item label="Phiếu giảm giá riêng tư">
           {{ formState.featured ? 'Có' : 'Không' }}
         </a-descriptions-item>
         <a-descriptions-item v-if="formState.featured" label="Khách hàng được áp dụng">
@@ -228,6 +227,7 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
 import { createCoupon, fetchCoupons, fetchCustomers, type CustomerApiModel } from '@/api/discount-management'
+import dayjs from 'dayjs'
 
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
@@ -249,13 +249,42 @@ const formState = reactive({
   selectedCustomerIds: [] as number[],
 })
 
+const disablePastDates = (current: Date | string) => {
+  if (!current) return false
+  return dayjs(current).isBefore(dayjs().startOf('day'))
+}
+
 const rules: FormRules = {
   code: [{ required: true, message: 'Vui lòng nhập mã phiếu giảm giá' }],
   name: [{ required: true, message: 'Vui lòng nhập tên phiếu giảm giá' }],
   discountMode: [{ required: true, message: 'Vui lòng chọn hình thức giảm giá' }],
   discountValue: [{ required: true, message: 'Vui lòng nhập giá trị giảm' }],
   quantity: [{ required: true, message: 'Vui lòng nhập số lượng áp dụng' }],
-  dateRange: [{ required: true, message: 'Vui lòng chọn khoảng thời gian áp dụng' }],
+  dateRange: [
+    { required: true, message: 'Vui lòng chọn khoảng thời gian áp dụng' },
+    {
+      validator: (value: string[], callback) => {
+        if (!Array.isArray(value) || value.length !== 2) {
+          callback('Vui lòng chọn khoảng thời gian áp dụng')
+          return
+        }
+        const [start, end] = value
+        if (!start || !end) {
+          callback('Vui lòng chọn khoảng thời gian áp dụng')
+          return
+        }
+        if (dayjs(start).isBefore(dayjs().startOf('day'))) {
+          callback('Ngày bắt đầu phải từ hôm nay trở đi')
+          return
+        }
+        if (dayjs(start).isAfter(dayjs(end))) {
+          callback('Ngày kết thúc phải sau ngày bắt đầu')
+          return
+        }
+        callback()
+      },
+    },
+  ],
 }
 
 const isPercent = computed(() => formState.discountMode === 'percentage')
@@ -374,6 +403,17 @@ watch(
     // Clear selected customers when unchecking featured
     if (!isFeatured) {
       formState.selectedCustomerIds = []
+      formState.quantity = 1 // Reset to default
+    }
+  }
+)
+
+// Auto-update quantity based on selected customers for private vouchers
+watch(
+  () => formState.selectedCustomerIds.length,
+  (count) => {
+    if (formState.featured) {
+      formState.quantity = count > 0 ? count : 1
     }
   }
 )
@@ -699,9 +739,9 @@ const handleSaveClick = async () => {
     return
   }
 
-  // Validate customer selection for featured vouchers
+  // Validate customer selection for private vouchers
   if (formState.featured && formState.selectedCustomerIds.length === 0) {
-    Message.error('Vui lòng chọn ít nhất một khách hàng cho phiếu giảm giá nổi bật')
+    Message.error('Vui lòng chọn ít nhất một khách hàng cho phiếu giảm giá riêng tư')
     return
   }
 
@@ -761,32 +801,6 @@ const confirmSave = async () => {
 }
 
 .coupon-card {
-  margin-top: 16px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  gap: 16px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--color-text-1);
-}
-
-.page-description {
-  margin: 4px 0 0 0;
-  color: var(--color-text-3);
-}
-
-.form-footer {
-  display: flex;
-  justify-content: flex-end;
   margin-top: 16px;
 }
 
@@ -853,10 +867,10 @@ const confirmSave = async () => {
   border-bottom: 2px solid var(--color-primary-6);
 }
 
-.featured-layout .page-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--color-border-2);
-  margin-bottom: 0;
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 20px;
 }
 
 .featured-layout .customer-selection-section {

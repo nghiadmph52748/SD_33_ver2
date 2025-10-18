@@ -109,7 +109,7 @@
           @clear="handleTableSearch"
         />
       </template>
-      <a-table :columns="columns" :data="filteredPromotions" :pagination="pagination" :loading="loading" :scroll="{ x: 1400 }">
+      <a-table :columns="columns" :data="filteredPromotions" :pagination="pagination" :loading="loading">
         <template #code="{ record }">
           <div class="code-cell">
             {{ record.code }}
@@ -159,17 +159,27 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-button v-if="isAdmin" type="text" status="danger" @click="deletePromotion(record)">
-              <template #icon>
-                <icon-delete />
+            <a-switch
+              v-if="isAdmin"
+              type="round"
+              :model-value="record.enabled"
+              :loading="isPromotionStatusUpdating(record.id)"
+              :disabled="!canTogglePromotionStatus(record)"
+              @change="(value) => handlePromotionStatusToggle(record, value)"
+            >
+              <template #checked-icon>
+                <icon-check />
               </template>
-            </a-button>
+              <template #unchecked-icon>
+                <icon-close />
+              </template>
+            </a-switch>
           </a-space>
         </template>
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt giảm giá" :footer="false" width="800px">
+    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt giảm giá" :footer="false" width="900px" :body-style="{ maxHeight: '80vh', overflowY: 'auto' }">
       <a-descriptions :column="2" bordered>
         <a-descriptions-item label="Tên">{{ selectedPromotion?.name }}</a-descriptions-item>
         <a-descriptions-item label="Mã">{{ selectedPromotion?.code }}</a-descriptions-item>
@@ -177,7 +187,9 @@
           <span class="percentage-badge">{{ selectedPromotion?.percentage }}%</span>
         </a-descriptions-item>
         <a-descriptions-item label="Trạng thái">
-          <a-tag :color="getStatusColor(selectedPromotion?.status ?? '')">{{ selectedPromotion ? getStatusText(selectedPromotion.status) : '' }}</a-tag>
+          <a-tag :color="getStatusColor(selectedPromotion?.status ?? '')">
+            {{ selectedPromotion ? getStatusText(selectedPromotion.status) : '' }}
+          </a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="Thời gian" :span="2">
           {{ formatDateTime(selectedPromotion?.start_date ?? '') }} - {{ formatDateTime(selectedPromotion?.end_date ?? '') }}
@@ -189,6 +201,84 @@
           {{ selectedPromotion?.updated_at ? formatDateTime(selectedPromotion.updated_at) : '—' }}
         </a-descriptions-item>
       </a-descriptions>
+
+      <!-- Product Details Section -->
+      <a-divider style="margin: 24px 0" />
+      <div class="product-details-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600">
+            Danh sách sản phẩm ({{ promotionProductDetails.length }} biến thể)
+          </h3>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <a-spin v-if="isProductDetailsLoading" size="small" />
+            <a-button v-else size="small" type="text" @click="selectedPromotion && loadPromotionProductDetails(selectedPromotion.id)">
+              <template #icon>
+                <icon-refresh />
+              </template>
+              Tải lại
+            </a-button>
+          </div>
+        </div>
+
+        <div v-if="!isProductDetailsLoading && promotionProductDetails.length === 0" style="text-align: center; padding: 32px; color: var(--color-text-3)">
+          <icon-empty style="font-size: 48px; margin-bottom: 8px" />
+          <div>Chưa áp dụng cho sản phẩm nào</div>
+        </div>
+
+        <div
+          v-else-if="!isProductDetailsLoading"
+          style="
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid var(--color-border-2);
+            border-radius: 4px;
+            padding: 8px;
+            scroll-behavior: smooth;
+          "
+        >
+          <div
+            v-for="variant in promotionProductDetails"
+            :key="variant.id"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 8px;
+              border-bottom: 1px solid var(--color-border-1);
+            "
+          >
+            <img
+              v-if="variant.anhSanPham?.[0]"
+              :src="variant.anhSanPham[0]"
+              :alt="variant.tenSanPham"
+              style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px"
+            />
+            <div v-else style="width: 50px; height: 50px; background: var(--color-fill-2); border-radius: 4px; display: flex; align-items: center; justify-content: center">
+              <icon-image :size="24" style="color: var(--color-text-4)" />
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-weight: 500; font-size: 14px; margin-bottom: 4px">
+                {{ variant.tenSanPham }}
+              </div>
+              <div style="font-size: 12px; color: var(--color-text-3); margin-bottom: 2px">
+                {{ buildVariantLabel(variant) }}
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center">
+                <a-tag v-if="variant.maChiTietSanPham" size="small" color="blue">{{ variant.maChiTietSanPham }}</a-tag>
+                <span style="font-size: 12px; color: var(--color-text-3)">Tồn: <strong>{{ variant.soLuong ?? 0 }}</strong></span>
+              </div>
+            </div>
+            <div style="text-align: right; white-space: nowrap">
+              <div style="font-size: 15px; font-weight: 600; color: var(--color-text-1)">
+                {{ formatCurrency(variant.giaBan || 0) }}
+              </div>
+              <div v-if="selectedPromotion" style="font-size: 13px; color: var(--color-success-light-4); margin-top: 2px">
+                {{ formatCurrency((variant.giaBan || 0) * (1 - selectedPromotion.percentage / 100)) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- History Section -->
       <a-divider style="margin: 24px 0" />
@@ -279,15 +369,12 @@
                 value-format="YYYY-MM-DD HH:mm:ss"
                 format="DD/MM/YYYY HH:mm"
                 allow-clear
+                :disabled-date="disablePastDates"
                 style="width: 100%"
               />
             </a-form-item>
             <a-form-item field="active" label="Trạng thái">
-              <a-switch
-                v-model="promotionEditForm.active"
-                checked-children="Hoạt động"
-                un-checked-children="Không hoạt động"
-              />
+              <a-switch v-model="promotionEditForm.active" checked-children="Hoạt động" un-checked-children="Không hoạt động" />
             </a-form-item>
             <a-form-item field="applyToProducts">
               <a-checkbox v-model="promotionEditForm.applyToProducts">Áp dụng cho sản phẩm cụ thể</a-checkbox>
@@ -366,20 +453,24 @@
                   </div>
                 </div>
               </template>
-              <template #tenSanPham="{ record }">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <span>{{ record.tenSanPham }}</span>
+              <template #productInfo="{ record }">
+                <div class="product-info-cell">
+                  <div class="product-name">{{ record.tenSanPham || '—' }}</div>
+                  <div v-if="buildVariantLabel(record)" class="product-variant-meta">{{ buildVariantLabel(record) }}</div>
                 </div>
               </template>
               <template #giaBan="{ record }">
                 <span>{{ formatCurrency(record.giaBan || 0) }}</span>
+              </template>
+              <template #soLuong="{ record }">
+                <span>{{ record.soLuong ?? 0 }}</span>
               </template>
             </a-table>
 
             <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
               Đã chọn:
               <strong>{{ promotionEditForm.selectedProducts.length }}</strong>
-              sản phẩm
+              biến thể
             </div>
           </div>
         </div>
@@ -405,24 +496,6 @@
       <p class="modal-note">Thay đổi sẽ được ghi lại vào lịch sử.</p>
     </a-modal>
 
-    <a-modal
-      v-model:visible="deleteVisible"
-      title="Xóa đợt giảm giá"
-      :confirm-loading="deleteSubmitting"
-      width="420px"
-      ok-text="Xóa"
-      :ok-button-props="{ status: 'danger' }"
-      @ok="confirmDeletePromotion"
-      @cancel="deleteVisible = false"
-    >
-      <p>
-        Bạn chắc chắn muốn xóa đợt giảm giá
-        <strong>{{ selectedPromotion?.name }}</strong>
-        ?
-      </p>
-      <p class="modal-note">Hành động này không thể hoàn tác.</p>
-    </a-modal>
-
     <!-- Export Confirmation Modal -->
     <a-modal
       v-model:visible="exportConfirmVisible"
@@ -445,14 +518,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import router from '@/router'
 import downloadCsv from '@/utils/export-csv'
 import {
-  deletePromotionCampaign,
   fetchPromotionCampaigns,
   fetchPromotionHistory,
   type PromotionApiModel,
@@ -464,22 +536,23 @@ import {
 } from '@/api/discount-management'
 import { getBienTheSanPhamList, type BienTheSanPham } from '@/api/san-pham'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
+import dayjs from 'dayjs'
 import {
   IconPlus,
   IconRefresh,
   IconDownload,
   IconEye,
   IconEdit,
-  IconDelete,
   IconPlusCircle,
   IconUser,
   IconEmpty,
   IconImage,
+  IconCheck,
+  IconClose,
 } from '@arco-design/web-vue/es/icon'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
-const router = useRouter()
 const userStore = useUserStore()
 
 // Check if user is admin
@@ -487,14 +560,10 @@ const userStore = useUserStore()
 const isAdmin = computed(() => {
   const roleId = userStore.idQuyenHan
   const roleName = userStore.tenQuyenHan?.toLowerCase()
-  
-  // Debug: Log role information
-  console.log('[Permission Check] User Role:', { roleId, roleName, tenQuyenHan: userStore.tenQuyenHan })
-  
+
   // Admin if idQuyenHan is 1 OR role name contains 'admin'
   const hasPermission = roleId === 1 || roleName?.includes('admin') || roleName?.includes('quản trị')
-  console.log('[Permission Check] isAdmin:', hasPermission)
-  
+
   return hasPermission
 })
 
@@ -529,60 +598,60 @@ const columns = [
   {
     title: 'STT',
     dataIndex: 'index',
-    width: 70,
+    width: 60,
     align: 'center',
   },
   {
     title: 'Mã',
     dataIndex: 'code',
     slotName: 'code',
-    width: 100,
+    width: 90,
   },
   {
     title: 'Tên',
     dataIndex: 'name',
     slotName: 'name',
-    width: 200,
+    width: 170,
   },
   {
     title: 'Phần trăm giảm',
     dataIndex: 'percentage',
     slotName: 'percentage',
-    width: 130,
+    width: 100,
     align: 'center',
   },
   {
     title: 'Thời gian',
     dataIndex: 'start_date',
     slotName: 'date_range',
-    width: 250,
+    width: 155,
     align: 'center',
   },
   {
     title: 'Trạng thái',
     dataIndex: 'status',
     slotName: 'status',
-    width: 110,
+    width: 100,
     align: 'center',
   },
   {
     title: 'Ngày tạo',
     dataIndex: 'created_at',
     slotName: 'created_at',
-    width: 180,
-    align: 'center',
+    width: 120,
+    align: 'left',
   },
   {
     title: 'Ngày cập nhật',
     dataIndex: 'updated_at',
     slotName: 'updated_at',
-    width: 180,
-    align: 'center',
+    width: 120,
+    align: 'left',
   },
   {
     title: 'Thao tác',
     slotName: 'action',
-    width: 150,
+    width: 100,
     fixed: 'right',
     align: 'center',
   },
@@ -599,6 +668,7 @@ interface PromotionRecord {
   start_date: string
   end_date: string
   status: PromotionStatus
+  enabled: boolean
   created_at?: string
   updated_at?: string
   source: PromotionApiModel
@@ -606,13 +676,12 @@ interface PromotionRecord {
 
 const promotions = ref<PromotionRecord[]>([])
 const selectedPromotion = ref<PromotionRecord | null>(null)
+const promotionStatusUpdatingIds = ref<number[]>([])
 
 const detailVisible = ref(false)
 const editVisible = ref(false)
 const editConfirmVisible = ref(false)
-const deleteVisible = ref(false)
 const editSubmitting = ref(false)
-const deleteSubmitting = ref(false)
 
 // Export confirmation modal
 const exportConfirmVisible = ref(false)
@@ -622,8 +691,29 @@ const exportSubmitting = ref(false)
 const historyList = ref<PromotionHistoryApiModel[]>([])
 const isHistoryLoading = ref(false)
 
-// Product selection state
-const productOptions = ref<BienTheSanPham[]>([])
+// Product selection state - type defined first
+type PromotionProductOption = BienTheSanPham & {
+  tenSanPhamChiTiet?: string
+}
+
+const productOptions = ref<PromotionProductOption[]>([])
+
+// Product details for view modal
+const promotionProductDetails = ref<PromotionProductOption[]>([])
+const isProductDetailsLoading = ref(false)
+
+const buildVariantLabel = (product: PromotionProductOption) => {
+  if (!product) return ''
+  const baseName = product.tenSanPham?.trim().toLowerCase() ?? ''
+  const detailName = product.tenSanPhamChiTiet?.trim()
+  if (detailName && detailName.toLowerCase() !== baseName && detailName.length > 0) {
+    return detailName
+  }
+  const attributes = [product.tenMauSac, product.tenKichThuoc, product.tenChatLieu, product.tenDeGiay, product.tenTrongLuong]
+    .map((attr) => (typeof attr === 'string' ? attr.trim() : ''))
+    .filter((attr) => attr && attr.length > 0)
+  return attributes.join(' • ')
+}
 const productOptionsLoading = ref(false)
 const originalProductIds = ref<number[]>([])
 
@@ -639,6 +729,11 @@ const promotionEditForm = reactive({
   applyToProducts: false,
   lyDoThayDoi: '',
 })
+
+const disablePastDates = (current: Date | string) => {
+  if (!current) return false
+  return dayjs(current).isBefore(dayjs().startOf('day'))
+}
 
 // Store original values for change detection
 const originalPromotionEditForm = reactive({
@@ -741,19 +836,47 @@ const derivePromotionStatus = (promotion: PromotionApiModel): PromotionStatus =>
   return promotion.trangThai ? 'active' : 'inactive'
 }
 
-const toPromotionRecord = (promotion: PromotionApiModel, index: number): PromotionRecord => ({
-  id: promotion.id,
-  index: index + 1,
-  code: promotion.maDotGiamGia ?? '',
-  name: promotion.tenDotGiamGia ?? '',
-  percentage: Number(promotion.giaTriGiamGia ?? 0),
-  start_date: promotion.ngayBatDau ?? '',
-  end_date: promotion.ngayKetThuc ?? '',
-  status: derivePromotionStatus(promotion),
-  created_at: promotion.createdAt,
-  updated_at: promotion.updatedAt,
-  source: promotion,
-})
+const resolvePromotionEnabled = (promotion: PromotionApiModel, status: PromotionStatus): boolean => {
+  const rawStatus = (promotion as unknown as { trangThai?: unknown }).trangThai
+
+  if (typeof rawStatus === 'boolean') {
+    return rawStatus
+  }
+
+  if (typeof rawStatus === 'number') {
+    return rawStatus !== 0
+  }
+
+  if (typeof rawStatus === 'string') {
+    const normalized = rawStatus.trim().toLowerCase()
+    if (['true', '1', 'active', 'đang hoạt động', 'dang hoat dong'].includes(normalized)) {
+      return true
+    }
+    if (['false', '0', 'inactive', 'không hoạt động', 'khong hoat dong'].includes(normalized)) {
+      return false
+    }
+  }
+
+  return status === 'active' || status === 'upcoming'
+}
+
+const toPromotionRecord = (promotion: PromotionApiModel, index: number): PromotionRecord => {
+  const status = derivePromotionStatus(promotion)
+  return {
+    id: promotion.id,
+    index: index + 1,
+    code: promotion.maDotGiamGia ?? '',
+    name: promotion.tenDotGiamGia ?? '',
+    percentage: Number(promotion.giaTriGiamGia ?? 0),
+    start_date: promotion.ngayBatDau ?? '',
+    end_date: promotion.ngayKetThuc ?? '',
+    status,
+    enabled: resolvePromotionEnabled(promotion, status),
+    created_at: promotion.createdAt,
+    updated_at: promotion.updatedAt,
+    source: { ...promotion },
+  }
+}
 
 // Filtered promotions computed
 const filteredPromotions = computed(() => {
@@ -948,11 +1071,64 @@ const formatHistoryDate = (dateString: string): string => {
   })
 }
 
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount)
+}
+
+const fetchProducts = async () => {
+  productOptionsLoading.value = true
+  try {
+    const response = await getBienTheSanPhamList(0)
+    const responseData = response.data as any
+    let rawData: PromotionProductOption[] = []
+    if (Array.isArray(responseData)) {
+      rawData = responseData
+    } else if (Array.isArray(responseData?.data)) {
+      rawData = responseData.data
+    }
+    productOptions.value = rawData.map((item) => ({
+      ...item,
+      tenSanPham: item.tenSanPham ?? item.tenSanPhamChiTiet ?? '',
+      tenSanPhamChiTiet: item.tenSanPhamChiTiet ?? undefined,
+      maChiTietSanPham: item.maChiTietSanPham ?? undefined,
+    }))
+  } catch {
+    Message.error('Không thể tải danh sách sản phẩm')
+    productOptions.value = []
+  } finally {
+    productOptionsLoading.value = false
+  }
+}
+
+const loadPromotionProductDetails = async (promotionId: number) => {
+  isProductDetailsLoading.value = true
+  try {
+    const productDetailIds = await fetchPromotionProductDetails(promotionId)
+    const productIds = productDetailIds.map((detail: PromotionProductDetailApiModel) => detail.idChiTietSanPham)
+
+    // Fetch all products if not already loaded
+    if (productOptions.value.length === 0) {
+      await fetchProducts()
+    }
+
+    // Filter products by IDs
+    promotionProductDetails.value = productOptions.value.filter((product) => productIds.includes(product.id))
+  } catch {
+    Message.error({ content: 'Không thể tải danh sách sản phẩm', duration: 3000 })
+    promotionProductDetails.value = []
+  } finally {
+    isProductDetailsLoading.value = false
+  }
+}
+
 const viewPromotion = async (promotion: any) => {
   selectedPromotion.value = promotion
   detailVisible.value = true
-  // Load history when opening detail modal
-  await loadHistory(promotion.id)
+  // Load history and products when opening detail modal
+  await Promise.all([loadHistory(promotion.id), loadPromotionProductDetails(promotion.id)])
 }
 
 // Product table configuration
@@ -965,22 +1141,29 @@ const productColumns = [
     align: 'center' as const,
   },
   {
-    title: 'Tên sản phẩm',
+    title: 'Sản phẩm',
     dataIndex: 'tenSanPham',
-    slotName: 'tenSanPham',
+    slotName: 'productInfo',
+    width: 220,
     ellipsis: true,
     tooltip: true,
   },
   {
-    title: 'Mã SP',
+    title: 'Mã biến thể',
     dataIndex: 'maChiTietSanPham',
-    width: 120,
+    width: 140,
   },
   {
     title: 'Giá bán',
     dataIndex: 'giaBan',
     slotName: 'giaBan',
     width: 150,
+    align: 'right' as const,
+  },
+  {
+    title: 'Tồn kho',
+    dataIndex: 'soLuong',
+    width: 90,
     align: 'right' as const,
   },
 ]
@@ -1000,12 +1183,14 @@ const filteredProductsEdit = computed(() => {
   if (!productSearchQuery.value) {
     return productOptions.value
   }
-  const query = productSearchQuery.value.toLowerCase()
-  return productOptions.value.filter(
-    (product) =>
-      product.tenSanPham?.toLowerCase().includes(query) ||
-      product.maChiTietSanPham?.toLowerCase().includes(query)
-  )
+  const query = productSearchQuery.value.trim().toLowerCase()
+  return productOptions.value.filter((product) => {
+    const baseName = product.tenSanPham?.toLowerCase() ?? ''
+    const variantName = product.tenSanPhamChiTiet?.toLowerCase() ?? ''
+    const attributes = buildVariantLabel(product).toLowerCase()
+    const sku = product.maChiTietSanPham?.toLowerCase() ?? ''
+    return baseName.includes(query) || variantName.includes(query) || attributes.includes(query) || sku.includes(query)
+  })
 })
 
 const productPagination = computed(() => ({
@@ -1073,13 +1258,6 @@ const deselectAllProductsEdit = () => {
   })
 }
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount)
-}
-
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
   img.style.display = 'none'
@@ -1090,27 +1268,14 @@ const handleImageError = (event: Event) => {
   }
 }
 
-const fetchProducts = async () => {
-  productOptionsLoading.value = true
-  try {
-    const response = await getBienTheSanPhamList(0)
-    productOptions.value = response.data || []
-  } catch (error) {
-    Message.error('Không thể tải danh sách sản phẩm')
-    productOptions.value = []
-  } finally {
-    productOptionsLoading.value = false
-  }
-}
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const loadProductsForPromotion = async (promotionId: number) => {
   try {
     const productDetails = await fetchPromotionProductDetails(promotionId)
     const productIds = productDetails.map((detail: PromotionProductDetailApiModel) => detail.idChiTietSanPham)
     promotionEditForm.selectedProducts = productIds
     originalProductIds.value = [...productIds]
-  } catch (error) {
-    console.error('Failed to load products for promotion:', error)
+  } catch {
     promotionEditForm.selectedProducts = []
     originalProductIds.value = []
   }
@@ -1121,9 +1286,70 @@ const editPromotion = async (promotion: any) => {
   router.push({ name: 'QuanLyDotGiamGiaEdit', params: { id: promotion.id } })
 }
 
-const deletePromotion = (promotion: any) => {
-  selectedPromotion.value = promotion
-  deleteVisible.value = true
+const isPromotionStatusUpdating = (id: number) => promotionStatusUpdatingIds.value.includes(id)
+
+const canTogglePromotionStatus = (promotion: PromotionRecord) => promotion.status !== 'expired'
+
+const handlePromotionStatusToggle = async (promotion: PromotionRecord, nextValue: boolean) => {
+  if (!promotion) return
+
+  const previousValue = promotion.enabled
+  if (nextValue === previousValue) {
+    return
+  }
+
+  if (!canTogglePromotionStatus(promotion)) {
+    Message.warning('Không thể thay đổi trạng thái cho đợt giảm giá đã hết hạn')
+    return
+  }
+
+  if (isPromotionStatusUpdating(promotion.id)) {
+    return
+  }
+
+  promotionStatusUpdatingIds.value.push(promotion.id)
+
+  const previousStatus = promotion.status
+  promotion.source.trangThai = nextValue
+  promotion.enabled = nextValue
+  promotion.status = derivePromotionStatus({ ...promotion.source, trangThai: nextValue })
+  if (selectedPromotion.value?.id === promotion.id) {
+    selectedPromotion.value = { ...promotion }
+  }
+
+  const payload = {
+    maDotGiamGia: promotion.source.maDotGiamGia ?? promotion.code,
+    tenDotGiamGia: promotion.source.tenDotGiamGia ?? promotion.name,
+    giaTriGiamGia: Number(promotion.source.giaTriGiamGia ?? promotion.percentage),
+    ngayBatDau: promotion.source.ngayBatDau ?? promotion.start_date,
+    ngayKetThuc: promotion.source.ngayKetThuc ?? promotion.end_date,
+    trangThai: nextValue,
+    deleted: Boolean(promotion.source.deleted),
+    lyDoThayDoi: nextValue ? 'Bật trạng thái đợt giảm giá' : 'Tắt trạng thái đợt giảm giá',
+  }
+
+  try {
+    await updatePromotionCampaign(promotion.id, payload)
+    Message.success(nextValue ? 'Đã bật đợt giảm giá' : 'Đã tắt đợt giảm giá')
+    await loadPromotions()
+    if (detailVisible.value && selectedPromotion.value?.id === promotion.id) {
+      const refreshed = promotions.value.find((item) => item.id === promotion.id)
+      if (refreshed) {
+        selectedPromotion.value = refreshed
+      }
+    }
+  } catch (error: any) {
+    promotion.source.trangThai = previousValue
+    promotion.enabled = previousValue
+    promotion.status = previousStatus
+    if (selectedPromotion.value?.id === promotion.id) {
+      selectedPromotion.value = { ...promotion, status: previousStatus }
+    }
+    const errorMessage = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái đợt giảm giá'
+    Message.error(errorMessage)
+  } finally {
+    promotionStatusUpdatingIds.value = promotionStatusUpdatingIds.value.filter((id) => id !== promotion.id)
+  }
 }
 
 const resetFilters = async () => {
@@ -1160,7 +1386,7 @@ const confirmExportExcel = async () => {
     downloadCsv('dot-giam-gia.csv', header, rows)
     Message.success('Xuất danh sách đợt giảm giá thành công')
     exportConfirmVisible.value = false
-  } catch (error) {
+  } catch {
     Message.error('Không thể xuất danh sách đợt giảm giá')
   } finally {
     exportSubmitting.value = false
@@ -1182,15 +1408,15 @@ const handleEditOkClick = async () => {
   }
 
   // Check if any changes were made
-  const hasChanges = (
+  const hasChanges =
     promotionEditForm.name !== originalPromotionEditForm.name ||
     promotionEditForm.discountValue !== originalPromotionEditForm.discountValue ||
     promotionEditForm.active !== originalPromotionEditForm.active ||
     promotionEditForm.dateRange[0] !== originalPromotionEditForm.dateRange[0] ||
     promotionEditForm.dateRange[1] !== originalPromotionEditForm.dateRange[1] ||
     promotionEditForm.applyToProducts !== originalPromotionEditForm.applyToProducts ||
-    JSON.stringify([...promotionEditForm.selectedProducts].sort()) !== JSON.stringify([...originalPromotionEditForm.selectedProducts].sort())
-  )
+    JSON.stringify([...promotionEditForm.selectedProducts].sort()) !==
+      JSON.stringify([...originalPromotionEditForm.selectedProducts].sort())
 
   if (!hasChanges) {
     Message.warning('Không có thay đổi nào để cập nhật')
@@ -1225,10 +1451,10 @@ const submitPromotionEdit = async () => {
     // Step 2: Update product associations if changed
     const currentProducts = new Set(promotionEditForm.selectedProducts)
     const originalProducts = new Set(originalProductIds.value)
-    
+
     // Find products that need to be added
-    const productsToAdd = Array.from(currentProducts).filter(id => !originalProducts.has(id))
-    
+    const productsToAdd = Array.from(currentProducts).filter((id) => !originalProducts.has(id))
+
     if (productsToAdd.length > 0) {
       const productDetailPayloads = productsToAdd.map((productId) => ({
         idDotGiamGia: selectedPromotion.value!.id,
@@ -1250,23 +1476,6 @@ const submitPromotionEdit = async () => {
     Message.error('Không thể cập nhật đợt giảm giá')
   } finally {
     editSubmitting.value = false
-  }
-}
-
-const confirmDeletePromotion = async () => {
-  if (!selectedPromotion.value) return
-  if (deleteSubmitting.value) return
-
-  deleteSubmitting.value = true
-  try {
-    await deletePromotionCampaign(selectedPromotion.value.id)
-    Message.success('Đã xóa đợt giảm giá')
-    deleteVisible.value = false
-    await loadPromotions()
-  } catch {
-    Message.error('Không thể xóa đợt giảm giá')
-  } finally {
-    deleteSubmitting.value = false
   }
 }
 
@@ -1486,10 +1695,6 @@ onMounted(() => {
   background-color: rgba(140, 140, 140, 0.1);
 }
 
-.danger-item {
-  color: #ff4d4f;
-}
-
 /* Fix action buttons alignment */
 :deep(.arco-table-td) .arco-space {
   display: flex;
@@ -1686,6 +1891,23 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.product-info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-info-cell .product-name {
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.product-variant-meta {
+  font-size: 12px;
+  color: var(--color-text-3);
+  line-height: 1.2;
 }
 
 .product-selection-section :deep(.arco-table),
