@@ -40,6 +40,11 @@ export function getDanhMucSanPhamList(page: number, size: number = 10) {
   return axios.get<DanhMucResponse>(`/api/san-pham-management/paging?page=${page}&size=${size}`)
 }
 
+// Load all danh muc to calculate max price
+export function getAllDanhMucSanPham() {
+  return axios.get<DanhMucResponse>(`/api/san-pham-management/paging?page=0&size=950`)
+}
+
 export function getDanhMucSanPhamById(id: number) {
   return axios.get<DanhMucSanPham>(`/api/san-pham-management/detail/${id}`)
 }

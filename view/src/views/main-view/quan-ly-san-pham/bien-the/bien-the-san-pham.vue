@@ -181,7 +181,7 @@
                 if (checked) {
                   if (!selectedVariants.includes(id)) {
                     selectedVariants.push(id)
-                  }
+                 }
                 } else {
                   const idx = selectedVariants.indexOf(id)
                   if (idx > -1) {

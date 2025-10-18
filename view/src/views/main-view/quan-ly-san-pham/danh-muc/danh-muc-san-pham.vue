@@ -27,7 +27,7 @@
                 <a-slider
                   v-model="priceRange"
                   :min="0"
-                  :max="5000000"
+                  :max="maxPrice"
                   :step="50000"
                   range
                   tooltip-visible
@@ -197,7 +197,13 @@ import { debounce } from 'lodash'
 import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { getDanhMucSanPhamList, getNhaSanXuatOptions, getXuatXuOptions, updateDanhMucSanPham } from '@/api/san-pham/danh-muc'
+import {
+  getDanhMucSanPhamList,
+  getAllDanhMucSanPham,
+  getNhaSanXuatOptions,
+  getXuatXuOptions,
+  updateDanhMucSanPham,
+} from '@/api/san-pham/danh-muc'
 import type { DanhMucParams, NhaSanXuatOption, XuatXuOption, DanhMucResponse } from '@/api/san-pham/danh-muc'
 import { IconPlus, IconRefresh, IconDownload, IconEye, IconCheckCircle, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
@@ -245,14 +251,13 @@ const xuatXuMap = ref<Map<number, string>>(new Map())
 
 // Price range ref để tránh tạo array mới
 const priceRange = ref([0, 5000000])
+// Max price from products - will be updated when data loads
+const maxPrice = ref(5000000)
 
 // Đồng bộ priceRange với filters
 const syncPriceRange = () => {
-  priceRange.value = [filters.giaTu || 0, filters.giaDen || 5000000]
+  priceRange.value = [filters.giaTu || 0, filters.giaDen || maxPrice.value]
 }
-
-// Watcher để sync khi filters thay đổi
-watch([() => filters.giaTu, () => filters.giaDen], syncPriceRange, { immediate: true })
 
 // Cập nhật filters khi priceRange thay đổi
 const updatePriceRange = (value: number[]) => {
@@ -400,25 +405,45 @@ const loadDanhMucList = async () => {
   try {
     loading.value = true
     const response = await getDanhMucSanPhamList(pagination.value.current - 1, pagination.value.pageSize)
-
     if (response.data) {
       const apiData = response.data
 
-      // Match the API response structure like bien-the
       if (apiData && apiData.data && Array.isArray(apiData.data)) {
         danhMucList.value = apiData
         pagination.value.total = apiData.totalElements || 0
         pagination.value.current = (apiData.currentPage || 0) + 1
         pagination.value.pageSize = apiData.pageSize || 10
+
+        // Load all data to calculate max price
+        try {
+          const allResponse = await getAllDanhMucSanPham()
+          if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data)) {
+            let allMaxPrice = 0
+            allResponse.data.data.forEach((item: any) => {
+              if (item.giaLonNhat && item.giaLonNhat > allMaxPrice) {
+                allMaxPrice = item.giaLonNhat
+              }
+            })
+            if (allMaxPrice > 0) {
+              maxPrice.value = allMaxPrice
+            }
+          }
+        } catch (error) {
+          console.error('Error loading all danh muc for max price:', error)
+        }
+
+        // Update price range max value
+        if (priceRange.value[1] < maxPrice.value) {
+          priceRange.value[1] = maxPrice.value
+        }
       } else {
-        // Fallback if structure is different
         danhMucList.value = response.data
-        pagination.value.total = response.data.totalElements || 0
+        pagination.value.total = response.data?.totalElements || 0
       }
     }
-  } catch {
+  } catch (error) {
     // eslint-disable-next-line no-console
-    // console.error('Error loading danh mục:', error)
+    console.error('Error loading danh mục:', error)
     Message.error('Không thể tải danh sách danh mục sản phẩm')
     danhMucList.value = null
     pagination.value.total = 0
@@ -645,7 +670,7 @@ const resetFilters = () => {
     idNhaSanXuat: undefined,
     idXuatXu: undefined,
     giaTu: 0,
-    giaDen: 5000000,
+    giaDen: maxPrice.value,
   })
 
   // Reset pagination to first page
