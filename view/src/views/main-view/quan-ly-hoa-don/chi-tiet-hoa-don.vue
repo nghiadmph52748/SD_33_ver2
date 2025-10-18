@@ -259,6 +259,17 @@
         </div>
       </a-card>
 
+      <!-- Timeline đơn hàng -->
+      <a-card class="timeline-card" :bordered="false">
+        <template #title>
+          <div class="card-header">
+            <icon-file />
+            <span>Timeline Đơn Hàng</span>
+          </div>
+        </template>
+        <TimelineDonHang :hoa-don-id="Number(invoiceId)" />
+      </a-card>
+
       <!-- Tổng kết đơn hàng -->
       <a-card class="summary-card" :bordered="false">
         <template #title>
@@ -305,6 +316,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { IconArrowLeft, IconPrinter, IconFile, IconUser } from '@arco-design/web-vue/es/icon'
+import TimelineDonHang from '@/components/timeline-don-hang/timeline-don-hang.vue'
 
 const route = useRoute()
 const router = useRouter()

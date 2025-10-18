@@ -44,9 +44,11 @@ const selectedInvoice = ref<any>(null)
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 80 },
   { title: 'Mã HĐ', dataIndex: 'maHoaDon', width: 120 },
-  { title: 'Khách hàng', dataIndex: 'tenKhachHang', width: 200 },
+  { title: 'Khách hàng', dataIndex: 'tenKhachHang', width: 150 },
+  { title: 'SDT KH', dataIndex: 'soDienThoaiKhachHang', width: 120 },
+  { title: 'Loại đơn', dataIndex: 'moTaLoaiDon', width: 150 },
+  { title: 'Ngày tạo', dataIndex: 'thoiGianTao', width: 150 },
   { title: 'Tổng tiền', dataIndex: 'tongTienSauGiam', width: 150 },
-  { title: 'Ngày tạo', dataIndex: 'ngayTao', width: 150 },
   { title: 'Trạng thái', dataIndex: 'trangThai', width: 100 },
   { title: 'Actions', slotName: 'actions', width: 120 },
 ]

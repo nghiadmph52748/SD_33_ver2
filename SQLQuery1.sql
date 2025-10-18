@@ -1487,6 +1487,373 @@ END
 GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD CHECK  (([ngay_het_han]>[ngay_nhan]))
 GO
+-- Thêm và cải thiện các trường cho bảng hóa đơn
+USE [GearUp]
+GO
+
+-- Thêm trường SDT nhân viên
+ALTER TABLE [dbo].[hoa_don] 
+ADD [so_dien_thoai_nhan_vien] [varchar](12) NULL
+GO
+
+-- Thêm trường mô tả loại đơn hàng chi tiết
+ALTER TABLE [dbo].[hoa_don] 
+ADD [mo_ta_loai_don] [nvarchar](100) NULL
+GO
+
+-- Thêm trường thời gian tạo chi tiết (datetime thay vì chỉ date)
+ALTER TABLE [dbo].[hoa_don] 
+ADD [thoi_gian_tao] [datetime] NULL
+GO
+
+-- Cập nhật dữ liệu mẫu cho các trường mới
+UPDATE [dbo].[hoa_don] 
+SET 
+    [so_dien_thoai_nhan_vien] = '0978123456',
+    [mo_ta_loai_don] = 'Bán hàng online',
+    [thoi_gian_tao] = '2025-09-27 08:30:00'
+WHERE [id] = 1
+GO
+
+UPDATE [dbo].[hoa_don] 
+SET 
+    [so_dien_thoai_nhan_vien] = '0978123456',
+    [mo_ta_loai_don] = 'Bán hàng tại quầy',
+    [thoi_gian_tao] = '2025-09-27 14:15:00'
+WHERE [id] = 2
+GO
+
+-- Tạo bảng loại đơn hàng
+CREATE TABLE [dbo].[loai_don_hang](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[ma_loai_don]  AS ('LDH'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ten_loai_don] [nvarchar](100) NOT NULL,
+	[mo_ta] [nvarchar](255) NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+-- Thêm dữ liệu cho bảng loại đơn hàng
+INSERT [dbo].[loai_don_hang] ([ten_loai_don], [mo_ta], [trang_thai], [deleted], [create_at], [create_by]) VALUES 
+(N'Bán hàng tại quầy', N'Đơn hàng được bán trực tiếp tại cửa hàng', 1, 0, CAST(N'2025-01-15' AS Date), 1),
+(N'Bán hàng online', N'Đơn hàng được đặt qua website hoặc ứng dụng', 1, 0, CAST(N'2025-01-15' AS Date), 1)
+GO
+
+-- Thêm constraint để đảm bảo chỉ có 2 loại đơn hàng
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [CK_hoa_don_mo_ta_loai_don] 
+CHECK ([mo_ta_loai_don] IN ('Bán hàng tại quầy', 'Bán hàng online'))
+GO
+
+-- Tạo bảng timeline quản lý đơn hàng
+CREATE TABLE [dbo].[timeline_don_hang](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_hoa_don] [int] NOT NULL,
+	[id_nhan_vien] [int] NULL,
+	[ma_timeline]  AS ('TL'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[trang_thai_cu] [nvarchar](100) NULL,
+	[trang_thai_moi] [nvarchar](100) NOT NULL,
+	[hanh_dong] [nvarchar](100) NOT NULL,
+	[mo_ta] [nvarchar](500) NULL,
+	[ghi_chu] [nvarchar](500) NULL,
+	[thoi_gian] [datetime] NOT NULL,
+	[ip_address] [varchar](50) NULL,
+	[user_agent] [nvarchar](500) NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+-- Thêm dữ liệu mẫu cho timeline
+INSERT [dbo].[timeline_don_hang] ([id_hoa_don], [id_nhan_vien], [trang_thai_cu], [trang_thai_moi], [hanh_dong], [mo_ta], [ghi_chu], [thoi_gian], [trang_thai], [deleted], [create_at], [create_by]) VALUES 
+(1, 2, NULL, 'Tạo đơn hàng', 'Tạo mới', 'Đơn hàng được tạo thành công', 'Khách hàng đặt hàng online', '2025-09-27 08:30:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+(1, 2, 'Tạo đơn hàng', 'Xác nhận đơn hàng', 'Xác nhận', 'Nhân viên xác nhận đơn hàng', 'Kiểm tra thông tin khách hàng', '2025-09-27 08:45:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+(1, 2, 'Xác nhận đơn hàng', 'Đang chuẩn bị hàng', 'Chuẩn bị', 'Bắt đầu chuẩn bị sản phẩm', 'Lấy hàng từ kho', '2025-09-27 09:00:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+(1, 2, 'Đang chuẩn bị hàng', 'Đang giao hàng', 'Giao hàng', 'Đơn hàng đang được giao', 'Giao cho shipper', '2025-09-27 10:00:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+(1, 2, 'Đang giao hàng', 'Đã giao hàng', 'Hoàn thành', 'Đơn hàng đã giao thành công', 'Khách hàng đã nhận hàng', '2025-09-27 11:30:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+
+(2, 2, NULL, 'Tạo đơn hàng', 'Tạo mới', 'Đơn hàng được tạo tại quầy', 'Khách hàng mua trực tiếp', '2025-09-27 14:15:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+(2, 2, 'Tạo đơn hàng', 'Xác nhận đơn hàng', 'Xác nhận', 'Nhân viên xác nhận đơn hàng', 'Kiểm tra sản phẩm tại quầy', '2025-09-27 14:20:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+(2, 2, 'Xác nhận đơn hàng', 'Đang chuẩn bị hàng', 'Chuẩn bị', 'Bắt đầu chuẩn bị sản phẩm', 'Lấy hàng từ kho', '2025-09-27 14:30:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+(2, 2, 'Đang chuẩn bị hàng', 'Đang giao hàng', 'Giao hàng', 'Đơn hàng đang được giao', 'Giao cho shipper', '2025-09-27 15:00:00', 1, 0, CAST(N'2025-09-27' AS Date), 2),
+(2, 2, 'Đang giao hàng', 'Đã giao hàng', 'Hoàn thành', 'Đơn hàng đã giao thành công', 'Khách hàng đã nhận hàng', '2025-09-27 16:00:00', 1, 0, CAST(N'2025-09-27' AS Date), 2)
+GO
+
+-- Thêm trường thời gian cập nhật cuối
+ALTER TABLE [dbo].[hoa_don] 
+ADD [thoi_gian_cap_nhat] [datetime] NULL
+GO
+
+-- Thêm trường ghi chú nội bộ
+ALTER TABLE [dbo].[hoa_don] 
+ADD [ghi_chu_noi_bo] [nvarchar](500) NULL
+GO
+
+-- Thêm trường mã vận đơn
+ALTER TABLE [dbo].[hoa_don] 
+ADD [ma_van_don] [nvarchar](50) NULL
+GO
+
+-- Thêm trường phương thức giao hàng
+ALTER TABLE [dbo].[hoa_don] 
+ADD [phuong_thuc_giao_hang] [nvarchar](100) NULL
+GO
+
+-- Thêm trường địa chỉ giao hàng chi tiết
+ALTER TABLE [dbo].[hoa_don] 
+ADD [dia_chi_giao_hang_chi_tiet] [nvarchar](500) NULL
+GO
+
+-- Thêm trường trạng thái thanh toán
+ALTER TABLE [dbo].[hoa_don] 
+ADD [trang_thai_thanh_toan] [int] NULL
+GO
+
+-- Thêm trường số tiền đã thanh toán
+ALTER TABLE [dbo].[hoa_don] 
+ADD [so_tien_da_thanh_toan] [decimal](18, 2) NULL
+GO
+
+-- Thêm trường số tiền còn lại
+ALTER TABLE [dbo].[hoa_don] 
+ADD [so_tien_con_lai] [decimal](18, 2) NULL
+GO
+
+-- Cập nhật giá trị mặc định cho các trường mới
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [DF_hoa_don_thoi_gian_tao] DEFAULT (getdate()) FOR [thoi_gian_tao]
+GO
+
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [DF_hoa_don_thoi_gian_cap_nhat] DEFAULT (getdate()) FOR [thoi_gian_cap_nhat]
+GO
+
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [DF_hoa_don_trang_thai_thanh_toan] DEFAULT (0) FOR [trang_thai_thanh_toan]
+GO
+
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [DF_hoa_don_so_tien_da_thanh_toan] DEFAULT (0) FOR [so_tien_da_thanh_toan]
+GO
+
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [DF_hoa_don_so_tien_con_lai] DEFAULT (0) FOR [so_tien_con_lai]
+GO
+
+-- Thêm ràng buộc kiểm tra cho các trường mới
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [CK_hoa_don_so_tien_da_thanh_toan] CHECK ([so_tien_da_thanh_toan] >= 0)
+GO
+
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [CK_hoa_don_so_tien_con_lai] CHECK ([so_tien_con_lai] >= 0)
+GO
+
+ALTER TABLE [dbo].[hoa_don] 
+ADD CONSTRAINT [CK_hoa_don_trang_thai_thanh_toan] CHECK ([trang_thai_thanh_toan] IN (0, 1, 2, 3))
+GO
+
+-- Thêm comment cho các trường mới
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Số điện thoại nhân viên xử lý đơn hàng', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'so_dien_thoai_nhan_vien'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Mô tả chi tiết loại đơn hàng (Bán hàng tại quầy, Bán hàng online)', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'mo_ta_loai_don'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Thời gian tạo hóa đơn chi tiết (bao gồm giờ phút giây)', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'thoi_gian_tao'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Thời gian cập nhật cuối cùng của hóa đơn', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'thoi_gian_cap_nhat'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Ghi chú nội bộ cho nhân viên xử lý', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'ghi_chu_noi_bo'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Mã vận đơn của đơn vị vận chuyển', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'ma_van_don'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Phương thức giao hàng (Giao tận nơi, Tại cửa hàng, Giao nhanh...)', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'phuong_thuc_giao_hang'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Địa chỉ giao hàng chi tiết (có thể khác với địa chỉ khách hàng)', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'dia_chi_giao_hang_chi_tiet'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Trạng thái thanh toán (0: Chưa thanh toán, 1: Đã thanh toán một phần, 2: Đã thanh toán đủ, 3: Hoàn tiền)', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'trang_thai_thanh_toan'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Số tiền đã thanh toán', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'so_tien_da_thanh_toan'
+GO
+
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Số tiền còn lại cần thanh toán', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'hoa_don', 
+    @level2type = N'COLUMN', @level2name = N'so_tien_con_lai'
+GO
+
+-- Thêm foreign key cho bảng timeline
+ALTER TABLE [dbo].[timeline_don_hang]  WITH CHECK ADD FOREIGN KEY([id_hoa_don])
+REFERENCES [dbo].[hoa_don] ([id])
+GO
+
+ALTER TABLE [dbo].[timeline_don_hang]  WITH CHECK ADD FOREIGN KEY([id_nhan_vien])
+REFERENCES [dbo].[nhan_vien] ([id])
+GO
+
+-- Thêm constraints cho bảng timeline
+ALTER TABLE [dbo].[timeline_don_hang] 
+ADD CONSTRAINT [DF_timeline_don_hang_thoi_gian] DEFAULT (getdate()) FOR [thoi_gian]
+GO
+
+ALTER TABLE [dbo].[timeline_don_hang] 
+ADD CONSTRAINT [DF_timeline_don_hang_trang_thai] DEFAULT (1) FOR [trang_thai]
+GO
+
+ALTER TABLE [dbo].[timeline_don_hang] 
+ADD CONSTRAINT [DF_timeline_don_hang_deleted] DEFAULT (0) FOR [deleted]
+GO
+
+-- Thêm comment cho bảng timeline
+EXEC sys.sp_addextendedproperty 
+    @name = N'MS_Description', 
+    @value = N'Bảng timeline theo dõi quá trình xử lý đơn hàng', 
+    @level0type = N'SCHEMA', @level0name = N'dbo', 
+    @level1type = N'TABLE', @level1name = N'timeline_don_hang'
+GO
+
+-- Query để lấy dữ liệu hóa đơn với đầy đủ thông tin
+USE [GearUp]
+GO
+
+-- View để lấy thông tin hóa đơn đầy đủ
+CREATE VIEW [dbo].[v_hoa_don_full_info] AS
+SELECT 
+    hd.id,
+    hd.ma_hoa_don,
+    hd.ten_hoa_don,
+    hd.loai_don,
+    hd.mo_ta_loai_don,
+    hd.thoi_gian_tao,
+    hd.ngay_tao,
+    hd.ngay_thanh_toan,
+    hd.tong_tien,
+    hd.tong_tien_sau_giam,
+    hd.phi_van_chuyen,
+    hd.ghi_chu,
+    hd.trang_thai,
+    hd.deleted,
+    
+    -- Thông tin khách hàng
+    hd.ten_khach_hang,
+    hd.so_dien_thoai_khach_hang,
+    hd.email_khach_hang,
+    hd.dia_chi_khach_hang,
+    
+    -- Thông tin nhân viên
+    hd.ten_nhan_vien,
+    hd.ma_nhan_vien,
+    hd.so_dien_thoai_nhan_vien,
+    
+    -- Thông tin phiếu giảm giá
+    hd.ten_phieu_giam_gia,
+    hd.ma_phieu_giam_gia,
+    
+    -- Thông tin bổ sung
+    hd.thoi_gian_cap_nhat,
+    hd.ghi_chu_noi_bo,
+    hd.ma_van_don,
+    hd.phuong_thuc_giao_hang,
+    hd.dia_chi_giao_hang_chi_tiet,
+    hd.trang_thai_thanh_toan,
+    hd.so_tien_da_thanh_toan,
+    hd.so_tien_con_lai
+FROM [dbo].[hoa_don] hd
+WHERE hd.deleted = 0
+GO
+
+-- Query mẫu để test dữ liệu
+SELECT TOP 10 
+    id,
+    ma_hoa_don,
+    ten_khach_hang,
+    so_dien_thoai_khach_hang,
+    ten_nhan_vien,
+    mo_ta_loai_don,
+    thoi_gian_tao,
+    tong_tien_sau_giam,
+    trang_thai
+FROM [dbo].[v_hoa_don_full_info]
+ORDER BY id DESC
+GO
+
 USE [master]
 GO
 ALTER DATABASE [GearUp] SET  READ_WRITE 

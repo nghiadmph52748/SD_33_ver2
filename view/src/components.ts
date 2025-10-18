@@ -8,6 +8,7 @@ import Chart from './components/chart/chart.vue'
 import ProductTable from './components/product-table/product-table.vue'
 import SimpleProductTable from './components/simple-product-table/simple-product-table.vue'
 import ProductTableFromInvoice from './components/product-table-from-invoice/product-table-from-invoice.vue'
+import TimelineDonHang from './components/timeline-don-hang/timeline-don-hang.vue'
 
 // Manually introduce ECharts modules to reduce packing size
 
@@ -31,5 +32,6 @@ export default {
     Vue.component('ProductTable', ProductTable)
     Vue.component('SimpleProductTable', SimpleProductTable)
     Vue.component('ProductTableFromInvoice', ProductTableFromInvoice)
+    Vue.component('TimelineDonHang', TimelineDonHang)
   },
 }

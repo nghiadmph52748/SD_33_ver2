@@ -103,6 +103,10 @@
           {{ formatCurrency(record.tongTienSauGiam || record.tongTien || 0) }}
         </template>
 
+        <template #ngayTao="{ record }">
+          {{ formatDate(record.thoiGianTao || record.ngayTao) }}
+        </template>
+
         <template #payment_method="{ record }">
           <span>{{ record.ngayThanhToan ? 'Đã thanh toán' : 'Chờ thanh toán' }}</span>
         </template>
@@ -207,6 +211,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import { fetchHoaDonList, type HoaDonApiModel } from '@/api/hoa-don'
 import {
   IconFile,
   IconCheckCircle,
@@ -233,7 +238,10 @@ const invoicesList = ref<any[]>([
     id: 1,
     maHoaDon: 'HD000001',
     tenNhanVien: 'Trần Thị Em',
+    soDienThoaiKhachHang: '0123456789',
     tenKhachHang: 'Phạm Văn A',
+    moTaLoaiDon: 'Bán hàng online',
+    thoiGianTao: '2025-09-27 08:30:00',
     tongTienSauGiam: 2250000,
     trangThai: true,
     ngayThanhToan: '2024-01-15',
@@ -243,7 +251,10 @@ const invoicesList = ref<any[]>([
     id: 2,
     maHoaDon: 'HD000002',
     tenNhanVien: 'Trần Thị Em',
+    soDienThoaiKhachHang: '0987654321',
     tenKhachHang: 'Hoàng Thị B',
+    moTaLoaiDon: 'Bán hàng tại quầy',
+    thoiGianTao: '2025-09-27 14:15:00',
     tongTienSauGiam: 3000000,
     trangThai: true,
     ngayThanhToan: '2024-01-16',
@@ -299,8 +310,24 @@ const invoiceColumns = [
     width: 150,
   },
   {
+    title: 'SDT Khách hàng',
+    dataIndex: 'soDienThoaiKhachHang',
+    width: 130,
+  },
+  {
     title: 'Tên Khách Hàng',
     dataIndex: 'tenKhachHang',
+    width: 150,
+  },
+  {
+    title: 'Loại đơn hàng',
+    dataIndex: 'moTaLoaiDon',
+    width: 150,
+  },
+  {
+    title: 'Ngày tạo',
+    dataIndex: 'thoiGianTao',
+    slotName: 'ngayTao',
     width: 150,
   },
   {
@@ -445,19 +472,31 @@ const calculateStatistics = () => {
 const fetchInvoices = async () => {
   try {
     loading.value = true
-    console.log('Đang gọi API: /api/hoa-don-management/playlist')
-    const response = await axios.get('/api/hoa-don-management/playlist')
-    console.log('Response từ backend:', response)
-
-    // Sửa lại để xử lý cả hai trường hợp response
-    if (response.data) {
-      invoicesList.value = response.data.data || response.data || []
-      console.log('Dữ liệu hóa đơn:', invoicesList.value)
-      calculateStatistics()
-      pagination.value.total = invoicesList.value.length
-    } else {
-      console.error('API trả về lỗi:', response.message)
-    }
+    console.log('Đang gọi API hóa đơn...')
+    
+    // Sử dụng API mới
+    const apiData = await fetchHoaDonList()
+    console.log('Dữ liệu từ API:', apiData)
+    
+    // Map dữ liệu để đảm bảo có đầy đủ các trường cần thiết
+    invoicesList.value = apiData.map((invoice: HoaDonApiModel) => ({
+      id: invoice.id,
+      maHoaDon: invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}`,
+      tenNhanVien: invoice.tenNhanVien || 'Chưa xác định',
+      soDienThoaiKhachHang: invoice.soDienThoaiKhachHang || 'Chưa có',
+      tenKhachHang: invoice.tenKhachHang || 'Khách lẻ',
+      moTaLoaiDon: invoice.moTaLoaiDon || (invoice.loaiDon ? 'Bán hàng online' : 'Bán hàng tại quầy'),
+      thoiGianTao: invoice.thoiGianTao || invoice.ngayTao || new Date().toISOString(),
+      tongTienSauGiam: invoice.tongTienSauGiam || invoice.tongTien || 0,
+      trangThai: invoice.trangThai,
+      ngayThanhToan: invoice.ngayThanhToan,
+      hoaDonChiTiets: [] // Sẽ được load riêng nếu cần
+    }))
+    
+    console.log('Dữ liệu hóa đơn đã xử lý:', invoicesList.value)
+    calculateStatistics()
+    pagination.value.total = invoicesList.value.length
+    return
   } catch (error) {
     console.error('Lỗi khi gọi API hóa đơn:', error)
 
@@ -467,7 +506,10 @@ const fetchInvoices = async () => {
         id: 1,
         maHoaDon: 'HD000001',
         tenNhanVien: 'Trần Thị Em',
+        soDienThoaiKhachHang: '0123456789',
         tenKhachHang: 'Phạm Văn A',
+        moTaLoaiDon: 'Bán hàng online',
+        thoiGianTao: '2025-09-27 08:30:00',
         tongTienSauGiam: 2250000,
         trangThai: true,
         ngayThanhToan: '2024-01-15',
@@ -477,7 +519,10 @@ const fetchInvoices = async () => {
         id: 2,
         maHoaDon: 'HD000002',
         tenNhanVien: 'Trần Thị Em',
+        soDienThoaiKhachHang: '0987654321',
         tenKhachHang: 'Hoàng Thị B',
+        moTaLoaiDon: 'Bán hàng tại quầy',
+        thoiGianTao: '2025-09-27 14:15:00',
         tongTienSauGiam: 3000000,
         trangThai: true,
         ngayThanhToan: '2024-01-16',
