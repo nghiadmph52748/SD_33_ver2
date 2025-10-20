@@ -67,12 +67,12 @@
           </a-form>
 
           <!-- Action Buttons -->
-          <div class="action-buttons">
+          <PageActions>
             <a-space>
               <a-button @click="goBack">Hủy</a-button>
               <a-button type="primary" @click="handleSubmit" :loading="submitting">Cập nhật</a-button>
             </a-space>
-          </div>
+          </PageActions>
         </a-card>
       </a-col>
 
@@ -300,6 +300,7 @@ import {
 import dayjs from 'dayjs'
 import axios from 'axios'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import PageActions from '@/components/page-actions/page-actions.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import {
   updatePromotionCampaign,
@@ -827,13 +828,6 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-.action-buttons {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid var(--color-border-2);
-  display: flex;
-  justify-content: flex-end;
-}
 
 .product-selection-section {
   border: 1px solid var(--color-border-2);

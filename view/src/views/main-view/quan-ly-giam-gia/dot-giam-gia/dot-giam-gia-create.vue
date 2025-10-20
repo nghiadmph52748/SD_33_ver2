@@ -185,12 +185,12 @@
       </a-form>
     </a-card>
 
-    <div class="page-actions">
+    <PageActions>
       <a-space>
-        <a-button @click="goBack">Quay lại</a-button>
-        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu giảm giá</a-button>
+        <a-button @click="goBack">Đặt lại</a-button>
+        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Cập nhật</a-button>
       </a-space>
-    </div>
+    </PageActions>
 
     <!-- Confirmation Modal -->
     <a-modal
@@ -268,6 +268,7 @@ import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import PageActions from '@/components/page-actions/page-actions.vue'
 import {
   createPromotionCampaign,
   fetchPromotionCampaigns,
@@ -775,11 +776,6 @@ const confirmSave = async () => {
   margin-top: 16px;
 }
 
-.page-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 24px 0;
-}
 
 /* Product Selection Section Styles */
 .product-selection-section {

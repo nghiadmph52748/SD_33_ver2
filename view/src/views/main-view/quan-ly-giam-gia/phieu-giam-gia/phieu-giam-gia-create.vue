@@ -141,12 +141,12 @@
       </div>
     </a-card>
 
-    <div class="page-actions">
+  <PageActions>
       <a-space>
-        <a-button @click="goBack">Quay lại</a-button>
-        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu phiếu giảm giá</a-button>
+        <a-button @click="goBack">Đặt lại</a-button>
+        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Cập nhật</a-button>
       </a-space>
-    </div>
+    </PageActions>
 
     <!-- Confirmation Modal -->
     <a-modal
@@ -224,6 +224,7 @@ import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
 import { IconUp } from '@arco-design/web-vue/es/icon'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import PageActions from '@/components/page-actions/page-actions.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
 import { createCoupon, fetchCoupons, fetchCustomers, type CustomerApiModel } from '@/api/discount-management'
@@ -914,11 +915,6 @@ const confirmSave = async () => {
   border-bottom: 2px solid var(--color-primary-6);
 }
 
-.page-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 24px 20px;
-}
 
 .featured-layout .customer-selection-section {
   border: none;
