@@ -21,6 +21,7 @@ import locale500 from '@/views/exception/500/locale/vi-VN'
 
 import localeUserInfo from '@/views/user/info/locale/vi-VN'
 import localeUserSetting from '@/views/user/setting/locale/vi-VN'
+import localeDiscount from '@/views/main-view/quan-ly-giam-gia/locale/vi-VN'
 
 // Dashboard components don't use localization
 /** simple end */
@@ -32,8 +33,12 @@ export default {
   'Chỉnh sửa biến thể': 'Chỉnh sửa biến thể',
   'menu.thong-ke': 'Thống kê',
   'menu.thong-ke.chung': 'Thống kê chung',
+  'menu.thong-ke.kho-hang': 'Thống kê kho hàng',
+  'menu.thong-ke.doanh-thu': 'Thống kê doanh thu',
   'menu.ban-hang': 'Bán hàng',
   'menu.ban-hang.index': 'Bán hàng',
+  'menu.ban-hang-tai-quay': 'Bán hàng tại quầy',
+  'menu.ban-hang-tai-quay.index': 'Bán hàng tại quầy',
   'menu.quan-ly-hoa-don': 'Quản lý hoá đơn',
   'menu.quan-ly-hoa-don.index': 'Quản lý hoá đơn',
   'menu.quan-ly-san-pham': 'Quản lý sản phẩm',
@@ -52,6 +57,9 @@ export default {
   'menu.quan-ly-tai-khoan': 'Quản lý tài khoản',
   'menu.quan-ly-tai-khoan.khach-hang': 'Quản lý khách hàng',
   'menu.quan-ly-tai-khoan.nhan-vien': 'Quản lý nhân viên',
+  'menu.khach-hang-nhan-su': 'Quản lý khách hàng & Nhân sự',
+  'menu.khach-hang-nhan-su.khach-hang': 'Quản lý khách hàng',
+  'menu.khach-hang-nhan-su.nhan-vien': 'Quản lý nhân viên',
   'menu.quan-ly-giam-gia': 'Quản lý giảm giá',
   'menu.quan-ly-giam-gia.dot-giam-gia': 'Đợt Giảm Giá',
   'menu.quan-ly-giam-gia.dot-giam-gia.create': 'Tạo đợt giảm giá',
@@ -93,5 +101,6 @@ export default {
   ...locale500,
   ...localeUserInfo,
   ...localeUserSetting,
+  ...localeDiscount,
   /** simple end */
 }

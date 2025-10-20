@@ -21,6 +21,7 @@ import locale500 from '@/views/exception/500/locale/en-US'
 
 import localeUserInfo from '@/views/user/info/locale/en-US'
 import localeUserSetting from '@/views/user/setting/locale/en-US'
+import localeDiscount from '@/views/main-view/quan-ly-giam-gia/locale/en-US'
 
 // Dashboard components don't use localization
 /** simple end */
@@ -34,6 +35,8 @@ export default {
   'menu.thong-ke.chung': 'General Statistics',
   'menu.thong-ke.kho-hang': 'Inventory Statistics',
   'menu.thong-ke.doanh-thu': 'Revenue Statistics',
+  'menu.ban-hang': 'Sales',
+  'menu.ban-hang.index': 'Sales',
   'menu.ban-hang-tai-quay': 'Point of Sale',
   'menu.ban-hang-tai-quay.index': 'Point of Sale',
   'menu.quan-ly-hoa-don': 'Invoice Management',
@@ -51,6 +54,9 @@ export default {
   'menu.quan-ly-san-pham.thuoc-tinh.de-giay': 'Shoe Soles',
   'menu.quan-ly-san-pham.thuoc-tinh.chat-lieu': 'Materials',
   'menu.quan-ly-san-pham.thuoc-tinh.trong-luong': 'Weights',
+  'menu.quan-ly-tai-khoan': 'Account Management',
+  'menu.quan-ly-tai-khoan.khach-hang': 'Customer Management',
+  'menu.quan-ly-tai-khoan.nhan-vien': 'Staff Management',
   'menu.khach-hang-nhan-su': 'Customer & Staff Management',
   'menu.khach-hang-nhan-su.khach-hang': 'Customer Management',
   'menu.khach-hang-nhan-su.nhan-vien': 'Staff Management',
@@ -95,5 +101,6 @@ export default {
   ...locale500,
   ...localeUserInfo,
   ...localeUserSetting,
+  ...localeDiscount,
   /** simple end */
 }

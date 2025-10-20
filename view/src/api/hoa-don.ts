@@ -65,22 +65,22 @@ export interface HoaDonApiModel {
   ghiChu?: string
   trangThai: boolean
   deleted: boolean
-  
+
   // Thông tin khách hàng
   tenKhachHang?: string
   soDienThoaiKhachHang?: string
   emailKhachHang?: string
   diaChiKhachHang?: string
-  
+
   // Thông tin nhân viên
   tenNhanVien?: string
   maNhanVien?: string
   soDienThoaiNhanVien?: string
-  
+
   // Thông tin phiếu giảm giá
   tenPhieuGiamGia?: string
   maPhieuGiamGia?: string
-  
+
   // Thông tin bổ sung
   thoiGianCapNhat?: string
   ghiChuNoiBo?: string
@@ -92,11 +92,9 @@ export interface HoaDonApiModel {
   soTienConLai?: number
 }
 
-export const fetchHoaDonList = () =>
-  requestJson<HoaDonApiModel[]>('/api/hoa-don-management/playlist')
+export const fetchHoaDonList = () => requestJson<HoaDonApiModel[]>('/api/hoa-don-management/playlist')
 
-export const fetchHoaDonById = (id: number) =>
-  requestJson<HoaDonApiModel>(`/api/hoa-don-management/${id}`)
+export const fetchHoaDonById = (id: number) => requestJson<HoaDonApiModel>(`/api/hoa-don-management/${id}`)
 
 export const createHoaDon = (data: Partial<HoaDonApiModel>) =>
   requestJson<HoaDonApiModel>('/api/hoa-don-management', {
@@ -114,5 +112,3 @@ export const deleteHoaDon = (id: number) =>
   requestJson<void>(`/api/hoa-don-management/${id}`, {
     method: 'DELETE',
   })
-
-

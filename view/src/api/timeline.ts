@@ -65,8 +65,7 @@ export interface TimelineItem {
   userAgent?: string
 }
 
-export const fetchTimelineByHoaDonId = (hoaDonId: number) =>
-  requestJson<TimelineItem[]>(`/api/timeline-don-hang/${hoaDonId}`)
+export const fetchTimelineByHoaDonId = (hoaDonId: number) => requestJson<TimelineItem[]>(`/api/timeline-don-hang/${hoaDonId}`)
 
 export const createTimelineItem = (data: Partial<TimelineItem>) =>
   requestJson<TimelineItem>('/api/timeline-don-hang', {
@@ -84,5 +83,3 @@ export const deleteTimelineItem = (id: number) =>
   requestJson<void>(`/api/timeline-don-hang/${id}`, {
     method: 'DELETE',
   })
-
-

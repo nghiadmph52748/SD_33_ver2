@@ -7,41 +7,41 @@
       <div :class="formState.featured ? 'two-column-container' : ''">
         <!-- Left Column: Form -->
         <div :class="formState.featured ? 'left-column' : ''">
-          <div v-if="formState.featured" class="column-title">Thông tin phiếu giảm giá</div>
+          <div v-if="formState.featured" class="column-title">{{ t('discount.coupon.info') }}</div>
 
           <a-form ref="formRef" :model="formState" :rules="rules" layout="vertical">
             <!-- Mã phiếu giảm giá -->
-            <a-form-item field="code" label="Mã phiếu giảm giá">
-              <a-input v-model="formState.code" placeholder="Nhập mã phiếu giảm giá" allow-clear />
+            <a-form-item field="code" :label="t('discount.coupon.code')">
+              <a-input v-model="formState.code" :placeholder="t('discount.coupon.codePlaceholder')" allow-clear />
             </a-form-item>
 
             <!-- Tên phiếu giảm giá -->
-            <a-form-item field="name" label="Tên phiếu giảm giá">
-              <a-input v-model="formState.name" placeholder="Nhập tên phiếu giảm giá..." allow-clear />
+            <a-form-item field="name" :label="t('discount.coupon.name')">
+              <a-input v-model="formState.name" :placeholder="t('discount.coupon.namePlaceholder')" allow-clear />
             </a-form-item>
 
             <!-- Loại giảm giá -->
-            <a-form-item field="discountMode" label="Loại giảm giá">
-              <a-select v-model="formState.discountMode" placeholder="Chọn loại giảm giá">
-                <a-option value="percentage">Giảm theo phần trăm</a-option>
-                <a-option value="amount">Giảm theo số tiền</a-option>
+            <a-form-item field="discountMode" :label="t('discount.coupon.discountType')">
+              <a-select v-model="formState.discountMode" :placeholder="t('discount.coupon.discountTypePlaceholder')">
+                <a-option value="percentage">{{ t('discount.coupon.discountType.percentage') }}</a-option>
+                <a-option value="amount">{{ t('discount.coupon.discountType.amount') }}</a-option>
               </a-select>
             </a-form-item>
 
             <!-- Giá trị giảm -->
-            <a-form-item field="discountValue" label="Giá trị giảm">
+            <a-form-item field="discountValue" :label="t('discount.coupon.discountValue')">
               <a-input
                 v-model="displayDiscountValue"
                 @blur="handleDiscountBlur"
                 @focus="handleDiscountFocus"
                 @input="handleDiscountInput"
-                :placeholder="isPercent ? 'Giá trị từ 0 - 100' : 'Giá trị từ 0 - 100.000.000 VND'"
+:placeholder="isPercent ? t('discount.coupon.discountValuePlaceholder.percentage') : t('discount.coupon.discountValuePlaceholder.amount')"
                 style="width: 100%"
               />
             </a-form-item>
 
             <!-- Thời gian áp dụng -->
-            <a-form-item field="dateRange" label="Thời gian áp dụng">
+            <a-form-item field="dateRange" :label="t('discount.coupon.validityPeriod')">
               <a-range-picker
                 v-model="formState.dateRange"
                 :show-time="true"
@@ -49,40 +49,41 @@
                 format="DD/MM/YYYY HH:mm"
                 allow-clear
                 :disabled-date="disablePastDates"
+                :placeholder="[t('discount.common.selectStartDate'), t('discount.common.selectEndDate')]"
                 style="width: 100%"
               />
             </a-form-item>
 
             <!-- Giá trị đơn hàng tối thiểu -->
-            <a-form-item field="minOrder" label="Giá trị đơn hàng tối thiểu">
+            <a-form-item field="minOrder" :label="t('discount.coupon.minOrder')">
               <a-input
                 v-model="displayMinOrder"
                 @blur="handleMinOrderBlur"
                 @focus="handleMinOrderFocus"
                 @input="handleMinOrderInput"
-                placeholder="Giá trị từ 0 - 500.000.000 VND"
+                :placeholder="t('discount.coupon.minOrderPlaceholder')"
                 style="width: 100%"
               />
             </a-form-item>
 
             <!-- Số lượng phiếu -->
-            <a-form-item field="quantity" label="Số lượng phiếu">
+            <a-form-item field="quantity" :label="t('discount.coupon.quantity')">
               <a-input-number
                 v-model="formState.quantity"
                 :min="1"
                 :max="100000"
                 :precision="0"
                 :disabled="formState.featured"
-                :placeholder="formState.featured ? 'Tự động theo số khách hàng' : 'Tối đa: 100.000 phiếu'"
+                :placeholder="formState.featured ? t('discount.coupon.quantityAuto') : t('discount.coupon.quantityPlaceholder')"
                 style="width: 100%"
               />
             </a-form-item>
 
             <!-- Mô tả -->
-            <a-form-item field="description" label="Mô tả">
+            <a-form-item field="description" :label="t('discount.common.description')">
               <a-textarea
                 v-model="formState.description"
-                placeholder="Nhập mô tả cho phiếu giảm giá..."
+                :placeholder="t('discount.coupon.descriptionPlaceholder')"
                 allow-clear
                 :max-length="500"
                 :auto-size="{ minRows: 3, maxRows: 6 }"
@@ -91,9 +92,9 @@
 
             <!-- Phiếu giảm giá riêng tư -->
             <a-form-item field="featured">
-              <a-checkbox v-model="formState.featured">Phiếu giảm giá riêng tư</a-checkbox>
+              <a-checkbox v-model="formState.featured">{{ t('discount.coupon.private') }}</a-checkbox>
               <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Phiếu giảm giá riêng tư chỉ áp dụng cho khách hàng được chọn
+                {{ t('discount.coupon.privateDescription') }}
               </div>
             </a-form-item>
           </a-form>
@@ -101,13 +102,13 @@
 
         <!-- Right Column: Customer Selection -->
         <div v-if="formState.featured" class="right-column">
-          <div class="column-title">Chọn khách hàng</div>
+          <div class="column-title">{{ t('discount.coupon.selectCustomers') }}</div>
           <div class="customer-selection-section">
             <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px">
-              <a-checkbox :model-value="isAllCustomersSelected" @change="toggleAllCustomers">Chọn tất cả</a-checkbox>
-              <a-button size="mini" @click="formState.selectedCustomerIds = []" type="text">Xóa chọn</a-button>
+              <a-checkbox :model-value="isAllCustomersSelected" @change="toggleAllCustomers">{{ t('discount.common.selectAll') }}</a-checkbox>
+              <a-button size="mini" @click="formState.selectedCustomerIds = []" type="text">{{ t('discount.coupon.clearSelection') }}</a-button>
             </div>
-            <a-input-search v-model="customerSearchQuery" placeholder="Tìm kiếm khách hàng..." allow-clear style="margin-bottom: 12px" />
+            <a-input-search v-model="customerSearchQuery" :placeholder="t('discount.coupon.searchCustomers')" allow-clear style="margin-bottom: 12px" />
             <a-table
               row-key="id"
               :columns="customerColumns"
@@ -122,81 +123,81 @@
                 <a-checkbox :model-value="isCustomerSelected(record.id)" @change="toggleCustomerSelection(record.id)" />
               </template>
               <template #empty>
-                <div style="text-align: center; padding: 20px">Không có dữ liệu</div>
+                <div style="text-align: center; padding: 20px">{{ t('discount.common.noData') }}</div>
               </template>
             </a-table>
             <div
               v-if="!customersLoading && filteredCustomers.length === 0"
               style="text-align: center; padding: 20px; color: var(--color-text-3)"
             >
-              Không tìm thấy khách hàng nào
+              {{ t('discount.coupon.noCustomersFound') }}
             </div>
             <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-              Đã chọn:
+              {{ t('discount.common.selected') }}:
               <strong>{{ formState.selectedCustomerIds.length }}</strong>
-              khách hàng
+              {{ t('discount.common.customers') }}
             </div>
           </div>
         </div>
       </div>
     </a-card>
 
-    <div class="page-actions">
+  <PageActions>
       <a-space>
-        <a-button @click="goBack">Quay lại</a-button>
-        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">Lưu phiếu giảm giá</a-button>
+        <a-button @click="goBack">{{ t('discount.common.reset') }}</a-button>
+        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">{{ t('discount.common.update') }}</a-button>
       </a-space>
-    </div>
+    </PageActions>
 
     <!-- Confirmation Modal -->
     <a-modal
       v-model:visible="confirmSaveVisible"
-      title="Xác nhận tạo phiếu giảm giá"
+      :title="t('discount.coupon.confirmCreate')"
       :confirm-loading="confirmSaveSubmitting"
       @ok="confirmSave"
       @cancel="confirmSaveVisible = false"
-      ok-text="Xác nhận"
-      cancel-text="Hủy"
+      :ok-text="t('discount.common.confirm')"
+      :cancel-text="t('discount.common.cancel')"
       width="560px"
     >
-      <p style="margin-bottom: 16px; color: var(--color-text-2)">Vui lòng kiểm tra lại thông tin trước khi lưu:</p>
+      <p style="margin-bottom: 16px; color: var(--color-text-2)">{{ t('discount.coupon.confirmSave') }}</p>
       <a-descriptions :column="1" bordered>
-        <a-descriptions-item label="Mã phiếu giảm giá">
+        <a-descriptions-item :label="t('discount.coupon.code')">
           {{ formState.code }}
         </a-descriptions-item>
-        <a-descriptions-item label="Tên phiếu giảm giá">
+        <a-descriptions-item :label="t('discount.coupon.name')">
           {{ formState.name }}
         </a-descriptions-item>
-        <a-descriptions-item label="Loại giảm giá">
-          {{ isPercent ? 'Giảm theo phần trăm' : 'Giảm theo số tiền' }}
+        <a-descriptions-item :label="t('discount.coupon.discountType')">
+          {{ isPercent ? t('discount.coupon.discountType.percentage') : t('discount.coupon.discountType.amount') }}
         </a-descriptions-item>
-        <a-descriptions-item label="Giá trị giảm">
+        <a-descriptions-item :label="t('discount.coupon.discountValue')">
           <span v-if="isPercent">{{ formState.discountValue }}%</span>
           <span v-else>{{ formatCurrency(formState.discountValue) }}</span>
         </a-descriptions-item>
-        <a-descriptions-item label="Giá trị đơn hàng tối thiểu">
-          {{ formState.minOrder ? formatCurrency(formState.minOrder) : 'Không giới hạn' }}
+        <a-descriptions-item :label="t('discount.coupon.minOrder')">
+          {{ formState.minOrder ? formatCurrency(formState.minOrder) : t('discount.common.unlimited') }}
         </a-descriptions-item>
-        <a-descriptions-item label="Thời gian áp dụng">
+        <a-descriptions-item :label="t('discount.coupon.validityPeriod')">
           {{ formatDateRange(formState.dateRange[0], formState.dateRange[1]) }}
         </a-descriptions-item>
-        <a-descriptions-item label="Số lượng phiếu">
+        <a-descriptions-item :label="t('discount.coupon.quantity')">
           {{ formState.quantity }}
         </a-descriptions-item>
-        <a-descriptions-item v-if="formState.description" label="Mô tả">
+        <a-descriptions-item v-if="formState.description" :label="t('discount.common.description')">
           {{ formState.description }}
         </a-descriptions-item>
-        <a-descriptions-item label="Phiếu giảm giá riêng tư">
-          {{ formState.featured ? 'Có' : 'Không' }}
+        <a-descriptions-item :label="t('discount.coupon.private')">
+          {{ formState.featured ? t('discount.coupon.featured.yes') : t('discount.coupon.featured.no') }}
         </a-descriptions-item>
-        <a-descriptions-item v-if="formState.featured" label="Khách hàng được áp dụng">
+        <a-descriptions-item v-if="formState.featured" :label="t('discount.coupon.appliedCustomers')">
           <div style="max-height: 150px; overflow-y: auto">
             <a-tag v-for="customerId in formState.selectedCustomerIds" :key="customerId" style="margin: 2px">
               {{ getCustomerNameById(customerId) }}
             </a-tag>
           </div>
           <div style="margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-            Tổng: {{ formState.selectedCustomerIds.length }} khách hàng
+            {{ t('discount.common.total') }}: {{ formState.selectedCustomerIds.length }} {{ t('discount.common.customers') }}
           </div>
         </a-descriptions-item>
       </a-descriptions>
@@ -224,11 +225,14 @@ import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
 import { IconUp } from '@arco-design/web-vue/es/icon'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import PageActions from '@/components/page-actions/page-actions.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { createCoupon, fetchCoupons, fetchCustomers, type CustomerApiModel } from '@/api/discount-management'
 import dayjs from 'dayjs'
 
+const { t } = useI18n()
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
 
@@ -243,7 +247,7 @@ const formState = reactive({
   discountValue: null as number | null,
   minOrder: null as number | null,
   dateRange: [] as string[],
-  quantity: 1,
+quantity: null as number | null,
   description: '',
   featured: false,
   selectedCustomerIds: [] as number[],
@@ -255,11 +259,48 @@ const disablePastDates = (current: Date | string) => {
 }
 
 const rules: FormRules = {
-  code: [{ required: true, message: 'Vui lòng nhập mã phiếu giảm giá' }],
-  name: [{ required: true, message: 'Vui lòng nhập tên phiếu giảm giá' }],
-  discountMode: [{ required: true, message: 'Vui lòng chọn hình thức giảm giá' }],
-  discountValue: [{ required: true, message: 'Vui lòng nhập giá trị giảm' }],
-  quantity: [{ required: true, message: 'Vui lòng nhập số lượng áp dụng' }],
+  code: [{ required: true, message: t('discount.coupon.validation.codeRequired') }],
+  name: [{ required: true, message: t('discount.coupon.validation.nameRequired') }],
+  discountMode: [{ required: true, message: t('discount.coupon.validation.discountTypeRequired') }],
+discountValue: [
+    { required: true, message: t('discount.coupon.validation.discountValueRequired') },
+    {
+      validator: (_: any, callback: (msg?: string) => void) => {
+        if (formState.discountValue === null || formState.discountValue === undefined || formState.discountValue === '') {
+          callback(t('discount.coupon.validation.discountValueRequired'))
+          return
+        }
+        const v = Number(formState.discountValue)
+        if (Number.isNaN(v)) {
+          callback(t('discount.coupon.validation.discountValueInvalid'))
+          return
+        }
+        if (isPercent.value) {
+          if (v < 1 || v > 100) {
+            callback(t('discount.coupon.validation.discountPercentRange'))
+            return
+          }
+        } else if (v <= 0) {
+          callback(t('discount.coupon.validation.discountAmountPositive'))
+          return
+        }
+        callback()
+      },
+    },
+  ],
+  quantity: [
+    { required: true, message: t('discount.coupon.validation.quantityRequired') },
+    {
+      validator: (_: any, callback: (msg?: string) => void) => {
+        const v = Number(formState.quantity)
+        if (!Number.isInteger(v) || v <= 0) {
+          callback(t('discount.coupon.validation.quantityPositive'))
+          return
+        }
+        callback()
+      },
+    },
+  ],
   dateRange: [
     { required: true, message: 'Vui lòng chọn khoảng thời gian áp dụng' },
     {
@@ -474,8 +515,8 @@ const handleDiscountBlur = () => {
     // Percentage mode - parse as float to handle decimals
     const value = parseFloat(displayDiscountValue.value.replace(/[^0-9.]/g, ''))
 
-    if (Number.isNaN(value) || value < 0) {
-      formState.discountValue = 0
+if (Number.isNaN(value) || value < 1) {
+      formState.discountValue = 1
     } else if (value > 100) {
       formState.discountValue = 100
       Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
@@ -592,9 +633,13 @@ watch(
 watch(
   () => formState.discountValue,
   (newValue) => {
-    if (isPercent.value && newValue !== undefined && newValue !== null && newValue > 100) {
-      Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
-      formState.discountValue = 100
+    if (isPercent.value && newValue !== undefined && newValue !== null) {
+      if (newValue > 100) {
+        Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+        formState.discountValue = 100
+      } else if (newValue < 1) {
+        formState.discountValue = 1
+      }
     }
   }
 )
@@ -705,14 +750,20 @@ const handleSaveClick = async () => {
   }
 
   const discountValue = Number(formState.discountValue)
-  if (Number.isNaN(discountValue) || discountValue <= 0) {
-    Message.error('Giá trị giảm phải lớn hơn 0')
-    return
-  }
-
-  if (isPercent.value && discountValue > 100) {
-    Message.error('Giá trị giảm theo phần trăm tối đa 100%')
-    return
+if (isPercent.value) {
+    if (Number.isNaN(discountValue) || discountValue < 1) {
+      Message.error('Giá trị giảm theo % phải từ 1 - 100')
+      return
+    }
+    if (discountValue > 100) {
+      Message.error('Giá trị giảm theo phần trăm tối đa 100%')
+      return
+    }
+  } else {
+    if (Number.isNaN(discountValue) || discountValue <= 0) {
+      Message.error('Giá trị giảm phải lớn hơn 0')
+      return
+    }
   }
 
   if (!formState.dateRange || formState.dateRange.length !== 2 || !formState.dateRange[0] || !formState.dateRange[1]) {
@@ -867,11 +918,6 @@ const confirmSave = async () => {
   border-bottom: 2px solid var(--color-primary-6);
 }
 
-.page-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 24px 20px;
-}
 
 .featured-layout .customer-selection-section {
   border: none;
