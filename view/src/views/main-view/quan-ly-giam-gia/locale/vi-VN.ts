@@ -178,6 +178,13 @@ export default {
   'discount.message.couponDisabled': 'Đã tắt phiếu giảm giá',
   'discount.message.updateCouponStatusFailed': 'Không thể cập nhật trạng thái phiếu giảm giá',
 
+  // Validation - Max Discount
+  'discount.validation.maxDiscountRequired': 'Vui lòng nhập giá trị giảm tối đa',
+  'discount.validation.maxDiscountInvalid': 'Giá trị giảm tối đa không hợp lệ',
+  'discount.validation.maxDiscountMin': 'Giá trị giảm tối đa tối thiểu 1.000 VND',
+  'discount.validation.maxDiscountMax': 'Giá trị giảm tối đa không được vượt quá 50.000.000 VND',
+  'discount.validation.maxDiscountLessThanMinOrder': 'Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu',
+
   // Campaign (Đợt giảm giá)
   'discount.campaign.title': 'Đợt giảm giá',
   'discount.campaign.list': 'Danh sách giảm giá',

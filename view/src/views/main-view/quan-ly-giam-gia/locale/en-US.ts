@@ -178,6 +178,13 @@ export default {
   'discount.message.couponDisabled': 'Coupon disabled',
   'discount.message.updateCouponStatusFailed': 'Cannot update coupon status',
 
+  // Validation - Max Discount
+  'discount.validation.maxDiscountRequired': 'Please enter maximum discount',
+  'discount.validation.maxDiscountInvalid': 'Invalid maximum discount',
+  'discount.validation.maxDiscountMin': 'Maximum discount must be at least 1,000 VND',
+  'discount.validation.maxDiscountMax': 'Maximum discount cannot exceed 50,000,000 VND',
+  'discount.validation.maxDiscountLessThanMinOrder': 'Maximum discount must be less than minimum order value',
+
   // Campaign (Đợt giảm giá)
   'discount.campaign.title': 'Discount Campaign',
   'discount.campaign.list': 'Campaign List',

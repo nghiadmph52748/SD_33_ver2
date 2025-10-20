@@ -310,21 +310,25 @@ const rules: FormRules = {
         if (!isPercent.value) return callback()
         const raw = formState.maxDiscount
         if (raw === null || raw === undefined || raw === '') {
-          callback('Vui lòng nhập giá trị giảm tối đa')
+          callback(t('discount.validation.maxDiscountRequired'))
           return
         }
         const v = Number(raw)
-        if (Number.isNaN(v) || v <= 0) {
-          callback('Vui lòng nhập mức giảm tối đa hợp lệ')
+        if (Number.isNaN(v)) {
+          callback(t('discount.validation.maxDiscountInvalid'))
+          return
+        }
+        if (v < 1000) {
+          callback(t('discount.validation.maxDiscountMin'))
           return
         }
         if (v > 50000000) {
-          callback('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
+          callback(t('discount.validation.maxDiscountMax'))
           return
         }
         const minOrderValue = Number(formState.minOrder || 0)
         if (minOrderValue > 0 && v >= minOrderValue) {
-          callback('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
+          callback(t('discount.validation.maxDiscountLessThanMinOrder'))
           return
         }
         callback()
@@ -644,19 +648,20 @@ const handleMaxDiscountBlur = () => {
   isEditingMaxDiscount.value = false
   const cleanValue = displayMaxDiscount.value.replace(/\./g, '').replace(/[^0-9]/g, '')
   const value = parseInt(cleanValue, 10)
-  if (Number.isNaN(value) || value <= 0) {
-    formState.maxDiscount = 1
+  if (Number.isNaN(value) || value < 1000) {
+    formState.maxDiscount = 1000
+    Message.warning(t('discount.validation.maxDiscountMin'))
   } else if (value > 50000000) {
     formState.maxDiscount = 50000000
-    Message.warning('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
+    Message.warning(t('discount.validation.maxDiscountMax'))
   } else {
     formState.maxDiscount = Math.round(value)
   }
   // Validate relation with minOrder
   const minOrderValue = Number(formState.minOrder || 0)
   if (minOrderValue > 0 && formState.maxDiscount >= minOrderValue) {
-    formState.maxDiscount = Math.max(1, minOrderValue - 1)
-    Message.warning('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
+    formState.maxDiscount = Math.max(1000, minOrderValue - 1)
+    Message.warning(t('discount.validation.maxDiscountLessThanMinOrder'))
   }
   displayMaxDiscount.value = `${formatNumberWithSeparator(formState.maxDiscount)} VND`
 }
@@ -878,19 +883,23 @@ if (isPercent.value) {
     return
   }
 
-if (isPercent.value) {
+  if (isPercent.value) {
     const capValue = Number(formState.maxDiscount)
-    if (!capValue || Number.isNaN(capValue) || capValue <= 0) {
-      Message.error('Vui lòng nhập mức giảm tối đa hợp lệ')
+    if (Number.isNaN(capValue)) {
+      Message.error(t('discount.validation.maxDiscountInvalid'))
+      return
+    }
+    if (capValue < 1000) {
+      Message.error(t('discount.validation.maxDiscountMin'))
       return
     }
     if (capValue > 50000000) {
-      Message.error('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
+      Message.error(t('discount.validation.maxDiscountMax'))
       return
     }
     const minOrderValue = Number(formState.minOrder || 0)
     if (minOrderValue > 0 && capValue >= minOrderValue) {
-      Message.error('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
+      Message.error(t('discount.validation.maxDiscountLessThanMinOrder'))
       return
     }
   } else {
