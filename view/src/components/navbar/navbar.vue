@@ -62,19 +62,17 @@
         </a-tooltip>
       </li>
       <li>
-        <a-tooltip :content="t('navbar.action.locale')">
-          <a-select
-            v-model="currentLocale"
-            :trigger-props="{ autoFitPopupMinWidth: true }"
-            :options="localeOptions"
-            @change="changeLocale"
-            class="locale-select"
-          >
-            <template #prefix>
-              <icon-language />
-            </template>
-          </a-select>
-        </a-tooltip>
+        <a-select
+          v-model="currentLocale"
+          :trigger-props="{ autoFitPopupMinWidth: true }"
+          :options="localeOptions"
+          @change="changeLocale"
+          class="locale-select"
+        >
+          <template #prefix>
+            <icon-language />
+          </template>
+        </a-select>
       </li>
       <li>
         <a-tooltip :content="t('settings.title')">
