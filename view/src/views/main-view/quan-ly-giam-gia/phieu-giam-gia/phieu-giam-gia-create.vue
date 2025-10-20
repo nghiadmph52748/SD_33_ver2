@@ -35,7 +35,19 @@
                 @blur="handleDiscountBlur"
                 @focus="handleDiscountFocus"
                 @input="handleDiscountInput"
-:placeholder="isPercent ? t('discount.coupon.discountValuePlaceholder.percentage') : t('discount.coupon.discountValuePlaceholder.amount')"
+                :placeholder="isPercent ? t('discount.coupon.discountValuePlaceholder.percentage') : t('discount.coupon.discountValuePlaceholder.amount')"
+                style="width: 100%"
+              />
+            </a-form-item>
+
+            <!-- Giá trị giảm tối đa (chỉ khi %)-->
+            <a-form-item v-if="isPercent" field="maxDiscount" :label="t('discount.coupon.maxDiscount')">
+              <a-input
+                v-model="displayMaxDiscount"
+                @blur="handleMaxDiscountBlur"
+                @focus="handleMaxDiscountFocus"
+                @input="handleMaxDiscountInput"
+                :placeholder="'Tối đa: 50.000.000 VND'"
                 style="width: 100%"
               />
             </a-form-item>
@@ -175,6 +187,9 @@
           <span v-if="isPercent">{{ formState.discountValue }}%</span>
           <span v-else>{{ formatCurrency(formState.discountValue) }}</span>
         </a-descriptions-item>
+        <a-descriptions-item v-if="isPercent" :label="t('discount.coupon.maxDiscount')">
+          <span>{{ formState.maxDiscount ? formatCurrency(formState.maxDiscount) : t('discount.common.unlimited') }}</span>
+        </a-descriptions-item>
         <a-descriptions-item :label="t('discount.coupon.minOrder')">
           {{ formState.minOrder ? formatCurrency(formState.minOrder) : t('discount.common.unlimited') }}
         </a-descriptions-item>
@@ -245,9 +260,10 @@ const formState = reactive({
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: null as number | null,
+  maxDiscount: null as number | null,
   minOrder: null as number | null,
   dateRange: [] as string[],
-quantity: null as number | null,
+  quantity: null as number | null,
   description: '',
   featured: false,
   selectedCustomerIds: [] as number[],
@@ -262,7 +278,7 @@ const rules: FormRules = {
   code: [{ required: true, message: t('discount.coupon.validation.codeRequired') }],
   name: [{ required: true, message: t('discount.coupon.validation.nameRequired') }],
   discountMode: [{ required: true, message: t('discount.coupon.validation.discountTypeRequired') }],
-discountValue: [
+  discountValue: [
     { required: true, message: t('discount.coupon.validation.discountValueRequired') },
     {
       validator: (_: any, callback: (msg?: string) => void) => {
@@ -282,6 +298,37 @@ discountValue: [
           }
         } else if (v <= 0) {
           callback(t('discount.coupon.validation.discountAmountPositive'))
+          return
+        }
+        callback()
+      },
+    },
+  ],
+  maxDiscount: [
+    {
+      validator: (_: any, callback: (msg?: string) => void) => {
+        if (!isPercent.value) return callback()
+        const raw = formState.maxDiscount
+        if (raw === null || raw === undefined || raw === '') {
+          callback(t('discount.validation.maxDiscountRequired'))
+          return
+        }
+        const v = Number(raw)
+        if (Number.isNaN(v)) {
+          callback(t('discount.validation.maxDiscountInvalid'))
+          return
+        }
+        if (v < 1000) {
+          callback(t('discount.validation.maxDiscountMin'))
+          return
+        }
+        if (v > 50000000) {
+          callback(t('discount.validation.maxDiscountMax'))
+          return
+        }
+        const minOrderValue = Number(formState.minOrder || 0)
+        if (minOrderValue > 0 && v >= minOrderValue) {
+          callback(t('discount.validation.maxDiscountLessThanMinOrder'))
           return
         }
         callback()
@@ -465,6 +512,10 @@ watch(
     if (mode === 'percentage' && formState.discountValue > 100) {
       formState.discountValue = 100
     }
+    if (mode === 'amount') {
+      formState.maxDiscount = null
+      displayMaxDiscount.value = ''
+    }
   }
 )
 
@@ -570,6 +621,63 @@ watch(
       displayDiscountValue.value = `${formatNumberWithSeparator(formState.discountValue)} VND`
     }
   }
+)
+
+// Display value for maxDiscount field
+const displayMaxDiscount = ref('')
+const isEditingMaxDiscount = ref(false)
+
+const handleMaxDiscountFocus = () => {
+  isEditingMaxDiscount.value = true
+  displayMaxDiscount.value = String(formState.maxDiscount || 0)
+}
+
+const handleMaxDiscountInput = () => {
+  if (!isEditingMaxDiscount.value) return
+  const cleanValue = displayMaxDiscount.value.replace(/\./g, '')
+  const digits = cleanValue.replace(/[^0-9]/g, '')
+  if (digits === '' || digits === '0') {
+    displayMaxDiscount.value = digits
+    return
+  }
+  const formatted = formatNumberWithSeparator(parseInt(digits, 10))
+  displayMaxDiscount.value = formatted
+}
+
+const handleMaxDiscountBlur = () => {
+  isEditingMaxDiscount.value = false
+  const cleanValue = displayMaxDiscount.value.replace(/\./g, '').replace(/[^0-9]/g, '')
+  const value = parseInt(cleanValue, 10)
+  if (Number.isNaN(value) || value < 1000) {
+    formState.maxDiscount = 1000
+    Message.warning(t('discount.validation.maxDiscountMin'))
+  } else if (value > 50000000) {
+    formState.maxDiscount = 50000000
+    Message.warning(t('discount.validation.maxDiscountMax'))
+  } else {
+    formState.maxDiscount = Math.round(value)
+  }
+  // Validate relation with minOrder
+  const minOrderValue = Number(formState.minOrder || 0)
+  if (minOrderValue > 0 && formState.maxDiscount >= minOrderValue) {
+    formState.maxDiscount = Math.max(1000, minOrderValue - 1)
+    Message.warning(t('discount.validation.maxDiscountLessThanMinOrder'))
+  }
+  displayMaxDiscount.value = `${formatNumberWithSeparator(formState.maxDiscount)} VND`
+}
+
+watch(
+  () => formState.maxDiscount,
+  (newValue) => {
+    if (!isEditingMaxDiscount.value) {
+      if (newValue === null || newValue === undefined) {
+        displayMaxDiscount.value = ''
+      } else {
+        displayMaxDiscount.value = `${formatNumberWithSeparator(newValue)} VND`
+      }
+    }
+  },
+  { immediate: true }
 )
 
 // Display value for minOrder field
@@ -775,7 +883,26 @@ if (isPercent.value) {
     return
   }
 
-  if (!isPercent.value) {
+  if (isPercent.value) {
+    const capValue = Number(formState.maxDiscount)
+    if (Number.isNaN(capValue)) {
+      Message.error(t('discount.validation.maxDiscountInvalid'))
+      return
+    }
+    if (capValue < 1000) {
+      Message.error(t('discount.validation.maxDiscountMin'))
+      return
+    }
+    if (capValue > 50000000) {
+      Message.error(t('discount.validation.maxDiscountMax'))
+      return
+    }
+    const minOrderValue = Number(formState.minOrder || 0)
+    if (minOrderValue > 0 && capValue >= minOrderValue) {
+      Message.error(t('discount.validation.maxDiscountLessThanMinOrder'))
+      return
+    }
+  } else {
     // For fixed amount discount
     const minOrderValue = Number(formState.minOrder || 0)
     if (minOrderValue > 0 && discountValue >= minOrderValue) {
@@ -820,7 +947,7 @@ const confirmSave = async () => {
     tenPhieuGiamGia: formState.name.trim(),
     loaiPhieuGiamGia: !isPercent.value,
     giaTriGiamGia: discountValue,
-    soTienToiDa: null,
+    soTienToiDa: isPercent.value ? Number(formState.maxDiscount ?? 0) : null,
     hoaDonToiThieu: formState.minOrder ? Number(formState.minOrder) : 0,
     soLuongDung: quantityValue,
     ngayBatDau: formState.dateRange[0],

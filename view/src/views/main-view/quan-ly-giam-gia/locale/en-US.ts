@@ -60,6 +60,7 @@ export default {
   'discount.coupon.discountType.percentageShort': 'Percent',
   'discount.coupon.discountType.amountShort': 'Fixed',
   'discount.coupon.discountValue': 'Discount Value',
+  'discount.coupon.maxDiscount': 'Maximum Discount',
   'discount.coupon.discountValuePercentPlaceholder': 'Value from 1 - 100',
   'discount.coupon.discountValueAmountPlaceholder': 'Value from 0 - 100,000,000 VND',
   'discount.coupon.discountValuePlaceholder.percentage': 'Value from 1 - 100',
@@ -176,6 +177,13 @@ export default {
   'discount.message.couponEnabled': 'Coupon enabled',
   'discount.message.couponDisabled': 'Coupon disabled',
   'discount.message.updateCouponStatusFailed': 'Cannot update coupon status',
+
+  // Validation - Max Discount
+  'discount.validation.maxDiscountRequired': 'Please enter maximum discount',
+  'discount.validation.maxDiscountInvalid': 'Invalid maximum discount',
+  'discount.validation.maxDiscountMin': 'Maximum discount must be at least 1,000 VND',
+  'discount.validation.maxDiscountMax': 'Maximum discount cannot exceed 50,000,000 VND',
+  'discount.validation.maxDiscountLessThanMinOrder': 'Maximum discount must be less than minimum order value',
 
   // Campaign (Đợt giảm giá)
   'discount.campaign.title': 'Discount Campaign',
