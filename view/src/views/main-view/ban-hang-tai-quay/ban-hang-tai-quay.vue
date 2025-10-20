@@ -31,19 +31,11 @@
                     :count="order.items.reduce((sum, item) => sum + item.quantity, 0)"
                     :style="{ backgroundColor: '#f5222d' }"
                   />
-                  <a-popconfirm
-                    v-if="orders.length > 1"
-                    title="Xoá đơn hàng này?"
-                    @ok="deleteOrderByIndex(idx)"
-                    ok-text="Xoá"
-                    cancel-text="Hủy"
-                  >
-                    <a-button type="text" size="mini" status="danger" @click.stop class="tab-close-btn">
-                      <template #icon>
-                        <icon-close />
-                      </template>
-                    </a-button>
-                  </a-popconfirm>
+                  <a-button type="text" size="mini" status="danger" class="tab-close-btn" @click.stop="showDeleteConfirm(idx)">
+                    <template #icon>
+                      <icon-close />
+                    </template>
+                  </a-button>
                 </div>
               </template>
 
@@ -172,18 +164,29 @@
         <!-- Payment Section -->
         <a-card title="Thanh Toán" class="payment-card">
           <a-form layout="vertical">
-            <!-- Discount Section -->
-            <a-form-item label="Mã Giảm Giá">
-              <a-select
-                :model-value="paymentForm.value?.discountCode || ''"
-                placeholder="Chọn mã giảm giá..."
-                allow-clear
-                @update:model-value="(val) => paymentForm.value && (paymentForm.value.discountCode = val || null)"
+            <!-- Discount Section - Button Style -->
+            <a-form-item>
+              <a-button
+                v-if="!paymentForm.value?.discountCode"
+                long
+                size="large"
+                type="secondary"
+                style="
+                  height: 56px;
+                  font-size: 15px;
+                  border: 1px solid #d9d9d9;
+                  background: transparent;
+                  color: #000;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  padding: 0 16px;
+                "
+                @click="showVoucherModal = true"
               >
-                <a-option value="SUMMER10">SUMMER10 (10% Off)</a-option>
-                <a-option value="SUMMER20">SUMMER20 (20% Off)</a-option>
-                <a-option value="VIP50">VIP50 (50K Off)</a-option>
-              </a-select>
+                <span style="font-weight: 500; text-align: left">Phiếu Giảm Giá</span>
+                <span style="font-weight: 400; font-size: 12px; text-align: right; color: #999">Chọn hoặc nhập mã ></span>
+              </a-button>
             </a-form-item>
 
             <!-- Payment Method -->
@@ -263,10 +266,58 @@
     <!-- Modals -->
     <!-- Product Selection Modal -->
     <a-modal v-model:visible="showProductModal" title="Chọn Sản Phẩm" width="90%" :footer="null" @cancel="showProductModal = false">
-      <div style="text-align: center; padding: 40px">
-        <a-empty description="Chọn biến thể sản phẩm sẽ được load ở đây" />
-        <p style="color: #86909c; margin-top: 16px">(Component ProductVariantTable)</p>
-      </div>
+      <a-table
+        v-if="productVariants.length > 0"
+        :columns="[
+          { title: 'Mã', dataIndex: 'maChiTietSanPham', key: 'maChiTietSanPham', width: 120 },
+          { title: 'Sản Phẩm', dataIndex: 'tenSanPham', key: 'tenSanPham', width: 200 },
+          { title: 'Màu', dataIndex: 'tenMauSac', key: 'tenMauSac', width: 100 },
+          { title: 'Kích Thước', dataIndex: 'tenKichThuoc', key: 'tenKichThuoc', width: 100 },
+          { title: 'Giá', dataIndex: 'giaBan', key: 'giaBan', width: 100, slotName: 'price' },
+          { title: 'Số Lượng', dataIndex: 'soLuong', key: 'soLuong', width: 80 },
+          { title: 'Hành Động', key: 'action', width: 80, slotName: 'action' },
+        ]"
+        :data="productVariants"
+        size="small"
+        :scroll="{ x: '100%' }"
+        :pagination="{
+          current: productPagination.current,
+          pageSize: productPagination.pageSize,
+          total: productPagination.total,
+          showTotal: true,
+        }"
+        @paginate="(page) => loadProductPage(page)"
+      >
+        <template #price="{ record }">
+          {{ formatCurrency(record.giaBan) }}
+        </template>
+        <template #action="{ record }">
+          <a-button
+            type="primary"
+            size="small"
+            @click="
+              () => {
+                if (currentOrder) {
+                  const item: CartItem = {
+                    id: `${Date.now()}_${Math.random()}`,
+                    productId: record.id?.toString() || '',
+                    productName: record.tenSanPham || '',
+                    price: record.giaBan || 0,
+                    quantity: 1,
+                    image: record.anhSanPham?.[0] || '',
+                  }
+                  currentOrder.items.push(item)
+                  showProductModal = false
+                  Message.success('Thêm sản phẩm thành công')
+                }
+              }
+            "
+          >
+            Thêm
+          </a-button>
+        </template>
+      </a-table>
+      <a-empty v-else description="Không có sản phẩm" />
     </a-modal>
 
     <!-- QR Scanner Modal -->
@@ -322,6 +373,133 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- Voucher Selection Modal -->
+    <a-modal v-model:visible="showVoucherModal" title="Chọn Phiếu Giảm Giá" width="900px" :footer="null" @cancel="showVoucherModal = false">
+      <div style="max-height: 600px; overflow-y: auto">
+        <a-empty v-if="coupons.length === 0" description="Không có phiếu giảm giá" />
+        <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px">
+          <div
+            v-for="coupon in coupons"
+            :key="coupon.id"
+            style="
+              border: 1px solid #e5e5e5;
+              border-radius: 8px;
+              padding: 16px;
+              cursor: pointer;
+              transition: all 0.3s;
+              background: linear-gradient(135deg, #fff8e1 0%, #fff 100%);
+              position: relative;
+              overflow: hidden;
+            "
+            @click="selectVoucher(coupon)"
+            @mouseenter="
+              (e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                e.currentTarget.style.transform = 'translateY(-4px)'
+              }
+            "
+            @mouseleave="
+              (e) => {
+                e.currentTarget.style.boxShadow = 'none'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }
+            "
+          >
+            <!-- Dashed border decoration -->
+            <div
+              style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border: 2px dashed #e5e5e5;
+                border-radius: 8px;
+                pointer-events: none;
+              "
+            ></div>
+
+            <!-- Content -->
+            <div style="position: relative; z-index: 1">
+              <!-- Header with code -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px">
+                <div style="flex: 1">
+                  <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 4px">
+                    {{ coupon.maPhieuGiamGia }}
+                  </div>
+                  <div style="font-size: 12px; color: #86909c; line-height: 1.4">
+                    {{ coupon.tenPhieuGiamGia }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Discount value (main attraction) -->
+              <div
+                style="
+                  background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%);
+                  color: white;
+                  padding: 12px;
+                  border-radius: 4px;
+                  margin-bottom: 12px;
+                  text-align: center;
+                "
+              >
+                <div style="font-size: 20px; font-weight: 700">
+                  {{ formatCurrency(Number(coupon.giaTriGiamGia) || 0) }}
+                </div>
+              </div>
+
+              <!-- Min order -->
+              <div v-if="coupon.hoaDonToiThieu" style="font-size: 12px; color: #86909c; margin-bottom: 8px">
+                Hoá đơn tối thiểu:
+                <strong>{{ formatCurrency(Number(coupon.hoaDonToiThieu)) }}</strong>
+              </div>
+
+              <!-- Quantity left -->
+              <div v-if="coupon.soLuongDung" style="font-size: 12px; color: #86909c; margin-bottom: 12px">
+                Còn lại:
+                <strong style="color: #f5222d">{{ coupon.soLuongDung }}</strong>
+              </div>
+
+              <!-- Validity period -->
+              <div
+                v-if="coupon.ngayKetThuc"
+                style="font-size: 11px; color: #86909c; margin-bottom: 12px; padding: 8px; background: #f5f5f5; border-radius: 4px"
+              >
+                Hết hạn: {{ coupon.ngayKetThuc }}
+              </div>
+
+              <!-- Select button -->
+              <a-button
+                type="primary"
+                long
+                @click.stop="selectVoucher(coupon)"
+                style="background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%); border: none"
+              >
+                Chọn Mã
+              </a-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- Delete Order Confirm Modal -->
+    <a-modal
+      v-model:visible="showDeleteConfirmModal"
+      title="Xoá Đơn Hàng"
+      width="400px"
+      @ok="confirmDeleteOrder"
+      @cancel="showDeleteConfirmModal = false"
+      ok-text="Xoá"
+      cancel-text="Hủy"
+    >
+      <div style="text-align: center; padding: 0">
+        <a-result status="warning" title="Xác Nhận Xoá Đơn Hàng?" style="margin: 0; padding: 0" />
+        <p style="margin: 4px 0 0 0; color: #666; font-size: 13px">Bạn có chắc muốn xoá đơn hàng này? Hành động này không thể hoàn tác.</p>
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -329,6 +507,10 @@
 import { ref, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck } from '@arco-design/web-vue/es/icon'
+import { getBienTheSanPhamPage, type BienTheSanPham } from '@/api/san-pham/bien-the'
+import { layDanhSachKhachHang, type KhachHangResponse } from '@/api/khach-hang'
+import { fetchCoupons, type CouponApiModel } from '@/api/discount-management'
+import { Message } from '@arco-design/web-vue'
 
 // ==================== TYPES ====================
 interface CartItem {
@@ -359,28 +541,31 @@ interface Customer {
 // ==================== STATE ====================
 const orders = ref<Order[]>([])
 const currentOrderIndex = ref('0')
-const customers = ref<Customer[]>([
-  {
-    id: '1',
-    name: 'Nguyễn Văn A',
-    phone: '0912345678',
-    email: 'nguyenvana@email.com',
-    address: '123 Đường Lê Lợi, Quận 1, TP.HCM',
-  },
-  {
-    id: '2',
-    name: 'Trần Thị B',
-    phone: '0987654321',
-    email: 'tranthib@email.com',
-    address: '456 Đường Nguyễn Huệ, Quận 1, TP.HCM',
-  },
-])
+const customers = ref<Customer[]>([])
+const productVariants = ref<BienTheSanPham[]>([])
+const coupons = ref<CouponApiModel[]>([])
 
 const customerSearchText = ref('')
 const showProductModal = ref(false)
 const showQRScanner = ref(false)
 const showAddCustomerModal = ref(false)
+const showVoucherModal = ref(false)
+const showDeleteConfirmModal = ref(false)
+const deleteConfirmOrderIndex = ref<number | null>(null)
 const confirmLoading = ref(false)
+const loadingData = ref(false)
+
+const productPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
+
+const voucherPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
 
 const paymentForm = ref({
   discountCode: null as string | null,
@@ -417,6 +602,11 @@ const filteredCustomers = computed(() => {
 const selectedCustomer = computed(() => {
   if (!currentOrder.value?.customerId) return null
   return customers.value.find((c) => c.id === currentOrder.value?.customerId)
+})
+
+const selectedCoupon = computed(() => {
+  if (!paymentForm.value?.discountCode) return null
+  return coupons.value.find((c) => c.maPhieuGiamGia === paymentForm.value?.discountCode)
 })
 
 const paginatedCartItems = computed(() => {
@@ -540,6 +730,20 @@ const deleteOrderByIndex = (index: number) => {
   }
 }
 
+const showDeleteConfirm = (index: number) => {
+  deleteConfirmOrderIndex.value = index
+  showDeleteConfirmModal.value = true
+}
+
+const confirmDeleteOrder = () => {
+  if (deleteConfirmOrderIndex.value !== null) {
+    deleteOrderByIndex(deleteConfirmOrderIndex.value)
+    showDeleteConfirmModal.value = false
+    deleteConfirmOrderIndex.value = null
+    Message.success('Đơn hàng đã được xoá')
+  }
+}
+
 const handleOrderChange = (key: string) => {
   currentOrderIndex.value = key
   cartPagination.value.current = 1
@@ -622,9 +826,69 @@ const formatCurrency = (value: number): string => {
 }
 
 // ==================== LIFECYCLE ====================
+const loadInitialData = async () => {
+  loadingData.value = true
+  try {
+    // Load customers
+    const customersResponse = await layDanhSachKhachHang()
+    if (customersResponse?.data) {
+      customers.value = customersResponse.data.map((c: KhachHangResponse) => ({
+        id: c.id.toString(),
+        name: c.tenKhachHang,
+        phone: c.soDienThoai,
+        email: c.email,
+        address: c.listDiaChi?.[0]?.diaChiCuThe || '',
+      }))
+    }
+
+    // Load product variants with pagination
+    const productsResponse = await getBienTheSanPhamPage(1, undefined, 10)
+    if (productsResponse?.data?.data) {
+      productVariants.value = productsResponse.data.data
+      productPagination.value.total = productsResponse.data.totalElements || 0
+      productPagination.value.current = 1
+    }
+
+    // Load coupons
+    const couponsResponse = await fetchCoupons()
+    if (couponsResponse) {
+      coupons.value = couponsResponse
+      voucherPagination.value.total = couponsResponse.length
+    }
+
+    Message.success('Tải dữ liệu thành công')
+  } catch (error) {
+    console.error('Error loading data:', error)
+    Message.error('Không thể tải dữ liệu')
+  } finally {
+    loadingData.value = false
+  }
+}
+
+const loadProductPage = async (page: number) => {
+  try {
+    const productsResponse = await getBienTheSanPhamPage(page, undefined, 10)
+    if (productsResponse?.data?.data) {
+      productVariants.value = productsResponse.data.data
+      productPagination.value.current = page
+      productPagination.value.total = productsResponse.data.totalElements || 0
+    }
+  } catch (error) {
+    console.error('Error loading products:', error)
+    Message.error('Không thể tải sản phẩm')
+  }
+}
+
+const selectVoucher = (coupon: CouponApiModel) => {
+  paymentForm.value.discountCode = coupon.maPhieuGiamGia || coupon.id.toString()
+  showVoucherModal.value = false
+}
+
 onMounted(() => {
   // Initialize with one empty order
   createNewOrder()
+  // Load data from API
+  loadInitialData()
 })
 </script>
 
@@ -635,6 +899,13 @@ onMounted(() => {
 
 .pos-main {
   margin-bottom: 24px;
+}
+
+:deep(.orders-tabs .arco-tabs-tab) {
+  gap: 4px;
+  margin: 0 1px;
+  border: 1px solid black;
+  border-bottom: none;
 }
 
 .pos-left,
