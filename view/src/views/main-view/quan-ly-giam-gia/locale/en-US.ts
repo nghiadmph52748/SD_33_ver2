@@ -60,6 +60,7 @@ export default {
   'discount.coupon.discountType.percentageShort': 'Percent',
   'discount.coupon.discountType.amountShort': 'Fixed',
   'discount.coupon.discountValue': 'Discount Value',
+  'discount.coupon.maxDiscount': 'Maximum Discount',
   'discount.coupon.discountValuePercentPlaceholder': 'Value from 1 - 100',
   'discount.coupon.discountValueAmountPlaceholder': 'Value from 0 - 100,000,000 VND',
   'discount.coupon.discountValuePlaceholder.percentage': 'Value from 1 - 100',

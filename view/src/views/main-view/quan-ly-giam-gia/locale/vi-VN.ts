@@ -60,6 +60,7 @@ export default {
   'discount.coupon.discountType.percentageShort': 'Giảm %',
   'discount.coupon.discountType.amountShort': 'Giảm tiền',
   'discount.coupon.discountValue': 'Giá trị giảm',
+  'discount.coupon.maxDiscount': 'Giá trị giảm tối đa',
   'discount.coupon.discountValuePercentPlaceholder': 'Giá trị từ 1 - 100',
   'discount.coupon.discountValueAmountPlaceholder': 'Giá trị từ 0 - 100.000.000 VND',
   'discount.coupon.discountValuePlaceholder.percentage': 'Giá trị từ 1 - 100',

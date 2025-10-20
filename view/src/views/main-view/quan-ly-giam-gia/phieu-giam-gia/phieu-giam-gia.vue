@@ -264,6 +264,9 @@
           <span v-if="selectedCoupon?.discount_type === 'percentage'">{{ selectedCoupon?.discount_value }}%</span>
           <span v-else>{{ formatCurrency(selectedCoupon?.discount_value ?? 0) }}</span>
         </a-descriptions-item>
+        <a-descriptions-item v-if="selectedCoupon?.discount_type === 'percentage'" :label="t('discount.coupon.maxDiscount')">
+          <span>{{ selectedCoupon?.max_discount_value != null ? formatCurrency(selectedCoupon.max_discount_value) : t('discount.common.unlimited') }}</span>
+        </a-descriptions-item>
         <a-descriptions-item :label="t('discount.coupon.minOrder')">
           {{ selectedCoupon?.min_order_value ? formatCurrency(selectedCoupon.min_order_value) : t('discount.common.unlimited') }}
         </a-descriptions-item>
@@ -815,6 +818,7 @@ interface CouponRecord {
   name: string
   discount_type: 'percentage' | 'fixed'
   discount_value: number
+  max_discount_value?: number | null
   min_order_value: number | null
   usage_limit: number | null
   total_used?: number
@@ -1166,6 +1170,7 @@ const toCouponRecord = (coupon: CouponApiModel, index: number): CouponRecord => 
     discount_type: discountType,
     discount_value: discountValue,
     min_order_value: minOrder,
+    max_discount_value: discountType === 'percentage' ? (coupon.soTienToiDa != null ? Number(coupon.soTienToiDa) : null) : null,
     usage_limit: usageLimit,
     total_used: usedCount,
     total_usage_limit: usageLimit,

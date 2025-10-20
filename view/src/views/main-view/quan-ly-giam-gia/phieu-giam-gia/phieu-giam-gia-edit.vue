@@ -45,6 +45,18 @@
               />
             </a-form-item>
 
+            <!-- Giá trị giảm tối đa (chỉ khi %)-->
+            <a-form-item v-if="isPercentEdit" field="maxDiscount" :label="t('discount.coupon.maxDiscount')">
+              <a-input
+                v-model="displayMaxDiscount"
+                @blur="handleMaxDiscountBlur"
+                @focus="handleMaxDiscountFocus"
+                @input="handleMaxDiscountInput"
+                :placeholder="'Tối đa: 50.000.000 VND'"
+                style="width: 100%"
+              />
+            </a-form-item>
+
             <a-form-item field="dateRange" :label="t('discount.coupon.dateRange')">
               <a-range-picker
                 v-model="couponEditForm.dateRange"
@@ -243,6 +255,7 @@ const couponEditForm = reactive({
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: null as number | null,
+  maxDiscount: null as number | null,
   minOrder: 0,
   quantity: null as number | null,
   dateRange: [] as string[],
@@ -264,6 +277,7 @@ const originalCouponEditForm = reactive({
   name: '',
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: null as number | null,
+  maxDiscount: null as number | null,
   minOrder: 0,
   quantity: null as number | null,
   dateRange: [] as string[],
@@ -297,6 +311,33 @@ const couponEditRules = computed<FormRules>(() => ({
           }
         } else if (v <= 0) {
           callback(t('discount.validation.discountValuePositive'))
+          return
+        }
+        callback()
+      },
+    },
+  ],
+  maxDiscount: [
+    {
+      validator: (_: any, callback: (msg?: string) => void) => {
+        if (!isPercentEdit.value) return callback()
+        const raw = couponEditForm.maxDiscount
+        if (raw === null || raw === undefined || raw === '') {
+          callback('Vui lòng nhập giá trị giảm tối đa')
+          return
+        }
+        const v = Number(raw)
+        if (Number.isNaN(v) || v <= 0) {
+          callback('Vui lòng nhập mức giảm tối đa hợp lệ')
+          return
+        }
+        if (v > 50000000) {
+          callback('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
+          return
+        }
+        const minOrderValue = Number(couponEditForm.minOrder || 0)
+        if (minOrderValue > 0 && v >= minOrderValue) {
+          callback('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
           return
         }
         callback()
@@ -754,6 +795,61 @@ const handleDiscountInput = () => {
   }
 }
 
+// Display value for maxDiscount field
+const displayMaxDiscount = ref('')
+const isEditingMaxDiscount = ref(false)
+
+const handleMaxDiscountFocus = () => {
+  isEditingMaxDiscount.value = true
+  displayMaxDiscount.value = String(couponEditForm.maxDiscount || 0)
+}
+
+const handleMaxDiscountInput = () => {
+  if (!isEditingMaxDiscount.value) return
+  const cleanValue = displayMaxDiscount.value.replace(/\./g, '')
+  const digits = cleanValue.replace(/[^0-9]/g, '')
+  if (digits === '' || digits === '0') {
+    displayMaxDiscount.value = digits
+    return
+  }
+  const formatted = formatNumberWithSeparator(parseInt(digits, 10))
+  displayMaxDiscount.value = formatted
+}
+
+const handleMaxDiscountBlur = () => {
+  isEditingMaxDiscount.value = false
+  const cleanValue = displayMaxDiscount.value.replace(/\./g, '').replace(/[^0-9]/g, '')
+  const value = parseInt(cleanValue, 10)
+  if (Number.isNaN(value) || value <= 0) {
+    couponEditForm.maxDiscount = 1
+  } else if (value > 50000000) {
+    couponEditForm.maxDiscount = 50000000
+    Message.warning('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
+  } else {
+    couponEditForm.maxDiscount = Math.round(value)
+  }
+  const minOrderValue = Number(couponEditForm.minOrder || 0)
+  if (minOrderValue > 0 && couponEditForm.maxDiscount >= minOrderValue) {
+    couponEditForm.maxDiscount = Math.max(1, minOrderValue - 1)
+    Message.warning('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
+  }
+  displayMaxDiscount.value = `${formatNumberWithSeparator(couponEditForm.maxDiscount)} VND`
+}
+
+watch(
+  () => couponEditForm.maxDiscount,
+  (newValue) => {
+    if (!isEditingMaxDiscount.value) {
+      if (newValue === null || newValue === undefined) {
+        displayMaxDiscount.value = ''
+      } else {
+        displayMaxDiscount.value = `${formatNumberWithSeparator(newValue)} VND`
+      }
+    }
+  },
+  { immediate: true }
+)
+
 // Handle blur - format with .00% or VND
 const handleDiscountBlur = () => {
   isEditingDiscount.value = false
@@ -817,12 +913,15 @@ watch(
       displayDiscountValue.value = `${couponEditForm.discountValue.toFixed(2)}%`
     } else {
       displayDiscountValue.value = `${formatNumberWithSeparator(couponEditForm.discountValue)} VND`
+      // reset max discount when switching to amount
+      couponEditForm.maxDiscount = null
+      displayMaxDiscount.value = ''
     }
   }
 )
 
 // Display value for minOrder field
-const displayMinOrder = ref('0 VND')
+const displayMinOrder = ref('')
 const isEditingMinOrder = ref(false)
 
 const handleMinOrderFocus = () => {
@@ -907,6 +1006,7 @@ const loadCouponData = async () => {
     const discountType = coupon.loaiPhieuGiamGia ? 'fixed' : 'percentage'
     couponEditForm.discountMode = discountType === 'percentage' ? 'percentage' : 'amount'
     couponEditForm.discountValue = Number(coupon.giaTriGiamGia ?? 0)
+    couponEditForm.maxDiscount = discountType === 'percentage' ? (coupon.soTienToiDa != null ? Number(coupon.soTienToiDa) : null) : null
     couponEditForm.minOrder = coupon.hoaDonToiThieu ?? 0
     couponEditForm.quantity = coupon.soLuongDung ?? 1
     couponEditForm.dateRange = [coupon.ngayBatDau ?? '', coupon.ngayKetThuc ?? ''].filter(Boolean) as string[]
@@ -921,6 +1021,7 @@ const loadCouponData = async () => {
       name: couponEditForm.name,
       discountMode: couponEditForm.discountMode,
       discountValue: couponEditForm.discountValue,
+      maxDiscount: couponEditForm.maxDiscount,
       minOrder: couponEditForm.minOrder,
       quantity: couponEditForm.quantity,
       dateRange: [...couponEditForm.dateRange],
@@ -1006,6 +1107,20 @@ const handleSubmit = async () => {
       Message.error(t('discount.message.discountPercentMax'))
       return
     }
+    const capValue = Number(couponEditForm.maxDiscount)
+    if (!capValue || Number.isNaN(capValue) || capValue <= 0) {
+      Message.error('Vui lòng nhập mức giảm tối đa hợp lệ')
+      return
+    }
+    if (capValue > 50000000) {
+      Message.error('Giá trị giảm tối đa không được vượt quá 50.000.000 VND')
+      return
+    }
+    const minOrderValue = Number(couponEditForm.minOrder || 0)
+    if (minOrderValue > 0 && capValue >= minOrderValue) {
+      Message.error('Giá trị giảm tối đa phải nhỏ hơn giá trị đơn hàng tối thiểu')
+      return
+    }
   } else {
     if (Number.isNaN(discountValue) || discountValue <= 0) {
       Message.error(t('discount.validation.discountValuePositive'))
@@ -1053,6 +1168,7 @@ const handleSubmit = async () => {
     couponEditForm.name !== originalCouponEditForm.name ||
     couponEditForm.discountMode !== originalCouponEditForm.discountMode ||
     couponEditForm.discountValue !== originalCouponEditForm.discountValue ||
+    couponEditForm.maxDiscount !== originalCouponEditForm.maxDiscount ||
     couponEditForm.minOrder !== originalCouponEditForm.minOrder ||
     couponEditForm.quantity !== originalCouponEditForm.quantity ||
     couponEditForm.dateRange[0] !== originalCouponEditForm.dateRange[0] ||
@@ -1090,7 +1206,7 @@ const confirmCouponEdit = async () => {
     tenPhieuGiamGia: couponEditForm.name.trim(),
     loaiPhieuGiamGia: couponEditForm.discountMode === 'amount',
     giaTriGiamGia: discountValue,
-    soTienToiDa: null,
+    soTienToiDa: isPercentEdit.value ? Number(couponEditForm.maxDiscount ?? 0) : null,
     hoaDonToiThieu: couponEditForm.minOrder ? Number(couponEditForm.minOrder) : 0,
     soLuongDung: quantityValue,
     ngayBatDau: startDate,
