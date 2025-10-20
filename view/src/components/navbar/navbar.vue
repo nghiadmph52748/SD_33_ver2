@@ -62,6 +62,21 @@
         </a-tooltip>
       </li>
       <li>
+        <a-tooltip :content="t('navbar.action.locale')">
+          <a-select
+            v-model="currentLocale"
+            :trigger-props="{ autoFitPopupMinWidth: true }"
+            :options="localeOptions"
+            @change="changeLocale"
+            class="locale-select"
+          >
+            <template #prefix>
+              <icon-language />
+            </template>
+          </a-select>
+        </a-tooltip>
+      </li>
+      <li>
         <a-tooltip :content="t('settings.title')">
           <a-button class="nav-btn" type="outline" :shape="'circle'" @click="setVisible">
             <template #icon>
@@ -97,9 +112,12 @@ import { Message } from '@arco-design/web-vue'
 import { useDark, useFullscreen, useToggle } from '@vueuse/core'
 import { computed, inject, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { LOCALE_OPTIONS } from '@/locale'
 import MessageBox from '../message-box/message-box.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const currentLocale = ref(locale.value)
+const localeOptions = LOCALE_OPTIONS
 
 const appStore = useAppStore()
 const userStore = useUserStore()
@@ -153,6 +171,11 @@ const switchGit = () => {
 }
 const open = (val: string) => {
   window.open(`https://vuejs-core.cn/${val}`)
+}
+const changeLocale = (value: string) => {
+  locale.value = value
+  localStorage.setItem('arco-locale', value)
+  Message.success(t('navbar.action.locale'))
 }
 </script>
 
