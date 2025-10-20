@@ -9,7 +9,7 @@
         <template #icon>
           <icon-left />
         </template>
-        Quay lại
+        {{ t('discount.common.back') }}
       </a-button>
     </div>
 
@@ -17,35 +17,35 @@
     <a-row :gutter="[16, 16]">
       <!-- Left Column: Form -->
       <a-col :span="couponEditForm.featured ? 12 : 24">
-        <a-card title="Thông tin phiếu giảm giá">
+        <a-card :title="t('discount.coupon.info')">
           <a-form ref="couponEditFormRef" :model="couponEditForm" :rules="couponEditRules" layout="vertical">
-            <a-form-item field="code" label="Mã phiếu giảm giá">
-              <a-input v-model="couponEditForm.code" placeholder="Nhập mã phiếu giảm giá" allow-clear />
+            <a-form-item field="code" :label="t('discount.coupon.code')">
+              <a-input v-model="couponEditForm.code" :placeholder="t('discount.coupon.codePlaceholder')" allow-clear />
             </a-form-item>
 
-            <a-form-item field="name" label="Tên phiếu giảm giá">
-              <a-input v-model="couponEditForm.name" placeholder="Nhập tên phiếu" allow-clear />
+            <a-form-item field="name" :label="t('discount.coupon.name')">
+              <a-input v-model="couponEditForm.name" :placeholder="t('discount.coupon.namePlaceholder')" allow-clear />
             </a-form-item>
 
-            <a-form-item field="discountMode" label="Loại giảm giá">
-              <a-select v-model="couponEditForm.discountMode" placeholder="Chọn loại giảm giá">
-                <a-option value="percentage">Giảm theo phần trăm</a-option>
-                <a-option value="amount">Giảm theo số tiền</a-option>
+            <a-form-item field="discountMode" :label="t('discount.coupon.discountType')">
+              <a-select v-model="couponEditForm.discountMode" :placeholder="t('discount.coupon.discountTypePlaceholder')">
+                <a-option value="percentage">{{ t('discount.coupon.discountType.percentage') }}</a-option>
+                <a-option value="amount">{{ t('discount.coupon.discountType.amount') }}</a-option>
               </a-select>
             </a-form-item>
 
-            <a-form-item field="discountValue" label="Giá trị giảm">
+            <a-form-item field="discountValue" :label="t('discount.coupon.discountValue')">
               <a-input
                 v-model="displayDiscountValue"
                 @blur="handleDiscountBlur"
                 @focus="handleDiscountFocus"
                 @input="handleDiscountInput"
-:placeholder="isPercentEdit ? 'Giá trị từ 1 - 100' : 'Giá trị từ 0 - 100.000.000 VND'"
+                :placeholder="isPercentEdit ? t('discount.coupon.discountValuePercentPlaceholder') : t('discount.coupon.discountValueAmountPlaceholder')"
                 style="width: 100%"
               />
             </a-form-item>
 
-            <a-form-item field="dateRange" label="Thời gian áp dụng">
+            <a-form-item field="dateRange" :label="t('discount.coupon.dateRange')">
               <a-range-picker
                 v-model="couponEditForm.dateRange"
                 :show-time="true"
@@ -57,57 +57,57 @@
               />
             </a-form-item>
 
-            <a-form-item field="minOrder" label="Giá trị đơn hàng tối thiểu">
+            <a-form-item field="minOrder" :label="t('discount.coupon.minOrder')">
               <a-input
                 v-model="displayMinOrder"
                 @blur="handleMinOrderBlur"
                 @focus="handleMinOrderFocus"
                 @input="handleMinOrderInput"
-                placeholder="Giá trị từ 0 - 500.000.000 VND"
+                :placeholder="t('discount.coupon.minOrderPlaceholder')"
                 style="width: 100%"
               />
             </a-form-item>
 
-            <a-form-item field="quantity" label="Số lượng phiếu">
+            <a-form-item field="quantity" :label="t('discount.coupon.quantity')">
               <a-input-number
                 v-model="couponEditForm.quantity"
                 :min="1"
                 :max="100000"
                 :precision="0"
                 :disabled="couponEditForm.featured"
-                :placeholder="couponEditForm.featured ? 'Tự động theo số khách hàng' : 'Tối đa: 100.000 phiếu'"
+                :placeholder="couponEditForm.featured ? t('discount.coupon.quantityAutoPlaceholder') : t('discount.coupon.quantityPlaceholder')"
                 style="width: 100%"
               />
             </a-form-item>
 
-            <a-form-item field="description" label="Mô tả">
+            <a-form-item field="description" :label="t('discount.coupon.description')">
               <a-textarea
                 v-model="couponEditForm.description"
-                placeholder="Nhập mô tả cho phiếu giảm giá..."
+                :placeholder="t('discount.coupon.descriptionPlaceholder')"
                 allow-clear
                 :max-length="500"
                 :auto-size="{ minRows: 3, maxRows: 6 }"
               />
             </a-form-item>
 
-            <a-form-item field="active" label="Trạng thái">
+            <a-form-item field="active" :label="t('discount.coupon.status')">
               <a-radio-group v-model="couponEditForm.active" type="button">
-                <a-radio :value="true">Hoạt động</a-radio>
-                <a-radio :value="false">Không hoạt động</a-radio>
+                <a-radio :value="true">{{ t('discount.coupon.status.active') }}</a-radio>
+                <a-radio :value="false">{{ t('discount.coupon.status.inactive') }}</a-radio>
               </a-radio-group>
             </a-form-item>
 
             <a-form-item field="featured">
-              <a-checkbox v-model="couponEditForm.featured">Phiếu giảm giá riêng tư</a-checkbox>
+              <a-checkbox v-model="couponEditForm.featured">{{ t('discount.coupon.privateCoupon') }}</a-checkbox>
               <div style="margin-left: 24px; margin-top: 4px; font-size: 12px; color: var(--color-text-3)">
-                Phiếu giảm giá riêng tư chỉ áp dụng cho khách hàng được chọn
+                {{ t('discount.coupon.privateCouponDescription') }}
               </div>
             </a-form-item>
 
-            <a-form-item field="lyDoThayDoi" label="Lý do thay đổi">
+            <a-form-item field="lyDoThayDoi" :label="t('discount.coupon.changeReason')">
               <a-textarea
                 v-model="couponEditForm.lyDoThayDoi"
-                placeholder="Nhập lý do thay đổi..."
+                :placeholder="t('discount.coupon.changeReasonPlaceholder')"
                 allow-clear
                 :max-length="500"
                 :auto-size="{ minRows: 3, maxRows: 6 }"
@@ -118,8 +118,8 @@
           <!-- Action Buttons -->
           <PageActions>
             <a-space>
-              <a-button @click="goBack">Hủy</a-button>
-              <a-button type="primary" @click="handleSubmit" :loading="submitting">Cập nhật</a-button>
+              <a-button @click="goBack">{{ t('discount.common.cancel') }}</a-button>
+              <a-button type="primary" @click="handleSubmit" :loading="submitting">{{ t('discount.common.update') }}</a-button>
             </a-space>
           </PageActions>
         </a-card>
@@ -127,22 +127,22 @@
 
       <!-- Right Column: Customer Selection (only if featured) -->
       <a-col :span="12" v-if="couponEditForm.featured">
-        <a-card title="Chọn khách hàng">
+        <a-card :title="t('discount.coupon.selectCustomers')">
           <div class="customer-selection-section">
-            <a-input-search v-model="customerSearchQuery" placeholder="Tìm kiếm khách hàng..." allow-clear style="margin-bottom: 12px" />
+            <a-input-search v-model="customerSearchQuery" :placeholder="t('discount.coupon.searchCustomerPlaceholder')" allow-clear style="margin-bottom: 12px" />
 
             <div style="margin-bottom: 12px; display: flex; gap: 8px">
               <a-button size="small" @click="selectAllEditCustomers">
                 <template #icon>
                   <icon-plus />
                 </template>
-                Chọn tất cả
+                {{ t('discount.common.selectAll') }}
               </a-button>
               <a-button size="small" @click="deselectAllEditCustomers">
                 <template #icon>
                   <icon-delete />
                 </template>
-                Bỏ chọn tất cả
+                {{ t('discount.common.deselectAll') }}
               </a-button>
             </div>
 
@@ -172,9 +172,9 @@
             </a-table>
 
             <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-              Đã chọn:
+              {{ t('discount.common.selected') }}:
               <strong>{{ couponEditForm.selectedCustomerIds.length }}</strong>
-              khách hàng
+              {{ t('discount.common.customers') }}
             </div>
           </div>
         </a-card>
@@ -184,23 +184,21 @@
     <!-- Edit Confirmation Modal -->
     <a-modal
       v-model:visible="couponEditConfirmVisible"
-      title="Xác nhận chỉnh sửa phiếu giảm giá"
+      :title="t('discount.coupon.editConfirmTitle')"
       :confirm-loading="submitting"
-      ok-text="Xác nhận"
+      :ok-text="t('discount.common.confirm')"
       width="500px"
       @ok="confirmCouponEdit"
       @cancel="couponEditConfirmVisible = false"
     >
       <p>
-        Bạn có chắc chắn muốn chỉnh sửa phiếu giảm giá
-        <strong>{{ couponEditForm.name }}</strong>
-        ?
+        {{ t('discount.coupon.editConfirmMessage', { name: couponEditForm.name }) }}
       </p>
       <p class="modal-note">
-        Lý do thay đổi:
+        {{ t('discount.coupon.changeReason') }}:
         <strong>{{ couponEditForm.lyDoThayDoi }}</strong>
       </p>
-      <p class="modal-note">Hành động này sẽ cập nhật thông tin phiếu giảm giá.</p>
+      <p class="modal-note">{{ t('discount.coupon.editConfirmNote') }}</p>
     </a-modal>
 
     <!-- Scroll to Top Button -->
@@ -217,6 +215,7 @@ import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
 import router from '@/router'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
+import { useI18n } from 'vue-i18n'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import PageActions from '@/components/page-actions/page-actions.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
@@ -226,6 +225,7 @@ import { IconPlus, IconDelete, IconLeft, IconUp, IconCheck, IconClose } from '@a
 import dayjs from 'dayjs'
 
 // Router
+const { t } = useI18n()
 const { breadcrumbItems } = useBreadcrumb()
 
 // Get coupon ID from route params
@@ -273,30 +273,30 @@ const originalCouponEditForm = reactive({
   selectedCustomerIds: [] as number[],
 })
 
-const couponEditRules: FormRules = {
-  code: [{ required: true, message: 'Vui lòng nhập mã phiếu giảm giá' }],
-  name: [{ required: true, message: 'Vui lòng nhập tên phiếu giảm giá' }],
-  discountMode: [{ required: true, message: 'Vui lòng chọn hình thức giảm giá' }],
+const couponEditRules = computed<FormRules>(() => ({
+  code: [{ required: true, message: t('discount.validation.codeRequired') }],
+  name: [{ required: true, message: t('discount.validation.nameRequired') }],
+  discountMode: [{ required: true, message: t('discount.validation.discountTypeRequired') }],
   discountValue: [
-    { required: true, message: 'Vui lòng nhập giá trị giảm' },
+    { required: true, message: t('discount.validation.discountValueRequired') },
     {
       validator: (_: any, callback: (msg?: string) => void) => {
         if (couponEditForm.discountValue === null || couponEditForm.discountValue === undefined || couponEditForm.discountValue === '') {
-          callback('Vui lòng nhập giá trị giảm')
+          callback(t('discount.validation.discountValueRequired'))
           return
         }
         const v = Number(couponEditForm.discountValue)
         if (Number.isNaN(v)) {
-          callback('Giá trị giảm không hợp lệ')
+          callback(t('discount.validation.discountValueInvalid'))
           return
         }
         if (isPercentEdit.value) {
           if (v < 1 || v > 100) {
-            callback('Giá trị giảm theo % phải từ 1 - 100')
+            callback(t('discount.validation.discountValuePercentRange'))
             return
           }
         } else if (v <= 0) {
-          callback('Giá trị giảm phải lớn hơn 0')
+          callback(t('discount.validation.discountValuePositive'))
           return
         }
         callback()
@@ -304,12 +304,12 @@ const couponEditRules: FormRules = {
     },
   ],
   quantity: [
-    { required: true, message: 'Vui lòng nhập số lượng áp dụng' },
+    { required: true, message: t('discount.validation.quantityRequired') },
     {
       validator: (_: any, callback: (msg?: string) => void) => {
         const v = Number(couponEditForm.quantity)
         if (!Number.isInteger(v) || v <= 0) {
-          callback('Số lượng áp dụng phải lớn hơn 0')
+          callback(t('discount.validation.quantityPositive'))
           return
         }
         callback()
@@ -317,32 +317,32 @@ const couponEditRules: FormRules = {
     },
   ],
   dateRange: [
-    { required: true, type: 'array', message: 'Vui lòng chọn thời gian áp dụng' },
+    { required: true, type: 'array', message: t('discount.validation.dateRangeRequired') },
     {
       validator: (value: string[], callback: (msg?: string) => void) => {
         if (!Array.isArray(value) || value.length !== 2) {
-          callback('Vui lòng chọn thời gian áp dụng')
+          callback(t('discount.validation.dateRangeRequired'))
           return
         }
         const [start, end] = value
         if (!start || !end) {
-          callback('Vui lòng chọn thời gian áp dụng')
+          callback(t('discount.validation.dateRangeRequired'))
           return
         }
         if (dayjs(start).isBefore(dayjs().startOf('day'))) {
-          callback('Ngày bắt đầu phải từ hôm nay trở đi')
+          callback(t('discount.validation.startDateFuture'))
           return
         }
         if (dayjs(start).isAfter(dayjs(end))) {
-          callback('Ngày kết thúc phải sau ngày bắt đầu')
+          callback(t('discount.validation.endDateAfterStart'))
           return
         }
         callback()
       },
     },
   ],
-  lyDoThayDoi: [{ required: true, message: 'Vui lòng nhập lý do thay đổi' }],
-}
+  lyDoThayDoi: [{ required: true, message: t('discount.validation.changeReasonRequired') }],
+}))
 
 const isPercentEdit = computed(() => couponEditForm.discountMode === 'percentage')
 
@@ -351,25 +351,25 @@ const customers = ref<CustomerApiModel[]>([])
 const customersLoading = ref(false)
 const customerSearchQuery = ref('')
 
-const customerColumns = [
+const customerColumns = computed(() => [
   {
-    title: 'Họ tên',
+    title: t('discount.customer.name'),
     dataIndex: 'tenKhachHang',
     ellipsis: true,
     tooltip: true,
   },
   {
-    title: 'Email',
+    title: t('discount.customer.email'),
     dataIndex: 'email',
     ellipsis: true,
     tooltip: true,
   },
   {
-    title: 'Số điện thoại',
+    title: t('discount.customer.phone'),
     dataIndex: 'soDienThoai',
     width: 130,
   },
-]
+])
 
 const filteredCustomers = computed(() => {
   if (!customerSearchQuery.value) {
@@ -398,7 +398,7 @@ const customerColumnsWithCheckbox = computed(() => [
     width: 50,
     align: 'center' as const,
   },
-  ...customerColumns,
+  ...customerColumns.value,
 ])
 
 const isAllEditCustomersSelected = computed(() => {
@@ -465,14 +465,14 @@ const loadCustomers = async () => {
       customers.value = activeCustomers
 
       if (activeCustomers.length === 0) {
-        Message.info('Không có khách hàng hoạt động')
+        Message.info(t('discount.message.noActiveCustomers'))
       }
     } else {
       customers.value = []
-      Message.warning('Dữ liệu khách hàng không hợp lệ')
+      Message.warning(t('discount.message.invalidCustomerData'))
     }
   } catch {
-    Message.error('Không thể tải danh sách khách hàng')
+    Message.error(t('discount.message.loadCustomersFailed'))
     customers.value = []
   } finally {
     customersLoading.value = false
@@ -519,34 +519,34 @@ const products = ref<ProductApiModel[]>([])
 const productsLoading = ref(false)
 const productSearchQuery = ref('')
 
-const productColumns = [
+const productColumns = computed(() => [
   {
-    title: 'Ảnh',
+    title: t('discount.product.image'),
     dataIndex: 'anhSanPham',
     slotName: 'anhSanPham',
     width: 80,
     align: 'center' as const,
   },
   {
-    title: 'Tên sản phẩm',
+    title: t('discount.product.name'),
     dataIndex: 'tenSanPham',
     slotName: 'tenSanPham',
     ellipsis: true,
     tooltip: true,
   },
   {
-    title: 'Mã SP',
+    title: t('discount.product.code'),
     dataIndex: 'maChiTietSanPham',
     width: 120,
   },
   {
-    title: 'Giá bán',
+    title: t('discount.product.price'),
     dataIndex: 'giaBan',
     slotName: 'giaBan',
     width: 150,
     align: 'right' as const,
   },
-]
+])
 
 const filteredProducts = computed(() => {
   if (!productSearchQuery.value) {
@@ -575,7 +575,7 @@ const productColumnsWithCheckbox = computed(() => [
     width: 50,
     align: 'center' as const,
   },
-  ...productColumns,
+  ...productColumns.value,
 ])
 
 const isAllEditProductsSelected = computed(() => {
@@ -643,14 +643,14 @@ const loadProducts = async () => {
       products.value = activeProducts
 
       if (activeProducts.length === 0) {
-        Message.info('Không có sản phẩm hoạt động')
+        Message.info(t('discount.message.noActiveProducts'))
       }
     } else {
       products.value = []
-      Message.warning('Dữ liệu sản phẩm không hợp lệ')
+      Message.warning(t('discount.message.invalidProductData'))
     }
   } catch {
-    Message.error('Không thể tải danh sách sản phẩm')
+    Message.error(t('discount.message.loadProductsFailed'))
     products.value = []
   } finally {
     productsLoading.value = false
@@ -687,7 +687,7 @@ watch(
     if (isPercentEdit.value) {
       if (value > 100) {
         couponEditForm.discountValue = 100
-        Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+        Message.warning(t('discount.message.discountPercentMax'))
       } else if (value < 1) {
         couponEditForm.discountValue = 1
       }
@@ -766,7 +766,7 @@ const handleDiscountBlur = () => {
       couponEditForm.discountValue = 1
     } else if (value > 100) {
       couponEditForm.discountValue = 100
-      Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+      Message.warning(t('discount.message.discountPercentMax'))
     } else {
       couponEditForm.discountValue = value
     }
@@ -780,7 +780,7 @@ const handleDiscountBlur = () => {
       couponEditForm.discountValue = 0
     } else if (value > 100000000) {
       couponEditForm.discountValue = 100000000
-      Message.warning('Giá trị giảm không được vượt quá 100.000.000 VND')
+      Message.warning(t('discount.message.discountAmountMax'))
     } else {
       couponEditForm.discountValue = Math.round(value)
     }
@@ -856,7 +856,7 @@ const handleMinOrderBlur = () => {
     couponEditForm.minOrder = 0
   } else if (value > 500000000) {
     couponEditForm.minOrder = 500000000
-    Message.warning('Giá trị đơn hàng tối thiểu không được vượt quá 500.000.000 VND')
+    Message.warning(t('discount.message.minOrderMax'))
   } else {
     couponEditForm.minOrder = Math.round(value)
   }
@@ -971,7 +971,7 @@ const loadCouponData = async () => {
       await loadProducts()
     }
   } catch {
-    Message.error('Không thể tải thông tin phiếu giảm giá')
+    Message.error(t('discount.message.loadCouponFailed'))
     goBack()
   } finally {
     loading.value = false
@@ -992,58 +992,58 @@ const handleSubmit = async () => {
 
   // Explicitly check lyDoThayDoi
   if (!couponEditForm.lyDoThayDoi || !couponEditForm.lyDoThayDoi.trim()) {
-    Message.error('Vui lòng nhập lý do thay đổi')
+    Message.error(t('discount.validation.changeReasonRequired'))
     return
   }
 
   const discountValue = Number(couponEditForm.discountValue)
   if (isPercentEdit.value) {
     if (Number.isNaN(discountValue) || discountValue < 1) {
-      Message.error('Giá trị giảm theo % phải từ 1 - 100')
+      Message.error(t('discount.validation.discountValuePercentRange'))
       return
     }
     if (discountValue > 100) {
-      Message.error('Giá trị giảm theo phần trăm tối đa 100%')
+      Message.error(t('discount.message.discountPercentMax'))
       return
     }
   } else {
     if (Number.isNaN(discountValue) || discountValue <= 0) {
-      Message.error('Giá trị giảm phải lớn hơn 0')
+      Message.error(t('discount.validation.discountValuePositive'))
       return
     }
   }
 
   const [startDate, endDate] = couponEditForm.dateRange
   if (!startDate || !endDate) {
-    Message.error('Vui lòng chọn thời gian áp dụng')
+    Message.error(t('discount.validation.dateRangeRequired'))
     return
   }
   if (new Date(startDate) > new Date(endDate)) {
-    Message.error('Ngày kết thúc phải sau ngày bắt đầu')
+    Message.error(t('discount.validation.endDateAfterStart'))
     return
   }
 
   if (!isPercentEdit.value) {
     const minOrderValue = Number(couponEditForm.minOrder || 0)
     if (minOrderValue > 0 && discountValue >= minOrderValue) {
-      Message.error('Giá trị giảm phải nhỏ hơn giá trị đơn hàng tối thiểu')
+      Message.error(t('discount.validation.discountLessThanMinOrder'))
       return
     }
   }
 
   const quantityValue = Number(couponEditForm.quantity)
   if (!Number.isInteger(quantityValue) || quantityValue <= 0) {
-    Message.error('Số lượng áp dụng phải lớn hơn 0')
+    Message.error(t('discount.validation.quantityPositive'))
     return
   }
 
   if (couponEditForm.featured && couponEditForm.selectedCustomerIds.length === 0) {
-    Message.error('Vui lòng chọn ít nhất một khách hàng cho phiếu giảm giá riêng tư')
+    Message.error(t('discount.validation.selectAtLeastOneCustomer'))
     return
   }
 
   if (couponEditForm.applyToProducts && couponEditForm.selectedProductIds.length === 0) {
-    Message.error('Vui lòng chọn ít nhất một sản phẩm để áp dụng giảm giá!')
+    Message.error(t('discount.validation.selectAtLeastOneProduct'))
     return
   }
 
@@ -1066,7 +1066,7 @@ const handleSubmit = async () => {
     JSON.stringify([...couponEditForm.selectedProductIds].sort()) !== JSON.stringify([...originalCouponEditForm.selectedProductIds].sort())
 
   if (!hasChanges) {
-    Message.warning('Không có thay đổi nào để cập nhật')
+    Message.warning(t('discount.message.noChanges'))
     return
   }
 
@@ -1076,7 +1076,7 @@ const handleSubmit = async () => {
 const confirmCouponEdit = async () => {
   // Validate lý do thay đổi before submission
   if (!couponEditForm.lyDoThayDoi || !couponEditForm.lyDoThayDoi.trim()) {
-    Message.error('Vui lòng nhập lý do thay đổi')
+    Message.error(t('discount.validation.changeReasonRequired'))
     couponEditConfirmVisible.value = false
     return
   }
@@ -1112,11 +1112,11 @@ const confirmCouponEdit = async () => {
       params: { idPhieuGiamGia: couponId.value },
     })
 
-    Message.success('Cập nhật phiếu giảm giá thành công')
+    Message.success(t('discount.message.updateCouponSuccess'))
     couponEditConfirmVisible.value = false
     goBack()
   } catch (error: any) {
-    const errorMessage = error.response?.data?.message || error.message || 'Không thể cập nhật phiếu giảm giá'
+    const errorMessage = error.response?.data?.message || error.message || t('discount.message.updateCouponFailed')
     Message.error(errorMessage)
   } finally {
     submitting.value = false

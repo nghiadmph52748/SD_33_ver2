@@ -9,15 +9,15 @@
         <!-- Row 1: Search - Start Date - End Date - Percentage -->
         <a-row :gutter="16">
           <a-col :span="6">
-            <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tên giảm giá..." allow-clear @change="searchPromotions" />
+            <a-form-item :label="t('discount.common.search')">
+              <a-input v-model="filters.search" :placeholder="t('discount.campaign.searchPlaceholder')" allow-clear @change="searchPromotions" />
             </a-form-item>
           </a-col>
           <a-col :span="5">
-            <a-form-item label="Ngày bắt đầu">
+            <a-form-item :label="t('discount.common.startDate')">
               <a-date-picker
                 v-model="filters.startDate"
-                placeholder="Chọn ngày bắt đầu"
+                :placeholder="t('discount.common.selectStartDate')"
                 allow-clear
                 @change="searchPromotions"
                 style="width: 100%"
@@ -25,10 +25,10 @@
             </a-form-item>
           </a-col>
           <a-col :span="5">
-            <a-form-item label="Ngày kết thúc">
+            <a-form-item :label="t('discount.common.endDate')">
               <a-date-picker
                 v-model="filters.endDate"
-                placeholder="Chọn ngày kết thúc"
+                :placeholder="t('discount.common.selectEndDate')"
                 allow-clear
                 @change="searchPromotions"
                 style="width: 100%"
@@ -36,7 +36,7 @@
             </a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="Phần trăm giảm">
+            <a-form-item :label="t('discount.campaign.percentageRange')">
               <div class="percentage-filter">
                 <a-slider
                   class="percentage-slider-control"
@@ -61,11 +61,11 @@
         <!-- Row 2: Status -->
         <a-row :gutter="16">
           <a-col :span="8">
-            <a-form-item label="Trạng thái">
+            <a-form-item :label="t('discount.common.status')">
               <a-radio-group v-model="filters.status" type="button" @change="searchPromotions">
-                <a-radio value="">Tất cả</a-radio>
-                <a-radio value="active">Đang hoạt động</a-radio>
-                <a-radio value="expired">Đã kết thúc</a-radio>
+                <a-radio value="">{{ t('discount.common.status.all') }}</a-radio>
+                <a-radio value="active">{{ t('discount.common.status.active') }}</a-radio>
+                <a-radio value="expired">{{ t('discount.common.status.ended') }}</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-col>
@@ -78,19 +78,19 @@
               <template #icon>
                 <icon-refresh />
               </template>
-              Đặt lại
+              {{ t('discount.common.reset') }}
             </a-button>
             <a-button @click="openExportConfirmModal">
               <template #icon>
                 <icon-download />
               </template>
-              Xuất Excel
+              {{ t('discount.common.export') }}
             </a-button>
             <a-button type="primary" @click="openCreatePage">
               <template #icon>
                 <icon-plus />
               </template>
-              Thêm đợt giảm giá
+              {{ t('discount.campaign.add') }}
             </a-button>
           </a-space>
         </div>
@@ -98,11 +98,11 @@
     </a-card>
 
     <!-- Promotions Table -->
-    <a-card title="Danh sách giảm giá" class="table-card">
+    <a-card :title="t('discount.campaign.list')" class="table-card">
       <template #extra>
         <a-input-search
           v-model="tableSearch"
-          placeholder="Tìm kiếm trong bảng..."
+          :placeholder="t('discount.campaign.tableSearchPlaceholder')"
           allow-clear
           style="width: 300px"
           @search="handleTableSearch"
@@ -179,25 +179,25 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="detailVisible" title="Chi tiết đợt giảm giá" :footer="false" width="900px" :body-style="{ maxHeight: '80vh', overflowY: 'auto' }">
+    <a-modal v-model:visible="detailVisible" :title="t('discount.campaign.detail')" :footer="false" width="900px" :body-style="{ maxHeight: '80vh', overflowY: 'auto' }">
       <a-descriptions :column="2" bordered>
-        <a-descriptions-item label="Tên">{{ selectedPromotion?.name }}</a-descriptions-item>
-        <a-descriptions-item label="Mã">{{ selectedPromotion?.code }}</a-descriptions-item>
-        <a-descriptions-item label="Giá trị giảm">
+        <a-descriptions-item :label="t('discount.common.name')">{{ selectedPromotion?.name }}</a-descriptions-item>
+        <a-descriptions-item :label="t('discount.common.code')">{{ selectedPromotion?.code }}</a-descriptions-item>
+        <a-descriptions-item :label="t('discount.campaign.discountValue')">
           <span class="percentage-badge">{{ selectedPromotion?.percentage }}%</span>
         </a-descriptions-item>
-        <a-descriptions-item label="Trạng thái">
+        <a-descriptions-item :label="t('discount.common.status')">
           <a-tag :color="getStatusColor(selectedPromotion?.status ?? '')">
             {{ selectedPromotion ? getStatusText(selectedPromotion.status) : '' }}
           </a-tag>
         </a-descriptions-item>
-        <a-descriptions-item label="Thời gian" :span="2">
+        <a-descriptions-item :label="t('discount.campaign.validityPeriod')" :span="2">
           {{ formatDateTime(selectedPromotion?.start_date ?? '') }} - {{ formatDateTime(selectedPromotion?.end_date ?? '') }}
         </a-descriptions-item>
-        <a-descriptions-item label="Ngày tạo">
+        <a-descriptions-item :label="t('discount.common.createdAt')">
           {{ selectedPromotion?.created_at ? formatDateTime(selectedPromotion.created_at) : '—' }}
         </a-descriptions-item>
-        <a-descriptions-item label="Ngày cập nhật">
+        <a-descriptions-item :label="t('discount.common.updatedAt')">
           {{ selectedPromotion?.updated_at ? formatDateTime(selectedPromotion.updated_at) : '—' }}
         </a-descriptions-item>
       </a-descriptions>
@@ -207,7 +207,7 @@
       <div class="product-details-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px">
           <h3 style="margin: 0; font-size: 16px; font-weight: 600">
-            Danh sách sản phẩm ({{ promotionProductDetails.length }} biến thể)
+            {{ t('discount.campaign.productList') }} ({{ promotionProductDetails.length }} {{ t('discount.common.variants') }})
           </h3>
           <div style="display: flex; align-items: center; gap: 8px">
             <a-spin v-if="isProductDetailsLoading" size="small" />
@@ -215,14 +215,14 @@
               <template #icon>
                 <icon-refresh />
               </template>
-              Tải lại
+              {{ t('discount.common.reload') }}
             </a-button>
           </div>
         </div>
 
         <div v-if="!isProductDetailsLoading && promotionProductDetails.length === 0" style="text-align: center; padding: 32px; color: var(--color-text-3)">
           <icon-empty style="font-size: 48px; margin-bottom: 8px" />
-          <div>Chưa áp dụng cho sản phẩm nào</div>
+          <div>{{ t('discount.campaign.noProductsApplied') }}</div>
         </div>
 
         <div
@@ -265,7 +265,7 @@
               </div>
               <div style="display: flex; gap: 8px; align-items: center">
                 <a-tag v-if="variant.maChiTietSanPham" size="small" color="blue">{{ variant.maChiTietSanPham }}</a-tag>
-                <span style="font-size: 12px; color: var(--color-text-3)">Tồn: <strong>{{ variant.soLuong ?? 0 }}</strong></span>
+                <span style="font-size: 12px; color: var(--color-text-3)">{{ t('discount.campaign.stock') }}: <strong>{{ variant.soLuong ?? 0 }}</strong></span>
               </div>
             </div>
             <div style="text-align: right; white-space: nowrap">
@@ -284,21 +284,21 @@
       <a-divider style="margin: 24px 0" />
       <div class="history-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px">
-          <h3 style="margin: 0; font-size: 16px; font-weight: 600">Lịch sử thay đổi</h3>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600">{{ t('discount.history.title') }}</h3>
           <div style="display: flex; align-items: center; gap: 8px">
             <a-spin v-if="isHistoryLoading" size="small" />
             <a-button v-else size="small" type="text" @click="selectedPromotion && loadHistory(selectedPromotion.id)">
               <template #icon>
                 <icon-refresh />
               </template>
-              Tải lại
+              {{ t('discount.common.reload') }}
             </a-button>
           </div>
         </div>
 
         <div v-if="!isHistoryLoading && historyList.length === 0" style="text-align: center; padding: 32px; color: var(--color-text-3)">
           <icon-empty style="font-size: 48px; margin-bottom: 8px" />
-          <div>Chưa có lịch sử thay đổi</div>
+          <div>{{ t('discount.history.empty') }}</div>
         </div>
 
         <a-timeline v-else-if="!isHistoryLoading">
@@ -468,9 +468,9 @@
             </a-table>
 
             <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-              Đã chọn:
+              {{ t('discount.common.selected') }}:
               <strong>{{ promotionEditForm.selectedProducts.length }}</strong>
-              biến thể
+              {{ t('discount.common.variants') }}
             </div>
           </div>
         </div>
@@ -519,6 +519,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
@@ -552,6 +553,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 
 // Breadcrumb setup
+const { t } = useI18n()
 const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 
@@ -594,68 +596,68 @@ const tableSearch = ref('')
 // Table
 const loading = ref(false)
 
-const columns = [
+const columns = computed(() => [
   {
     title: 'STT',
     dataIndex: 'index',
     width: 60,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Mã',
+    title: t('discount.common.code'),
     dataIndex: 'code',
     slotName: 'code',
     width: 90,
   },
   {
-    title: 'Tên',
+    title: t('discount.common.name'),
     dataIndex: 'name',
     slotName: 'name',
     width: 170,
   },
   {
-    title: 'Phần trăm giảm',
+    title: t('discount.campaign.percentage'),
     dataIndex: 'percentage',
     slotName: 'percentage',
     width: 100,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Thời gian',
+    title: t('discount.campaign.validityPeriod'),
     dataIndex: 'start_date',
     slotName: 'date_range',
     width: 155,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Trạng thái',
+    title: t('discount.common.status'),
     dataIndex: 'status',
     slotName: 'status',
     width: 100,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Ngày tạo',
+    title: t('discount.common.createdAt'),
     dataIndex: 'created_at',
     slotName: 'created_at',
     width: 120,
-    align: 'left',
+    align: 'left' as const,
   },
   {
-    title: 'Ngày cập nhật',
+    title: t('discount.common.updatedAt'),
     dataIndex: 'updated_at',
     slotName: 'updated_at',
     width: 120,
-    align: 'left',
+    align: 'left' as const,
   },
   {
-    title: 'Thao tác',
+    title: t('discount.common.actions'),
     slotName: 'action',
     width: 100,
-    fixed: 'right',
-    align: 'center',
+    fixed: 'right' as const,
+    align: 'center' as const,
   },
-]
+])
 
 // Pagination - moved after filteredPromotions
 
@@ -954,7 +956,7 @@ const loadPromotions = async () => {
     })
     promotions.value = sorted.map((item, index) => toPromotionRecord(item, index))
   } catch {
-    Message.error({ content: 'Không thể tải danh sách đợt giảm giá', duration: 5000 })
+    Message.error({ content: t('discount.message.loadCampaignsFailed'), duration: 5000 })
   } finally {
     loading.value = false
   }
@@ -1010,13 +1012,13 @@ const getStatusColor = (status: string) => {
 const getStatusText = (status: string) => {
   switch (status) {
     case 'active':
-      return 'Đang hoạt động'
+      return t('discount.campaign.status.active')
     case 'expired':
-      return 'Đã kết thúc'
+      return t('discount.campaign.status.expired')
     case 'upcoming':
-      return 'Sắp diễn ra'
+      return t('discount.campaign.status.upcoming')
     case 'inactive':
-      return 'Tạm dừng'
+      return t('discount.campaign.status.inactive')
     default:
       return status
   }
@@ -1043,7 +1045,7 @@ const loadHistory = async (promotionId: number) => {
     const data = await fetchPromotionHistory(promotionId)
     historyList.value = data
   } catch {
-    Message.error({ content: 'Không thể tải lịch sử thay đổi', duration: 3000 })
+    Message.error({ content: t('discount.message.loadHistoryFailed'), duration: 3000 })
     historyList.value = []
   } finally {
     isHistoryLoading.value = false
@@ -1096,7 +1098,7 @@ const fetchProducts = async () => {
       maChiTietSanPham: item.maChiTietSanPham ?? undefined,
     }))
   } catch {
-    Message.error('Không thể tải danh sách sản phẩm')
+    Message.error(t('discount.message.loadProductsFailed'))
     productOptions.value = []
   } finally {
     productOptionsLoading.value = false
@@ -1117,7 +1119,7 @@ const loadPromotionProductDetails = async (promotionId: number) => {
     // Filter products by IDs
     promotionProductDetails.value = productOptions.value.filter((product) => productIds.includes(product.id))
   } catch {
-    Message.error({ content: 'Không thể tải danh sách sản phẩm', duration: 3000 })
+    Message.error({ content: t('discount.message.loadProductsFailed'), duration: 3000 })
     promotionProductDetails.value = []
   } finally {
     isProductDetailsLoading.value = false

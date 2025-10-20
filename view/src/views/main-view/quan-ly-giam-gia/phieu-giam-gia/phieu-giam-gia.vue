@@ -9,15 +9,15 @@
         <!-- Row 1: Search - Start Date - End Date -->
         <a-row :gutter="12">
           <a-col :span="8">
-            <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Mã, tên, giá trị giảm..." allow-clear @change="searchCoupons" />
+            <a-form-item :label="t('discount.common.search')">
+              <a-input v-model="filters.search" :placeholder="t('discount.coupon.searchPlaceholder')" allow-clear @change="searchCoupons" />
             </a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="Ngày bắt đầu">
+            <a-form-item :label="t('discount.common.startDate')">
               <a-date-picker
                 v-model="filters.startDate"
-                placeholder="Chọn ngày bắt đầu"
+                :placeholder="t('discount.common.selectStartDate')"  
                 allow-clear
                 @change="searchCoupons"
                 style="width: 100%"
@@ -25,10 +25,10 @@
             </a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="Ngày kết thúc">
+            <a-form-item :label="t('discount.common.endDate')">
               <a-date-picker
                 v-model="filters.endDate"
-                placeholder="Chọn ngày kết thúc"
+                :placeholder="t('discount.common.selectEndDate')"
                 allow-clear
                 @change="searchCoupons"
                 style="width: 100%"
@@ -40,20 +40,20 @@
         <!-- Row 2: Discount Type - Status -->
         <a-row :gutter="12">
           <a-col :span="8">
-            <a-form-item label="Loại giảm giá">
+            <a-form-item :label="t('discount.coupon.discountType')">
               <a-radio-group v-model="filters.discountType" type="button" @change="searchCoupons">
-                <a-radio value="">Tất cả</a-radio>
-                <a-radio value="percentage">Giảm %</a-radio>
-                <a-radio value="fixed">Giảm tiền</a-radio>
+                <a-radio value="">{{ t('discount.coupon.discountType.all') }}</a-radio>
+                <a-radio value="percentage">{{ t('discount.coupon.discountType.percentageShort') }}</a-radio>
+                <a-radio value="fixed">{{ t('discount.coupon.discountType.amountShort') }}</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="Trạng thái">
+            <a-form-item :label="t('discount.common.status')">
               <a-radio-group v-model="filters.status" type="button" @change="searchCoupons">
-                <a-radio value="">Tất cả</a-radio>
-                <a-radio value="active">Đang hoạt động</a-radio>
-                <a-radio value="expired">Đã hết hạn</a-radio>
+                <a-radio value="">{{ t('discount.common.status.all') }}</a-radio>
+                <a-radio value="active">{{ t('discount.common.status.active') }}</a-radio>
+                <a-radio value="expired">{{ t('discount.common.status.expired') }}</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-col>
@@ -64,7 +64,7 @@
 
         <div class="slider-grid">
           <div class="slider-block">
-            <div class="slider-title">Giá trị giảm (%)</div>
+            <div class="slider-title">{{ t('discount.coupon.discountValueRange.percent') }}</div>
             <a-slider v-model="filters.discountPercentRange" range :min="0" :max="100" @change="searchCoupons" />
             <div class="slider-values">
               <span class="slider-value-badge">{{ filters.discountPercentRange[0] }}%</span>
@@ -74,7 +74,7 @@
           </div>
 
           <div class="slider-block">
-            <div class="slider-title">Giá trị giảm (VNĐ)</div>
+            <div class="slider-title">{{ t('discount.coupon.discountValueRange.amount') }}</div>
             <a-slider
               v-model="filters.discountAmountRange"
               range
@@ -91,7 +91,7 @@
           </div>
 
           <div class="slider-block">
-            <div class="slider-title">Đơn hàng tối thiểu</div>
+            <div class="slider-title">{{ t('discount.coupon.minOrderRange') }}</div>
             <a-slider
               v-model="filters.minOrderRange"
               range
@@ -108,7 +108,7 @@
           </div>
 
           <div class="slider-block">
-            <div class="slider-title">Số lượng phiếu</div>
+            <div class="slider-title">{{ t('discount.coupon.quantityRange') }}</div>
             <a-slider v-model="filters.quantityRange" range :min="0" :max="DEFAULT_QUANTITY_RANGE[1]" :step="10" @change="searchCoupons" />
             <div class="slider-values">
               <span class="slider-value-badge">{{ filters.quantityRange[0] }}</span>
@@ -126,19 +126,19 @@
               <template #icon>
                 <icon-refresh />
               </template>
-              Đặt lại
+              {{ t('discount.common.reset') }}
             </a-button>
             <a-button type="primary" @click="openCreatePage">
               <template #icon>
                 <icon-plus />
               </template>
-              Thêm phiếu giảm giá
+              {{ t('discount.coupon.add') }}
             </a-button>
             <a-button @click="exportCoupons">
               <template #icon>
                 <icon-download />
               </template>
-              Xuất Excel
+              {{ t('discount.common.export') }}
             </a-button>
           </a-space>
         </div>
@@ -146,11 +146,11 @@
     </a-card>
 
     <!-- Coupons Table -->
-    <a-card title="Danh sách phiếu giảm giá" class="table-card">
+    <a-card :title="t('discount.coupon.list')" class="table-card">
       <template #extra>
         <a-input-search
           v-model="tableSearch"
-          placeholder="Tìm kiếm trong bảng..."
+          :placeholder="t('discount.coupon.tableSearchPlaceholder')"
           allow-clear
           style="width: 300px"
           @search="handleTableSearch"
@@ -174,13 +174,13 @@
           <div class="privacy-badge" :class="{ 'privacy-badge-private': record.featured }">
             <icon-lock v-if="record.featured" class="privacy-icon" />
             <icon-public v-else class="privacy-icon" />
-            <span>{{ record.featured ? 'Riêng tư' : 'Công khai' }}</span>
+            <span>{{ record.featured ? t('discount.coupon.privacy.private') : t('discount.coupon.privacy.public') }}</span>
           </div>
         </template>
 
         <template #discount_type="{ record }">
           <a-tag :color="record.discount_type === 'percentage' ? 'blue' : 'green'">
-            {{ record.discount_type === 'percentage' ? 'Giảm %' : 'Giảm tiền' }}
+            {{ record.discount_type === 'percentage' ? t('discount.coupon.discountType.percentageShort') : t('discount.coupon.discountType.amountShort') }}
           </a-tag>
         </template>
 
@@ -256,58 +256,58 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="couponDetailVisible" title="Chi tiết phiếu giảm giá" :footer="false" width="900px" :body-style="{ maxHeight: '80vh', overflowY: 'auto' }">
+    <a-modal v-model:visible="couponDetailVisible" :title="t('discount.coupon.detail')" :footer="false" width="900px" :body-style="{ maxHeight: '80vh', overflowY: 'auto' }">
       <a-descriptions :column="2" bordered>
-        <a-descriptions-item label="Tên">{{ selectedCoupon?.name }}</a-descriptions-item>
-        <a-descriptions-item label="Mã">{{ selectedCoupon?.code }}</a-descriptions-item>
-        <a-descriptions-item label="Giá trị giảm">
+        <a-descriptions-item :label="t('discount.common.name')">{{ selectedCoupon?.name }}</a-descriptions-item>
+        <a-descriptions-item :label="t('discount.common.code')">{{ selectedCoupon?.code }}</a-descriptions-item>
+        <a-descriptions-item :label="t('discount.coupon.discountValue')">
           <span v-if="selectedCoupon?.discount_type === 'percentage'">{{ selectedCoupon?.discount_value }}%</span>
           <span v-else>{{ formatCurrency(selectedCoupon?.discount_value ?? 0) }}</span>
         </a-descriptions-item>
-        <a-descriptions-item label="Đơn hàng tối thiểu">
-          {{ selectedCoupon?.min_order_value ? formatCurrency(selectedCoupon.min_order_value) : 'Không giới hạn' }}
+        <a-descriptions-item :label="t('discount.coupon.minOrder')">
+          {{ selectedCoupon?.min_order_value ? formatCurrency(selectedCoupon.min_order_value) : t('discount.common.unlimited') }}
         </a-descriptions-item>
-        <a-descriptions-item label="Số lượng">
+        <a-descriptions-item :label="t('discount.coupon.usageLimit')">
           {{ selectedCoupon?.usage_limit ?? '∞' }}
         </a-descriptions-item>
-        <a-descriptions-item label="Thời gian" :span="2">
+        <a-descriptions-item :label="t('discount.coupon.validityPeriod')" :span="2">
           {{ formatDateTime(selectedCoupon?.start_date ?? '') }} - {{ formatDateTime(selectedCoupon?.end_date ?? '') }}
         </a-descriptions-item>
-        <a-descriptions-item label="Trạng thái">
+        <a-descriptions-item :label="t('discount.common.status')">
           <a-tag :color="getStatusColor(selectedCoupon?.status ?? '')">
             {{ selectedCoupon ? getStatusText(selectedCoupon.status) : '' }}
           </a-tag>
         </a-descriptions-item>
-        <a-descriptions-item label="Phiếu giảm giá nổi bật">
+        <a-descriptions-item :label="t('discount.coupon.featured')">
           <a-tag v-if="selectedCoupon?.featured" color="orange">
             <template #icon>
               <icon-star />
             </template>
-            Nổi bật
+            {{ t('discount.coupon.featured.yes') }}
           </a-tag>
-          <span v-else style="color: var(--color-text-3)">Không</span>
+          <span v-else style="color: var(--color-text-3)">{{ t('discount.coupon.featured.no') }}</span>
         </a-descriptions-item>
-        <a-descriptions-item label="Mô tả" :span="2">
+        <a-descriptions-item :label="t('discount.common.description')" :span="2">
           {{ selectedCoupon?.source?.moTa || '—' }}
         </a-descriptions-item>
-        <a-descriptions-item label="Ngày tạo">
+        <a-descriptions-item :label="t('discount.common.createdAt')">
           {{ selectedCoupon?.created_at ? formatDateTime(selectedCoupon.created_at) : '—' }}
         </a-descriptions-item>
-        <a-descriptions-item label="Ngày cập nhật">
+        <a-descriptions-item :label="t('discount.common.updatedAt')">
           {{ selectedCoupon?.updated_at ? formatDateTime(selectedCoupon.updated_at) : '—' }}
         </a-descriptions-item>
-        <a-descriptions-item v-if="selectedCoupon?.featured" label="Số khách hàng áp dụng" :span="2">
+        <a-descriptions-item v-if="selectedCoupon?.featured" :label="t('discount.coupon.appliedCustomers')" :span="2">
           <div style="display: flex; align-items: center; gap: 12px">
             <span>
               <strong>{{ selectedCoupon?.source?.idKhachHang?.length || 0 }}</strong>
-              khách hàng
+              {{ t('discount.common.customers') }}
             </span>
             <a-button
               v-if="selectedCoupon?.source?.idKhachHang && selectedCoupon.source.idKhachHang.length > 0"
               size="small"
               @click="viewAppliedCustomers"
             >
-              Xem danh sách
+              {{ t('discount.common.viewList') }}
             </a-button>
           </div>
         </a-descriptions-item>
@@ -317,21 +317,21 @@
       <a-divider style="margin: 24px 0" />
       <div class="history-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px">
-          <h3 style="margin: 0; font-size: 16px; font-weight: 600">Lịch sử thay đổi</h3>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600">{{ t('discount.history.title') }}</h3>
           <div style="display: flex; align-items: center; gap: 8px">
             <a-spin v-if="isHistoryLoading" size="small" />
             <a-button v-else size="small" type="text" @click="selectedCoupon && loadHistory(selectedCoupon.id)">
               <template #icon>
                 <icon-refresh />
               </template>
-              Tải lại
+              {{ t('discount.common.reload') }}
             </a-button>
           </div>
         </div>
 
         <div v-if="!isHistoryLoading && historyList.length === 0" style="text-align: center; padding: 32px; color: var(--color-text-3)">
           <icon-empty style="font-size: 48px; margin-bottom: 8px" />
-          <div>Chưa có lịch sử thay đổi</div>
+          <div>{{ t('discount.history.empty') }}</div>
         </div>
 
         <a-timeline v-else-if="!isHistoryLoading">
@@ -576,7 +576,7 @@
     </a-modal>
 
     <!-- Applied Customers Modal -->
-    <a-modal v-model:visible="appliedCustomersVisible" title="Danh sách khách hàng áp dụng" :footer="false" width="700px" :body-style="{ maxHeight: '70vh', overflowY: 'auto' }">
+    <a-modal v-model:visible="appliedCustomersVisible" :title="t('discount.coupon.appliedCustomers')" :footer="false" width="700px" :body-style="{ maxHeight: '70vh', overflowY: 'auto' }">
       <div v-if="appliedCustomersList.length > 0">
         <a-list :data="appliedCustomersList" :bordered="false">
           <template #item="{ item, index }">
@@ -598,7 +598,7 @@
           </template>
         </a-list>
       </div>
-      <div v-else style="text-align: center; padding: 40px; color: var(--color-text-3)">Không có khách hàng nào</div>
+      <div v-else style="text-align: center; padding: 40px; color: var(--color-text-3)">{{ t('discount.coupon.noCustomersFound') }}</div>
     </a-modal>
 
     <!-- Edit Confirmation Modal -->
@@ -646,6 +646,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import { useI18n } from 'vue-i18n'
 
 import { useUserStore } from '@/store'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
@@ -680,6 +681,7 @@ import {
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 
 // Breadcrumb setup
+const { t } = useI18n()
 const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 
@@ -728,81 +730,81 @@ const tableSearch = ref('')
 
 // Table
 const loading = ref(false)
-const columns = [
+const columns = computed(() => [
   {
     title: 'STT',
     dataIndex: 'index',
     width: 56,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Mã',
+    title: t('discount.common.code'),
     dataIndex: 'code',
     slotName: 'code',
     width: 85,
   },
   {
-    title: 'Tên phiếu',
+    title: t('discount.coupon.name'),
     dataIndex: 'name',
     slotName: 'name',
   },
   {
-    title: 'Riêng tư',
+    title: t('discount.coupon.private'),
     dataIndex: 'featured',
     slotName: 'featured',
     width: 100,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Loại',
+    title: t('discount.coupon.discountType'),
     dataIndex: 'discount_type',
     slotName: 'discount_type',
     width: 80,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Giảm',
+    title: t('discount.coupon.discountValue'),
     dataIndex: 'discount_value',
     slotName: 'discount_value',
     width: 85,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'ĐH tối thiểu',
+    title: t('discount.coupon.minOrder'),
     dataIndex: 'min_order_value',
     slotName: 'min_order_value',
     width: 105,
-    align: 'right',
+    align: 'right' as const,
   },
   {
-    title: 'Thời gian',
+    title: t('discount.coupon.validityPeriod'),
     dataIndex: 'start_date',
     slotName: 'validity_period',
     width: 155,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'SL',
+    title: t('discount.coupon.quantity'),
     dataIndex: 'quantity',
     slotName: 'quantity',
     width: 55,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Trạng thái',
+    title: t('discount.common.status'),
     dataIndex: 'status',
     slotName: 'status',
     width: 100,
-    align: 'center',
+    align: 'center' as const,
   },
   {
-    title: 'Thao tác',
+    title: t('discount.common.actions'),
     slotName: 'action',
     width: 105,
-    fixed: 'right',
-    align: 'center',
+    fixed: 'right' as const,
+    align: 'center' as const,
   },
-]
+])
 
 type CouponStatus = 'active' | 'expired' | 'upcoming' | 'used_up' | 'inactive'
 
@@ -1379,7 +1381,7 @@ const loadCoupons = async () => {
       coupons.value.filter((c) => c.featured)
     )
   } catch {
-    Message.error({ content: 'Không thể tải danh sách phiếu giảm giá', duration: 5000 })
+    Message.error({ content: t('discount.message.loadCouponsFailed'), duration: 5000 })
   } finally {
     loading.value = false
   }
@@ -1437,15 +1439,15 @@ const getStatusColor = (status: string) => {
 const getStatusText = (status: string) => {
   switch (status) {
     case 'active':
-      return 'Đang hoạt động'
+      return t('discount.coupon.status.active')
     case 'expired':
-      return 'Đã hết hạn'
+      return t('discount.coupon.status.expired')
     case 'used_up':
-      return 'Hết lượt sử dụng'
+      return t('discount.coupon.status.usedUp')
     case 'upcoming':
-      return 'Sắp diễn ra'
+      return t('discount.coupon.status.upcoming')
     case 'inactive':
-      return 'Tạm dừng'
+      return t('discount.coupon.status.inactive')
     default:
       return status
   }
@@ -1477,7 +1479,7 @@ const handleCouponStatusToggle = async (coupon: CouponRecord, nextValue: boolean
   }
 
   if (!canToggleCouponStatus(coupon)) {
-    Message.warning('Không thể thay đổi trạng thái của phiếu giảm giá này')
+    Message.warning(t('discount.message.cannotToggleCouponStatus'))
     return
   }
 
@@ -1510,12 +1512,12 @@ const handleCouponStatusToggle = async (coupon: CouponRecord, nextValue: boolean
     deleted: Boolean(coupon.source.deleted),
     idKhachHang: coupon.source.idKhachHang ?? [],
     featured: Boolean(coupon.source.featured),
-    lyDoThayDoi: 'Cập nhật trạng thái phiếu giảm giá',
+    lyDoThayDoi: t('discount.message.updateCouponStatus'),
   }
 
   try {
     await updateCoupon(coupon.id, payload)
-    Message.success(nextValue ? 'Đã bật phiếu giảm giá' : 'Đã tắt phiếu giảm giá')
+    Message.success(nextValue ? t('discount.message.couponEnabled') : t('discount.message.couponDisabled'))
   } catch (error: any) {
     coupon.source.trangThai = previousValue
     coupon.enabled = previousValue
@@ -1523,7 +1525,7 @@ const handleCouponStatusToggle = async (coupon: CouponRecord, nextValue: boolean
     if (selectedCoupon.value?.id === coupon.id) {
       selectedCoupon.value = { ...coupon, status: previousStatus }
     }
-    const errorMessage = error?.response?.data?.message || error?.message || 'Không thể cập nhật trạng thái phiếu giảm giá'
+    const errorMessage = error?.response?.data?.message || error?.message || t('discount.message.updateCouponStatusFailed')
     Message.error(errorMessage)
   } finally {
     couponStatusUpdatingIds.value = couponStatusUpdatingIds.value.filter((id) => id !== coupon.id)
@@ -1536,7 +1538,7 @@ const loadHistory = async (couponId: number) => {
   try {
     historyList.value = await fetchCouponHistory(couponId)
   } catch {
-    Message.error('Không thể tải lịch sử thay đổi')
+    Message.error(t('discount.message.loadHistoryFailed'))
     historyList.value = []
   } finally {
     isHistoryLoading.value = false
