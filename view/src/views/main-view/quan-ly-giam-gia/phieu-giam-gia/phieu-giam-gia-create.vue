@@ -35,7 +35,7 @@
                 @blur="handleDiscountBlur"
                 @focus="handleDiscountFocus"
                 @input="handleDiscountInput"
-                :placeholder="isPercent ? 'Giá trị từ 0 - 100' : 'Giá trị từ 0 - 100.000.000 VND'"
+:placeholder="isPercent ? 'Giá trị từ 1 - 100' : 'Giá trị từ 0 - 100.000.000 VND'"
                 style="width: 100%"
               />
             </a-form-item>
@@ -243,7 +243,7 @@ const formState = reactive({
   discountValue: null as number | null,
   minOrder: null as number | null,
   dateRange: [] as string[],
-  quantity: 1,
+quantity: null as number | null,
   description: '',
   featured: false,
   selectedCustomerIds: [] as number[],
@@ -258,8 +258,45 @@ const rules: FormRules = {
   code: [{ required: true, message: 'Vui lòng nhập mã phiếu giảm giá' }],
   name: [{ required: true, message: 'Vui lòng nhập tên phiếu giảm giá' }],
   discountMode: [{ required: true, message: 'Vui lòng chọn hình thức giảm giá' }],
-  discountValue: [{ required: true, message: 'Vui lòng nhập giá trị giảm' }],
-  quantity: [{ required: true, message: 'Vui lòng nhập số lượng áp dụng' }],
+discountValue: [
+    { required: true, message: 'Vui lòng nhập giá trị giảm' },
+    {
+      validator: (_: any, callback: (msg?: string) => void) => {
+        if (formState.discountValue === null || formState.discountValue === undefined || formState.discountValue === '') {
+          callback('Vui lòng nhập giá trị giảm')
+          return
+        }
+        const v = Number(formState.discountValue)
+        if (Number.isNaN(v)) {
+          callback('Giá trị giảm không hợp lệ')
+          return
+        }
+        if (isPercent.value) {
+          if (v < 1 || v > 100) {
+            callback('Giá trị giảm theo % phải từ 1 - 100')
+            return
+          }
+        } else if (v <= 0) {
+          callback('Giá trị giảm phải lớn hơn 0')
+          return
+        }
+        callback()
+      },
+    },
+  ],
+  quantity: [
+    { required: true, message: 'Vui lòng nhập số lượng áp dụng' },
+    {
+      validator: (_: any, callback: (msg?: string) => void) => {
+        const v = Number(formState.quantity)
+        if (!Number.isInteger(v) || v <= 0) {
+          callback('Số lượng áp dụng phải lớn hơn 0')
+          return
+        }
+        callback()
+      },
+    },
+  ],
   dateRange: [
     { required: true, message: 'Vui lòng chọn khoảng thời gian áp dụng' },
     {
@@ -474,8 +511,8 @@ const handleDiscountBlur = () => {
     // Percentage mode - parse as float to handle decimals
     const value = parseFloat(displayDiscountValue.value.replace(/[^0-9.]/g, ''))
 
-    if (Number.isNaN(value) || value < 0) {
-      formState.discountValue = 0
+if (Number.isNaN(value) || value < 1) {
+      formState.discountValue = 1
     } else if (value > 100) {
       formState.discountValue = 100
       Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
@@ -592,9 +629,13 @@ watch(
 watch(
   () => formState.discountValue,
   (newValue) => {
-    if (isPercent.value && newValue !== undefined && newValue !== null && newValue > 100) {
-      Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
-      formState.discountValue = 100
+    if (isPercent.value && newValue !== undefined && newValue !== null) {
+      if (newValue > 100) {
+        Message.warning('Giá trị giảm theo phần trăm không được vượt quá 100%')
+        formState.discountValue = 100
+      } else if (newValue < 1) {
+        formState.discountValue = 1
+      }
     }
   }
 )
@@ -705,14 +746,20 @@ const handleSaveClick = async () => {
   }
 
   const discountValue = Number(formState.discountValue)
-  if (Number.isNaN(discountValue) || discountValue <= 0) {
-    Message.error('Giá trị giảm phải lớn hơn 0')
-    return
-  }
-
-  if (isPercent.value && discountValue > 100) {
-    Message.error('Giá trị giảm theo phần trăm tối đa 100%')
-    return
+if (isPercent.value) {
+    if (Number.isNaN(discountValue) || discountValue < 1) {
+      Message.error('Giá trị giảm theo % phải từ 1 - 100')
+      return
+    }
+    if (discountValue > 100) {
+      Message.error('Giá trị giảm theo phần trăm tối đa 100%')
+      return
+    }
+  } else {
+    if (Number.isNaN(discountValue) || discountValue <= 0) {
+      Message.error('Giá trị giảm phải lớn hơn 0')
+      return
+    }
   }
 
   if (!formState.dateRange || formState.dateRange.length !== 2 || !formState.dateRange[0] || !formState.dateRange[1]) {

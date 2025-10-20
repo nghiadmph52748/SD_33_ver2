@@ -83,6 +83,7 @@
             <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
 
             <a-table
+              class="product-group-table"
               row-key="key"
               :columns="productGroupColumns"
               :data="filteredProductGroups"
@@ -155,61 +156,51 @@
               </template>
               <template #expand-row="{ record }">
                 <div class="variant-expansion">
-                  <div class="variant-grid">
-                    <div
-                      v-for="variant in record.variants"
-                      :key="variant.id"
-                      class="variant-card"
-                      :class="{ selected: promotionEditForm.selectedProducts.includes(variant.id) }"
-                      @click="toggleVariant(variant.id)"
-                    >
-                      <a-checkbox
-                        :model-value="promotionEditForm.selectedProducts.includes(variant.id)"
-                        @click.stop
-                        @change="() => toggleVariant(variant.id)"
-                      />
-                      <div class="variant-details">
-                        <div class="variant-header">
+                  <a-table
+                    :columns="variantColumns"
+                    :data="record.variants"
+                    :pagination="false"
+                    size="small"
+                    :bordered="false"
+                    row-key="id"
+                    :row-class="(record) => (promotionEditForm.selectedProducts.includes(record.id) ? 'variant-row-selected' : '')"
+                    @row-click="(record) => toggleVariant(record.id)"
+                  >
+                    <template #variant="{ record: variant }">
+                      <div class="variant-info">
+                        <div class="variant-name">
                           <span class="variant-label">{{ buildVariantLabel(variant) }}</span>
                           <a-tag v-if="variant.maChiTietSanPham" size="small" color="blue">{{ variant.maChiTietSanPham }}</a-tag>
                         </div>
-                        <div class="variant-specs">
-                          <div v-if="variant.tenMauSac" class="spec-item">
-                            <icon-bg-colors class="spec-icon" :size="14" />
-                            <span class="spec-label">Màu sắc:</span>
-                            <span class="spec-value">{{ variant.tenMauSac }}</span>
-                          </div>
-                          <div v-if="variant.tenKichThuoc" class="spec-item">
-                            <icon-expand class="spec-icon" :size="14" />
-                            <span class="spec-label">Kích thước:</span>
-                            <span class="spec-value">{{ variant.tenKichThuoc }}</span>
-                          </div>
-                          <div v-if="variant.tenChatLieu" class="spec-item">
-                            <icon-tag class="spec-icon" :size="14" />
-                            <span class="spec-label">Chất liệu:</span>
-                            <span class="spec-value">{{ variant.tenChatLieu }}</span>
-                          </div>
-                          <div v-if="variant.tenDeGiay" class="spec-item">
-                            <icon-apps class="spec-icon" :size="14" />
-                            <span class="spec-label">Đế giày:</span>
-                            <span class="spec-value">{{ variant.tenDeGiay }}</span>
-                          </div>
-                          <div v-if="variant.tenTrongLuong" class="spec-item">
-                            <icon-nav class="spec-icon" :size="14" />
-                            <span class="spec-label">Trọng lượng:</span>
-                            <span class="spec-value">{{ variant.tenTrongLuong }}</span>
-                          </div>
-                        </div>
-                        <div class="variant-footer">
-                          <span class="variant-price">{{ formatCurrency(variant.giaBan || 0) }}</span>
-                          <span v-if="typeof variant.soLuong === 'number'" class="variant-stock">
-                            Tồn:
-                            <strong>{{ variant.soLuong }}</strong>
+                        <div class="variant-specs-inline">
+                          <span v-if="variant.tenMauSac" class="spec-tag">
+                            <icon-bg-colors :size="12" /> {{ variant.tenMauSac }}
+                          </span>
+                          <span v-if="variant.tenKichThuoc" class="spec-tag">
+                            <icon-expand :size="12" /> {{ variant.tenKichThuoc }}
+                          </span>
+                          <span v-if="variant.tenChatLieu" class="spec-tag">
+                            <icon-tag :size="12" /> {{ variant.tenChatLieu }}
+                          </span>
+                          <span v-if="variant.tenDeGiay" class="spec-tag">
+                            <icon-apps :size="12" /> {{ variant.tenDeGiay }}
+                          </span>
+                          <span v-if="variant.tenTrongLuong" class="spec-tag">
+                            <icon-nav :size="12" /> {{ variant.tenTrongLuong }}
                           </span>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    </template>
+                    <template #price="{ record: variant }">
+                      <span class="variant-price">{{ formatCurrency(variant.giaBan || 0) }}</span>
+                    </template>
+                    <template #stock="{ record: variant }">
+                      <span v-if="typeof variant.soLuong === 'number'" class="variant-stock">
+                        <strong>{{ variant.soLuong }}</strong>
+                      </span>
+                      <span v-else class="variant-stock">--</span>
+                    </template>
+                  </a-table>
                 </div>
               </template>
             </a-table>
@@ -543,10 +534,33 @@ const productGroupColumns = [
     width: 300,
   },
   {
-    title: 'Biến thể',
+    title: 'Biến thế',
     dataIndex: 'variants',
     slotName: 'variantSelect',
     width: 240,
+  },
+]
+
+const variantColumns = [
+  {
+    title: 'Biến thể',
+    dataIndex: 'variant',
+    slotName: 'variant',
+    ellipsis: true,
+  },
+  {
+    title: 'Giá',
+    dataIndex: 'price',
+    slotName: 'price',
+    width: 140,
+    align: 'right' as const,
+  },
+  {
+    title: 'Tồn',
+    dataIndex: 'stock',
+    slotName: 'stock',
+    width: 80,
+    align: 'center' as const,
   },
 ]
 
@@ -832,23 +846,6 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-.product-selection-section :deep(.arco-table-expand-icon-col),
-.product-selection-section :deep(.arco-table-col-expand),
-.product-selection-section :deep(.arco-table-td-expand-icon),
-.product-selection-section :deep(.arco-table-th-expand-icon),
-.product-selection-section :deep(td.arco-table-expand-icon-cell),
-.product-selection-section :deep(th.arco-table-expand-icon-cell),
-.product-selection-section :deep(colgroup col:first-child) {
-  visibility: collapse !important;
-  width: 0 !important;
-  min-width: 0 !important;
-  max-width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border: none !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
-}
 
 .product-image-cell {
   display: flex;
@@ -917,118 +914,85 @@ onMounted(async () => {
 
 /* Variant Expansion Styles */
 .variant-expansion {
-  padding: 16px;
+  padding: 12px;
   background: var(--color-fill-1);
   border-radius: 4px;
 }
 
-.variant-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+.variant-expansion :deep(.arco-table) {
+  background: transparent;
 }
 
-.variant-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px;
+.variant-expansion :deep(.arco-table-th) {
+  background-color: var(--color-fill-2);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.variant-expansion :deep(.arco-table-td) {
   background: white;
-  border: 1.5px solid var(--color-border-2);
-  border-radius: 6px;
+}
+
+.variant-expansion :deep(.arco-table-tr) {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
-.variant-card:hover {
-  border-color: var(--color-primary-light-3);
+.variant-expansion :deep(.arco-table-tr:hover .arco-table-td) {
   background: var(--color-primary-light-1);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.variant-card.selected {
-  border-color: var(--color-primary-6);
-  background: var(--color-primary-light-1);
-  box-shadow: 0 0 0 1px var(--color-primary-light-3);
+.variant-expansion :deep(.variant-row-selected .arco-table-td) {
+  background-color: var(--color-primary-light-2) !important;
+  border-left: 3px solid var(--color-primary-6);
 }
 
-.variant-details {
-  flex: 1;
-  min-width: 0;
+.variant-expansion :deep(.variant-row-selected:hover .arco-table-td) {
+  background-color: var(--color-primary-light-3) !important;
+}
+
+
+.variant-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-.variant-header {
+.variant-name {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  flex-wrap: wrap;
 }
 
 .variant-label {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-1);
   font-size: 13px;
-  line-height: 1.4;
-  flex: 1;
 }
 
-/* Specs Display */
-.variant-specs {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 0;
-}
-
-.spec-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.spec-icon {
-  color: var(--color-primary-6);
-  min-width: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.spec-label {
-  color: var(--color-text-3);
-  font-weight: 500;
-  min-width: 80px;
-}
-
-.spec-value {
-  color: var(--color-text-1);
-  font-weight: 500;
-}
-
-.variant-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border-1);
-}
-
-.variant-meta {
+.variant-specs-inline {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 8px;
-  font-size: 12px;
+  align-items: center;
+}
+
+.spec-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
   color: var(--color-text-3);
+  background: var(--color-fill-2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.spec-tag svg {
+  color: var(--color-primary-6);
+  flex-shrink: 0;
 }
 
 .variant-price {
