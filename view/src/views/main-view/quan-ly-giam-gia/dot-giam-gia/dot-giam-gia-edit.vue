@@ -183,7 +183,7 @@
                             <icon-tag :size="12" /> {{ variant.tenChatLieu }}
                           </span>
                           <span v-if="variant.tenDeGiay" class="spec-tag">
-                            <icon-apps :size="12" /> {{ variant.tenDeGiay }}
+                            <img :src="soleIcon" alt="sole" class="spec-icon-img" /> {{ variant.tenDeGiay }}
                           </span>
                           <span v-if="variant.tenTrongLuong" class="spec-tag">
                             <icon-nav :size="12" /> {{ variant.tenTrongLuong }}
@@ -298,6 +298,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import dayjs from 'dayjs'
 import axios from 'axios'
+import soleIcon from '@/assets/icons/soles.png'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import PageActions from '@/components/page-actions/page-actions.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
@@ -339,6 +340,7 @@ interface ProductGroup {
 
 const productOptions = ref<PromotionProductOption[]>([])
 const productOptionsLoading = ref(false)
+
 
 const buildVariantLabel = (product: PromotionProductOption) => {
   if (!product) return ''
@@ -1002,5 +1004,12 @@ onMounted(async () => {
 
 .variant-stock strong {
   color: var(--color-text-2);
+}
+
+.spec-icon-img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+  display: inline-block;
 }
 </style>

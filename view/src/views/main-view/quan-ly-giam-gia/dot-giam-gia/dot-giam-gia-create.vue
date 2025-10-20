@@ -155,7 +155,7 @@
                           <icon-tag :size="12" /> {{ variant.tenChatLieu }}
                         </span>
                         <span v-if="variant.tenDeGiay" class="spec-tag">
-                          <icon-apps :size="12" /> {{ variant.tenDeGiay }}
+                          <img :src="soleIcon" alt="sole" class="spec-icon-img" /> {{ variant.tenDeGiay }}
                         </span>
                         <span v-if="variant.tenTrongLuong" class="spec-tag">
                           <icon-nav :size="12" /> {{ variant.tenTrongLuong }}
@@ -280,6 +280,7 @@ import {
 import { getBienTheSanPhamList, type BienTheSanPham } from '@/api/san-pham'
 import { IconImage, IconDown, IconUp, IconBgColors, IconExpand, IconTag, IconApps, IconNav } from '@arco-design/web-vue/es/icon'
 import dayjs from 'dayjs'
+import soleIcon from '@/assets/icons/soles.png'
 
 // eslint-disable-next-line import/no-unresolved
 import { useRouter } from 'vue-router'
@@ -296,6 +297,7 @@ type PromotionProductOption = BienTheSanPham & {
 }
 
 const productOptions = ref<PromotionProductOption[]>([])
+
 
 const buildVariantLabel = (product: PromotionProductOption) => {
   if (!product) return ''
@@ -964,6 +966,13 @@ const confirmSave = async () => {
 .spec-tag svg {
   color: var(--color-primary-6);
   flex-shrink: 0;
+}
+
+.spec-icon-img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+  display: inline-block;
 }
 
 .variant-price {
