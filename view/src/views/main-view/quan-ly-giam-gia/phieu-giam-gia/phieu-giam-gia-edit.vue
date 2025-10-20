@@ -91,16 +91,10 @@
             </a-form-item>
 
             <a-form-item field="active" label="Trạng thái">
-              <div class="status-switch-wrapper">
-                <a-switch v-model="couponEditForm.active" type="round">
-                  <template #checked-icon>
-                    <icon-check />
-                  </template>
-                  <template #unchecked-icon>
-                    <icon-close />
-                  </template>
-                </a-switch>
-              </div>
+              <a-radio-group v-model="couponEditForm.active" type="button">
+                <a-radio :value="true">Hoạt động</a-radio>
+                <a-radio :value="false">Không hoạt động</a-radio>
+              </a-radio-group>
             </a-form-item>
 
             <a-form-item field="featured">
