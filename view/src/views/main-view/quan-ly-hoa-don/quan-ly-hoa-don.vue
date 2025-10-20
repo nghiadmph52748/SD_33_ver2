@@ -310,14 +310,14 @@ const invoiceColumns = [
     width: 150,
   },
   {
-    title: 'SDT Khách hàng',
-    dataIndex: 'soDienThoaiKhachHang',
-    width: 130,
-  },
-  {
     title: 'Tên Khách Hàng',
     dataIndex: 'tenKhachHang',
     width: 150,
+  },
+  {
+    title: 'SDT Khách hàng',
+    dataIndex: 'soDienThoaiKhachHang',
+    width: 130,
   },
   {
     title: 'Loại đơn hàng',

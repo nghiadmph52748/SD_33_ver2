@@ -37,20 +37,6 @@
               </a-select>
             </a-space>
 
-            <a-radio-group v-model="viewMode" type="button" size="small">
-              <a-radio value="grid">
-                <template #icon>
-                  <icon-apps />
-                </template>
-                Lưới
-              </a-radio>
-              <a-radio value="table">
-                <template #icon>
-                  <icon-menu />
-                </template>
-                Bảng
-              </a-radio>
-            </a-radio-group>
           </a-space>
         </div>
 
@@ -106,10 +92,6 @@
             row-key="id"
             :scroll="{ y: 'calc(100vh - 300px)' }"
           >
-            <template #image="{ record }">
-              <img :src="getProductImage(record)" :alt="record.tenSanPham" class="table-product-image" />
-            </template>
-
             <template #name="{ record }">
               <div class="table-product-name">
                 <strong>{{ record.tenSanPham }}</strong>
@@ -540,8 +522,6 @@ import {
   IconTag,
   IconClose,
   IconQrcode,
-  IconApps,
-  IconMenu,
 } from '@arco-design/web-vue/es/icon'
 
 // Breadcrumb setup
@@ -557,7 +537,6 @@ const loading = ref(false)
 const productSearch = ref('')
 const selectedCategory = ref('')
 const sortBy = ref('name')
-const viewMode = ref('table')
 
 // Customer info
 const customerForm = ref({
@@ -677,15 +656,6 @@ const getPromotionLabel = (product: any) => {
   return `-${product.giaTriGiamGia}%`
 }
 
-const getProductImage = (product: any) => {
-  // Lấy ảnh đầu tiên từ danh sách ảnh sản phẩm
-  if (product.anhSanPham && product.anhSanPham.length > 0) {
-    return product.anhSanPham[0]
-  }
-  // Fallback về placeholder nếu không có ảnh
-  return `https://via.placeholder.com/200x150/1890ff/ffffff?text=${encodeURIComponent(product.tenSanPham || 'Sản phẩm')}`
-}
-
 const getStockColor = (product: any) => {
   const stock = product.soLuong || 0
   if (stock > 10) return 'green'
@@ -701,16 +671,10 @@ const getStockText = (product: any) => {
 // Product table columns
 const productTableColumns = [
   {
-    title: 'Hình ảnh',
-    dataIndex: 'image',
-    key: 'image',
-    width: 80,
-    slotName: 'image',
-  },
-  {
     title: 'Tên sản phẩm',
     dataIndex: 'tenSanPham',
     key: 'name',
+    width: 200,
     slotName: 'name',
   },
   {
@@ -2190,13 +2154,6 @@ onUnmounted(async () => {
 .products-table {
   height: 100%;
   overflow-y: auto;
-}
-
-.table-product-image {
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 4px;
 }
 
 .table-product-name {
