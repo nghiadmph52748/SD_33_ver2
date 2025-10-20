@@ -65,6 +65,7 @@ const generatePathFromLocale = (locale: string): string => {
     'menu.quan-ly-san-pham.danh-muc': '/quan-ly-san-pham/danh-muc',
     'menu.quan-ly-san-pham.them-san-pham': '/quan-ly-san-pham/them-san-pham',
     'menu.quan-ly-san-pham.bien-the': '/quan-ly-san-pham/bien-the',
+    'menu.ban-hang-tai-quay': '/ban-hang-tai-quay',
     'menu.quan-ly-san-pham.thuoc-tinh': '/quan-ly-san-pham/thuoc-tinh',
     'menu.quan-ly-san-pham.thuoc-tinh.anh-san-pham': '/quan-ly-san-pham/thuoc-tinh/anh-san-pham',
     'menu.quan-ly-san-pham.thuoc-tinh.nha-san-xuat': '/quan-ly-san-pham/thuoc-tinh/nha-san-xuat',
@@ -94,7 +95,10 @@ const processedItems = computed(() => {
 
 // Helper functions to get properties regardless of format
 const getItemLocale = (item: BreadcrumbItem | string): string => {
-  return typeof item === 'string' ? item : item.locale
+  if (typeof item === 'string') {
+    return item
+  }
+  return item.locale || ''
 }
 
 const getItemPath = (item: BreadcrumbItem | string, index: number): string => {

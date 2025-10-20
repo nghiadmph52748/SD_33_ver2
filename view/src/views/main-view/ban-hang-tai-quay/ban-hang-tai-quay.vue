@@ -1,2168 +1,784 @@
 <template>
-  <div class="pos-page">
-    <!-- Breadcrumb -->
+  <div class="pos-system">
+    <!-- Header -->
     <Breadcrumb :items="breadcrumbItems" />
 
-    <!-- Main Content -->
-    <div class="pos-content">
-      <!-- Left Panel - Products -->
-      <div class="products-panel">
-        <!-- Product Search & Filter -->
-        <div class="product-controls">
-          <a-space style="margin-bottom: 16px; width: 100%">
-            <a-input-search v-model="productSearch" placeholder="Tìm kiếm sản phẩm..." allow-clear style="flex: 1" />
-            <a-button type="primary" @click="showQRScanner = true">
-              <template #icon>
-                <icon-qrcode />
-              </template>
-              Quét QR
-            </a-button>
-          </a-space>
-
-          <a-space wrap style="justify-content: space-between; width: 100%">
-            <a-space wrap>
-              <a-select v-model="selectedCategory" placeholder="Chọn danh mục" style="width: 150px" allow-clear>
-                <a-option value="sneaker">Giày sneaker</a-option>
-                <a-option value="boot">Giày boot</a-option>
-                <a-option value="heel">Giày cao gót</a-option>
-                <a-option value="sport">Giày thể thao</a-option>
-                <a-option value="sandal">Giày sandal</a-option>
-              </a-select>
-
-              <a-select v-model="sortBy" placeholder="Sắp xếp theo" style="width: 130px">
-                <a-option value="name">Tên A-Z</a-option>
-                <a-option value="price-low">Giá thấp</a-option>
-                <a-option value="price-high">Giá cao</a-option>
-                <a-option value="newest">Mới nhất</a-option>
-              </a-select>
+    <!-- Main Layout -->
+    <a-row :gutter="16" class="pos-main">
+      <!-- Left: Orders & Cart -->
+      <a-col :xs="24" :lg="16" class="pos-left">
+        <a-card class="orders-card" title="Danh Sách Đơn Hàng">
+          <template #extra>
+            <a-space size="small">
+              <a-button v-if="orders.length < 8" type="primary" size="small" @click="createNewOrder">
+                <template #icon>
+                  <icon-plus />
+                </template>
+                Thêm Đơn
+              </a-button>
             </a-space>
+          </template>
 
-          </a-space>
-        </div>
+          <a-empty v-if="orders.length === 0" description="Chưa có đơn hàng nào" />
 
-        <!-- Loading State -->
-        <div v-if="loading" class="loading-container">
-          <a-spin />
-          <p>Đang tải sản phẩm...</p>
-        </div>
-
-        <!-- Grid View -->
-        <div v-else-if="viewMode === 'grid'" class="products-grid">
-          <a-card v-for="product in filteredProducts" :key="product.id" class="product-card" hoverable @click="addToCart(product)">
-            <template #cover>
-              <div class="product-image-wrapper">
-                <img :src="getProductImage(product)" :alt="product.tenSanPham" class="product-image" />
-                <a-tag v-if="hasPromotion(product)" class="promo-badge" color="red">{{ getPromotionLabel(product) }}</a-tag>
-              </div>
-            </template>
-
-            <a-card-meta :title="product.tenSanPham">
-              <template #description>
-                <div class="product-info">
-                  <div class="product-price-section">
-                    <div v-if="hasPromotion(product)" class="original-price">{{ formatCurrency(getOriginalPrice(product)) }}</div>
-                    <div class="product-price" :class="{ 'promo-price': hasPromotion(product) }">
-                      {{ formatCurrency(getProductPrice(product)) }}
-                    </div>
-                  </div>
-                  <div class="product-stock">
-                    <a-tag :color="getStockColor(product)">{{ getStockText(product) }}</a-tag>
-                  </div>
-                </div>
-              </template>
-            </a-card-meta>
-
-            <template #actions>
-              <a-button type="primary" size="small" @click.stop="addToCart(product)">
-                <template #icon>
-                  <icon-plus />
-                </template>
-                Thêm
-              </a-button>
-            </template>
-          </a-card>
-        </div>
-
-        <!-- Table View -->
-        <div v-else class="products-table">
-          <a-table
-            :columns="productTableColumns"
-            :data="filteredProducts"
-            :pagination="productPagination"
-            row-key="id"
-            :scroll="{ y: 'calc(100vh - 300px)' }"
-          >
-            <template #name="{ record }">
-              <div class="table-product-name">
-                <strong>{{ record.tenSanPham }}</strong>
-                <div style="font-size: 12px; color: #86909c; margin-top: 2px">
-                  Mã: {{ record.maSanPham || `SP${String(record.id).padStart(5, '0')}` }}
-                </div>
-              </div>
-            </template>
-
-            <template #stock="{ record }">
-              <a-tag :color="getStockColor(record)">{{ getStockText(record) }}</a-tag>
-            </template>
-
-            <template #action="{ record }">
-              <a-button type="primary" size="small" @click="addToCart(record)">
-                <template #icon>
-                  <icon-plus />
-                </template>
-                Thêm
-              </a-button>
-            </template>
-          </a-table>
-        </div>
-      </div>
-
-      <!-- Right Panel - Cart & Checkout -->
-      <div class="cart-panel">
-        <!-- Customer Info -->
-        <a-card title="Thông tin khách hàng" class="customer-card" size="small">
-          <div class="customer-info-section">
-            <a-form layout="vertical" :model="customerForm" v-if="!isGuestCustomer">
-              <a-form-item label="Tên khách hàng">
-                <a-input v-model="customerForm.name" placeholder="Nhập tên khách hàng" allow-clear />
-              </a-form-item>
-              <a-form-item label="Số điện thoại">
-                <a-input v-model="customerForm.phone" placeholder="Nhập số điện thoại" allow-clear />
-              </a-form-item>
-            </a-form>
-
-            <div v-else class="guest-customer-display">
-              <a-tag color="orange" size="large">
-                <template #icon>
-                  <icon-user-add />
-                </template>
-                Khách lạ
-              </a-tag>
-              <p style="margin: 8px 0 0 0; color: #86909c; font-size: 12px">Khách hàng không có trong hệ thống</p>
-            </div>
-
-            <div class="customer-actions">
-              <div class="button-group">
-                <a-button type="dashed" @click="showCustomerModal = true" style="flex: 1; margin-right: 8px">
-                  <template #icon>
-                    <icon-user-add />
-                  </template>
-                  Chọn khách hàng
-                </a-button>
-
-                <a-button v-if="!isGuestCustomer" type="primary" @click="selectGuestCustomer" style="flex: 1">
-                  <template #icon>
-                    <icon-user />
-                  </template>
-                  Khách lạ
-                </a-button>
-              </div>
-
-              <a-button v-if="isGuestCustomer" type="text" size="small" @click="clearCustomer" style="margin-top: 8px; width: 100%">
-                Xóa khách lạ
-              </a-button>
-            </div>
-          </div>
-        </a-card>
-
-        <!-- Customer Selection Modal -->
-        <a-modal v-model:visible="showCustomerModal" title="Chọn khách hàng có trong hệ thống" width="800px" @ok="selectCustomer">
-          <div class="customer-modal">
-            <a-input-search
-              v-model="customerSearch"
-              placeholder="Tìm kiếm khách hàng theo tên hoặc số điện thoại"
-              style="margin-bottom: 16px"
-              @search="searchCustomers"
-            />
-
-            <a-table
-              :columns="customerColumns"
-              :data="filteredCustomers"
-              :pagination="customerPagination"
-              :loading="customerLoading"
-              @row-click="handleCustomerRowClick"
-              row-key="id"
-              :row-class="getCustomerRowClass"
-            >
-              <template #name="{ record }">
-                <div class="customer-name">
-                  <strong>{{ record.tenKhachHang }}</strong>
-                </div>
-              </template>
-
-              <template #phone="{ record }">
-                <span>{{ record.soDienThoai || 'N/A' }}</span>
-              </template>
-
-              <template #email="{ record }">
-                <span>{{ record.email || 'N/A' }}</span>
-              </template>
-            </a-table>
-          </div>
-        </a-modal>
-
-        <!-- Coupon Modal -->
-        <a-modal v-model:visible="showCouponModal" title="Chọn phiếu giảm giá" width="800px" @ok="applyCoupon">
-          <div class="coupon-modal">
-            <!-- Cart value info -->
-            <a-alert v-if="subtotal > 0" type="info" style="margin-bottom: 16px">
-              Giá trị giỏ hàng hiện tại:
-              <strong>{{ formatCurrency(subtotal) }}</strong>
-            </a-alert>
-            <a-alert v-else type="warning" style="margin-bottom: 16px">
-              Giỏ hàng trống! Vui lòng thêm sản phẩm trước khi chọn phiếu giảm giá.
-            </a-alert>
-
-            <a-input-search
-              v-model="couponSearch"
-              placeholder="Tìm kiếm phiếu giảm giá theo mã hoặc tên"
-              style="margin-bottom: 16px"
-              @search="searchCoupons"
-            />
-
-            <!-- Empty state when no applicable coupons -->
-            <a-empty
-              v-if="!couponLoading && filteredCoupons.length === 0 && couponsList.length > 0"
-              description="Không có phiếu giảm giá khả dụng cho giỏ hàng hiện tại"
-              style="padding: 40px 0"
-            >
-              <template #image>
-                <icon-tag style="font-size: 48px; color: #d9d9d9" />
-              </template>
-            </a-empty>
-
-            <a-table
-              v-else
-              :columns="couponColumns"
-              :data="filteredCoupons"
-              :pagination="couponPagination"
-              :loading="couponLoading"
-              @row-click="handleCouponRowClick"
-              row-key="id"
-              :row-class="getCouponRowClass"
-            >
-              <template #code="{ record }">
-                <div class="coupon-code">
-                  <strong>{{ record.maPhieuGiamGia }}</strong>
-                  <a-tag
-                    v-if="couponProductDetails.has(record.id) && (couponProductDetails.get(record.id)?.length || 0) > 0"
-                    color="purple"
-                    size="small"
-                    style="margin-left: 8px"
+          <a-tabs v-else v-model:active-key="currentOrderIndex" type="button" @change="handleOrderChange" class="orders-tabs">
+            <a-tab-pane v-for="(order, idx) in orders" :key="idx.toString()">
+              <template #title>
+                <div class="tab-header">
+                  <span>Đơn #{{ idx + 1 }} ({{ order.orderCode }})</span>
+                  <a-badge
+                    v-if="order.items.length > 0"
+                    :count="order.items.reduce((sum, item) => sum + item.quantity, 0)"
+                    :style="{ backgroundColor: '#f5222d' }"
+                  />
+                  <a-popconfirm
+                    v-if="orders.length > 1"
+                    title="Xoá đơn hàng này?"
+                    @ok="deleteOrderByIndex(idx)"
+                    ok-text="Xoá"
+                    cancel-text="Hủy"
                   >
-                    Sản phẩm cụ thể
-                  </a-tag>
+                    <a-button type="text" size="mini" status="danger" @click.stop class="tab-close-btn">
+                      <template #icon>
+                        <icon-close />
+                      </template>
+                    </a-button>
+                  </a-popconfirm>
                 </div>
               </template>
 
-              <template #name="{ record }">
-                <span>{{ record.tenPhieuGiamGia || 'N/A' }}</span>
-              </template>
-
-              <template #type="{ record }">
-                <a-tag :color="record.loaiPhieuGiamGia ? 'orange' : 'blue'">
-                  {{ record.loaiPhieuGiamGia ? 'Số tiền cố định' : 'Phần trăm' }}
-                </a-tag>
-              </template>
-
-              <template #value="{ record }">
-                <span v-if="!record.loaiPhieuGiamGia">{{ record.giaTriGiamGia }}%</span>
-                <span v-else>{{ formatCurrency(Number(record.giaTriGiamGia)) }}</span>
-              </template>
-
-              <template #minOrder="{ record }">
-                <span v-if="record.hoaDonToiThieu">{{ formatCurrency(Number(record.hoaDonToiThieu)) }}</span>
-                <span v-else>Không giới hạn</span>
-              </template>
-
-              <template #status="{ record }">
-                <a-tag :color="record.trangThai ? 'green' : 'red'">
-                  {{ record.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
-                </a-tag>
-              </template>
-            </a-table>
-          </div>
-        </a-modal>
-
-        <!-- Main Cart -->
-        <a-card title="Giỏ hàng" class="cart-card">
-          <div v-if="cartItems.length === 0" class="empty-cart">
-            <icon-star style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
-            <p style="color: #86909c">Chưa có sản phẩm nào</p>
-          </div>
-
-          <div v-else class="cart-items">
-            <div v-for="(item, index) in cartItems" :key="item.id" class="cart-item">
-              <div class="item-info">
-                <img :src="item.image" :alt="item.name" class="item-image" />
-                <div class="item-details">
-                  <div class="item-name">
-                    {{ item.name }}
-                    <a-tag v-if="item.hasPromotion" color="red" size="small" style="margin-left: 4px">KM</a-tag>
-                  </div>
-                  <div class="item-price-section">
-                    <div v-if="item.hasPromotion" class="original-price small">{{ formatCurrency(item.originalPrice) }}</div>
-                    <div class="item-price" :class="{ 'promo-price': item.hasPromotion }">
-                      {{ formatCurrency(item.price) }}
-                    </div>
-                  </div>
+              <!-- Product Selection Toolbar -->
+              <div class="toolbar" style="display: flex; justify-content: space-between; align-items: center">
+                <div style="font-weight: 600; color: #333; font-size: 14px">
+                  Mã Đơn:
+                  <span style="color: #0960bd; font-weight: 700">{{ currentOrder?.orderCode }}</span>
                 </div>
+                <a-space wrap>
+                  <a-button type="primary" @click="showProductModal = true">
+                    <template #icon>
+                      <icon-plus />
+                    </template>
+                    Thêm Sản Phẩm
+                  </a-button>
+                  <a-button @click="showQRScanner = true">
+                    <template #icon>
+                      <icon-qrcode />
+                    </template>
+                    Quét QR
+                  </a-button>
+                  <a-button v-if="currentOrder?.items.length > 0" type="text" status="danger" @click="clearCart">
+                    <template #icon>
+                      <icon-delete />
+                    </template>
+                    Xoá Tất Cả
+                  </a-button>
+                </a-space>
               </div>
 
-              <div class="item-controls">
-                <a-input-number
-                  v-model="item.quantity"
-                  :min="1"
-                  :max="item.stock"
-                  size="small"
-                  style="width: 80px"
-                  @change="updateQuantity(index, item.quantity)"
-                />
-                <a-button type="text" danger size="small" @click="removeFromCart(index)">
-                  <template #icon>
-                    <icon-delete />
-                  </template>
+              <!-- Cart Table -->
+              <a-card class="cart-card">
+                <template #title>🛒 Giỏ Hàng</template>
+                <div class="cart-wrapper">
+                  <a-table
+                    v-if="currentOrder?.items.length > 0"
+                    :columns="cartColumns"
+                    :data="paginatedCartItems"
+                    :pagination="{
+                      current: cartPagination.value?.current || 1,
+                      pageSize: cartPagination.value?.pageSize || 5,
+                      total: currentOrder?.items.length || 0,
+                      showTotal: true,
+                      showPageSize: true,
+                    }"
+                    row-key="id"
+                    size="small"
+                    :scroll="{ x: '100%' }"
+                    @paginate="(page) => (cartPagination.value.current = page)"
+                  >
+                    <template #quantity="{ record }">
+                      <a-input-number
+                        :model-value="record.quantity"
+                        :min="1"
+                        :max="999"
+                        size="small"
+                        @change="(val) => updateQuantity(record.id, val)"
+                      />
+                    </template>
+
+                    <template #price="{ record }">
+                      {{ formatCurrency(record.price) }}
+                    </template>
+
+                    <template #subtotal="{ record }">
+                      <strong>{{ formatCurrency(record.price * record.quantity) }}</strong>
+                    </template>
+
+                    <template #action="{ record }">
+                      <a-popconfirm title="Xoá sản phẩm này?" @ok="removeFromCart(record.id)" ok-text="Xoá" cancel-text="Hủy">
+                        <a-button type="text" status="danger" size="small">
+                          <template #icon>
+                            <icon-delete />
+                          </template>
+                        </a-button>
+                      </a-popconfirm>
+                    </template>
+                  </a-table>
+                  <a-empty v-else description="Giỏ hàng trống" />
+                </div>
+              </a-card>
+            </a-tab-pane>
+          </a-tabs>
+        </a-card>
+      </a-col>
+
+      <!-- Right: Customer & Payment -->
+      <a-col :xs="24" :lg="8" class="pos-right">
+        <!-- Customer Section -->
+        <a-card title="Thông Tin Khách Hàng" class="customer-card">
+          <a-form layout="vertical">
+            <a-form-item label="Chọn Khách Hàng">
+              <a-select
+                v-model:model-value="currentOrder.customerId"
+                placeholder="--- Chọn khách hàng ---"
+                allow-search
+                filterable
+                @change="handleCustomerChange"
+              >
+                <a-option value="">Khách lẻ</a-option>
+                <a-option v-for="customer in filteredCustomers" :key="customer.id" :value="customer.id">
+                  {{ customer.name }} ({{ customer.phone }})
+                </a-option>
+              </a-select>
+            </a-form-item>
+
+            <a-form-item v-if="selectedCustomer">
+              <a-descriptions size="small" :column="1" bordered>
+                <a-descriptions-item label="Tên">{{ selectedCustomer.name }}</a-descriptions-item>
+                <a-descriptions-item label="SĐT">{{ selectedCustomer.phone }}</a-descriptions-item>
+                <a-descriptions-item label="Email">{{ selectedCustomer.email || 'N/A' }}</a-descriptions-item>
+                <a-descriptions-item label="Địa Chỉ">{{ selectedCustomer.address || 'N/A' }}</a-descriptions-item>
+              </a-descriptions>
+            </a-form-item>
+
+            <a-button v-if="!selectedCustomer" type="dashed" long @click="showAddCustomerModal = true">
+              <template #icon>
+                <icon-plus />
+              </template>
+              Thêm Khách Hàng Mới
+            </a-button>
+          </a-form>
+        </a-card>
+
+        <!-- Payment Section -->
+        <a-card title="Thanh Toán" class="payment-card">
+          <a-form layout="vertical">
+            <!-- Discount Section -->
+            <a-form-item label="Mã Giảm Giá">
+              <a-select
+                :model-value="paymentForm.value?.discountCode || ''"
+                placeholder="Chọn mã giảm giá..."
+                allow-clear
+                @update:model-value="(val) => paymentForm.value && (paymentForm.value.discountCode = val || null)"
+              >
+                <a-option value="SUMMER10">SUMMER10 (10% Off)</a-option>
+                <a-option value="SUMMER20">SUMMER20 (20% Off)</a-option>
+                <a-option value="VIP50">VIP50 (50K Off)</a-option>
+              </a-select>
+            </a-form-item>
+
+            <!-- Payment Method -->
+            <a-form-item label="Phương Thức Thanh Toán">
+              <div style="display: flex; gap: 8px; width: 100%">
+                <a-button
+                  :type="paymentForm.value?.method === 'cash' ? 'primary' : 'secondary'"
+                  style="flex: 1"
+                  @click="paymentForm.value && (paymentForm.value.method = 'cash')"
+                >
+                  💵 Tiền Mặt
+                </a-button>
+                <a-button
+                  :type="paymentForm.value?.method === 'transfer' ? 'primary' : 'secondary'"
+                  style="flex: 1"
+                  @click="paymentForm.value && (paymentForm.value.method = 'transfer')"
+                >
+                  🏦 Chuyển Khoản
                 </a-button>
               </div>
-            </div>
-          </div>
+            </a-form-item>
 
-          <!-- Cart Summary -->
-          <div v-if="cartItems.length > 0" class="cart-summary">
-            <div class="summary-row">
-              <span>Tạm tính:</span>
-              <span>{{ formatCurrency(subtotal) }}</span>
-            </div>
-
-            <!-- Promotion Savings -->
-            <div v-if="promotionSavings > 0" class="summary-row savings-info">
-              <div class="savings-label">
-                <span>Tiết kiệm từ khuyến mãi:</span>
-                <div class="savings-note">{{ promotionItemsCount }} sản phẩm</div>
-              </div>
-              <span class="savings-amount">-{{ formatCurrency(promotionSavings) }}</span>
-            </div>
-
-            <!-- Applied Coupon -->
-            <div v-if="appliedCoupon" class="summary-row discount-applied">
-              <div class="discount-info">
-                <span>Giảm giá ({{ appliedCoupon.code }}):</span>
-                <div class="discount-note">{{ getApplicableProductsCount }} sản phẩm được áp dụng</div>
-              </div>
-              <span class="discount-amount">-{{ formatCurrency(discountAmount) }}</span>
-            </div>
-
-            <!-- Add Coupon Button -->
-            <div v-if="!appliedCoupon" class="coupon-section">
-              <a-button type="dashed" block @click="showCouponModal = true">
-                <template #icon>
-                  <icon-tag />
-                </template>
-                Thêm phiếu giảm giá
-              </a-button>
-            </div>
-
-            <!-- Remove Coupon Button -->
-            <div v-if="appliedCoupon" class="coupon-section">
-              <a-button type="text" size="small" @click="removeCoupon" style="color: #ff4d4f">
-                <template #icon>
-                  <icon-close />
-                </template>
-                Xóa phiếu giảm giá
-              </a-button>
-            </div>
-
-            <div class="summary-row total">
-              <span><strong>Tổng cộng:</strong></span>
-              <span>
-                <strong>{{ formatCurrency(total) }}</strong>
-              </span>
-            </div>
-          </div>
-        </a-card>
-
-        <!-- Payment -->
-        <a-card title="Thanh toán" class="payment-card">
-          <a-space direction="vertical" style="width: 100%">
-            <a-radio-group v-model="paymentMethod" style="width: 100%">
-              <a-space direction="vertical" style="width: 100%">
-                <a-radio value="cash">Tiền mặt</a-radio>
-                <a-radio value="card">Thẻ tín dụng</a-radio>
-                <a-radio value="transfer">Chuyển khoản</a-radio>
-              </a-space>
-            </a-radio-group>
-
-            <div v-if="paymentMethod === 'cash'" class="cash-payment">
-              <a-alert
-                v-if="customerPaid <= 0"
-                message="Vui lòng nhập số tiền khách đưa để thanh toán"
-                type="warning"
-                show-icon
-                style="margin-bottom: 16px"
+            <!-- Cash Input -->
+            <a-form-item v-if="paymentForm.value?.method === 'cash'" label="Tiền Nhận">
+              <a-input-number
+                v-model:model-value="paymentForm.value.cashReceived"
+                :min="finalPrice"
+                placeholder="Nhập tiền nhận"
+                style="width: 100%"
+                @update:model-value="(val) => (paymentForm.value.cashReceived = val || 0)"
               />
+            </a-form-item>
 
-              <a-form-item
-                label="Khách đưa"
-                :required="true"
-                :validate-status="customerPaid <= 0 ? 'error' : 'success'"
-                :help="customerPaid <= 0 ? 'Vui lòng nhập số tiền khách đưa' : ''"
-              >
-                <a-input-number
-                  v-model="customerPaid"
-                  :min="0"
-                  :precision="0"
-                  style="width: 100%"
-                  placeholder="Nhập số tiền khách đưa"
-                  @change="calculateChange"
-                  :status="customerPaid <= 0 ? 'error' : ''"
-                />
-              </a-form-item>
-              <div class="change-info">
-                <div class="change-row">
-                  <span>Tiền thừa:</span>
-                  <span>{{ formatCurrency(change) }}</span>
-                </div>
-              </div>
-            </div>
-            <div v-else-if="paymentMethod === 'transfer'" class="transfer-payment">
-              <p class="transfer-note">
-                Thanh toán trực tuyến qua VNPAY (sandbox). Sau khi khởi tạo, hệ thống sẽ chuyển tới trang thanh toán.
+            <!-- Transfer Notes -->
+            <a-alert v-if="paymentForm.value?.method === 'transfer'" type="info" title="Chuyển Khoản" closable>
+              <p>Vui lòng chuyển khoản theo thông tin cung cấp. Mã hoá đơn: {{ currentOrder?.id }}</p>
+            </a-alert>
+
+            <!-- Price Summary -->
+            <a-divider />
+            <div class="payment-summary">
+              <p class="summary-row">
+                <span>Tổng tiền:</span>
+                <strong>{{ formatCurrency(subtotal) }}</strong>
               </p>
-              <a-select v-model="selectedTransferBankCode" placeholder="Chọn kênh thanh toán (tùy chọn)" allow-clear>
-                <a-option v-for="bank in vnpayBankOptions" :key="bank.value" :value="bank.value">{{ bank.label }}</a-option>
-              </a-select>
+              <p class="summary-row">
+                <span>Giảm giá:</span>
+                <span :class="discountAmount > 0 ? 'discount-text' : ''">
+                  {{ discountAmount > 0 ? '-' : '' }}{{ formatCurrency(discountAmount) }}
+                </span>
+              </p>
+              <p class="summary-row total">
+                <span>Thành tiền:</span>
+                <strong class="final-price">{{ formatCurrency(finalPrice) }}</strong>
+              </p>
+              <p v-if="paymentForm.value?.method === 'cash' && change > 0" class="summary-row">
+                <span>Tiền thối:</span>
+                <span class="change-text">{{ formatCurrency(change) }}</span>
+              </p>
             </div>
-          </a-space>
 
-          <a-button type="primary" size="large" block :disabled="isPaymentDisabled" :loading="isProcessingPayment" @click="processPayment">
-            <template #icon>
-              <icon-check-circle />
-            </template>
-            {{ paymentButtonLabel }}
-          </a-button>
+            <!-- Action Buttons -->
+            <a-space direction="vertical" size="large" style="width: 100%; margin-top: 16px">
+              <a-button type="primary" long size="large" :disabled="!canConfirmOrder" :loading="confirmLoading" @click="confirmOrder">
+                <template #icon>
+                  <icon-check />
+                </template>
+                Xác Nhận ({{ finalPrice > 0 ? formatCurrency(finalPrice) : '0đ' }})
+              </a-button>
+              <a-button long @click="printOrder" :disabled="!currentOrder?.items.length">🖨️ In Hoá Đơn</a-button>
+            </a-space>
+          </a-form>
         </a-card>
+      </a-col>
+    </a-row>
+
+    <!-- Modals -->
+    <!-- Product Selection Modal -->
+    <a-modal v-model:visible="showProductModal" title="Chọn Sản Phẩm" width="90%" :footer="null" @cancel="showProductModal = false">
+      <div style="text-align: center; padding: 40px">
+        <a-empty description="Chọn biến thể sản phẩm sẽ được load ở đây" />
+        <p style="color: #86909c; margin-top: 16px">(Component ProductVariantTable)</p>
       </div>
-    </div>
+    </a-modal>
 
     <!-- QR Scanner Modal -->
-    <a-modal v-model:visible="showQRScanner" title="" :footer="null" width="600px" @cancel="closeQRScanner" unmount-on-close>
-      <div class="qr-scanner-container">
-        <div class="qr-modal-header">
-          <h3 class="modal-title">Quét mã QR sản phẩm</h3>
-          <p class="modal-subtitle">Đưa mã QR vào khung hình để quét</p>
-        </div>
-
-        <!-- Camera Preview -->
-        <div class="camera-preview">
-          <video ref="qrVideo" autoplay playsinline muted class="qr-video" @loadedmetadata="onVideoLoaded"></video>
-          <canvas ref="qrCanvas" class="qr-canvas"></canvas>
-
-          <!-- Scanning overlay -->
-          <div class="scanning-overlay">
-            <div class="scanning-frame">
-              <div class="corner corner-tl"></div>
-              <div class="corner corner-tr"></div>
-              <div class="corner corner-bl"></div>
-              <div class="corner corner-br"></div>
-              <div class="scanning-line" :class="{ active: isScanning }"></div>
-            </div>
-            <p class="scanning-text">
-              {{ isScanning ? 'Đang quét...' : cameraError ? cameraError : 'Đưa mã QR vào khung hình' }}
-            </p>
-          </div>
-        </div>
-
-        <!-- QR Scanner Controls -->
-        <div class="qr-controls">
-          <a-space>
-            <a-button @click="toggleCamera" :disabled="!hasMultipleCameras">Đổi camera</a-button>
-            <a-button v-if="torchSupported" @click="toggleTorch">
-              {{ torchEnabled ? 'Tắt đèn pin' : 'Bật đèn pin' }}
-            </a-button>
-            <a-button @click="closeQRScanner">Đóng</a-button>
-          </a-space>
-        </div>
-
-        <!-- QR Result -->
-        <div v-if="qrResult" class="qr-result">
-          <a-result status="success" title="Đã thêm sản phẩm vào giỏ hàng!">
-            <template #subtitle>
-              <p class="result-text">
-                Mã QR:
-                <strong>{{ qrResult }}</strong>
-              </p>
-            </template>
-            <template #extra>
-              <a-space>
-                <a-button type="primary" @click="scanAgain">Quét sản phẩm khác</a-button>
-                <a-button @click="closeQRScanner">Đóng</a-button>
-              </a-space>
-            </template>
-          </a-result>
-        </div>
+    <a-modal v-model:visible="showQRScanner" title="Quét Mã QR Sản Phẩm" width="500px" :footer="null" @cancel="showQRScanner = false">
+      <div style="text-align: center; padding: 40px">
+        <a-empty description="Scanner sẽ được load ở đây" />
+        <p style="color: #86909c; margin-top: 16px">(Sử dụng html5-qrcode)</p>
       </div>
+    </a-modal>
+
+    <!-- Add Customer Modal -->
+    <a-modal
+      v-model:visible="showAddCustomerModal"
+      title="Thêm Khách Hàng Mới"
+      width="500px"
+      ok-text="Thêm"
+      cancel-text="Hủy"
+      @ok="addNewCustomer"
+    >
+      <a-form v-if="newCustomerForm.value" :model="newCustomerForm.value" layout="vertical">
+        <a-form-item label="Tên Khách Hàng" required>
+          <a-input
+            :model-value="newCustomerForm.value?.name || ''"
+            placeholder="Nhập tên khách hàng"
+            @update:model-value="(val) => newCustomerForm.value && (newCustomerForm.value.name = val)"
+          />
+        </a-form-item>
+
+        <a-form-item label="Số Điện Thoại" required>
+          <a-input
+            :model-value="newCustomerForm.value?.phone || ''"
+            placeholder="Nhập số điện thoại"
+            @update:model-value="(val) => newCustomerForm.value && (newCustomerForm.value.phone = val)"
+          />
+        </a-form-item>
+
+        <a-form-item label="Email">
+          <a-input
+            :model-value="newCustomerForm.value?.email || ''"
+            placeholder="Nhập email"
+            type="email"
+            @update:model-value="(val) => newCustomerForm.value && (newCustomerForm.value.email = val)"
+          />
+        </a-form-item>
+
+        <a-form-item label="Địa Chỉ">
+          <a-textarea
+            :model-value="newCustomerForm.value?.address || ''"
+            placeholder="Nhập địa chỉ"
+            :auto-size="{ minRows: 2, maxRows: 4 }"
+            @update:model-value="(val) => newCustomerForm.value && (newCustomerForm.value.address = val)"
+          />
+        </a-form-item>
+      </a-form>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
-import axios from 'axios'
+import { ref, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
-import { createVnpayPayment, type CreateVnpayPaymentPayload } from '@/api/payment'
-import { fetchCustomers as fetchCustomersApi, fetchCoupons as fetchCouponsApi, fetchCouponProductDetails } from '@/api/discount-management'
-import { Message } from '@arco-design/web-vue'
-import {
-  IconPlus,
-  IconUserAdd,
-  IconStar,
-  IconDelete,
-  IconCheckCircle,
-  IconTag,
-  IconClose,
-  IconQrcode,
-} from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck } from '@arco-design/web-vue/es/icon'
 
-// Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
+// ==================== TYPES ====================
+interface CartItem {
+  id: string
+  productId: string
+  productName: string
+  price: number
+  quantity: number
+  image?: string
+}
 
-// Data from API
-const todayOrders = ref(0)
-const todayRevenue = ref(0)
-const productsList = ref<any[]>([])
-const loading = ref(false)
+interface Order {
+  id: string
+  orderCode: string
+  items: CartItem[]
+  customerId: string | null
+  createdAt: Date
+}
 
-// Search & Filter
-const productSearch = ref('')
-const selectedCategory = ref('')
-const sortBy = ref('name')
+interface Customer {
+  id: string
+  name: string
+  phone: string
+  email?: string
+  address?: string
+}
 
-// Customer info
-const customerForm = ref({
+// ==================== STATE ====================
+const orders = ref<Order[]>([])
+const currentOrderIndex = ref('0')
+const customers = ref<Customer[]>([
+  {
+    id: '1',
+    name: 'Nguyễn Văn A',
+    phone: '0912345678',
+    email: 'nguyenvana@email.com',
+    address: '123 Đường Lê Lợi, Quận 1, TP.HCM',
+  },
+  {
+    id: '2',
+    name: 'Trần Thị B',
+    phone: '0987654321',
+    email: 'tranthib@email.com',
+    address: '456 Đường Nguyễn Huệ, Quận 1, TP.HCM',
+  },
+])
+
+const customerSearchText = ref('')
+const showProductModal = ref(false)
+const showQRScanner = ref(false)
+const showAddCustomerModal = ref(false)
+const confirmLoading = ref(false)
+
+const paymentForm = ref({
+  discountCode: null as string | null,
+  method: 'cash' as 'cash' | 'transfer' | 'card',
+  cashReceived: 0,
+})
+
+const newCustomerForm = ref({
   name: '',
   phone: '',
+  email: '',
+  address: '',
 })
 
-// Customer selection
-const showCustomerModal = ref(false)
-const customerSearch = ref('')
-const customersList = ref<any[]>([])
-const customerLoading = ref(false)
-const selectedCustomer = ref<any>(null)
-const isGuestCustomer = ref(false)
-
-// Customer table columns
-const customerColumns = [
-  {
-    title: 'Tên khách hàng',
-    dataIndex: 'tenKhachHang',
-    slotName: 'name',
-  },
-  {
-    title: 'Số điện thoại',
-    dataIndex: 'soDienThoai',
-    slotName: 'phone',
-  },
-  {
-    title: 'Email',
-    dataIndex: 'email',
-    slotName: 'email',
-  },
-]
-
-// Coupon table columns
-const couponColumns = [
-  {
-    title: 'Mã phiếu',
-    dataIndex: 'maPhieuGiamGia',
-    slotName: 'code',
-  },
-  {
-    title: 'Tên phiếu',
-    dataIndex: 'tenPhieuGiamGia',
-    slotName: 'name',
-  },
-  {
-    title: 'Loại giảm giá',
-    dataIndex: 'loaiPhieuGiamGia',
-    slotName: 'type',
-  },
-  {
-    title: 'Giá trị',
-    dataIndex: 'giaTriGiamGia',
-    slotName: 'value',
-  },
-  {
-    title: 'Hóa đơn tối thiểu',
-    dataIndex: 'hoaDonToiThieu',
-    slotName: 'minOrder',
-  },
-  {
-    title: 'Trạng thái',
-    dataIndex: 'trangThai',
-    slotName: 'status',
-  },
-]
-
-// Customer pagination
-const customerPagination = ref({
+const cartPagination = ref({
   current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `Tổng ${total} khách hàng`,
+  pageSize: 5,
 })
 
-// Coupon pagination
-const couponPagination = ref({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `Tổng ${total} phiếu giảm giá`,
+const breadcrumbItems = ['menu.ban-hang-tai-quay']
+
+// ==================== COMPUTED ====================
+const currentOrder = computed(() => {
+  const idx = parseInt(currentOrderIndex.value)
+  return orders.value[idx] || null
 })
 
-// Helper functions (defined before productTableColumns to avoid no-use-before-define)
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount)
-}
-
-const getProductPrice = (product: any) => {
-  // Nếu có khuyến mãi, tính giá sau giảm
-  const originalPrice = Number(product.giaBan || 0)
-  if (product.idDotGiamGia && product.giaTriGiamGia) {
-    const discountPercent = Number(product.giaTriGiamGia)
-    return originalPrice - (originalPrice * discountPercent) / 100
-  }
-  return originalPrice
-}
-
-const getOriginalPrice = (product: any) => {
-  return Number(product.giaBan || 0)
-}
-
-const hasPromotion = (product: any) => {
-  return Boolean(product.idDotGiamGia && product.giaTriGiamGia)
-}
-
-const getPromotionLabel = (product: any) => {
-  if (!hasPromotion(product)) return ''
-  return `-${product.giaTriGiamGia}%`
-}
-
-const getStockColor = (product: any) => {
-  const stock = product.soLuong || 0
-  if (stock > 10) return 'green'
-  if (stock > 0) return 'orange'
-  return 'red'
-}
-
-const getStockText = (product: any) => {
-  const stock = product.soLuong || 0
-  return `${stock} sản phẩm`
-}
-
-// Product table columns
-const productTableColumns = [
-  {
-    title: 'Tên sản phẩm',
-    dataIndex: 'tenSanPham',
-    key: 'name',
-    width: 200,
-    slotName: 'name',
-  },
-  {
-    title: 'Giá',
-    key: 'price',
-    width: 150,
-    render: ({ record }: any) => formatCurrency(getProductPrice(record)),
-  },
-  {
-    title: 'Tồn kho',
-    dataIndex: 'soLuong',
-    key: 'stock',
-    width: 120,
-    slotName: 'stock',
-  },
-  {
-    title: 'Thao tác',
-    key: 'action',
-    width: 100,
-    fixed: 'right',
-    slotName: 'action',
-  },
-]
-
-// Product pagination
-const productPagination = ref({
-  current: 1,
-  pageSize: 20,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `Tổng ${total} sản phẩm`,
+const filteredCustomers = computed(() => {
+  if (!customerSearchText.value) return customers.value
+  const query = customerSearchText.value.toLowerCase()
+  return customers.value.filter((c) => c.name.toLowerCase().includes(query) || c.phone.toLowerCase().includes(query))
 })
 
-// Cart
-const cartItems = ref<any[]>([])
+const selectedCustomer = computed(() => {
+  if (!currentOrder.value?.customerId) return null
+  return customers.value.find((c) => c.id === currentOrder.value?.customerId)
+})
 
-// Payment
-const paymentMethod = ref('cash')
-const customerPaid = ref(0)
-const change = ref(0)
-const isProcessingPayment = ref(false)
-const selectedTransferBankCode = ref('')
-
-// Discount coupon
-const showCouponModal = ref(false)
-const couponSearch = ref('')
-const couponsList = ref<any[]>([])
-const couponLoading = ref(false)
-const selectedCoupon = ref<any>(null)
-const appliedCoupon = ref<any>(null)
-
-// Coupon product restrictions
-const couponProductDetails = ref<Map<number, number[]>>(new Map())
-const appliedCouponProductIds = ref<number[]>([])
-
-// QR Scanner variables
-const showQRScanner = ref(false)
-const qrVideo = ref<HTMLVideoElement | null>(null)
-const qrCanvas = ref<HTMLCanvasElement | null>(null)
-const qrResult = ref('')
-const isScanning = ref(false)
-const cameraError = ref('')
-const hasMultipleCameras = ref(false)
-const torchSupported = ref(false)
-const torchEnabled = ref(false)
-const currentCameraIndex = ref(0)
-
-let qrStream: MediaStream | null = null
-let animationFrameId: number | null = null
-let availableCameras: MediaDeviceInfo[] = []
-
-const vnpayBankOptions = [
-  { label: 'VNPAY QR', value: 'VNPAYQR' },
-  { label: 'Ngân hàng nội địa (ATM)', value: 'VNBANK' },
-  { label: 'Thẻ quốc tế (Visa/Master/JCB)', value: 'INTCARD' },
-]
-
-// Products data from API
-const products = computed(() => productsList.value)
-
-// Computed
-const filteredProducts = computed(() => {
-  let filtered = products.value
-
-  // Search filter
-  if (productSearch.value) {
-    filtered = filtered.filter((product) => product.tenSanPham?.toLowerCase().includes(productSearch.value.toLowerCase()))
-  }
-
-  // Category filter (tạm thời bỏ qua vì API không có category)
-  // if (selectedCategory.value) {
-  //   filtered = filtered.filter((product) => product.category === selectedCategory.value)
-  // }
-
-  // Sort
-  filtered = [...filtered].sort((a, b) => {
-    switch (sortBy.value) {
-      case 'price-low':
-        return getProductPrice(a) - getProductPrice(b)
-      case 'price-high':
-        return getProductPrice(b) - getProductPrice(a)
-      case 'name':
-        return (a.tenSanPham || '').localeCompare(b.tenSanPham || '')
-      case 'newest':
-        return (b.id || 0) - (a.id || 0)
-      default:
-        return 0
-    }
-  })
-
-  // Update pagination total
-  productPagination.value.total = filtered.length
-
-  return filtered
+const paginatedCartItems = computed(() => {
+  if (!currentOrder.value) return []
+  const start = (cartPagination.value.current - 1) * cartPagination.value.pageSize
+  const end = start + cartPagination.value.pageSize
+  return currentOrder.value.items.slice(start, end)
 })
 
 const subtotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  if (!currentOrder.value) return 0
+  return currentOrder.value.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 })
 
-// Tổng giá trị các sản phẩm được áp dụng giảm giá
-const applicableCartSubtotal = computed(() => {
-  if (!appliedCoupon.value) return 0
-
-  // Nếu không có giới hạn sản phẩm => toàn bộ giỏ hàng
-  if (appliedCouponProductIds.value.length === 0) {
-    return subtotal.value
-  }
-
-  // Tính tổng chỉ các sản phẩm được phép
-  return cartItems.value
-    .filter((item) => appliedCouponProductIds.value.includes(item.id))
-    .reduce((sum, item) => sum + item.price * item.quantity, 0)
-})
-
-// Giá trị giảm giá thực tế
 const discountAmount = computed(() => {
-  if (!appliedCoupon.value) return 0
-
-  const applicableAmount = applicableCartSubtotal.value
-
-  if (appliedCoupon.value.type === 'percentage') {
-    const discount = (applicableAmount * appliedCoupon.value.discount) / 100
-
-    // Áp dụng cap nếu có
-    if (appliedCoupon.value.maxDiscount) {
-      return Math.min(discount, appliedCoupon.value.maxDiscount)
-    }
-    return discount
-  }
-
-  // Fixed amount
-  return Math.min(appliedCoupon.value.discount, applicableAmount)
+  const code = paymentForm.value?.discountCode
+  if (!code) return 0
+  if (code === 'SUMMER10') return subtotal.value * 0.1
+  if (code === 'SUMMER20') return subtotal.value * 0.2
+  if (code === 'VIP50') return 50000
+  return 0
 })
 
-const total = computed(() => {
-  return Math.max(0, subtotal.value - discountAmount.value)
+const tax = computed(() => {
+  return (subtotal.value - discountAmount.value) * 0.1
 })
 
-// Filtered customers
-const filteredCustomers = computed(() => {
-  if (!customerSearch.value) {
-    return customersList.value
-  }
-
-  const searchTerm = customerSearch.value.toLowerCase()
-  return customersList.value.filter((customer) => {
-    return (
-      customer.tenKhachHang?.toLowerCase().includes(searchTerm) ||
-      customer.soDienThoai?.toLowerCase().includes(searchTerm) ||
-      customer.email?.toLowerCase().includes(searchTerm)
-    )
-  })
+const finalPrice = computed(() => {
+  return subtotal.value - discountAmount.value + tax.value
 })
 
-// Filtered coupons - only show applicable coupons based on cart subtotal
-const filteredCoupons = computed(() => {
-  // Filter by minimum order value first
-  let filtered = couponsList.value.filter((coupon) => {
-    // Check if coupon has minimum order requirement
-    const minOrder = coupon.hoaDonToiThieu ? Number(coupon.hoaDonToiThieu) : 0
-    // Only show if cart subtotal meets minimum requirement
-    return subtotal.value >= minOrder
-  })
-
-  // Then filter by search term if exists
-  if (couponSearch.value) {
-    const searchTerm = couponSearch.value.toLowerCase()
-    filtered = filtered.filter((coupon) => {
-      return coupon.maPhieuGiamGia?.toLowerCase().includes(searchTerm) || coupon.tenPhieuGiamGia?.toLowerCase().includes(searchTerm)
-    })
-  }
-
-  return filtered
+const change = computed(() => {
+  return Math.max(0, paymentForm.value?.cashReceived - finalPrice.value)
 })
 
-// Promotion savings calculations
-const promotionSavings = computed(() => {
-  return cartItems.value.reduce((sum, item) => {
-    if (item.hasPromotion) {
-      return sum + (item.originalPrice - item.price) * item.quantity
-    }
-    return sum
+const canConfirmOrder = computed(() => {
+  return currentOrder.value?.items.length > 0 && finalPrice.value > 0
+})
+
+const totalRevenue = computed(() => {
+  return orders.value.reduce((sum, order) => {
+    const orderSubtotal = order.items.reduce((s, item) => s + item.price * item.quantity, 0)
+    const discount = paymentForm.value?.discountCode === 'SUMMER10' ? orderSubtotal * 0.1 : 0
+    const tax = (orderSubtotal - discount) * 0.1
+    return sum + (orderSubtotal - discount + tax)
   }, 0)
 })
 
-const promotionItemsCount = computed(() => {
-  return cartItems.value.filter((item) => item.hasPromotion).length
+const totalItemsSold = computed(() => {
+  return orders.value.reduce((sum, order) => sum + order.items.reduce((s, item) => s + item.quantity, 0), 0)
 })
 
-// Helper utilities for discount UI
-const getApplicableProductsCount = computed(() => {
-  if (!appliedCoupon.value) return 0
-  if (appliedCouponProductIds.value.length === 0) {
-    return cartItems.value.length // All products
+// ==================== COLUMNS ====================
+const cartColumns = [
+  {
+    title: 'Sản Phẩm',
+    dataIndex: 'productName',
+    key: 'productName',
+    width: 150,
+  },
+  {
+    title: 'Giá',
+    dataIndex: 'price',
+    key: 'price',
+    slotName: 'price',
+    width: 100,
+    align: 'right' as const,
+  },
+  {
+    title: 'Số Lượng',
+    dataIndex: 'quantity',
+    key: 'quantity',
+    slotName: 'quantity',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: 'Thành Tiền',
+    dataIndex: 'subtotal',
+    key: 'subtotal',
+    slotName: 'subtotal',
+    width: 120,
+    align: 'right' as const,
+  },
+  {
+    title: 'Hành Động',
+    dataIndex: 'action',
+    key: 'action',
+    slotName: 'action',
+    width: 80,
+    align: 'center' as const,
+  },
+]
+
+// ==================== METHODS ====================
+const generateOrderCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let code = ''
+  for (let i = 0; i < 7; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
   }
-  return cartItems.value.filter((item) => appliedCouponProductIds.value.includes(item.id)).length
-})
-
-// Computed for payment
-const paymentButtonLabel = computed(() => {
-  const amountLabel = formatCurrency(Math.max(total.value, 0))
-  return paymentMethod.value === 'transfer' ? `Thanh toán VNPAY (${amountLabel})` : `Thanh toán (${amountLabel})`
-})
-
-const isPaymentDisabled = computed(() => {
-  if (cartItems.value.length === 0 || total.value <= 0 || isProcessingPayment.value) {
-    return true
-  }
-
-  // For cash payment, require customer payment amount
-  if (paymentMethod.value === 'cash') {
-    return customerPaid.value <= 0
-  }
-
-  return false
-})
-
-const addToSingleCart = (product: any) => {
-  const existingItem = cartItems.value.find((item) => item.id === product.id)
-
-  if (existingItem) {
-    // Kiểm tra số lượng sản phẩm
-    if (existingItem.quantity < (product.soLuong || 0)) {
-      existingItem.quantity += 1
-    }
-  } else {
-    cartItems.value.push({
-      id: product.id,
-      name: product.tenSanPham,
-      price: getProductPrice(product),
-      originalPrice: getOriginalPrice(product),
-      hasPromotion: hasPromotion(product),
-      promotionLabel: getPromotionLabel(product),
-      image: getProductImage(product),
-      stock: product.soLuong || 0,
-      quantity: 1,
-      // Lưu thêm thông tin gốc từ API
-      originalProduct: product,
-    })
-  }
+  return code
 }
 
-const addToCart = (product: any) => {
-  addToSingleCart(product)
+const createNewOrder = () => {
+  const newOrder: Order = {
+    id: `ORDER_${Date.now()}`,
+    orderCode: generateOrderCode(),
+    items: [],
+    customerId: null,
+    createdAt: new Date(),
+  }
+  orders.value.push(newOrder)
+  currentOrderIndex.value = (orders.value.length - 1).toString()
 }
 
-const updateQuantity = (itemIndex: number, quantity: number) => {
-  cartItems.value[itemIndex].quantity = Math.max(0, quantity)
-}
-
-const removeFromCart = (itemIndex: number) => {
-  cartItems.value.splice(itemIndex, 1)
-}
-
-// Customer functions
-const fetchCustomers = async () => {
-  try {
-    customerLoading.value = true
-    const data = await fetchCustomersApi()
-
-    if (data && Array.isArray(data)) {
-      // Filter active customers
-      const activeCustomers = data.filter((c) => {
-        return c.trangThai !== false && c.trangThai !== 0
-      })
-      customersList.value = activeCustomers
-      customerPagination.value.total = activeCustomers.length
-    } else {
-      customersList.value = []
-    }
-  } catch {
-    Message.error('Không thể tải danh sách khách hàng')
-    customersList.value = []
-  } finally {
-    customerLoading.value = false
+const deleteOrderByIndex = (index: number) => {
+  orders.value.splice(index, 1)
+  if (orders.value.length > 0) {
+    currentOrderIndex.value = '0'
   }
 }
 
-const searchCustomers = () => {
-  // Search is handled by computed property
+const handleOrderChange = (key: string) => {
+  currentOrderIndex.value = key
+  cartPagination.value.current = 1
 }
 
-const handleCustomerRowClick = (record: any) => {
-  selectedCustomer.value = record
+const updateQuantity = (itemId: string, quantity: number) => {
+  if (!currentOrder.value) return
+  const item = currentOrder.value.items.find((i) => i.id === itemId)
+  if (item) {
+    item.quantity = Math.max(1, quantity || 1)
+  }
 }
 
-const getCustomerRowClass = (record: any) => {
-  return selectedCustomer.value?.id === record.id ? 'selected-row' : ''
+const removeFromCart = (itemId: string) => {
+  if (!currentOrder.value) return
+  const index = currentOrder.value.items.findIndex((i) => i.id === itemId)
+  if (index > -1) {
+    currentOrder.value.items.splice(index, 1)
+  }
 }
 
-const selectCustomer = () => {
-  if (selectedCustomer.value) {
-    // Handle existing customer
-    isGuestCustomer.value = false
-    customerForm.value.name = selectedCustomer.value.tenKhachHang || ''
-    customerForm.value.phone = selectedCustomer.value.soDienThoai || ''
-    showCustomerModal.value = false
-    Message.success('Đã chọn khách hàng thành công!')
+const clearCart = () => {
+  if (currentOrder.value) {
+    currentOrder.value.items = []
+  }
+}
+
+const handleCustomerChange = (customerId: string) => {
+  if (currentOrder.value) {
+    currentOrder.value.customerId = customerId || null
+  }
+}
+
+const handleCustomerSearch = () => {
+  // Placeholder for search implementation
+}
+
+const addNewCustomer = () => {
+  if (!newCustomerForm.value?.name || !newCustomerForm.value?.phone) {
+    // Show error
     return
   }
-  Message.warning('Vui lòng chọn một khách hàng!')
+  const customer: Customer = {
+    id: `CUSTOMER_${Date.now()}`,
+    ...newCustomerForm.value,
+  }
+  customers.value.push(customer)
+  if (currentOrder.value) {
+    currentOrder.value.customerId = customer.id
+  }
+  showAddCustomerModal.value = false
+  newCustomerForm.value = { name: '', phone: '', email: '', address: '' }
 }
 
-const selectGuestCustomer = () => {
-  isGuestCustomer.value = true
-  customerForm.value.name = ''
-  customerForm.value.phone = ''
-  selectedCustomer.value = null
-  Message.success('Đã chọn khách lạ!')
+const confirmOrder = () => {
+  if (!canConfirmOrder.value) return
+  confirmLoading.value = true
+  setTimeout(() => {
+    // API call would go here
+    console.log('Order confirmed:', currentOrder.value)
+    Message.success('Đơn hàng đã được xác nhận')
+    confirmLoading.value = false
+  }, 500)
 }
 
-const clearCustomer = () => {
-  isGuestCustomer.value = false
-  customerForm.value.name = ''
-  customerForm.value.phone = ''
-  selectedCustomer.value = null
-  Message.info('Đã xóa thông tin khách hàng!')
+const printOrder = () => {
+  if (!currentOrder.value?.items.length) return
+  // Implement print functionality
+  console.log('Printing order:', currentOrder.value)
+  Message.info('In hoá đơn thành công')
 }
 
-// Coupon functions
-const loadCouponProductDetails = async (couponId: number): Promise<number[] | null> => {
-  // Check cache first
-  if (couponProductDetails.value.has(couponId)) {
-    const cached = couponProductDetails.value.get(couponId)
-    return cached && cached.length > 0 ? cached : null
-  }
-
-  try {
-    const details = await fetchCouponProductDetails(couponId)
-
-    // Nếu không có chi tiết => áp dụng cho tất cả sản phẩm
-    if (!details || details.length === 0) {
-      couponProductDetails.value.set(couponId, [])
-      return null // null = áp dụng toàn bộ
-    }
-
-    // Extract product IDs
-    const productIds = details.map((d) => d.idChiTietSanPham)
-    couponProductDetails.value.set(couponId, productIds)
-    return productIds
-  } catch {
-    // On error, assume applies to all products
-    // On error, assume applies to all products
-    couponProductDetails.value.set(couponId, [])
-    return null
-  }
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value)
 }
 
-const fetchCoupons = async () => {
-  try {
-    couponLoading.value = true
-    const data = await fetchCouponsApi()
-
-    if (data && Array.isArray(data)) {
-      // Filter active coupons only
-      const now = new Date()
-      const activeCoupons = data.filter((coupon) => {
-        // Check if coupon is active
-        if (!coupon.trangThai) return false
-
-        // Check if not deleted
-        if (coupon.deleted) return false
-
-        // Check if within valid date range
-        const startDate = coupon.ngayBatDau ? new Date(coupon.ngayBatDau) : null
-        const endDate = coupon.ngayKetThuc ? new Date(coupon.ngayKetThuc) : null
-
-        if (startDate && now < startDate) return false
-        if (endDate) {
-          const endOfDay = new Date(endDate)
-          endOfDay.setHours(23, 59, 59, 999)
-          if (now > endOfDay) return false
-        }
-
-        return true
-      })
-
-      couponsList.value = activeCoupons
-      couponPagination.value.total = activeCoupons.length
-    } else {
-      couponsList.value = []
-    }
-  } catch {
-    Message.error('Không thể tải danh sách phiếu giảm giá')
-    couponsList.value = []
-  } finally {
-    couponLoading.value = false
-  }
-}
-
-const searchCoupons = () => {
-  // Search is handled by computed property
-}
-
-const handleCouponRowClick = (record: any) => {
-  selectedCoupon.value = record
-}
-
-const getCouponRowClass = (record: any) => {
-  return selectedCoupon.value?.id === record.id ? 'selected-row' : ''
-}
-
-const applyCoupon = async () => {
-  if (!selectedCoupon.value) {
-    Message.warning('Vui lòng chọn một phiếu giảm giá!')
-    return
-  }
-
-  if (subtotal.value <= 0) {
-    Message.warning('Giỏ hàng trống!')
-    return
-  }
-
-  // Load product restrictions
-  couponLoading.value = true
-  const productIds = await loadCouponProductDetails(selectedCoupon.value.id)
-  couponLoading.value = false
-
-  // Kiểm tra sản phẩm trong giỏ
-  let hasApplicableProducts = true
-  if (productIds && productIds.length > 0) {
-    const cartProductIds = cartItems.value.map((item) => item.id)
-    hasApplicableProducts = productIds.some((id) => cartProductIds.includes(id))
-
-    if (!hasApplicableProducts) {
-      Message.warning('Giỏ hàng không có sản phẩm nào áp dụng được phiếu giảm giá này!')
-      return
-    }
-  }
-
-  // Store applicable product IDs
-  appliedCouponProductIds.value = productIds || []
-
-  // Tính subtotal của sản phẩm được áp dụng
-  const applicableAmount =
-    productIds && productIds.length > 0
-      ? cartItems.value.filter((item) => productIds.includes(item.id)).reduce((sum, item) => sum + item.price * item.quantity, 0)
-      : subtotal.value
-
-  // Check minimum order
-  const minOrder = selectedCoupon.value.hoaDonToiThieu ? Number(selectedCoupon.value.hoaDonToiThieu) : 0
-
-  if (applicableAmount < minOrder) {
-    Message.warning(`Tổng giá trị sản phẩm áp dụng phải từ ${formatCurrency(minOrder)}! (Hiện tại: ${formatCurrency(applicableAmount)})`)
-    return
-  }
-
-  // Apply coupon
-  appliedCoupon.value = {
-    code: selectedCoupon.value.maPhieuGiamGia,
-    type: selectedCoupon.value.loaiPhieuGiamGia ? 'fixed' : 'percentage',
-    discount: Number(selectedCoupon.value.giaTriGiamGia),
-    maxDiscount: selectedCoupon.value.soTienToiDa ? Number(selectedCoupon.value.soTienToiDa) : null,
-  }
-
-  showCouponModal.value = false
-
-  const productCount = appliedCouponProductIds.value.length
-  const productNote = productCount > 0 ? ` (Áp dụng cho ${productCount} sản phẩm)` : ''
-
-  Message.success(`Áp dụng phiếu giảm giá thành công!${productNote}`)
-}
-
-const removeCoupon = () => {
-  appliedCoupon.value = null
-  appliedCouponProductIds.value = []
-  Message.info('Đã xóa phiếu giảm giá!')
-}
-
-const calculateChange = () => {
-  change.value = Math.max(0, customerPaid.value - total.value)
-}
-
-const resetCartState = () => {
-  cartItems.value = []
-  customerForm.value = { name: '', phone: '' }
-  isGuestCustomer.value = false
-  selectedCustomer.value = null
-  appliedCoupon.value = null
-  appliedCouponProductIds.value = []
-  customerPaid.value = 0
-  change.value = 0
-}
-
-const completeLocalPayment = () => {
-  Message.success('Thanh toán thành công')
-  resetCartState()
-}
-
-const initiateVnpayPayment = async () => {
-  if (isProcessingPayment.value) {
-    return
-  }
-  if (total.value <= 0) {
-    Message.warning('Số tiền thanh toán không hợp lệ')
-    return
-  }
-
-  try {
-    isProcessingPayment.value = true
-    const payload: CreateVnpayPaymentPayload = {
-      amount: Math.round(total.value),
-      orderId: `POS-${Date.now()}`,
-      orderInfo: `Thanh toan don hang tai quay ${customerForm.value.name || 'Khach le'}`,
-      locale: 'vn',
-    }
-
-    if (selectedTransferBankCode.value) {
-      payload.bankCode = selectedTransferBankCode.value
-    }
-
-    const response = await createVnpayPayment(payload)
-
-    if (!response?.payUrl) {
-      throw new Error('Thiếu đường dẫn thanh toán trong phản hồi VNPAY')
-    }
-
-    window.location.href = response.payUrl
-  } catch {
-    Message.error('Không thể khởi tạo thanh toán VNPAY. Vui lòng thử lại.')
-  } finally {
-    isProcessingPayment.value = false
-  }
-}
-
-const processPayment = async () => {
-  if (cartItems.value.length === 0) {
-    Message.warning('Chưa có sản phẩm trong giỏ hàng')
-    return
-  }
-
-  if (total.value <= 0) {
-    Message.warning('Số tiền thanh toán không hợp lệ')
-    return
-  }
-
-  // Validate customer payment amount for cash payment
-  if (paymentMethod.value === 'cash') {
-    if (customerPaid.value <= 0) {
-      Message.warning('Vui lòng nhập số tiền khách đưa!')
-      return
-    }
-
-    if (customerPaid.value < total.value) {
-      Message.warning('Số tiền khách đưa không đủ để thanh toán!')
-      return
-    }
-
-    calculateChange()
-    completeLocalPayment()
-    return
-  }
-
-  if (paymentMethod.value === 'transfer') {
-    await initiateVnpayPayment()
-    return
-  }
-
-  completeLocalPayment()
-}
-
-// Watch for payment method changes
-watch(paymentMethod, (method) => {
-  if (method !== 'cash') {
-    customerPaid.value = 0
-    change.value = 0
-  }
-  if (method !== 'transfer') {
-    selectedTransferBankCode.value = ''
-  }
-})
-
-watch(total, () => {
-  if (paymentMethod.value === 'cash') {
-    calculateChange()
-  }
-})
-
-// API functions
-const fetchProducts = async () => {
-  try {
-    loading.value = true
-    // Sử dụng API chi tiết sản phẩm để lấy ảnh
-    const response = await axios.get('/api/chi-tiet-san-pham-management/playlist')
-
-    if (response.success) {
-      productsList.value = response.data || []
-    }
-  } catch {
-    // Handle error silently
-  } finally {
-    loading.value = false
-  }
-}
-
-const fetchTodayStats = async () => {
-  try {
-    // Lấy thống kê hôm nay từ API hóa đơn
-    const response = await axios.get('/api/hoa-don-management/playlist')
-    if (response.success) {
-      const invoiceList = response.data || []
-      const today = new Date()
-      const todayStr = today.toISOString().split('T')[0]
-
-      // Đếm hóa đơn hôm nay
-      todayOrders.value = invoiceList.filter((invoice: any) => {
-        const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
-        return invoiceDate.toISOString().split('T')[0] === todayStr
-      }).length
-
-      // Tính doanh thu hôm nay
-      todayRevenue.value = invoiceList
-        .filter((invoice: any) => {
-          const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
-          return invoiceDate.toISOString().split('T')[0] === todayStr && (invoice.trangThai === true || invoice.ngayThanhToan)
-        })
-        .reduce((sum: number, invoice: any) => {
-          return sum + Number(invoice.tongTienSauGiam || invoice.tongTien || 0)
-        }, 0)
-    }
-  } catch {
-    // Handle error silently
-  }
-}
-
-// QR Scanner Functions
-// Helper functions first to avoid no-use-before-define errors
-const detectQRCode = (imageData: ImageData) => {
-  try {
-    if (typeof window !== 'undefined' && (window as any).jsQR) {
-      const code = (window as any).jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'dontInvert',
-      })
-      return code ? code.data : null
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-const stopCamera = async () => {
-  if (qrStream) {
-    qrStream.getTracks().forEach((track) => track.stop())
-    qrStream = null
-  }
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId)
-    animationFrameId = null
-  }
-  isScanning.value = false
-  torchEnabled.value = false
-}
-
-const closeQRScanner = async () => {
-  await stopCamera()
-  showQRScanner.value = false
-  qrResult.value = ''
-  cameraError.value = ''
-}
-
-const addProductFromQR = async () => {
-  try {
-    if (!qrResult.value) {
-      Message.error('Không có mã QR để thêm sản phẩm')
-      return
-    }
-
-    const product = productsList.value.find((p) => {
-      const productCode = p.maSanPham || `SP${String(p.id).padStart(5, '0')}`
-      return (
-        productCode === qrResult.value || p.id.toString() === qrResult.value || productCode.toLowerCase() === qrResult.value.toLowerCase()
-      )
-    })
-
-    if (!product) {
-      Message.error(`Không tìm thấy sản phẩm với mã: ${qrResult.value}`)
-      // Clear result to allow scanning again
-      qrResult.value = ''
-      return
-    }
-
-    if (product.soLuong <= 0) {
-      Message.warning('Sản phẩm đã hết hàng')
-      // Clear result to allow scanning again
-      qrResult.value = ''
-      return
-    }
-
-    addToCart(product)
-    Message.success(`Đã thêm ${product.tenSanPham || 'sản phẩm'} vào giỏ hàng`)
-    // Close scanner automatically after successful addition
-    await closeQRScanner()
-  } catch {
-    Message.error('Có lỗi xảy ra khi thêm sản phẩm')
-    // Clear result to allow scanning again
-    qrResult.value = ''
-  }
-}
-
-const startScanning = (context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, video: HTMLVideoElement) => {
-  const scan = () => {
-    if (!isScanning.value || !showQRScanner.value) {
-      return
-    }
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-
-    const qrCode = detectQRCode(imageData)
-
-    if (qrCode) {
-      qrResult.value = qrCode
-      isScanning.value = false
-      Message.success('Quét QR thành công!')
-      // Automatically add product to cart
-      addProductFromQR()
-    } else {
-      animationFrameId = requestAnimationFrame(scan)
-    }
-  }
-
-  scan()
-}
-
-const initCamera = async () => {
-  try {
-    cameraError.value = ''
-    isScanning.value = false
-
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    availableCameras = devices.filter((device) => device.kind === 'videoinput')
-    hasMultipleCameras.value = availableCameras.length > 1
-
-    if (availableCameras.length === 0) {
-      cameraError.value = 'Không tìm thấy camera'
-      return
-    }
-
-    const constraints = {
-      video: {
-        deviceId: availableCameras[currentCameraIndex.value]?.deviceId,
-        facingMode: availableCameras.length > 1 ? 'environment' : 'user',
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-      },
-    }
-
-    qrStream = await navigator.mediaDevices.getUserMedia(constraints)
-
-    // Check torch support after getting the stream
-    const track = qrStream.getVideoTracks()[0]
-    if (track) {
-      const capabilities = track.getCapabilities() as any
-      if (capabilities.torch) {
-        torchSupported.value = true
-      }
-    }
-
-    if (qrVideo.value) {
-      qrVideo.value.srcObject = qrStream
-      // Wait for video to be ready
-      await qrVideo.value.play()
-    }
-  } catch (error) {
-    const err = error as Error
-    if (err.name === 'NotAllowedError') {
-      cameraError.value = 'Vui lòng cho phép truy cập camera'
-    } else if (err.name === 'NotFoundError') {
-      cameraError.value = 'Không tìm thấy camera'
-    } else {
-      cameraError.value = 'Không thể kết nối camera'
-    }
-  }
-}
-
-const onVideoLoaded = () => {
-  if (qrVideo.value && qrCanvas.value) {
-    const video = qrVideo.value
-    const canvas = qrCanvas.value
-
-    // Make sure video has valid dimensions
-    if (!video.videoWidth || !video.videoHeight) {
-      return
-    }
-
-    const context = canvas.getContext('2d', { willReadFrequently: true })
-    if (!context) return
-
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-
-    isScanning.value = true
-    Message.success('Camera sẵn sàng! Bắt đầu quét...')
-    startScanning(context, canvas, video)
-  }
-}
-
-const toggleCamera = async () => {
-  if (hasMultipleCameras.value && availableCameras.length > 1) {
-    currentCameraIndex.value = (currentCameraIndex.value + 1) % availableCameras.length
-    await stopCamera()
-    await initCamera()
-  }
-}
-
-const toggleTorch = async () => {
-  if (torchSupported.value && qrStream) {
-    try {
-      const track = qrStream.getVideoTracks()[0]
-      const capabilities = track.getCapabilities() as any
-
-      if (capabilities.torch) {
-        await track.applyConstraints({
-          advanced: [{ torch: !torchEnabled.value } as any],
-        })
-        torchEnabled.value = !torchEnabled.value
-      }
-    } catch {
-      Message.error('Không thể bật/tắt đèn pin')
-    }
-  }
-}
-
-const scanAgain = () => {
-  qrResult.value = ''
-  isScanning.value = true
-  if (qrVideo.value && qrCanvas.value) {
-    const context = qrCanvas.value.getContext('2d', { willReadFrequently: true })
-    if (context) {
-      startScanning(context, qrCanvas.value, qrVideo.value)
-    }
-  }
-}
-
-// Watch for QR scanner modal open/close
-watch(showQRScanner, async (newVal) => {
-  if (newVal) {
-    await nextTick()
-    Message.info('Đang khởi tạo camera...')
-    await initCamera()
-    if (cameraError.value) {
-      Message.error(cameraError.value)
-    }
-  } else {
-    await stopCamera()
-  }
-})
-
+// ==================== LIFECYCLE ====================
 onMounted(() => {
-  fetchProducts()
-  fetchTodayStats()
-  fetchCustomers()
-  fetchCoupons()
-})
-
-// Cleanup camera on component unmount
-onUnmounted(async () => {
-  await stopCamera()
+  // Initialize with one empty order
+  createNewOrder()
 })
 </script>
 
-<style scoped>
-.pos-page {
-  padding: 0 20px 20px 20px;
+<style scoped lang="less">
+.pos-system {
+  padding: 16px;
 }
 
-.pos-content {
-  display: flex;
-  gap: 16px;
-  height: calc(100vh - 140px);
+.pos-main {
+  margin-bottom: 24px;
 }
 
-.products-panel {
-  flex: 2;
-  display: flex;
-  flex-direction: column;
+.pos-left,
+.pos-right {
+  :deep(.arco-card) {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
 }
 
-.product-controls {
+.orders-card {
   margin-bottom: 16px;
 }
 
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  color: #86909c;
+.orders-tabs {
+  :deep(.arco-tabs-tab) {
+    padding: 8px 16px;
+  }
 }
 
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
-.product-card {
-  overflow: hidden;
-}
-
-.product-card .product-image {
-  height: 150px;
-  object-fit: cover;
-}
-
-.product-image-wrapper {
-  position: relative;
-}
-
-.promo-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.product-price-section {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.original-price {
-  font-size: 14px;
-  color: var(--color-text-3);
-  text-decoration: line-through;
-}
-
-.original-price.small {
-  font-size: 11px;
-}
-
-.promo-price {
-  color: #ff4d4f !important;
-  font-weight: 700;
-}
-
-.product-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.product-price {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1890ff;
-}
-
-.product-stock {
-  font-size: 12px;
-}
-
-.cart-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.customer-card,
-.cart-card,
-.payment-card {
-}
-
-.cart-items {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.cart-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.cart-item:last-child {
-  border-bottom: none;
-}
-
-.item-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-}
-
-.item-image {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-}
-
-.item-details {
-  flex: 1;
-}
-
-.item-name {
-  font-weight: 500;
-  color: #1d2129;
-  margin-bottom: 4px;
-  font-size: 14px;
-  line-height: 1.2;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.item-price-section {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.item-price {
-  font-size: 12px;
-  color: #1890ff;
-  font-weight: 500;
-}
-
-.item-controls {
+.tab-header {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  .tab-close-btn {
+    margin-left: 8px;
+  }
 }
 
-.empty-cart {
-  text-align: center;
-  padding: 40px 20px;
+.toolbar {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.cart-card {
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.cart-wrapper {
+  margin-bottom: 16px;
+  min-height: 200px;
+
+  :deep(.arco-table) {
+    font-size: 13px;
+  }
 }
 
 .cart-summary {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.discount-applied {
-  background: rgba(var(--success-6), 0.05);
-  padding: 8px;
+  padding: 12px;
+  background: #fafafa;
   border-radius: 4px;
-  margin: 8px 0;
+
+  p {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 13px;
+
+    strong {
+      font-weight: 600;
+    }
+  }
 }
 
-.discount-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.customer-card {
+  margin-bottom: 16px;
+
+  :deep(.arco-form-item) {
+    margin-bottom: 12px;
+  }
 }
 
-.discount-note {
-  font-size: 11px;
-  color: var(--color-text-3);
-  font-style: italic;
+.payment-card {
+  :deep(.arco-form-item) {
+    margin-bottom: 12px;
+  }
+
+  :deep(.arco-form-item-label-col) {
+    line-height: 28px;
+  }
 }
 
-.discount-amount {
-  color: var(--success-6);
-  font-weight: 600;
-}
-
-.coupon-code {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Promotion savings info */
-.savings-info {
-  background: rgba(255, 77, 79, 0.05);
-  padding: 8px;
+.payment-summary {
+  padding: 12px;
+  background: #fafafa;
   border-radius: 4px;
-  margin: 8px 0;
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &.total {
+      border-top: 1px solid #e5e5e5;
+      padding-top: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+  }
 }
 
-.savings-label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.savings-note {
-  font-size: 11px;
-  color: var(--color-text-3);
-  font-style: italic;
-}
-
-.savings-amount {
-  color: #ff4d4f;
+.discount-text {
+  color: #f5222d;
   font-weight: 600;
 }
 
-.summary-row.total {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1d2129;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e8e8e8;
-}
-
-.cash-payment {
-  margin: 16px 0;
-}
-
-.cash-payment .ant-form-item-has-error .ant-input-number {
-  border-color: #ff4d4f;
-}
-
-.cash-payment .ant-form-item-has-error .ant-input-number:focus {
-  border-color: #ff4d4f;
-  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
-}
-
-.change-info {
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
-
-  padding: 8px 12px;
-  margin-top: 8px;
-}
-
-.change-row {
-  display: flex;
-  justify-content: space-between;
-  font-weight: 500;
+.final-price {
   color: #52c41a;
+  font-size: 16px;
+  font-weight: 700;
 }
 
-.transfer-payment {
-  margin: 16px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.change-text {
+  color: #faad14;
+  font-weight: 600;
 }
 
-.transfer-note {
-  margin: 0;
-  font-size: 13px;
-  color: #64748b;
-  line-height: 1.4;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-  .pos-content {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .products-panel,
-  .cart-panel {
-    flex: none;
-  }
-
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  }
+.text-right {
+  text-align: right;
 }
 
 @media (max-width: 768px) {
-  .pos-page {
-    padding: 16px;
+  .pos-system {
+    padding: 8px;
   }
 
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
+  .pos-left,
+  .pos-right {
+    margin-bottom: 16px;
   }
 
-  .header-right {
-    width: 100%;
-    justify-content: space-around;
+  .orders-tabs {
+    :deep(.arco-tabs-tab) {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
   }
-
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  }
-
-  .product-card {
-    margin: 0;
-  }
-}
-
-/* Customer info section */
-.customer-info-section {
-  min-height: 120px;
-}
-
-.guest-customer-display {
-  text-align: center;
-  padding: 16px;
-  background-color: #fff7e6;
-  border: 1px solid #ffd591;
-  border-radius: 6px;
-  margin-bottom: 16px;
-}
-
-.customer-actions {
-  margin-top: 16px;
-}
-
-.button-group {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-/* Customer modal styles */
-.customer-modal {
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.guest-customer-info {
-  padding: 16px;
-  background-color: #f7f8fa;
-  border-radius: 6px;
-  margin-bottom: 16px;
-}
-
-.existing-customer-list {
-  min-height: 300px;
-}
-
-.customer-name {
-  font-weight: 600;
-  color: #1890ff;
-  cursor: pointer;
-}
-
-.customer-name:hover {
-  color: #40a9ff;
-}
-
-/* Coupon styles */
-.coupon-section {
-  margin: 8px 0;
-}
-
-.discount-applied {
-  color: #52c41a;
-  font-weight: 500;
-}
-
-.coupon-modal {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.coupon-preview {
-  margin-top: 16px;
-  padding: 12px;
-  background-color: #f6ffed;
-  border: 1px solid #b7eb8f;
-  border-radius: 6px;
-}
-
-.coupon-code {
-  font-weight: 600;
-  color: #1890ff;
-  cursor: pointer;
-}
-
-.coupon-code:hover {
-  color: #40a9ff;
-}
-
-/* Selected Row Highlight */
-:deep(.arco-table-tr.selected-row) td {
-  background-color: #e6f7ff !important;
-}
-
-:deep(.arco-table-tr.selected-row):hover td {
-  background-color: #bae7ff !important;
-}
-
-:deep(.arco-table-tr) {
-  cursor: pointer !important;
-  transition: background-color 0.2s ease;
-}
-
-:deep(.arco-table-tr):hover td {
-  background-color: #f5f5f5 !important;
-}
-
-:deep(.arco-table-body .arco-table-tr) {
-  cursor: pointer !important;
-}
-
-/* QR Scanner Styles */
-.qr-scanner-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.qr-modal-header {
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.qr-modal-header .modal-title {
-  margin: 0 0 8px 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #1d2129;
-}
-
-.qr-modal-header .modal-subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: #86909c;
-}
-
-.camera-preview {
-  position: relative;
-  width: 100%;
-  height: 400px;
-  background-color: #000;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.qr-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.qr-canvas {
-  display: none;
-}
-
-.scanning-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.scanning-frame {
-  position: relative;
-  width: 250px;
-  height: 250px;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-}
-
-.corner {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  border: 3px solid #ffffff;
-}
-
-.corner-tl {
-  top: -2px;
-  left: -2px;
-  border-right: none;
-  border-bottom: none;
-}
-
-.corner-tr {
-  top: -2px;
-  right: -2px;
-  border-left: none;
-  border-bottom: none;
-}
-
-.corner-bl {
-  bottom: -2px;
-  left: -2px;
-  border-right: none;
-  border-top: none;
-}
-
-.corner-br {
-  bottom: -2px;
-  right: -2px;
-  border-left: none;
-  border-top: none;
-}
-
-.scanning-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(22, 119, 255, 0.8), transparent);
-  animation: scan 2s linear infinite;
-  opacity: 0;
-}
-
-.scanning-line.active {
-  opacity: 1;
-}
-
-@keyframes scan {
-  0% {
-    transform: translateY(0);
-  }
-  100% {
-    transform: translateY(250px);
-  }
-}
-
-.scanning-text {
-  margin-top: 20px;
-  color: #ffffff;
-  font-size: 14px;
-  text-align: center;
-  padding: 8px 16px;
-  background-color: rgba(0, 0, 0, 0.6);
-  border-radius: 4px;
-}
-
-.qr-controls {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.qr-result {
-  text-align: center;
-}
-
-.result-text {
-  margin: 16px 0;
-  font-size: 16px;
-  color: #1d2129;
-}
-
-/* Product Table Styles */
-.products-table {
-  height: 100%;
-  overflow-y: auto;
-}
-
-.table-product-name {
-  line-height: 1.4;
-}
-
-.table-product-price {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1890ff;
 }
 </style>

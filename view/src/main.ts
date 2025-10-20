@@ -14,6 +14,18 @@ import store from './store'
 
 const app = createApp(App)
 
+// Increase recursive updates limit for development
+// eslint-disable-next-line no-console
+app.config.errorHandler = (err, instance, info) => {
+  if (typeof err === 'string' && err.includes('Maximum recursive updates exceeded')) {
+    // eslint-disable-next-line no-console
+    console.warn('[Vue warn]:', err)
+    return // Suppress the error
+  }
+  // eslint-disable-next-line no-console
+  console.error(err, info)
+}
+
 app.use(ArcoVue, {})
 app.use(ArcoVueIcon)
 

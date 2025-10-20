@@ -701,7 +701,7 @@ const executeConfirmedAction = async () => {
     if (confirmAction.value === 'upload') {
       // Execute upload
       const files = fileList.value.map((fileItem: any) => fileItem.originFile || fileItem.file)
-      const result = await uploadMutipartFile(files, uploadForm.tenAnh, userStore.id!)
+      const result = await uploadMutipartFile(files, uploadForm.tenAnh, null, userStore.id)
 
       if (result.data && result.data.length > 0) {
         Message.success('Upload ảnh thành công')
@@ -729,7 +729,7 @@ const executeConfirmedAction = async () => {
       }
     } else if (confirmAction.value === 'edit') {
       // Execute edit
-      const result = await updateAnhSanPham(editForm.id!, editForm.tenAnh, editForm.trangThai, userStore.id!)
+      const result = await updateAnhSanPham(editForm.id!, editForm.tenAnh, editForm.trangThai, userStore.id)
       if (result.data) {
         Message.success('Cập nhật ảnh thành công')
         // Luôn reload với id vừa edit lên đầu
