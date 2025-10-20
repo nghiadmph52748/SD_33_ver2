@@ -9,7 +9,7 @@
         <template #icon>
           <icon-left />
         </template>
-        Quay lại
+        {{ t('discount.common.back') }}
       </a-button>
     </div>
 
@@ -17,28 +17,28 @@
     <a-row :gutter="[16, 16]">
       <!-- Left Column: Form -->
       <a-col :span="8">
-        <a-card title="Thông tin đợt giảm giá">
+        <a-card :title="t('discount.campaign.info')">
           <a-form ref="promotionEditFormRef" :model="promotionEditForm" :rules="promotionEditRules" layout="vertical">
-            <a-form-item field="code" label="Mã đợt giảm giá">
-              <a-input v-model="promotionEditForm.code" placeholder="Nhập mã đợt giảm giá" allow-clear />
+            <a-form-item field="code" :label="t('discount.campaign.code')">
+              <a-input v-model="promotionEditForm.code" :placeholder="t('discount.campaign.codePlaceholder')" allow-clear />
             </a-form-item>
-            <a-form-item field="name" label="Tên đợt giảm giá">
-              <a-input v-model="promotionEditForm.name" placeholder="Nhập tên đợt giảm giá" allow-clear />
+            <a-form-item field="name" :label="t('discount.campaign.name')">
+              <a-input v-model="promotionEditForm.name" :placeholder="t('discount.campaign.namePlaceholder')" allow-clear />
             </a-form-item>
-            <a-form-item field="discountValue" label="Giá trị giảm (%)">
+            <a-form-item field="discountValue" :label="t('discount.campaign.discountValue')">
               <a-input-number
                 v-model="promotionEditForm.discountValue"
                 :min="1"
                 :max="100"
                 :step="0.01"
                 :precision="2"
-                placeholder="Giá trị từ 1 - 100"
+                :placeholder="t('discount.campaign.discountValuePlaceholder')"
                 style="width: 100%"
               >
                 <template #suffix>%</template>
               </a-input-number>
             </a-form-item>
-            <a-form-item field="dateRange" label="Thời gian áp dụng">
+            <a-form-item field="dateRange" :label="t('discount.campaign.validityPeriod')">
               <a-range-picker
                 v-model="promotionEditForm.dateRange"
                 :show-time="true"
@@ -49,16 +49,16 @@
                 style="width: 100%"
               />
             </a-form-item>
-            <a-form-item field="active" label="Trạng thái">
+            <a-form-item field="active" :label="t('discount.campaign.status')">
               <a-radio-group v-model="promotionEditForm.active" type="button">
-                <a-radio :value="true">Hoạt động</a-radio>
-                <a-radio :value="false">Không hoạt động</a-radio>
+                <a-radio :value="true">{{ t('discount.campaign.status.active') }}</a-radio>
+                <a-radio :value="false">{{ t('discount.campaign.status.inactive') }}</a-radio>
               </a-radio-group>
             </a-form-item>
-            <a-form-item field="lyDoThayDoi" label="Lý do thay đổi">
+            <a-form-item field="lyDoThayDoi" :label="t('discount.campaign.changeReason')">
               <a-textarea
                 v-model="promotionEditForm.lyDoThayDoi"
-                placeholder="Nhập lý do thay đổi..."
+                :placeholder="t('discount.campaign.changeReasonPlaceholder')"
                 allow-clear
                 :max-length="500"
                 :auto-size="{ minRows: 3, maxRows: 6 }"
@@ -69,8 +69,8 @@
           <!-- Action Buttons -->
           <PageActions>
             <a-space>
-              <a-button @click="goBack">Hủy</a-button>
-              <a-button type="primary" @click="handleSubmit" :loading="submitting">Cập nhật</a-button>
+              <a-button @click="goBack">{{ t('discount.common.cancel') }}</a-button>
+              <a-button type="primary" @click="handleSubmit" :loading="submitting">{{ t('discount.common.update') }}</a-button>
             </a-space>
           </PageActions>
         </a-card>
@@ -78,9 +78,9 @@
 
       <!-- Right Column: Product Selection -->
       <a-col :span="16">
-        <a-card title="Chọn sản phẩm áp dụng">
+        <a-card :title="t('discount.campaign.selectProducts')">
           <div class="product-selection-section">
-            <a-input-search v-model="productSearchQuery" placeholder="Tìm kiếm sản phẩm..." allow-clear style="margin-bottom: 12px" />
+            <a-input-search v-model="productSearchQuery" :placeholder="t('discount.campaign.searchProducts')" allow-clear style="margin-bottom: 12px" />
 
             <a-table
               class="product-group-table"
@@ -116,8 +116,8 @@
                 <div class="product-info-cell">
                   <div class="product-name">{{ record.tenSanPham }}</div>
                   <div v-if="record.variants.length > 1" class="product-variant-meta">
-                    {{ record.variants.length }} biến thể •
-                    <span style="color: var(--color-primary-light-4)">{{ getGroupSelectedVariantIdsEdit(record).length }} đã chọn</span>
+                    {{ record.variants.length }} {{ t('discount.common.variants') }} •
+                    <span style="color: var(--color-primary-light-4)">{{ getGroupSelectedVariantIdsEdit(record).length }} {{ t('discount.common.selected') }}</span>
                   </div>
                   <div v-else-if="record.variants.length === 1" class="product-variant-meta">
                     {{ buildVariantLabel(record.variants[0]) }}
@@ -129,7 +129,7 @@
                   <div style="display: flex; align-items: center; gap: 8px; flex: 1">
                     <span style="font-size: 13px; color: var(--color-text-2)">
                       <strong>{{ getGroupSelectedVariantIdsEdit(record).length }}</strong>
-                      / {{ record.variants.length }} đã chọn
+                      / {{ record.variants.length }} {{ t('discount.common.selected') }}
                     </span>
                     <a-button
                       v-if="!isAllVariantsSelected(record)"
@@ -138,7 +138,7 @@
                       @click.stop="selectAllVariantsEdit(record)"
                       style="padding: 0 4px; font-size: 12px"
                     >
-                      Chọn tất cả
+                      {{ t('discount.common.selectAll') }}
                     </a-button>
                     <a-button
                       v-else
@@ -147,7 +147,7 @@
                       @click.stop="deselectAllVariantsEdit(record)"
                       style="padding: 0 4px; font-size: 12px; color: var(--color-danger-light-4)"
                     >
-                      Bỏ chọn tất cả
+                      {{ t('discount.common.deselectAll') }}
                     </a-button>
                   </div>
                   <icon-down v-if="!expandedRowKeys.includes(record.key)" :size="16" style="color: var(--color-text-3)" />
@@ -206,9 +206,9 @@
             </a-table>
 
             <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-              Đã chọn:
+              {{ t('discount.common.selected') }}:
               <strong>{{ promotionEditForm.selectedProducts.length }}</strong>
-              sản phẩm
+              {{ t('discount.common.variants') }}
             </div>
           </div>
         </a-card>
@@ -218,27 +218,25 @@
     <!-- Confirmation Modal -->
     <a-modal
       v-model:visible="editConfirmVisible"
-      title="Xác nhận cập nhật"
+      :title="t('discount.campaign.editConfirmTitle')"
       :confirm-loading="submitting"
       width="700px"
-      ok-text="Xác nhận"
-      cancel-text="Hủy"
+      :ok-text="t('discount.common.confirm')"
+      :cancel-text="t('discount.common.cancel')"
       @ok="submitPromotionEdit"
       @cancel="editConfirmVisible = false"
     >
       <p>
-        Bạn chắc chắn muốn cập nhật đợt giảm giá
-        <strong>{{ promotionEditForm.name }}</strong>
-        ?
+        {{ t('discount.campaign.editConfirmMessage', { name: promotionEditForm.name }) }}
       </p>
       <p class="modal-note">
-        Lý do thay đổi:
+        {{ t('discount.campaign.changeReason') }}:
         <strong>{{ promotionEditForm.lyDoThayDoi }}</strong>
       </p>
-      <p class="modal-note">Thay đổi sẽ được ghi lại vào lịch sử.</p>
+      <p class="modal-note">{{ t('discount.campaign.editConfirmNote') }}</p>
 
       <div v-if="promotionEditForm.selectedProducts.length > 0" style="margin-top: 16px">
-        <a-divider orientation="left" style="margin: 16px 0 12px 0">Danh sách sản phẩm ({{ promotionEditForm.selectedProducts.length }} biến thể)</a-divider>
+        <a-divider orientation="left" style="margin: 16px 0 12px 0">{{ t('discount.campaign.productList') }} ({{ promotionEditForm.selectedProducts.length }} {{ t('discount.common.variants') }})</a-divider>
         <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--color-border-2); border-radius: 4px; padding: 8px">
           <div
             v-for="variant in selectedVariantsForModalEdit"
@@ -281,6 +279,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import {
   IconPlus,
@@ -315,6 +314,7 @@ import { useRouter } from 'vue-router'
 
 // Router
 const router = useRouter()
+const { t } = useI18n()
 const { breadcrumbItems } = useBreadcrumb()
 
 // Get promotion ID from route params
@@ -393,7 +393,7 @@ async function fetchProducts() {
       maChiTietSanPham: item.maChiTietSanPham ?? undefined,
     }))
   } catch {
-    Message.error('Không thể tải danh sách sản phẩm')
+    Message.error(t('discount.campaign.error.loadProducts'))
     productOptions.value = []
   } finally {
     productOptionsLoading.value = false
@@ -422,12 +422,12 @@ watch(
   (newValue) => {
     if (newValue === undefined || newValue === null) return
     if (newValue < 1) {
-      Message.warning('Giá trị giảm tối thiểu 1%')
+      Message.warning(t('discount.campaign.validation.discountValueMin'))
       promotionEditForm.discountValue = 1
       return
     }
     if (newValue > 100) {
-      Message.warning('Giá trị giảm không được vượt quá 100%')
+      Message.warning(t('discount.campaign.validation.discountValueMax'))
       promotionEditForm.discountValue = 100
     }
   }
@@ -444,32 +444,32 @@ const originalPromotionEditForm = reactive({
   applyToProducts: true,
 })
 
-const promotionEditRules: FormRules = {
-  code: [{ required: true, message: 'Vui lòng nhập mã đợt giảm giá' }],
-  name: [{ required: true, message: 'Vui lòng nhập tên đợt giảm giá' }],
+const promotionEditRules = computed<FormRules>(() => ({
+  code: [{ required: true, message: t('discount.campaign.validation.codeRequired') }],
+  name: [{ required: true, message: t('discount.campaign.validation.nameRequired') }],
   discountValue: [
-    { required: true, message: 'Vui lòng nhập giá trị giảm' },
+    { required: true, message: t('discount.campaign.validation.discountValueRequired') },
     {
       validator: (value: number | null, callback: (msg?: string) => void) => {
         if (value === undefined || value === null || Number.isNaN(Number(value))) {
-          callback('Vui lòng nhập giá trị giảm')
+          callback(t('discount.campaign.validation.discountValueRequired'))
           return
         }
         if (value < 1) {
-          callback('Giá trị giảm tối thiểu 1%')
+          callback(t('discount.campaign.validation.discountValueMin'))
           return
         }
         if (value > 100) {
-          callback('Giá trị giảm tối đa 100%')
+          callback(t('discount.campaign.validation.discountRangeMax'))
           return
         }
         callback()
       },
     },
   ],
-  dateRange: [{ required: true, type: 'array', message: 'Vui lòng chọn thời gian áp dụng' }],
-  lyDoThayDoi: [{ required: true, message: 'Vui lòng nhập lý do thay đổi' }],
-}
+  dateRange: [{ required: true, type: 'array', message: t('discount.campaign.validation.dateRangeRequired') }],
+  lyDoThayDoi: [{ required: true, message: t('discount.campaign.validation.changeReasonRequired') }],
+}))
 
 const productGroups = computed<ProductGroup[]>(() => {
   const groupMap = new Map<number | string, ProductGroup>()
@@ -518,16 +518,16 @@ const productGroupPagination = computed(() => ({
   total: filteredProductGroups.value.length,
 }))
 
-const productGroupColumns = [
+const productGroupColumns = computed(() => [
   {
-    title: 'Ảnh',
+    title: t('discount.product.image'),
     dataIndex: 'thumbnail',
     slotName: 'thumbnail',
     width: 80,
     align: 'center' as const,
   },
   {
-    title: 'Sản phẩm',
+    title: t('discount.product.name'),
     dataIndex: 'tenSanPham',
     slotName: 'product',
     ellipsis: true,
@@ -535,35 +535,35 @@ const productGroupColumns = [
     width: 300,
   },
   {
-    title: 'Biến thế',
+    title: t('discount.product.variants'),
     dataIndex: 'variants',
     slotName: 'variantSelect',
     width: 240,
   },
-]
+])
 
-const variantColumns = [
+const variantColumns = computed(() => [
   {
-    title: 'Biến thể',
+    title: t('discount.product.variant'),
     dataIndex: 'variant',
     slotName: 'variant',
     ellipsis: true,
   },
   {
-    title: 'Giá',
+    title: t('discount.product.price'),
     dataIndex: 'price',
     slotName: 'price',
     width: 140,
     align: 'right' as const,
   },
   {
-    title: 'Tồn',
+    title: t('discount.campaign.stock'),
     dataIndex: 'stock',
     slotName: 'stock',
     width: 80,
     align: 'center' as const,
   },
-]
+])
 
 const getGroupSelectedVariantIdsEdit = (group: ProductGroup) => {
   const variantIds = new Set(group.variants.map((variant) => variant.id))
