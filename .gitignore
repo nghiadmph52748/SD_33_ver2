@@ -7,7 +7,7 @@ node_modules
 *.md
 .env
 .env.*
-!.env.example
+.env.example
 
 # Maven
 target/

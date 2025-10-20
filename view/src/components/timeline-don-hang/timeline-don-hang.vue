@@ -11,8 +11,8 @@
     </div>
 
     <div class="timeline-content" v-if="timelineData.length > 0">
-      <div 
-        v-for="(item, index) in timelineData" 
+      <div
+        v-for="(item, index) in timelineData"
         :key="item.id"
         class="timeline-item"
         :class="{ 'is-last': index === timelineData.length - 1 }"
@@ -33,7 +33,7 @@
             <span class="timeline-title">{{ item.trangThaiMoi }}</span>
             <span class="timeline-time">{{ formatTime(item.thoiGian) }}</span>
           </div>
-          
+
           <div class="timeline-description">
             <p><strong>Hành động:</strong> {{ item.hanhDong }}</p>
             <p v-if="item.moTa"><strong>Mô tả:</strong> {{ item.moTa }}</p>
@@ -88,7 +88,7 @@ const fetchTimeline = async () => {
     } catch (apiError) {
       console.log('API timeline chưa có, sử dụng dữ liệu mẫu')
     }
-    
+
     // Dữ liệu mẫu khi API lỗi hoặc chưa có
     timelineData.value = [
       {
@@ -102,7 +102,6 @@ const fetchTimeline = async () => {
         moTa: 'Đơn hàng được tạo thành công',
         ghiChu: 'Khách hàng đặt hàng online',
         thoiGian: '2025-09-27 08:30:00',
-        ipAddress: '192.168.1.100',
       },
       {
         id: 2,
@@ -115,7 +114,6 @@ const fetchTimeline = async () => {
         moTa: 'Nhân viên xác nhận đơn hàng',
         ghiChu: 'Kiểm tra thông tin khách hàng',
         thoiGian: '2025-09-27 08:45:00',
-        ipAddress: '192.168.1.100',
       },
       {
         id: 3,
@@ -128,7 +126,6 @@ const fetchTimeline = async () => {
         moTa: 'Bắt đầu chuẩn bị sản phẩm',
         ghiChu: 'Lấy hàng từ kho',
         thoiGian: '2025-09-27 09:00:00',
-        ipAddress: '192.168.1.100',
       },
       {
         id: 4,
@@ -141,7 +138,6 @@ const fetchTimeline = async () => {
         moTa: 'Đơn hàng đang được giao',
         ghiChu: 'Giao cho shipper',
         thoiGian: '2025-09-27 10:00:00',
-        ipAddress: '192.168.1.100',
       },
       {
         id: 5,
@@ -154,7 +150,6 @@ const fetchTimeline = async () => {
         moTa: 'Đơn hàng đã giao thành công',
         ghiChu: 'Khách hàng đã nhận hàng',
         thoiGian: '2025-09-27 11:30:00',
-        ipAddress: '192.168.1.100',
       },
     ]
   } finally {
@@ -355,21 +350,21 @@ onMounted(() => {
   .timeline-container {
     padding: 12px;
   }
-  
+
   .timeline-item {
     margin-bottom: 20px;
   }
-  
+
   .timeline-marker {
     margin-right: 12px;
   }
-  
+
   .timeline-dot {
     width: 28px;
     height: 28px;
     font-size: 12px;
   }
-  
+
   .timeline-header-item {
     flex-direction: column;
     align-items: flex-start;

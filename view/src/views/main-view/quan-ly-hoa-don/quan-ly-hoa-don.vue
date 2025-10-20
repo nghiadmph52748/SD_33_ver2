@@ -347,7 +347,7 @@ const invoiceColumns = [
   {
     title: 'Thao tác',
     slotName: 'action',
-    width: 180,
+    width: 100,
     fixed: 'right',
   },
 ]
@@ -473,11 +473,11 @@ const fetchInvoices = async () => {
   try {
     loading.value = true
     console.log('Đang gọi API hóa đơn...')
-    
+
     // Sử dụng API mới
     const apiData = await fetchHoaDonList()
     console.log('Dữ liệu từ API:', apiData)
-    
+
     // Map dữ liệu để đảm bảo có đầy đủ các trường cần thiết
     invoicesList.value = apiData.map((invoice: HoaDonApiModel) => ({
       id: invoice.id,
@@ -492,7 +492,7 @@ const fetchInvoices = async () => {
       ngayThanhToan: invoice.ngayThanhToan,
       hoaDonChiTiets: [] // Sẽ được load riêng nếu cần
     }))
-    
+
     console.log('Dữ liệu hóa đơn đã xử lý:', invoicesList.value)
     calculateStatistics()
     pagination.value.total = invoicesList.value.length
@@ -741,6 +741,10 @@ onMounted(() => {
   padding: 16px;
 
   margin-bottom: 16px;
+}
+
+:deep(.arco-table .arco-table-cell) {
+  padding: 9px 8px;
 }
 
 .summary-row {

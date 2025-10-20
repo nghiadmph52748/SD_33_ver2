@@ -181,7 +181,7 @@
                 if (checked) {
                   if (!selectedVariants.includes(id)) {
                     selectedVariants.push(id)
-                 }
+                  }
                 } else {
                   const idx = selectedVariants.indexOf(id)
                   if (idx > -1) {
@@ -197,7 +197,34 @@
         </template>
 
         <template #product_image="{ record }">
-          <a-carousel :autoplay="true" show-arrow="hover" :loop="true" style="width: 70px; height: 70px">
+          <div
+            v-if="record.anhSanPham && record.anhSanPham.length > 2"
+            @click="openImageSlideshow(record.anhSanPham)"
+            style="cursor: pointer; position: relative"
+            class="image-slideshow-trigger"
+          >
+            <a-carousel :autoplay="true" show-arrow="hover" :loop="true" style="width: 70px; height: 70px">
+              <a-carousel-item v-for="(img, index) in record.anhSanPham" :key="index">
+                <a-avatar :image-url="img" :size="70" shape="square"></a-avatar>
+              </a-carousel-item>
+            </a-carousel>
+            <div
+              style="
+                position: absolute;
+                bottom: 4px;
+                right: 4px;
+                background: rgba(0, 0, 0, 0.6);
+                color: white;
+                padding: 2px 4px;
+                border-radius: 2px;
+                font-size: 10px;
+                font-weight: bold;
+              "
+            >
+              +{{ record.anhSanPham.length }} ảnh
+            </div>
+          </div>
+          <a-carousel v-else :autoplay="true" show-arrow="hover" :loop="true" style="width: 70px; height: 70px">
             <a-carousel-item
               v-if="record.anhSanPham && record.anhSanPham.length > 0"
               v-for="(img, index) in record.anhSanPham"
@@ -356,6 +383,18 @@
       </template>
     </a-modal>
 
+    <!-- Image Slideshow Modal -->
+    <a-modal v-model:visible="showImageSlideshow" title="Xem ảnh sản phẩm" width="800px" :footer="false">
+      <div style="display: flex; flex-direction: column; align-items: center">
+        <a-carousel :autoplay="true" :autoplay-interval="3000" show-arrow="always" style="width: 100%; max-height: 600px">
+          <a-carousel-item v-for="(img, index) in currentSlideImages" :key="index">
+            <img :src="img" style="width: 100%; height: 100%; object-fit: contain; max-height: 600px" />
+          </a-carousel-item>
+        </a-carousel>
+        <div style="margin-top: 12px; text-align: center; color: #999">{{ currentSlideIndex + 1 }} / {{ currentSlideImages.length }}</div>
+      </div>
+    </a-modal>
+
     <!-- QR Code Scanner Modal -->
     <a-modal v-model:visible="showScanQRModal" title="Quét Mã QR Sản Phẩm" width="600px" :footer="false" @open="initQRScanner">
       <div class="qr-scanner-container" style="display: flex; flex-direction: column; align-items: center">
@@ -396,7 +435,7 @@ import {
   type TrongLuong,
 } from '@/api/san-pham/bien-the'
 import { Html5Qrcode } from 'html5-qrcode'
-import { deleteBienTheSanPham, getBienTheSanPhamPage, updateBienTheSanPham } from '../../../../api/san-pham/bien-the'
+import { deleteBienTheSanPham, getBienTheSanPhamPage, updateBienTheSanPham, getBienTheSanPhamById } from '../../../../api/san-pham/bien-the'
 
 // Breadcrumb setup
 const { breadcrumbItems } = useBreadcrumb()
@@ -544,6 +583,19 @@ const selectedVariants = ref<string[]>([])
 // QR Scanner state
 const showScanQRModal = ref(false)
 let qrScannerInstance: any = null
+
+// Image Slideshow Modal state
+const showImageSlideshow = ref(false)
+const currentSlideImages = ref<string[]>([])
+const currentSlideIndex = ref(0)
+
+const openImageSlideshow = (images: string[]) => {
+  if (images && images.length > 0) {
+    currentSlideImages.value = images
+    currentSlideIndex.value = 0
+    showImageSlideshow.value = true
+  }
+}
 
 // Computed properties for select all checkbox
 const isAllSelected = computed(() => {
@@ -1016,6 +1068,35 @@ const exportExcel = () => {
   }
 }
 
+// QR Scanner Helper Functions
+const searchLocalVariant = (variantId: number, decodedText: string, html5QrCode: any) => {
+  const foundVariant = variants.value.find((v) => Number(v.id) === variantId)
+  if (foundVariant) {
+    html5QrCode.stop().catch(() => {
+      // Ignore stop errors
+    })
+    showScanQRModal.value = false
+    router.push(`/quan-ly-san-pham/bien-the/detail/${foundVariant.id}`)
+    Message.success(`Quét thành công! Đang chuyển đến chi tiết biến thể...`)
+    return
+  }
+
+  // Try to find by code
+  const foundByCode = variants.value.find((v) => v.maChiTietSanPham === decodedText)
+  if (foundByCode) {
+    html5QrCode.stop().catch(() => {
+      // Ignore stop errors
+    })
+    showScanQRModal.value = false
+    router.push(`/quan-ly-san-pham/bien-the/detail/${foundByCode.id}`)
+    Message.success(`Quét thành công! Đang chuyển đến chi tiết biến thể...`)
+    return
+  }
+
+  // Not found anywhere
+  Message.warning(`Không tìm thấy biến thể với mã: ${decodedText}`)
+}
+
 // QR Scanner Functions
 const initQRScanner = async () => {
   try {
@@ -1032,30 +1113,27 @@ const initQRScanner = async () => {
       (decodedText) => {
         // When QR code is successfully decoded
         const variantId = Number(decodedText)
-        const foundVariant = variants.value.find((v) => Number(v.id) === variantId)
 
-        if (foundVariant) {
-          // Stop scanner and redirect
-          html5QrCode.stop().catch(() => {
-            // Ignore stop errors
+        // Try API first to check all variants in database
+        getBienTheSanPhamById(variantId)
+          .then((response) => {
+            if (response.data && response.success) {
+              // Variant exists in database
+              html5QrCode.stop().catch(() => {
+                // Ignore stop errors
+              })
+              showScanQRModal.value = false
+              router.push(`/quan-ly-san-pham/bien-the/detail/${variantId}`)
+              Message.success(`Quét thành công! Đang chuyển đến chi tiết biến thể...`)
+            } else {
+              // Not found via API, try local search
+              searchLocalVariant(variantId, decodedText, html5QrCode)
+            }
           })
-          showScanQRModal.value = false
-          router.push(`/quan-ly-san-pham/bien-the/detail/${foundVariant.id}`)
-          Message.success(`Quét thành công! Đang chuyển đến chi tiết biến thể...`)
-        } else {
-          // Try to find by code
-          const foundByCode = variants.value.find((v) => v.maChiTietSanPham === decodedText)
-          if (foundByCode) {
-            html5QrCode.stop().catch(() => {
-              // Ignore stop errors
-            })
-            showScanQRModal.value = false
-            router.push(`/quan-ly-san-pham/bien-the/detail/${foundByCode.id}`)
-            Message.success(`Quét thành công! Đang chuyển đến chi tiết biến thể...`)
-          } else {
-            Message.warning(`Không tìm thấy biến thể với mã: ${decodedText}`)
-          }
-        }
+          .catch(() => {
+            // API failed, fallback to local search
+            searchLocalVariant(variantId, decodedText, html5QrCode)
+          })
       },
       () => {
         // Ignore error messages
@@ -1738,5 +1816,18 @@ watch(
 :deep(.arco-switch-loading) {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* Image Slideshow Trigger Styling */
+.image-slideshow-trigger {
+  display: inline-block;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.image-slideshow-trigger:hover {
+  opacity: 0.85;
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.4);
+  transform: scale(1.02);
 }
 </style>
