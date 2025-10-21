@@ -1,23 +1,30 @@
 <template>
   <div class="bo-loc-section">
     <a-card class="bo-loc-card" :bordered="false">
-      <div class="bo-loc-header">
-        <div class="bo-loc-title">
-          <icon-filter class="filter-icon" />
-          <span>Bộ Lọc Thống Kê</span>
+      <div class="bo-loc-container">
+        <!-- Header với title và actions -->
+        <div class="bo-loc-header">
+          <div class="bo-loc-title">
+            <icon-filter class="filter-icon" />
+            <span>Bộ Lọc Thống Kê</span>
+          </div>
+          <div class="filter-actions">
+            <a-button class="reset-btn" @click="$emit('datLai')">
+              <icon-refresh class="action-icon" />
+              Đặt lại
+            </a-button>
+            <a-button type="primary" class="export-btn" @click="$emit('xuatExcel')">
+              <icon-download class="action-icon" />
+              Xuất Excel
+            </a-button>
+          </div>
         </div>
-      </div>
 
-      <div class="bo-loc-content">
-        <!-- Dòng 1: Labels -->
-        <div class="bo-loc-row-1">
-          <div class="bo-loc-label">Khoảng thời gian thống kê</div>
-          <div class="bo-loc-label">Loại biểu đồ</div>
-        </div>
-
-        <!-- Dòng 2: Controls -->
-        <div class="bo-loc-row-2">
-          <div class="time-range-container">
+        <!-- Controls Row -->
+        <div class="bo-loc-controls">
+          <!-- Time Range -->
+          <div class="control-group">
+            <label class="control-label">Khoảng thời gian</label>
             <a-select :model-value="khoangThoiGian" class="filter-select" @change="thayDoiKhoangThoiGian">
               <a-option value="today">Hôm nay</a-option>
               <a-option value="week">Tuần này</a-option>
@@ -25,44 +32,48 @@
               <a-option value="year">Năm này</a-option>
               <a-option value="custom">Tùy chọn</a-option>
             </a-select>
+          </div>
 
-            <!-- DatePicker cho tùy chọn -->
-            <div v-if="khoangThoiGian === 'custom'" class="custom-date-picker">
-              <a-range-picker
-                :model-value="khoangNgayTuyChon"
-                @change="thayDoiKhoangNgayTuyChon"
-                format="DD/MM/YYYY"
-                :placeholder="['Từ ngày', 'Đến ngày']"
-                style="width: 300px"
-              />
+          <!-- Custom Date Range -->
+          <div v-if="khoangThoiGian === 'custom'" class="control-group">
+            <label class="control-label">Chọn ngày</label>
+            <a-range-picker
+              :model-value="khoangNgayTuyChon"
+              @change="thayDoiKhoangNgayTuyChon"
+              format="DD/MM/YYYY"
+              :placeholder="['Từ ngày', 'Đến ngày']"
+              class="date-picker"
+            />
+          </div>
+
+          <!-- Chart Type -->
+          <div class="control-group">
+            <label class="control-label">Loại biểu đồ</label>
+            <div class="chart-type-buttons">
+              <button :class="['chart-btn', { active: loaiBieuDo === 'line' }]" @click="thayDoiLoaiBieuDo('line')">
+                <icon-line class="chart-icon" />
+                Đường
+              </button>
+              <button :class="['chart-btn', { active: loaiBieuDo === 'bar' }]" @click="thayDoiLoaiBieuDo('bar')">
+                <icon-bar class="chart-icon" />
+                Cột
+              </button>
             </div>
           </div>
 
-          <div class="chart-type-buttons">
-            <button :class="['chart-btn', { active: loaiBieuDo === 'line' }]" @click="thayDoiLoaiBieuDo('line')">
-              <icon-line class="chart-icon" />
-              Đường
-            </button>
-            <button :class="['chart-btn', { active: loaiBieuDo === 'bar' }]" @click="thayDoiLoaiBieuDo('bar')">
-              <icon-bar class="chart-icon" />
-              Cột
-            </button>
-          </div>
-        </div>
-
-        <!-- Dòng 3: Summary và Actions -->
-        <div class="bo-loc-row-3">
-          <span class="summary-text">Số đơn hàng: {{ tongDonHang }} | Tổng doanh thu: {{ dinhDangTien(tongDoanhThu) }}</span>
-
-          <div class="filter-actions">
-            <a-button class="reset-btn" @click="$emit('datLai')">
-              <icon-refresh class="action-icon" />
-              Đặt lại bộ lọc
-            </a-button>
-            <a-button type="primary" class="export-btn" @click="$emit('xuatExcel')">
-              <icon-download class="action-icon" />
-              Xuất Excel
-            </a-button>
+          <!-- Summary -->
+          <div class="control-group summary-group">
+            <div class="summary-box">
+              <div class="summary-item">
+                <span class="summary-label">Đơn hàng</span>
+                <span class="summary-value">{{ tongDonHang }}</span>
+              </div>
+              <div class="summary-divider"></div>
+              <div class="summary-item">
+                <span class="summary-label">Doanh thu</span>
+                <span class="summary-value">{{ dinhDangTien(tongDoanhThu) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -122,13 +133,20 @@ const thayDoiKhoangNgayTuyChon = (dates: any[]) => {
 .bo-loc-card {
   background: white;
   border: 1px solid #f0f0f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.bo-loc-container {
+  padding: 20px 24px;
 }
 
 .bo-loc-header {
-  padding: 20px 24px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .bo-loc-title {
@@ -145,55 +163,41 @@ const thayDoiKhoangNgayTuyChon = (dates: any[]) => {
   color: #1890ff;
 }
 
-.bo-loc-content {
-  padding: 24px;
-}
-
-.bo-loc-row-1 {
+.bo-loc-controls {
   display: flex;
-  gap: 40px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-end;
 }
 
-.bo-loc-label {
-  font-weight: 600;
-  font-size: 14px;
-  color: #333333;
-  margin: 0;
-  flex: 1;
-}
-
-.bo-loc-row-2 {
-  display: flex;
-  gap: 40px;
-  margin-bottom: 20px;
-  align-items: flex-start;
-}
-
-.time-range-container {
+.control-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
+}
+
+.control-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .filter-select {
-  width: 200px;
+  width: 180px;
   height: 40px;
   border-radius: 8px;
-  border: 1px solid #d9d9d9;
-  font-size: 14px;
 }
 
-.custom-date-picker {
-  margin-top: 8px;
+.date-picker {
+  width: 280px;
+  height: 40px;
 }
 
 .chart-type-buttons {
   display: flex;
-  gap: 12px;
-  flex: 1;
-  justify-content: flex-start;
+  gap: 8px;
 }
 
 .chart-btn {
@@ -232,52 +236,75 @@ const thayDoiKhoangNgayTuyChon = (dates: any[]) => {
 }
 
 .chart-icon {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 16px;
 }
 
-.bo-loc-row-3 {
+.summary-group {
+  margin-left: auto;
+}
+
+.summary-box {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: 20px;
+  gap: 16px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
-.summary-text {
-  font-size: 14px;
-  color: #666666;
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 500;
-  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+.summary-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .filter-actions {
   display: flex;
-  gap: 12px;
-  flex-shrink: 0;
+  gap: 10px;
 }
 
 .reset-btn {
-  background: #8c8c8c;
-  border-color: #8c8c8c;
-  color: white;
+  background: white;
+  border: 1px solid #d9d9d9;
+  color: #666;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 6px;
+  padding: 8px 16px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.3s ease;
   height: 40px;
-  min-width: 140px;
-  justify-content: center;
 }
 
 .reset-btn:hover {
-  background: #737373;
-  border-color: #737373;
+  border-color: #faad14;
+  color: #faad14;
+  background: #fffbe6;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(250, 173, 20, 0.2);
 }
 
 .export-btn {
@@ -286,25 +313,23 @@ const thayDoiKhoangNgayTuyChon = (dates: any[]) => {
   color: white;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 6px;
+  padding: 8px 16px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.3s ease;
   height: 40px;
-  min-width: 140px;
-  justify-content: center;
 }
 
 .export-btn:hover {
   background: #40a9ff;
   border-color: #40a9ff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
 }
 
 .action-icon {
-  font-size: 16px;
+  font-size: 14px;
 }
 </style>

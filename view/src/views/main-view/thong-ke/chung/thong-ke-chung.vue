@@ -62,13 +62,13 @@
 
     <!-- Biểu đồ Row 2: 3 pie charts -->
     <a-row :gutter="16" style="margin-top: 16px">
-      <a-col :span="8">
+      <a-col :span="10">
         <BieuDoTrangThaiDonHang v-model:ky-thong-ke="kyTrangThaiDonHang" :du-lieu="duLieuTrangThaiDonHang" />
       </a-col>
-      <a-col :span="8">
+      <a-col :span="7">
         <BieuDoPhanPhoiKenh :du-lieu="duLieuKenhPhanPhoi" />
       </a-col>
-      <a-col :span="8">
+      <a-col :span="7">
         <BieuDoDanhMuc :du-lieu="duLieuDanhMuc" />
       </a-col>
     </a-row>

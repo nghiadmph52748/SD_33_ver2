@@ -34,16 +34,17 @@ const cauHinhBieuDo = computed(() => ({
     formatter: '{a} <br/>{b}: {c} ({d}%)',
   },
   legend: {
-    orient: 'vertical',
-    left: 'left',
-    top: 'center',
+    orient: 'horizontal',
+    left: 'center',
+    bottom: 0,
+    itemGap: 15,
   },
   series: [
     {
       name: 'Danh mục sản phẩm bán chạy',
       type: 'pie',
-      radius: ['40%', '70%'],
-      center: ['60%', '50%'],
+      radius: ['40%', '65%'],
+      center: ['50%', '45%'],
       data: props.duLieu,
       emphasis: {
         itemStyle: {
@@ -54,11 +55,11 @@ const cauHinhBieuDo = computed(() => ({
       },
       label: {
         formatter: '{b}: {d}%',
-        fontSize: 12,
+        fontSize: 11,
       },
       labelLine: {
         show: true,
-        length: 10,
+        length: 8,
         length2: 5,
       },
     },
