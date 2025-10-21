@@ -16,7 +16,8 @@ import type {
 export function useTinhToanThongKe(
   danhSachHoaDon: Ref<HoaDon[]>,
   danhSachChiTietSanPham: Ref<ChiTietSanPham[]>,
-  kyDoanhThu: Ref<string>
+  kyDoanhThu: Ref<string>,
+  t: (key: string, params?: Record<string, any>) => string
 ) {
   // ============= HELPER FUNCTIONS =============
   const laHoaDonDaThanhToan = (hoaDon: HoaDon) => hoaDon?.trangThai === true || !!hoaDon?.ngayThanhToan
@@ -53,35 +54,35 @@ export function useTinhToanThongKe(
     productsSold: 0,
     orders: 0,
     revenue: 0,
-    title: 'Hôm nay',
+    title: t('thongKe.time.today'),
   })
 
   const duLieuTuan = ref<DuLieuThongKe>({
     productsSold: 0,
     orders: 0,
     revenue: 0,
-    title: 'Tuần này',
+    title: t('thongKe.time.thisWeek'),
   })
 
   const duLieuThang = ref<DuLieuThongKe>({
     productsSold: 0,
     orders: 0,
     revenue: 0,
-    title: 'Tháng này',
+    title: t('thongKe.time.thisMonth'),
   })
 
   const duLieuNam = ref<DuLieuThongKe>({
     productsSold: 0,
     orders: 0,
     revenue: 0,
-    title: 'Năm này',
+    title: t('thongKe.time.thisYear'),
   })
 
   const duLieuTuyChon = ref<DuLieuThongKe>({
     productsSold: 0,
     orders: 0,
     revenue: 0,
-    title: 'Tùy chọn',
+    title: t('thongKe.time.custom'),
   })
 
   // ============= TÍNH TOÁN DỮ LIỆU THEO THỜI GIAN =============
@@ -171,7 +172,7 @@ export function useTinhToanThongKe(
 
     for (let i = soThang - 1; i >= 0; i -= 1) {
       const ngay = new Date(hienTai.getFullYear(), hienTai.getMonth() - i, 1)
-      cacThang.push({ label: `Tháng ${ngay.getMonth() + 1}`, year: ngay.getFullYear(), monthIndex: ngay.getMonth() })
+      cacThang.push({ label: t('thongKe.time.month', { month: ngay.getMonth() + 1 }), year: ngay.getFullYear(), monthIndex: ngay.getMonth() })
     }
 
     const tongTien: number[] = new Array(cacThang.length).fill(0)
@@ -219,11 +220,11 @@ export function useTinhToanThongKe(
 
   // ============= DỮ LIỆU TRẠNG THÁI ĐƠN HÀNG =============
   const duLieuTrangThaiDonHang = ref<DuLieuTrangThaiDonHang[]>([
-    { name: 'Chờ xác nhận', value: 0, color: '#faad14' },
-    { name: 'Chờ giao hàng', value: 0, color: '#1890ff' },
-    { name: 'Đang giao', value: 0, color: '#52c41a' },
-    { name: 'Hoàn thành', value: 0, color: '#13c2c2' },
-    { name: 'Đã hủy', value: 0, color: '#ff4d4f' },
+    { name: t('thongKe.status.pending'), value: 0, color: '#faad14' },
+    { name: t('thongKe.status.processing'), value: 0, color: '#1890ff' },
+    { name: t('thongKe.status.shipping'), value: 0, color: '#52c41a' },
+    { name: t('thongKe.status.completed'), value: 0, color: '#13c2c2' },
+    { name: t('thongKe.status.cancelled'), value: 0, color: '#ff4d4f' },
   ])
 
   const capNhatDuLieuTrangThai = (kyThongKe: string) => {
@@ -261,41 +262,47 @@ export function useTinhToanThongKe(
         hoaDonLoc = danhSachHoaDon.value
     }
 
-    const demTrangThai = {
-      'Chờ xác nhận': 0,
-      'Chờ giao hàng': 0,
-      'Đang giao': 0,
-      'Hoàn thành': 0,
-      'Đã hủy': 0,
+    const pending = t('thongKe.status.pending')
+    const processing = t('thongKe.status.processing')
+    const shipping = t('thongKe.status.shipping')
+    const completed = t('thongKe.status.completed')
+    const cancelled = t('thongKe.status.cancelled')
+
+    const demTrangThai: Record<string, number> = {
+      [pending]: 0,
+      [processing]: 0,
+      [shipping]: 0,
+      [completed]: 0,
+      [cancelled]: 0,
     }
 
     hoaDonLoc.forEach((hd) => {
       if (hd.deleted === true) {
-        demTrangThai['Đã hủy'] += 1
+        demTrangThai[cancelled] += 1
       } else if (hd.ngayThanhToan && hd.trangThai === true) {
-        demTrangThai['Hoàn thành'] += 1
+        demTrangThai[completed] += 1
       } else if (hd.trangThai === true && !hd.ngayThanhToan) {
-        demTrangThai['Chờ giao hàng'] += 1
+        demTrangThai[processing] += 1
       } else if (hd.trangThai === false) {
-        demTrangThai['Chờ xác nhận'] += 1
+        demTrangThai[pending] += 1
       } else {
-        demTrangThai['Đang giao'] += 1
+        demTrangThai[shipping] += 1
       }
     })
 
     duLieuTrangThaiDonHang.value = [
-      { name: 'Chờ xác nhận', value: demTrangThai['Chờ xác nhận'], color: '#faad14' },
-      { name: 'Chờ giao hàng', value: demTrangThai['Chờ giao hàng'], color: '#1890ff' },
-      { name: 'Đang giao', value: demTrangThai['Đang giao'], color: '#52c41a' },
-      { name: 'Hoàn thành', value: demTrangThai['Hoàn thành'], color: '#13c2c2' },
-      { name: 'Đã hủy', value: demTrangThai['Đã hủy'], color: '#ff4d4f' },
+      { name: pending, value: demTrangThai[pending], color: '#faad14' },
+      { name: processing, value: demTrangThai[processing], color: '#1890ff' },
+      { name: shipping, value: demTrangThai[shipping], color: '#52c41a' },
+      { name: completed, value: demTrangThai[completed], color: '#13c2c2' },
+      { name: cancelled, value: demTrangThai[cancelled], color: '#ff4d4f' },
     ]
   }
 
   // ============= DỮ LIỆU KÊNH PHÂN PHỐI =============
   const duLieuKenhPhanPhoi = ref<DuLieuTrangThaiDonHang[]>([
-    { name: 'Online', value: 0, color: '#1890ff' },
-    { name: 'Tại quầy', value: 0, color: '#52c41a' },
+    { name: t('thongKe.channel.onlineValue'), value: 0, color: '#1890ff' },
+    { name: t('thongKe.channel.offlineValue'), value: 0, color: '#52c41a' },
   ])
 
   const capNhatDuLieuKenhPhanPhoi = () => {
@@ -311,8 +318,8 @@ export function useTinhToanThongKe(
     })
 
     duLieuKenhPhanPhoi.value = [
-      { name: 'Online', value: onlineCount, color: '#1890ff' },
-      { name: 'Tại quầy', value: offlineCount, color: '#52c41a' },
+      { name: t('thongKe.channel.onlineValue'), value: onlineCount, color: '#1890ff' },
+      { name: t('thongKe.channel.offlineValue'), value: offlineCount, color: '#52c41a' },
     ]
   }
 
@@ -329,33 +336,33 @@ export function useTinhToanThongKe(
       ten.includes('basketball') ||
       ten.includes('tennis')
     ) {
-      return 'Giày Thể Thao'
+      return t('thongKe.category.sports')
     }
     if (ten.includes('chạy') || ten.includes('marathon') || ten.includes('jogging')) {
-      return 'Giày Chạy Bộ'
+      return t('thongKe.category.running')
     }
     if (ten.includes('bóng đá') || ten.includes('football') || ten.includes('soccer')) {
-      return 'Giày Bóng Đá'
+      return t('thongKe.category.football')
     }
     if (ten.includes('bóng rổ') || ten.includes('basketball')) {
-      return 'Giày Bóng Rổ'
+      return t('thongKe.category.basketball')
     }
     if (ten.includes('tennis') || ten.includes('quần vợt')) {
-      return 'Giày Tennis'
+      return t('thongKe.category.tennis')
     }
     if (ten.includes('lifestyle') || ten.includes('casual') || ten.includes('street')) {
-      return 'Giày Lifestyle'
+      return t('thongKe.category.lifestyle')
     }
     if (ten.includes('cao gót') || ten.includes('heels')) {
-      return 'Giày Cao Gót'
+      return t('thongKe.category.heels')
     }
     if (ten.includes('boot') || ten.includes('bốt')) {
-      return 'Giày Boot'
+      return t('thongKe.category.boots')
     }
     if (ten.includes('sandal') || ten.includes('dép')) {
-      return 'Giày Sandal'
+      return t('thongKe.category.sandals')
     }
-    return 'Danh Mục Khác'
+    return t('thongKe.category.other')
   }
 
   const capNhatDuLieuDanhMuc = () => {
@@ -403,9 +410,9 @@ export function useTinhToanThongKe(
   const sanPhamSapHetHang = ref<SanPhamSapHetHang[]>([])
 
   const layTrangThaiKho = (soLuongTon: number): string => {
-    if (soLuongTon === 0) return 'HẾT HÀNG'
-    if (soLuongTon <= 2) return 'CẢNH BÁO'
-    return 'SẮP HẾT'
+    if (soLuongTon === 0) return t('thongKe.lowStockTable.outOfStock')
+    if (soLuongTon <= 2) return t('thongKe.lowStockTable.warning')
+    return t('thongKe.lowStockTable.lowStock')
   }
 
   const capNhatSanPhamSapHetHang = () => {
@@ -452,10 +459,10 @@ export function useTinhToanThongKe(
 
   const capNhatBangChiTiet = () => {
     const cacKyThongKe = [
-      { key: 'today', label: 'Hôm nay', getData: () => layDuLieuHomNay() },
-      { key: 'week', label: 'Tuần này', getData: () => layDuLieuTuan() },
-      { key: 'month', label: 'Tháng này', getData: () => layDuLieuThang() },
-      { key: 'year', label: 'Năm này', getData: () => layDuLieuNam() },
+      { key: 'today', label: t('thongKe.time.today'), getData: () => layDuLieuHomNay() },
+      { key: 'week', label: t('thongKe.time.thisWeek'), getData: () => layDuLieuTuan() },
+      { key: 'month', label: t('thongKe.time.thisMonth'), getData: () => layDuLieuThang() },
+      { key: 'year', label: t('thongKe.time.thisYear'), getData: () => layDuLieuNam() },
     ]
 
     const duLieuBang = cacKyThongKe.map((ky) => {
@@ -468,7 +475,7 @@ export function useTinhToanThongKe(
         soDonHang: data.orderCount,
         giaTriTB,
         tangTruong: 0,
-        trangThai: data.orderCount > 0 ? 'Hoạt động' : 'Không hoạt động',
+        trangThai: data.orderCount > 0 ? t('thongKe.detailTable.active') : t('thongKe.detailTable.inactive'),
       }
     })
 

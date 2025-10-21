@@ -2,7 +2,7 @@
   <a-card class="chart-card">
     <template #title>
       <div class="chart-title">
-        <span>Phân Phối Đa Kênh</span>
+        <span>{{ $t('thongKe.channel.title') }}</span>
       </div>
     </template>
     <div class="chart-container">

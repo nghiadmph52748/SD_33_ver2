@@ -2,7 +2,7 @@
   <a-card class="chart-card">
     <template #title>
       <div class="chart-title">
-        <span>Bảng Thống Kê Chi Tiết</span>
+        <span>{{ $t('thongKe.detailTable.title') }}</span>
       </div>
     </template>
     <div class="table-container">
@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { DuLieuBangChiTiet } from '../types/thong-ke.types'
 
 interface Props {
@@ -44,6 +45,8 @@ interface Props {
 
 defineProps<Props>()
 
+const { t } = useI18n()
+
 const dinhDangTien = (soTien: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -52,9 +55,13 @@ const dinhDangTien = (soTien: number) => {
 }
 
 const layMauTrangThai = (trangThai: string): string => {
+  const activeText = t('thongKe.detailTable.active')
+  const inactiveText = t('thongKe.detailTable.inactive')
   switch (trangThai) {
+    case activeText:
     case 'Hoạt động':
       return 'green'
+    case inactiveText:
     case 'Không hoạt động':
       return 'red'
     default:
@@ -64,42 +71,42 @@ const layMauTrangThai = (trangThai: string): string => {
 
 const cot = [
   {
-    title: 'Thời gian',
+    title: t('thongKe.detailTable.time'),
     dataIndex: 'thoiGian',
     slotName: 'thoiGian',
     width: 120,
     align: 'center' as const,
   },
   {
-    title: 'Doanh thu',
+    title: t('thongKe.detailTable.revenue'),
     dataIndex: 'doanhThu',
     slotName: 'doanhThu',
     width: 150,
     align: 'right' as const,
   },
   {
-    title: 'Số đơn hàng',
+    title: t('thongKe.detailTable.orders'),
     dataIndex: 'soDonHang',
     slotName: 'soDonHang',
     width: 120,
     align: 'center' as const,
   },
   {
-    title: 'Giá trị TB/đơn',
+    title: t('thongKe.detailTable.avgValue'),
     dataIndex: 'giaTriTB',
     slotName: 'giaTriTB',
     width: 150,
     align: 'right' as const,
   },
   {
-    title: 'Tăng trưởng',
+    title: t('thongKe.detailTable.growth'),
     dataIndex: 'tangTruong',
     slotName: 'tangTruong',
     width: 120,
     align: 'center' as const,
   },
   {
-    title: 'Trạng thái',
+    title: t('thongKe.detailTable.status'),
     dataIndex: 'trangThai',
     slotName: 'trangThai',
     width: 120,

@@ -2,14 +2,14 @@
   <a-card class="chart-card">
     <template #title>
       <div class="chart-title">
-        <span>Top Sản Phẩm Bán Chạy Nhất Của Cửa Hàng</span>
+        <span>{{ $t('thongKe.topSellingTable.title') }}</span>
       </div>
     </template>
     <div class="table-container">
       <div v-if="duLieu.length === 0" class="no-data-container">
         <div class="no-data-icon">📊</div>
-        <div class="no-data-text">Chưa có dữ liệu sản phẩm bán chạy</div>
-        <div class="no-data-subtext">Dữ liệu sẽ hiển thị khi có hóa đơn đã thanh toán</div>
+        <div class="no-data-text">{{ $t('thongKe.topSellingTable.noData') }}</div>
+        <div class="no-data-subtext">{{ $t('thongKe.topSellingTable.noDataSub') }}</div>
       </div>
       <a-table v-else :columns="cot" :data="duLieu" :pagination="phanTrang" :scroll="{ x: 800 }" class="top-selling-table">
         <template #stt="{ record }">
@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { SanPhamBanChayNhat } from '../types/thong-ke.types'
 
 interface Props {
@@ -43,6 +44,8 @@ interface Props {
 }
 
 defineProps<Props>()
+
+const { t } = useI18n()
 
 const dinhDangTien = (soTien: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -53,35 +56,35 @@ const dinhDangTien = (soTien: number) => {
 
 const cot = [
   {
-    title: 'STT',
+    title: t('thongKe.topSellingTable.no'),
     dataIndex: 'stt',
     slotName: 'stt',
     width: 80,
     align: 'center' as const,
   },
   {
-    title: 'Ảnh',
+    title: t('thongKe.topSellingTable.image'),
     dataIndex: 'anh',
     slotName: 'anh',
     width: 100,
     align: 'center' as const,
   },
   {
-    title: 'Tên sản phẩm',
+    title: t('thongKe.topSellingTable.productName'),
     dataIndex: 'tenSanPham',
     slotName: 'tenSanPham',
     width: 200,
     align: 'left' as const,
   },
   {
-    title: 'Giá bán',
+    title: t('thongKe.topSellingTable.price'),
     dataIndex: 'giaBan',
     slotName: 'giaBan',
     width: 150,
     align: 'right' as const,
   },
   {
-    title: 'Số lượng đã bán',
+    title: t('thongKe.topSellingTable.soldQuantity'),
     dataIndex: 'soLuongDaBan',
     slotName: 'soLuongDaBan',
     width: 150,

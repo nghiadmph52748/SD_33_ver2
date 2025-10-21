@@ -2,13 +2,13 @@
   <a-card class="chart-card">
     <template #title>
       <div class="chart-title">
-        <span>Sản Phẩm Bán Chạy</span>
+        <span>{{ $t('thongKe.topProducts.title') }}</span>
       </div>
     </template>
     <template #extra>
       <a-select :model-value="kyThongKe" style="width: 120px" @change="$emit('update:kyThongKe', $event)">
-        <a-option value="week">Tuần này</a-option>
-        <a-option value="month">Tháng này</a-option>
+        <a-option value="week">{{ $t('thongKe.topProducts.week') }}</a-option>
+        <a-option value="month">{{ $t('thongKe.topProducts.month') }}</a-option>
       </a-select>
     </template>
     <div class="top-products-grid">
@@ -20,18 +20,18 @@
             <span v-else-if="index === 2" class="trophy">🥉</span>
             <span v-else class="rank-text">#{{ index + 1 }}</span>
           </div>
-          <div v-if="index < 3" class="hot-badge">HOT</div>
+          <div v-if="index < 3" class="hot-badge">{{ $t('thongKe.topProducts.hot') }}</div>
         </div>
         <div class="card-body">
           <div class="product-name">{{ sanPham.name }}</div>
           <div class="product-metrics">
             <div class="metric">
-              <div class="metric-label">Đã bán</div>
+              <div class="metric-label">{{ $t('thongKe.topProducts.sold') }}</div>
               <div class="metric-value">{{ sanPham.value }}</div>
             </div>
             <div class="metric-divider"></div>
             <div class="metric">
-              <div class="metric-label">Doanh thu</div>
+              <div class="metric-label">{{ $t('thongKe.topProducts.revenue') }}</div>
               <div class="metric-value">{{ dinhDangTienNgan(sanPham.revenue) }}</div>
             </div>
           </div>

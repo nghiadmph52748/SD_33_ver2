@@ -6,16 +6,16 @@
         <div class="bo-loc-header">
           <div class="bo-loc-title">
             <icon-filter class="filter-icon" />
-            <span>Bộ Lọc Thống Kê</span>
+            <span>{{ $t('thongKe.filter.title') }}</span>
           </div>
           <div class="filter-actions">
             <a-button class="reset-btn" @click="$emit('datLai')">
               <icon-refresh class="action-icon" />
-              Đặt lại
+              {{ $t('thongKe.filter.reset') }}
             </a-button>
             <a-button type="primary" class="export-btn" @click="$emit('xuatExcel')">
               <icon-download class="action-icon" />
-              Xuất Excel
+              {{ $t('thongKe.filter.exportExcel') }}
             </a-button>
           </div>
         </div>
@@ -24,39 +24,39 @@
         <div class="bo-loc-controls">
           <!-- Time Range -->
           <div class="control-group">
-            <label class="control-label">Khoảng thời gian</label>
+            <label class="control-label">{{ $t('thongKe.filter.timeRange') }}</label>
             <a-select :model-value="khoangThoiGian" class="filter-select" @change="thayDoiKhoangThoiGian">
-              <a-option value="today">Hôm nay</a-option>
-              <a-option value="week">Tuần này</a-option>
-              <a-option value="month">Tháng này</a-option>
-              <a-option value="year">Năm này</a-option>
-              <a-option value="custom">Tùy chọn</a-option>
+              <a-option value="today">{{ $t('thongKe.filter.today') }}</a-option>
+              <a-option value="week">{{ $t('thongKe.filter.week') }}</a-option>
+              <a-option value="month">{{ $t('thongKe.filter.month') }}</a-option>
+              <a-option value="year">{{ $t('thongKe.filter.year') }}</a-option>
+              <a-option value="custom">{{ $t('thongKe.filter.custom') }}</a-option>
             </a-select>
           </div>
 
           <!-- Custom Date Range -->
           <div v-if="khoangThoiGian === 'custom'" class="control-group">
-            <label class="control-label">Chọn ngày</label>
+            <label class="control-label">{{ $t('thongKe.filter.selectDate') }}</label>
             <a-range-picker
               :model-value="khoangNgayTuyChon"
               @change="thayDoiKhoangNgayTuyChon"
               format="DD/MM/YYYY"
-              :placeholder="['Từ ngày', 'Đến ngày']"
+              :placeholder="[$t('thongKe.filter.fromDate'), $t('thongKe.filter.toDate')]"
               class="date-picker"
             />
           </div>
 
           <!-- Chart Type -->
           <div class="control-group">
-            <label class="control-label">Loại biểu đồ</label>
+            <label class="control-label">{{ $t('thongKe.filter.chartType') }}</label>
             <div class="chart-type-buttons">
               <button :class="['chart-btn', { active: loaiBieuDo === 'line' }]" @click="thayDoiLoaiBieuDo('line')">
                 <icon-line class="chart-icon" />
-                Đường
+                {{ $t('thongKe.filter.lineChart') }}
               </button>
               <button :class="['chart-btn', { active: loaiBieuDo === 'bar' }]" @click="thayDoiLoaiBieuDo('bar')">
                 <icon-bar class="chart-icon" />
-                Cột
+                {{ $t('thongKe.filter.barChart') }}
               </button>
             </div>
           </div>
@@ -65,12 +65,12 @@
           <div class="control-group summary-group">
             <div class="summary-box">
               <div class="summary-item">
-                <span class="summary-label">Đơn hàng</span>
+                <span class="summary-label">{{ $t('thongKe.filter.orders') }}</span>
                 <span class="summary-value">{{ tongDonHang }}</span>
               </div>
               <div class="summary-divider"></div>
               <div class="summary-item">
-                <span class="summary-label">Doanh thu</span>
+                <span class="summary-label">{{ $t('thongKe.filter.revenue') }}</span>
                 <span class="summary-value">{{ dinhDangTien(tongDoanhThu) }}</span>
               </div>
             </div>

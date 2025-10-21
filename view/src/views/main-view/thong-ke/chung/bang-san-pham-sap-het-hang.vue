@@ -2,14 +2,14 @@
   <a-card class="chart-card">
     <template #title>
       <div class="chart-title">
-        <span>Sản phẩm sắp hết hàng</span>
+        <span>{{ $t('thongKe.lowStockTable.title') }}</span>
       </div>
     </template>
     <div class="table-container">
       <div v-if="duLieu.length === 0" class="no-data-container">
         <div class="no-data-icon">📦</div>
-        <div class="no-data-text">Không có sản phẩm sắp hết hàng</div>
-        <div class="no-data-subtext">Tất cả sản phẩm đều có đủ hàng trong kho</div>
+        <div class="no-data-text">{{ $t('thongKe.lowStockTable.noData') }}</div>
+        <div class="no-data-subtext">{{ $t('thongKe.lowStockTable.noDataSub') }}</div>
       </div>
       <a-table v-else :columns="cot" :data="duLieu" :pagination="phanTrang" :scroll="{ x: 800 }" class="low-stock-table">
         <template #stt="{ record }">
@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { SanPhamSapHetHang } from '../types/thong-ke.types'
 
 interface Props {
@@ -48,6 +49,8 @@ interface Props {
 }
 
 defineProps<Props>()
+
+const { t } = useI18n()
 
 const dinhDangTien = (soTien: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -64,42 +67,42 @@ const layMauTrangThaiKho = (soLuongTon: number): string => {
 
 const cot = [
   {
-    title: 'STT',
+    title: t('thongKe.lowStockTable.no'),
     dataIndex: 'stt',
     slotName: 'stt',
     width: 80,
     align: 'center' as const,
   },
   {
-    title: 'Ảnh',
+    title: t('thongKe.lowStockTable.image'),
     dataIndex: 'anh',
     slotName: 'anh',
     width: 100,
     align: 'center' as const,
   },
   {
-    title: 'Tên biến thể sản phẩm chi tiết',
+    title: t('thongKe.lowStockTable.variantName'),
     dataIndex: 'tenSanPham',
     slotName: 'tenSanPham',
     width: 300,
     align: 'left' as const,
   },
   {
-    title: 'Giá bán',
+    title: t('thongKe.lowStockTable.price'),
     dataIndex: 'giaBan',
     slotName: 'giaBan',
     width: 150,
     align: 'right' as const,
   },
   {
-    title: 'Số lượng tồn',
+    title: t('thongKe.lowStockTable.stock'),
     dataIndex: 'soLuongTon',
     slotName: 'soLuongTon',
     width: 150,
     align: 'center' as const,
   },
   {
-    title: 'Trạng thái',
+    title: t('thongKe.lowStockTable.status'),
     dataIndex: 'trangThai',
     slotName: 'trangThai',
     width: 120,

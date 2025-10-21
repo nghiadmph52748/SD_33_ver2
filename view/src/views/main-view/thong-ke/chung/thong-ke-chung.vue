@@ -24,21 +24,21 @@
         :loai-mau="khoangThoiGian"
       />
       <TheThongKe
-        tieu-de="Tuần này"
+        :tieu-de="$t('thongKe.card.thisWeek')"
         :doanh-thu="duLieuTuan.revenue"
         :san-pham-da-ban="duLieuTuan.productsSold"
         :so-don-hang="duLieuTuan.orders"
         loai-mau="week"
       />
       <TheThongKe
-        tieu-de="Tháng này"
+        :tieu-de="$t('thongKe.card.thisMonth')"
         :doanh-thu="duLieuThang.revenue"
         :san-pham-da-ban="duLieuThang.productsSold"
         :so-don-hang="duLieuThang.orders"
         loai-mau="month"
       />
       <TheThongKe
-        tieu-de="Năm này"
+        :tieu-de="$t('thongKe.card.thisYear')"
         :doanh-thu="duLieuNam.revenue"
         :san-pham-da-ban="duLieuNam.productsSold"
         :so-don-hang="duLieuNam.orders"
@@ -98,6 +98,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { useThongKeData } from '../composables/useThongKeData'
@@ -118,6 +119,7 @@ import BangSanPhamBanChayNhat from './bang-san-pham-ban-chay-nhat.vue'
 import BangSanPhamSapHetHang from './bang-san-pham-sap-het-hang.vue'
 
 // ============= SETUP =============
+const { t } = useI18n()
 const { breadcrumbItems } = useBreadcrumb()
 
 // ============= STATE =============
@@ -148,7 +150,7 @@ const {
   duLieuBangChiTiet,
   capNhatToanBoDuLieu,
   capNhatDuLieuTrangThai,
-} = useTinhToanThongKe(danhSachHoaDon, danhSachChiTietSanPham, kyDoanhThu)
+} = useTinhToanThongKe(danhSachHoaDon, danhSachChiTietSanPham, kyDoanhThu, t)
 
 // ============= EXCEL EXPORT =============
 const { xuatBaoCaoThongKe } = useXuatExcel()

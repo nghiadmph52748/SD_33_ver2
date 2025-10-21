@@ -2,13 +2,13 @@
   <a-card class="chart-card">
     <template #title>
       <div class="chart-title">
-        <span>Biểu Đồ Doanh Thu</span>
+        <span>{{ $t('thongKe.revenue.title') }}</span>
       </div>
     </template>
     <template #extra>
       <a-select :model-value="kyDoanhThu" style="width: 120px" @change="$emit('update:kyDoanhThu', $event)">
-        <a-option value="6months">6 tháng</a-option>
-        <a-option value="12months">12 tháng</a-option>
+        <a-option value="6months">{{ $t('thongKe.revenue.6months') }}</a-option>
+        <a-option value="12months">{{ $t('thongKe.revenue.12months') }}</a-option>
       </a-select>
     </template>
     <div class="chart-container">
@@ -19,6 +19,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, BarChart } from 'echarts/charts'
@@ -41,6 +42,8 @@ interface Emits {
 }
 
 defineEmits<Emits>()
+
+const { t } = useI18n()
 
 const dinhDangTien = (soTien: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -78,7 +81,7 @@ const cauHinhBieuDo = computed(() => ({
   },
   series: [
     {
-      name: 'Doanh thu',
+      name: t('thongKe.revenue.name'),
       type: props.loaiBieuDo,
       data: props.duLieuDoanhThu.map((item) => item.revenue),
       smooth: props.loaiBieuDo === 'line',

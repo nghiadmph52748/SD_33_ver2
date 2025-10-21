@@ -2,14 +2,14 @@
   <a-card class="chart-card">
     <template #title>
       <div class="chart-title">
-        <span>Phân Bố Trạng Thái Đơn Hàng</span>
+        <span>{{ $t('thongKe.orderStatus.title') }}</span>
       </div>
     </template>
     <template #extra>
       <div class="order-status-buttons">
-        <button :class="['status-btn', { active: kyThongKe === 'day' }]" @click="$emit('update:kyThongKe', 'day')">Ngày</button>
-        <button :class="['status-btn', { active: kyThongKe === 'month' }]" @click="$emit('update:kyThongKe', 'month')">Tháng</button>
-        <button :class="['status-btn', { active: kyThongKe === 'year' }]" @click="$emit('update:kyThongKe', 'year')">Năm</button>
+        <button :class="['status-btn', { active: kyThongKe === 'day' }]" @click="$emit('update:kyThongKe', 'day')">{{ $t('thongKe.orderStatus.day') }}</button>
+        <button :class="['status-btn', { active: kyThongKe === 'month' }]" @click="$emit('update:kyThongKe', 'month')">{{ $t('thongKe.orderStatus.month') }}</button>
+        <button :class="['status-btn', { active: kyThongKe === 'year' }]" @click="$emit('update:kyThongKe', 'year')">{{ $t('thongKe.orderStatus.year') }}</button>
       </div>
     </template>
     <div class="chart-container">

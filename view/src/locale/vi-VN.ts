@@ -22,6 +22,7 @@ import locale500 from '@/views/exception/500/locale/vi-VN'
 import localeUserInfo from '@/views/user/info/locale/vi-VN'
 import localeUserSetting from '@/views/user/setting/locale/vi-VN'
 import localeDiscount from '@/views/main-view/quan-ly-giam-gia/locale/vi-VN'
+import localeThongKe from '@/views/main-view/thong-ke/locale/vi-VN'
 
 // Dashboard components don't use localization
 /** simple end */
@@ -102,5 +103,6 @@ export default {
   ...localeUserInfo,
   ...localeUserSetting,
   ...localeDiscount,
+  ...localeThongKe,
   /** simple end */
 }
