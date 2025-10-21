@@ -22,6 +22,7 @@ import locale500 from '@/views/exception/500/locale/en-US'
 import localeUserInfo from '@/views/user/info/locale/en-US'
 import localeUserSetting from '@/views/user/setting/locale/en-US'
 import localeDiscount from '@/views/main-view/quan-ly-giam-gia/locale/en-US'
+import localeThongKe from '@/views/main-view/thong-ke/locale/en-US'
 
 // Dashboard components don't use localization
 /** simple end */
@@ -102,5 +103,6 @@ export default {
   ...localeUserInfo,
   ...localeUserSetting,
   ...localeDiscount,
+  ...localeThongKe,
   /** simple end */
 }
