@@ -2,7 +2,6 @@
   <div class="add-employee-page">
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
-
     <!-- Card 1: Thông tin nhân viên -->
     <a-card title="Thông tin nhân viên" :loading="loading">
       <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">
@@ -40,12 +39,33 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item name="matKhau">
+            <a-form-item name="cccd">
               <template #label>
-                Mật khẩu
+                CCCD
                 <span style="color: red">*</span>
               </template>
-              <a-input-password v-model="formData.matKhau" placeholder="Nhập mật khẩu" />
+
+              <div style="display: flex; gap: 8px; align-items: center">
+                <a-input v-model="formData.cccd" placeholder="Nhập hoặc quét CCCD" style="flex: 1" />
+
+                <!-- Nút quét CCCD -->
+                <a-button type="outline" @click="openQRModal">
+                  <template #icon>
+                    <icon-scan />
+                  </template>
+                  Quét QR
+                </a-button>
+
+                <!-- Nút tải ảnh -->
+                <a-button type="outline" @click="() => cccdFileInputRef?.click()">
+                  <template #icon>
+                    <icon-upload />
+                  </template>
+                  Tải ảnh
+                </a-button>
+
+                <input ref="cccdFileInputRef" type="file" accept="image/*" style="display: none" @change="handleCCCDImageUpload" />
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
@@ -61,13 +81,17 @@
               <a-input v-model="formData.soDienThoai" placeholder="Nhập số điện thoại" />
             </a-form-item>
           </a-col>
+
           <a-col :span="12">
-            <a-form-item name="cccd">
+            <a-form-item name="gioiTinh">
               <template #label>
-                CCCD
+                Giới tính
                 <span style="color: red">*</span>
               </template>
-              <a-input v-model="formData.cccd" placeholder="Nhập CCCD" />
+              <a-radio-group v-model="formData.gioiTinh" type="button">
+                <a-radio :value="true">Nam</a-radio>
+                <a-radio :value="false">Nữ</a-radio>
+              </a-radio-group>
             </a-form-item>
           </a-col>
         </a-row>
@@ -84,22 +108,10 @@
                 v-model="formData.idQuyenHan"
                 placeholder="-- Chọn quyền hạn --"
                 :options="[
-                  { value: 1, label: 'Admin' },
-                  { value: 2, label: 'Nhân viên' },
+                  { value: 1, label: 'Nhân Viên' },
+                  { value: 2, label: 'Admin' },
                 ]"
               />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item name="gioiTinh">
-              <template #label>
-                Giới tính
-                <span style="color: red">*</span>
-              </template>
-              <a-radio-group v-model="formData.gioiTinh" type="button">
-                <a-radio :value="true">Nam</a-radio>
-                <a-radio :value="false">Nữ</a-radio>
-              </a-radio-group>
             </a-form-item>
           </a-col>
         </a-row>
@@ -276,6 +288,23 @@
         </div>
       </template>
     </a-modal>
+    <!-- Modal quét QR -->
+    <a-modal
+  v-model:visible="showQRModal"
+  title="Quét mã QR CCCD"
+  ok-text="Đóng"
+  cancel-text="Hủy"
+  hide-cancel
+  width="400px"
+  @ok="closeQRModal"
+  @cancel="closeQRModal"
+>
+
+      <div style="text-align: center">
+        <video ref="videoRef" autoplay playsinline style="width: 100%; border-radius: 8px" />
+      </div>
+    </a-modal>
+    
   </div>
 </template>
 
@@ -287,6 +316,13 @@ import useBreadcrumb from '@/hooks/breadcrumb'
 import { themNhanVien, type NhanVienRequest } from '@/api/nhan-vien'
 import { Message, Modal } from '@arco-design/web-vue'
 import { IconUpload, IconClose, IconSave } from '@arco-design/web-vue/es/icon'
+import QrScanner, { ScanResult } from 'qr-scanner'
+import { IconScan } from '@arco-design/web-vue/es/icon'
+
+const showQRModal = ref(false)
+const videoRef = ref<HTMLVideoElement | null>(null)
+const qrScanner = ref<QrScanner | null>(null)
+const cccdFileInputRef = ref<HTMLInputElement | null>(null)
 
 // Router
 const router = useRouter()
@@ -390,6 +426,117 @@ const onDistrictChange = async (value: string) => {
       value: w.name,
       label: w.name,
     }))
+  }
+}
+
+const closeQRModal = () => {
+  if (qrScanner.value) {
+    qrScanner.value.stop()
+    qrScanner.value.destroy()
+    qrScanner.value = null
+  }
+  showQRModal.value = false
+}
+
+const openQRModal = async () => {
+  showQRModal.value = true
+  await nextTick()
+
+  if (!videoRef.value) return
+
+  qrScanner.value = new QrScanner(
+    videoRef.value,
+    (result: ScanResult) => {
+      const raw = result.data.trim()
+      console.log('✅ QR Result:', raw)
+
+      // Nếu là loại chứa dấu |
+      if (raw.includes('|')) {
+        const parts = raw.split('|')
+        if (parts.length > 5) {
+          const cccd = parts[0]
+          const ten = parts[2]
+          const dob = parts[3]
+          const gioiTinh = parts[4]
+          const diaChi = parts[5]
+
+          formData.value.cccd = cccd || ''
+          formData.value.tenNhanVien = ten || ''
+          formData.value.ngaySinh = dob
+            ? `${dob.slice(4, 8)}-${dob.slice(2, 4)}-${dob.slice(0, 2)}`
+            : ''
+          formData.value.gioiTinh = gioiTinh?.toLowerCase().includes('nam')
+
+          const addressParts = diaChi.split(',').map((x) => x.trim())
+          formData.value.diaChiCuThe = addressParts[0] || ''
+          formData.value.phuong = addressParts[1] || ''
+          formData.value.quan = addressParts[2] || ''
+          formData.value.thanhPho = addressParts[3] || ''
+
+          Message.success('✅ Đã tự động điền thông tin từ CCCD!')
+        } else {
+          Message.warning('Không thể đọc đầy đủ thông tin từ mã CCCD!')
+        }
+      }
+      // Nếu là loại mã hóa JWT
+      else if (raw.split('.').length === 3) {
+        formData.value.cccd = raw
+        Message.info('📦 Mã CCCD mới (JWT) – không thể giải mã thông tin chi tiết!')
+      } else {
+        Message.warning('Mã QR không đúng định dạng CCCD!')
+      }
+
+      closeQRModal()
+    },
+    { highlightScanRegion: true, returnDetailedScanResult: true }
+  )
+
+  await qrScanner.value.start()
+}
+
+
+// Xử lý khi người dùng tải ảnh CCCD
+const handleCCCDImageUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  try {
+    const result = await QrScanner.scanImage(file)
+    if (result) {
+  const raw = result.trim()
+  const parts = raw.split('|')
+  if (parts.length > 5) {
+    const cccd = parts[0]
+    const ten = parts[2]
+    const dob = parts[3]
+    const gioiTinh = parts[4]
+    const diaChi = parts[5]
+
+    formData.value.cccd = cccd || ''
+    formData.value.tenNhanVien = ten || ''
+    formData.value.ngaySinh = dob
+      ? `${dob.slice(4, 8)}-${dob.slice(2, 4)}-${dob.slice(0, 2)}`
+      : ''
+    formData.value.gioiTinh = gioiTinh?.toLowerCase().includes('nam')
+
+    const addressParts = diaChi.split(',').map((x) => x.trim())
+    formData.value.diaChiCuThe = addressParts[0] || ''
+    formData.value.phuong = addressParts[1] || ''
+    formData.value.quan = addressParts[2] || ''
+    formData.value.thanhPho = addressParts[3] || ''
+
+    Message.success('✅ Đã tự động điền thông tin từ ảnh CCCD!')
+  } else {
+    Message.warning('Không thể đọc được đầy đủ thông tin từ ảnh CCCD!')
+  }
+}
+
+  } catch (err) {
+    console.error('Không đọc được mã QR:', err)
+    Message.warning('Không phát hiện được mã QR trong ảnh này.')
+  } finally {
+    target.value = ''
   }
 }
 
@@ -710,5 +857,22 @@ const handleCancel = () => {
 .upload-container .arco-btn-dashed:hover {
   border-color: #165dff;
   color: #165dff;
+}
+.qr-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8); /* nền mờ xung quanh */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.qrcode-stream {
+  width: 300px;
+  height: 300px;
+  border: 3px solid #00ff99;
+  border-radius: 10px;
+  overflow: hidden;
 }
 </style>

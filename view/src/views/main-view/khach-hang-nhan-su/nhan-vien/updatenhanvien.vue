@@ -39,13 +39,25 @@
               <a-input v-model="formData.email" placeholder="Nhập email" />
             </a-form-item>
           </a-col>
-          <a-col :span="12">
+          <!-- <a-col :span="12">
             <a-form-item name="matKhau">
               <template #label>
                 Mật khẩu
                 <span style="color: red">*</span>
               </template>
               <a-input-password v-model="formData.matKhau" placeholder="Nhập mật khẩu" />
+            </a-form-item>
+          </a-col> -->
+          <a-col :span="12">
+            <a-form-item name="gioiTinh">
+              <template #label>
+                Giới tính
+                <span style="color: red">*</span>
+              </template>
+              <a-radio-group v-model="formData.gioiTinh">
+                <a-radio :value="true">Nam</a-radio>
+                <a-radio :value="false">Nữ</a-radio>
+              </a-radio-group>
             </a-form-item>
           </a-col>
         </a-row>
@@ -86,7 +98,7 @@
               </a-select>
             </a-form-item>
           </a-col>
-          <a-col :span="12">
+          <!-- <a-col :span="12">
             <a-form-item name="gioiTinh">
               <template #label>
                 Giới tính
@@ -97,7 +109,7 @@
                 <a-radio :value="false">Nữ</a-radio>
               </a-radio-group>
             </a-form-item>
-          </a-col>
+          </a-col> -->
         </a-row>
 
         <!-- Hàng 5: Ảnh nhân viên -->

@@ -116,6 +116,7 @@ public class NhanVien {
     @Column(name = "update_by")
     private Integer updateBy;
 
+
     @OneToMany(mappedBy = "idNhanVien")
     private Set<HoaDon> hoaDons = new LinkedHashSet<>();
 

@@ -2,10 +2,7 @@ package org.example.be_sp.service;
 
 import java.io.IOException;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -28,7 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class NhanVienService {
-
+    @Autowired
+    private Emailgui emailService;
     @Autowired
     private NhanVienRepository nhanVienRepository;
     @Autowired
@@ -90,16 +88,43 @@ public class NhanVienService {
         nv.setIdQuyenHan(repository.findById(request.getIdQuyenHan())
                 .orElseThrow(() -> new ApiException("QuyenHan not found", "404")));
 
-        // set tài khoản & mật khẩu
-        if (request.getTenTaiKhoan() != null && request.getMatKhau() != null) {
-            if (nhanVienRepository.existsByTenTaiKhoan(request.getTenTaiKhoan())) {
-                throw new ApiException("TenTaiKhoan da ton tai", "400");
-            }
-            nv.setTenTaiKhoan(request.getTenTaiKhoan());
-            nv.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
+
+        // Sinh mật khẩu ngẫu nhiên nếu không có trong request
+        String rawPassword = request.getMatKhau();
+        if (rawPassword == null || rawPassword.isEmpty()) {
+            rawPassword = generateRandomPassword();
         }
 
+        // Kiểm tra trùng tài khoản
+        if (nhanVienRepository.existsByTenTaiKhoan(request.getTenTaiKhoan())) {
+            throw new ApiException("Tên tài khoản đã tồn tại", "400");
+        }
+
+        // Thiết lập tài khoản và mật khẩu (chỉ mã hóa 1 lần)
+        nv.setTenTaiKhoan(request.getTenTaiKhoan());
+        nv.setMatKhau(passwordEncoder.encode(rawPassword));
+
+
         nhanVienRepository.save(nv);
+
+        try {
+            emailService.sendAccountInfo(
+                    nv.getEmail(),
+                    nv.getTenNhanVien(),
+                    rawPassword // gửi mật khẩu gốc (chưa mã hóa)
+            );
+        } catch (Exception e) {
+            System.err.println("❌ Gửi mail thất bại: " + e.getMessage());
+        }
+    }
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%";
+        StringBuilder password = new StringBuilder();
+        Random random = new Random();
+        for (int i = 0; i < 8; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return password.toString();
     }
 
     public NhanVienResponse updateNhanVien(Integer id, NhanVienRequest request, PasswordEncoder passwordEncoder) {

@@ -104,12 +104,12 @@ public class NhanVienController {
             request.setMatKhau(matKhau);
             request.setTrangThai(trangThai);
             request.setDeleted(false);
-            
+
             // Set file ảnh nếu có
             if (file != null && file.length > 0) {
                 request.setAnhNhanVien(file);
             }
-            
+
             nhanVienService.saveNhanVien(request, passwordEncoder);
             return new ResponseObject<>(true, null, "Thêm nhân viên mới thành công");
         } catch (Exception e) {
@@ -153,12 +153,12 @@ public class NhanVienController {
             request.setTenTaiKhoan(tenTaiKhoan);
             request.setMatKhau(matKhau);
             request.setTrangThai(trangThai);
-            
+
             // Set file ảnh nếu có
             if (file != null && file.length > 0) {
                 request.setAnhNhanVien(file);
             }
-            
+
             nhanVienService.updateNhanVien(id, request, passwordEncoder);
             return new ResponseObject<>(true, null, "Cập nhật nhân viên thành công");
         } catch (Exception e) {

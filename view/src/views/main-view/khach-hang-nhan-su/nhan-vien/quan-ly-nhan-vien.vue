@@ -347,6 +347,10 @@ const timKiemNhanVien = async () => {
           return gioiTinhText === boLoc.value.gioiTinh
         })
       }
+      // Filter theo quyền hạn
+      if (boLoc.value.tenQuyenHan !== '') {
+        filtered = filtered.filter((item: any) => item.tenQuyenHan === boLoc.value.tenQuyenHan)
+      }
 
       // Filter theo trạng thái
       if (boLoc.value.trangThai !== '') {
@@ -370,13 +374,18 @@ const timKiemNhanVien = async () => {
           phuong: item.phuong,
           diaChi: item.diaChiCuThe,
           tenQuyenHan: item.tenQuyenHan,
-          idQuyenHan: item.tenQuyenHan === 'Quản lý' ? 1 : 2,
+          idQuyenHan: item.idQuyenHan,
           trangThai: Boolean(item.trangThai),
           anhNhanVien: item.anhNhanVien ? `/uploads/${item.anhNhanVien}` : null,
           updating: false,
         }
       })
+      mappedData.sort((a, b) => b.id - a.id)
 
+      // ✅ Đánh lại STT sau khi sắp xếp
+      mappedData.forEach((item, index) => {
+        item.stt = index + 1
+      })
       danhSachNhanVien.value = mappedData
       phanTrang.total = mappedData.length
     }
