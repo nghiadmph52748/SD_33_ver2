@@ -3,7 +3,6 @@
     <Breadcrumb :items="breadcrumbItems" />
 
     <a-card class="coupon-card" :class="{ 'featured-layout': formState.featured }">
-
       <div :class="formState.featured ? 'two-column-container' : ''">
         <!-- Left Column: Form -->
         <div :class="formState.featured ? 'left-column' : ''">
@@ -35,7 +34,11 @@
                 @blur="handleDiscountBlur"
                 @focus="handleDiscountFocus"
                 @input="handleDiscountInput"
-                :placeholder="isPercent ? t('discount.coupon.discountValuePlaceholder.percentage') : t('discount.coupon.discountValuePlaceholder.amount')"
+                :placeholder="
+                  isPercent
+                    ? t('discount.coupon.discountValuePlaceholder.percentage')
+                    : t('discount.coupon.discountValuePlaceholder.amount')
+                "
                 style="width: 100%"
               />
             </a-form-item>
@@ -117,10 +120,19 @@
           <div class="column-title">{{ t('discount.coupon.selectCustomers') }}</div>
           <div class="customer-selection-section">
             <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px">
-              <a-checkbox :model-value="isAllCustomersSelected" @change="toggleAllCustomers">{{ t('discount.common.selectAll') }}</a-checkbox>
-              <a-button size="mini" @click="formState.selectedCustomerIds = []" type="text">{{ t('discount.coupon.clearSelection') }}</a-button>
+              <a-checkbox :model-value="isAllCustomersSelected" @change="toggleAllCustomers">
+                {{ t('discount.common.selectAll') }}
+              </a-checkbox>
+              <a-button size="mini" @click="formState.selectedCustomerIds = []" type="text">
+                {{ t('discount.coupon.clearSelection') }}
+              </a-button>
             </div>
-            <a-input-search v-model="customerSearchQuery" :placeholder="t('discount.coupon.searchCustomers')" allow-clear style="margin-bottom: 12px" />
+            <a-input-search
+              v-model="customerSearchQuery"
+              :placeholder="t('discount.coupon.searchCustomers')"
+              allow-clear
+              style="margin-bottom: 12px"
+            />
             <a-table
               row-key="id"
               :columns="customerColumns"
@@ -154,7 +166,7 @@
       </div>
     </a-card>
 
-  <PageActions>
+    <PageActions>
       <a-space>
         <a-button @click="goBack">{{ t('discount.common.reset') }}</a-button>
         <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">{{ t('discount.common.update') }}</a-button>
@@ -219,14 +231,7 @@
     </a-modal>
 
     <!-- Scroll to Top Button -->
-    <a-button
-      v-show="showScrollTop"
-      class="scroll-to-top-btn"
-      type="primary"
-      shape="circle"
-      size="large"
-      @click="scrollToTop"
-    >
+    <a-button v-show="showScrollTop" class="scroll-to-top-btn" type="primary" shape="circle" size="large" @click="scrollToTop">
       <template #icon>
         <icon-up />
       </template>
@@ -480,7 +485,6 @@ const formatNumberWithSeparator = (value: number | string) => {
   return numValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
-
 // Load customers when featured is checked
 watch(
   () => formState.featured,
@@ -566,7 +570,7 @@ const handleDiscountBlur = () => {
     // Percentage mode - parse as float to handle decimals
     const value = parseFloat(displayDiscountValue.value.replace(/[^0-9.]/g, ''))
 
-if (Number.isNaN(value) || value < 1) {
+    if (Number.isNaN(value) || value < 1) {
       formState.discountValue = 1
     } else if (value > 100) {
       formState.discountValue = 100
@@ -858,7 +862,7 @@ const handleSaveClick = async () => {
   }
 
   const discountValue = Number(formState.discountValue)
-if (isPercent.value) {
+  if (isPercent.value) {
     if (Number.isNaN(discountValue) || discountValue < 1) {
       Message.error('Giá trị giảm theo % phải từ 1 - 100')
       return
@@ -1044,7 +1048,6 @@ const confirmSave = async () => {
   padding-bottom: 12px;
   border-bottom: 2px solid var(--color-primary-6);
 }
-
 
 .featured-layout .customer-selection-section {
   border: none;

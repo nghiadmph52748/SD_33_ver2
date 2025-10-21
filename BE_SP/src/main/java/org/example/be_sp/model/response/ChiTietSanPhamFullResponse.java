@@ -30,6 +30,7 @@ public class ChiTietSanPhamFullResponse {
 	private String tenDeGiay;
 	private String tenChatLieu;
 	private String tenMauSac;
+	private String maMau;
 	private String tenKichThuoc;
 	private String tenTrongLuong;
 	private Integer soLuong;
@@ -100,6 +101,11 @@ public class ChiTietSanPhamFullResponse {
 			this.tenMauSac = s.getIdMauSac().getTenMauSac();
 		} else {
 			this.tenMauSac = null;
+		}
+		if (s.getIdMauSac() != null) {
+			this.maMau = s.getIdMauSac().getMaMau();
+		} else {
+			this.maMau = null;
 		}
 		if (s.getIdKichThuoc() != null) {
 			this.tenKichThuoc = s.getIdKichThuoc().getTenKichThuoc();

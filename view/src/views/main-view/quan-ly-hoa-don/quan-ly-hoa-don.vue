@@ -490,7 +490,7 @@ const fetchInvoices = async () => {
       tongTienSauGiam: invoice.tongTienSauGiam || invoice.tongTien || 0,
       trangThai: invoice.trangThai,
       ngayThanhToan: invoice.ngayThanhToan,
-      hoaDonChiTiets: [] // Sẽ được load riêng nếu cần
+      hoaDonChiTiets: [], // Sẽ được load riêng nếu cần
     }))
 
     console.log('Dữ liệu hóa đơn đã xử lý:', invoicesList.value)
@@ -569,7 +569,6 @@ const viewInvoice = (invoice: any) => {
   router.push({ name: 'HoaDonChiTiet', params: { id: invoice.id } })
 }
 
-
 const editInvoice = () => {
   // Implement edit logic
 }
@@ -620,7 +619,6 @@ const testAPI = async () => {
 const exportExcel = () => {
   // Implement export logic
 }
-
 
 const cancelSelected = () => {
   // Implement batch cancel logic

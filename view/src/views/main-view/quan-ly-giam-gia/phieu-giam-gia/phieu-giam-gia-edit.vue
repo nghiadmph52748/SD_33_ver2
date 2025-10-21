@@ -40,7 +40,9 @@
                 @blur="handleDiscountBlur"
                 @focus="handleDiscountFocus"
                 @input="handleDiscountInput"
-                :placeholder="isPercentEdit ? t('discount.coupon.discountValuePercentPlaceholder') : t('discount.coupon.discountValueAmountPlaceholder')"
+                :placeholder="
+                  isPercentEdit ? t('discount.coupon.discountValuePercentPlaceholder') : t('discount.coupon.discountValueAmountPlaceholder')
+                "
                 style="width: 100%"
               />
             </a-form-item>
@@ -87,7 +89,9 @@
                 :max="100000"
                 :precision="0"
                 :disabled="couponEditForm.featured"
-                :placeholder="couponEditForm.featured ? t('discount.coupon.quantityAutoPlaceholder') : t('discount.coupon.quantityPlaceholder')"
+                :placeholder="
+                  couponEditForm.featured ? t('discount.coupon.quantityAutoPlaceholder') : t('discount.coupon.quantityPlaceholder')
+                "
                 style="width: 100%"
               />
             </a-form-item>
@@ -141,7 +145,12 @@
       <a-col :span="12" v-if="couponEditForm.featured">
         <a-card :title="t('discount.coupon.selectCustomers')">
           <div class="customer-selection-section">
-            <a-input-search v-model="customerSearchQuery" :placeholder="t('discount.coupon.searchCustomerPlaceholder')" allow-clear style="margin-bottom: 12px" />
+            <a-input-search
+              v-model="customerSearchQuery"
+              :placeholder="t('discount.coupon.searchCustomerPlaceholder')"
+              allow-clear
+              style="margin-bottom: 12px"
+            />
 
             <div style="margin-bottom: 12px; display: flex; gap: 8px">
               <a-button size="small" @click="selectAllEditCustomers">
@@ -1299,7 +1308,6 @@ onUnmounted(() => {
   color: var(--color-text-3);
   margin: 0;
 }
-
 
 .customer-selection-section {
   border: 1px solid var(--color-border-2);

@@ -1,12 +1,5 @@
 <template>
-  <a-button
-    v-show="showScrollTop"
-    class="scroll-to-top-btn"
-    type="primary"
-    shape="circle"
-    size="large"
-    @click="scrollToTop"
-  >
+  <a-button v-show="showScrollTop" class="scroll-to-top-btn" type="primary" shape="circle" size="large" @click="scrollToTop">
     <template #icon>
       <icon-up />
     </template>

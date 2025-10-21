@@ -10,7 +10,12 @@
         <a-row :gutter="16">
           <a-col :span="6">
             <a-form-item :label="t('discount.common.search')">
-              <a-input v-model="filters.search" :placeholder="t('discount.campaign.searchPlaceholder')" allow-clear @change="searchPromotions" />
+              <a-input
+                v-model="filters.search"
+                :placeholder="t('discount.campaign.searchPlaceholder')"
+                allow-clear
+                @change="searchPromotions"
+              />
             </a-form-item>
           </a-col>
           <a-col :span="5">
@@ -179,7 +184,13 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="detailVisible" :title="t('discount.campaign.detail')" :footer="false" width="900px" :body-style="{ maxHeight: '80vh', overflowY: 'auto' }">
+    <a-modal
+      v-model:visible="detailVisible"
+      :title="t('discount.campaign.detail')"
+      :footer="false"
+      width="900px"
+      :body-style="{ maxHeight: '80vh', overflowY: 'auto' }"
+    >
       <a-descriptions :column="2" bordered>
         <a-descriptions-item :label="t('discount.common.name')">{{ selectedPromotion?.name }}</a-descriptions-item>
         <a-descriptions-item :label="t('discount.common.code')">{{ selectedPromotion?.code }}</a-descriptions-item>
@@ -220,7 +231,10 @@
           </div>
         </div>
 
-        <div v-if="!isProductDetailsLoading && promotionProductDetails.length === 0" style="text-align: center; padding: 32px; color: var(--color-text-3)">
+        <div
+          v-if="!isProductDetailsLoading && promotionProductDetails.length === 0"
+          style="text-align: center; padding: 32px; color: var(--color-text-3)"
+        >
           <icon-empty style="font-size: 48px; margin-bottom: 8px" />
           <div>{{ t('discount.campaign.noProductsApplied') }}</div>
         </div>
@@ -239,13 +253,7 @@
           <div
             v-for="variant in promotionProductDetails"
             :key="variant.id"
-            style="
-              display: flex;
-              align-items: center;
-              gap: 12px;
-              padding: 8px;
-              border-bottom: 1px solid var(--color-border-1);
-            "
+            style="display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid var(--color-border-1)"
           >
             <img
               v-if="variant.anhSanPham?.[0]"
@@ -253,7 +261,18 @@
               :alt="variant.tenSanPham"
               style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px"
             />
-            <div v-else style="width: 50px; height: 50px; background: var(--color-fill-2); border-radius: 4px; display: flex; align-items: center; justify-content: center">
+            <div
+              v-else
+              style="
+                width: 50px;
+                height: 50px;
+                background: var(--color-fill-2);
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
               <icon-image :size="24" style="color: var(--color-text-4)" />
             </div>
             <div style="flex: 1; min-width: 0">
@@ -265,7 +284,10 @@
               </div>
               <div style="display: flex; gap: 8px; align-items: center">
                 <a-tag v-if="variant.maChiTietSanPham" size="small" color="blue">{{ variant.maChiTietSanPham }}</a-tag>
-                <span style="font-size: 12px; color: var(--color-text-3)">{{ t('discount.campaign.stock') }}: <strong>{{ variant.soLuong ?? 0 }}</strong></span>
+                <span style="font-size: 12px; color: var(--color-text-3)">
+                  {{ t('discount.campaign.stock') }}:
+                  <strong>{{ variant.soLuong ?? 0 }}</strong>
+                </span>
               </div>
             </div>
             <div style="text-align: right; white-space: nowrap">

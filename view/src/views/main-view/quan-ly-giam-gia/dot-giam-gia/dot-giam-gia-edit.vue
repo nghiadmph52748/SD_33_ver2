@@ -80,7 +80,12 @@
       <a-col :span="16">
         <a-card :title="t('discount.campaign.selectProducts')">
           <div class="product-selection-section">
-            <a-input-search v-model="productSearchQuery" :placeholder="t('discount.campaign.searchProducts')" allow-clear style="margin-bottom: 12px" />
+            <a-input-search
+              v-model="productSearchQuery"
+              :placeholder="t('discount.campaign.searchProducts')"
+              allow-clear
+              style="margin-bottom: 12px"
+            />
 
             <a-table
               class="product-group-table"
@@ -120,7 +125,9 @@
                   <div class="product-name">{{ record.tenSanPham }}</div>
                   <div v-if="record.variants.length > 1" class="product-variant-meta">
                     {{ record.variants.length }} {{ t('discount.common.variants') }} •
-                    <span style="color: var(--color-primary-light-4)">{{ getGroupSelectedVariantIdsEdit(record).length }} {{ t('discount.common.selected') }}</span>
+                    <span style="color: var(--color-primary-light-4)">
+                      {{ getGroupSelectedVariantIdsEdit(record).length }} {{ t('discount.common.selected') }}
+                    </span>
                   </div>
                   <div v-else-if="record.variants.length === 1" class="product-variant-meta">
                     {{ buildVariantLabel(record.variants[0]) }}
@@ -177,19 +184,24 @@
                         </div>
                         <div class="variant-specs-inline">
                           <span v-if="variant.tenMauSac" class="spec-tag">
-                            <icon-bg-colors :size="12" /> {{ variant.tenMauSac }}
+                            <icon-bg-colors :size="12" />
+                            {{ variant.tenMauSac }}
                           </span>
                           <span v-if="variant.tenKichThuoc" class="spec-tag">
-                            <icon-expand :size="12" /> {{ variant.tenKichThuoc }}
+                            <icon-expand :size="12" />
+                            {{ variant.tenKichThuoc }}
                           </span>
                           <span v-if="variant.tenChatLieu" class="spec-tag">
-                            <icon-tag :size="12" /> {{ variant.tenChatLieu }}
+                            <icon-tag :size="12" />
+                            {{ variant.tenChatLieu }}
                           </span>
                           <span v-if="variant.tenDeGiay" class="spec-tag">
-                            <img :src="soleIcon" alt="sole" class="spec-icon-img" /> {{ variant.tenDeGiay }}
+                            <img :src="soleIcon" alt="sole" class="spec-icon-img" />
+                            {{ variant.tenDeGiay }}
                           </span>
                           <span v-if="variant.tenTrongLuong" class="spec-tag">
-                            <icon-nav :size="12" /> {{ variant.tenTrongLuong }}
+                            <icon-nav :size="12" />
+                            {{ variant.tenTrongLuong }}
                           </span>
                         </div>
                       </div>
@@ -239,18 +251,14 @@
       <p class="modal-note">{{ t('discount.campaign.editConfirmNote') }}</p>
 
       <div v-if="promotionEditForm.selectedProducts.length > 0" style="margin-top: 16px">
-        <a-divider orientation="left" style="margin: 16px 0 12px 0">{{ t('discount.campaign.productList') }} ({{ promotionEditForm.selectedProducts.length }} {{ t('discount.common.variants') }})</a-divider>
+        <a-divider orientation="left" style="margin: 16px 0 12px 0">
+          {{ t('discount.campaign.productList') }} ({{ promotionEditForm.selectedProducts.length }} {{ t('discount.common.variants') }})
+        </a-divider>
         <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--color-border-2); border-radius: 4px; padding: 8px">
           <div
             v-for="variant in selectedVariantsForModalEdit"
             :key="variant.id"
-            style="
-              display: flex;
-              align-items: center;
-              gap: 12px;
-              padding: 8px;
-              border-bottom: 1px solid var(--color-border-1);
-            "
+            style="display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid var(--color-border-1)"
           >
             <img
               v-if="variant.anhSanPham?.[0]"
@@ -258,7 +266,18 @@
               :alt="variant.tenSanPham"
               style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px"
             />
-            <div v-else style="width: 40px; height: 40px; background: var(--color-fill-2); border-radius: 4px; display: flex; align-items: center; justify-content: center">
+            <div
+              v-else
+              style="
+                width: 40px;
+                height: 40px;
+                background: var(--color-fill-2);
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
               <icon-image :size="20" style="color: var(--color-text-4)" />
             </div>
             <div style="flex: 1; min-width: 0">
@@ -344,7 +363,6 @@ interface ProductGroup {
 
 const productOptions = ref<PromotionProductOption[]>([])
 const productOptionsLoading = ref(false)
-
 
 const buildVariantLabel = (product: PromotionProductOption) => {
   if (!product) return ''
@@ -600,9 +618,7 @@ const deselectAllFilteredVariantsEdit = () => {
 }
 
 const selectAllVariantsEdit = (group: ProductGroup) => {
-  const variantIds = group.variants
-    .filter((v) => v.id && typeof v.id === 'number' && !Number.isNaN(v.id))
-    .map((v) => v.id)
+  const variantIds = group.variants.filter((v) => v.id && typeof v.id === 'number' && !Number.isNaN(v.id)).map((v) => v.id)
   variantIds.forEach((id) => {
     if (!promotionEditForm.selectedProducts.includes(id)) {
       promotionEditForm.selectedProducts.push(id)
@@ -611,9 +627,7 @@ const selectAllVariantsEdit = (group: ProductGroup) => {
 }
 
 const deselectAllVariantsEdit = (group: ProductGroup) => {
-  const variantIds = group.variants
-    .filter((v) => v.id && typeof v.id === 'number' && !Number.isNaN(v.id))
-    .map((v) => v.id)
+  const variantIds = group.variants.filter((v) => v.id && typeof v.id === 'number' && !Number.isNaN(v.id)).map((v) => v.id)
   promotionEditForm.selectedProducts = promotionEditForm.selectedProducts.filter((id) => !variantIds.includes(id))
 }
 
@@ -842,7 +856,6 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-
 .product-selection-section {
   border: 1px solid var(--color-border-2);
   border-radius: 8px;
@@ -853,7 +866,6 @@ onMounted(async () => {
 .product-selection-section :deep(.arco-table-tr) {
   cursor: pointer;
 }
-
 
 .product-image-cell {
   display: flex;
@@ -958,7 +970,6 @@ onMounted(async () => {
 .variant-expansion :deep(.variant-row-selected:hover .arco-table-td) {
   background-color: var(--color-primary-light-3) !important;
 }
-
 
 .variant-info {
   display: flex;

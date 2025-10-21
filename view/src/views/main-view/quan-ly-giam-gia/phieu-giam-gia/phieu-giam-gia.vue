@@ -17,7 +17,7 @@
             <a-form-item :label="t('discount.common.startDate')">
               <a-date-picker
                 v-model="filters.startDate"
-                :placeholder="t('discount.common.selectStartDate')"  
+                :placeholder="t('discount.common.selectStartDate')"
                 allow-clear
                 @change="searchCoupons"
                 style="width: 100%"
@@ -180,7 +180,11 @@
 
         <template #discount_type="{ record }">
           <a-tag :color="record.discount_type === 'percentage' ? 'blue' : 'green'">
-            {{ record.discount_type === 'percentage' ? t('discount.coupon.discountType.percentageShort') : t('discount.coupon.discountType.amountShort') }}
+            {{
+              record.discount_type === 'percentage'
+                ? t('discount.coupon.discountType.percentageShort')
+                : t('discount.coupon.discountType.amountShort')
+            }}
           </a-tag>
         </template>
 
@@ -256,7 +260,13 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="couponDetailVisible" :title="t('discount.coupon.detail')" :footer="false" width="900px" :body-style="{ maxHeight: '80vh', overflowY: 'auto' }">
+    <a-modal
+      v-model:visible="couponDetailVisible"
+      :title="t('discount.coupon.detail')"
+      :footer="false"
+      width="900px"
+      :body-style="{ maxHeight: '80vh', overflowY: 'auto' }"
+    >
       <a-descriptions :column="2" bordered>
         <a-descriptions-item :label="t('discount.common.name')">{{ selectedCoupon?.name }}</a-descriptions-item>
         <a-descriptions-item :label="t('discount.common.code')">{{ selectedCoupon?.code }}</a-descriptions-item>
@@ -265,7 +275,13 @@
           <span v-else>{{ formatCurrency(selectedCoupon?.discount_value ?? 0) }}</span>
         </a-descriptions-item>
         <a-descriptions-item v-if="selectedCoupon?.discount_type === 'percentage'" :label="t('discount.coupon.maxDiscount')">
-          <span>{{ selectedCoupon?.max_discount_value != null ? formatCurrency(selectedCoupon.max_discount_value) : t('discount.common.unlimited') }}</span>
+          <span>
+            {{
+              selectedCoupon?.max_discount_value != null
+                ? formatCurrency(selectedCoupon.max_discount_value)
+                : t('discount.common.unlimited')
+            }}
+          </span>
         </a-descriptions-item>
         <a-descriptions-item :label="t('discount.coupon.minOrder')">
           {{ selectedCoupon?.min_order_value ? formatCurrency(selectedCoupon.min_order_value) : t('discount.common.unlimited') }}
@@ -579,7 +595,13 @@
     </a-modal>
 
     <!-- Applied Customers Modal -->
-    <a-modal v-model:visible="appliedCustomersVisible" :title="t('discount.coupon.appliedCustomers')" :footer="false" width="700px" :body-style="{ maxHeight: '70vh', overflowY: 'auto' }">
+    <a-modal
+      v-model:visible="appliedCustomersVisible"
+      :title="t('discount.coupon.appliedCustomers')"
+      :footer="false"
+      width="700px"
+      :body-style="{ maxHeight: '70vh', overflowY: 'auto' }"
+    >
       <div v-if="appliedCustomersList.length > 0">
         <a-list :data="appliedCustomersList" :bordered="false">
           <template #item="{ item, index }">

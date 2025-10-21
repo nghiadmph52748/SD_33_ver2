@@ -46,7 +46,7 @@
                   <span style="color: #0960bd; font-weight: 700">{{ currentOrder?.orderCode }}</span>
                 </div>
                 <a-space wrap>
-                  <a-button type="primary" @click="showProductModal = true">
+                  <a-button type="primary" @click="openProductModal">
                     <template #icon>
                       <icon-plus />
                     </template>
@@ -130,10 +130,11 @@
           <a-form layout="vertical">
             <a-form-item label="Chọn Khách Hàng">
               <a-select
-                v-model:model-value="currentOrder.customerId"
+                :model-value="currentOrder?.customerId"
                 placeholder="--- Chọn khách hàng ---"
                 allow-search
                 filterable
+                @update:model-value="updateCustomerId"
                 @change="handleCustomerChange"
               >
                 <a-option value="">Khách lẻ</a-option>
@@ -143,7 +144,7 @@
               </a-select>
             </a-form-item>
 
-            <a-form-item v-if="selectedCustomer">
+            <a-form-item v-if="selectedCustomer && currentOrder">
               <a-descriptions size="small" :column="1" bordered>
                 <a-descriptions-item label="Tên">{{ selectedCustomer.name }}</a-descriptions-item>
                 <a-descriptions-item label="SĐT">{{ selectedCustomer.phone }}</a-descriptions-item>
@@ -265,19 +266,71 @@
 
     <!-- Modals -->
     <!-- Product Selection Modal -->
-    <a-modal v-model:visible="showProductModal" title="Chọn Sản Phẩm" width="90%" :footer="null" @cancel="showProductModal = false">
+    <a-modal v-model:visible="showProductModal" title="Chọn Sản Phẩm" width="90%" :footer="null" @cancel="handleProductModalCancel">
+      <div style="margin-bottom: 16px">
+        <a-input-search
+          v-model="productSearchText"
+          placeholder="Tìm kiếm sản phẩm (tên, mã, màu, kích thước...)"
+          allow-clear
+          style="width: 100%; margin-bottom: 12px"
+        />
+        <a-row :gutter="[12, 12]">
+          <a-col :xs="24" :sm="12" :md="8" :lg="4">
+            <a-select
+              v-model="productFilters.tenChatLieu"
+              placeholder="Chất liệu"
+              allow-clear
+              :options="productMaterialOptions"
+              size="small"
+            />
+          </a-col>
+          <a-col :xs="24" :sm="12" :md="8" :lg="4">
+            <a-select v-model="productFilters.tenDeGiay" placeholder="Đế" allow-clear :options="productSoleOptions" size="small" />
+          </a-col>
+          <a-col :xs="24" :sm="12" :md="8" :lg="4">
+            <a-select
+              v-model="productFilters.tenNhaSanXuat"
+              placeholder="NSX"
+              allow-clear
+              :options="productManufacturerOptions"
+              size="small"
+            />
+          </a-col>
+          <a-col :xs="24" :sm="12" :md="8" :lg="4">
+            <a-select v-model="productFilters.tenXuatXu" placeholder="Xuất xứ" allow-clear :options="productOriginOptions" size="small" />
+          </a-col>
+          <a-col :xs="24" :sm="12" :md="8" :lg="4">
+            <a-select v-model="productFilters.tenMauSac" placeholder="Màu Sắc" allow-clear :options="productColorOptions" size="small" />
+          </a-col>
+          <a-col :xs="24" :sm="12" :md="8" :lg="4">
+            <a-select
+              v-model="productFilters.tenKichThuoc"
+              placeholder="Kích Thước"
+              allow-clear
+              :options="productSizeOptions"
+              size="small"
+            />
+          </a-col>
+        </a-row>
+      </div>
       <a-table
-        v-if="productVariants.length > 0"
+        :key="`products-${productPagination.current}`"
+        v-if="filteredProductVariants.length > 0"
         :columns="[
-          { title: 'Mã', dataIndex: 'maChiTietSanPham', key: 'maChiTietSanPham', width: 120 },
-          { title: 'Sản Phẩm', dataIndex: 'tenSanPham', key: 'tenSanPham', width: 200 },
-          { title: 'Màu', dataIndex: 'tenMauSac', key: 'tenMauSac', width: 100 },
-          { title: 'Kích Thước', dataIndex: 'tenKichThuoc', key: 'tenKichThuoc', width: 100 },
-          { title: 'Giá', dataIndex: 'giaBan', key: 'giaBan', width: 100, slotName: 'price' },
+          { title: 'STT', dataIndex: 'stt', key: 'stt', width: 50 },
+          { title: 'Sản Phẩm', dataIndex: 'product', key: 'product', width: 200, slotName: 'product' },
+          { title: 'Thông Tin', dataIndex: 'info', key: 'info', width: 200, slotName: 'info' },
+          { title: 'Màu Sắc | Kích Thước', dataIndex: 'variant', key: 'variant', width: 150, slotName: 'variant' },
+          { title: 'Giá Bán', dataIndex: 'price', key: 'price', width: 150, slotName: 'price' },
           { title: 'Số Lượng', dataIndex: 'soLuong', key: 'soLuong', width: 80 },
-          { title: 'Hành Động', key: 'action', width: 80, slotName: 'action' },
+          { title: 'Thao Tác', key: 'action', width: 80, slotName: 'action' },
         ]"
-        :data="productVariants"
+        :data="
+          filteredProductVariants.map((p, idx) => ({
+            ...p,
+            stt: (productPagination.current - 1) * productPagination.pageSize + idx + 1,
+          }))
+        "
         size="small"
         :scroll="{ x: '100%' }"
         :pagination="{
@@ -286,35 +339,97 @@
           total: productPagination.total,
           showTotal: true,
         }"
-        @paginate="(page) => loadProductPage(page)"
+        :page-position="'bottomCenter'"
+        @page-change="
+          (page) => {
+            loadProductPage(page)
+          }
+        "
       >
-        <template #price="{ record }">
-          {{ formatCurrency(record.giaBan) }}
+        <template #product="{ record, rowIndex }">
+          <div style="display: flex; gap: 8px; align-items: center">
+            <img
+              v-if="record.anhSanPham?.[0]"
+              :src="record.anhSanPham[0]"
+              style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px"
+              :alt="record.tenSanPham"
+            />
+            <div>
+              <div style="font-weight: 600; font-size: 13px">{{ record.tenSanPham }}</div>
+              <div style="font-size: 11px; color: #999">Mã: {{ record.maChiTietSanPham }}</div>
+            </div>
+          </div>
         </template>
+
+        <template #info="{ record }">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px">
+            <div>
+              <div v-if="record.tenChatLieu" style="margin-bottom: 4px">
+                <span style="color: #999">Chất liệu:</span>
+                <strong>{{ ' ' + record.tenChatLieu }}</strong>
+              </div>
+              <div v-if="record.tenDeGiay">
+                <span style="color: #999">Đế:</span>
+                <strong>{{ ' ' + record.tenDeGiay }}</strong>
+              </div>
+            </div>
+            <div>
+              <div v-if="record.tenNhaSanXuat" style="margin-bottom: 4px">
+                <span style="color: #999">NSX:</span>
+                <strong>{{ ' ' + record.tenNhaSanXuat }}</strong>
+              </div>
+              <div v-if="record.tenXuatXu">
+                <span style="color: #999">Xuất xứ:</span>
+                <strong>{{ ' ' + record.tenXuatXu }}</strong>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template #variant="{ record }">
+          <div style="font-size: 12px; display: flex; align-items: center; gap: 12px">
+            <!-- Màu sắc -->
+            <div v-if="record.tenMauSac" style="display: flex; align-items: center; gap: 6px">
+              <div
+                v-if="record.maMau"
+                style="width: 20px; height: 20px; border-radius: 3px; border: 1px solid #e5e5e5; background-color: #ffffff; flex-shrink: 0"
+                :style="{ backgroundColor: record.maMau }"
+                :title="record.maMau"
+              />
+              <div>
+                <div style="font-weight: 600; line-height: 1">{{ record.tenMauSac }}</div>
+                <div v-if="record.maMau" style="font-size: 10px; color: #999; line-height: 1">{{ record.maMau }}</div>
+              </div>
+            </div>
+
+            <!-- Dấu phân cách -->
+            <span v-if="record.tenMauSac && record.tenKichThuoc" style="color: #d9d9d9">|</span>
+
+            <!-- Kích thước -->
+            <div v-if="record.tenKichThuoc" style="font-weight: 600">
+              {{ record.tenKichThuoc }}
+            </div>
+          </div>
+        </template>
+
+        <template #price="{ record }">
+          <div style="font-size: 12px">
+            <div v-if="record.giaTriGiamGia && record.giaTriGiamGia > 0">
+              <div style="text-decoration: line-through; color: #999; margin-bottom: 2px">
+                {{ formatCurrency(record.giaBan) }}
+              </div>
+              <div style="font-weight: 600; color: #f5222d; font-size: 14px">
+                {{ formatCurrency(record.giaBan * (1 - record.giaTriGiamGia / 100)) }}
+              </div>
+            </div>
+            <div v-else style="font-weight: 600; color: #f5222d; font-size: 14px">
+              {{ formatCurrency(record.giaBan) }}
+            </div>
+          </div>
+        </template>
+
         <template #action="{ record }">
-          <a-button
-            type="primary"
-            size="small"
-            @click="
-              () => {
-                if (currentOrder) {
-                  const item: CartItem = {
-                    id: `${Date.now()}_${Math.random()}`,
-                    productId: record.id?.toString() || '',
-                    productName: record.tenSanPham || '',
-                    price: record.giaBan || 0,
-                    quantity: 1,
-                    image: record.anhSanPham?.[0] || '',
-                  }
-                  currentOrder.items.push(item)
-                  showProductModal = false
-                  Message.success('Thêm sản phẩm thành công')
-                }
-              }
-            "
-          >
-            Thêm
-          </a-button>
+          <a-button type="primary" size="small" @click="showAddProductConfirm(record)">Chọn</a-button>
         </template>
       </a-table>
       <a-empty v-else description="Không có sản phẩm" />
@@ -500,14 +615,127 @@
         <p style="margin: 4px 0 0 0; color: #666; font-size: 13px">Bạn có chắc muốn xoá đơn hàng này? Hành động này không thể hoàn tác.</p>
       </div>
     </a-modal>
+
+    <!-- Add Product Confirm Modal -->
+    <a-modal
+      v-model:visible="showAddProductConfirmModal"
+      title="Thêm Sản Phẩm"
+      width="500px"
+      @ok="confirmAddProduct"
+      @cancel="showAddProductConfirmModal = false"
+      ok-text="Thêm"
+      cancel-text="Hủy"
+    >
+      <div v-if="selectedProductForAdd">
+        <!-- Product Info -->
+        <div style="display: flex; gap: 12px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e5e5">
+          <img
+            v-if="selectedProductForAdd.anhSanPham?.[0]"
+            :src="selectedProductForAdd.anhSanPham[0]"
+            style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px"
+          />
+          <div style="flex: 1">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px">{{ selectedProductForAdd.tenSanPham }}</div>
+            <div style="font-size: 12px; color: #999; margin-bottom: 12px">Mã: {{ selectedProductForAdd.maChiTietSanPham }}</div>
+
+            <!-- Thông tin chi tiết - 2 cột -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; font-size: 11px">
+              <div>
+                <div v-if="selectedProductForAdd.tenChatLieu" style="margin-bottom: 6px">
+                  <div style="color: #999; font-size: 10px">Chất liệu</div>
+                  <div style="font-weight: 500">{{ selectedProductForAdd.tenChatLieu }}</div>
+                </div>
+                <div v-if="selectedProductForAdd.tenDeGiay">
+                  <div style="color: #999; font-size: 10px">Đế</div>
+                  <div style="font-weight: 500">{{ selectedProductForAdd.tenDeGiay }}</div>
+                </div>
+              </div>
+              <div>
+                <div v-if="selectedProductForAdd.tenNhaSanXuat" style="margin-bottom: 6px">
+                  <div style="color: #999; font-size: 10px">Nhà sản xuất</div>
+                  <div style="font-weight: 500">{{ selectedProductForAdd.tenNhaSanXuat }}</div>
+                </div>
+                <div v-if="selectedProductForAdd.tenXuatXu">
+                  <div style="color: #999; font-size: 10px">Xuất xứ</div>
+                  <div style="font-weight: 500">{{ selectedProductForAdd.tenXuatXu }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Màu và kích thước -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; font-size: 11px">
+              <div v-if="selectedProductForAdd.tenMauSac">
+                <div style="color: #999; font-size: 10px">Màu sắc</div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px">
+                  <div
+                    v-if="selectedProductForAdd.maMau"
+                    style="width: 24px; height: 24px; border-radius: 4px; border: 1px solid #e5e5e5; background-color: #ffffff"
+                    :style="{ backgroundColor: selectedProductForAdd.maMau }"
+                    :title="selectedProductForAdd.maMau"
+                  />
+                  <div>
+                    <div style="font-weight: 600">{{ selectedProductForAdd.tenMauSac }}</div>
+                    <div v-if="selectedProductForAdd.maMau" style="color: #999; font-size: 10px">
+                      {{ selectedProductForAdd.maMau }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="selectedProductForAdd.tenKichThuoc">
+                <div style="color: #999; font-size: 10px">Kích thước</div>
+                <div style="font-weight: 600; margin-top: 4px">{{ selectedProductForAdd.tenKichThuoc }}</div>
+              </div>
+            </div>
+
+            <!-- Giá bán -->
+            <div style="color: #999; font-size: 10px; margin-bottom: 6px">Giá bán</div>
+            <div v-if="selectedProductForAdd.giaTriGiamGia && selectedProductForAdd.giaTriGiamGia > 0" style="margin-bottom: 0">
+              <div style="text-decoration: line-through; color: #999; font-size: 12px; margin-bottom: 2px">
+                {{ formatCurrency(selectedProductForAdd.giaBan) }}
+              </div>
+              <div style="font-weight: 600; color: #f5222d; font-size: 14px">
+                {{ formatCurrency(selectedProductForAdd.giaBan * (1 - selectedProductForAdd.giaTriGiamGia / 100)) }}
+              </div>
+            </div>
+            <div v-else style="font-weight: 600; color: #f5222d; font-size: 14px">
+              {{ formatCurrency(selectedProductForAdd.giaBan) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Quantity Input -->
+        <div style="margin-bottom: 0">
+          <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px">Số Lượng</label>
+          <a-input-number
+            ref="quantityInputRef"
+            v-model:model-value="productQuantityInput"
+            :min="1"
+            :max="999"
+            style="width: 100%"
+            placeholder="Nhập số lượng"
+          />
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck } from '@arco-design/web-vue/es/icon'
-import { getBienTheSanPhamPage, type BienTheSanPham } from '@/api/san-pham/bien-the'
+import {
+  getBienTheSanPhamPage,
+  getChatLieuOptions,
+  getDeGiayOptions,
+  getMauSacOptions,
+  getKichThuocOptions,
+  type BienTheSanPham,
+  type ChatLieu,
+  type DeGiay,
+  type MauSac,
+  type KichThuoc,
+} from '@/api/san-pham/bien-the'
 import { layDanhSachKhachHang, type KhachHangResponse } from '@/api/khach-hang'
 import { fetchCoupons, type CouponApiModel } from '@/api/discount-management'
 import { Message } from '@arco-design/web-vue'
@@ -543,15 +771,35 @@ const orders = ref<Order[]>([])
 const currentOrderIndex = ref('0')
 const customers = ref<Customer[]>([])
 const productVariants = ref<BienTheSanPham[]>([])
+const allProductVariants = ref<BienTheSanPham[]>([])
 const coupons = ref<CouponApiModel[]>([])
 
 const customerSearchText = ref('')
+const productSearchText = ref('')
+const productFilters = ref({
+  tenChatLieu: null as string | null,
+  tenDeGiay: null as string | null,
+  tenNhaSanXuat: null as string | null,
+  tenXuatXu: null as string | null,
+  tenMauSac: null as string | null,
+  tenKichThuoc: null as string | null,
+})
+const filterOptionsData = ref({
+  chatLieu: [] as ChatLieu[],
+  deGiay: [] as DeGiay[],
+  mauSac: [] as MauSac[],
+  kichThuoc: [] as KichThuoc[],
+})
 const showProductModal = ref(false)
 const showQRScanner = ref(false)
 const showAddCustomerModal = ref(false)
 const showVoucherModal = ref(false)
 const showDeleteConfirmModal = ref(false)
+const showAddProductConfirmModal = ref(false)
 const deleteConfirmOrderIndex = ref<number | null>(null)
+const selectedProductForAdd = ref<BienTheSanPham | null>(null)
+const productQuantityInput = ref(1)
+const quantityInputRef = ref<any>(null)
 const confirmLoading = ref(false)
 const loadingData = ref(false)
 
@@ -589,7 +837,7 @@ const breadcrumbItems = ['menu.ban-hang-tai-quay']
 
 // ==================== COMPUTED ====================
 const currentOrder = computed(() => {
-  const idx = parseInt(currentOrderIndex.value)
+  const idx = parseInt(currentOrderIndex.value, 10)
   return orders.value[idx] || null
 })
 
@@ -639,7 +887,7 @@ const finalPrice = computed(() => {
 })
 
 const change = computed(() => {
-  return Math.max(0, paymentForm.value?.cashReceived - finalPrice.value)
+  return Math.max(0, (paymentForm.value?.cashReceived || 0) - finalPrice.value)
 })
 
 const canConfirmOrder = computed(() => {
@@ -650,13 +898,100 @@ const totalRevenue = computed(() => {
   return orders.value.reduce((sum, order) => {
     const orderSubtotal = order.items.reduce((s, item) => s + item.price * item.quantity, 0)
     const discount = paymentForm.value?.discountCode === 'SUMMER10' ? orderSubtotal * 0.1 : 0
-    const tax = (orderSubtotal - discount) * 0.1
-    return sum + (orderSubtotal - discount + tax)
+    const orderTax = (orderSubtotal - discount) * 0.1
+    return sum + (orderSubtotal - discount + orderTax)
   }, 0)
 })
 
 const totalItemsSold = computed(() => {
   return orders.value.reduce((sum, order) => sum + order.items.reduce((s, item) => s + item.quantity, 0), 0)
+})
+
+const filteredProductVariants = computed(() => {
+  // Nếu không có allProductVariants, dùng productVariants
+  const sourceData = allProductVariants.value.length > 0 ? allProductVariants.value : productVariants.value
+  console.log('filteredProductVariants sourceData:', sourceData, 'length:', sourceData.length)
+  let result = sourceData
+
+  // Apply search text filter
+  if (productSearchText.value) {
+    const query = productSearchText.value.toLowerCase()
+    result = result.filter(
+      (p) =>
+        p.tenSanPham?.toLowerCase().includes(query) ||
+        p.maChiTietSanPham?.toLowerCase().includes(query) ||
+        p.tenChatLieu?.toLowerCase().includes(query) ||
+        p.tenDeGiay?.toLowerCase().includes(query) ||
+        p.tenNhaSanXuat?.toLowerCase().includes(query) ||
+        p.tenXuatXu?.toLowerCase().includes(query) ||
+        p.tenMauSac?.toLowerCase().includes(query) ||
+        p.tenKichThuoc?.toLowerCase().includes(query) ||
+        p.giaBan?.toString().includes(query)
+    )
+  }
+
+  // Apply filter objects
+  const filters = productFilters.value
+  if (filters.tenChatLieu) {
+    result = result.filter((p) => p.tenChatLieu === filters.tenChatLieu)
+  }
+  if (filters.tenDeGiay) {
+    result = result.filter((p) => p.tenDeGiay === filters.tenDeGiay)
+  }
+  if (filters.tenNhaSanXuat) {
+    result = result.filter((p) => p.tenNhaSanXuat === filters.tenNhaSanXuat)
+  }
+  if (filters.tenXuatXu) {
+    result = result.filter((p) => p.tenXuatXu === filters.tenXuatXu)
+  }
+  if (filters.tenMauSac) {
+    result = result.filter((p) => p.tenMauSac === filters.tenMauSac)
+  }
+  if (filters.tenKichThuoc) {
+    result = result.filter((p) => p.tenKichThuoc === filters.tenKichThuoc)
+  }
+
+  // Update pagination total with filtered results
+  productPagination.value.total = result.length
+
+  // Get current page data from filtered results
+  const startIndex = (productPagination.value.current - 1) * productPagination.value.pageSize
+  const endIndex = startIndex + productPagination.value.pageSize
+
+  return result.slice(startIndex, endIndex)
+})
+
+const productMaterialOptions = computed(() => {
+  const options = filterOptionsData.value.chatLieu.map((item) => ({ label: item.tenChatLieu, value: item.tenChatLieu }))
+  return [{ label: 'Tất cả', value: null }, ...options]
+})
+
+const productSoleOptions = computed(() => {
+  const options = filterOptionsData.value.deGiay.map((item) => ({ label: item.tenDeGiay, value: item.tenDeGiay }))
+  return [{ label: 'Tất cả', value: null }, ...options]
+})
+
+const productColorOptions = computed(() => {
+  const options = filterOptionsData.value.mauSac.map((item) => ({ label: item.tenMauSac, value: item.tenMauSac }))
+  return [{ label: 'Tất cả', value: null }, ...options]
+})
+
+const productSizeOptions = computed(() => {
+  const options = filterOptionsData.value.kichThuoc.map((item) => ({ label: item.tenKichThuoc, value: item.tenKichThuoc }))
+  return [{ label: 'Tất cả', value: null }, ...options]
+})
+
+// Lấy Nhà Sản Xuất và Xuất xứ từ allProductVariants
+const productManufacturerOptions = computed(() => {
+  const manufacturers = [...new Set(allProductVariants.value.map((p) => p.tenNhaSanXuat).filter(Boolean))]
+  const options = manufacturers.map((manufacturer) => ({ label: manufacturer, value: manufacturer }))
+  return [{ label: 'Tất cả', value: null }, ...options]
+})
+
+const productOriginOptions = computed(() => {
+  const origins = [...new Set(allProductVariants.value.map((p) => p.tenXuatXu).filter(Boolean))]
+  const options = origins.map((origin) => ({ label: origin, value: origin }))
+  return [{ label: 'Tất cả', value: null }, ...options]
 })
 
 // ==================== COLUMNS ====================
@@ -705,7 +1040,7 @@ const cartColumns = [
 const generateOrderCode = (): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let code = ''
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 7; i += 1) {
     code += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   return code
@@ -744,6 +1079,34 @@ const confirmDeleteOrder = () => {
   }
 }
 
+const showAddProductConfirm = (product: BienTheSanPham) => {
+  selectedProductForAdd.value = product
+  productQuantityInput.value = 1
+  showAddProductConfirmModal.value = true
+  nextTick(() => {
+    quantityInputRef.value?.focus?.()
+  })
+}
+
+const confirmAddProduct = () => {
+  if (!selectedProductForAdd.value || !currentOrder.value) return
+
+  const item: CartItem = {
+    id: `${Date.now()}_${Math.random()}`,
+    productId: selectedProductForAdd.value.id?.toString() || '',
+    productName: selectedProductForAdd.value.tenSanPham || '',
+    price: selectedProductForAdd.value.giaBan || 0,
+    quantity: Math.max(1, productQuantityInput.value),
+    image: selectedProductForAdd.value.anhSanPham?.[0] || '',
+  }
+  currentOrder.value.items.push(item)
+  showAddProductConfirmModal.value = false
+  showProductModal.value = false
+  selectedProductForAdd.value = null
+  productQuantityInput.value = 1
+  Message.success('Thêm sản phẩm thành công')
+}
+
 const handleOrderChange = (key: string) => {
   currentOrderIndex.value = key
   cartPagination.value.current = 1
@@ -768,6 +1131,12 @@ const removeFromCart = (itemId: string) => {
 const clearCart = () => {
   if (currentOrder.value) {
     currentOrder.value.items = []
+  }
+}
+
+const updateCustomerId = (customerId: string) => {
+  if (currentOrder.value) {
+    currentOrder.value.customerId = customerId || null
   }
 }
 
@@ -802,8 +1171,6 @@ const confirmOrder = () => {
   if (!canConfirmOrder.value) return
   confirmLoading.value = true
   setTimeout(() => {
-    // API call would go here
-    console.log('Order confirmed:', currentOrder.value)
     Message.success('Đơn hàng đã được xác nhận')
     confirmLoading.value = false
   }, 500)
@@ -811,8 +1178,6 @@ const confirmOrder = () => {
 
 const printOrder = () => {
   if (!currentOrder.value?.items.length) return
-  // Implement print functionality
-  console.log('Printing order:', currentOrder.value)
   Message.info('In hoá đơn thành công')
 }
 
@@ -826,6 +1191,24 @@ const formatCurrency = (value: number): string => {
 }
 
 // ==================== LIFECYCLE ====================
+const loadFilterOptions = async () => {
+  try {
+    const [chatLieuRes, deGiayRes, mauSacRes, kichThuocRes] = await Promise.all([
+      getChatLieuOptions(),
+      getDeGiayOptions(),
+      getMauSacOptions(),
+      getKichThuocOptions(),
+    ])
+
+    if (chatLieuRes?.data) filterOptionsData.value.chatLieu = chatLieuRes.data
+    if (deGiayRes?.data) filterOptionsData.value.deGiay = deGiayRes.data
+    if (mauSacRes?.data) filterOptionsData.value.mauSac = mauSacRes.data
+    if (kichThuocRes?.data) filterOptionsData.value.kichThuoc = kichThuocRes.data
+  } catch (error) {
+    console.error('Error loading filter options:', error)
+  }
+}
+
 const loadInitialData = async () => {
   loadingData.value = true
   try {
@@ -841,13 +1224,8 @@ const loadInitialData = async () => {
       }))
     }
 
-    // Load product variants with pagination
-    const productsResponse = await getBienTheSanPhamPage(1, undefined, 10)
-    if (productsResponse?.data?.data) {
-      productVariants.value = productsResponse.data.data
-      productPagination.value.total = productsResponse.data.totalElements || 0
-      productPagination.value.current = 1
-    }
+    // Load filter options from server
+    await loadFilterOptions()
 
     // Load coupons
     const couponsResponse = await fetchCoupons()
@@ -855,8 +1233,6 @@ const loadInitialData = async () => {
       coupons.value = couponsResponse
       voucherPagination.value.total = couponsResponse.length
     }
-
-    Message.success('Tải dữ liệu thành công')
   } catch (error) {
     console.error('Error loading data:', error)
     Message.error('Không thể tải dữ liệu')
@@ -867,16 +1243,70 @@ const loadInitialData = async () => {
 
 const loadProductPage = async (page: number) => {
   try {
-    const productsResponse = await getBienTheSanPhamPage(page, undefined, 10)
-    if (productsResponse?.data?.data) {
-      productVariants.value = productsResponse.data.data
-      productPagination.value.current = page
-      productPagination.value.total = productsResponse.data.totalElements || 0
-    }
+    productPagination.value.current = page
   } catch (error) {
-    console.error('Error loading products:', error)
+    console.error('Error changing page:', error)
+    Message.error('Không thể chuyển trang')
+  }
+}
+
+const loadAllProducts = async () => {
+  try {
+    // Load all products (assuming API supports large pageSize or we need to load in batches)
+    let allProducts: BienTheSanPham[] = []
+    let pageIndex = 0
+    let hasMore = true
+
+    // eslint-disable-next-line no-await-in-loop
+    while (hasMore) {
+      // eslint-disable-next-line no-await-in-loop
+      const productsResponse = await getBienTheSanPhamPage(pageIndex, undefined, 100)
+      console.log('loadAllProducts response:', productsResponse)
+      console.log('products data:', productsResponse?.data?.data)
+      if (productsResponse?.data?.data) {
+        const products = productsResponse.data.data
+        if (Array.isArray(products) && products.length > 0) {
+          allProducts = allProducts.concat(products)
+          pageIndex += 1
+          hasMore = products.length === 100
+        } else {
+          hasMore = false
+        }
+      } else {
+        hasMore = false
+      }
+    }
+
+    console.log('All products loaded:', allProducts)
+    allProductVariants.value = allProducts
+    productPagination.value.total = allProducts.length
+    productPagination.value.current = 1
+  } catch (error) {
+    console.error('Error loading all products:', error)
     Message.error('Không thể tải sản phẩm')
   }
+}
+
+const resetProductFilters = () => {
+  productSearchText.value = ''
+  productFilters.value = {
+    tenChatLieu: null,
+    tenDeGiay: null,
+    tenNhaSanXuat: null,
+    tenXuatXu: null,
+    tenMauSac: null,
+    tenKichThuoc: null,
+  }
+}
+
+const openProductModal = async () => {
+  await loadAllProducts()
+  showProductModal.value = true
+}
+
+const handleProductModalCancel = () => {
+  showProductModal.value = false
+  resetProductFilters()
 }
 
 const selectVoucher = (coupon: CouponApiModel) => {
@@ -906,6 +1336,10 @@ onMounted(() => {
   margin: 0 1px;
   border: 1px solid black;
   border-bottom: none;
+}
+
+:deep(.arco-modal-body) {
+  padding: 20px 20px;
 }
 
 .pos-left,

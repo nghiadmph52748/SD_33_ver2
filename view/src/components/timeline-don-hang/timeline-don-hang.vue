@@ -35,10 +35,22 @@
           </div>
 
           <div class="timeline-description">
-            <p><strong>Hành động:</strong> {{ item.hanhDong }}</p>
-            <p v-if="item.moTa"><strong>Mô tả:</strong> {{ item.moTa }}</p>
-            <p v-if="item.ghiChu"><strong>Ghi chú:</strong> {{ item.ghiChu }}</p>
-            <p v-if="item.trangThaiCu"><strong>Trạng thái cũ:</strong> {{ item.trangThaiCu }}</p>
+            <p>
+              <strong>Hành động:</strong>
+              {{ item.hanhDong }}
+            </p>
+            <p v-if="item.moTa">
+              <strong>Mô tả:</strong>
+              {{ item.moTa }}
+            </p>
+            <p v-if="item.ghiChu">
+              <strong>Ghi chú:</strong>
+              {{ item.ghiChu }}
+            </p>
+            <p v-if="item.trangThaiCu">
+              <strong>Trạng thái cũ:</strong>
+              {{ item.trangThaiCu }}
+            </p>
           </div>
 
           <div class="timeline-meta">
@@ -59,14 +71,7 @@
 import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { fetchTimelineByHoaDonId, type TimelineItem } from '@/api/timeline'
-import {
-  IconRefresh,
-  IconCheck,
-  IconClockCircle,
-  IconEdit,
-  IconCheckCircle,
-  IconPlus,
-} from '@arco-design/web-vue/es/icon'
+import { IconRefresh, IconCheck, IconClockCircle, IconEdit, IconCheckCircle, IconPlus } from '@arco-design/web-vue/es/icon'
 
 // TimelineItem interface đã được import từ @/api/timeline
 
@@ -191,11 +196,15 @@ const getStatusClass = (hanhDong: string) => {
   }
 }
 
-watch(() => props.hoaDonId, () => {
-  if (props.hoaDonId) {
-    fetchTimeline()
-  }
-}, { immediate: true })
+watch(
+  () => props.hoaDonId,
+  () => {
+    if (props.hoaDonId) {
+      fetchTimeline()
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   if (props.hoaDonId) {
