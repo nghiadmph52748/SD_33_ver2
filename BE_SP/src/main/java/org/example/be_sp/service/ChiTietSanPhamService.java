@@ -35,7 +35,8 @@ public class ChiTietSanPhamService {
 	@Autowired
 	TrongLuongRepository trongLuong;
 
-	UploadImageToCloudinary uploadImageToCloudinary = new UploadImageToCloudinary();
+	@Autowired
+	UploadImageToCloudinary uploadImageToCloudinary;
 
 	public List<ChiTietSanPhamFullResponse> getAll() {
 		return repository.findAllByDeletedWithDetails(false).stream().map(ChiTietSanPhamFullResponse::new).toList();

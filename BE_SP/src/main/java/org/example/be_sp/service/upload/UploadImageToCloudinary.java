@@ -13,7 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 
-import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,33 +21,30 @@ import lombok.Setter;
 @Service
 public class UploadImageToCloudinary {
 
-    @Value("${CLOUDINARY_CLOUD_NAME}")
+    @Value("${cloudinary.cloud-name:}")
     private String CLOUD_NAME;
-    @Value("${CLOUDINARY_API_KEY}")
+    @Value("${cloudinary.api-key:}")
     private String API_KEY;
-    @Value("${CLOUDINARY_API_SECRET}")
+    @Value("${cloudinary.api-secret:}")
     private String API_SECRET;
 
     private Cloudinary cloudinary;
 
-    @PostConstruct
-    public void init() {
-        System.out.println("[UploadImageToCloudinary] Initializing Cloudinary...");
-        System.out.println("[UploadImageToCloudinary] CLOUD_NAME: " + (CLOUD_NAME != null ? CLOUD_NAME : "NULL"));
-        System.out.println("[UploadImageToCloudinary] API_KEY: " + (API_KEY != null ? API_KEY.substring(0, Math.min(5, API_KEY.length())) + "..." : "NULL"));
-        System.out.println("[UploadImageToCloudinary] API_SECRET: " + (API_SECRET != null ? "SET" : "NULL"));
-        
-        if (CLOUD_NAME == null || API_KEY == null || API_SECRET == null) {
-            System.err.println("[UploadImageToCloudinary] ERROR: Cloudinary credentials are missing!");
-            return;
+    private Cloudinary getCloudinary() {
+        if (this.cloudinary == null) {
+            String cloudName = (CLOUD_NAME != null && !CLOUD_NAME.isBlank()) ? CLOUD_NAME : System.getenv("CLOUDINARY_CLOUD_NAME");
+            String apiKey = (API_KEY != null && !API_KEY.isBlank()) ? API_KEY : System.getenv("CLOUDINARY_API_KEY");
+            String apiSecret = (API_SECRET != null && !API_SECRET.isBlank()) ? API_SECRET : System.getenv("CLOUDINARY_API_SECRET");
+            if (cloudName == null || cloudName.isBlank() || apiKey == null || apiKey.isBlank() || apiSecret == null || apiSecret.isBlank()) {
+                throw new ApiException("Cloudinary configuration is missing. Please set properties cloudinary.cloud-name, cloudinary.api-key, cloudinary.api-secret or corresponding environment variables.", "CLOUDINARY_CONFIG_MISSING");
+            }
+            this.cloudinary = new Cloudinary(ObjectUtils.asMap(
+                    "cloud_name", cloudName,
+                    "api_key", apiKey,
+                    "api_secret", apiSecret
+            ));
         }
-        
-        cloudinary = new Cloudinary(ObjectUtils.asMap(
-                "cloud_name", CLOUD_NAME,
-                "api_key", API_KEY,
-                "api_secret", API_SECRET
-        ));
-        System.out.println("[UploadImageToCloudinary] Cloudinary initialized successfully");
+        return this.cloudinary;
     }
 
     @Getter
@@ -67,7 +63,7 @@ public class UploadImageToCloudinary {
         try {
             for (int i = 0; i < files.length; i++) {
                 String hash = DigestUtils.md5DigestAsHex(files[i].getBytes());
-                Map uploadResult = cloudinary.uploader().upload(files[i].getBytes(),
+                Map uploadResult = getCloudinary().uploader().upload(files[i].getBytes(),
                         ObjectUtils.asMap(
                                 "folder", "SD_73/images",
                                 "public_id", hash,
@@ -92,14 +88,20 @@ public class UploadImageToCloudinary {
     public String uploadQrCode(byte[] qrCodeBytes) {
         try {
             String hash = DigestUtils.md5DigestAsHex(qrCodeBytes);
-            Map uploadResult = cloudinary.uploader().upload(qrCodeBytes,
+            Map uploadResult = getCloudinary().uploader().upload(qrCodeBytes,
                     ObjectUtils.asMap(
                             "folder", "SD_73/qr_codes",
                             "public_id", hash,
-                            "resource_type", "image"
+                            "resource_type", "image",
+                            "format", "png",
+                            "overwrite", true
                     )
             );
-            return uploadResult.get("secure_url").toString();
+            Object url = uploadResult.get("secure_url");
+            if (url == null) {
+                throw new ApiException("Cloudinary did not return a secure_url for QR code upload", "CLOUDINARY_NO_URL");
+            }
+            return url.toString();
         } catch (Exception e) {
             throw new ApiException("Fail  to upload Qrcode to Cloudinary: " + e.getMessage(), "CLOUDINARY_UPLOAD_ERROR");
         }

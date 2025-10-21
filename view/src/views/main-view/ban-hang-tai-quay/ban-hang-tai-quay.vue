@@ -71,6 +71,19 @@
               <a-card class="cart-card">
                 <template #title>🛒 Giỏ Hàng</template>
                 <div class="cart-wrapper">
+                  <!-- Alert for insufficient stock -->
+                  <a-alert v-if="overStockItems.length > 0" type="error" closable style="margin-bottom: 16px">
+                    <template #title>❌ Tồn kho không đủ</template>
+                    <div style="font-size: 12px">
+                      <div v-for="item in overStockItems" :key="item.id" style="margin-bottom: 8px; line-height: 1.5">
+                        <strong>{{ item.productName }}</strong>
+                        <br />
+                        <span style="color: #666">Yêu cầu: {{ item.requiredQty }} cái | Còn lại: {{ item.currentStock }} cái | Thiếu:</span>
+                        <strong style="color: #f5222d">{{ item.shortageQty }} cái</strong>
+                      </div>
+                    </div>
+                  </a-alert>
+
                   <a-table
                     v-if="currentOrder?.items.length > 0"
                     :columns="cartColumns"
@@ -625,6 +638,7 @@
       @cancel="showAddProductConfirmModal = false"
       ok-text="Thêm"
       cancel-text="Hủy"
+      :ok-button-props="{ disabled: !isQuantityValid }"
     >
       <div v-if="selectedProductForAdd">
         <!-- Product Info -->
@@ -705,15 +719,24 @@
 
         <!-- Quantity Input -->
         <div style="margin-bottom: 0">
-          <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px">Số Lượng</label>
+          <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px">
+            Số Lượng (Tồn kho: {{ selectedProductForAdd.soLuong || 0 }})
+          </label>
           <a-input-number
             ref="quantityInputRef"
-            v-model:model-value="productQuantityInput"
-            :min="1"
-            :max="999"
-            style="width: 100%"
+            :model-value="productQuantityInput"
+            style="width: 100%; margin-bottom: 12px"
             placeholder="Nhập số lượng"
+            @update:model-value="handleQuantityChange"
           />
+
+          <!-- Alert if quantity exceeds stock -->
+          <a-alert v-if="productQuantityInput > (selectedProductForAdd.soLuong || 0)" type="error" closable>
+            <template #title>❌ Tồn kho không đủ</template>
+            <div style="font-size: 12px">
+              Yêu cầu: {{ productQuantityInput }} cái | Tồn kho: {{ selectedProductForAdd.soLuong || 0 }} cái
+            </div>
+          </a-alert>
         </div>
       </div>
     </a-modal>
@@ -773,6 +796,8 @@ const customers = ref<Customer[]>([])
 const productVariants = ref<BienTheSanPham[]>([])
 const allProductVariants = ref<BienTheSanPham[]>([])
 const coupons = ref<CouponApiModel[]>([])
+// Track số lượng đã bán của mỗi sản phẩm (để tính toán lại tồn kho khi reload)
+const soldQuantitiesByProductId = ref<Record<string | number, number>>({})
 
 const customerSearchText = ref('')
 const productSearchText = ref('')
@@ -894,6 +919,47 @@ const canConfirmOrder = computed(() => {
   return currentOrder.value?.items.length > 0 && finalPrice.value > 0
 })
 
+const insufficientStockItems = computed(() => {
+  if (!currentOrder.value) return []
+  return currentOrder.value.items
+    .map((item) => {
+      const product = allProductVariants.value.find((p) => p.id === parseInt(item.productId))
+      const stock = product?.soLuong || 0
+      if (stock < 0) {
+        return {
+          id: item.id,
+          productName: item.productName,
+          requiredQty: item.quantity,
+          currentStock: Math.max(0, stock), // Hiển thị 0 nếu âm
+          shortageQty: Math.abs(stock), // Số lượng còn thiếu
+        }
+      }
+      return null
+    })
+    .filter((item) => item !== null)
+})
+
+const overStockItems = computed(() => {
+  if (!currentOrder.value) return []
+  return currentOrder.value.items
+    .map((item) => {
+      const product = allProductVariants.value.find((p) => p.id === parseInt(item.productId))
+      const stock = product?.soLuong || 0
+      // Nếu item quantity > 0 và stock < 0, tức là vượt quá
+      if (item.quantity > 0 && stock < 0) {
+        return {
+          id: item.id,
+          productName: item.productName,
+          requiredQty: item.quantity,
+          currentStock: Math.max(0, stock),
+          shortageQty: Math.abs(stock),
+        }
+      }
+      return null
+    })
+    .filter((item) => item !== null)
+})
+
 const totalRevenue = computed(() => {
   return orders.value.reduce((sum, order) => {
     const orderSubtotal = order.items.reduce((s, item) => s + item.price * item.quantity, 0)
@@ -910,7 +976,6 @@ const totalItemsSold = computed(() => {
 const filteredProductVariants = computed(() => {
   // Nếu không có allProductVariants, dùng productVariants
   const sourceData = allProductVariants.value.length > 0 ? allProductVariants.value : productVariants.value
-  console.log('filteredProductVariants sourceData:', sourceData, 'length:', sourceData.length)
   let result = sourceData
 
   // Apply search text filter
@@ -1088,23 +1153,84 @@ const showAddProductConfirm = (product: BienTheSanPham) => {
   })
 }
 
+const isQuantityValid = computed(() => {
+  const quantity = productQuantityInput.value
+  const stock = selectedProductForAdd.value?.soLuong || 0
+  return quantity > 0 && quantity <= stock
+})
+
+const handleQuantityChange = (val: number) => {
+  productQuantityInput.value = val
+  const stock = selectedProductForAdd.value?.soLuong || 0
+
+  // Show warning if quantity is out of range
+  if (val && val > stock) {
+    Message.warning(`⚠️ Số lượng vượt quá tồn kho! Tồn kho: ${stock}`)
+  } else if (val && val < 1) {
+    Message.warning('⚠️ Số lượng phải lớn hơn 0')
+  }
+}
+
 const confirmAddProduct = () => {
   if (!selectedProductForAdd.value || !currentOrder.value) return
 
-  const item: CartItem = {
-    id: `${Date.now()}_${Math.random()}`,
-    productId: selectedProductForAdd.value.id?.toString() || '',
-    productName: selectedProductForAdd.value.tenSanPham || '',
-    price: selectedProductForAdd.value.giaBan || 0,
-    quantity: Math.max(1, productQuantityInput.value),
-    image: selectedProductForAdd.value.anhSanPham?.[0] || '',
+  // Validate quantity - chỉ cho phép thêm khi số lượng hợp lệ
+  const quantity = productQuantityInput.value
+  const stock = selectedProductForAdd.value.soLuong || 0
+
+  if (!quantity || quantity < 1) {
+    Message.error('Số lượng phải lớn hơn 0')
+    return
   }
-  currentOrder.value.items.push(item)
+
+  if (quantity > stock) {
+    Message.error(`Số lượng không đủ. Tồn kho: ${stock}`)
+    return
+  }
+
+  // Kiểm tra xem sản phẩm đã tồn tại trong giỏ hàng chưa
+  const existingItem = currentOrder.value.items.find((item) => item.productId === selectedProductForAdd.value?.id?.toString())
+
+  if (existingItem) {
+    // Nếu sản phẩm đã tồn tại, kiểm tra tổng số lượng
+    const newTotalQuantity = existingItem.quantity + quantity
+    const stock = selectedProductForAdd.value.soLuong || 0
+
+    if (newTotalQuantity > stock) {
+      Message.error(`⚠️ Tổng số lượng (${newTotalQuantity}) vượt quá tồn kho (${stock})`)
+      return
+    }
+
+    existingItem.quantity = newTotalQuantity
+    Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${existingItem.quantity}`)
+  } else {
+    // Nếu là sản phẩm mới, thêm vào giỏ hàng
+    const item: CartItem = {
+      id: `${Date.now()}_${Math.random()}`,
+      productId: selectedProductForAdd.value.id?.toString() || '',
+      productName: selectedProductForAdd.value.tenSanPham || '',
+      price: selectedProductForAdd.value.giaBan || 0,
+      quantity: quantity,
+      image: selectedProductForAdd.value.anhSanPham?.[0] || '',
+    }
+    currentOrder.value.items.push(item)
+    Message.success('Thêm sản phẩm thành công')
+  }
+
+  // Trừ số lượng từ kho (cập nhật trong allProductVariants)
+  const productId = selectedProductForAdd.value.id
+  const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+  if (productInVariants) {
+    productInVariants.soLuong = (productInVariants.soLuong || 0) - quantity
+  }
+
+  // Track số lượng đã bán
+  soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + quantity
+
   showAddProductConfirmModal.value = false
   showProductModal.value = false
   selectedProductForAdd.value = null
   productQuantityInput.value = 1
-  Message.success('Thêm sản phẩm thành công')
 }
 
 const handleOrderChange = (key: string) => {
@@ -1115,8 +1241,43 @@ const handleOrderChange = (key: string) => {
 const updateQuantity = (itemId: string, quantity: number) => {
   if (!currentOrder.value) return
   const item = currentOrder.value.items.find((i) => i.id === itemId)
+  if (!item) return
+
+  const oldQuantity = item.quantity
+  const newQuantity = Math.max(1, quantity || 1)
+  const diff = newQuantity - oldQuantity // Chênh lệch số lượng
+
+  // Không cần cập nhật nếu số lượng không thay đổi
+  if (diff === 0) return
+
+  // Kiểm tra xem tổng số lượng trong giỏ có vượt quá tồn kho không
+  const productId = parseInt(item.productId)
+  const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+
+  if (diff > 0 && productInVariants) {
+    // Nếu tăng số lượng, kiểm tra tồn kho
+    Message.error(`❌ Tồn kho không đủ!`)
+    return
+  }
+
+  // Chỉ cập nhật khi vượt qua toàn bộ kiểm tra
+  // Cập nhật số lượng trong kho
+  if (productInVariants) {
+    productInVariants.soLuong = (productInVariants.soLuong || 0) - diff
+  }
+
+  // Track số lượng đã bán
+  soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + diff
+
+  // Cập nhật quantity cuối cùng (chỉ khi hết kiểm tra)
+  item.quantity = newQuantity
+}
+
+const resetQuantity = (itemId: string, previousQuantity: number) => {
+  if (!currentOrder.value) return
+  const item = currentOrder.value.items.find((i) => i.id === itemId)
   if (item) {
-    item.quantity = Math.max(1, quantity || 1)
+    item.quantity = previousQuantity
   }
 }
 
@@ -1124,12 +1285,36 @@ const removeFromCart = (itemId: string) => {
   if (!currentOrder.value) return
   const index = currentOrder.value.items.findIndex((i) => i.id === itemId)
   if (index > -1) {
+    const item = currentOrder.value.items[index]
+    const productId = parseInt(item.productId)
+
+    // Hoàn lại số lượng vào kho
+    const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+    if (productInVariants) {
+      productInVariants.soLuong = (productInVariants.soLuong || 0) + item.quantity
+    }
+
+    // Cập nhật số lượng đã bán
+    soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
+
     currentOrder.value.items.splice(index, 1)
   }
 }
 
 const clearCart = () => {
   if (currentOrder.value) {
+    // Hoàn lại tất cả số lượng vào kho và cập nhật số lượng đã bán
+    currentOrder.value.items.forEach((item) => {
+      const productId = parseInt(item.productId)
+      const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+      if (productInVariants) {
+        productInVariants.soLuong = (productInVariants.soLuong || 0) + item.quantity
+      }
+
+      // Cập nhật số lượng đã bán
+      soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
+    })
+
     currentOrder.value.items = []
   }
 }
@@ -1261,8 +1446,6 @@ const loadAllProducts = async () => {
     while (hasMore) {
       // eslint-disable-next-line no-await-in-loop
       const productsResponse = await getBienTheSanPhamPage(pageIndex, undefined, 100)
-      console.log('loadAllProducts response:', productsResponse)
-      console.log('products data:', productsResponse?.data?.data)
       if (productsResponse?.data?.data) {
         const products = productsResponse.data.data
         if (Array.isArray(products) && products.length > 0) {
@@ -1277,7 +1460,15 @@ const loadAllProducts = async () => {
       }
     }
 
-    console.log('All products loaded:', allProducts)
+    // Áp dụng lại số lượng đã bán cho mỗi sản phẩm
+    allProducts.forEach((product) => {
+      const productId = product.id
+      const soldQuantity = soldQuantitiesByProductId.value[productId] || 0
+      if (soldQuantity > 0 && product.soLuong) {
+        product.soLuong = Math.max(0, product.soLuong - soldQuantity)
+      }
+    })
+
     allProductVariants.value = allProducts
     productPagination.value.total = allProducts.length
     productPagination.value.current = 1
