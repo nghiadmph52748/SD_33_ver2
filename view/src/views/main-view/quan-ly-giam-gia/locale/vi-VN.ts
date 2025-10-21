@@ -150,6 +150,7 @@ export default {
   // Product
   'discount.product.image': 'Ảnh',
   'discount.product.name': 'Tên sản phẩm',
+  'discount.product.brand': 'Thương hiệu',
   'discount.product.code': 'Mã SP',
   'discount.product.price': 'Giá bán',
   'discount.product.variant': 'Biến thể',

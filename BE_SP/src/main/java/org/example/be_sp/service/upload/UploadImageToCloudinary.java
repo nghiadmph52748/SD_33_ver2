@@ -33,11 +33,22 @@ public class UploadImageToCloudinary {
 
     @PostConstruct
     public void init() {
+        System.out.println("[UploadImageToCloudinary] Initializing Cloudinary...");
+        System.out.println("[UploadImageToCloudinary] CLOUD_NAME: " + (CLOUD_NAME != null ? CLOUD_NAME : "NULL"));
+        System.out.println("[UploadImageToCloudinary] API_KEY: " + (API_KEY != null ? API_KEY.substring(0, Math.min(5, API_KEY.length())) + "..." : "NULL"));
+        System.out.println("[UploadImageToCloudinary] API_SECRET: " + (API_SECRET != null ? "SET" : "NULL"));
+        
+        if (CLOUD_NAME == null || API_KEY == null || API_SECRET == null) {
+            System.err.println("[UploadImageToCloudinary] ERROR: Cloudinary credentials are missing!");
+            return;
+        }
+        
         cloudinary = new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", CLOUD_NAME,
                 "api_key", API_KEY,
                 "api_secret", API_SECRET
         ));
+        System.out.println("[UploadImageToCloudinary] Cloudinary initialized successfully");
     }
 
     @Getter

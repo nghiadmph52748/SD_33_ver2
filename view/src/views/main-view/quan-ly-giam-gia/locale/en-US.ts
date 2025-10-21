@@ -150,6 +150,7 @@ export default {
   // Product
   'discount.product.image': 'Image',
   'discount.product.name': 'Product Name',
+  'discount.product.brand': 'Brand',
   'discount.product.code': 'Code',
   'discount.product.price': 'Price',
   'discount.product.variant': 'Variant',

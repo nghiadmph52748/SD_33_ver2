@@ -112,6 +112,9 @@
                   </div>
                 </div>
               </template>
+              <template #brand="{ record }">
+                <span style="font-size: 13px; color: var(--color-text-2)">{{ record.tenNhaSanXuat || '--' }}</span>
+              </template>
               <template #product="{ record }">
                 <div class="product-info-cell">
                   <div class="product-name">{{ record.tenSanPham }}</div>
@@ -334,6 +337,7 @@ type PromotionProductOption = BienTheSanPham & {
 interface ProductGroup {
   key: number | string
   tenSanPham: string
+  tenNhaSanXuat?: string
   thumbnail?: string
   variants: PromotionProductOption[]
 }
@@ -486,6 +490,7 @@ const productGroups = computed<ProductGroup[]>(() => {
       group = {
         key: groupKey,
         tenSanPham: variant.tenSanPham ?? variant.tenSanPhamChiTiet ?? 'Sản phẩm',
+        tenNhaSanXuat: variant.tenNhaSanXuat,
         thumbnail: variant.anhSanPham?.[0],
         variants: [],
       }
@@ -534,7 +539,14 @@ const productGroupColumns = computed(() => [
     slotName: 'product',
     ellipsis: true,
     tooltip: true,
-    width: 300,
+    width: 240,
+  },
+  {
+    title: t('discount.product.brand'),
+    dataIndex: 'tenNhaSanXuat',
+    slotName: 'brand',
+    width: 120,
+    align: 'center' as const,
   },
   {
     title: t('discount.product.variants'),
