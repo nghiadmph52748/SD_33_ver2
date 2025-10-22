@@ -49,13 +49,19 @@
                     </template>
                     Thêm Sản Phẩm
                   </a-button>
-                  <a-button @click="showQRScanner = true">
+                  <a-button @click="showQRScanner = true" style="border: 1px solid #d9d9d9">
                     <template #icon>
                       <icon-qrcode />
                     </template>
                     Quét QR
                   </a-button>
-                  <a-button v-if="currentOrder?.items.length > 0" type="text" status="danger" @click="clearCart">
+                  <a-button
+                    v-if="currentOrder?.items.length > 0"
+                    type="text"
+                    status="danger"
+                    @click="clearCart"
+                    style="border: 1px solid #d9d9d9"
+                  >
                     <template #icon>
                       <icon-delete />
                     </template>
@@ -96,6 +102,49 @@
                     :scroll="{ x: '100%' }"
                     @paginate="(page) => (cartPagination.value.current = page)"
                   >
+                    <template #product="{ record }">
+                      <div style="display: flex; gap: 8px; align-items: center">
+                        <img
+                          v-if="record.image"
+                          :src="record.image"
+                          style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px"
+                          :alt="record.productName"
+                        />
+                        <div>
+                          <div style="font-weight: 600; font-size: 13px">
+                            {{ getProductDisplayName(record) }}
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                    <template #info="{ record }">
+                      <div style="display: flex; flex-direction: column; gap: 2px; font-size: 11px">
+                        <div v-if="record.tenMauSac" style="display: flex; align-items: center; gap: 6px">
+                          <span style="color: #999; min-width: 30px">Màu:</span>
+                          <div style="display: flex; align-items: center; gap: 4px">
+                            <div
+                              v-if="record.maMau"
+                              style="width: 16px; height: 16px; border-radius: 2px; border: 1px solid #e5e5e5"
+                              :style="{ backgroundColor: record.maMau }"
+                            ></div>
+                            <strong>{{ record.tenMauSac }}</strong>
+                            <span v-if="record.maMau" style="color: #666; font-size: 10px">({{ record.maMau }})</span>
+                          </div>
+                        </div>
+                        <div v-if="record.tenKichThuoc" style="display: flex; align-items: center; gap: 6px">
+                          <span style="color: #999; min-width: 30px">Size:</span>
+                          <strong>{{ record.tenKichThuoc }}</strong>
+                        </div>
+                        <div v-if="record.tenDeGiay" style="display: flex; align-items: center; gap: 6px">
+                          <span style="color: #999; min-width: 30px">Đế:</span>
+                          <strong>{{ record.tenDeGiay }}</strong>
+                        </div>
+                        <div v-if="record.tenChatLieu" style="display: flex; align-items: center; gap: 6px">
+                          <span style="color: #999; min-width: 30px">Chất liệu:</span>
+                          <strong>{{ record.tenChatLieu }}</strong>
+                        </div>
+                      </div>
+                    </template>
                     <template #quantity="{ record }">
                       <a-input-number
                         :model-value="record.quantity"
@@ -757,6 +806,13 @@ interface CartItem {
   price: number
   quantity: number
   image?: string
+  // Thông tin chi tiết sản phẩm
+  tenChiTietSanPham?: string
+  tenMauSac?: string
+  maMau?: string
+  tenKichThuoc?: string
+  tenDeGiay?: string
+  tenChatLieu?: string
 }
 
 interface Order {
@@ -875,7 +931,13 @@ const paginatedCartItems = computed(() => {
   if (!currentOrder.value) return []
   const start = (cartPagination.value.current - 1) * cartPagination.value.pageSize
   const end = start + cartPagination.value.pageSize
-  return currentOrder.value.items.slice(start, end)
+  const items = currentOrder.value.items.slice(start, end)
+
+  // Thêm STT cho mỗi item
+  return items.map((item, index) => ({
+    ...item,
+    stt: start + index + 1,
+  }))
 })
 
 const subtotal = computed(() => {
@@ -892,12 +954,8 @@ const discountAmount = computed(() => {
   return 0
 })
 
-const tax = computed(() => {
-  return (subtotal.value - discountAmount.value) * 0.1
-})
-
 const finalPrice = computed(() => {
-  return subtotal.value - discountAmount.value + tax.value
+  return subtotal.value - discountAmount.value
 })
 
 const change = computed(() => {
@@ -953,8 +1011,7 @@ const totalRevenue = computed(() => {
   return orders.value.reduce((sum, order) => {
     const orderSubtotal = order.items.reduce((s, item) => s + item.price * item.quantity, 0)
     const discount = paymentForm.value?.discountCode === 'SUMMER10' ? orderSubtotal * 0.1 : 0
-    const orderTax = (orderSubtotal - discount) * 0.1
-    return sum + (orderSubtotal - discount + orderTax)
+    return sum + (orderSubtotal - discount)
   }, 0)
 })
 
@@ -1051,18 +1108,25 @@ const productOriginOptions = computed(() => {
 // ==================== COLUMNS ====================
 const cartColumns = [
   {
-    title: 'Sản Phẩm',
-    dataIndex: 'productName',
-    key: 'productName',
-    width: 150,
+    title: 'STT',
+    dataIndex: 'stt',
+    key: 'stt',
+    width: 50,
+    align: 'center' as const,
   },
   {
-    title: 'Giá',
-    dataIndex: 'price',
-    key: 'price',
-    slotName: 'price',
-    width: 100,
-    align: 'right' as const,
+    title: 'Sản Phẩm',
+    dataIndex: 'product',
+    key: 'product',
+    width: 200,
+    slotName: 'product',
+  },
+  {
+    title: 'Thông Tin',
+    dataIndex: 'info',
+    key: 'info',
+    width: 180,
+    slotName: 'info',
   },
   {
     title: 'Số Lượng',
@@ -1073,15 +1137,23 @@ const cartColumns = [
     align: 'center' as const,
   },
   {
-    title: 'Thành Tiền',
-    dataIndex: 'subtotal',
-    key: 'subtotal',
-    slotName: 'subtotal',
+    title: 'Giá Bán',
+    dataIndex: 'price',
+    key: 'price',
+    slotName: 'price',
     width: 120,
     align: 'right' as const,
   },
   {
-    title: 'Hành Động',
+    title: 'Thành Tiền',
+    dataIndex: 'subtotal',
+    key: 'subtotal',
+    slotName: 'subtotal',
+    width: 130,
+    align: 'right' as const,
+  },
+  {
+    title: 'Thao Tác',
     dataIndex: 'action',
     key: 'action',
     slotName: 'action',
@@ -1234,6 +1306,13 @@ const confirmAddProduct = () => {
         price: selectedProductForAdd.value.giaBan || 0,
         quantity: quantity,
         image: selectedProductForAdd.value.anhSanPham?.[0] || '',
+        // Thông tin chi tiết sản phẩm
+        tenChiTietSanPham: selectedProductForAdd.value.tenChiTietSanPham || '',
+        tenMauSac: selectedProductForAdd.value.tenMauSac || '',
+        maMau: selectedProductForAdd.value.maMau || '',
+        tenKichThuoc: selectedProductForAdd.value.tenKichThuoc || '',
+        tenDeGiay: selectedProductForAdd.value.tenDeGiay || '',
+        tenChatLieu: selectedProductForAdd.value.tenChatLieu || '',
       }
       currentOrder.value.items.push(item)
       console.log('✅ [DEBUG] Thêm sản phẩm mới thành công:', { cartItemsCount: currentOrder.value.items.length })
@@ -1326,20 +1405,36 @@ const updateQuantity = (itemId: string, quantity: number) => {
 
     // Kiểm tra tồn kho
     try {
-      const availableStock = productInVariants.soLuong || 0
+      // Tính tổng số lượng khả dụng: số trong kho hiện tại + số đã có trong giỏ
+      const currentStockInWarehouse = productInVariants.soLuong || 0
+      const totalAvailable = currentStockInWarehouse + oldQuantity
 
-      if (availableStock <= 0 && diff > 0) {
+      console.log('🔍 [DEBUG] Tính toán tồn kho:', {
+        currentStockInWarehouse,
+        oldQuantity,
+        totalAvailable,
+        diff,
+        newRequestedTotal: oldQuantity + diff,
+      })
+
+      if (totalAvailable <= 0 && diff > 0) {
         console.error('❌ [DEBUG] Sản phẩm hết hàng:', item.productName)
         throw new Error(`Sản phẩm "${item.productName}" đã hết hàng. Không thể tăng số lượng!`)
       }
 
       if (diff > 0) {
-        const requestedTotal = oldQuantity + diff
-        if (requestedTotal > availableStock) {
-          console.error('❌ [DEBUG] Tồn kho không đủ:', { requested: requestedTotal, available: availableStock })
-          throw new Error(`Tồn kho không đủ! Yêu cầu: ${requestedTotal} cái | Còn lại: ${availableStock} cái`)
+        const newTotalInCart = oldQuantity + diff
+        if (newTotalInCart > totalAvailable) {
+          console.error('❌ [DEBUG] Tồn kho không đủ:', {
+            requested: newTotalInCart,
+            available: totalAvailable,
+            currentInWarehouse: currentStockInWarehouse,
+            currentInCart: oldQuantity,
+          })
+          throw new Error(`Tồn kho không đủ! Yêu cầu: ${newTotalInCart} cái | Còn lại: ${totalAvailable} cái`)
         }
       }
+      console.log('✅ [DEBUG] Kiểm tra tồn kho - PASS')
     } catch (stockError) {
       Message.error(`❌ ${stockError.message}`)
       // Reset quantity và force re-render table
@@ -1549,6 +1644,20 @@ const confirmOrder = () => {
 const printOrder = () => {
   if (!currentOrder.value?.items.length) return
   Message.info('In hoá đơn thành công')
+}
+
+const getProductDisplayName = (record: CartItem): string => {
+  const parts = [record.productName]
+
+  if (record.tenMauSac) {
+    parts.push(record.tenMauSac)
+  }
+
+  if (record.tenKichThuoc) {
+    parts.push(record.tenKichThuoc)
+  }
+
+  return parts.join(' - ')
 }
 
 const formatCurrency = (value: number): string => {
