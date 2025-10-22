@@ -18,9 +18,7 @@
               </a-button>
             </a-space>
           </template>
-
           <a-empty v-if="orders.length === 0" description="Chưa có đơn hàng nào" />
-
           <a-tabs v-else v-model:active-key="currentOrderIndex" type="button" @change="handleOrderChange" class="orders-tabs">
             <a-tab-pane v-for="(order, idx) in orders" :key="idx.toString()">
               <template #title>
@@ -38,7 +36,6 @@
                   </a-button>
                 </div>
               </template>
-
               <!-- Product Selection Toolbar -->
               <div class="toolbar" style="display: flex; justify-content: space-between; align-items: center">
                 <div style="font-weight: 600; color: #333; font-size: 14px">
@@ -66,7 +63,6 @@
                   </a-button>
                 </a-space>
               </div>
-
               <!-- Cart Table -->
               <a-card class="cart-card">
                 <template #title>🛒 Giỏ Hàng</template>
@@ -83,9 +79,9 @@
                       </div>
                     </div>
                   </a-alert>
-
                   <a-table
                     v-if="currentOrder?.items.length > 0"
+                    :key="cartTableKey"
                     :columns="cartColumns"
                     :data="paginatedCartItems"
                     :pagination="{
@@ -109,15 +105,12 @@
                         @change="(val) => updateQuantity(record.id, val)"
                       />
                     </template>
-
                     <template #price="{ record }">
                       {{ formatCurrency(record.price) }}
                     </template>
-
                     <template #subtotal="{ record }">
                       <strong>{{ formatCurrency(record.price * record.quantity) }}</strong>
                     </template>
-
                     <template #action="{ record }">
                       <a-popconfirm title="Xoá sản phẩm này?" @ok="removeFromCart(record.id)" ok-text="Xoá" cancel-text="Hủy">
                         <a-button type="text" status="danger" size="small">
@@ -156,7 +149,6 @@
                 </a-option>
               </a-select>
             </a-form-item>
-
             <a-form-item v-if="selectedCustomer && currentOrder">
               <a-descriptions size="small" :column="1" bordered>
                 <a-descriptions-item label="Tên">{{ selectedCustomer.name }}</a-descriptions-item>
@@ -165,7 +157,6 @@
                 <a-descriptions-item label="Địa Chỉ">{{ selectedCustomer.address || 'N/A' }}</a-descriptions-item>
               </a-descriptions>
             </a-form-item>
-
             <a-button v-if="!selectedCustomer" type="dashed" long @click="showAddCustomerModal = true">
               <template #icon>
                 <icon-plus />
@@ -174,7 +165,6 @@
             </a-button>
           </a-form>
         </a-card>
-
         <!-- Payment Section -->
         <a-card title="Thanh Toán" class="payment-card">
           <a-form layout="vertical">
@@ -373,7 +363,6 @@
             </div>
           </div>
         </template>
-
         <template #info="{ record }">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px">
             <div>
@@ -398,7 +387,6 @@
             </div>
           </div>
         </template>
-
         <template #variant="{ record }">
           <div style="font-size: 12px; display: flex; align-items: center; gap: 12px">
             <!-- Màu sắc -->
@@ -414,10 +402,8 @@
                 <div v-if="record.maMau" style="font-size: 10px; color: #999; line-height: 1">{{ record.maMau }}</div>
               </div>
             </div>
-
             <!-- Dấu phân cách -->
             <span v-if="record.tenMauSac && record.tenKichThuoc" style="color: #d9d9d9">|</span>
-
             <!-- Kích thước -->
             <div v-if="record.tenKichThuoc" style="font-weight: 600">
               {{ record.tenKichThuoc }}
@@ -858,6 +844,9 @@ const cartPagination = ref({
   pageSize: 5,
 })
 
+// Force re-render key cho cart table khi có lỗi cập nhật quantity
+const cartTableKey = ref(0)
+
 const breadcrumbItems = ['menu.ban-hang-tai-quay']
 
 // ==================== COMPUTED ====================
@@ -1172,65 +1161,112 @@ const handleQuantityChange = (val: number) => {
 }
 
 const confirmAddProduct = () => {
-  if (!selectedProductForAdd.value || !currentOrder.value) return
+  console.log('🔍 [DEBUG] confirmAddProduct - Bắt đầu thêm sản phẩm:', {
+    productName: selectedProductForAdd.value?.tenSanPham,
+    quantity: productQuantityInput.value,
+  })
 
-  // Validate quantity - chỉ cho phép thêm khi số lượng hợp lệ
-  const quantity = productQuantityInput.value
-  const stock = selectedProductForAdd.value.soLuong || 0
+  try {
+    if (!selectedProductForAdd.value || !currentOrder.value) {
+      console.error('❌ [DEBUG] Thiếu dữ liệu sản phẩm hoặc đơn hàng')
+      throw new Error('Dữ liệu sản phẩm hoặc đơn hàng không hợp lệ')
+    }
 
-  if (!quantity || quantity < 1) {
-    Message.error('Số lượng phải lớn hơn 0')
-    return
-  }
-
-  if (quantity > stock) {
-    Message.error(`Số lượng không đủ. Tồn kho: ${stock}`)
-    return
-  }
-
-  // Kiểm tra xem sản phẩm đã tồn tại trong giỏ hàng chưa
-  const existingItem = currentOrder.value.items.find((item) => item.productId === selectedProductForAdd.value?.id?.toString())
-
-  if (existingItem) {
-    // Nếu sản phẩm đã tồn tại, kiểm tra tổng số lượng
-    const newTotalQuantity = existingItem.quantity + quantity
+    const quantity = productQuantityInput.value
     const stock = selectedProductForAdd.value.soLuong || 0
+    console.log('🔍 [DEBUG] Kiểm tra tồn kho:', { requested: quantity, available: stock })
 
-    if (newTotalQuantity > stock) {
-      Message.error(`⚠️ Tổng số lượng (${newTotalQuantity}) vượt quá tồn kho (${stock})`)
+    if (!quantity || quantity < 1) {
+      Message.error('Số lượng phải lớn hơn 0')
       return
     }
 
-    existingItem.quantity = newTotalQuantity
-    Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${existingItem.quantity}`)
-  } else {
-    // Nếu là sản phẩm mới, thêm vào giỏ hàng
-    const item: CartItem = {
-      id: `${Date.now()}_${Math.random()}`,
-      productId: selectedProductForAdd.value.id?.toString() || '',
-      productName: selectedProductForAdd.value.tenSanPham || '',
-      price: selectedProductForAdd.value.giaBan || 0,
-      quantity: quantity,
-      image: selectedProductForAdd.value.anhSanPham?.[0] || '',
+    // Kiểm tra tồn kho
+    try {
+      if (stock <= 0) {
+        console.error('❌ [DEBUG] Sản phẩm hết hàng:', selectedProductForAdd.value.tenSanPham)
+        throw new Error(`Sản phẩm "${selectedProductForAdd.value.tenSanPham}" đã hết hàng. Không thể thêm vào giỏ!`)
+      }
+      if (quantity > stock) {
+        console.error('❌ [DEBUG] Tồn kho không đủ:', { requested: quantity, available: stock })
+        throw new Error(`Tồn kho không đủ. Yêu cầu: ${quantity} cái | Còn lại: ${stock} cái`)
+      }
+    } catch (stockError) {
+      Message.error(`❌ ${stockError.message}`)
+      return
     }
-    currentOrder.value.items.push(item)
-    Message.success('Thêm sản phẩm thành công')
+
+    // Kiểm tra sản phẩm đã tồn tại
+    const existingItem = currentOrder.value.items.find((item) => item.productId === selectedProductForAdd.value?.id?.toString())
+    console.log('🔍 [DEBUG] Kiểm tra sản phẩm tồn tại:', !!existingItem)
+
+    if (existingItem) {
+      const newTotalQuantity = existingItem.quantity + quantity
+      console.log('🔍 [DEBUG] Cập nhật sản phẩm hiện có:', {
+        currentQty: existingItem.quantity,
+        addingQty: quantity,
+        newTotal: newTotalQuantity,
+      })
+      try {
+        if (stock <= 0) {
+          console.error('❌ [DEBUG] Sản phẩm hết hàng khi cập nhật:', selectedProductForAdd.value.tenSanPham)
+          throw new Error(`Sản phẩm "${selectedProductForAdd.value.tenSanPham}" đã hết hàng. Không thể tăng số lượng!`)
+        }
+        if (newTotalQuantity > stock) {
+          console.error('❌ [DEBUG] Tổng số lượng vượt kho:', { current: existingItem.quantity, adding: quantity, available: stock })
+          throw new Error(`Tổng số lượng (${newTotalQuantity}) vượt quá tồn kho (${stock})`)
+        }
+      } catch (totalStockError) {
+        Message.error(`⚠️ ${totalStockError.message}`)
+        return
+      }
+
+      existingItem.quantity = newTotalQuantity
+      console.log('✅ [DEBUG] Cập nhật số lượng thành công:', newTotalQuantity)
+      Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${existingItem.quantity}`)
+    } else {
+      console.log('🔍 [DEBUG] Thêm sản phẩm mới vào giỏ')
+
+      const item: CartItem = {
+        id: `${Date.now()}_${Math.random()}`,
+        productId: selectedProductForAdd.value.id?.toString() || '',
+        productName: selectedProductForAdd.value.tenSanPham || '',
+        price: selectedProductForAdd.value.giaBan || 0,
+        quantity: quantity,
+        image: selectedProductForAdd.value.anhSanPham?.[0] || '',
+      }
+      currentOrder.value.items.push(item)
+      console.log('✅ [DEBUG] Thêm sản phẩm mới thành công:', { cartItemsCount: currentOrder.value.items.length })
+      Message.success('Thêm sản phẩm thành công')
+    }
+
+    // Cập nhật tồn kho
+    const productId = selectedProductForAdd.value.id
+
+    if (!productId) {
+      console.error('❌ [DEBUG] Không tìm thấy ID sản phẩm')
+      throw new Error('Không tìm thấy ID sản phẩm')
+    }
+
+    const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+    if (productInVariants) {
+      const oldStock = productInVariants.soLuong || 0
+      productInVariants.soLuong = oldStock - quantity
+      console.log('✅ [DEBUG] Cập nhật tồn kho:', { oldStock, newStock: productInVariants.soLuong, subtracted: quantity })
+    }
+
+    soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + quantity
+
+    showAddProductConfirmModal.value = false
+    showProductModal.value = false
+    selectedProductForAdd.value = null
+    productQuantityInput.value = 1
+
+    console.log('🎉 [DEBUG] confirmAddProduct - Hoàn thành thành công')
+  } catch (error) {
+    console.error('❌ [DEBUG] Lỗi trong confirmAddProduct:', error.message)
+    Message.error('Có lỗi xảy ra khi thêm sản phẩm. Vui lòng thử lại.')
   }
-
-  // Trừ số lượng từ kho (cập nhật trong allProductVariants)
-  const productId = selectedProductForAdd.value.id
-  const productInVariants = allProductVariants.value.find((p) => p.id === productId)
-  if (productInVariants) {
-    productInVariants.soLuong = (productInVariants.soLuong || 0) - quantity
-  }
-
-  // Track số lượng đã bán
-  soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + quantity
-
-  showAddProductConfirmModal.value = false
-  showProductModal.value = false
-  selectedProductForAdd.value = null
-  productQuantityInput.value = 1
 }
 
 const handleOrderChange = (key: string) => {
@@ -1239,38 +1275,105 @@ const handleOrderChange = (key: string) => {
 }
 
 const updateQuantity = (itemId: string, quantity: number) => {
-  if (!currentOrder.value) return
-  const item = currentOrder.value.items.find((i) => i.id === itemId)
-  if (!item) return
+  console.log('🔍 [DEBUG] updateQuantity - Cập nhật số lượng từ input:', { itemId, newQuantity: quantity })
 
-  const oldQuantity = item.quantity
-  const newQuantity = Math.max(1, quantity || 1)
-  const diff = newQuantity - oldQuantity // Chênh lệch số lượng
+  let item: CartItem | undefined
+  let oldQuantity = 1
 
-  // Không cần cập nhật nếu số lượng không thay đổi
-  if (diff === 0) return
+  try {
+    if (!currentOrder.value) {
+      console.error('❌ [DEBUG] Không tìm thấy đơn hàng hiện tại')
+      throw new Error('Không tìm thấy đơn hàng hiện tại')
+    }
 
-  // Kiểm tra xem tổng số lượng trong giỏ có vượt quá tồn kho không
-  const productId = parseInt(item.productId)
-  const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+    item = currentOrder.value.items.find((i) => i.id === itemId)
+    if (!item) {
+      console.error('❌ [DEBUG] Không tìm thấy sản phẩm trong giỏ hàng:', itemId)
+      throw new Error('Không tìm thấy sản phẩm trong giỏ hàng')
+    }
 
-  if (diff > 0 && productInVariants) {
-    // Nếu tăng số lượng, kiểm tra tồn kho
-    Message.error(`❌ Tồn kho không đủ!`)
-    return
-  }
+    oldQuantity = item.quantity
+    const newQuantity = Math.max(1, quantity || 1)
+    const diff = newQuantity - oldQuantity
 
-  // Chỉ cập nhật khi vượt qua toàn bộ kiểm tra
-  // Cập nhật số lượng trong kho
-  if (productInVariants) {
+    console.log('🔍 [DEBUG] Chi tiết cập nhật:', {
+      productName: item.productName,
+      oldQuantity,
+      newQuantity,
+      diff,
+      action: diff > 0 ? 'tăng' : diff < 0 ? 'giảm' : 'không đổi',
+    })
+
+    if (diff === 0) {
+      console.log('ℹ️ [DEBUG] Số lượng không thay đổi')
+      return
+    }
+
+    // Kiểm tra xem tổng số lượng trong giỏ có vượt quá tồn kho không
+    const productId = parseInt(item.productId)
+
+    if (isNaN(productId)) {
+      console.error('❌ [DEBUG] ID sản phẩm không hợp lệ:', item.productId)
+      throw new Error('ID sản phẩm không hợp lệ')
+    }
+
+    const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+
+    if (!productInVariants) {
+      console.error('❌ [DEBUG] Không tìm thấy thông tin sản phẩm trong kho:', productId)
+      throw new Error('Không tìm thấy thông tin sản phẩm trong kho')
+    }
+
+    // Kiểm tra tồn kho
+    try {
+      const availableStock = productInVariants.soLuong || 0
+
+      if (availableStock <= 0 && diff > 0) {
+        console.error('❌ [DEBUG] Sản phẩm hết hàng:', item.productName)
+        throw new Error(`Sản phẩm "${item.productName}" đã hết hàng. Không thể tăng số lượng!`)
+      }
+
+      if (diff > 0) {
+        const requestedTotal = oldQuantity + diff
+        if (requestedTotal > availableStock) {
+          console.error('❌ [DEBUG] Tồn kho không đủ:', { requested: requestedTotal, available: availableStock })
+          throw new Error(`Tồn kho không đủ! Yêu cầu: ${requestedTotal} cái | Còn lại: ${availableStock} cái`)
+        }
+      }
+    } catch (stockError) {
+      Message.error(`❌ ${stockError.message}`)
+      // Reset quantity và force re-render table
+      item.quantity = oldQuantity
+      // Force re-render table để đồng bộ UI
+      cartTableKey.value++
+      console.log('🔄 [DEBUG] Force re-render table, cartTableKey:', cartTableKey.value)
+      return
+    }
+
+    // Cập nhật số lượng trong kho
     productInVariants.soLuong = (productInVariants.soLuong || 0) - diff
+
+    // Track số lượng đã bán
+    soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + diff
+
+    // Cập nhật quantity cuối cùng
+    item.quantity = newQuantity
+
+    console.log('✅ [DEBUG] updateQuantity - Hoàn thành cập nhật:', {
+      productName: item.productName,
+      finalQuantity: newQuantity,
+    })
+  } catch (error) {
+    console.error('❌ [DEBUG] Lỗi trong updateQuantity:', error.message)
+    Message.error('Có lỗi xảy ra khi cập nhật số lượng. Vui lòng thử lại.')
+    // Reset lại giá trị input về số lượng cũ khi có lỗi hệ thống
+    if (item) {
+      item.quantity = oldQuantity
+      // Force re-render table để đồng bộ UI
+      cartTableKey.value++
+      console.log('🔄 [DEBUG] Force re-render table do lỗi hệ thống, cartTableKey:', cartTableKey.value)
+    }
   }
-
-  // Track số lượng đã bán
-  soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + diff
-
-  // Cập nhật quantity cuối cùng (chỉ khi hết kiểm tra)
-  item.quantity = newQuantity
 }
 
 const resetQuantity = (itemId: string, previousQuantity: number) => {
@@ -1282,14 +1385,30 @@ const resetQuantity = (itemId: string, previousQuantity: number) => {
 }
 
 const removeFromCart = (itemId: string) => {
-  if (!currentOrder.value) return
-  const index = currentOrder.value.items.findIndex((i) => i.id === itemId)
-  if (index > -1) {
+  try {
+    if (!currentOrder.value) {
+      console.error('❌ [DEBUG] Không tìm thấy đơn hàng hiện tại')
+      throw new Error('Không tìm thấy đơn hàng hiện tại')
+    }
+
+    const index = currentOrder.value.items.findIndex((i) => i.id === itemId)
+
+    if (index === -1) {
+      console.error('❌ [DEBUG] Không tìm thấy sản phẩm trong giỏ hàng:', itemId)
+      throw new Error('Không tìm thấy sản phẩm trong giỏ hàng')
+    }
+
     const item = currentOrder.value.items[index]
     const productId = parseInt(item.productId)
 
+    if (isNaN(productId)) {
+      console.error('❌ [DEBUG] ID sản phẩm không hợp lệ:', item.productId)
+      throw new Error('ID sản phẩm không hợp lệ')
+    }
+
     // Hoàn lại số lượng vào kho
     const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+
     if (productInVariants) {
       productInVariants.soLuong = (productInVariants.soLuong || 0) + item.quantity
     }
@@ -1298,24 +1417,52 @@ const removeFromCart = (itemId: string) => {
     soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
 
     currentOrder.value.items.splice(index, 1)
+    Message.success('Đã xóa sản phẩm khỏi giỏ hàng')
+  } catch (error) {
+    console.error('❌ [DEBUG] Lỗi trong removeFromCart:', error.message)
+    Message.error('Có lỗi xảy ra khi xóa sản phẩm. Vui lòng thử lại.')
   }
 }
 
 const clearCart = () => {
-  if (currentOrder.value) {
-    // Hoàn lại tất cả số lượng vào kho và cập nhật số lượng đã bán
-    currentOrder.value.items.forEach((item) => {
-      const productId = parseInt(item.productId)
-      const productInVariants = allProductVariants.value.find((p) => p.id === productId)
-      if (productInVariants) {
-        productInVariants.soLuong = (productInVariants.soLuong || 0) + item.quantity
-      }
+  try {
+    if (!currentOrder.value) {
+      console.error('❌ [DEBUG] Không tìm thấy đơn hàng hiện tại')
+      throw new Error('Không tìm thấy đơn hàng hiện tại')
+    }
 
-      // Cập nhật số lượng đã bán
-      soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
+    // Hoàn lại tất cả số lượng vào kho và cập nhật số lượng đã bán
+    currentOrder.value.items.forEach((item, index) => {
+      try {
+        const productId = parseInt(item.productId)
+        if (isNaN(productId)) {
+          return
+        }
+
+        const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+        if (productInVariants) {
+          productInVariants.soLuong = (productInVariants.soLuong || 0) + item.quantity
+        }
+
+        // Cập nhật số lượng đã bán
+        soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
+      } catch (itemError) {
+        console.warn(`⚠️ [DEBUG] Lỗi khi xử lý sản phẩm ${item.productName}:`, itemError)
+      }
     })
 
     currentOrder.value.items = []
+    console.log('✅ [DEBUG] Đã xóa tất cả sản phẩm khỏi giỏ hàng:', {
+      clearedItemsCount: itemsCount,
+      remainingItemsCount: currentOrder.value.items.length,
+    })
+
+    Message.success('Đã xóa tất cả sản phẩm khỏi giỏ hàng')
+    console.log('🎉 [DEBUG] clearCart - Hoàn thành thành công')
+  } catch (error) {
+    console.error('❌ [DEBUG] Lỗi trong clearCart:', error)
+    console.error('❌ [DEBUG] Stack trace:', error.stack)
+    Message.error('Có lỗi xảy ra khi xóa giỏ hàng. Vui lòng thử lại.')
   }
 }
 
@@ -1353,12 +1500,50 @@ const addNewCustomer = () => {
 }
 
 const confirmOrder = () => {
-  if (!canConfirmOrder.value) return
-  confirmLoading.value = true
-  setTimeout(() => {
-    Message.success('Đơn hàng đã được xác nhận')
+  try {
+    if (!canConfirmOrder.value) {
+      throw new Error('Đơn hàng không thể xác nhận')
+    }
+
+    // Kiểm tra tồn kho lần cuối trước khi xác nhận đơn hàng
+    if (!currentOrder.value) {
+      throw new Error('Không tìm thấy đơn hàng hiện tại')
+    }
+
+    for (const item of currentOrder.value.items) {
+      const productId = parseInt(item.productId)
+      if (isNaN(productId)) {
+        throw new Error(`ID sản phẩm không hợp lệ: ${item.productId}`)
+      }
+
+      const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+      if (!productInVariants) {
+        throw new Error(`Không tìm thấy thông tin tồn kho cho sản phẩm: ${item.productName}`)
+      }
+
+      const availableStock = productInVariants.soLuong || 0
+      if (item.quantity > availableStock) {
+        throw new Error(
+          `Tồn kho không đủ cho sản phẩm "${item.productName}". Yêu cầu: ${item.quantity} cái | Còn lại: ${availableStock} cái`
+        )
+      }
+    }
+
+    confirmLoading.value = true
+    setTimeout(() => {
+      try {
+        Message.success('Đơn hàng đã được xác nhận')
+        confirmLoading.value = false
+      } catch (successError) {
+        console.error('Lỗi khi hiển thị thông báo thành công:', successError)
+        confirmLoading.value = false
+      }
+    }, 500)
+  } catch (error) {
+    console.error('Lỗi khi xác nhận đơn hàng:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi xác nhận đơn hàng. Vui lòng thử lại.')
     confirmLoading.value = false
-  }, 500)
+  }
 }
 
 const printOrder = () => {
