@@ -41,17 +41,6 @@
             </div>
           </div>
         </template>
-        <template #trangThai="{ record }">
-          <div class="status-cell">
-            <a-tag :color="layMauTrangThai(record.trangThai)" class="status-tag">
-              <template #icon>
-                <icon-check-circle v-if="record.trangThai === 'Hoạt động' || record.trangThai === $t('thongKe.detailTable.active')" />
-                <icon-close-circle v-else />
-              </template>
-              {{ record.trangThai }}
-            </a-tag>
-          </div>
-        </template>
       </a-table>
     </div>
   </a-card>
@@ -64,8 +53,6 @@ import {
   IconFile,
   IconArrowUp,
   IconArrowDown,
-  IconCheckCircle,
-  IconCloseCircle,
 } from '@arco-design/web-vue/es/icon'
 import type { DuLieuBangChiTiet } from '../types/thong-ke.types'
 
@@ -83,21 +70,6 @@ const dinhDangTien = (soTien: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(soTien)
-}
-
-const layMauTrangThai = (trangThai: string): string => {
-  const activeText = t('thongKe.detailTable.active')
-  const inactiveText = t('thongKe.detailTable.inactive')
-  switch (trangThai) {
-    case activeText:
-    case 'Hoạt động':
-      return 'green'
-    case inactiveText:
-    case 'Không hoạt động':
-      return 'red'
-    default:
-      return 'blue'
-  }
 }
 
 const cot = [
@@ -136,242 +108,122 @@ const cot = [
     width: 120,
     align: 'center' as const,
   },
-  {
-    title: t('thongKe.detailTable.status'),
-    dataIndex: 'trangThai',
-    slotName: 'trangThai',
-    width: 120,
-    align: 'center' as const,
-  },
 ]
 </script>
 
 <style scoped>
 .chart-card {
   height: 100%;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 4px;
+  border: none;
+}
+
+.chart-card :deep(.arco-card-header) {
+  height: auto;
+  padding: 20px;
+  border: none;
 }
 
 .chart-card :deep(.arco-card-body) {
-  padding: 24px;
+  padding: 0 20px 20px 20px;
 }
 
 .chart-title {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
 }
 
 .title-icon {
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 18px;
 }
 
 .table-container {
-  margin-top: 20px;
+  /* No margin needed */
 }
 
-.detail-table {
-  border-radius: 8px;
-  overflow: hidden;
+.detail-table :deep(.arco-table-cell) {
+  padding: 12px 16px;
 }
 
-.detail-table :deep(.arco-table) {
-  border-radius: 8px;
+.detail-table :deep(.arco-table-th) {
+  font-weight: 600;
+  color: var(--color-text-2);
+  background-color: var(--color-fill-2);
 }
 
-.detail-table :deep(.arco-table-thead) {
-  background: linear-gradient(to right, #f0f5ff, #e8f4fd);
-}
-
-.detail-table :deep(.arco-table-thead .arco-table-th) {
-  background: transparent;
-  font-weight: 700;
-  font-size: 13px;
-  color: #4e5969;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid #bedaff;
-  padding: 18px 16px;
-}
-
-.detail-table :deep(.arco-table-tbody .arco-table-tr) {
-  transition: all 0.3s ease;
-}
-
-.detail-table :deep(.arco-table-tbody .arco-table-tr:hover) {
-  background: linear-gradient(to right, #f8fbff, #ffffff);
-  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.08);
-  transform: translateY(-1px);
-}
-
-.detail-table :deep(.arco-table-td) {
-  padding: 18px 16px;
-  border-bottom: 1px solid #e8f1ff;
-  font-size: 14px;
-  color: #1d2129;
-  vertical-align: middle;
+.detail-table :deep(.arco-table-tr:hover) {
+  background-color: var(--color-fill-1);
 }
 
 /* Time Cell Styles */
 .time-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
 }
 
 .time-icon {
-  font-size: 16px;
-  color: #165dff;
+  font-size: 14px;
+  color: rgb(var(--blue-6));
 }
 
 .time-text {
-  font-weight: 600;
-  color: #1d2129;
-  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-1);
 }
 
 /* Revenue Cell Styles */
-.revenue-cell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .revenue-amount {
-  font-weight: 700;
-  font-size: 16px;
-  color: #00b96b;
-  padding: 4px 12px;
-  background: linear-gradient(135deg, #e8f9f1 0%, #f0fdf7 100%);
-  border-radius: 6px;
-  border: 1px solid #b7f0d4;
+  font-weight: 600;
+  color: rgb(var(--green-6));
 }
 
 /* Order Count Cell Styles */
-.order-count-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .count-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f4fd 100%);
-  border: 1px solid #bedaff;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.count-badge:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.15);
+  gap: 4px;
 }
 
 .count-icon {
   font-size: 14px;
-  color: #165dff;
+  color: rgb(var(--blue-6));
 }
 
 .count-number {
-  font-weight: 700;
-  font-size: 15px;
-  color: #165dff;
+  font-weight: 600;
+  color: var(--color-text-1);
 }
 
 /* Average Value Cell Styles */
-.avg-value-cell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .avg-amount {
-  font-weight: 600;
-  font-size: 14px;
-  color: #1d2129;
-  padding: 4px 10px;
-  background: #f7f8fa;
-  border-radius: 6px;
+  font-weight: 500;
+  color: var(--color-text-2);
 }
 
 /* Growth Cell Styles */
-.growth-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .growth-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  min-width: 70px;
-  justify-content: center;
-}
-
-.growth-badge:hover {
-  transform: scale(1.08);
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .growth-badge.positive {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border: 2px solid #86efac;
-  color: #16a34a;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.15);
+  color: rgb(var(--green-6));
 }
 
 .growth-badge.negative {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border: 2px solid #fca5a5;
-  color: #dc2626;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+  color: rgb(var(--red-6));
 }
 
 .growth-icon {
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.growth-value {
-  font-weight: 700;
-}
-
-/* Status Cell Styles */
-.status-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.detail-table :deep(.arco-tag) {
-  padding: 5px 12px;
-  font-weight: 600;
   font-size: 12px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.detail-table :deep(.arco-tag:hover) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 </style>

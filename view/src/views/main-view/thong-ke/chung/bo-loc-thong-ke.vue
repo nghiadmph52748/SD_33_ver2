@@ -248,9 +248,9 @@ const thayDoiKhoangNgayTuyChon = (dates: any[]) => {
   align-items: center;
   gap: 16px;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.2);
 }
 
 .summary-item {

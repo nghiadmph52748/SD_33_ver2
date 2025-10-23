@@ -36,14 +36,10 @@
             <span class="price-value">{{ dinhDangTien(record.giaBan) }}</span>
           </div>
         </template>
-        <template #soLuongDaBan="{ record, rowIndex }">
-          <div class="quantity-cell">
-            <div class="quantity-container">
-              <span class="quantity-number">{{ record.soLuongDaBan }}</span>
-              <div class="quantity-bar-wrapper">
-                <div class="quantity-bar" :style="{ width: getBarWidth(record.soLuongDaBan, rowIndex) + '%' }"></div>
-              </div>
-            </div>
+        <template #soLuongDaBan="{ record }">
+          <div class="quantity-badge">
+            <span class="quantity-value">{{ record.soLuongDaBan }}</span>
+            <span class="quantity-label">đã bán</span>
           </div>
         </template>
       </a-table>
@@ -79,15 +75,6 @@ const getRankClass = (index: number): string => {
   return 'rank-default'
 }
 
-const maxQuantity = computed(() => {
-  if (props.duLieu.length === 0) return 0
-  return Math.max(...props.duLieu.map(item => item.soLuongDaBan))
-})
-
-const getBarWidth = (quantity: number, index: number): number => {
-  if (maxQuantity.value === 0) return 0
-  return (quantity / maxQuantity.value) * 100
-}
 
 const cot = [
   {
@@ -131,43 +118,35 @@ const cot = [
 <style scoped>
 .chart-card {
   height: 100%;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 4px;
+  border: none;
+}
+
+.chart-card :deep(.arco-card-header) {
+  height: auto;
+  padding: 20px;
+  border: none;
 }
 
 .chart-card :deep(.arco-card-body) {
-  padding: 24px;
+  padding: 0 20px 20px 20px;
 }
 
 .chart-title {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
 }
 
 .title-icon {
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+  font-size: 18px;
 }
 
 .table-container {
-  margin-top: 20px;
+  /* No margin needed */
 }
 
 .no-data-container {
@@ -177,70 +156,40 @@ const cot = [
   justify-content: center;
   padding: 60px 20px;
   text-align: center;
-  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-  border-radius: 12px;
-  border: 1px dashed #d9d9d9;
+  background: var(--color-fill-1);
+  border-radius: 4px;
 }
 
 .no-data-icon {
-  font-size: 64px;
-  margin-bottom: 20px;
-  opacity: 0.5;
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
 }
 
 .no-data-text {
-  font-size: 18px;
-  font-weight: 600;
-  color: #666;
-  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  margin-bottom: 4px;
 }
 
 .no-data-subtext {
-  font-size: 14px;
-  color: #999;
-  line-height: 1.5;
+  font-size: 12px;
+  color: var(--color-text-3);
 }
 
-.top-selling-table {
-  border-radius: 8px;
-  overflow: hidden;
+.top-selling-table :deep(.arco-table-cell) {
+  padding: 12px 16px;
 }
 
-.top-selling-table :deep(.arco-table) {
-  border-radius: 8px;
+.top-selling-table :deep(.arco-table-th) {
+  font-weight: 600;
+  color: var(--color-text-2);
+  background-color: var(--color-fill-2);
 }
 
-.top-selling-table :deep(.arco-table-thead) {
-  background: linear-gradient(to right, #f8f9fa, #f5f6f7);
-}
-
-.top-selling-table :deep(.arco-table-thead .arco-table-th) {
-  background: transparent;
-  font-weight: 700;
-  font-size: 13px;
-  color: #4e5969;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid #e5e6eb;
-  padding: 18px 16px;
-}
-
-.top-selling-table :deep(.arco-table-tbody .arco-table-tr) {
-  transition: all 0.3s ease;
-}
-
-.top-selling-table :deep(.arco-table-tbody .arco-table-tr:hover) {
-  background: linear-gradient(to right, #f8fafc, #ffffff);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
-}
-
-.top-selling-table :deep(.arco-table-td) {
-  padding: 20px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
-  color: #1d2129;
-  vertical-align: middle;
+.top-selling-table :deep(.arco-table-tr:hover) {
+  background-color: var(--color-fill-1);
 }
 
 /* Rank Badge Styles */
@@ -248,183 +197,85 @@ const cot = [
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  font-weight: 700;
-  font-size: 16px;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  transition: all 0.3s ease;
-}
-
-.rank-badge:hover {
-  transform: scale(1.15) rotate(5deg);
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .rank-gold {
-  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: #b8860b;
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+  background: rgb(var(--gold-1));
+  color: rgb(var(--gold-6));
 }
 
 .rank-silver {
-  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-  color: #6b6b6b;
-  box-shadow: 0 4px 15px rgba(192, 192, 192, 0.4);
+  background: rgb(var(--gray-2));
+  color: rgb(var(--gray-7));
 }
 
 .rank-bronze {
-  background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
-  color: #8b4513;
-  box-shadow: 0 4px 15px rgba(205, 127, 50, 0.4);
+  background: rgb(var(--orange-1));
+  color: rgb(var(--orange-6));
 }
 
 .rank-default {
-  background: linear-gradient(135deg, #e8e8e8 0%, #f5f5f5 100%);
-  color: #8c8c8c;
-}
-
-.rank-number {
-  position: relative;
-  z-index: 1;
+  background: var(--color-fill-2);
+  color: var(--color-text-3);
 }
 
 /* Product Image Styles */
-.product-image-cell {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .image-wrapper {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 2px;
   overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.image-wrapper:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border-2);
 }
 
 .product-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.image-wrapper:hover .product-img {
-  transform: scale(1.05);
-}
-
-.image-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.1) 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.image-wrapper:hover .image-overlay {
-  opacity: 1;
 }
 
 /* Product Name Styles */
-.product-name-cell {
-  display: flex;
-  align-items: center;
-}
-
 .product-name {
-  font-weight: 600;
-  color: #1d2129;
+  font-weight: 500;
+  color: var(--color-text-1);
   line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  transition: color 0.2s ease;
-}
-
-.top-selling-table :deep(.arco-table-tbody .arco-table-tr:hover) .product-name {
-  color: #165dff;
 }
 
 /* Price Styles */
-.price-cell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .price-value {
-  font-weight: 700;
-  font-size: 15px;
-  color: #00b96b;
+  font-weight: 600;
+  color: rgb(var(--green-6));
 }
 
 /* Quantity Styles */
-.quantity-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.quantity-container {
-  display: flex;
+.quantity-badge {
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: 100%;
+  gap: 2px;
+  padding: 8px 16px;
+  background: rgb(var(--blue-1));
+  border-radius: 4px;
+  border: 1px solid rgb(var(--blue-3));
 }
 
-.quantity-number {
+.quantity-value {
   font-weight: 700;
   font-size: 16px;
-  color: #1d2129;
+  color: rgb(var(--blue-6));
+  line-height: 1;
 }
 
-.quantity-bar-wrapper {
-  width: 100%;
-  height: 6px;
-  background: #f0f0f0;
-  border-radius: 3px;
-  overflow: hidden;
-  position: relative;
-}
-
-.quantity-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #165dff 0%, #4080ff 100%);
-  border-radius: 3px;
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.quantity-bar::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+.quantity-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--blue-5));
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 </style>
