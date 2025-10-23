@@ -1,7 +1,8 @@
 <template>
-  <a-card class="chart-card">
+  <a-card class="chart-card" :bordered="false">
     <template #title>
       <div class="chart-title">
+        <div class="title-icon">🔥</div>
         <span>{{ $t('thongKe.topSellingTable.title') }}</span>
       </div>
     </template>
@@ -11,23 +12,39 @@
         <div class="no-data-text">{{ $t('thongKe.topSellingTable.noData') }}</div>
         <div class="no-data-subtext">{{ $t('thongKe.topSellingTable.noDataSub') }}</div>
       </div>
-      <a-table v-else :columns="cot" :data="duLieu" :pagination="phanTrang" :scroll="{ x: 800 }" class="top-selling-table">
-        <template #stt="{ record }">
-          <span class="rank-cell">{{ record.id }}</span>
+      <a-table v-else :columns="cot" :data="duLieu" :pagination="phanTrang" :scroll="{ x: 800 }" class="top-selling-table" :bordered="false">
+        <template #stt="{ record, rowIndex }">
+          <div :class="['rank-badge', getRankClass(rowIndex)]">
+            <span class="rank-number">{{ rowIndex + 1 }}</span>
+          </div>
         </template>
         <template #anh="{ record }">
           <div class="product-image-cell">
-            <img :src="record.anh || '/default-product.png'" :alt="record.tenSanPham" class="product-img" />
+            <div class="image-wrapper">
+              <img :src="record.anh || '/default-product.png'" :alt="record.tenSanPham" class="product-img" />
+              <div class="image-overlay"></div>
+            </div>
           </div>
         </template>
         <template #tenSanPham="{ record }">
-          <span class="product-name-cell">{{ record.tenSanPham }}</span>
+          <div class="product-name-cell">
+            <span class="product-name">{{ record.tenSanPham }}</span>
+          </div>
         </template>
         <template #giaBan="{ record }">
-          <span class="price-cell">{{ dinhDangTien(record.giaBan) }}</span>
+          <div class="price-cell">
+            <span class="price-value">{{ dinhDangTien(record.giaBan) }}</span>
+          </div>
         </template>
-        <template #soLuongDaBan="{ record }">
-          <span class="quantity-cell">{{ record.soLuongDaBan }}</span>
+        <template #soLuongDaBan="{ record, rowIndex }">
+          <div class="quantity-cell">
+            <div class="quantity-container">
+              <span class="quantity-number">{{ record.soLuongDaBan }}</span>
+              <div class="quantity-bar-wrapper">
+                <div class="quantity-bar" :style="{ width: getBarWidth(record.soLuongDaBan, rowIndex) + '%' }"></div>
+              </div>
+            </div>
+          </div>
         </template>
       </a-table>
     </div>
@@ -35,6 +52,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SanPhamBanChayNhat } from '../types/thong-ke.types'
 
@@ -43,7 +61,7 @@ interface Props {
   phanTrang: any
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const { t } = useI18n()
 
@@ -52,6 +70,23 @@ const dinhDangTien = (soTien: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(soTien)
+}
+
+const getRankClass = (index: number): string => {
+  if (index === 0) return 'rank-gold'
+  if (index === 1) return 'rank-silver'
+  if (index === 2) return 'rank-bronze'
+  return 'rank-default'
+}
+
+const maxQuantity = computed(() => {
+  if (props.duLieu.length === 0) return 0
+  return Math.max(...props.duLieu.map(item => item.soLuongDaBan))
+})
+
+const getBarWidth = (quantity: number, index: number): number => {
+  if (maxQuantity.value === 0) return 0
+  return (quantity / maxQuantity.value) * 100
 }
 
 const cot = [
@@ -96,19 +131,43 @@ const cot = [
 <style scoped>
 .chart-card {
   height: 100%;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.chart-card :deep(.arco-card-body) {
+  padding: 24px;
 }
 
 .chart-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 18px;
+  gap: 12px;
+  font-size: 20px;
   font-weight: 700;
   color: #1a1a1a;
 }
 
+.title-icon {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
 .table-container {
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 .no-data-container {
@@ -118,15 +177,15 @@ const cot = [
   justify-content: center;
   padding: 60px 20px;
   text-align: center;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border-radius: 12px;
+  border: 1px dashed #d9d9d9;
 }
 
 .no-data-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.6;
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.5;
 }
 
 .no-data-text {
@@ -147,61 +206,225 @@ const cot = [
   overflow: hidden;
 }
 
+.top-selling-table :deep(.arco-table) {
+  border-radius: 8px;
+}
+
 .top-selling-table :deep(.arco-table-thead) {
-  background-color: #f5f5f5;
+  background: linear-gradient(to right, #f8f9fa, #f5f6f7);
 }
 
 .top-selling-table :deep(.arco-table-thead .arco-table-th) {
-  background-color: #f5f5f5;
-  font-weight: 600;
-  font-size: 14px;
-  color: #1d2129;
-  border-bottom: 2px solid #e8e8e8;
-  padding: 16px 12px;
+  background: transparent;
+  font-weight: 700;
+  font-size: 13px;
+  color: #4e5969;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e6eb;
+  padding: 18px 16px;
+}
+
+.top-selling-table :deep(.arco-table-tbody .arco-table-tr) {
+  transition: all 0.3s ease;
 }
 
 .top-selling-table :deep(.arco-table-tbody .arco-table-tr:hover) {
-  background-color: #f8f9fa;
+  background: linear-gradient(to right, #f8fafc, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
 }
 
 .top-selling-table :deep(.arco-table-td) {
-  padding: 16px 12px;
+  padding: 20px 16px;
   border-bottom: 1px solid #f0f0f0;
   font-size: 14px;
   color: #1d2129;
+  vertical-align: middle;
 }
 
-.rank-cell {
-  font-weight: 400;
-  color: #000000;
+/* Rank Badge Styles */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 16px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s ease;
 }
 
+.rank-badge:hover {
+  transform: scale(1.15) rotate(5deg);
+}
+
+.rank-gold {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #b8860b;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+.rank-silver {
+  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+  color: #6b6b6b;
+  box-shadow: 0 4px 15px rgba(192, 192, 192, 0.4);
+}
+
+.rank-bronze {
+  background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
+  color: #8b4513;
+  box-shadow: 0 4px 15px rgba(205, 127, 50, 0.4);
+}
+
+.rank-default {
+  background: linear-gradient(135deg, #e8e8e8 0%, #f5f5f5 100%);
+  color: #8c8c8c;
+}
+
+.rank-number {
+  position: relative;
+  z-index: 1;
+}
+
+/* Product Image Styles */
 .product-image-cell {
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.product-img {
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #e8e8e8;
+.image-wrapper {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.image-wrapper:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.image-wrapper:hover .product-img {
+  transform: scale(1.05);
+}
+
+.image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.image-wrapper:hover .image-overlay {
+  opacity: 1;
+}
+
+/* Product Name Styles */
 .product-name-cell {
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.product-name {
+  font-weight: 600;
+  color: #1d2129;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.2s ease;
+}
+
+.top-selling-table :deep(.arco-table-tbody .arco-table-tr:hover) .product-name {
+  color: #165dff;
+}
+
+/* Price Styles */
+.price-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.price-value {
+  font-weight: 700;
+  font-size: 15px;
+  color: #00b96b;
+}
+
+/* Quantity Styles */
+.quantity-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quantity-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.quantity-number {
+  font-weight: 700;
+  font-size: 16px;
   color: #1d2129;
 }
 
-.price-cell {
-  font-weight: 500;
-  color: #52c41a;
+.quantity-bar-wrapper {
+  width: 100%;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
 }
 
-.quantity-cell {
-  font-weight: 400;
-  color: #000000;
+.quantity-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #165dff 0%, #4080ff 100%);
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.quantity-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 </style>
