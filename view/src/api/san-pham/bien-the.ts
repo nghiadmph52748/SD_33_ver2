@@ -79,6 +79,7 @@ export interface BienTheSanPham {
   idDotGiamGia?: number
   tenDotGiamGia?: string
   giaTriGiamGia?: number
+  qrcode?: string
   trangThai: boolean
   deleted?: boolean
   createAt?: string

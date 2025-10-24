@@ -161,13 +161,11 @@
                       <strong>{{ formatCurrency(record.price * record.quantity) }}</strong>
                     </template>
                     <template #action="{ record }">
-                      <a-popconfirm title="Xoá sản phẩm này?" @ok="removeFromCart(record.id)" ok-text="Xoá" cancel-text="Hủy">
-                        <a-button type="text" status="danger" size="small">
-                          <template #icon>
-                            <icon-delete />
-                          </template>
-                        </a-button>
-                      </a-popconfirm>
+                      <a-button type="text" status="danger" size="small" @click="showDeleteProductConfirm(record)">
+                        <template #icon>
+                          <icon-delete />
+                        </template>
+                      </a-button>
                     </template>
                   </a-table>
                   <a-empty v-else description="Giỏ hàng trống" />
@@ -182,7 +180,7 @@
       <a-col :xs="24" :lg="8" class="pos-right">
         <!-- Customer Section -->
         <a-card title="Thông Tin Khách Hàng" class="customer-card">
-          <a-form layout="vertical">
+          <a-form :model="{}" layout="vertical">
             <a-form-item label="Chọn Khách Hàng">
               <a-select
                 :model-value="currentOrder?.customerId"
@@ -216,14 +214,15 @@
         </a-card>
         <!-- Payment Section -->
         <a-card title="Thanh Toán" class="payment-card">
-          <a-form layout="vertical">
+          <a-form :model="{}" layout="vertical">
             <!-- Discount Section - Button Style -->
-            <a-form-item>
+            <a-form-item :model="{}">
               <a-button
                 v-if="!paymentForm.value?.discountCode"
                 long
                 size="large"
                 type="secondary"
+                :disabled="!hasEligibleVouchers"
                 style="
                   height: 56px;
                   font-size: 15px;
@@ -238,24 +237,28 @@
                 @click="showVoucherModal = true"
               >
                 <span style="font-weight: 500; text-align: left">Phiếu Giảm Giá</span>
-                <span style="font-weight: 400; font-size: 12px; text-align: right; color: #999">Chọn hoặc nhập mã ></span>
+                <span style="font-weight: 400; font-size: 12px; text-align: right; color: #999">
+                  {{ hasEligibleVouchers ? `${eligibleVouchersCount} voucher có thể dùng >` : 'Không có voucher phù hợp' }}
+                </span>
               </a-button>
             </a-form-item>
 
             <!-- Payment Method -->
-            <a-form-item label="Phương Thức Thanh Toán">
+            <a-form-item :model="{}" label="Phương Thức Thanh Toán">
               <div style="display: flex; gap: 8px; width: 100%">
                 <a-button
-                  :type="paymentForm.value?.method === 'cash' ? 'primary' : 'secondary'"
-                  style="flex: 1"
-                  @click="paymentForm.value && (paymentForm.value.method = 'cash')"
+                  :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'cash' }]"
+                  :type="paymentMethod.value === 'cash' ? 'primary' : 'secondary'"
+                  style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
+                  @click="selectPaymentMethod('cash')"
                 >
                   💵 Tiền Mặt
                 </a-button>
                 <a-button
-                  :type="paymentForm.value?.method === 'transfer' ? 'primary' : 'secondary'"
-                  style="flex: 1"
-                  @click="paymentForm.value && (paymentForm.value.method = 'transfer')"
+                  :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'transfer' }]"
+                  :type="paymentMethod.value === 'transfer' ? 'primary' : 'secondary'"
+                  style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
+                  @click="selectPaymentMethod('transfer')"
                 >
                   🏦 Chuyển Khoản
                 </a-button>
@@ -263,19 +266,63 @@
             </a-form-item>
 
             <!-- Cash Input -->
-            <a-form-item v-if="paymentForm.value?.method === 'cash'" label="Tiền Nhận">
+            <a-form-item
+              :model="{}"
+              v-if="paymentMethod.value === 'cash'"
+              label="Tiền Nhận"
+              class="cash-input-container"
+              style="transition: all 0.3s ease"
+            >
               <a-input-number
                 v-model:model-value="paymentForm.value.cashReceived"
                 :min="finalPrice"
-                placeholder="Nhập tiền nhận"
-                style="width: 100%"
+                placeholder="Nhập số tiền khách đưa"
+                style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
+                :precision="0"
+                :formatter="(value) => formatCurrency(value || 0)"
+                :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
                 @update:model-value="(val) => (paymentForm.value.cashReceived = val || 0)"
               />
+              <div v-if="paymentForm.value?.cashReceived > 0" class="cash-feedback" style="margin-top: 8px">
+                <div v-if="change >= 0" class="cash-change-positive">
+                  <span class="cash-icon">💰</span>
+                  <span class="cash-text">
+                    Tiền thối:
+                    <strong>{{ formatCurrency(change) }}</strong>
+                  </span>
+                </div>
+                <div v-else class="cash-change-negative">
+                  <span class="cash-icon">⚠️</span>
+                  <span class="cash-text">
+                    Thiếu:
+                    <strong>{{ formatCurrency(Math.abs(change)) }}</strong>
+                  </span>
+                </div>
+              </div>
             </a-form-item>
 
             <!-- Transfer Notes -->
-            <a-alert v-if="paymentForm.value?.method === 'transfer'" type="info" title="Chuyển Khoản" closable>
+            <a-alert v-if="paymentMethod.value === 'transfer'" type="info" title="Chuyển Khoản" closable>
               <p>Vui lòng chuyển khoản theo thông tin cung cấp. Mã hoá đơn: {{ currentOrder?.id }}</p>
+            </a-alert>
+
+            <!-- Selected Voucher Info -->
+            <a-alert
+              v-if="selectedCoupon"
+              :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`"
+              type="success"
+              closable
+              @close="clearVoucher"
+            >
+              <div style="display: flex; justify-content: space-between; align-items: center">
+                <div>
+                  <strong>{{ selectedCoupon.maPhieuGiamGia }}</strong>
+                  <span style="margin-left: 8px; color: #52c41a">-{{ getDiscountDisplay(selectedCoupon) }}</span>
+                </div>
+                <div style="font-size: 12px; color: #666">
+                  <span v-if="selectedCoupon.hoaDonToiThieu">Min: {{ formatCurrency(Number(selectedCoupon.hoaDonToiThieu)) }}</span>
+                </div>
+              </div>
             </a-alert>
 
             <!-- Price Summary -->
@@ -294,10 +341,6 @@
               <p class="summary-row total">
                 <span>Thành tiền:</span>
                 <strong class="final-price">{{ formatCurrency(finalPrice) }}</strong>
-              </p>
-              <p v-if="paymentForm.value?.method === 'cash' && change > 0" class="summary-row">
-                <span>Tiền thối:</span>
-                <span class="change-text">{{ formatCurrency(change) }}</span>
               </p>
             </div>
 
@@ -484,10 +527,17 @@
     </a-modal>
 
     <!-- QR Scanner Modal -->
-    <a-modal v-model:visible="showQRScanner" title="Quét Mã QR Sản Phẩm" width="500px" :footer="null" @cancel="showQRScanner = false">
-      <div style="text-align: center; padding: 40px">
-        <a-empty description="Scanner sẽ được load ở đây" />
-        <p style="color: #86909c; margin-top: 16px">(Sử dụng html5-qrcode)</p>
+    <a-modal
+      v-model:visible="showQRScanner"
+      title="Quét Mã QR Sản Phẩm"
+      width="600px"
+      :footer="null"
+      @cancel="closeQRScanner"
+      @open="initQRScanner"
+    >
+      <div style="text-align: center; padding: 20px">
+        <!-- QR Scanner Container -->
+        <div id="qr-reader" style="width: 100%; max-width: 550px; margin: 0 auto"></div>
       </div>
     </a-modal>
 
@@ -538,112 +588,162 @@
     </a-modal>
 
     <!-- Voucher Selection Modal -->
-    <a-modal v-model:visible="showVoucherModal" title="Chọn Phiếu Giảm Giá" width="900px" :footer="null" @cancel="showVoucherModal = false">
+    <a-modal v-model:visible="showVoucherModal" title="Chọn Phiếu Giảm Giá" width="800px" :footer="null" @cancel="showVoucherModal = false">
       <div style="max-height: 600px; overflow-y: auto">
         <a-empty v-if="coupons.length === 0" description="Không có phiếu giảm giá" />
-        <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px">
+
+        <!-- Current order summary for condition checking -->
+        <div
+          v-if="currentOrder && currentOrder.items.length > 0"
+          style="margin-bottom: 16px; padding: 12px; background: #f0f9ff; border-radius: 6px; border: 1px solid #e5e5e5"
+        >
+          <div style="font-size: 12px; color: #666; margin-bottom: 8px">Đơn hàng hiện tại:</div>
+          <div style="font-weight: 600; color: #1890ff">
+            Tổng tiền: {{ formatCurrency(subtotal) }} | Số lượng: {{ currentOrder.items.reduce((sum, item) => sum + item.quantity, 0) }} sản
+            phẩm
+          </div>
+        </div>
+
+        <div v-else style="margin-bottom: 16px; padding: 12px; background: #fff7e6; border-radius: 6px; border: 1px solid #ffd591">
+          <div style="font-size: 12px; color: #d48806">⚠️ Chưa có sản phẩm nào trong giỏ hàng</div>
+        </div>
+
+        <div v-if="coupons.length > 0">
+          <!-- Eligible Vouchers Count -->
+          <div style="margin-bottom: 12px; font-size: 14px; color: #666">
+            {{ eligibleVouchersCount }}/{{ coupons.length }} voucher có thể sử dụng
+          </div>
+
+          <!-- Voucher List - 1 voucher per row -->
           <div
             v-for="coupon in coupons"
             :key="coupon.id"
-            style="
-              border: 1px solid #e5e5e5;
-              border-radius: 8px;
-              padding: 16px;
-              cursor: pointer;
-              transition: all 0.3s;
-              background: linear-gradient(135deg, #fff8e1 0%, #fff 100%);
-              position: relative;
-              overflow: hidden;
-            "
-            @click="selectVoucher(coupon)"
-            @mouseenter="
-              (e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
-                e.currentTarget.style.transform = 'translateY(-4px)'
-              }
-            "
-            @mouseleave="
-              (e) => {
-                e.currentTarget.style.boxShadow = 'none'
-                e.currentTarget.style.transform = 'translateY(0)'
-              }
-            "
+            style="border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 12px; overflow: hidden"
           >
-            <!-- Dashed border decoration -->
             <div
               style="
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                border: 2px dashed #e5e5e5;
-                border-radius: 8px;
-                pointer-events: none;
+                display: flex;
+                align-items: center;
+                padding: 16px;
+                background: #fafafa;
+                border-bottom: 1px solid #e5e5e5;
+                cursor: pointer;
+                transition: all 0.3s;
               "
-            ></div>
-
-            <!-- Content -->
-            <div style="position: relative; z-index: 1">
-              <!-- Header with code -->
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px">
-                <div style="flex: 1">
-                  <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 4px">
+              :class="{ 'voucher-disabled': !isVoucherEligible(coupon) }"
+              @click="isVoucherEligible(coupon) ? selectVoucher(coupon) : null"
+              @mouseenter="
+                (e) => {
+                  if (isVoucherEligible(coupon)) {
+                    e.currentTarget.style.background = '#f0f9ff'
+                  }
+                }
+              "
+              @mouseleave="
+                (e) => {
+                  e.currentTarget.style.background = '#fafafa'
+                }
+              "
+            >
+              <!-- Left: Voucher Info -->
+              <div style="flex: 1">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px">
+                  <div style="font-size: 16px; font-weight: 600; color: #333">
                     {{ coupon.maPhieuGiamGia }}
                   </div>
-                  <div style="font-size: 12px; color: #86909c; line-height: 1.4">
-                    {{ coupon.tenPhieuGiamGia }}
-                  </div>
+                  <a-tag v-if="!isVoucherEligible(coupon)" color="red" size="small">
+                    {{ getVoucherStatus(coupon) }}
+                  </a-tag>
+                  <a-tag v-else-if="coupon.soLuongDung <= 0" color="orange" size="small">Hết lượt sử dụng</a-tag>
+                  <a-tag v-else color="green" size="small">Có thể sử dụng</a-tag>
+                </div>
+
+                <div style="font-size: 12px; color: #86909c; line-height: 1.4">
+                  {{ coupon.tenPhieuGiamGia }}
+                </div>
+
+                <!-- Conditions -->
+                <div style="margin-top: 8px; font-size: 11px; color: #666">
+                  <span v-if="!isVoucherEligible(coupon)" style="color: #ff4d4f">❌ {{ getVoucherStatus(coupon) }}</span>
+                  <span v-else>
+                    <span>💰 {{ getDiscountDisplay(coupon) }} giảm giá</span>
+                    <span v-if="coupon.hoaDonToiThieu" style="margin-left: 12px">
+                      Min: {{ formatCurrency(Number(coupon.hoaDonToiThieu)) }}
+                    </span>
+                    <span v-if="coupon.soLuongDung" style="margin-left: 12px">📊 Còn: {{ coupon.soLuongDung }} lượt</span>
+                    <span v-if="coupon.ngayKetThuc" style="margin-left: 12px">⏰ Hết hạn: {{ coupon.ngayKetThuc }}</span>
+                  </span>
                 </div>
               </div>
 
-              <!-- Discount value (main attraction) -->
-              <div
-                style="
-                  background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%);
-                  color: white;
-                  padding: 12px;
-                  border-radius: 4px;
-                  margin-bottom: 12px;
-                  text-align: center;
-                "
-              >
-                <div style="font-size: 20px; font-weight: 700">
-                  {{ formatCurrency(Number(coupon.giaTriGiamGia) || 0) }}
+              <!-- Right: Discount Value -->
+              <div style="text-align: center; margin-left: 16px">
+                <div
+                  style="
+                    background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%);
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 600;
+                  "
+                >
+                  {{ getDiscountDisplay(coupon) }}
                 </div>
               </div>
 
-              <!-- Min order -->
-              <div v-if="coupon.hoaDonToiThieu" style="font-size: 12px; color: #86909c; margin-bottom: 8px">
-                Hoá đơn tối thiểu:
-                <strong>{{ formatCurrency(Number(coupon.hoaDonToiThieu)) }}</strong>
+              <!-- Action Button -->
+              <div style="margin-left: 16px">
+                <a-button
+                  type="primary"
+                  size="small"
+                  :disabled="!isVoucherEligible(coupon)"
+                  @click.stop="selectVoucher(coupon)"
+                  style="background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%); border: none"
+                >
+                  {{ isVoucherEligible(coupon) ? 'Chọn' : 'Không đủ ĐK' }}
+                </a-button>
               </div>
-
-              <!-- Quantity left -->
-              <div v-if="coupon.soLuongDung" style="font-size: 12px; color: #86909c; margin-bottom: 12px">
-                Còn lại:
-                <strong style="color: #f5222d">{{ coupon.soLuongDung }}</strong>
-              </div>
-
-              <!-- Validity period -->
-              <div
-                v-if="coupon.ngayKetThuc"
-                style="font-size: 11px; color: #86909c; margin-bottom: 12px; padding: 8px; background: #f5f5f5; border-radius: 4px"
-              >
-                Hết hạn: {{ coupon.ngayKetThuc }}
-              </div>
-
-              <!-- Select button -->
-              <a-button
-                type="primary"
-                long
-                @click.stop="selectVoucher(coupon)"
-                style="background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%); border: none"
-              >
-                Chọn Mã
-              </a-button>
             </div>
           </div>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- Delete Product Confirm Modal -->
+    <a-modal
+      v-model:visible="showDeleteProductModal"
+      title="Xóa Sản Phẩm Khỏi Giỏ Hàng"
+      width="500px"
+      @ok="confirmDeleteProduct"
+      @cancel="showDeleteProductModal = false"
+      ok-text="Xóa"
+      cancel-text="Hủy"
+    >
+      <div v-if="productToDelete">
+        <!-- Product Info -->
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e5e5">
+          <img
+            v-if="productToDelete.image"
+            :src="productToDelete.image"
+            style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px"
+            :alt="productToDelete.productName"
+          />
+          <div style="flex: 1">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px">{{ getProductDisplayName(productToDelete) }}</div>
+            <div style="font-size: 12px; color: #999; margin-bottom: 8px">Số lượng: {{ productToDelete.quantity }}</div>
+            <div style="font-size: 14px; font-weight: 600; color: #f5222d">
+              {{ formatCurrency(productToDelete.price * productToDelete.quantity) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Warning -->
+        <div style="text-align: center; padding: 16px; background: #fff7e6; border-radius: 6px; margin-bottom: 16px">
+          <a-result status="warning" title="Xác Nhận Xóa Sản Phẩm?" style="margin: 0; padding: 0" />
+          <p style="margin: 8px 0 0 0; color: #d48806; font-size: 12px">
+            Sản phẩm sẽ được xóa khỏi giỏ hàng và số lượng sẽ được hoàn lại vào kho.
+          </p>
         </div>
       </div>
     </a-modal>
@@ -779,11 +879,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck } from '@arco-design/web-vue/es/icon'
 import {
   getBienTheSanPhamPage,
+  getBienTheSanPhamById,
   getChatLieuOptions,
   getDeGiayOptions,
   getMauSacOptions,
@@ -797,6 +898,7 @@ import {
 import { layDanhSachKhachHang, type KhachHangResponse } from '@/api/khach-hang'
 import { fetchCoupons, type CouponApiModel } from '@/api/discount-management'
 import { Message } from '@arco-design/web-vue'
+import { Html5Qrcode, Html5QrcodeSupportedFormats, Html5QrcodeScannerState } from 'html5-qrcode'
 
 // ==================== TYPES ====================
 interface CartItem {
@@ -863,8 +965,13 @@ const showAddCustomerModal = ref(false)
 const showVoucherModal = ref(false)
 const showDeleteConfirmModal = ref(false)
 const showAddProductConfirmModal = ref(false)
+const showDeleteProductModal = ref(false)
+
+// QR Scanner state
+const qrScannerInstance = ref<Html5Qrcode | null>(null)
 const deleteConfirmOrderIndex = ref<number | null>(null)
 const selectedProductForAdd = ref<BienTheSanPham | null>(null)
+const productToDelete = ref<CartItem | null>(null)
 const productQuantityInput = ref(1)
 const quantityInputRef = ref<any>(null)
 const confirmLoading = ref(false)
@@ -924,8 +1031,93 @@ const selectedCustomer = computed(() => {
 
 const selectedCoupon = computed(() => {
   if (!paymentForm.value?.discountCode) return null
-  return coupons.value.find((c) => c.maPhieuGiamGia === paymentForm.value?.discountCode)
+  const coupon = coupons.value.find((c) => c.maPhieuGiamGia === paymentForm.value?.discountCode)
+  if (coupon) {
+    console.log('🔍 [DEBUG] Selected coupon:', {
+      maPhieuGiamGia: coupon.maPhieuGiamGia,
+      loaiPhieuGiamGia: coupon.loaiPhieuGiamGia,
+      giaTriGiamGia: coupon.giaTriGiamGia,
+      hoaDonToiThieu: coupon.hoaDonToiThieu,
+    })
+  }
+  return coupon
 })
+
+const eligibleVouchersCount = computed(() => {
+  return coupons.value.filter((coupon) => isVoucherEligible(coupon)).length
+})
+
+const hasEligibleVouchers = computed(() => {
+  return eligibleVouchersCount.value > 0
+})
+
+// Function to get voucher status text
+const getVoucherStatus = (coupon: CouponApiModel) => {
+  if (!currentOrder.value || currentOrder.value.items.length === 0) {
+    return 'Chưa có sản phẩm'
+  }
+
+  if (coupon.hoaDonToiThieu && subtotal.value < Number(coupon.hoaDonToiThieu)) {
+    const discountText = !coupon.loaiPhieuGiamGia ? `${Number(coupon.giaTriGiamGia)}%` : formatCurrency(Number(coupon.giaTriGiamGia))
+    return `Cần ${formatCurrency(Number(coupon.hoaDonToiThieu))} cho ${discountText}`
+  }
+
+  if (coupon.soLuongDung !== undefined && coupon.soLuongDung <= 0) {
+    return 'Hết lượt'
+  }
+
+  if (coupon.ngayKetThuc) {
+    const expiryDate = new Date(coupon.ngayKetThuc)
+    const now = new Date()
+    if (expiryDate < now) {
+      return 'Đã hết hạn'
+    }
+  }
+
+  return 'Không đủ điều kiện'
+}
+
+// Function to get discount display text
+const getDiscountDisplay = (coupon: CouponApiModel) => {
+  const discountValue = Number(coupon.giaTriGiamGia) || 0
+
+  if (!coupon.loaiPhieuGiamGia) {
+    // Percentage discount (loaiPhieuGiamGia = false)
+    return `${discountValue}%`
+  } else {
+    // Fixed amount discount (loaiPhieuGiamGia = true)
+    return formatCurrency(discountValue)
+  }
+}
+
+// Computed to check if voucher is eligible for current order
+const isVoucherEligible = (coupon: CouponApiModel) => {
+  // Check if order has items
+  if (!currentOrder.value || currentOrder.value.items.length === 0) {
+    return false
+  }
+
+  // Check minimum order amount
+  if (coupon.hoaDonToiThieu && subtotal.value < Number(coupon.hoaDonToiThieu)) {
+    return false
+  }
+
+  // Check quantity remaining
+  if (coupon.soLuongDung !== undefined && coupon.soLuongDung <= 0) {
+    return false
+  }
+
+  // Check expiry date
+  if (coupon.ngayKetThuc) {
+    const expiryDate = new Date(coupon.ngayKetThuc)
+    const now = new Date()
+    if (expiryDate < now) {
+      return false
+    }
+  }
+
+  return true
+}
 
 const paginatedCartItems = computed(() => {
   if (!currentOrder.value) return []
@@ -933,25 +1125,45 @@ const paginatedCartItems = computed(() => {
   const end = start + cartPagination.value.pageSize
   const items = currentOrder.value.items.slice(start, end)
 
-  // Thêm STT cho mỗi item
-  return items.map((item, index) => ({
-    ...item,
+  // Thêm STT cho mỗi cart item
+  return items.map((cartItem, index) => ({
+    ...cartItem,
     stt: start + index + 1,
   }))
 })
 
 const subtotal = computed(() => {
   if (!currentOrder.value) return 0
-  return currentOrder.value.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  return currentOrder.value.items.reduce((sum, cartItem) => sum + cartItem.price * cartItem.quantity, 0)
 })
 
 const discountAmount = computed(() => {
-  const code = paymentForm.value?.discountCode
-  if (!code) return 0
-  if (code === 'SUMMER10') return subtotal.value * 0.1
-  if (code === 'SUMMER20') return subtotal.value * 0.2
-  if (code === 'VIP50') return 50000
-  return 0
+  if (!selectedCoupon.value || !currentOrder.value) return 0
+
+  const coupon = selectedCoupon.value
+  const discountValue = Number(coupon.giaTriGiamGia) || 0
+  const subtotalValue = subtotal.value
+
+  console.log('🔍 [DEBUG] Calculating discount:', {
+    coupon: coupon.maPhieuGiamGia,
+    loaiPhieuGiamGia: coupon.loaiPhieuGiamGia,
+    giaTriGiamGia: discountValue,
+    subtotal: subtotalValue,
+  })
+
+  // Check if it's percentage discount (loaiPhieuGiamGia = false means percentage)
+  if (!coupon.loaiPhieuGiamGia) {
+    // Percentage discount (loaiPhieuGiamGia = false)
+    const percentage = discountValue / 100 // Convert from 10 to 0.1
+    const discount = subtotalValue * percentage
+    console.log('🔍 [DEBUG] Percentage discount:', { percentage, discount })
+    return discount
+  } else {
+    // Fixed amount discount (loaiPhieuGiamGia = true)
+    const discount = Math.min(discountValue, subtotalValue) // Don't exceed subtotal
+    console.log('🔍 [DEBUG] Fixed amount discount:', { discountValue, subtotalValue, discount })
+    return discount
+  }
 })
 
 const finalPrice = computed(() => {
@@ -959,64 +1171,81 @@ const finalPrice = computed(() => {
 })
 
 const change = computed(() => {
-  return Math.max(0, (paymentForm.value?.cashReceived || 0) - finalPrice.value)
+  return (paymentForm.value?.cashReceived || 0) - finalPrice.value
+})
+
+const paymentMethod = computed({
+  get: () => paymentForm.value.method,
+  set: (value: 'cash' | 'transfer' | 'card') => {
+    paymentForm.value.method = value
+  },
 })
 
 const canConfirmOrder = computed(() => {
-  return currentOrder.value?.items.length > 0 && finalPrice.value > 0
+  if (!currentOrder.value?.items.length || finalPrice.value <= 0) {
+    return false
+  }
+
+  // Nếu thanh toán bằng tiền mặt, cần đủ tiền
+  if (paymentMethod === 'cash') {
+    return (paymentForm.value.cashReceived || 0) >= finalPrice.value
+  }
+
+  // Các phương thức khác không cần kiểm tra tiền
+  return true
 })
 
 const insufficientStockItems = computed(() => {
   if (!currentOrder.value) return []
   return currentOrder.value.items
-    .map((item) => {
-      const product = allProductVariants.value.find((p) => p.id === parseInt(item.productId))
+    .map((cartItem) => {
+      const product = allProductVariants.value.find((p) => p.id === parseInt(cartItem.productId))
       const stock = product?.soLuong || 0
       if (stock < 0) {
         return {
-          id: item.id,
-          productName: item.productName,
-          requiredQty: item.quantity,
+          id: cartItem.id,
+          productName: cartItem.productName,
+          requiredQty: cartItem.quantity,
           currentStock: Math.max(0, stock), // Hiển thị 0 nếu âm
           shortageQty: Math.abs(stock), // Số lượng còn thiếu
         }
       }
       return null
     })
-    .filter((item) => item !== null)
+    .filter((stockItem) => stockItem !== null)
 })
 
 const overStockItems = computed(() => {
   if (!currentOrder.value) return []
   return currentOrder.value.items
-    .map((item) => {
-      const product = allProductVariants.value.find((p) => p.id === parseInt(item.productId))
+    .map((cartItem) => {
+      const product = allProductVariants.value.find((p) => p.id === parseInt(cartItem.productId))
       const stock = product?.soLuong || 0
       // Nếu item quantity > 0 và stock < 0, tức là vượt quá
-      if (item.quantity > 0 && stock < 0) {
+      if (cartItem.quantity > 0 && stock < 0) {
         return {
-          id: item.id,
-          productName: item.productName,
-          requiredQty: item.quantity,
+          id: cartItem.id,
+          productName: cartItem.productName,
+          requiredQty: cartItem.quantity,
           currentStock: Math.max(0, stock),
           shortageQty: Math.abs(stock),
         }
       }
       return null
     })
-    .filter((item) => item !== null)
+    .filter((stockItem) => stockItem !== null)
 })
 
 const totalRevenue = computed(() => {
   return orders.value.reduce((sum, order) => {
-    const orderSubtotal = order.items.reduce((s, item) => s + item.price * item.quantity, 0)
+    const orderSubtotal = order.items.reduce((subtotal, item) => subtotal + item.price * item.quantity, 0)
     const discount = paymentForm.value?.discountCode === 'SUMMER10' ? orderSubtotal * 0.1 : 0
     return sum + (orderSubtotal - discount)
   }, 0)
 })
 
 const totalItemsSold = computed(() => {
-  return orders.value.reduce((sum, order) => sum + order.items.reduce((s, item) => s + item.quantity, 0), 0)
+  return orders.value.reduce((sum, order) => sum + order.items.reduce((subtotal, item) => subtotal + item.quantity, 0), 0)
 })
 
 const filteredProductVariants = computed(() => {
@@ -1073,34 +1302,34 @@ const filteredProductVariants = computed(() => {
 })
 
 const productMaterialOptions = computed(() => {
-  const options = filterOptionsData.value.chatLieu.map((item) => ({ label: item.tenChatLieu, value: item.tenChatLieu }))
+  const options = filterOptionsData.value.chatLieu.map((material) => ({ label: material.tenChatLieu, value: material.tenChatLieu }))
   return [{ label: 'Tất cả', value: null }, ...options]
 })
 
 const productSoleOptions = computed(() => {
-  const options = filterOptionsData.value.deGiay.map((item) => ({ label: item.tenDeGiay, value: item.tenDeGiay }))
+  const options = filterOptionsData.value.deGiay.map((sole) => ({ label: sole.tenDeGiay, value: sole.tenDeGiay }))
   return [{ label: 'Tất cả', value: null }, ...options]
 })
 
 const productColorOptions = computed(() => {
-  const options = filterOptionsData.value.mauSac.map((item) => ({ label: item.tenMauSac, value: item.tenMauSac }))
+  const options = filterOptionsData.value.mauSac.map((color) => ({ label: color.tenMauSac, value: color.tenMauSac }))
   return [{ label: 'Tất cả', value: null }, ...options]
 })
 
 const productSizeOptions = computed(() => {
-  const options = filterOptionsData.value.kichThuoc.map((item) => ({ label: item.tenKichThuoc, value: item.tenKichThuoc }))
+  const options = filterOptionsData.value.kichThuoc.map((size) => ({ label: size.tenKichThuoc, value: size.tenKichThuoc }))
   return [{ label: 'Tất cả', value: null }, ...options]
 })
 
 // Lấy Nhà Sản Xuất và Xuất xứ từ allProductVariants
 const productManufacturerOptions = computed(() => {
-  const manufacturers = [...new Set(allProductVariants.value.map((p) => p.tenNhaSanXuat).filter(Boolean))]
+  const manufacturers = [...new Set(allProductVariants.value.map((product) => product.tenNhaSanXuat).filter(Boolean))]
   const options = manufacturers.map((manufacturer) => ({ label: manufacturer, value: manufacturer }))
   return [{ label: 'Tất cả', value: null }, ...options]
 })
 
 const productOriginOptions = computed(() => {
-  const origins = [...new Set(allProductVariants.value.map((p) => p.tenXuatXu).filter(Boolean))]
+  const origins = [...new Set(allProductVariants.value.map((product) => product.tenXuatXu).filter(Boolean))]
   const options = origins.map((origin) => ({ label: origin, value: origin }))
   return [{ label: 'Tất cả', value: null }, ...options]
 })
@@ -1196,12 +1425,62 @@ const showDeleteConfirm = (index: number) => {
   showDeleteConfirmModal.value = true
 }
 
-const confirmDeleteOrder = () => {
+const showDeleteProductConfirm = (product: CartItem) => {
+  productToDelete.value = product
+  showDeleteProductModal.value = true
+}
+
+const confirmDeleteProduct = async () => {
+  if (productToDelete.value) {
+    try {
+      const itemId = productToDelete.value.id
+      await removeFromCart(itemId)
+      showDeleteProductModal.value = false
+      productToDelete.value = null
+    } catch (error) {
+      console.error('❌ Lỗi khi xóa sản phẩm:', error)
+      Message.error('Có lỗi xảy ra khi xóa sản phẩm')
+    }
+  }
+}
+
+const confirmDeleteOrder = async () => {
   if (deleteConfirmOrderIndex.value !== null) {
-    deleteOrderByIndex(deleteConfirmOrderIndex.value)
-    showDeleteConfirmModal.value = false
-    deleteConfirmOrderIndex.value = null
-    Message.success('Đơn hàng đã được xoá')
+    try {
+      const orderIndex = deleteConfirmOrderIndex.value
+      const orderToDelete = orders.value[orderIndex]
+
+      if (orderToDelete && orderToDelete.items.length > 0) {
+        // Hoàn lại tất cả số lượng vào kho trước khi xóa đơn hàng
+        orderToDelete.items.forEach((item) => {
+          try {
+            const productId = parseInt(item.productId)
+            if (isNaN(productId)) {
+              return
+            }
+
+            const productInVariants = allProductVariants.value.find((p) => p.id === productId)
+            if (productInVariants) {
+              productInVariants.soLuong = (productInVariants.soLuong || 0) + item.quantity
+            }
+
+            // Cập nhật số lượng đã bán
+            soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
+          } catch (itemError) {
+            console.warn(`⚠️ Lỗi khi hoàn stock cho sản phẩm ${item.productName}:`, itemError)
+          }
+        })
+      }
+
+      // Xóa đơn hàng
+      deleteOrderByIndex(orderIndex)
+      showDeleteConfirmModal.value = false
+      deleteConfirmOrderIndex.value = null
+      Message.success('Đơn hàng đã được xoá')
+    } catch (error) {
+      console.error('❌ Lỗi khi xóa đơn hàng:', error)
+      Message.error('Có lỗi xảy ra khi xóa đơn hàng')
+    }
   }
 }
 
@@ -1233,11 +1512,6 @@ const handleQuantityChange = (val: number) => {
 }
 
 const confirmAddProduct = () => {
-  console.log('🔍 [DEBUG] confirmAddProduct - Bắt đầu thêm sản phẩm:', {
-    productName: selectedProductForAdd.value?.tenSanPham,
-    quantity: productQuantityInput.value,
-  })
-
   try {
     if (!selectedProductForAdd.value || !currentOrder.value) {
       console.error('❌ [DEBUG] Thiếu dữ liệu sản phẩm hoặc đơn hàng')
@@ -1246,8 +1520,6 @@ const confirmAddProduct = () => {
 
     const quantity = productQuantityInput.value
     const stock = selectedProductForAdd.value.soLuong || 0
-    console.log('🔍 [DEBUG] Kiểm tra tồn kho:', { requested: quantity, available: stock })
-
     if (!quantity || quantity < 1) {
       Message.error('Số lượng phải lớn hơn 0')
       return
@@ -1270,15 +1542,8 @@ const confirmAddProduct = () => {
 
     // Kiểm tra sản phẩm đã tồn tại
     const existingItem = currentOrder.value.items.find((item) => item.productId === selectedProductForAdd.value?.id?.toString())
-    console.log('🔍 [DEBUG] Kiểm tra sản phẩm tồn tại:', !!existingItem)
-
     if (existingItem) {
       const newTotalQuantity = existingItem.quantity + quantity
-      console.log('🔍 [DEBUG] Cập nhật sản phẩm hiện có:', {
-        currentQty: existingItem.quantity,
-        addingQty: quantity,
-        newTotal: newTotalQuantity,
-      })
       try {
         if (stock <= 0) {
           console.error('❌ [DEBUG] Sản phẩm hết hàng khi cập nhật:', selectedProductForAdd.value.tenSanPham)
@@ -1294,11 +1559,8 @@ const confirmAddProduct = () => {
       }
 
       existingItem.quantity = newTotalQuantity
-      console.log('✅ [DEBUG] Cập nhật số lượng thành công:', newTotalQuantity)
       Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${existingItem.quantity}`)
     } else {
-      console.log('🔍 [DEBUG] Thêm sản phẩm mới vào giỏ')
-
       const item: CartItem = {
         id: `${Date.now()}_${Math.random()}`,
         productId: selectedProductForAdd.value.id?.toString() || '',
@@ -1315,7 +1577,6 @@ const confirmAddProduct = () => {
         tenChatLieu: selectedProductForAdd.value.tenChatLieu || '',
       }
       currentOrder.value.items.push(item)
-      console.log('✅ [DEBUG] Thêm sản phẩm mới thành công:', { cartItemsCount: currentOrder.value.items.length })
       Message.success('Thêm sản phẩm thành công')
     }
 
@@ -1331,7 +1592,6 @@ const confirmAddProduct = () => {
     if (productInVariants) {
       const oldStock = productInVariants.soLuong || 0
       productInVariants.soLuong = oldStock - quantity
-      console.log('✅ [DEBUG] Cập nhật tồn kho:', { oldStock, newStock: productInVariants.soLuong, subtracted: quantity })
     }
 
     soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + quantity
@@ -1340,8 +1600,6 @@ const confirmAddProduct = () => {
     showProductModal.value = false
     selectedProductForAdd.value = null
     productQuantityInput.value = 1
-
-    console.log('🎉 [DEBUG] confirmAddProduct - Hoàn thành thành công')
   } catch (error) {
     console.error('❌ [DEBUG] Lỗi trong confirmAddProduct:', error.message)
     Message.error('Có lỗi xảy ra khi thêm sản phẩm. Vui lòng thử lại.')
@@ -1354,8 +1612,6 @@ const handleOrderChange = (key: string) => {
 }
 
 const updateQuantity = (itemId: string, quantity: number) => {
-  console.log('🔍 [DEBUG] updateQuantity - Cập nhật số lượng từ input:', { itemId, newQuantity: quantity })
-
   let item: CartItem | undefined
   let oldQuantity = 1
 
@@ -1375,16 +1631,7 @@ const updateQuantity = (itemId: string, quantity: number) => {
     const newQuantity = Math.max(1, quantity || 1)
     const diff = newQuantity - oldQuantity
 
-    console.log('🔍 [DEBUG] Chi tiết cập nhật:', {
-      productName: item.productName,
-      oldQuantity,
-      newQuantity,
-      diff,
-      action: diff > 0 ? 'tăng' : diff < 0 ? 'giảm' : 'không đổi',
-    })
-
     if (diff === 0) {
-      console.log('ℹ️ [DEBUG] Số lượng không thay đổi')
       return
     }
 
@@ -1409,14 +1656,6 @@ const updateQuantity = (itemId: string, quantity: number) => {
       const currentStockInWarehouse = productInVariants.soLuong || 0
       const totalAvailable = currentStockInWarehouse + oldQuantity
 
-      console.log('🔍 [DEBUG] Tính toán tồn kho:', {
-        currentStockInWarehouse,
-        oldQuantity,
-        totalAvailable,
-        diff,
-        newRequestedTotal: oldQuantity + diff,
-      })
-
       if (totalAvailable <= 0 && diff > 0) {
         console.error('❌ [DEBUG] Sản phẩm hết hàng:', item.productName)
         throw new Error(`Sản phẩm "${item.productName}" đã hết hàng. Không thể tăng số lượng!`)
@@ -1434,39 +1673,28 @@ const updateQuantity = (itemId: string, quantity: number) => {
           throw new Error(`Tồn kho không đủ! Yêu cầu: ${newTotalInCart} cái | Còn lại: ${totalAvailable} cái`)
         }
       }
-      console.log('✅ [DEBUG] Kiểm tra tồn kho - PASS')
     } catch (stockError) {
       Message.error(`❌ ${stockError.message}`)
       // Reset quantity và force re-render table
       item.quantity = oldQuantity
       // Force re-render table để đồng bộ UI
       cartTableKey.value++
-      console.log('🔄 [DEBUG] Force re-render table, cartTableKey:', cartTableKey.value)
       return
     }
-
     // Cập nhật số lượng trong kho
     productInVariants.soLuong = (productInVariants.soLuong || 0) - diff
-
     // Track số lượng đã bán
     soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + diff
-
     // Cập nhật quantity cuối cùng
     item.quantity = newQuantity
-
-    console.log('✅ [DEBUG] updateQuantity - Hoàn thành cập nhật:', {
-      productName: item.productName,
-      finalQuantity: newQuantity,
-    })
   } catch (error) {
-    console.error('❌ [DEBUG] Lỗi trong updateQuantity:', error.message)
+    console.error('❌ Lỗi trong updateQuantity:', error.message)
     Message.error('Có lỗi xảy ra khi cập nhật số lượng. Vui lòng thử lại.')
     // Reset lại giá trị input về số lượng cũ khi có lỗi hệ thống
     if (item) {
       item.quantity = oldQuantity
       // Force re-render table để đồng bộ UI
       cartTableKey.value++
-      console.log('🔄 [DEBUG] Force re-render table do lỗi hệ thống, cartTableKey:', cartTableKey.value)
     }
   }
 }
@@ -1512,7 +1740,7 @@ const removeFromCart = (itemId: string) => {
     soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
 
     currentOrder.value.items.splice(index, 1)
-    Message.success('Đã xóa sản phẩm khỏi giỏ hàng')
+    // Message success sẽ được hiển thị trong modal confirm
   } catch (error) {
     console.error('❌ [DEBUG] Lỗi trong removeFromCart:', error.message)
     Message.error('Có lỗi xảy ra khi xóa sản phẩm. Vui lòng thử lại.')
@@ -1542,21 +1770,16 @@ const clearCart = () => {
         // Cập nhật số lượng đã bán
         soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
       } catch (itemError) {
-        console.warn(`⚠️ [DEBUG] Lỗi khi xử lý sản phẩm ${item.productName}:`, itemError)
+        console.warn(`⚠️ Lỗi khi xử lý sản phẩm ${item.productName}:`, itemError)
       }
     })
 
     currentOrder.value.items = []
-    console.log('✅ [DEBUG] Đã xóa tất cả sản phẩm khỏi giỏ hàng:', {
-      clearedItemsCount: itemsCount,
-      remainingItemsCount: currentOrder.value.items.length,
-    })
 
     Message.success('Đã xóa tất cả sản phẩm khỏi giỏ hàng')
-    console.log('🎉 [DEBUG] clearCart - Hoàn thành thành công')
   } catch (error) {
-    console.error('❌ [DEBUG] Lỗi trong clearCart:', error)
-    console.error('❌ [DEBUG] Stack trace:', error.stack)
+    console.error('❌ Lỗi trong clearCart:', error)
+    console.error('❌ Stack trace:', error.stack)
     Message.error('Có lỗi xảy ra khi xóa giỏ hàng. Vui lòng thử lại.')
   }
 }
@@ -1795,9 +2018,302 @@ const handleProductModalCancel = () => {
 }
 
 const selectVoucher = (coupon: CouponApiModel) => {
+  // Only allow selection if voucher is eligible
+  if (!isVoucherEligible(coupon)) {
+    Message.warning('Voucher này không đủ điều kiện áp dụng cho đơn hàng hiện tại')
+    return
+  }
+
   paymentForm.value.discountCode = coupon.maPhieuGiamGia || coupon.id.toString()
   showVoucherModal.value = false
+  Message.success(`Đã áp dụng voucher: ${coupon.tenPhieuGiamGia}`)
 }
+
+const selectPaymentMethod = (method: 'cash' | 'transfer' | 'card') => {
+  paymentMethod.value = method
+}
+
+const clearVoucher = () => {
+  paymentForm.value.discountCode = null
+  Message.info('Đã xóa voucher')
+}
+
+// ==================== QR SCANNER METHODS ====================
+
+const initQRScanner = async () => {
+  try {
+    // Clean up previous instance if exists
+    if (qrScannerInstance.value) {
+      try {
+        await qrScannerInstance.value.stop()
+        await qrScannerInstance.value.clear()
+      } catch (cleanupError) {
+        console.warn('Cleanup error:', cleanupError)
+      }
+      qrScannerInstance.value = null
+    }
+
+    // Check if DOM element exists
+    const qrReaderElement = document.getElementById('qr-reader')
+    if (!qrReaderElement) {
+      console.error('❌ [DEBUG] QR reader element not found in DOM')
+      throw new Error('QR reader element not found')
+    }
+
+    // Initialize scanner
+    const html5QrCode = new Html5Qrcode('qr-reader')
+    qrScannerInstance.value = html5QrCode
+
+    // Try environment camera first (back camera) with enhanced detection
+    try {
+      await html5QrCode.start(
+        { facingMode: 'environment' }, // Try back camera first
+        {
+          fps: 30, // Increased FPS for faster scanning
+          qrbox: { width: 400, height: 400 }, // Large scan area for better detection
+          aspectRatio: 1,
+          formats: Html5QrcodeSupportedFormats.QR_CODE, // Focus on QR codes only
+          supportedScanTypes: ['qr_code'], // Only QR codes for better performance
+          showTorchButtonIfSupported: true,
+          showZoomSliderIfSupported: true,
+          defaultZoomValueIfSupported: 1.5, // Better zoom for QR detection
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true, // Use native barcode detector if available
+          },
+          // Enhanced detection settings
+          showScanHighlighting: true,
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+        },
+        (decodedText: string) => {
+          // When QR code is successfully decoded
+          handleQRScanSuccess(decodedText)
+        },
+        (errorMessage: string) => {
+          // Optional: Handle scan errors silently
+          console.debug('QR Scan error:', errorMessage)
+        }
+      )
+    } catch (envError) {
+      console.warn('⚠️ [DEBUG] Environment camera failed, trying any camera:', envError)
+
+      // Fallback to any available camera with enhanced detection
+      await html5QrCode.start(
+        { facingMode: 'user' }, // Front camera or any available camera
+        {
+          fps: 30, // Increased FPS for faster scanning
+          qrbox: { width: 400, height: 400 }, // Large scan area for better detection
+          aspectRatio: 1,
+          formats: Html5QrcodeSupportedFormats.QR_CODE, // Focus on QR codes only
+          supportedScanTypes: ['qr_code'], // Only QR codes for better performance
+          showTorchButtonIfSupported: true,
+          showZoomSliderIfSupported: true,
+          defaultZoomValueIfSupported: 1.5, // Better zoom for QR detection
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true, // Use native barcode detector if available
+          },
+          // Enhanced detection settings
+          showScanHighlighting: true,
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+        },
+        (decodedText: string) => {
+          // When QR code is successfully decoded
+          handleQRScanSuccess(decodedText)
+        },
+        (errorMessage: string) => {
+          // Optional: Handle scan errors silently
+          console.debug('QR Scan error:', errorMessage)
+        }
+      )
+    }
+  } catch (error) {
+    console.error('❌ [DEBUG] Error initializing QR scanner:', error)
+    console.error('❌ [DEBUG] Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    })
+
+    // More specific error handling
+    if (error.name === 'NotAllowedError') {
+      Message.error('Quyền truy cập camera bị từ chối. Vui lòng cho phép truy cập camera trong trình duyệt.')
+    } else if (error.name === 'NotFoundError') {
+      Message.error('Không tìm thấy camera trên thiết bị. Vui lòng kết nối camera và thử lại.')
+    } else if (error.name === 'NotReadableError') {
+      Message.error('Camera đang được sử dụng bởi ứng dụng khác. Vui lòng đóng ứng dụng khác và thử lại.')
+    } else if (error.name === 'OverconstrainedError') {
+      Message.error('Camera không hỗ trợ cấu hình yêu cầu. Vui lòng thử lại.')
+    } else {
+      Message.error('Không thể khởi tạo camera. Vui lòng kiểm tra quyền truy cập camera và thử lại.')
+    }
+
+    showQRScanner.value = false
+  }
+}
+
+const handleQRScanSuccess = async (decodedText: string) => {
+  try {
+    // Stop scanner immediately after successful scan
+    if (qrScannerInstance.value) {
+      try {
+        await qrScannerInstance.value.stop()
+      } catch (stopError) {}
+    }
+    // Find product in allProductVariants that has matching qrcode
+    const matchedProduct = allProductVariants.value.find((product) => {
+      if (product.qrcode) {
+        // Multiple matching strategies:
+        // 1. Exact match with QR code URL
+        // 2. QR code contains decoded text or vice versa
+        // 3. Match with product ID
+        // 4. Match with product SKU
+        const qrMatch =
+          decodedText === product.qrcode ||
+          product.qrcode === decodedText ||
+          decodedText.includes(product.qrcode) ||
+          product.qrcode.includes(decodedText) ||
+          decodedText === product.id?.toString() ||
+          decodedText === product.maChiTietSanPham
+        return qrMatch
+      }
+      return false
+    })
+
+    if (!matchedProduct) {
+      console.error('❌ [DEBUG] No product found with QR code:', decodedText)
+      console.error(
+        '❌ [DEBUG] Available QR codes in products:',
+        allProductVariants.value.filter((p) => p.qrcode).map((p) => ({ id: p.id, qrcode: p.qrcode, maChiTietSanPham: p.maChiTietSanPham }))
+      )
+
+      // Fallback: try to parse as ID
+      const fallbackId = parseInt(decodedText.trim(), 10)
+      if (!isNaN(fallbackId) && fallbackId > 0) {
+        const fallbackProduct = allProductVariants.value.find((p) => p.id === fallbackId)
+        if (fallbackProduct) {
+          await addProductToCart(fallbackProduct, 1)
+          await closeQRScanner()
+          Message.success(`Đã thêm sản phẩm "${fallbackProduct.tenSanPham}" vào giỏ hàng`)
+          return
+        }
+      }
+
+      Message.error(`Không tìm thấy sản phẩm với mã QR: "${decodedText}". Vui lòng thử lại.`)
+      return
+    }
+
+    // Check stock
+    if (matchedProduct.soLuong <= 0) {
+      Message.error(`Sản phẩm "${matchedProduct.tenSanPham}" đã hết hàng`)
+      return
+    }
+
+    // Add to cart with quantity 1
+    await addProductToCart(matchedProduct, 1)
+
+    // Close QR scanner after success
+    await closeQRScanner()
+    Message.success(`Đã thêm sản phẩm "${matchedProduct.tenSanPham}" vào giỏ hàng`)
+  } catch (error) {
+    console.error('❌ Error processing QR scan:', error)
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    })
+    Message.error('Có lỗi xảy ra khi xử lý mã QR. Vui lòng thử lại.')
+  }
+}
+
+const addProductToCart = async (product: BienTheSanPham, quantity: number) => {
+  try {
+    if (!currentOrder.value) {
+      throw new Error('Không tìm thấy đơn hàng hiện tại')
+    }
+
+    // Check if already in cart
+    const existingItem = currentOrder.value.items.find((item) => item.productId === product.id?.toString())
+
+    if (existingItem) {
+      // Update quantity if already exists
+      const newQuantity = existingItem.quantity + quantity
+      if (newQuantity > product.soLuong) {
+        throw new Error(`Tổng số lượng (${newQuantity}) vượt quá tồn kho (${product.soLuong})`)
+      }
+      existingItem.quantity = newQuantity
+      Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${newQuantity}`)
+    } else {
+      // Add new item
+      const item: CartItem = {
+        id: `${Date.now()}_${Math.random()}`,
+        productId: product.id?.toString() || '',
+        productName: product.tenSanPham || '',
+        price: product.giaBan || 0,
+        quantity: quantity,
+        image: product.anhSanPham?.[0] || '',
+        tenChiTietSanPham: product.tenChiTietSanPham || '',
+        tenMauSac: product.tenMauSac || '',
+        maMau: product.maMau || '',
+        tenKichThuoc: product.tenKichThuoc || '',
+        tenDeGiay: product.tenDeGiay || '',
+        tenChatLieu: product.tenChatLieu || '',
+      }
+      currentOrder.value.items.push(item)
+      Message.success('Thêm sản phẩm vào giỏ hàng thành công')
+    }
+
+    // Update stock
+    const productInVariants = allProductVariants.value.find((p) => p.id === product.id)
+    if (productInVariants) {
+      productInVariants.soLuong = Math.max(0, productInVariants.soLuong - quantity)
+    }
+
+    // Track sold quantity
+    soldQuantitiesByProductId.value[product.id] = (soldQuantitiesByProductId.value[product.id] || 0) + quantity
+  } catch (error) {
+    console.error('Error adding product to cart:', error)
+    throw error
+  }
+}
+
+const closeQRScanner = async () => {
+  // Clean up scanner instance
+  if (qrScannerInstance.value) {
+    try {
+      await qrScannerInstance.value.stop()
+      await qrScannerInstance.value.clear()
+    } catch (cleanupError) {
+      console.warn('Cleanup error:', cleanupError)
+    }
+    qrScannerInstance.value = null
+  }
+
+  showQRScanner.value = false
+}
+
+// Watch for modal visibility
+watch([showQRScanner, showDeleteProductModal], async ([qrOpen, deleteProductOpen]) => {
+  if (qrOpen) {
+    // QR Modal opened, ensure products are loaded first
+    if (allProductVariants.value.length === 0) {
+      await loadAllProducts()
+    }
+
+    // Then start camera
+    setTimeout(() => {
+      requestCameraPermission()
+    }, 100)
+  } else if (!qrOpen) {
+    // QR Modal closed, cleanup scanner
+    await closeQRScanner()
+  }
+
+  if (!deleteProductOpen) {
+    // Reset delete product state when modal closes
+    productToDelete.value = null
+  }
+})
 
 onMounted(() => {
   // Initialize with one empty order
@@ -1954,6 +2470,185 @@ onMounted(() => {
   text-align: right;
 }
 
+/* Payment Method Button Styling */
+.payment-method-btn {
+  position: relative;
+  overflow: hidden;
+
+  &:not(.payment-method-active) {
+    border: 2px solid #f0f0f0 !important;
+    background: #fafafa !important;
+    color: #666 !important;
+
+    &:hover {
+      border-color: #40a9ff !important;
+      background: #e6f7ff !important;
+      color: #1890ff !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
+    }
+  }
+
+  &.payment-method-active {
+    border: 2px solid #1890ff !important;
+    box-shadow: 0 4px 16px rgba(24, 144, 255, 0.25);
+    transform: translateY(-2px);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #1890ff, #40a9ff);
+      animation: paymentActiveGlow 2s ease-in-out infinite alternate;
+    }
+
+    &::after {
+      content: '✓';
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 12px;
+      color: #1890ff;
+      font-weight: bold;
+      animation: paymentCheckPulse 1.5s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes paymentActiveGlow {
+  0% {
+    opacity: 0.8;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1.02);
+  }
+}
+
+@keyframes paymentCheckPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Cash Input Styling */
+.cash-input-container {
+  animation: cashInputSlideIn 0.3s ease-out;
+
+  :deep(.arco-input-number) {
+    .arco-input {
+      border-radius: 8px;
+      border: 2px solid #e6f7ff;
+      background: #fafaff;
+      transition: all 0.2s ease;
+
+      &:focus,
+      &:hover {
+        border-color: #1890ff;
+        box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+      }
+    }
+  }
+}
+
+@keyframes cashInputSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cash-feedback {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  animation: cashFeedbackFadeIn 0.3s ease-out;
+}
+
+@keyframes cashFeedbackFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.cash-change-positive {
+  background: linear-gradient(135deg, #f6ffed, #b7eb8f);
+  border: 1px solid #b7eb8f;
+  color: #52c41a;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: cashPositivePulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes cashPositivePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.4);
+  }
+  100% {
+    box-shadow: 0 2px 8px 0 rgba(82, 196, 26, 0.4);
+  }
+}
+
+.cash-change-negative {
+  background: linear-gradient(135deg, #fff2f0, #ffccc7);
+  border: 1px solid #ffccc7;
+  color: #ff4d4f;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: cashNegativeShake 0.5s ease-in-out;
+}
+
+@keyframes cashNegativeShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+.cash-icon {
+  font-size: 16px;
+}
+
+.cash-text {
+  flex: 1;
+
+  strong {
+    font-size: 16px;
+    font-weight: 700;
+  }
+}
+
 @media (max-width: 768px) {
   .pos-system {
     padding: 8px;
@@ -1970,5 +2665,16 @@ onMounted(() => {
       font-size: 12px;
     }
   }
+}
+
+/* Voucher disabled styling */
+.voucher-disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+  background: #f5f5f5 !important;
+}
+
+.voucher-disabled:hover {
+  background: #f5f5f5 !important;
 }
 </style>

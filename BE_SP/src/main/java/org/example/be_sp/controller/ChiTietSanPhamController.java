@@ -1,6 +1,7 @@
 package org.example.be_sp.controller;
 
-import com.google.zxing.WriterException;
+import java.io.IOException;
+
 import org.example.be_sp.model.request.ChiTietSanPhamRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.ChiTietSanPhamService;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
+import com.google.zxing.WriterException;
 
 @RestController
 @RequestMapping("/api/chi-tiet-san-pham-management")

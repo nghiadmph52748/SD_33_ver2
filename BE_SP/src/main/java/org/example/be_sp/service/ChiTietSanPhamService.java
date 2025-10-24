@@ -1,12 +1,20 @@
 package org.example.be_sp.service;
 
-import com.google.zxing.WriterException;
+import java.io.IOException;
+import java.util.List;
+
 import org.example.be_sp.entity.ChiTietSanPham;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.ChiTietSanPhamRequest;
 import org.example.be_sp.model.response.ChiTietSanPhamFullResponse;
 import org.example.be_sp.model.response.PagingResponse;
-import org.example.be_sp.repository.*;
+import org.example.be_sp.repository.ChatLieuRepository;
+import org.example.be_sp.repository.ChiTietSanPhamRepository;
+import org.example.be_sp.repository.DeGiayRepository;
+import org.example.be_sp.repository.KichThuocRepository;
+import org.example.be_sp.repository.MauSacRepository;
+import org.example.be_sp.repository.SanPhamRepository;
+import org.example.be_sp.repository.TrongLuongRepository;
 import org.example.be_sp.service.upload.UploadImageToCloudinary;
 import org.example.be_sp.util.MapperUtils;
 import org.example.be_sp.util.QRGeneration;
@@ -14,8 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.util.List;
+import com.google.zxing.WriterException;
 
 @Service
 public class ChiTietSanPhamService {
