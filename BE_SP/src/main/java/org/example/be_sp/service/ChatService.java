@@ -133,7 +133,6 @@ public class ChatService {
                     readNotification.put("readAt", LocalDateTime.now().toString());
                     
                     String senderUsername = sender.getTenTaiKhoan();
-                    System.out.println("✅ Sending read notification to: " + senderUsername);
                     
                     messagingTemplate.convertAndSendToUser(
                         senderUsername,

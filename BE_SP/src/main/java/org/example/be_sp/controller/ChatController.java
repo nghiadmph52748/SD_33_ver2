@@ -42,9 +42,7 @@ public class ChatController {
     public ResponseObject<?> getConversations() {
         try {
             Integer userId = getCurrentUserId();
-            System.out.println("[DEBUG] Getting conversations for userId: " + userId);
             var conversations = chatService.getConversationsByUserId(userId);
-            System.out.println("[DEBUG] Found " + conversations.size() + " conversations");
             return new ResponseObject<>(true, 
                 conversations, 
                 "Lấy danh sách cuộc trò chuyện thành công");
@@ -80,9 +78,7 @@ public class ChatController {
     public ResponseObject<?> sendMessage(@Valid @RequestBody SendMessageRequest request) {
         try {
             Integer senderId = getCurrentUserId();
-            System.out.println("[DEBUG] Sending message from userId: " + senderId + " to userId: " + request.getReceiverId());
             var result = chatService.sendMessage(senderId, request);
-            System.out.println("[DEBUG] Message sent successfully");
             return new ResponseObject<>(true, 
                 result, 
                 "Gửi tin nhắn thành công");
@@ -99,14 +95,10 @@ public class ChatController {
     public ResponseObject<?> markAsRead(@PathVariable Integer senderId) {
         try {
             Integer receiverId = getCurrentUserId();
-            System.out.println("[DEBUG] 👁️ Marking messages as read: sender=" + senderId + ", receiver=" + receiverId);
             chatService.markMessagesAsRead(senderId, receiverId);
-            System.out.println("[DEBUG] ✅ Mark as read completed");
             return new ResponseObject<>(true, null, 
                 "Đánh dấu tin nhắn đã đọc thành công");
         } catch (Exception e) {
-            System.err.println("[DEBUG] ❌ Mark as read error: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseObject<>(false, null, 
                 "Lỗi khi đánh dấu tin nhắn: " + e.getMessage());
         }

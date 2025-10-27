@@ -70,8 +70,7 @@ public class ChatWebSocketController {
             );
             
         } catch (Exception e) {
-            // Log error và gửi thông báo lỗi cho sender
-            System.err.println("Lỗi khi gửi tin nhắn qua WebSocket: " + e.getMessage());
+            // Silently handle error
         }
     }
 
@@ -89,7 +88,7 @@ public class ChatWebSocketController {
                 notification
             );
         } catch (Exception e) {
-            System.err.println("Lỗi khi gửi thông báo typing: " + e.getMessage());
+            // Silently handle error
         }
     }
 
