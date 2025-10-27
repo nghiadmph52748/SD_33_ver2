@@ -27,6 +27,18 @@ const CHAT: AppRouteRecordRaw = {
         activeMenu: 'chat',
       },
     },
+    {
+      path: ':conversationId',
+      name: 'ChatConversation',
+      component: () => import('@/views/chat/index.vue'),
+      meta: {
+        locale: 'menu.chat',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+        activeMenu: 'chat',
+      },
+    },
   ],
 }
 

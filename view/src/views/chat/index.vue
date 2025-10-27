@@ -30,13 +30,16 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import useChatStore from '@/store/modules/chat'
 import ConversationList from '@/components/chat/ConversationList.vue'
 import ChatWindow from '@/components/chat/ChatWindow.vue'
 import { IconMessage } from '@arco-design/web-vue/es/icon'
 
 const chatStore = useChatStore()
+const route = useRoute()
+const router = useRouter()
 
 onMounted(async () => {
   // Kết nối WebSocket
@@ -49,7 +52,35 @@ onMounted(async () => {
 
   // Lấy tổng số tin chưa đọc
   await chatStore.fetchUnreadCount()
+
+  // Nếu có conversationId trong route, set active conversation
+  const conversationId = route.params.conversationId
+  if (conversationId) {
+    const id = Number(conversationId)
+    if (!Number.isNaN(id)) {
+      chatStore.setActiveConversation(id)
+    }
+  }
 })
+
+// Watch active conversation và sync với URL
+watch(
+  () => chatStore.activeConversationId,
+  (newId) => {
+    if (newId) {
+      // Update URL nếu khác với conversationId hiện tại
+      const currentId = route.params.conversationId
+      if (!currentId || Number(currentId) !== newId) {
+        router.replace({ name: 'ChatConversation', params: { conversationId: newId } })
+      }
+    } else {
+      // Về trang chat index nếu không có active conversation
+      if (route.name !== 'ChatIndex') {
+        router.replace({ name: 'ChatIndex' })
+      }
+    }
+  }
+)
 
 onBeforeUnmount(() => {
   // Giữ WebSocket connection khi user navigate away
