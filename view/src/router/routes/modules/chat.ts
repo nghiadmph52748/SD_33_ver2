@@ -5,16 +5,18 @@ const CHAT: AppRouteRecordRaw = {
   path: '/chat',
   name: 'chat',
   component: DEFAULT_LAYOUT,
+  redirect: { name: 'ChatIndex' },
   meta: {
     locale: 'menu.chat',
     requiresAuth: true,
-    icon: 'icon-message',
-    order: 10,
+    icon: 'IconMessage',
+    order: 7,
     roles: ['*'],
+    hideChildrenInMenu: true,
   },
   children: [
     {
-      path: '',
+      path: 'index',
       name: 'ChatIndex',
       component: () => import('@/views/chat/index.vue'),
       meta: {
@@ -22,6 +24,7 @@ const CHAT: AppRouteRecordRaw = {
         requiresAuth: true,
         roles: ['*'],
         hideInMenu: true,
+        activeMenu: 'chat',
       },
     },
   ],
