@@ -6,6 +6,7 @@ export default {
   'discount.common.selectStartDate': 'Chọn ngày bắt đầu',
   'discount.common.selectEndDate': 'Chọn ngày kết thúc',
   'discount.common.reset': 'Đặt lại',
+  'discount.common.create': 'Tạo',
   'discount.common.update': 'Cập nhật',
   'discount.common.cancel': 'Hủy',
   'discount.common.confirm': 'Xác nhận',

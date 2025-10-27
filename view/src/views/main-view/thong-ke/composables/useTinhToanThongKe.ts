@@ -172,7 +172,11 @@ export function useTinhToanThongKe(
 
     for (let i = soThang - 1; i >= 0; i -= 1) {
       const ngay = new Date(hienTai.getFullYear(), hienTai.getMonth() - i, 1)
-      cacThang.push({ label: t('thongKe.time.month', { month: ngay.getMonth() + 1 }), year: ngay.getFullYear(), monthIndex: ngay.getMonth() })
+      cacThang.push({
+        label: t('thongKe.time.month', { month: ngay.getMonth() + 1 }),
+        year: ngay.getFullYear(),
+        monthIndex: ngay.getMonth(),
+      })
     }
 
     const tongTien: number[] = new Array(cacThang.length).fill(0)

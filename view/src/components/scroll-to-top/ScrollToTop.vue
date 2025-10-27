@@ -1,9 +1,11 @@
 <template>
-  <a-button v-show="showScrollTop" class="scroll-to-top-btn" type="primary" shape="circle" size="large" @click="scrollToTop">
-    <template #icon>
-      <icon-up />
-    </template>
-  </a-button>
+  <transition name="slide-fade-up">
+    <a-button v-show="showScrollTop" class="scroll-to-top-btn" type="primary" shape="circle" size="large" @click="scrollToTop">
+      <template #icon>
+        <icon-up />
+      </template>
+    </a-button>
+  </transition>
 </template>
 
 <script setup lang="ts">
@@ -41,17 +43,36 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   background-color: #4ade80 !important;
   border-color: #4ade80 !important;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .scroll-to-top-btn:hover {
   background-color: #22c55e !important;
   border-color: #22c55e !important;
-  transform: translateY(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(74, 222, 128, 0.4);
 }
 
 .scroll-to-top-btn:active {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* Slide fade up animation */
+.slide-fade-up-enter-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-fade-up-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slide-fade-up-enter-from {
+  transform: translateY(30px) scale(0.7);
+  opacity: 0;
+}
+
+.slide-fade-up-leave-to {
+  transform: translateY(30px) scale(0.7);
+  opacity: 0;
 }
 </style>

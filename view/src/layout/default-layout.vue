@@ -46,6 +46,9 @@
             <PageLayout />
           </a-layout-content>
           <Footer v-if="footer" />
+
+          <!-- Floating Chat Button (ẩn khi đang ở trang /chat) -->
+          <FloatingChatButton v-if="userStore.id && !isOnChatPage" />
         </a-layout>
       </a-layout>
     </a-layout>
@@ -56,7 +59,7 @@
 import Footer from '@/components/footer/footer.vue'
 import Menu from '@/components/menu/menu.vue'
 import NavBar from '@/components/navbar/navbar.vue'
-import TabBar from '@/components/tab-bar/tab-bar.vue'
+import FloatingChatButton from '@/components/chat/FloatingChatButton.vue'
 import usePermission from '@/hooks/permission'
 import useResponsive from '@/hooks/responsive'
 import { useAppStore, useUserStore } from '@/store'
@@ -69,6 +72,9 @@ const appStore = useAppStore()
 const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
+
+// Ẩn floating chat button khi đang ở trang chat
+const isOnChatPage = computed(() => route.path === '/chat')
 const permission = usePermission()
 useResponsive(true)
 const navbarHeight = `60px`

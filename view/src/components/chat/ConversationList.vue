@@ -1,0 +1,412 @@
+<template>
+  <div class="conversation-list">
+    <!-- Header -->
+    <div class="conversation-header">
+      <div class="header-top">
+        <h3>Tin nhắn</h3>
+        <a-button type="primary" size="small" @click="showNewChatModal = true">
+          <template #icon>
+            <icon-plus />
+          </template>
+          Tạo mới
+        </a-button>
+      </div>
+      <a-input-search v-model="searchQuery" placeholder="Tìm kiếm cuộc trò chuyện..." class="search-input" allow-clear />
+    </div>
+
+    <!-- Conversation list -->
+    <a-spin :loading="loading" class="conversation-spin">
+      <div class="conversation-items">
+        <div
+          v-for="conversation in filteredConversations"
+          :key="conversation.id"
+          class="conversation-item"
+          :class="{ active: conversation.id === activeConversationId }"
+          @click="handleSelectConversation(conversation)"
+        >
+          <!-- Avatar -->
+          <a-avatar :size="48" class="conversation-avatar">
+            <img v-if="getOtherUserAvatar(conversation)" :src="getOtherUserAvatar(conversation)" alt="avatar" />
+            <template v-else>
+              <icon-user />
+            </template>
+          </a-avatar>
+
+          <!-- Content -->
+          <div class="conversation-content">
+            <div class="conversation-top">
+              <span class="conversation-name">{{ getOtherUserName(conversation) }}</span>
+              <span v-if="conversation.lastMessageTime" class="conversation-time">
+                {{ formatTime(conversation.lastMessageTime) }}
+              </span>
+            </div>
+            <div class="conversation-bottom">
+              <div class="message-wrapper">
+                <!-- Hiển thị "Seen" nếu là tin nhắn của mình và đã được đọc -->
+                <icon-check-circle-fill v-if="isLastMessageSeenByOther(conversation)" class="seen-icon" />
+                <span class="conversation-message" :class="{ unread: hasUnread(conversation) }">
+                  {{ getLastMessagePreview(conversation) }}
+                </span>
+              </div>
+              <a-badge v-if="hasUnread(conversation)" :count="getUnreadCount(conversation)" :max-count="99" class="conversation-badge" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <a-empty v-if="filteredConversations.length === 0" description="Chưa có cuộc trò chuyện nào" />
+      </div>
+    </a-spin>
+
+    <!-- New Chat Modal -->
+    <NewChatModal v-model:visible="showNewChatModal" @selected="handleNewChat" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { IconUser, IconPlus, IconCheckCircleFill } from '@arco-design/web-vue/es/icon'
+import { Message } from '@arco-design/web-vue'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/vi'
+import useChatStore from '@/store/modules/chat'
+import useUserStore from '@/store/modules/user'
+import type { Conversation } from '@/api/chat'
+import NewChatModal from './NewChatModal.vue'
+
+dayjs.extend(relativeTime)
+dayjs.locale('vi')
+
+const chatStore = useChatStore()
+const userStore = useUserStore()
+
+const searchQuery = ref('')
+const showNewChatModal = ref(false)
+const loading = computed(() => chatStore.loadingConversations)
+const activeConversationId = computed(() => chatStore.activeConversationId)
+
+/**
+ * Lọc conversations theo search query
+ */
+/**
+ * Lấy tên người dùng còn lại (không phải mình)
+ */
+function getOtherUserName(conversation: Conversation): string {
+  const currentUserId = userStore.id
+  if (currentUserId === conversation.nhanVien1Id) {
+    return conversation.nhanVien2Name
+  }
+  return conversation.nhanVien1Name
+}
+
+const filteredConversations = computed(() => {
+  const conversations = chatStore.conversations || []
+  if (!searchQuery.value) {
+    return conversations
+  }
+  const query = searchQuery.value.toLowerCase()
+  return conversations.filter((conv) => {
+    const otherUserName = getOtherUserName(conv).toLowerCase()
+    return otherUserName.includes(query)
+  })
+})
+
+/**
+ * Lấy avatar người dùng còn lại
+ */
+function getOtherUserAvatar(_conversation: Conversation): string | null {
+  // TODO: Implement avatar from user data
+  return null
+}
+
+/**
+ * Lấy preview tin nhắn cuối
+ */
+function getLastMessagePreview(conversation: Conversation): string {
+  if (!conversation.lastMessageContent) {
+    return 'Chưa có tin nhắn'
+  }
+  const maxLength = 40
+  if (conversation.lastMessageContent.length > maxLength) {
+    return `${conversation.lastMessageContent.substring(0, maxLength)}...`
+  }
+  return conversation.lastMessageContent
+}
+
+/**
+ * Format time hiển thị
+ */
+function formatTime(timestamp: string | null): string {
+  if (!timestamp) return ''
+  const time = dayjs(timestamp)
+  const now = dayjs()
+  const diffInHours = now.diff(time, 'hour')
+
+  if (diffInHours < 24) {
+    return time.format('HH:mm')
+  }
+  if (diffInHours < 168) {
+    // < 7 days
+    return time.format('ddd')
+  }
+  return time.format('DD/MM')
+}
+
+/**
+ * Kiểm tra có tin nhắn chưa đọc không
+ */
+function hasUnread(conversation: Conversation): boolean {
+  return chatStore.getUnreadCount(conversation.id) > 0
+}
+
+/**
+ * Lấy số tin nhắn chưa đọc
+ */
+function getUnreadCount(conversation: Conversation): number {
+  return chatStore.getUnreadCount(conversation.id)
+}
+
+/**
+ * Kiểm tra tin nhắn cuối cùng của mình đã được đọc chưa
+ */
+function isLastMessageSeenByOther(conversation: Conversation): boolean {
+  const currentUserId = userStore.id
+  
+  // Chỉ hiển thị "seen" nếu tin nhắn cuối là của mình
+  if (conversation.lastSenderId !== currentUserId) {
+    return false
+  }
+  
+  // Kiểm tra người kia có unread count = 0 không
+  // Nếu currentUserId = nhanVien1, kiểm tra unreadCountNv2
+  // Nếu currentUserId = nhanVien2, kiểm tra unreadCountNv1
+  if (currentUserId === conversation.nhanVien1Id) {
+    return conversation.unreadCountNv2 === 0
+  }
+  if (currentUserId === conversation.nhanVien2Id) {
+    return conversation.unreadCountNv1 === 0
+  }
+  
+  return false
+}
+
+/**
+ * Xử lý khi click vào conversation
+ */
+async function handleSelectConversation(conversation: Conversation) {
+  chatStore.setActiveConversation(conversation.id)
+  
+  // Nếu có tin nhắn chưa đọc, tự động mark as read
+  if (hasUnread(conversation)) {
+    const currentUserId = userStore.id
+    let otherUserId: number | null = null
+    
+    if (currentUserId === conversation.nhanVien1Id) {
+      otherUserId = conversation.nhanVien2Id
+    } else if (currentUserId === conversation.nhanVien2Id) {
+      otherUserId = conversation.nhanVien1Id
+    }
+    
+    if (otherUserId) {
+      // Gọi mark as read ngay lập tức
+      await chatStore.markAsRead(otherUserId)
+    }
+  }
+}
+
+/**
+ * Xử lý tạo chat mới
+ */
+async function handleNewChat(userId: number) {
+  console.log('🆕 Starting new chat with user:', userId)
+  try {
+    // Kiểm tra xem đã có conversation chưa
+    const existingConv = (chatStore.conversations || []).find(
+      (c) =>
+        (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
+        (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+    )
+
+    if (existingConv) {
+      // Nếu đã có, chỉ mở conversation
+      console.log('✅ Existing conversation found:', existingConv.id)
+      chatStore.setActiveConversation(existingConv.id)
+    } else {
+      // Nếu chưa có, tạo mới bằng cách gọi tin nhắn đầu tiên
+      console.log('📤 Sending first message to create conversation...')
+      await chatStore.sendMessageViaAPI({
+        receiverId: userId,
+        content: 'Xin chào! 👋',
+        messageType: 'TEXT',
+      })
+
+      console.log('🔄 Fetching conversation...')
+      // Lấy conversation vừa tạo qua API
+      await chatStore.fetchConversations()
+      
+      // Mở conversation
+      const newConv = (chatStore.conversations || []).find(
+        (c) =>
+          (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
+          (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+      )
+      
+      if (newConv) {
+        console.log('✅ Conversation found, opening:', newConv)
+        chatStore.setActiveConversation(newConv.id)
+        // Lấy tin nhắn của conversation
+        await chatStore.fetchMessages(userId)
+      } else {
+        console.warn('⚠️ Could not find conversation after sending message')
+        Message.warning('Vui lòng reload trang để xem cuộc trò chuyện mới')
+      }
+    }
+  } catch (error: any) {
+    console.error('❌ Error creating new chat:', error)
+    Message.error(`Không thể tạo cuộc trò chuyện: ${error.message || error}`)
+  }
+}
+</script>
+
+<style scoped lang="less">
+.conversation-list {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-1);
+  border-right: 1px solid var(--color-border-2);
+}
+
+.conversation-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border-2);
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+}
+
+.conversation-spin {
+  flex: 1;
+  overflow: hidden;
+}
+
+.conversation-items {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border-3);
+    border-radius: 3px;
+  }
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  gap: 12px;
+
+  &:hover {
+    background: var(--color-fill-2);
+  }
+
+  &.active {
+    background: var(--color-fill-3);
+  }
+
+  .conversation-avatar {
+    flex-shrink: 0;
+  }
+
+  .conversation-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .conversation-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+
+      .conversation-name {
+        font-weight: 500;
+        font-size: 15px;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .conversation-time {
+        font-size: 12px;
+        color: var(--color-text-3);
+        flex-shrink: 0;
+      }
+    }
+
+    .conversation-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+
+      .message-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 1;
+        min-width: 0;
+
+        .seen-icon {
+          font-size: 12px;
+          color: rgb(var(--success-6));
+          flex-shrink: 0;
+        }
+      }
+
+      .conversation-message {
+        font-size: 13px;
+        color: var(--color-text-3);
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        &.unread {
+          color: var(--color-text-1);
+          font-weight: 500;
+        }
+      }
+
+      .conversation-badge {
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+</style>

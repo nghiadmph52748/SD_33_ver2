@@ -757,6 +757,60 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[tin_nhan]    Script Date: 10/27/2025 04:26:00 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tin_nhan](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[ma_tin_nhan] AS ('TN'+RIGHT('00000'+CONVERT([nvarchar](5),[id]),(5))) PERSISTED,
+	[id_nguoi_gui] [int] NOT NULL,
+	[id_nguoi_nhan] [int] NOT NULL,
+	[noi_dung] [nvarchar](max) NOT NULL,
+	[loai_tin_nhan] [varchar](20) NULL,
+	[da_doc] [bit] NULL,
+	[thoi_gian_doc] [datetime2](7) NULL,
+	[thoi_gian_gui] [datetime2](7) NOT NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[cuoc_trao_doi]    Script Date: 10/27/2025 04:26:00 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[cuoc_trao_doi](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[ma_cuoc_trao_doi] AS ('CTD'+RIGHT('00000'+CONVERT([nvarchar](5),[id]),(5))) PERSISTED,
+	[id_nhan_vien_1] [int] NOT NULL,
+	[id_nhan_vien_2] [int] NOT NULL,
+	[tin_nhan_cuoi_cung] [nvarchar](500) NULL,
+	[thoi_gian_tin_nhan_cuoi] [datetime2](7) NULL,
+	[id_nguoi_gui_cuoi] [int] NULL,
+	[so_tin_nhan_chua_doc_nv1] [int] NULL,
+	[so_tin_nhan_chua_doc_nv2] [int] NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
 SET IDENTITY_INSERT [dbo].[anh_san_pham] ON 
 GO
 INSERT [dbo].[anh_san_pham] ([id], [duong_dan_anh], [ten_anh], [mau_anh], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'https://res.cloudinary.com/dlgbdwd96/image/upload/v1759817800/SD_73/bb70c82e45f17b28c1d2fd401eefd419.png', N'Abc - Đen', N'Đen', 1, 0, CAST(N'2025-10-12' AS Date), 1, NULL, NULL)
@@ -1438,6 +1492,70 @@ GO
 ALTER TABLE [dbo].[thong_tin_don_hang]  WITH CHECK ADD FOREIGN KEY([id_trang_thai_don_hang])
 REFERENCES [dbo].[trang_thai_don_hang] ([id])
 GO
+ALTER TABLE [dbo].[tin_nhan] WITH CHECK 
+ADD CONSTRAINT FK_tin_nhan_nguoi_gui 
+FOREIGN KEY([id_nguoi_gui]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+ALTER TABLE [dbo].[tin_nhan] WITH CHECK 
+ADD CONSTRAINT FK_tin_nhan_nguoi_nhan 
+FOREIGN KEY([id_nguoi_nhan]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK
+ADD CONSTRAINT FK_cuoc_trao_doi_nhan_vien_1 
+FOREIGN KEY([id_nhan_vien_1]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
+ADD CONSTRAINT FK_cuoc_trao_doi_nhan_vien_2 
+FOREIGN KEY([id_nhan_vien_2]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
+ADD CONSTRAINT FK_cuoc_trao_doi_nguoi_gui_cuoi 
+FOREIGN KEY([id_nguoi_gui_cuoi]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+CREATE NONCLUSTERED INDEX IX_tin_nhan_conversation
+ON [dbo].[tin_nhan] ([id_nguoi_gui], [id_nguoi_nhan], [thoi_gian_gui] DESC)
+INCLUDE ([noi_dung], [da_doc], [loai_tin_nhan])
+GO
+CREATE NONCLUSTERED INDEX IX_tin_nhan_chua_doc
+ON [dbo].[tin_nhan] ([id_nguoi_nhan], [da_doc])
+WHERE [da_doc] = 0 AND [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_tin_nhan_thoi_gian
+ON [dbo].[tin_nhan] ([thoi_gian_gui] DESC)
+INCLUDE ([id_nguoi_gui], [id_nguoi_nhan], [noi_dung])
+GO
+CREATE UNIQUE NONCLUSTERED INDEX UQ_cuoc_trao_doi_unique
+ON [dbo].[cuoc_trao_doi] ([id_nhan_vien_1], [id_nhan_vien_2])
+WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_nhan_vien
+ON [dbo].[cuoc_trao_doi] ([id_nhan_vien_1], [id_nhan_vien_2], [thoi_gian_tin_nhan_cuoi] DESC)
+WHERE [deleted] = 0
+GO
+ALTER TABLE [dbo].[tin_nhan] WITH CHECK
+ADD CONSTRAINT CHK_tin_nhan_khac_nguoi 
+CHECK ([id_nguoi_gui] <> [id_nguoi_nhan])
+GO
+ALTER TABLE [dbo].[tin_nhan] WITH CHECK
+ADD CONSTRAINT CHK_tin_nhan_noi_dung 
+CHECK (LEN(RTRIM(LTRIM([noi_dung]))) > 0)
+GO
+ALTER TABLE [dbo].[tin_nhan] WITH CHECK
+ADD CONSTRAINT CHK_tin_nhan_loai 
+CHECK ([loai_tin_nhan] IN ('TEXT', 'IMAGE', 'FILE'))
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK
+ADD CONSTRAINT CHK_cuoc_trao_doi_khac_nguoi 
+CHECK ([id_nhan_vien_1] <> [id_nhan_vien_2])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK
+ADD CONSTRAINT CHK_cuoc_trao_doi_so_tin_chua_doc_nv1 
+CHECK ([so_tin_nhan_chua_doc_nv1] >= 0)
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
+ADD CONSTRAINT CHK_cuoc_trao_doi_so_tin_chua_doc_nv2 
+CHECK ([so_tin_nhan_chua_doc_nv2] >= 0)
+GO
 ALTER TABLE [dbo].[chi_tiet_san_pham]  WITH CHECK ADD CHECK  (([gia_ban]>=(0)))
 GO
 ALTER TABLE [dbo].[chi_tiet_san_pham]  WITH CHECK ADD CHECK  (([so_luong]>=(0)))
@@ -1852,6 +1970,159 @@ SELECT TOP 10
     trang_thai
 FROM [dbo].[v_hoa_don_full_info]
 ORDER BY id DESC
+GO
+
+CREATE VIEW [dbo].[v_tin_nhan_chi_tiet] AS
+SELECT 
+    tn.id,
+    tn.ma_tin_nhan,
+    tn.noi_dung,
+    tn.loai_tin_nhan,
+    tn.da_doc,
+    tn.thoi_gian_gui,
+    tn.thoi_gian_doc,
+    tn.id_nguoi_gui,
+    ng.ten_nhan_vien AS ten_nguoi_gui,
+    ng.ma_nhan_vien AS ma_nguoi_gui,
+    ng.anh_nhan_vien AS anh_nguoi_gui,
+    qh_gui.ten_quyen_han AS quyen_han_nguoi_gui,
+    tn.id_nguoi_nhan,
+    nn.ten_nhan_vien AS ten_nguoi_nhan,
+    nn.ma_nhan_vien AS ma_nguoi_nhan,
+    nn.anh_nhan_vien AS anh_nguoi_nhan,
+    qh_nhan.ten_quyen_han AS quyen_han_nguoi_nhan,
+    tn.trang_thai,
+    tn.deleted
+FROM 
+    [dbo].[tin_nhan] tn
+    INNER JOIN [dbo].[nhan_vien] ng ON tn.id_nguoi_gui = ng.id
+    INNER JOIN [dbo].[nhan_vien] nn ON tn.id_nguoi_nhan = nn.id
+    LEFT JOIN [dbo].[quyen_han] qh_gui ON ng.id_quyen_han = qh_gui.id
+    LEFT JOIN [dbo].[quyen_han] qh_nhan ON nn.id_quyen_han = qh_nhan.id
+WHERE 
+    tn.deleted = 0
+GO
+
+CREATE VIEW [dbo].[v_cuoc_trao_doi_chi_tiet] AS
+SELECT 
+    ctd.id,
+    ctd.ma_cuoc_trao_doi,
+    ctd.id_nhan_vien_1,
+    nv1.ten_nhan_vien AS ten_nhan_vien_1,
+    nv1.ma_nhan_vien AS ma_nhan_vien_1,
+    nv1.anh_nhan_vien AS anh_nhan_vien_1,
+    qh1.ten_quyen_han AS quyen_han_nv1,
+    ctd.id_nhan_vien_2,
+    nv2.ten_nhan_vien AS ten_nhan_vien_2,
+    nv2.ma_nhan_vien AS ma_nhan_vien_2,
+    nv2.anh_nhan_vien AS anh_nhan_vien_2,
+    qh2.ten_quyen_han AS quyen_han_nv2,
+    ctd.tin_nhan_cuoi_cung,
+    ctd.thoi_gian_tin_nhan_cuoi,
+    ctd.id_nguoi_gui_cuoi,
+    nguoi_gui_cuoi.ten_nhan_vien AS ten_nguoi_gui_cuoi,
+    ctd.so_tin_nhan_chua_doc_nv1,
+    ctd.so_tin_nhan_chua_doc_nv2,
+    ctd.trang_thai,
+    ctd.create_at
+FROM 
+    [dbo].[cuoc_trao_doi] ctd
+    INNER JOIN [dbo].[nhan_vien] nv1 ON ctd.id_nhan_vien_1 = nv1.id
+    INNER JOIN [dbo].[nhan_vien] nv2 ON ctd.id_nhan_vien_2 = nv2.id
+    LEFT JOIN [dbo].[quyen_han] qh1 ON nv1.id_quyen_han = qh1.id
+    LEFT JOIN [dbo].[quyen_han] qh2 ON nv2.id_quyen_han = qh2.id
+    LEFT JOIN [dbo].[nhan_vien] nguoi_gui_cuoi ON ctd.id_nguoi_gui_cuoi = nguoi_gui_cuoi.id
+WHERE 
+    ctd.deleted = 0
+GO
+
+CREATE PROCEDURE [dbo].[sp_lay_danh_sach_cuoc_trao_doi]
+    @id_nhan_vien INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        ctd.id,
+        ctd.ma_cuoc_trao_doi,
+        CASE 
+            WHEN ctd.id_nhan_vien_1 = @id_nhan_vien THEN nv2.ten_nhan_vien
+            ELSE nv1.ten_nhan_vien
+        END AS ten_nguoi_chat,
+        CASE 
+            WHEN ctd.id_nhan_vien_1 = @id_nhan_vien THEN nv2.anh_nhan_vien
+            ELSE nv1.anh_nhan_vien
+        END AS anh_nguoi_chat,
+        CASE 
+            WHEN ctd.id_nhan_vien_1 = @id_nhan_vien THEN ctd.id_nhan_vien_2
+            ELSE ctd.id_nhan_vien_1
+        END AS id_nguoi_chat,
+        ctd.tin_nhan_cuoi_cung,
+        ctd.thoi_gian_tin_nhan_cuoi,
+        CASE 
+            WHEN ctd.id_nhan_vien_1 = @id_nhan_vien THEN ctd.so_tin_nhan_chua_doc_nv1
+            ELSE ctd.so_tin_nhan_chua_doc_nv2
+        END AS so_tin_chua_doc
+    FROM 
+        [dbo].[cuoc_trao_doi] ctd
+        INNER JOIN [dbo].[nhan_vien] nv1 ON ctd.id_nhan_vien_1 = nv1.id
+        INNER JOIN [dbo].[nhan_vien] nv2 ON ctd.id_nhan_vien_2 = nv2.id
+    WHERE 
+        (ctd.id_nhan_vien_1 = @id_nhan_vien OR ctd.id_nhan_vien_2 = @id_nhan_vien)
+        AND ctd.deleted = 0
+    ORDER BY 
+        ctd.thoi_gian_tin_nhan_cuoi DESC
+END
+GO
+
+CREATE PROCEDURE [dbo].[sp_lay_tin_nhan]
+    @id_nguoi_1 INT,
+    @id_nguoi_2 INT,
+    @page INT = 1,
+    @page_size INT = 50
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        tn.id,
+        tn.ma_tin_nhan,
+        tn.id_nguoi_gui,
+        tn.id_nguoi_nhan,
+        tn.noi_dung,
+        tn.loai_tin_nhan,
+        tn.da_doc,
+        tn.thoi_gian_gui,
+        tn.thoi_gian_doc,
+        ng.ten_nhan_vien AS ten_nguoi_gui,
+        ng.anh_nhan_vien AS anh_nguoi_gui
+    FROM 
+        [dbo].[tin_nhan] tn
+        INNER JOIN [dbo].[nhan_vien] ng ON tn.id_nguoi_gui = ng.id
+    WHERE 
+        ((tn.id_nguoi_gui = @id_nguoi_1 AND tn.id_nguoi_nhan = @id_nguoi_2) 
+         OR (tn.id_nguoi_gui = @id_nguoi_2 AND tn.id_nguoi_nhan = @id_nguoi_1))
+        AND tn.deleted = 0
+    ORDER BY 
+        tn.thoi_gian_gui DESC
+    OFFSET (@page - 1) * @page_size ROWS
+    FETCH NEXT @page_size ROWS ONLY
+END
+GO
+
+CREATE PROCEDURE [dbo].[sp_dem_tin_chua_doc]
+    @id_nhan_vien INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT COUNT(*) AS tong_tin_chua_doc
+    FROM [dbo].[tin_nhan]
+    WHERE 
+        id_nguoi_nhan = @id_nhan_vien 
+        AND da_doc = 0 
+        AND deleted = 0
+END
 GO
 
 USE [master]

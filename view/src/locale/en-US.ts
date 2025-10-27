@@ -83,6 +83,7 @@ export default {
   'menu.faq': 'FAQ',
   'menu.faq.index': 'FAQ',
   'menu.faq.main': 'FAQ',
+  'menu.chat': 'Messages',
   'navbar.docs': 'Docs',
   'navbar.action.locale': 'Switch to English',
   ...localeSettings,

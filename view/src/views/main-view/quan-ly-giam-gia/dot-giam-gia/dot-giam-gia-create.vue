@@ -204,7 +204,7 @@
     <PageActions>
       <a-space>
         <a-button @click="goBack">{{ t('discount.common.reset') }}</a-button>
-        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">{{ t('discount.common.update') }}</a-button>
+        <a-button type="primary" :loading="confirmSaveSubmitting" @click="handleSaveClick">{{ t('discount.common.create') }}</a-button>
       </a-space>
     </PageActions>
 

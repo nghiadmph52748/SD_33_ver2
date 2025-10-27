@@ -6,6 +6,7 @@ export default {
   'discount.common.selectStartDate': 'Select start date',
   'discount.common.selectEndDate': 'Select end date',
   'discount.common.reset': 'Reset',
+  'discount.common.create': 'Create',
   'discount.common.update': 'Update',
   'discount.common.cancel': 'Cancel',
   'discount.common.confirm': 'Confirm',

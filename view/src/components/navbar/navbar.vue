@@ -30,6 +30,17 @@
         </a-tooltip>
       </li>
       <li>
+        <a-tooltip content="Tin nhắn">
+          <div class="message-box-trigger">
+            <a-badge :count="chatStore.totalUnreadCount" :dot="chatStore.totalUnreadCount > 0">
+              <a-button class="nav-btn" type="outline" :shape="'circle'" @click="openChatDrawer">
+                <icon-message />
+              </a-button>
+            </a-badge>
+          </div>
+        </a-tooltip>
+      </li>
+      <li>
         <a-tooltip :content="$t('settings.navbar.alerts')">
           <div class="message-box-trigger">
             <a-badge :count="notificationStore.totalUnread" :dot="notificationStore.totalUnread > 0">
@@ -106,10 +117,12 @@
 import useUser from '@/hooks/user'
 import { useAppStore, useUserStore } from '@/store'
 import useNotificationStore from '@/store/modules/notification'
+import useChatStore from '@/store/modules/chat'
 import { Message } from '@arco-design/web-vue'
 import { useDark, useFullscreen, useToggle } from '@vueuse/core'
-import { computed, inject, ref } from 'vue'
+import { computed, inject, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter, useRoute } from 'vue-router'
 import { LOCALE_OPTIONS } from '@/locale'
 import MessageBox from '../message-box/message-box.vue'
 
@@ -120,7 +133,10 @@ const localeOptions = LOCALE_OPTIONS
 const appStore = useAppStore()
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
+const chatStore = useChatStore()
 const { logout } = useUser()
+const router = useRouter()
+const route = useRoute()
 const { isFullscreen, toggle: toggleFullScreen } = useFullscreen()
 const avatar = computed(() => {
   return userStore.avatar
@@ -175,6 +191,33 @@ const changeLocale = (value: string) => {
   localStorage.setItem('arco-locale', value)
   Message.success(t('navbar.action.locale'))
 }
+
+const openChatDrawer = () => {
+  router.push('/chat')
+}
+
+onMounted(async () => {
+  if (userStore.id) {
+    // Fetch unread count
+    await chatStore.fetchUnreadCount()
+    
+    // Auto-connect WebSocket nếu chưa connect
+    if (!chatStore.wsConnected && !chatStore.wsConnecting) {
+      await chatStore.connectWebSocket()
+    }
+    
+    // Fallback: Polling unread count mỗi 5s nếu WebSocket fail
+    setInterval(async () => {
+      if (!chatStore.wsConnected) {
+        await chatStore.fetchUnreadCount()
+        // Nếu đang mở trang chat, refresh conversations
+        if (route.path === '/chat' && chatStore.conversations.length > 0) {
+          await chatStore.fetchConversations()
+        }
+      }
+    }, 5000)
+  }
+})
 </script>
 
 <style scoped lang="less">

@@ -83,6 +83,7 @@ export default {
   'menu.faq': 'Câu hỏi thường gặp',
   'menu.faq.index': 'Câu hỏi thường gặp',
   'menu.faq.main': 'Câu hỏi thường gặp',
+  'menu.chat': 'Tin nhắn',
   'navbar.docs': 'Tài liệu',
   'navbar.action.locale': 'Chuyển sang tiếng Việt',
   ...localeSettings,
