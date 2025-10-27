@@ -861,6 +861,11 @@ const derivePromotionStatus = (promotion: PromotionApiModel): PromotionStatus =>
 }
 
 const resolvePromotionEnabled = (promotion: PromotionApiModel, status: PromotionStatus): boolean => {
+  // Force expired promotions to be disabled
+  if (status === 'expired') {
+    return false
+  }
+
   const rawStatus = (promotion as unknown as { trangThai?: unknown }).trangThai
 
   if (typeof rawStatus === 'boolean') {

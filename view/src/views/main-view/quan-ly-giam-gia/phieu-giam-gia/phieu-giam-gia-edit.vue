@@ -242,7 +242,7 @@ import PageActions from '@/components/page-actions/page-actions.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { fetchCustomers, type CustomerApiModel, updateCoupon } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
-import { IconPlus, IconDelete, IconLeft, IconUp, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete, IconLeft, IconUp } from '@arco-design/web-vue/es/icon'
 import dayjs from 'dayjs'
 
 // Router
@@ -296,6 +296,8 @@ const originalCouponEditForm = reactive({
   selectedCustomerIds: [] as number[],
 })
 
+const isPercentEdit = computed(() => couponEditForm.discountMode === 'percentage')
+
 const couponEditRules = computed<FormRules>(() => ({
   code: [{ required: true, message: t('discount.validation.codeRequired') }],
   name: [{ required: true, message: t('discount.validation.nameRequired') }],
@@ -329,7 +331,10 @@ const couponEditRules = computed<FormRules>(() => ({
   maxDiscount: [
     {
       validator: (_: any, callback: (msg?: string) => void) => {
-        if (!isPercentEdit.value) return callback()
+        if (!isPercentEdit.value) {
+          callback()
+          return
+        }
         const raw = couponEditForm.maxDiscount
         if (raw === null || raw === undefined || raw === '') {
           callback(t('discount.validation.maxDiscountRequired'))
@@ -397,8 +402,6 @@ const couponEditRules = computed<FormRules>(() => ({
   ],
   lyDoThayDoi: [{ required: true, message: t('discount.validation.changeReasonRequired') }],
 }))
-
-const isPercentEdit = computed(() => couponEditForm.discountMode === 'percentage')
 
 // Customers
 const customers = ref<CustomerApiModel[]>([])
@@ -615,74 +618,8 @@ const filteredProducts = computed(() => {
   )
 })
 
-const productPagination = computed(() => ({
-  pageSize: 5,
-  showTotal: true,
-  showPageSize: false,
-}))
-
-const productColumnsWithCheckbox = computed(() => [
-  {
-    title: '',
-    dataIndex: 'select',
-    slotName: 'select',
-    width: 50,
-    align: 'center' as const,
-  },
-  ...productColumns.value,
-])
-
-const isAllEditProductsSelected = computed(() => {
-  if (filteredProducts.value.length === 0) return false
-  return filteredProducts.value.every((product) => couponEditForm.selectedProductIds.includes(product.id))
-})
-
-const isSomeEditProductsSelected = computed(() => {
-  return couponEditForm.selectedProductIds.length > 0
-})
-
-const toggleEditProductSelection = (productId: number) => {
-  const index = couponEditForm.selectedProductIds.indexOf(productId)
-  if (index > -1) {
-    couponEditForm.selectedProductIds.splice(index, 1)
-  } else {
-    couponEditForm.selectedProductIds.push(productId)
-  }
-}
-
-const toggleAllEditProducts = () => {
-  if (isAllEditProductsSelected.value) {
-    filteredProducts.value.forEach((product) => {
-      const index = couponEditForm.selectedProductIds.indexOf(product.id)
-      if (index > -1) {
-        couponEditForm.selectedProductIds.splice(index, 1)
-      }
-    })
-  } else {
-    filteredProducts.value.forEach((product) => {
-      if (!couponEditForm.selectedProductIds.includes(product.id)) {
-        couponEditForm.selectedProductIds.push(product.id)
-      }
-    })
-  }
-}
-
-const selectAllEditProducts = () => {
-  filteredProducts.value.forEach((product) => {
-    if (!couponEditForm.selectedProductIds.includes(product.id)) {
-      couponEditForm.selectedProductIds.push(product.id)
-    }
-  })
-}
-
-const deselectAllEditProducts = () => {
-  filteredProducts.value.forEach((product) => {
-    const index = couponEditForm.selectedProductIds.indexOf(product.id)
-    if (index > -1) {
-      couponEditForm.selectedProductIds.splice(index, 1)
-    }
-  })
-}
+// Unused variables removed to fix ESLint warnings
+// These were defined but never used in the template
 
 const loadProducts = async () => {
   productsLoading.value = true
@@ -745,10 +682,8 @@ watch(
       } else if (value < 1) {
         couponEditForm.discountValue = 1
       }
-    } else {
-      if (value <= 0) {
-        couponEditForm.discountValue = 1
-      }
+    } else if (value <= 0) {
+      couponEditForm.discountValue = 1
     }
   }
 )
@@ -761,13 +696,7 @@ const formatNumberWithSeparator = (value: number | string | undefined) => {
   return numValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
-const parseFormattedNumber = (value: string | number | undefined) => {
-  if (typeof value === 'number') return value
-  if (!value || value === '') return undefined
-  const cleaned = String(value).replace(/\./g, '')
-  const parsed = Number(cleaned)
-  return Number.isNaN(parsed) ? undefined : parsed
-}
+// parseFormattedNumber removed - not used
 
 // Display value for discount input (with % or VND symbol)
 const displayDiscountValue = ref('')
@@ -987,21 +916,7 @@ watch(
   { immediate: true }
 )
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount)
-}
-
-const handleImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.style.display = 'none'
-  const placeholder = img.parentElement?.querySelector('.product-image-placeholder')
-  if (placeholder) {
-    ;(placeholder as HTMLElement).style.display = 'flex'
-  }
-}
+// formatCurrency and handleImageError removed - not used
 
 const goBack = () => {
   router.push({ name: 'QuanLyPhieuGiamGia' })
@@ -1020,7 +935,12 @@ const loadCouponData = async () => {
     const discountType = coupon.loaiPhieuGiamGia ? 'fixed' : 'percentage'
     couponEditForm.discountMode = discountType === 'percentage' ? 'percentage' : 'amount'
     couponEditForm.discountValue = Number(coupon.giaTriGiamGia ?? 0)
-    couponEditForm.maxDiscount = discountType === 'percentage' ? (coupon.soTienToiDa != null ? Number(coupon.soTienToiDa) : null) : null
+    // Set maxDiscount based on discount type
+    if (discountType === 'percentage') {
+      couponEditForm.maxDiscount = coupon.soTienToiDa != null ? Number(coupon.soTienToiDa) : null
+    } else {
+      couponEditForm.maxDiscount = null
+    }
     couponEditForm.minOrder = coupon.hoaDonToiThieu ?? 0
     couponEditForm.quantity = coupon.soLuongDung ?? 1
     couponEditForm.dateRange = [coupon.ngayBatDau ?? '', coupon.ngayKetThuc ?? ''].filter(Boolean) as string[]
@@ -1139,11 +1059,9 @@ const handleSubmit = async () => {
       Message.error(t('discount.validation.maxDiscountLessThanMinOrder'))
       return
     }
-  } else {
-    if (Number.isNaN(discountValue) || discountValue <= 0) {
-      Message.error(t('discount.validation.discountValuePositive'))
-      return
-    }
+  } else if (Number.isNaN(discountValue) || discountValue <= 0) {
+    Message.error(t('discount.validation.discountValuePositive'))
+    return
   }
 
   const [startDate, endDate] = couponEditForm.dateRange

@@ -297,14 +297,12 @@
             {{ selectedCoupon ? getStatusText(selectedCoupon.status) : '' }}
           </a-tag>
         </a-descriptions-item>
-        <a-descriptions-item :label="t('discount.coupon.featured')">
-          <a-tag v-if="selectedCoupon?.featured" color="orange">
-            <template #icon>
-              <icon-star />
-            </template>
-            {{ t('discount.coupon.featured.yes') }}
-          </a-tag>
-          <span v-else style="color: var(--color-text-3)">{{ t('discount.coupon.featured.no') }}</span>
+        <a-descriptions-item :label="t('discount.coupon.private')">
+          <div class="privacy-badge" :class="{ 'privacy-badge-private': selectedCoupon?.featured }">
+            <icon-lock v-if="selectedCoupon?.featured" class="privacy-icon" />
+            <icon-public v-else class="privacy-icon" />
+            <span>{{ selectedCoupon?.featured ? t('discount.coupon.privacy.private') : t('discount.coupon.privacy.public') }}</span>
+          </div>
         </a-descriptions-item>
         <a-descriptions-item :label="t('discount.common.description')" :span="2">
           {{ selectedCoupon?.source?.moTa || '—' }}
@@ -1153,6 +1151,11 @@ const deriveCouponStatus = (coupon: CouponApiModel): CouponStatus => {
 }
 
 const resolveCouponEnabled = (coupon: CouponApiModel, status: CouponStatus): boolean => {
+  // Force expired coupons to be disabled
+  if (status === 'expired') {
+    return false
+  }
+
   const raw = (coupon as unknown as { trangThai?: unknown }).trangThai
 
   if (typeof raw === 'boolean') {
