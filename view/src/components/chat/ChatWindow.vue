@@ -225,6 +225,7 @@ function handleNewLine(_event: KeyboardEvent) {
         margin: 0;
         font-size: 16px;
         font-weight: 500;
+        color: var(--color-text-1);
       }
 
       .status-online {

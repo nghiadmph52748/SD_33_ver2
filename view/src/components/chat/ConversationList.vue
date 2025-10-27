@@ -293,6 +293,7 @@ async function handleNewChat(userId: number) {
     margin: 0;
     font-size: 24px;
     font-weight: 600;
+    color: var(--color-text-1);
   }
 
   .search-input {
@@ -360,6 +361,7 @@ async function handleNewChat(userId: number) {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        color: var(--color-text-1);
       }
 
       .conversation-time {

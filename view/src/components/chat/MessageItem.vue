@@ -105,9 +105,10 @@ function formatTime(timestamp: string): string {
 
   &.received {
     .message-bubble {
-      background: var(--color-fill-2);
+      background: var(--color-fill-3);
       color: var(--color-text-1);
       border-radius: 18px 18px 18px 4px;
+      border: 1px solid var(--color-border-2);
 
       .message-meta {
         .message-time {
