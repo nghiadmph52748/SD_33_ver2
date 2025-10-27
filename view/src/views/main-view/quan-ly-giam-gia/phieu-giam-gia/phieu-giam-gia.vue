@@ -235,7 +235,7 @@
                 <icon-eye />
               </template>
             </a-button>
-            <a-button type="text" @click="editCoupon(record)">
+            <a-button type="text" @click="editCoupon(record)" :disabled="record.status === 'expired'">
               <template #icon>
                 <icon-edit />
               </template>

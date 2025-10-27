@@ -159,7 +159,7 @@
                 <icon-eye />
               </template>
             </a-button>
-            <a-button type="text" @click="editPromotion(record)">
+            <a-button type="text" @click="editPromotion(record)" :disabled="record.status === 'expired'">
               <template #icon>
                 <icon-edit />
               </template>

@@ -252,7 +252,7 @@
                   style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
                   @click="selectPaymentMethod('cash')"
                 >
-                  💵 Tiền Mặt
+                Tiền Mặt
                 </a-button>
                 <a-button
                   :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'transfer' }]"
@@ -260,7 +260,7 @@
                   style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
                   @click="selectPaymentMethod('transfer')"
                 >
-                  🏦 Chuyển Khoản
+                Chuyển Khoản
                 </a-button>
               </div>
             </a-form-item>
@@ -352,7 +352,7 @@
                 </template>
                 Xác Nhận ({{ finalPrice > 0 ? formatCurrency(finalPrice) : '0đ' }})
               </a-button>
-              <a-button long @click="printOrder" :disabled="!currentOrder?.items.length">🖨️ In Hoá Đơn</a-button>
+              <a-button long @click="printOrder" :disabled="!currentOrder?.items.length">In Hoá Đơn</a-button>
             </a-space>
           </a-form>
         </a-card>
