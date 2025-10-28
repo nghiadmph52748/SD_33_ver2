@@ -1,6 +1,6 @@
 <script lang="tsx">
 // @ts-nocheck
-import { IconList, IconHome, IconFolder, IconSettings, IconUser, IconStar, IconMessage } from '@arco-design/web-vue/es/icon'
+import { IconList, IconHome, IconFolder, IconSettings, IconUser, IconStar, IconMessage, IconRobot } from '@arco-design/web-vue/es/icon'
 import { useAppStore } from '@/store'
 import { openWindow, regexUrl } from '@/utils'
 import { listenerRouteChange } from '@/utils/route-listener'
@@ -27,6 +27,7 @@ export default defineComponent({
       IconUser,
       IconStar,
       IconMessage,
+      IconRobot,
     }
     const collapsed = computed({
       get() {

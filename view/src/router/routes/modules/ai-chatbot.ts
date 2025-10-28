@@ -9,7 +9,7 @@ const AI_CHATBOT: AppRouteRecordRaw = {
   meta: {
     locale: 'menu.ai-assistant',
     requiresAuth: false,
-    icon: 'IconBulb',
+    icon: 'IconRobot',
     order: 7,
     roles: ['*'],
     hideChildrenInMenu: true
