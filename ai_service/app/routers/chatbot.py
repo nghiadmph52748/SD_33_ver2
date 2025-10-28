@@ -294,7 +294,7 @@ async def chat(request: ChatRequest):
         
         return ChatResponse(
             message=ai_message,
-            sources=db_context,
+            sources='',
             query_type=intent
         )
     

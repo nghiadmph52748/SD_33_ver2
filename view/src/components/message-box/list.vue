@@ -5,12 +5,7 @@
         <div class="time-group">
           <div class="group-header">
             <span class="group-label">{{ group.label }}</span>
-            <a-button
-              v-if="group.items.some((i) => !i.status)"
-              type="text"
-              size="mini"
-              @click="markGroup(group.items)"
-            >
+            <a-button v-if="group.items.some((i) => !i.status)" type="text" size="mini" @click="markGroup(group.items)">
               <template #icon>
                 <icon-check />
               </template>
@@ -40,11 +35,7 @@
               <div class="item-content">
                 <div class="item-header">
                   <span class="item-title">{{ item.title }}</span>
-                  <a-tag
-                    :color="getStatusColor(item.messageType)"
-                    size="small"
-                    class="item-status-tag"
-                  >
+                  <a-tag :color="getStatusColor(item.messageType)" size="small" class="item-status-tag">
                     {{ getStatusText(item.messageType) }}
                   </a-tag>
                 </div>
@@ -63,9 +54,7 @@
                     {{ formatTime(item.time) }}
                   </span>
                   <a-space :size="8" class="item-actions">
-                    <a-link :hoverable="false">
-                      <icon-eye /> Xem
-                    </a-link>
+                    <a-link :hoverable="false"> <icon-eye /> Xem </a-link>
                     <a-link v-if="!item.status" :hoverable="false" @click.stop="onItemClick(item)">
                       <icon-check /> Đánh dấu
                     </a-link>
@@ -119,7 +108,10 @@ const viewMore = () => {
 }
 
 const markGroup = (items: MessageListType) => {
-  emit('itemClick', items.filter((i) => !i.status))
+  emit(
+    'itemClick',
+    items.filter((i) => !i.status)
+  )
 }
 
 const onItemClick = (item: MessageRecord) => {
@@ -127,17 +119,19 @@ const onItemClick = (item: MessageRecord) => {
     emit('itemClick', [item])
   }
 }
-// Group by relative day label
-const grouped = computed(() => {
-  const groups: Record<string, any> = {}
-  const items = props.renderList || []
-  for (const it of items) {
-    const label = getRelativeLabel(it.time)
-    if (!groups[label]) groups[label] = []
-    groups[label].push(it)
+
+function parseDate(s: string) {
+  // Accept ISO or locale strings
+  const iso = Date.parse(s)
+  if (!Number.isNaN(iso)) return new Date(iso)
+  // Try to sanitize dd/MM/yyyy HH:mm:ss
+  const parts = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}:\d{2}:\d{2})/)
+  if (parts) {
+    const [_, d, m, y, t] = parts
+    return new Date(`${y}-${m}-${d}T${t}`)
   }
-  return Object.keys(groups).map((k) => ({ key: k, label: k, items: groups[k] }))
-})
+  return new Date()
+}
 
 function getRelativeLabel(timeStr?: string) {
   try {
@@ -153,19 +147,6 @@ function getRelativeLabel(timeStr?: string) {
   } catch {
     return 'Khác'
   }
-}
-
-function parseDate(s: string) {
-  // Accept ISO or locale strings
-  const iso = Date.parse(s)
-  if (!Number.isNaN(iso)) return new Date(iso)
-  // Try to sanitize dd/MM/yyyy HH:mm:ss
-  const parts = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}:\d{2}:\d{2})/)
-  if (parts) {
-    const [_, d, m, y, t] = parts
-    return new Date(`${y}-${m}-${d}T${t}`)
-  }
-  return new Date()
 }
 
 function formatTime(timeStr?: string) {
@@ -233,6 +214,21 @@ function getStatusText(messageType?: number) {
       return 'Thông báo'
   }
 }
+
+// Group by relative day label
+const grouped = computed(() => {
+  const groups: Record<string, any> = {}
+  const items = props.renderList || []
+  
+  // Use forEach instead of for...of to avoid iterator issues
+  items.forEach((it) => {
+    const label = getRelativeLabel(it.time)
+    if (!groups[label]) groups[label] = []
+    groups[label].push(it)
+  })
+  
+  return Object.keys(groups).map((k) => ({ key: k, label: k, items: groups[k] }))
+})
 </script>
 
 <style scoped lang="less">

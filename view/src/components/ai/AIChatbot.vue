@@ -31,11 +31,6 @@
             </div>
             <div class="content">
               <div class="text" v-html="renderMarkdown(msg.content)"></div>
-              <div v-if="msg.sources" class="sources">
-                <a-divider style="margin: 8px 0" />
-                <div class="sources-label">📊 Nguồn dữ liệu:</div>
-                <div class="sources-content" v-html="renderMarkdown(msg.sources)"></div>
-              </div>
               <div class="timestamp">{{ msg.timestamp }}</div>
             </div>
           </div>
@@ -451,17 +446,18 @@ function renderMarkdown(md: string) {
       table {
         width: 100%;
         border-collapse: collapse;
-        margin: 6px 0 2px 0;
+        margin: 8px 0 4px 0;
+        border: 1px solid var(--color-border-2);
       }
 
       th, td {
-        border: 1px solid #e5e6eb;
-        padding: 6px 8px;
+        border: 1px solid var(--color-border-2);
+        padding: 8px 10px;
         text-align: left;
       }
 
       th {
-        background: #f2f3f5;
+        background: var(--color-fill-2);
         font-weight: 600;
       }
       code, pre code {

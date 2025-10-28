@@ -92,12 +92,25 @@ class DatabaseClient:
     def get_order_status_distribution(self) -> List[Dict]:
         """Get order status distribution"""
         query = """
+        WITH latest_status AS (
+            SELECT 
+                hd.id AS order_id,
+                ls.id_trang_thai_don_hang AS status_id
+            FROM hoa_don hd
+            OUTER APPLY (
+                SELECT TOP 1 ttdh.id_trang_thai_don_hang
+                FROM thong_tin_don_hang ttdh
+                WHERE ttdh.id_hoa_don = hd.id
+                ORDER BY ttdh.thoi_gian DESC
+            ) ls
+            WHERE hd.trang_thai = 1
+        )
         SELECT 
-            ttd.ten_trang_thai as status_name,
-            COUNT(hd.id) as order_count
-        FROM hoa_don hd
-        JOIN trang_thai_don_hang ttd ON hd.id_trang_thai_don_hang = ttd.id
-        GROUP BY ttd.ten_trang_thai
+            ttd.ten_trang_thai_don_hang AS status_name,
+            COUNT(ls.order_id) AS order_count
+        FROM latest_status ls
+        JOIN trang_thai_don_hang ttd ON ls.status_id = ttd.id
+        GROUP BY ttd.ten_trang_thai_don_hang
         ORDER BY order_count DESC
         """
         return self.execute_query(query)
