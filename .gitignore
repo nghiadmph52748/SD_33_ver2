@@ -4,7 +4,9 @@
 AGENTS.md
 WARP.md
 node_modules
-*.md
+AI_DEPLOYMENT_GUIDE.md
+CHAT_FEATURE_README.md
+SUMMARY_CHANGES.md
 .env
 .env.*
 .env.example
@@ -42,4 +44,90 @@ application.properties.backup
 # OS
 .DS_Store
 Thumbs.db
+
+# Python
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+ai_service/venv/
+ai_service/env/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# AI Service specific
+ai_service/.env
+ai_service/*.log
+ai_service/app/models/*.pkl
+ai_service/app/models/*.joblib
+ai_service/app/models/*.h5
+ai_service/notebooks/.ipynb_checkpoints/
 
