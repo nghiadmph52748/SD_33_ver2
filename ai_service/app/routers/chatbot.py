@@ -45,6 +45,7 @@ Bạn là trợ lý AI của GearUp (cửa hàng giày thể thao) — phiên b�
 **Định dạng:**
 - Tiêu đề ngắn gọn + emoji
 - Danh sách/so sánh → bảng Markdown có header
+- Nếu có từ 2 hàng dữ liệu trở lên, BẮT BUỘC dùng bảng Markdown (không dùng gạch đầu dòng)
 - Đơn vị: VNĐ, đơn, đôi; số có dấu phẩy phần nghìn
 - Kết thúc bằng 1 câu takeaway
 
@@ -58,6 +59,8 @@ def detect_intent(message: str) -> str:
     # Check low_stock first (higher priority)
     if any(word in message_lower for word in ["hết hàng", "sắp hết", "tồn kho thấp", "tồn kho", "stock", "còn lại", "số lượng còn"]):
         return "low_stock"
+    elif any(word in message_lower for word in ["tạo mã giảm", "tạo voucher", "tạo phiếu giảm", "create voucher", "coupon", "mã khuyến mãi"]):
+        return "create_voucher"
     elif any(word in message_lower for word in ["bán chạy", "top", "phổ biến", "best seller"]):
         return "top_products"
     elif any(word in message_lower for word in ["doanh thu", "revenue", "tổng tiền", "thu nhập"]):
@@ -137,15 +140,15 @@ def query_database(intent: str, message: str) -> str:
             if not products:
                 return "✅ Tất cả sản phẩm đều còn đủ hàng."
             
-            context = "⚠️ **Sản phẩm sắp hết hàng (≤10 đôi):**\n\n"
+            context = "⚠️ **Sản phẩm sắp hết hàng (≤10 đôi)**\n\n"
+            context += "| # | Sản phẩm | Biến thể | Màu | Size | Tồn kho |\n|---:|---|---|---|---:|---:|\n"
             for i, p in enumerate(products, 1):
-                context += f"{i}. **{p['product_name']}**"
-                if p.get('color') or p.get('size'):
-                    context += f" ({p.get('color', '')}"
-                    if p.get('color') and p.get('size'):
-                        context += f", "
-                    context += f"{p.get('size', '')})"
-                context += f"\n   - Còn lại: **{p['stock_quantity']} đôi**\n\n"
+                variant = p.get('variant_id') or '-'
+                color = p.get('color') or ''
+                size = p.get('size') or ''
+                context += (
+                    f"| {i} | {p['product_name']} | {variant} | {color} | {size} | {p['stock_quantity']} |\n"
+                )
             
             return context
         
@@ -155,9 +158,10 @@ def query_database(intent: str, message: str) -> str:
             if not statuses:
                 return "Không có dữ liệu trạng thái đơn hàng."
             
-            context = "📋 **Phân bố trạng thái đơn hàng:**\n\n"
+            context = "📋 **Phân bố trạng thái đơn hàng**\n\n"
+            context += "| Trạng thái | Số đơn |\n|---|---:|\n"
             for status in statuses:
-                context += f"- **{status['status_name']}**: {status['order_count']} đơn\n"
+                context += f"| {status['status_name']} | {fmt_number(status['order_count'])} |\n"
             
             return context
         
@@ -191,6 +195,74 @@ def query_database(intent: str, message: str) -> str:
                     f"{fmt_datetime(campaign['start_date'])} | {fmt_datetime(campaign['end_date'])} |\n"
                 )
             
+            return context
+        
+        elif intent == "create_voucher":
+            # naive parsing: look for % or đ numbers and optional date range
+            import re
+            name = "Voucher tự động"
+            percent = True
+            value = 10.0
+            min_order = 0.0
+            usage_limit = 1
+            description = "Tạo bởi AI"
+            # value percent like 10% or 15 %
+            m = re.search(r"(\d{1,2})\s*%", message)
+            if m:
+                percent = True
+                value = float(m.group(1))
+            else:
+                m2 = re.search(r"(\d{5,})\s*(vnđ|vnd|đ)?", message, re.IGNORECASE)
+                if m2:
+                    percent = False
+                    value = float(m2.group(1))
+            # min order
+            mo = re.search(r"tối thiểu\s*(\d{5,})", message)
+            if mo:
+                min_order = float(mo.group(1))
+            # usage limit
+            ul = re.search(r"(\d+)\s*(lần|uses)", message)
+            if ul:
+                usage_limit = int(ul.group(1))
+            # dates (fallback today..+30d)
+            from datetime import datetime, timedelta
+            start_dt = datetime.now()
+            end_dt = start_dt + timedelta(days=30)
+            sd = re.search(r"(\d{4}-\d{2}-\d{2})", message)
+            ed = re.findall(r"(\d{4}-\d{2}-\d{2})", message)
+            if ed and len(ed) >= 2:
+                try:
+                    start_dt = datetime.fromisoformat(ed[0])
+                    end_dt = datetime.fromisoformat(ed[1]) + timedelta(hours=23, minutes=59, seconds=59)
+                except Exception:
+                    pass
+            start_iso = start_dt.strftime("%Y-%m-%d %H:%M:%S")
+            end_iso = end_dt.strftime("%Y-%m-%d %H:%M:%S")
+            # create
+            try:
+                created = db_client.create_voucher(
+                    name=name,
+                    percent_type=percent,
+                    value=value,
+                    start_datetime=start_iso,
+                    end_datetime=end_iso,
+                    min_order=min_order,
+                    usage_limit=usage_limit,
+                    description=description,
+                )
+            except Exception as e:
+                return f"❌ Không thể tạo voucher: {str(e)}"
+            if not created:
+                return "❌ Không thể tạo voucher."
+            context = "🎉 **Đã tạo mã giảm giá mới**\n\n"
+            context += "| Mã | Tên | Loại | Giá trị | Bắt đầu | Kết thúc | Tối thiểu | Số lượt |\n|---|---|---|---:|---|---|---:|---:|\n"
+            loai = "%" if created.get("loai_phieu_giam_gia") == 0 else "VNĐ"
+            context += (
+                f"| {created.get('ma_phieu_giam_gia')} | {created.get('ten_phieu_giam_gia')} | {loai} | "
+                f"{created.get('gia_tri_giam_gia')} | {fmt_datetime(created.get('ngay_bat_dau'))} | "
+                f"{fmt_datetime(created.get('ngay_ket_thuc'))} | {fmt_number(created.get('hoa_don_toi_thieu'))} | "
+                f"{fmt_number(created.get('so_luong_dung'))} |\n"
+            )
             return context
         
         elif intent == "employees":
@@ -247,13 +319,10 @@ def query_database(intent: str, message: str) -> str:
             pos_orders = stats.get('pos_orders') or 0
             online_orders = stats.get('online_orders') or 0
             
-            context = "🛒 **Phân bố kênh bán hàng:**\n\n"
-            context += f"**Bán tại quầy (POS):**\n"
-            context += f"- Số đơn: {pos_orders} đơn\n"
-            context += f"- Doanh thu: {pos_revenue:,.0f} VNĐ\n\n"
-            context += f"**Bán hàng online:**\n"
-            context += f"- Số đơn: {online_orders} đơn\n"
-            context += f"- Doanh thu: {online_revenue:,.0f} VNĐ\n"
+            context = "🛒 **Phân bố kênh bán hàng**\n\n"
+            context += "| Kênh | Số đơn | Doanh thu (VNĐ) |\n|---|---:|---:|\n"
+            context += f"| Tại quầy (POS) | {fmt_number(pos_orders)} | {fmt_number(pos_revenue)} |\n"
+            context += f"| Online | {fmt_number(online_orders)} | {fmt_number(online_revenue)} |\n"
             
             return context
         

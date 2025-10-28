@@ -35,7 +35,22 @@ class DatabaseClient:
                 
                 return results
         except Exception as e:
-            logger.error(f"❌ Database error: {e}")
+            logger.error(f"Database error: {e}")
+            raise
+    
+    def execute_non_query(self, query: str, params: tuple = None) -> int:
+        """Execute INSERT/UPDATE/DELETE and return affected row count"""
+        try:
+            with pyodbc.connect(self.connection_string) as conn:
+                cursor = conn.cursor()
+                if params:
+                    cursor.execute(query, params)
+                else:
+                    cursor.execute(query)
+                conn.commit()
+                return cursor.rowcount
+        except Exception as e:
+            logger.error(f"Database error: {e}")
             raise
     
     def get_top_selling_products(self, limit: int = 5, days: int = 365) -> List[Dict]:
@@ -69,6 +84,71 @@ class DatabaseClient:
         """
         results = self.execute_query(query)
         return results[0] if results else {}
+
+    # ===== Voucher helpers =====
+    def voucher_code_exists(self, code: str) -> bool:
+        query = """
+        SELECT 1 FROM phieu_giam_gia WHERE ma_phieu_giam_gia = ?
+        """
+        return len(self.execute_query(query, (code,))) > 0
+
+    def generate_voucher_code(self) -> str:
+        """Generate unique voucher code like PGG00001"""
+        import random
+        for _ in range(50):
+            number = random.randint(1, 99999)
+            code = f"PGG{number:05d}"
+            if not self.voucher_code_exists(code):
+                return code
+        raise RuntimeError("Could not generate unique voucher code after many attempts")
+
+    def create_voucher(
+        self,
+        *,
+        name: str,
+        percent_type: bool,
+        value: float,
+        start_datetime: str,
+        end_datetime: str,
+        min_order: float = 0,
+        usage_limit: int = 1,
+        code: str | None = None,
+        description: str | None = None,
+    ) -> Dict:
+        """Create a voucher in phieu_giam_gia and return the inserted data"""
+        if code is None:
+            code = self.generate_voucher_code()
+        insert_sql = """
+        INSERT INTO phieu_giam_gia (
+            ma_phieu_giam_gia,
+            ten_phieu_giam_gia,
+            loai_phieu_giam_gia,
+            gia_tri_giam_gia,
+            hoa_don_toi_thieu,
+            so_luong_dung,
+            ngay_bat_dau,
+            ngay_ket_thuc,
+            trang_thai,
+            mo_ta
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+        """
+        params = (
+            code,
+            name,
+            0 if percent_type else 1,
+            value,
+            min_order,
+            usage_limit,
+            start_datetime,
+            end_datetime,
+            description or ""
+        )
+        self.execute_non_query(insert_sql, params)
+        select_sql = """
+        SELECT TOP 1 * FROM phieu_giam_gia WHERE ma_phieu_giam_gia = ?
+        """
+        rows = self.execute_query(select_sql, (code,))
+        return rows[0] if rows else {}
     
     def get_low_stock_products(self, threshold: int = 10) -> List[Dict]:
         """Get products with low stock"""

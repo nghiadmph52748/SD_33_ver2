@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-chatbot">
+  <div class="ai-chatbot" :class="{ 'is-dark': isDark }">
     <a-card class="chatbot-card" :bordered="false">
       <template #title>
         <div class="chatbot-header">
@@ -19,7 +19,7 @@
       </template>
 
       <!-- Messages Container -->
-      <div class="messages-container" ref="messagesContainer">
+      <div class="messages-container" ref="messagesContainer" :style="messagesContainerStyle">
         <div
           v-for="msg in messages"
           :key="msg.id"
@@ -48,7 +48,7 @@
       </div>
 
       <!-- Quick Actions -->
-      <div class="quick-actions">
+      <div class="quick-actions" :style="quickActionsStyle">
         <div class="quick-actions-label">💡 Gợi ý nhanh:</div>
         <a-space wrap :size="8">
           <a-button
@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { parse as markedParse } from 'marked'
 import { chatWithAI, checkAIHealth } from '@/api/ai'
 import { Message } from '@arco-design/web-vue'
@@ -122,6 +122,9 @@ const input = ref('')
 const loading = ref(false)
 const isConnected = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
+const isDark = ref(false)
+const messagesContainerStyle = ref<Record<string, string>>({})
+const quickActionsStyle = ref<Record<string, string>>({})
 
 const STORAGE_KEY = 'gearup_ai_chat_history_v1'
 
@@ -306,6 +309,31 @@ onMounted(async () => {
 
   // Check connection every 30 seconds
   setInterval(checkConnection, 30000)
+
+  // Observe theme changes from Arco (class on <html>)
+  const root = document.documentElement
+  const updateTheme = () => {
+    isDark.value = root.classList.contains('arco-theme-dark')
+    if (isDark.value) {
+      messagesContainerStyle.value = {
+        background: 'linear-gradient(180deg, #0f1115 0%, #12141a 100%)'
+      }
+      quickActionsStyle.value = {
+        background: '#131722'
+      }
+    } else {
+      messagesContainerStyle.value = {}
+      quickActionsStyle.value = {}
+    }
+  }
+  updateTheme()
+  const observer = new MutationObserver(updateTheme)
+  observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+  ;(window as any).__aiChatThemeObserver = observer
+})
+onUnmounted(() => {
+  const obs = (window as any).__aiChatThemeObserver
+  if (obs && typeof obs.disconnect === 'function') obs.disconnect()
 })
 
 // Auto-persist on change (debounced by microtask via watch)
@@ -340,6 +368,13 @@ function renderMarkdown(md: string) {
       flex-direction: column;
       padding: 16px;
       overflow: hidden;
+      /* make card body transparent so container background is visible */
+      background: transparent !important;
+    }
+
+    /* also ensure the card root is transparent */
+    :deep(.arco-card) {
+      background: transparent !important;
     }
   }
 
@@ -360,7 +395,8 @@ function renderMarkdown(md: string) {
     overflow-y: auto;
     padding: 16px;
     margin-bottom: 16px;
-    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    /* Use Arco theme variables so it adapts to light/dark automatically */
+    background: var(--color-bg-1) !important;
     border-radius: 12px;
 
     /* Custom scrollbar */
@@ -403,9 +439,9 @@ function renderMarkdown(md: string) {
 
     &.assistant {
       .content {
-        background: #ffffff;
-        color: #1d2129;
-        border: 1px solid #e5e6eb;
+        background: var(--color-bg-2);
+        color: var(--color-text-1);
+        border: 1px solid var(--color-border-2);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       }
     }
@@ -495,14 +531,14 @@ function renderMarkdown(md: string) {
   .quick-actions {
     margin-bottom: 12px;
     padding: 12px;
-    background: #f7f8fa;
+    background: var(--color-bg-2);
     border-radius: 8px;
 
     .quick-actions-label {
       font-size: 12px;
       font-weight: 600;
       margin-bottom: 8px;
-      color: #666;
+      color: var(--color-text-2);
     }
   }
 
@@ -523,6 +559,100 @@ function renderMarkdown(md: string) {
     }
   }
 }
+
+/* Component-level dark mode using .is-dark to avoid global scoping issues */
+.ai-chatbot.is-dark {
+  .messages-container {
+    background: linear-gradient(180deg, #0f1115 0%, #12141a 100%);
+    &::-webkit-scrollbar-track { background: #161922; }
+    &::-webkit-scrollbar-thumb { background: #2a2f3a; }
+    &::-webkit-scrollbar-thumb:hover { background: #3a4150; }
+  }
+  .message.assistant .content {
+    background: #151823;
+    color: #e6e9ef;
+    border: 1px solid #272b36;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  }
+  .message.user .message-wrapper .content {
+    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
+  }
+  .content .text table { border-color: #2b3040; }
+  .content .text th, .content .text td { border-color: #2b3040; }
+  .content .text th { background: #1b2030; color: #e6e9ef; }
+  .content .text code, .content .text pre code { background: #0f1420; color: #e6e9ef; }
+  .content .sources .sources-content { background: #141926; border-color: #2b3040; color: #cfd6e4; }
+  .content .timestamp { opacity: 0.7; }
+  .quick-actions { background: #131722; }
+  .quick-actions .quick-actions-label { color: #9aa4b2; }
+}
+
+/* Dark theme overrides for Arco (.arco-theme-dark on body/html)
+   Use :deep to pierce scoped styles and raise specificity with !important */
+:deep(html.arco-theme-dark) .ai-chatbot .messages-container,
+:deep(body.arco-theme-dark) .ai-chatbot .messages-container,
+:deep(.arco-theme-dark) .ai-chatbot .messages-container {
+  background: linear-gradient(180deg, #0f1115 0%, #12141a 100%) !important;
+}
+
+:deep(html.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-track,
+:deep(body.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-track,
+:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-track { background: #161922 !important; }
+:deep(html.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb,
+:deep(body.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb,
+:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb { background: #2a2f3a !important; }
+:deep(html.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb:hover,
+:deep(body.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb:hover,
+:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb:hover { background: #3a4150 !important; }
+
+:deep(html.arco-theme-dark) .ai-chatbot .message.assistant .content,
+:deep(body.arco-theme-dark) .ai-chatbot .message.assistant .content,
+:deep(.arco-theme-dark) .ai-chatbot .message.assistant .content {
+  background: #151823 !important;
+  color: #e6e9ef !important;
+  border: 1px solid #272b36 !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+:deep(html.arco-theme-dark) .ai-chatbot .message.user .message-wrapper .content,
+:deep(body.arco-theme-dark) .ai-chatbot .message.user .message-wrapper .content,
+:deep(.arco-theme-dark) .ai-chatbot .message.user .message-wrapper .content {
+  box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35) !important;
+}
+
+:deep(html.arco-theme-dark) .ai-chatbot .content .text table,
+:deep(body.arco-theme-dark) .ai-chatbot .content .text table,
+:deep(.arco-theme-dark) .ai-chatbot .content .text table { border-color: #2b3040 !important; }
+:deep(html.arco-theme-dark) .ai-chatbot .content .text th,
+:deep(body.arco-theme-dark) .ai-chatbot .content .text th,
+:deep(.arco-theme-dark) .ai-chatbot .content .text th,
+:deep(html.arco-theme-dark) .ai-chatbot .content .text td,
+:deep(body.arco-theme-dark) .ai-chatbot .content .text td,
+:deep(.arco-theme-dark) .ai-chatbot .content .text td { border-color: #2b3040 !important; }
+:deep(html.arco-theme-dark) .ai-chatbot .content .text th,
+:deep(body.arco-theme-dark) .ai-chatbot .content .text th,
+:deep(.arco-theme-dark) .ai-chatbot .content .text th { background: #1b2030 !important; color: #e6e9ef !important; }
+:deep(html.arco-theme-dark) .ai-chatbot .content .text code,
+:deep(body.arco-theme-dark) .ai-chatbot .content .text code,
+:deep(.arco-theme-dark) .ai-chatbot .content .text code,
+:deep(html.arco-theme-dark) .ai-chatbot .content .text pre code,
+:deep(body.arco-theme-dark) .ai-chatbot .content .text pre code,
+:deep(.arco-theme-dark) .ai-chatbot .content .text pre code { background: #0f1420 !important; color: #e6e9ef !important; }
+
+:deep(html.arco-theme-dark) .ai-chatbot .content .sources .sources-content,
+:deep(body.arco-theme-dark) .ai-chatbot .content .sources .sources-content,
+:deep(.arco-theme-dark) .ai-chatbot .content .sources .sources-content { background: #141926 !important; border-color: #2b3040 !important; color: #cfd6e4 !important; }
+
+:deep(html.arco-theme-dark) .ai-chatbot .content .timestamp,
+:deep(body.arco-theme-dark) .ai-chatbot .content .timestamp,
+:deep(.arco-theme-dark) .ai-chatbot .content .timestamp { opacity: 0.7 !important; }
+
+:deep(html.arco-theme-dark) .ai-chatbot .quick-actions,
+:deep(body.arco-theme-dark) .ai-chatbot .quick-actions,
+:deep(.arco-theme-dark) .ai-chatbot .quick-actions { background: #131722 !important; }
+:deep(html.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label,
+:deep(body.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label,
+:deep(.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label { color: #9aa4b2 !important; }
 
 @keyframes fadeIn {
   from {

@@ -12,7 +12,7 @@ class LMStudioClient:
             api_key="lm-studio"
         )
         self.model = settings.lm_studio_model
-        logger.info(f"✅ LM Studio client initialized: {settings.lm_studio_base_url}")
+        logger.info(f"LM Studio client initialized: {settings.lm_studio_base_url}")
     
     def chat(
         self, 
@@ -32,7 +32,7 @@ class LMStudioClient:
             )
             return response
         except Exception as e:
-            logger.error(f"❌ LM Studio error: {e}")
+            logger.error(f"LM Studio error: {e}")
             raise
     
     def test_connection(self):
