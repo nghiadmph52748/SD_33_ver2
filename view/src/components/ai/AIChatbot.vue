@@ -3,7 +3,7 @@
     <a-card class="chatbot-card" :bordered="false">
       <template #title>
         <div class="chatbot-header">
-          <span class="title">🤖 AI Assistant</span>
+          <span class="title">🤖 Trợ Lý AI</span>
           <a-space>
             <a-badge
               :status="isConnected ? 'success' : 'error'"
@@ -30,11 +30,11 @@
               {{ msg.role === 'user' ? '👤' : '🤖' }}
             </div>
             <div class="content">
-              <div class="text">{{ msg.content }}</div>
+              <div class="text" v-html="renderMarkdown(msg.content)"></div>
               <div v-if="msg.sources" class="sources">
                 <a-divider style="margin: 8px 0" />
                 <div class="sources-label">📊 Nguồn dữ liệu:</div>
-                <pre>{{ msg.sources }}</pre>
+                <div class="sources-content" v-html="renderMarkdown(msg.sources)"></div>
               </div>
               <div class="timestamp">{{ msg.timestamp }}</div>
             </div>
@@ -76,8 +76,9 @@
           :loading="loading"
           :disabled="!isConnected"
           allow-clear
-          @search="sendMessage"
-          @press-enter="sendMessage"
+          search-button
+          @search="handleSearch"
+          @press-enter="handleSearch"
         >
           <template #button-icon>
             <icon-send />
@@ -90,7 +91,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
+import { parse as markedParse } from 'marked'
 import { chatWithAI, checkAIHealth } from '@/api/ai'
 import { Message } from '@arco-design/web-vue'
 import { IconSend, IconDelete } from '@arco-design/web-vue/es/icon'
@@ -126,6 +128,30 @@ const loading = ref(false)
 const isConnected = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
 
+const STORAGE_KEY = 'gearup_ai_chat_history_v1'
+
+function saveHistory() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.value))
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const parsed: ChatMessage[] = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        messages.value = parsed
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+}
+
 const quickActions: QuickAction[] = [
   {
     id: 'top-products',
@@ -146,10 +172,34 @@ const quickActions: QuickAction[] = [
     question: 'Sản phẩm nào sắp hết hàng?'
   },
   {
-    id: 'customers',
-    label: 'Khách hàng',
+    id: 'order-status',
+    label: 'Trạng thái đơn',
+    icon: '📋',
+    question: 'Trạng thái đơn hàng thế nào?'
+  },
+  {
+    id: 'top-customers',
+    label: 'Top khách hàng',
     icon: '👥',
-    question: 'Có bao nhiêu khách hàng đang hoạt động?'
+    question: 'Khách hàng nào chi tiêu nhiều nhất?'
+  },
+  {
+    id: 'discounts',
+    label: 'Đợt giảm giá',
+    icon: '🎉',
+    question: 'Đợt giảm giá nào đang hoạt động?'
+  },
+  {
+    id: 'employees',
+    label: 'Nhân viên',
+    icon: '👨‍💼',
+    question: 'Nhân viên nào bán hàng tốt nhất?'
+  },
+  {
+    id: 'channel',
+    label: 'Kênh bán hàng',
+    icon: '🛒',
+    question: 'Bán online hay tại quầy nhiều hơn?'
   }
 ]
 
@@ -162,6 +212,12 @@ async function checkConnection() {
     isConnected.value = false
     console.error('AI service connection failed:', error)
   }
+}
+
+function handleSearch(value?: string) {
+  // Use current input if value is undefined (e.g., press-enter)
+  const text = typeof value === 'string' ? value : input.value
+  sendMessage(text)
 }
 
 async function sendMessage(text: string = input.value) {
@@ -184,6 +240,9 @@ async function sendMessage(text: string = input.value) {
   input.value = ''
   loading.value = true
 
+  // Persist
+  saveHistory()
+
   // Scroll to bottom
   await nextTick()
   scrollToBottom()
@@ -204,6 +263,9 @@ async function sendMessage(text: string = input.value) {
     // Scroll to bottom
     await nextTick()
     scrollToBottom()
+
+    // Persist
+    saveHistory()
   } catch (error: any) {
     Message.error('Lỗi khi gửi tin nhắn: ' + error.message)
 
@@ -232,6 +294,7 @@ function clearMessages() {
       timestamp: new Date().toLocaleTimeString('vi-VN')
     }
   ]
+  saveHistory()
 }
 
 function scrollToBottom() {
@@ -242,11 +305,30 @@ function scrollToBottom() {
 
 // Lifecycle
 onMounted(async () => {
+  // Restore history first
+  loadHistory()
   await checkConnection()
 
   // Check connection every 30 seconds
   setInterval(checkConnection, 30000)
 })
+
+// Auto-persist on change (debounced by microtask via watch)
+watch(
+  messages,
+  () => {
+    saveHistory()
+  },
+  { deep: true }
+)
+
+function renderMarkdown(md: string) {
+  try {
+    return markedParse(md || '') as string
+  } catch {
+    return md
+  }
+}
 </script>
 
 <style scoped lang="less">
@@ -281,8 +363,10 @@ onMounted(async () => {
   .messages-container {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 0;
+    padding: 16px;
     margin-bottom: 16px;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border-radius: 12px;
 
     /* Custom scrollbar */
     &::-webkit-scrollbar {
@@ -314,17 +398,20 @@ onMounted(async () => {
 
         .content {
           background: #165dff;
-          color: white;
+          color: #fff;
           margin-right: 8px;
           margin-left: 0;
+          box-shadow: 0 4px 10px rgba(22, 93, 255, 0.25);
         }
       }
     }
 
     &.assistant {
       .content {
-        background: #f5f5f5;
-        color: #333;
+        background: #ffffff;
+        color: #1d2129;
+        border: 1px solid #e5e6eb;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       }
     }
   }
@@ -338,18 +425,48 @@ onMounted(async () => {
   .avatar {
     font-size: 24px;
     flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .content {
-    padding: 10px 14px;
-    border-radius: 12px;
-    max-width: 70%;
+    padding: 10px 12px;
+    border-radius: 14px;
+    max-width: 72%;
     word-wrap: break-word;
     margin-left: 8px;
 
     .text {
-      line-height: 1.6;
-      white-space: pre-wrap;
+      line-height: 1.7;
+      white-space: normal;
+
+      h1, h2, h3 {
+        margin: 0 0 8px 0;
+        font-weight: 600;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 6px 0 2px 0;
+      }
+
+      th, td {
+        border: 1px solid #e5e6eb;
+        padding: 6px 8px;
+        text-align: left;
+      }
+
+      th {
+        background: #f2f3f5;
+        font-weight: 600;
+      }
+      code, pre code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
     }
 
     .sources {
@@ -362,21 +479,20 @@ onMounted(async () => {
         margin-bottom: 4px;
       }
 
-      pre {
-        background: rgba(0, 0, 0, 0.05);
+      .sources-content {
+        background: #fafbfc;
         padding: 8px;
-        border-radius: 4px;
-        white-space: pre-wrap;
-        font-size: 11px;
-        line-height: 1.4;
-        margin: 4px 0 0 0;
+        border-radius: 6px;
+        border: 1px solid #eef0f2;
+        font-size: 12px;
+        line-height: 1.5;
       }
     }
 
     .timestamp {
-      margin-top: 4px;
+      margin-top: 6px;
       font-size: 11px;
-      opacity: 0.6;
+      opacity: 0.55;
     }
   }
 
@@ -396,12 +512,17 @@ onMounted(async () => {
 
   .input-container {
     :deep(.arco-input-search) {
-      .arco-input-wrapper {
-        border-radius: 20px;
+      .arco-input {
+        border-radius: 20px 0 0 20px;
       }
 
       .arco-input-append {
         border-radius: 0 20px 20px 0;
+      }
+
+      .arco-btn {
+        border-radius: 0 20px 20px 0;
+        height: 100%;
       }
     }
   }

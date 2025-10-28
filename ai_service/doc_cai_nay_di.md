@@ -1,10 +1,9 @@
-# GearUp AI Service
 ## Cài đặt
 
 **Yêu cầu:**
 - Python 3.10+
 - LM Studio chạy trên localhost:3147
-- SQL Server (database GearUp)
+- SQL Server
 - Spring Boot backend chạy trên localhost:8080
 
 **Các bước cài đặt:**
@@ -31,7 +30,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Chỉnh sửa file `.env` với thông tin database của bạn:
+Chỉnh sửa file `.env` với thông tin database:
 ```env
 LM_STUDIO_BASE_URL=http://localhost:3147/v1
 LM_STUDIO_MODEL=llama-3.2-3b-instruct
@@ -53,11 +52,11 @@ API_PORT=8001
 uvicorn app.main:app --reload --port 8001
 ```
 
-Dịch vụ sẽ chạy tại http://localhost:8001 (tài liệu API tại /docs)
+Dịch vụ sẽ chạy tại http://localhost:8001 
 
 ## API Endpoints
 
-### Kiểm tra sức khỏe
+### Kiểm tra
 
 ```bash
 # Kiểm tra trạng thái dịch vụ
@@ -79,8 +78,8 @@ curl -X POST http://localhost:8001/api/ai/chatbot/chat \
 **Phản hồi:**
 ```json
 {
-  "message": "📊 Dựa trên dữ liệu từ hệ thống, đây là top 5 sản phẩm bán chạy nhất trong 30 ngày qua:\n\n1. Nike Air Force 1 - 142 đôi\n2. Adidas Ultra Boost - 98 đôi\n3. Vans Old Skool - 76 đôi\n...",
-  "sources": "📊 **Top 5 sản phẩm bán chạy nhất (30 ngày qua):**\n\n1. **Nike Air Force 1**\n   - Đã bán: 142 đôi\n   - Doanh thu: 15,500,000 VNĐ\n...",
+  "message": "Dựa trên dữ liệu từ hệ thống, đây là top 5 sản phẩm bán chạy nhất trong 30 ngày qua:\n\n1. Nike Air Force 1 - 142 đôi\n2. Adidas Ultra Boost - 98 đôi\n3. Vans Old Skool - 76 đôi\n...",
+  "sources": "**Top 5 sản phẩm bán chạy nhất (30 ngày qua):**\n\n1. **Nike Air Force 1**\n   - Đã bán: 142 đôi\n   - Doanh thu: 15,500,000 VNĐ\n...",
   "queryType": "top_products"
 }
 ```

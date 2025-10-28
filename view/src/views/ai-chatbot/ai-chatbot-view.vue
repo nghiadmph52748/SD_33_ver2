@@ -11,7 +11,7 @@
         <!-- Info Card -->
         <a-card title="ℹ️ Giới thiệu" :bordered="false" style="margin-bottom: 16px">
           <p>
-            <strong>AI Assistant</strong> là trợ lý thông minh giúp bạn tra cứu thông tin nhanh
+            <strong>GearUp AI</strong> là trợ lý thông minh giúp bạn tra cứu thông tin nhanh
             chóng trong hệ thống GearUp.
           </p>
           <a-divider />
@@ -29,8 +29,24 @@
               <span>Cảnh báo tồn kho thấp</span>
             </div>
             <div class="feature-item">
+              <span class="icon">📋</span>
+              <span>Trạng thái đơn hàng</span>
+            </div>
+            <div class="feature-item">
               <span class="icon">👥</span>
-              <span>Thông tin khách hàng</span>
+              <span>Top khách hàng chi tiêu</span>
+            </div>
+            <div class="feature-item">
+              <span class="icon">🎉</span>
+              <span>Đợt giảm giá hoạt động</span>
+            </div>
+            <div class="feature-item">
+              <span class="icon">👨‍💼</span>
+              <span>Hiệu suất nhân viên</span>
+            </div>
+            <div class="feature-item">
+              <span class="icon">🛒</span>
+              <span>Phân bố kênh bán hàng</span>
             </div>
           </div>
         </a-card>
@@ -69,12 +85,6 @@
           </a-list>
 
           <a-divider />
-
-          <div class="tech-info">
-            <a-tag color="blue">LM Studio</a-tag>
-            <a-tag color="green">Llama 3.2 3B</a-tag>
-            <a-tag color="orange">RAG</a-tag>
-          </div>
         </a-card>
       </a-col>
     </a-row>

@@ -88,6 +88,115 @@ class DatabaseClient:
         ORDER BY ctsp.so_luong ASC
         """
         return self.execute_query(query, (threshold,))
+    
+    def get_order_status_distribution(self) -> List[Dict]:
+        """Get order status distribution"""
+        query = """
+        SELECT 
+            ttd.ten_trang_thai as status_name,
+            COUNT(hd.id) as order_count
+        FROM hoa_don hd
+        JOIN trang_thai_don_hang ttd ON hd.id_trang_thai_don_hang = ttd.id
+        GROUP BY ttd.ten_trang_thai
+        ORDER BY order_count DESC
+        """
+        return self.execute_query(query)
+    
+    def get_top_customers_by_spending(self, limit: int = 5) -> List[Dict]:
+        """Get top customers by total spending"""
+        query = """
+        SELECT TOP (?)
+            kh.ten_khach_hang as customer_name,
+            kh.ma_khach_hang as customer_code,
+            COUNT(DISTINCT hd.id) as total_orders,
+            SUM(hd.tong_tien) as total_spent
+        FROM khach_hang kh
+        LEFT JOIN hoa_don hd ON kh.id = hd.id_khach_hang
+        WHERE hd.trang_thai = 1 OR hd.trang_thai IS NULL
+        GROUP BY kh.id, kh.ten_khach_hang, kh.ma_khach_hang
+        HAVING SUM(hd.tong_tien) > 0
+        ORDER BY total_spent DESC
+        """
+        return self.execute_query(query, (limit,))
+    
+    def get_active_discount_campaigns(self) -> List[Dict]:
+        """Get active discount campaigns"""
+        query = """
+        SELECT 
+            dg.ten_dot_giam_gia as campaign_name,
+            dg.ma_dot_giam_gia as campaign_code,
+            dg.gia_tri_giam_gia as discount_value,
+            dg.ngay_bat_dau as start_date,
+            dg.ngay_ket_thuc as end_date
+        FROM dot_giam_gia dg
+        WHERE dg.trang_thai = 1
+        AND GETDATE() BETWEEN dg.ngay_bat_dau AND dg.ngay_ket_thuc
+        ORDER BY dg.ngay_bat_dau DESC
+        """
+        return self.execute_query(query)
+    
+    def get_employee_sales_performance(self, limit: int = 5) -> List[Dict]:
+        """Get employee sales performance"""
+        query = """
+        SELECT TOP (?)
+            nv.ten_nhan_vien as employee_name,
+            nv.ma_nhan_vien as employee_code,
+            COUNT(DISTINCT hd.id) as total_orders,
+            SUM(hd.tong_tien) as total_revenue
+        FROM nhan_vien nv
+        LEFT JOIN hoa_don hd ON nv.id = hd.id_nhan_vien
+        WHERE hd.trang_thai = 1 OR hd.trang_thai IS NULL
+        GROUP BY nv.id, nv.ten_nhan_vien, nv.ma_nhan_vien
+        HAVING COUNT(DISTINCT hd.id) > 0
+        ORDER BY total_revenue DESC
+        """
+        return self.execute_query(query, (limit,))
+    
+    def get_top_product_colors(self, limit: int = 5) -> List[Dict]:
+        """Get top selling product colors"""
+        query = """
+        SELECT TOP (?)
+            ms.ten_mau_sac as color_name,
+            SUM(hdct.so_luong) as total_sold
+        FROM hoa_don_chi_tiet hdct
+        JOIN chi_tiet_san_pham ctsp ON hdct.id_chi_tiet_san_pham = ctsp.id
+        JOIN mau_sac ms ON ctsp.id_mau_sac = ms.id
+        JOIN hoa_don hd ON hdct.id_hoa_don = hd.id
+        WHERE hd.trang_thai = 1
+        GROUP BY ms.ten_mau_sac
+        ORDER BY total_sold DESC
+        """
+        return self.execute_query(query, (limit,))
+    
+    def get_top_product_sizes(self, limit: int = 5) -> List[Dict]:
+        """Get top selling product sizes"""
+        query = """
+        SELECT TOP (?)
+            kt.ten_kich_thuoc as size_name,
+            SUM(hdct.so_luong) as total_sold
+        FROM hoa_don_chi_tiet hdct
+        JOIN chi_tiet_san_pham ctsp ON hdct.id_chi_tiet_san_pham = ctsp.id
+        JOIN kich_thuoc kt ON ctsp.id_kich_thuoc = kt.id
+        JOIN hoa_don hd ON hdct.id_hoa_don = hd.id
+        WHERE hd.trang_thai = 1
+        GROUP BY kt.ten_kich_thuoc
+        ORDER BY total_sold DESC
+        """
+        return self.execute_query(query, (limit,))
+    
+    def get_online_vs_pos_stats(self) -> Dict:
+        """Get online vs POS sales statistics"""
+        query = """
+        SELECT 
+            SUM(CASE WHEN hd.loai_don = 0 THEN hd.tong_tien ELSE 0 END) as pos_revenue,
+            SUM(CASE WHEN hd.loai_don = 1 THEN hd.tong_tien ELSE 0 END) as online_revenue,
+            COUNT(CASE WHEN hd.loai_don = 0 THEN 1 END) as pos_orders,
+            COUNT(CASE WHEN hd.loai_don = 1 THEN 1 END) as online_orders
+        FROM hoa_don hd
+        WHERE hd.trang_thai = 1
+        """
+        results = self.execute_query(query)
+        return results[0] if results else {}
 
 # Singleton instance
 db_client = DatabaseClient()
