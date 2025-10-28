@@ -109,8 +109,12 @@ export default defineComponent({
     }
     listenerRouteChange((newRoute) => {
       const { requiresAuth, activeMenu, hideInMenu } = newRoute.meta
-      if (requiresAuth && (!hideInMenu || activeMenu)) {
+      console.log('Route changed:', newRoute.name, { requiresAuth, activeMenu, hideInMenu })
+      
+      // Handle routes with activeMenu or requireAuth
+      if (activeMenu || (requiresAuth && !hideInMenu)) {
         const menuOpenKeys = findMenuOpenKeys((activeMenu || newRoute.name) as string)
+        console.log('Menu open keys:', menuOpenKeys)
 
         const keySet = new Set([...menuOpenKeys, ...openKeys.value])
         openKeys.value = [...keySet]
@@ -118,12 +122,16 @@ export default defineComponent({
         // If activeMenu is specified, use it; otherwise use the first visible parent in the path
         if (activeMenu) {
           selectedKey.value = [activeMenu]
+          console.log('Using activeMenu:', activeMenu)
         } else if (hideInMenu && menuOpenKeys.length > 0) {
           // For hidden routes, select the top-level parent menu item
           selectedKey.value = [menuOpenKeys[0]]
+          console.log('Using first menu key:', menuOpenKeys[0])
         } else {
           selectedKey.value = [menuOpenKeys[menuOpenKeys.length - 1]]
+          console.log('Using last menu key:', menuOpenKeys[menuOpenKeys.length - 1])
         }
+        console.log('Final selected key:', selectedKey.value)
       }
     }, true)
     const setCollapse = (val: boolean) => {
@@ -188,6 +196,7 @@ export default defineComponent({
 </script>
 
 <style lang="less" scoped>
+/* Global styles for menu hover - not scoped */
 :deep(.arco-menu-inner) {
   .arco-menu-inline-header {
     display: flex;
@@ -198,5 +207,106 @@ export default defineComponent({
       font-size: 18px;
     }
   }
+}
+
+/* Hover + active styles for sidebar (both themes) */
+::deep(.arco-menu) {
+  .arco-menu-item,
+  .arco-menu-inline-header {
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  
+  /* Hover state - works for both selected and unselected items */
+  .arco-menu-item:hover,
+  .arco-menu-inline-header:hover {
+    background: #e6f4ff !important;
+    color: #1890ff !important;
+  }
+  
+  /* Selected state - stronger blue background */
+  .arco-menu-selected,
+  .arco-menu-selected > .arco-menu-inline-header {
+    background: #bae7ff !important;
+    color: #0050b3 !important;
+    position: relative;
+  }
+  
+  /* Selected item hover - even stronger blue */
+  .arco-menu-selected:hover,
+  .arco-menu-selected:hover > .arco-menu-inline-header {
+    background: #91d5ff !important;
+    color: #003a8c !important;
+  }
+  
+  /* Blue left border for selected items */
+  .arco-menu-selected::before,
+  .arco-menu-selected > .arco-menu-inline-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: #1890ff;
+    border-radius: 0 2px 2px 0;
+  }
+}
+
+/* Alternative approach with higher specificity */
+::deep(.arco-menu .arco-menu-item:hover) {
+  background: #e6f4ff !important;
+  color: #1890ff !important;
+}
+
+::deep(.arco-menu .arco-menu-selected) {
+  background: #bae7ff !important;
+  color: #0050b3 !important;
+  position: relative;
+}
+
+::deep(.arco-menu .arco-menu-selected:hover) {
+  background: #91d5ff !important;
+  color: #003a8c !important;
+}
+
+::deep(.arco-menu .arco-menu-selected::before) {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #1890ff;
+  border-radius: 0 2px 2px 0;
+}
+</style>
+
+<style lang="less">
+/* Non-scoped styles for menu hover effects */
+.arco-menu .arco-menu-item:hover {
+  background: #e6f4ff !important;
+  color: #1890ff !important;
+}
+
+.arco-menu .arco-menu-selected {
+  background: #bae7ff !important;
+  color: #0050b3 !important;
+  position: relative;
+}
+
+.arco-menu .arco-menu-selected:hover {
+  background: #91d5ff !important;
+  color: #003a8c !important;
+}
+
+.arco-menu .arco-menu-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #1890ff;
+  border-radius: 0 2px 2px 0;
 }
 </style>
