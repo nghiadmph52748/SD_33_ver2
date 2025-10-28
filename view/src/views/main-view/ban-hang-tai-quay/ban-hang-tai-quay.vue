@@ -4,22 +4,11 @@
     <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Main Layout -->
-    <a-row :gutter="16" class="pos-main">
-      <!-- Left: Orders & Cart -->
-      <a-col :xs="24" :lg="16" class="pos-left">
-        <a-card class="orders-card" title="Danh Sách Đơn Hàng">
-          <template #extra>
-            <a-space size="small">
-              <a-button v-if="orders.length < 8" type="primary" size="small" @click="createNewOrder">
-                <template #icon>
-                  <icon-plus />
-                </template>
-                Thêm Đơn
-              </a-button>
-            </a-space>
-          </template>
-          <a-empty v-if="orders.length === 0" description="Chưa có đơn hàng nào" />
-          <a-tabs v-else v-model:active-key="currentOrderIndex" type="button" @change="handleOrderChange" class="orders-tabs">
+    <a-card class="main-pos-card">
+      <!-- <template #title> -->
+      <div style="display: flex; width: 100%; align-items: center">
+        <div class="tabs-container" style="flex: 0 0 80%; display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+          <a-tabs v-model:active-key="currentOrderIndex" type="button" @change="handleOrderChange" class="orders-tabs" style="flex: 1; min-width: max-content;">
             <a-tab-pane v-for="(order, idx) in orders" :key="idx.toString()">
               <template #title>
                 <div class="tab-header">
@@ -36,39 +25,59 @@
                   </a-button>
                 </div>
               </template>
-              <!-- Product Selection Toolbar -->
-              <div class="toolbar" style="display: flex; justify-content: space-between; align-items: center">
-                <div style="font-weight: 600; color: #333; font-size: 14px">
-                  Mã Đơn:
-                  <span style="color: #0960bd; font-weight: 700">{{ currentOrder?.orderCode }}</span>
+            </a-tab-pane>
+          </a-tabs>
+        </div>
+        <div style="flex: 0 0 20%; text-align: center;margin-bottom: 16px;">
+          <a-button v-if="orders.length < 8" type="primary" size="medium" @click="createNewOrder">
+            <template #icon>
+              <icon-plus />
+            </template>
+            Thêm Đơn
+          </a-button>
+        </div>
+      </div>
+      <!-- </template> -->
+      <a-row :gutter="16" class="pos-main">
+        <!-- Left: Orders & Cart -->
+        <a-col :xs="24" :lg="16" class="pos-left">
+          <a-empty v-if="orders.length === 0" description="Chưa có đơn hàng nào" />
+          <div v-else>
+            <a-card class="order-code-cart-card">
+              <template #title>
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  <div style="font-weight: 600; color: #333; font-size: 14px">
+                    Mã Đơn:
+                    <span style="color: #0960bd; font-weight: 700">{{ currentOrder?.orderCode }}</span>
+                  </div>
+                  <a-space wrap style="margin-top: 8px">
+                    <a-button
+                      v-if="currentOrder?.items.length > 0"
+                      type="text"
+                      status="danger"
+                      @click="clearCart"
+                      style="border: 1px solid #d9d9d9"
+                    >
+                      <template #icon>
+                        <icon-delete />
+                      </template>
+                      Xoá Tất Cả
+                    </a-button>
+                    <a-button @click="showQRScanner = true" style="border: 1px solid #d9d9d9">
+                      <template #icon>
+                        <icon-qrcode />
+                      </template>
+                      Quét QR
+                    </a-button>
+                    <a-button type="primary" @click="openProductModal">
+                      <template #icon>
+                        <icon-plus />
+                      </template>
+                      Thêm Sản Phẩm
+                    </a-button>
+                  </a-space>
                 </div>
-                <a-space wrap>
-                  <a-button type="primary" @click="openProductModal">
-                    <template #icon>
-                      <icon-plus />
-                    </template>
-                    Thêm Sản Phẩm
-                  </a-button>
-                  <a-button @click="showQRScanner = true" style="border: 1px solid #d9d9d9">
-                    <template #icon>
-                      <icon-qrcode />
-                    </template>
-                    Quét QR
-                  </a-button>
-                  <a-button
-                    v-if="currentOrder?.items.length > 0"
-                    type="text"
-                    status="danger"
-                    @click="clearCart"
-                    style="border: 1px solid #d9d9d9"
-                  >
-                    <template #icon>
-                      <icon-delete />
-                    </template>
-                    Xoá Tất Cả
-                  </a-button>
-                </a-space>
-              </div>
+              </template>
               <!-- Cart Table -->
               <a-card class="cart-card">
                 <template #title>🛒 Giỏ Hàng</template>
@@ -171,193 +180,202 @@
                   <a-empty v-else description="Giỏ hàng trống" />
                 </div>
               </a-card>
-            </a-tab-pane>
-          </a-tabs>
-        </a-card>
-      </a-col>
+            </a-card>
+          </div>
+        </a-col>
 
-      <!-- Right: Customer & Payment -->
-      <a-col :xs="24" :lg="8" class="pos-right">
-        <!-- Customer Section -->
-        <a-card title="Thông Tin Khách Hàng" class="customer-card">
-          <a-form :model="{}" layout="vertical">
-            <a-form-item label="Chọn Khách Hàng">
-              <a-select
-                :model-value="currentOrder?.customerId"
-                placeholder="--- Chọn khách hàng ---"
-                allow-search
-                filterable
-                @update:model-value="updateCustomerId"
-                @change="handleCustomerChange"
-              >
-                <a-option value="">Khách lẻ</a-option>
-                <a-option v-for="customer in filteredCustomers" :key="customer.id" :value="customer.id">
-                  {{ customer.name }} ({{ customer.phone }})
-                </a-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item v-if="selectedCustomer && currentOrder">
-              <a-descriptions size="small" :column="1" bordered>
-                <a-descriptions-item label="Tên">{{ selectedCustomer.name }}</a-descriptions-item>
-                <a-descriptions-item label="SĐT">{{ selectedCustomer.phone }}</a-descriptions-item>
-                <a-descriptions-item label="Email">{{ selectedCustomer.email || 'N/A' }}</a-descriptions-item>
-                <a-descriptions-item label="Địa Chỉ">{{ selectedCustomer.address || 'N/A' }}</a-descriptions-item>
-              </a-descriptions>
-            </a-form-item>
-            <a-button v-if="!selectedCustomer" type="dashed" long @click="showAddCustomerModal = true">
-              <template #icon>
-                <icon-plus />
-              </template>
-              Thêm Khách Hàng Mới
-            </a-button>
-          </a-form>
-        </a-card>
-        <!-- Payment Section -->
-        <a-card title="Thanh Toán" class="payment-card">
-          <a-form :model="{}" layout="vertical">
-            <!-- Discount Section - Button Style -->
-            <a-form-item :model="{}">
-              <a-button
-                v-if="!paymentForm.value?.discountCode"
-                long
-                size="large"
-                type="secondary"
-                :disabled="!hasEligibleVouchers"
-                style="
-                  height: 56px;
-                  font-size: 15px;
-                  border: 1px solid #d9d9d9;
-                  background: transparent;
-                  color: #000;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  padding: 0 16px;
-                "
-                @click="showVoucherModal = true"
-              >
-                <span style="font-weight: 500; text-align: left">Phiếu Giảm Giá</span>
-                <span style="font-weight: 400; font-size: 12px; text-align: right; color: #999">
-                  {{ hasEligibleVouchers ? `${eligibleVouchersCount} voucher có thể dùng >` : 'Không có voucher phù hợp' }}
-                </span>
-              </a-button>
-            </a-form-item>
-
-            <!-- Payment Method -->
-            <a-form-item :model="{}" label="Phương Thức Thanh Toán">
-              <div style="display: flex; gap: 8px; width: 100%">
-                <a-button
-                  :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'cash' }]"
-                  :type="paymentMethod.value === 'cash' ? 'primary' : 'secondary'"
-                  style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
-                  @click="selectPaymentMethod('cash')"
+        <!-- Right: Customer & Payment -->
+        <a-col :xs="24" :lg="8" class="pos-right">
+          <!-- Customer Section -->
+          <a-card title="Thông Tin Khách Hàng" class="customer-card">
+            <a-form :model="{}" layout="vertical">
+              <a-form-item label="Chọn Khách Hàng">
+                <a-select
+                  :model-value="currentOrder?.customerId"
+                  placeholder="--- Chọn khách hàng ---"
+                  allow-search
+                  filterable
+                  @update:model-value="updateCustomerId"
+                  @change="handleCustomerChange"
                 >
-                Tiền Mặt
-                </a-button>
-                <a-button
-                  :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'transfer' }]"
-                  :type="paymentMethod.value === 'transfer' ? 'primary' : 'secondary'"
-                  style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
-                  @click="selectPaymentMethod('transfer')"
-                >
-                Chuyển Khoản
-                </a-button>
-              </div>
-            </a-form-item>
-
-            <!-- Cash Input -->
-            <a-form-item
-              :model="{}"
-              v-if="paymentMethod.value === 'cash'"
-              label="Tiền Nhận"
-              class="cash-input-container"
-              style="transition: all 0.3s ease"
-            >
-              <a-input-number
-                v-model:model-value="paymentForm.value.cashReceived"
-                :min="finalPrice"
-                placeholder="Nhập số tiền khách đưa"
-                style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
-                :precision="0"
-                :formatter="(value) => formatCurrency(value || 0)"
-                :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
-                @update:model-value="(val) => (paymentForm.value.cashReceived = val || 0)"
-              />
-              <div v-if="paymentForm.value?.cashReceived > 0" class="cash-feedback" style="margin-top: 8px">
-                <div v-if="change >= 0" class="cash-change-positive">
-                  <span class="cash-icon">💰</span>
-                  <span class="cash-text">
-                    Tiền thối:
-                    <strong>{{ formatCurrency(change) }}</strong>
-                  </span>
-                </div>
-                <div v-else class="cash-change-negative">
-                  <span class="cash-icon">⚠️</span>
-                  <span class="cash-text">
-                    Thiếu:
-                    <strong>{{ formatCurrency(Math.abs(change)) }}</strong>
-                  </span>
-                </div>
-              </div>
-            </a-form-item>
-
-            <!-- Transfer Notes -->
-            <a-alert v-if="paymentMethod.value === 'transfer'" type="info" title="Chuyển Khoản" closable>
-              <p>Vui lòng chuyển khoản theo thông tin cung cấp. Mã hoá đơn: {{ currentOrder?.id }}</p>
-            </a-alert>
-
-            <!-- Selected Voucher Info -->
-            <a-alert
-              v-if="selectedCoupon"
-              :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`"
-              type="success"
-              closable
-              @close="clearVoucher"
-            >
-              <div style="display: flex; justify-content: space-between; align-items: center">
-                <div>
-                  <strong>{{ selectedCoupon.maPhieuGiamGia }}</strong>
-                  <span style="margin-left: 8px; color: #52c41a">-{{ getDiscountDisplay(selectedCoupon) }}</span>
-                </div>
-                <div style="font-size: 12px; color: #666">
-                  <span v-if="selectedCoupon.hoaDonToiThieu">Min: {{ formatCurrency(Number(selectedCoupon.hoaDonToiThieu)) }}</span>
-                </div>
-              </div>
-            </a-alert>
-
-            <!-- Price Summary -->
-            <a-divider />
-            <div class="payment-summary">
-              <p class="summary-row">
-                <span>Tổng tiền:</span>
-                <strong>{{ formatCurrency(subtotal) }}</strong>
-              </p>
-              <p class="summary-row">
-                <span>Giảm giá:</span>
-                <span :class="discountAmount > 0 ? 'discount-text' : ''">
-                  {{ discountAmount > 0 ? '-' : '' }}{{ formatCurrency(discountAmount) }}
-                </span>
-              </p>
-              <p class="summary-row total">
-                <span>Thành tiền:</span>
-                <strong class="final-price">{{ formatCurrency(finalPrice) }}</strong>
-              </p>
-            </div>
-
-            <!-- Action Buttons -->
-            <a-space direction="vertical" size="large" style="width: 100%; margin-top: 16px">
-              <a-button type="primary" long size="large" :disabled="!canConfirmOrder" :loading="confirmLoading" @click="confirmOrder">
+                  <a-option value="">Khách lẻ</a-option>
+                  <a-option v-for="customer in filteredCustomers" :key="customer.id" :value="customer.id">
+                    {{ customer.name }} ({{ customer.phone }})
+                  </a-option>
+                </a-select>
+              </a-form-item>
+              <a-form-item v-if="selectedCustomer && currentOrder">
+                <a-descriptions size="small" :column="1" bordered>
+                  <a-descriptions-item label="Tên">{{ selectedCustomer.name }}</a-descriptions-item>
+                  <a-descriptions-item label="SĐT">{{ selectedCustomer.phone }}</a-descriptions-item>
+                  <a-descriptions-item label="Email">{{ selectedCustomer.email || 'N/A' }}</a-descriptions-item>
+                  <a-descriptions-item label="Địa Chỉ">{{ selectedCustomer.address || 'N/A' }}</a-descriptions-item>
+                </a-descriptions>
+              </a-form-item>
+              <a-button v-if="!selectedCustomer" type="dashed" long @click="showAddCustomerModal = true">
                 <template #icon>
-                  <icon-check />
+                  <icon-plus />
                 </template>
-                Xác Nhận ({{ finalPrice > 0 ? formatCurrency(finalPrice) : '0đ' }})
+                Thêm Khách Hàng Mới
               </a-button>
-              <a-button long @click="printOrder" :disabled="!currentOrder?.items.length">In Hoá Đơn</a-button>
-            </a-space>
-          </a-form>
-        </a-card>
-      </a-col>
-    </a-row>
+            </a-form>
+          </a-card>
+          <!-- Payment Section -->
+          <a-card class="payment-card">
+            <template #title>
+              <div style="display: flex; justify-content: space-between; align-items: center">
+                <span>Thanh Toán</span>
+                <a-select v-model="orderType" placeholder="Loại đơn" style="width: 120px">
+                  <a-option value="counter">Tại quầy</a-option>
+                  <a-option value="delivery">Giao hàng</a-option>
+                </a-select>
+              </div>
+            </template>
+            <a-form :model="{}" layout="vertical">
+              <!-- Discount Section - Button Style -->
+              <a-form-item :model="{}">
+                <a-button
+                  v-if="!paymentForm.value?.discountCode"
+                  long
+                  size="large"
+                  type="secondary"
+                  :disabled="!hasEligibleVouchers"
+                  style="
+                    height: 56px;
+                    font-size: 15px;
+                    border: 1px solid #d9d9d9;
+                    background: transparent;
+                    color: #000;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0 16px;
+                  "
+                  @click="showVoucherModal = true"
+                >
+                  <span style="font-weight: 500; text-align: left">Phiếu Giảm Giá</span>
+                  <span style="font-weight: 400; font-size: 12px; text-align: right; color: #999">
+                    {{ hasEligibleVouchers ? `${eligibleVouchersCount} voucher có thể dùng >` : 'Không có voucher phù hợp' }}
+                  </span>
+                </a-button>
+              </a-form-item>
+
+              <!-- Payment Method -->
+              <a-form-item :model="{}" label="Phương Thức Thanh Toán">
+                <div style="display: flex; gap: 8px; width: 100%">
+                  <a-button
+                    :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'cash' }]"
+                    :type="paymentMethod.value === 'cash' ? 'primary' : 'secondary'"
+                    style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
+                    @click="selectPaymentMethod('cash')"
+                  >
+                    Tiền Mặt
+                  </a-button>
+                  <a-button
+                    :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'transfer' }]"
+                    :type="paymentMethod.value === 'transfer' ? 'primary' : 'secondary'"
+                    style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
+                    @click="selectPaymentMethod('transfer')"
+                  >
+                    Chuyển Khoản
+                  </a-button>
+                </div>
+              </a-form-item>
+
+              <!-- Cash Input -->
+              <a-form-item
+                :model="{}"
+                v-if="paymentMethod.value === 'cash'"
+                label="Tiền Nhận"
+                class="cash-input-container"
+                style="transition: all 0.3s ease"
+              >
+                <a-input-number
+                  v-model:model-value="paymentForm.value.cashReceived"
+                  :min="finalPrice"
+                  placeholder="Nhập số tiền khách đưa"
+                  style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
+                  :precision="0"
+                  :formatter="(value) => formatCurrency(value || 0)"
+                  :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
+                  @update:model-value="(val) => (paymentForm.value.cashReceived = val || 0)"
+                />
+                <div v-if="paymentForm.value?.cashReceived > 0" class="cash-feedback" style="margin-top: 8px">
+                  <div v-if="change >= 0" class="cash-change-positive">
+                    <span class="cash-icon">💰</span>
+                    <span class="cash-text">
+                      Tiền thối:
+                      <strong>{{ formatCurrency(change) }}</strong>
+                    </span>
+                  </div>
+                  <div v-else class="cash-change-negative">
+                    <span class="cash-icon">⚠️</span>
+                    <span class="cash-text">
+                      Thiếu:
+                      <strong>{{ formatCurrency(Math.abs(change)) }}</strong>
+                    </span>
+                  </div>
+                </div>
+              </a-form-item>
+
+              <!-- Transfer Notes -->
+              <a-alert v-if="paymentMethod.value === 'transfer'" type="info" title="Chuyển Khoản" closable>
+                <p>Vui lòng chuyển khoản theo thông tin cung cấp. Mã hoá đơn: {{ currentOrder?.id }}</p>
+              </a-alert>
+
+              <!-- Selected Voucher Info -->
+              <a-alert
+                v-if="selectedCoupon"
+                :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`"
+                type="success"
+                closable
+                @close="clearVoucher"
+              >
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  <div>
+                    <strong>{{ selectedCoupon.maPhieuGiamGia }}</strong>
+                    <span style="margin-left: 8px; color: #52c41a">-{{ getDiscountDisplay(selectedCoupon) }}</span>
+                  </div>
+                  <div style="font-size: 12px; color: #666">
+                    <span v-if="selectedCoupon.hoaDonToiThieu">Min: {{ formatCurrency(Number(selectedCoupon.hoaDonToiThieu)) }}</span>
+                  </div>
+                </div>
+              </a-alert>
+
+              <!-- Price Summary -->
+              <a-divider />
+              <div class="payment-summary">
+                <p class="summary-row">
+                  <span>Tổng tiền:</span>
+                  <strong>{{ formatCurrency(subtotal) }}</strong>
+                </p>
+                <p class="summary-row">
+                  <span>Giảm giá:</span>
+                  <span :class="discountAmount > 0 ? 'discount-text' : ''">
+                    {{ discountAmount > 0 ? '-' : '' }}{{ formatCurrency(discountAmount) }}
+                  </span>
+                </p>
+                <p class="summary-row total">
+                  <span>Thành tiền:</span>
+                  <strong class="final-price">{{ formatCurrency(finalPrice) }}</strong>
+                </p>
+              </div>
+
+              <!-- Action Buttons -->
+              <a-space direction="vertical" size="large" style="width: 100%; margin-top: 16px">
+                <a-button type="primary" long size="large" :disabled="!canConfirmOrder" :loading="confirmLoading" @click="confirmOrder">
+                  <template #icon>
+                    <icon-check />
+                  </template>
+                  Xác Nhận ({{ finalPrice > 0 ? formatCurrency(finalPrice) : '0đ' }})
+                </a-button>
+                <a-button long @click="printOrder" :disabled="!currentOrder?.items.length">In Hoá Đơn</a-button>
+              </a-space>
+            </a-form>
+          </a-card>
+        </a-col>
+      </a-row>
+    </a-card>
 
     <!-- Modals -->
     <!-- Product Selection Modal -->
@@ -994,6 +1012,8 @@ const paymentForm = ref({
   method: 'cash' as 'cash' | 'transfer' | 'card',
   cashReceived: 0,
 })
+
+const orderType = ref('counter')
 
 const newCustomerForm = ref({
   name: '',
@@ -2328,6 +2348,10 @@ onMounted(() => {
   padding: 16px;
 }
 
+.main-pos-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .pos-main {
   margin-bottom: 24px;
 }
@@ -2378,6 +2402,11 @@ onMounted(() => {
 }
 
 .cart-card {
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.order-code-cart-card {
   margin-bottom: 16px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
@@ -2676,5 +2705,10 @@ onMounted(() => {
 
 .voucher-disabled:hover {
   background: #f5f5f5 !important;
+}
+
+/* Hide scrollbar for tabs container */
+.tabs-container::-webkit-scrollbar {
+  display: none;
 }
 </style>
