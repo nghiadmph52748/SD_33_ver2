@@ -11,8 +11,17 @@
     </div>
     <ul class="right-side">
       <li>
+        <a-tooltip content="Trợ lý AI">
+          <a-button class="nav-btn" type="outline" :shape="'circle'" @click="goAI">
+            <template #icon>
+              <icon-robot />
+            </template>
+          </a-button>
+        </a-tooltip>
+      </li>
+      <li>
         <a-tooltip :content="$t('settings.search')">
-          <a-button class="nav-btn" type="outline" :shape="'circle'">
+          <a-button class="nav-btn" type="outline" :shape="'circle'" @click="openSearch">
             <template #icon>
               <icon-search />
             </template>
@@ -52,9 +61,10 @@
         </a-tooltip>
         <a-popover
           trigger="click"
+          position="br"
           :arrow-style="{ display: 'none' }"
-          :content-style="{ padding: 0, minWidth: '400px' }"
-          content-class="message-popover"
+          :content-style="{ padding: 0, minWidth: '420px', maxWidth: '420px' }"
+          content-class="notification-popover"
         >
           <div ref="refBtn" class="ref-btn"></div>
           <template #content>
@@ -96,21 +106,57 @@
       </li>
       <li>
         <a-dropdown trigger="click">
-          <a-avatar :size="32" :style="{ marginRight: '8px' }">A</a-avatar>
+          <a-space style="cursor: pointer">
+            <a-avatar :size="32">{{ userInitials }}</a-avatar>
+            <span style="color: var(--color-text-1); font-weight: 500">{{ userStore.name || 'User' }}</span>
+          </a-space>
           <template #content>
-            <a-doption>
-              <a-space @click="handleLogout">
-                <icon-export />
-                <span>
-                  {{ t('messageBox.logout') }}
-                </span>
-              </a-space>
-            </a-doption>
+            <div style="padding: 10px 12px; min-width: 220px">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px">
+                <a-avatar :size="40">{{ userInitials }}</a-avatar>
+                <div>
+                  <div style="font-weight: 600">{{ userStore.name }}</div>
+                  <div style="font-size: 12px; color: var(--color-text-3)">{{ userStore.email }}</div>
+                </div>
+              </div>
+              <a-divider style="margin: 8px 0" />
+              <a-doption @click="goProfile">
+                <a-space>
+                  <icon-user />
+                  <span>Hồ sơ cá nhân</span>
+                </a-space>
+              </a-doption>
+              <a-doption @click="handleLogout">
+                <a-space>
+                  <icon-export />
+                  <span>{{ t('messageBox.logout') }}</span>
+                </a-space>
+              </a-doption>
+            </div>
           </template>
         </a-dropdown>
       </li>
     </ul>
   </div>
+
+  <a-modal v-model:visible="searchVisible" :footer="false" :mask-closable="true" :width="560" title="Tìm kiếm nhanh">
+    <a-input
+      ref="searchInputRef"
+      v-model="searchQuery"
+      placeholder="Nhập từ khóa: tên menu, tính năng..."
+      allow-clear
+      @press-enter="selectFirstResult"
+    />
+    <div v-if="filteredResults.length === 0" style="padding: 12px; color: var(--color-text-3)">Không có kết quả</div>
+    <a-list v-else :bordered="false" :split="true" style="max-height: 320px; overflow: auto; margin-top: 8px">
+      <a-list-item v-for="item in filteredResults" :key="item.name" @click="handleSelect(item)" style="cursor: pointer">
+        <a-space>
+          <component :is="item.icon" v-if="item.icon" />
+          <span>{{ item.title }}</span>
+        </a-space>
+      </a-list-item>
+    </a-list>
+  </a-modal>
 </template>
 
 <script lang="ts" setup>
@@ -124,6 +170,7 @@ import { computed, inject, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { LOCALE_OPTIONS } from '@/locale'
+import { useAppStore as useStore } from '@/store'
 import MessageBox from '../message-box/message-box.vue'
 
 const { t, locale } = useI18n()
@@ -175,6 +222,17 @@ const setPopoverVisible = () => {
 const handleLogout = () => {
   logout()
 }
+const userInitials = computed(() => {
+  const n = (userStore.name || '').trim()
+  if (!n) return 'U'
+  const parts = n.split(' ')
+  const first = parts[0]?.[0] || ''
+  const last = parts[parts.length - 1]?.[0] || ''
+  return (first + last).toUpperCase()
+})
+const goProfile = () => {
+  router.push('/profile')
+}
 const switchRoles = async () => {
   const res = await userStore.switchRoles()
   Message.success(res as string)
@@ -196,6 +254,48 @@ const openChatDrawer = () => {
   router.push('/chat')
 }
 
+const goAI = () => {
+  router.push('/ai-chatbot/index')
+}
+
+// Keep outline style to avoid blue fill when active
+
+// Quick search modal state
+const searchVisible = ref(false)
+const searchQuery = ref('')
+const searchInputRef = ref()
+
+const openSearch = () => {
+  searchVisible.value = true
+  setTimeout(() => {
+    searchInputRef.value?.focus?.()
+  }, 50)
+}
+
+type SearchItem = { name: string; path: string; title: string; icon?: any }
+const allRoutes = router.getRoutes().filter((r) => r.meta && r.meta.locale)
+const searchData: SearchItem[] = allRoutes.map((r) => ({
+  name: String(r.name || r.path),
+  path: r.path,
+  title: t(String(r.meta?.locale || r.name || r.path)),
+}))
+
+const filteredResults = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return searchData.slice(0, 10)
+  return searchData.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 20)
+})
+
+const handleSelect = (item: SearchItem) => {
+  searchVisible.value = false
+  searchQuery.value = ''
+  router.push(item.path)
+}
+
+const selectFirstResult = () => {
+  const first = filteredResults.value[0]
+  if (first) handleSelect(first)
+}
 onMounted(async () => {
   if (userStore.id) {
     // Fetch unread count
@@ -265,6 +365,20 @@ onMounted(async () => {
     border-color: rgb(var(--gray-2));
     color: rgb(var(--gray-8));
     font-size: 16px;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
+  .nav-btn:hover,
+  .nav-btn:focus {
+    background-color: var(--color-fill-2);
+    border-color: var(--color-border);
+    color: var(--color-text-1);
+    box-shadow: none;
+  }
+
+  :deep(.arco-btn-primary.nav-btn:hover),
+  :deep(.arco-btn-primary.nav-btn:focus) {
+    box-shadow: none;
   }
 
   .trigger-btn,
@@ -280,9 +394,11 @@ onMounted(async () => {
 </style>
 
 <style lang="less">
-.message-popover {
+.notification-popover {
   .arco-popover-content {
     margin-top: 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   }
 }
 

@@ -167,7 +167,7 @@ export default defineComponent({
 
     return () => (
       <a-menu
-        theme='dark'
+        theme={appStore.theme === 'dark' ? 'dark' : 'light'}
         mode={topMenu.value ? 'horizontal' : 'vertical'}
         v-model:collapsed={collapsed.value}
         v-model:open-keys={openKeys.value}

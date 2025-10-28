@@ -42,7 +42,54 @@ const useNotificationStore = defineStore('notification', {
       this.loading = true
       try {
         const { data } = await queryMessageList()
-        this.messages = data
+        const normalized = (data || []).map((m) => ({
+          // Ensure required fields exist for UI rendering
+          id: m.id,
+          title: m.title || 'Thông báo',
+          subTitle: m.subTitle || '',
+          content: m.content || '',
+          time: m.time || new Date().toISOString(),
+          status: (m.status as 0 | 1) ?? 0,
+          avatar: m.avatar,
+          type: m.type || (m.messageType === 0 ? 'todo' : 'message'),
+          messageType: m.messageType,
+        }))
+
+        // If no data returned, provide a small demo list so UI is not empty
+        this.messages = normalized.length
+          ? normalized
+          : [
+              {
+                id: 1,
+                title: 'Nguyễn Văn A',
+                subTitle: 'Tin nhắn riêng',
+                content: 'Yêu cầu phê duyệt đã được gửi, vui lòng kiểm tra',
+                time: new Date().toLocaleString('vi-VN'),
+                status: 0,
+                type: 'message',
+                messageType: 2,
+              },
+              {
+                id: 2,
+                title: 'Hệ thống',
+                subTitle: 'Cảnh báo',
+                content: 'Phiên đăng nhập sẽ hết hạn sau 10 phút',
+                time: new Date(Date.now() - 3600_000).toLocaleString('vi-VN'),
+                status: 0,
+                type: 'notice',
+                messageType: 3,
+              },
+              {
+                id: 3,
+                title: 'Việc cần làm',
+                subTitle: 'Đánh giá PR',
+                content: 'Xem lại yêu cầu hợp nhất #128',
+                time: new Date(Date.now() - 24 * 3600_000).toLocaleString('vi-VN'),
+                status: 1,
+                type: 'todo',
+                messageType: 1,
+              },
+            ]
         this.unreadCount = this.totalUnread
       } catch (error) {
         console.error('Failed to fetch notifications:', error)

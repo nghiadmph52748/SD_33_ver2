@@ -9,7 +9,7 @@
           v-if="renderMenu"
           v-show="!hideMenu"
           class="layout-sider"
-          :breakpoint="'xl'"
+          :breakpoint="'lg'"
           :collapsible="true"
           :width="menuWidth"
           :style="{ paddingTop: navbar ? '60px' : '' }"
@@ -135,11 +135,16 @@ onMounted(() => {
       padding-left: 8px;
       background: var(--color-menu-dark-bg);
       height: 60px;
+      transition: background-color 0.15s ease;
 
       .arco-typography {
         color: #fff;
         font-size: 18px;
         width: 200px;
+      }
+
+      &:hover {
+        background: fade(#fff, 6%);
       }
     }
 
@@ -187,7 +192,7 @@ onMounted(() => {
   }
 
   .layout-content {
-    min-width: @layout-max-width;
+    min-width: 0;
     min-height: 100vh;
     overflow-y: hidden;
     background-color: var(--color-fill-2);
@@ -200,7 +205,7 @@ onMounted(() => {
       left: 0;
       z-index: 100;
       width: 100%;
-      min-width: @layout-max-width;
+      min-width: 0;
       height: @nav-size-height;
     }
   }
@@ -222,6 +227,52 @@ onMounted(() => {
           width: calc(100% - 50px) !important;
         }
       }
+    }
+  }
+}
+
+/* Light theme adjustments for menu colors */
+body:not([arco-theme='dark']) {
+  .layout {
+    .layout-sider {
+      background: var(--color-bg-2);
+
+      .left-side {
+        background: var(--color-bg-2);
+
+        .arco-typography {
+          color: var(--color-text-1);
+        }
+
+        &:hover {
+          background: var(--color-fill-2);
+        }
+      }
+    }
+  }
+}
+
+/* Responsive tweaks */
+@media (max-width: 1200px) {
+  .layout {
+    .layout-content {
+      padding-left: 0 !important;
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .layout {
+    .layout-sider {
+      width: 220px !important;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    .layout-sider {
+      display: none;
     }
   }
 }
