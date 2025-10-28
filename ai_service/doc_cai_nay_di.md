@@ -1,7 +1,4 @@
 # GearUp AI Service
-
-Dịch vụ AI microservice cho hệ thống quản lý bán hàng GearUp. Sử dụng LM Studio (Llama 3.2 3B) để tạo chatbot AI hỗ trợ admin.
-
 ## Cài đặt
 
 **Yêu cầu:**
