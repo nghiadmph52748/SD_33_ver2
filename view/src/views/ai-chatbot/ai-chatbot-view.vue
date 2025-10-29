@@ -4,32 +4,62 @@
 
     <a-row :gutter="16">
       <a-col :span="16">
-        <AIChatbot ref="chatbotRef" />
+        <AIChatbot ref="chatbotRef" @session-state="onSessionState" />
       </a-col>
 
       <a-col :span="8">
         <!-- Chat History Card -->
-        <a-card title="📚 Lịch sử chat" :bordered="false" style="margin-bottom: 16px">
-          <a-space direction="vertical" :size="8" style="width: 100%">
-            <a-alert v-if="Object.keys(sessions).length <= 1" type="normal" :closable="false">
-              Tạo nhiều cuộc trò chuyện để xuất hiện ở đây
-            </a-alert>
-            <a-space wrap :size="8">
-              <a-button
-                v-for="(session, sessionId) in sessions"
-                :key="sessionId"
-                size="small"
-                :type="sessionId === currentSessionId ? 'primary' : 'outline'"
-                @click="onSwitchSession(sessionId)"
-              >
-                {{ sessionNames[sessionId] || formatSessionTime(sessionId) }}
-              </a-button>
-            </a-space>
-          </a-space>
+        <a-card title="Lịch sử chat" :bordered="false" style="margin-bottom: 16px">
+          <div v-if="sortedSessions.length === 0" class="empty-history">
+            <a-empty description="Chưa có lịch sử chat" :image="false">
+              <template #description>
+                <span style="color: #86909c; font-size: 14px">
+                  Tạo cuộc trò chuyện mới để bắt đầu
+                </span>
+              </template>
+            </a-empty>
+          </div>
+          
+          <div v-else class="chat-history">
+            <a-list
+              :bordered="false"
+              :split="false"
+              size="small"
+              :data="sortedSessions"
+            >
+              <template #item="{ item }">
+                <a-list-item
+                  :class="['session-item', { active: item.id === currentSessionId }]"
+                  @click="onSwitchSession(item.id)"
+                >
+                  <a-list-item-meta>
+                    <template #title>
+                      <div class="session-title">
+                        <span class="session-name">{{ item.name }}</span>
+                        <a-tag
+                          v-if="item.id === currentSessionId"
+                          size="small"
+                          color="blue"
+                        >
+                          Đang chọn
+                        </a-tag>
+                      </div>
+                    </template>
+                    <template #description>
+                      <div class="session-info">
+                        <span class="session-time">{{ formatSessionTime(item.id) }}</span>
+                        <span class="message-count">{{ item.messageCount }} tin nhắn</span>
+                      </div>
+                    </template>
+                  </a-list-item-meta>
+                </a-list-item>
+              </template>
+            </a-list>
+          </div>
         </a-card>
 
         <!-- Quick Actions Card -->
-        <a-card title="🚀 Hành động nhanh" :bordered="false" style="margin-bottom: 16px">
+        <a-card title="Hành động nhanh" :bordered="false" style="margin-bottom: 16px">
           <a-space direction="vertical" :size="12" style="width: 100%">
             <a-button type="primary" long @click="createNewChat">
               <template #icon>
@@ -47,7 +77,7 @@
         </a-card>
 
         <!-- Info Card -->
-        <a-card title="ℹ️ Giới thiệu" :bordered="false" style="margin-bottom: 16px">
+        <a-card title="Giới thiệu" :bordered="false" style="margin-bottom: 16px">
           <p>
             <strong>GearUp AI</strong> là trợ lý thông minh giúp bạn tra cứu thông tin nhanh
             chóng trong hệ thống GearUp.
@@ -130,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watchEffect } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconDelete } from '@arco-design/web-vue/es/icon'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
@@ -142,10 +172,47 @@ const { breadcrumbItems } = useBreadcrumb()
 // Reference to the chatbot component
 const chatbotRef = ref<InstanceType<typeof AIChatbot> | null>(null)
 
-// Mirror child state for template
-const sessions = computed<Record<string, any>>(() => chatbotRef.value?.chatSessions || {})
-const currentSessionId = computed<string | ''>(() => chatbotRef.value?.currentSessionId || '')
-const sessionNames = computed<Record<string, string>>(() => chatbotRef.value?.sessionNames || {})
+// Mirror child state for template by subscribing to child's refs
+const sessions = ref<Record<string, any>>({})
+const currentSessionId = ref<string | ''>('')
+const sessionNames = ref<Record<string, string>>({})
+
+watchEffect(() => {
+  const child: any = chatbotRef.value
+  sessions.value = child?.chatSessions?.value || {}
+  currentSessionId.value = child?.currentSessionId?.value || ''
+  sessionNames.value = child?.sessionNames?.value || {}
+})
+
+function onSessionState(payload: { sessions: Record<string, any>; currentSessionId: string; sessionNames: Record<string, string> }) {
+  sessions.value = payload.sessions || {}
+  currentSessionId.value = payload.currentSessionId || ''
+  sessionNames.value = payload.sessionNames || {}
+}
+
+// Sorted sessions for display
+const sortedSessions = computed(() => {
+  const ids = Object.keys(sessions.value)
+  const list = ids.map(sessionId => ({
+    id: sessionId,
+    name: sessionNames.value[sessionId] || 'Cuộc trò chuyện mới',
+    messageCount: sessions.value[sessionId]?.length || 0,
+    timestamp: parseInt(sessionId.split('_')[1], 10) || 0
+  }))
+
+  // If nothing is persisted yet but we have an active session, show it
+  if (list.length === 0 && currentSessionId.value) {
+    const sid = currentSessionId.value
+    list.push({
+      id: sid,
+      name: sessionNames.value[sid] || 'Cuộc trò chuyện mới',
+      messageCount: 0,
+      timestamp: parseInt((sid.split('_')[1] || '0'), 10) || Date.now()
+    })
+  }
+
+  return list.sort((a, b) => b.timestamp - a.timestamp)
+})
 
 function onSwitchSession(sessionId: string) {
   if (chatbotRef.value && typeof (chatbotRef.value as any).switchToSession === 'function') {
@@ -207,6 +274,71 @@ function clearChatHistory() {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+  }
+
+  // Chat history styles
+  .empty-history {
+    padding: 20px 0;
+    text-align: center;
+  }
+
+  .chat-history {
+    .session-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+
+      &:hover {
+        background-color: #f7f8fa;
+        border-color: #e5e6eb;
+      }
+
+      &.active {
+        background-color: #e8f4ff;
+        border-color: #165dff;
+        box-shadow: 0 2px 8px rgba(22, 93, 255, 0.1);
+      }
+
+      .session-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+
+        .session-name {
+          font-weight: 500;
+          color: #1d2129;
+          font-size: 14px;
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          margin-right: 8px;
+        }
+      }
+
+      .session-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: #86909c;
+
+        .session-time {
+          font-weight: 400;
+        }
+
+        .message-count {
+          background-color: #f2f3f5;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-weight: 500;
+        }
+      }
+    }
   }
 }
 </style>

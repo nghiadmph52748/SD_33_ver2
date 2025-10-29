@@ -15,6 +15,17 @@
 
       <!-- Messages Container -->
       <div class="messages-container" ref="messagesContainer" :style="messagesContainerStyle">
+        <!-- Empty state for new conversations -->
+        <div v-if="messages.length === 0 && !loading" class="empty-messages">
+          <div class="empty-content">
+            <div class="empty-icon">💬</div>
+            <div class="empty-title">Chào mừng đến với GearUp AI!</div>
+            <div class="empty-description">
+              Hãy bắt đầu cuộc trò chuyện bằng cách đặt câu hỏi hoặc sử dụng các gợi ý bên dưới.
+            </div>
+          </div>
+        </div>
+
         <div
           v-for="msg in messages"
           :key="msg.id"
@@ -104,6 +115,15 @@ interface QuickAction {
   question: string
 }
 
+// Emits
+const emit = defineEmits<{
+  (e: 'session-state', payload: {
+    sessions: Record<string, ChatMessage[]>
+    currentSessionId: string
+    sessionNames: Record<string, string>
+  }): void
+}>()
+
 // State
 const messages = ref<ChatMessage[]>([
   {
@@ -183,6 +203,12 @@ function saveHistory() {
     // Also save current session as active (for backward compatibility)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.value))
     
+    // Notify parent about session state changes
+    emit('session-state', {
+      sessions: chatSessions.value,
+      currentSessionId: currentSessionId.value,
+      sessionNames: sessionNames.value
+    })
   } catch {
     // ignore storage errors
   }
@@ -245,6 +271,13 @@ function loadHistory() {
   } catch {
     // ignore parse errors
   }
+
+  // Emit current state after loading history
+  emit('session-state', {
+    sessions: chatSessions.value,
+    currentSessionId: currentSessionId.value,
+    sessionNames: sessionNames.value
+  })
 }
 
 const quickActions: QuickAction[] = [
@@ -355,9 +388,13 @@ async function sendMessage(text: string = input.value) {
     }
     messages.value.push(aiMessage)
 
-    // Auto-generate session name after first user message (only once per session)
+    // Auto-generate session name after first user message
     const userMessages = messages.value.filter((msg) => msg.role === 'user' && msg.id !== 0)
-    if (userMessages.length === 1 && !sessionNames.value[currentSessionId.value]) {
+    const currentName = sessionNames.value[currentSessionId.value]
+    if (
+      userMessages.length === 1 &&
+      (!currentName || currentName === 'Cuộc trò chuyện mới')
+    ) {
       const newName = generateSessionName(messages.value)
       sessionNames.value[currentSessionId.value] = newName
     }
@@ -898,5 +935,55 @@ defineExpose({
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Empty state styles */
+.empty-messages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 40px 20px;
+}
+
+.empty-content {
+  text-align: center;
+  max-width: 300px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+  margin-bottom: 8px;
+}
+
+.empty-description {
+  font-size: 14px;
+  color: #86909c;
+  line-height: 1.5;
+}
+
+/* Dark theme empty state */
+.is-dark .empty-title {
+  color: #e6e9ef;
+}
+
+.is-dark .empty-description {
+  color: #9aa4b2;
+}
+
+:deep(.arco-theme-dark) .ai-chatbot .empty-title {
+  color: #e6e9ef !important;
+}
+
+:deep(.arco-theme-dark) .ai-chatbot .empty-description {
+  color: #9aa4b2 !important;
 }
 </style>
