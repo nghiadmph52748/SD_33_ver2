@@ -60,6 +60,9 @@ onMounted(async () => {
     if (!Number.isNaN(id)) {
       chatStore.setActiveConversation(id)
     }
+  } else if (route.name === 'ChatIndex' && chatStore.conversations.length > 0) {
+    // Auto-select first conversation when accessing /chat/index without conversationId
+    chatStore.setActiveConversation(chatStore.conversations[0].id)
   }
 })
 

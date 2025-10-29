@@ -297,7 +297,10 @@ function clearMessages() {
 
 function scrollToBottom() {
   if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    messagesContainer.value.scrollTo({
+      top: messagesContainer.value.scrollHeight,
+      behavior: 'smooth'
+    })
   }
 }
 
@@ -305,6 +308,13 @@ function scrollToBottom() {
 onMounted(async () => {
   // Restore history first
   loadHistory()
+  await nextTick()
+  
+  // Scroll to bottom after loading history
+  setTimeout(() => {
+    scrollToBottom()
+  }, 100)
+  
   await checkConnection()
 
   // Check connection every 30 seconds

@@ -48,7 +48,9 @@
           <Footer v-if="footer" />
 
           <!-- Floating Chat Button (ẩn khi đang ở trang /chat) -->
-          <FloatingChatButton v-if="userStore.id && !isOnChatPage" />
+          <transition name="fade">
+            <FloatingChatButton v-if="userStore.id && !isOnChatPage" />
+          </transition>
         </a-layout>
       </a-layout>
     </a-layout>
@@ -73,8 +75,8 @@ const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 
-// Ẩn floating chat button khi đang ở trang chat
-const isOnChatPage = computed(() => route.path === '/chat')
+// Ẩn floating chat button khi đang ở bất kỳ trang chat nào (/chat, /chat/index, /chat/:id)
+const isOnChatPage = computed(() => route.path.startsWith('/chat'))
 const permission = usePermission()
 useResponsive(true)
 const navbarHeight = `60px`
@@ -279,5 +281,16 @@ body:not([arco-theme='dark']) {
 
 :deep(.arco-menu-vertical .arco-menu-inner, .arco-menu-inner) {
   scrollbar-width: none !important;
+}
+
+/* Floating chat button fade animation */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

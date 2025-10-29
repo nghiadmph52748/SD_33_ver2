@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { IconUser, IconCheckCircleFill, IconSend, IconMessage } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import useChatStore from '@/store/modules/chat'
@@ -155,6 +155,19 @@ watch(
   },
   { deep: true }
 )
+
+/**
+ * Auto-scroll on mount nếu đã có messages
+ */
+onMounted(async () => {
+  if (activeConversation.value && messages.value.length > 0) {
+    await nextTick()
+    // Use setTimeout to ensure DOM is fully rendered
+    setTimeout(() => {
+      scrollToBottom()
+    }, 100)
+  }
+})
 
 /**
  * Xử lý gửi tin nhắn
