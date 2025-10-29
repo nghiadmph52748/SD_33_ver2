@@ -107,11 +107,10 @@ const useChatStore = defineStore('chat', {
       this.loadingConversations = true
       try {
         const response = await layDanhSachCuocTroChuyen()
-        
+
         // Handle different response structures
         const data = response.data?.data || response.data || []
         this.conversations = Array.isArray(data) ? data : []
-        
 
         // Cập nhật total unread count
         this.updateTotalUnreadCount()
@@ -134,23 +133,23 @@ const useChatStore = defineStore('chat', {
 
         if (conversationId) {
           // Handle different response structures
-          
+
           // Try different paths:
           // 1. response.data.data.content (paginated in wrapper)
           // 2. response.data.content (paginated direct)
           // 3. response.data.data (array in wrapper)
           // 4. response.data (direct array)
           const data = response.data?.data || response.data
-          
+
           const messages = data?.content || (Array.isArray(data) ? data : [])
-          
+
           // Lưu tin nhắn vào state
           const messagesArray = Array.isArray(messages) ? messages : []
-          
+
           // Merge với messages đã có trong cache (từ WebSocket)
           const existingMessages = this.messages[conversationId] || []
           const allMessages = [...messagesArray]
-          
+
           // Thêm các message chỉ có trong cache nhưng không có trong API response
           existingMessages.forEach((existingMsg) => {
             const existsInApi = allMessages.some((m) => m.id === existingMsg.id)
@@ -158,12 +157,11 @@ const useChatStore = defineStore('chat', {
               allMessages.push(existingMsg)
             }
           })
-          
+
           // Backend trả về DESC (newest first), cần reverse để hiển thị oldest first
           allMessages.sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())
-          
+
           this.messages[conversationId] = allMessages
-          
         } else {
         }
       } catch (error: any) {
@@ -206,7 +204,7 @@ const useChatStore = defineStore('chat', {
       }
 
       this.sendingMessage = true
-      
+
       try {
         // Tạo optimistic message để hiển thị ngay trên UI
         const userStore = useUserStore()
@@ -223,16 +221,15 @@ const useChatStore = defineStore('chat', {
           sentAt: new Date().toISOString(),
           readAt: null,
         }
-        
+
         // Thêm optimistic message vào UI ngay lập tức
         this.addMessageToState(optimisticMessage)
-        
+
         // Gửi qua WebSocket
         this.stompClient.publish({
           destination: '/app/chat.send',
           body: JSON.stringify(message),
         })
-        
       } catch (error: any) {
         Message.error(`Lỗi khi gửi tin nhắn qua WebSocket: ${error.message}`)
         // Fallback to API
@@ -264,7 +261,7 @@ const useChatStore = defineStore('chat', {
             conversation.unreadCountNv2 = 0
           }
           this.updateTotalUnreadCount()
-          
+
           // Cập nhật isRead = true cho tất cả messages từ sender trong conversation
           const messages = this.messages[conversation.id]
           if (messages) {
@@ -338,12 +335,11 @@ const useChatStore = defineStore('chat', {
           const userStore = useUserStore()
           const userId = userStore.id
           const username = userStore.tenTaiKhoan
-          
 
           // Subscribe để nhận tin nhắn
           // Spring WebSocket tự động resolve /user/queue/messages đến session của user hiện tại
           const subscriptionDestination = `/user/queue/messages`
-          
+
           const subscription = client.subscribe(subscriptionDestination, (message: IMessage) => {
             try {
               const chatMessage: ChatMessage = JSON.parse(message.body)
@@ -352,7 +348,6 @@ const useChatStore = defineStore('chat', {
               console.error('❌ Error parsing message:', err)
             }
           })
-          
 
           // Subscribe typing notifications
           client.subscribe(`/user/queue/typing`, (message: IMessage) => {
@@ -360,7 +355,7 @@ const useChatStore = defineStore('chat', {
             console.log('Typing notification:', notification)
             // TODO: Handle typing indicator in UI
           })
-          
+
           // Subscribe read notifications (khi người nhận đã đọc tin nhắn)
           const readSubscription = client.subscribe(`/user/queue/read`, (message: IMessage) => {
             try {
@@ -370,7 +365,6 @@ const useChatStore = defineStore('chat', {
               console.error('❌ Error parsing read notification:', err)
             }
           })
-          
         },
 
         onStompError: (frame) => {
@@ -417,7 +411,7 @@ const useChatStore = defineStore('chat', {
 
       // Refresh unread count
       this.fetchUnreadCount()
-      
+
       // Refresh conversations nếu chưa có
       if (this.conversations.length === 0) {
         this.fetchConversations()
@@ -428,7 +422,6 @@ const useChatStore = defineStore('chat', {
      * Thêm tin nhắn vào state
      */
     addMessageToState(message: ChatMessage) {
-      
       // Tìm conversation chứa tin nhắn này
       const userStore = useUserStore()
       const conversation = this.conversations.find(
@@ -438,23 +431,23 @@ const useChatStore = defineStore('chat', {
           (c.nhanVien1Id === message.receiverId && c.nhanVien2Id === message.senderId) ||
           (c.nhanVien2Id === message.receiverId && c.nhanVien1Id === message.senderId)
       )
-      
+
       if (!conversation) {
         return
       }
-      
-      
+
       // Thêm tin nhắn vào conversation đó
       if (!this.messages[conversation.id]) {
         this.messages[conversation.id] = []
       }
 
       // Kiểm tra duplicate - thay thế optimistic message (temp ID) bằng message thật từ server
-      const existingIndex = this.messages[conversation.id].findIndex((m) => 
-        m.id === message.id || // Exact ID match
-        (m.maTinNhan && m.maTinNhan.startsWith('temp-') && m.content === message.content && m.senderId === message.senderId) // Optimistic message match
+      const existingIndex = this.messages[conversation.id].findIndex(
+        (m) =>
+          m.id === message.id || // Exact ID match
+          (m.maTinNhan && m.maTinNhan.startsWith('temp-') && m.content === message.content && m.senderId === message.senderId) // Optimistic message match
       )
-      
+
       if (existingIndex >= 0) {
         // Replace optimistic message with real one from server
         this.messages[conversation.id][existingIndex] = message
@@ -497,27 +490,25 @@ const useChatStore = defineStore('chat', {
      * Xử lý thông báo đã đọc từ WebSocket
      */
     handleReadNotification(notification: { senderId: number; receiverId: number; readAt: string }) {
-      
       const userStore = useUserStore()
       const currentUserId = userStore.id
-      
+
       // Chỉ xử lý nếu current user là sender (người gửi tin nhắn)
       if (currentUserId !== notification.senderId) {
         return
       }
-      
+
       // Tìm conversation với receiver
       const conversation = this.conversations.find(
         (c) =>
           (c.nhanVien1Id === notification.senderId && c.nhanVien2Id === notification.receiverId) ||
           (c.nhanVien2Id === notification.senderId && c.nhanVien1Id === notification.receiverId)
       )
-      
+
       if (!conversation) {
         return
       }
-      
-      
+
       // Cập nhật isRead cho tất cả messages từ sender trong conversation
       const messages = this.messages[conversation.id]
       if (messages) {
@@ -530,7 +521,7 @@ const useChatStore = defineStore('chat', {
           }
         })
       }
-      
+
       // Cập nhật unread count trong conversation (cho người kia)
       if (currentUserId === conversation.nhanVien1Id) {
         conversation.unreadCountNv2 = 0

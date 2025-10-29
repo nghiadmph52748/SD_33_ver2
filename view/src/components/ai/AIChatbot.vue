@@ -9,11 +9,6 @@
               :status="isConnected ? 'success' : 'error'"
               :text="isConnected ? 'Online' : 'Offline'"
             />
-            <a-button type="text" size="small" @click="clearMessages">
-              <template #icon>
-                <icon-delete />
-              </template>
-            </a-button>
           </a-space>
         </div>
       </template>
@@ -46,6 +41,8 @@
           </div>
         </div>
       </div>
+
+      
 
       <!-- Quick Actions -->
       <div class="quick-actions" :style="quickActionsStyle">
@@ -90,7 +87,7 @@ import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { parse as markedParse } from 'marked'
 import { chatWithAI, checkAIHealth } from '@/api/ai'
 import { Message } from '@arco-design/web-vue'
-import { IconSend, IconDelete } from '@arco-design/web-vue/es/icon'
+import { IconSend } from '@arco-design/web-vue/es/icon'
 
 interface ChatMessage {
   id: number
@@ -125,12 +122,67 @@ const messagesContainer = ref<HTMLElement | null>(null)
 const isDark = ref(false)
 const messagesContainerStyle = ref<Record<string, string>>({})
 const quickActionsStyle = ref<Record<string, string>>({})
+const currentSessionId = ref<string>('')
+const chatSessions = ref<Record<string, ChatMessage[]>>({})
+const sessionNames = ref<Record<string, string>>({})
 
 const STORAGE_KEY = 'gearup_ai_chat_history_v1'
+const CHAT_SESSIONS_KEY = 'gearup_ai_chat_sessions_v1'
+const SESSION_NAMES_KEY = 'gearup_ai_session_names_v1'
+
+function generateSessionId(): string {
+  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+function generateSessionName(msgs: ChatMessage[]): string {
+  // Get the first user message after the welcome message
+  const userMessages = msgs.filter((msg) => msg.role === 'user' && msg.id !== 0)
+  if (userMessages.length === 0) return 'Cuộc trò chuyện mới'
+
+  const firstUserMessage = userMessages[0].content.toLowerCase()
+
+  // Common patterns for automatic naming
+  const patterns = [
+    { pattern: /sản phẩm.*bán chạy|top.*sản phẩm|bán nhiều nhất/, name: '📊 Top sản phẩm' },
+    { pattern: /doanh thu|revenue|tháng này|tháng trước/, name: '💰 Doanh thu' },
+    { pattern: /tồn kho|hết hàng|stock|inventory/, name: '⚠️ Tồn kho' },
+    { pattern: /đơn hàng|order|trạng thái/, name: '📋 Đơn hàng' },
+    { pattern: /khách hàng|customer|chi tiêu/, name: '👥 Khách hàng' },
+    { pattern: /giảm giá|discount|promotion/, name: '🎉 Giảm giá' },
+    { pattern: /nhân viên|employee|bán hàng/, name: '👨‍💼 Nhân viên' },
+    { pattern: /kênh bán|online|tại quầy/, name: '🛒 Kênh bán hàng' },
+    { pattern: /thống kê|statistics|báo cáo/, name: '📈 Thống kê' },
+    { pattern: /tài chính|finance|tiền/, name: '💳 Tài chính' },
+  ]
+
+  // Check for patterns
+  const match = patterns.find(({ pattern }) => pattern.test(firstUserMessage))
+  if (match) {
+    return match.name
+  }
+
+  // If no pattern matches, create a name from the first few words
+  const words = firstUserMessage.split(' ').slice(0, 3)
+  const truncated = words.join(' ')
+  return truncated.length > 20 ? `${truncated.substring(0, 17)}...` : truncated
+}
 
 function saveHistory() {
   try {
+    // Save current session
+    if (currentSessionId.value) {
+      chatSessions.value[currentSessionId.value] = [...messages.value]
+    }
+    
+    // Save all sessions
+    localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(chatSessions.value))
+    
+    // Save session names
+    localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(sessionNames.value))
+    
+    // Also save current session as active (for backward compatibility)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.value))
+    
   } catch {
     // ignore storage errors
   }
@@ -138,11 +190,56 @@ function saveHistory() {
 
 function loadHistory() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const parsed: ChatMessage[] = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        messages.value = parsed
+    // Load all sessions first
+    const sessionsRaw = localStorage.getItem(CHAT_SESSIONS_KEY)
+    if (sessionsRaw) {
+      const parsed: Record<string, ChatMessage[]> = JSON.parse(sessionsRaw)
+      if (parsed && typeof parsed === 'object') {
+        chatSessions.value = parsed
+      }
+    }
+    
+    // Load session names
+    const namesRaw = localStorage.getItem(SESSION_NAMES_KEY)
+    if (namesRaw) {
+      const parsed: Record<string, string> = JSON.parse(namesRaw)
+      if (parsed && typeof parsed === 'object') {
+        sessionNames.value = parsed
+      }
+    }
+    
+    // If we have existing sessions, use the most recent one
+    if (Object.keys(chatSessions.value).length > 0) {
+      // Get the most recent session (highest timestamp)
+      const sessionIds = Object.keys(chatSessions.value)
+      const sortedSessions = sessionIds.sort((a, b) => {
+        const timestampA = parseInt(a.split('_')[1], 10)
+        const timestampB = parseInt(b.split('_')[1], 10)
+        return timestampB - timestampA // Most recent first
+      })
+      
+      const [mostRecentSessionId] = sortedSessions
+      currentSessionId.value = mostRecentSessionId
+      messages.value = [...chatSessions.value[currentSessionId.value]]
+    } else {
+      // Load current session (backward compatibility)
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed: ChatMessage[] = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          messages.value = parsed
+          // Generate a session ID for existing history
+          currentSessionId.value = generateSessionId()
+          chatSessions.value[currentSessionId.value] = parsed
+          // Generate name for existing history
+          sessionNames.value[currentSessionId.value] = generateSessionName(parsed)
+        }
+      }
+      
+      // If still no session, create new one
+      if (!currentSessionId.value) {
+        currentSessionId.value = generateSessionId()
+        sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
       }
     }
   } catch {
@@ -258,6 +355,13 @@ async function sendMessage(text: string = input.value) {
     }
     messages.value.push(aiMessage)
 
+    // Auto-generate session name after first user message (only once per session)
+    const userMessages = messages.value.filter((msg) => msg.role === 'user' && msg.id !== 0)
+    if (userMessages.length === 1 && !sessionNames.value[currentSessionId.value]) {
+      const newName = generateSessionName(messages.value)
+      sessionNames.value[currentSessionId.value] = newName
+    }
+
     // Scroll to bottom
     await nextTick()
     scrollToBottom()
@@ -283,7 +387,82 @@ function askQuestion(question: string) {
   sendMessage(question)
 }
 
+function switchToSession(sessionId: string) {
+  if (chatSessions.value[sessionId]) {
+    // Save current session before switching
+    if (currentSessionId.value) {
+      chatSessions.value[currentSessionId.value] = [...messages.value]
+    }
+    
+    // Switch to selected session
+    currentSessionId.value = sessionId
+    messages.value = [...chatSessions.value[sessionId]]
+    
+    // Save and scroll
+    saveHistory()
+    nextTick(() => {
+      scrollToBottom()
+    })
+  }
+}
+
+function formatSessionTime(sessionId: string): string {
+  try {
+    const timestamp = parseInt(sessionId.split('_')[1], 10)
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+
+    if (diffInHours < 1) {
+      return 'Vừa xong'
+    }
+    if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h trước`
+    }
+    return date.toLocaleDateString('vi-VN')
+  } catch {
+    return 'Chat cũ'
+  }
+}
+
+function createNewChat() {
+  // Save current session before creating new one
+  if (currentSessionId.value && messages.value.length > 1) {
+    chatSessions.value[currentSessionId.value] = [...messages.value]
+  }
+  
+  // Create new session
+  currentSessionId.value = generateSessionId()
+  messages.value = [
+    {
+      id: 0,
+      role: 'assistant',
+      content: 'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? 😊',
+      timestamp: new Date().toLocaleTimeString('vi-VN')
+    }
+  ]
+  
+  // Set default name for new session
+  sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
+  
+  // Save new session
+  chatSessions.value[currentSessionId.value] = [...messages.value]
+  saveHistory()
+  
+  // Scroll to bottom
+  nextTick(() => {
+    scrollToBottom()
+  })
+  
+  Message.success('Đã tạo cuộc trò chuyện mới')
+}
+
 function clearMessages() {
+  // Clear all sessions
+  chatSessions.value = {}
+  sessionNames.value = {}
+  currentSessionId.value = generateSessionId()
+  
   messages.value = [
     {
       id: 0,
@@ -292,7 +471,18 @@ function clearMessages() {
       timestamp: new Date().toLocaleTimeString('vi-VN')
     }
   ]
+  
+  // Set default name for new session
+  sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
+  
+  // Save cleared state
+  chatSessions.value[currentSessionId.value] = [...messages.value]
   saveHistory()
+  
+  // Scroll to bottom
+  nextTick(() => {
+    scrollToBottom()
+  })
 }
 
 function scrollToBottom() {
@@ -326,10 +516,10 @@ onMounted(async () => {
     isDark.value = root.classList.contains('arco-theme-dark')
     if (isDark.value) {
       messagesContainerStyle.value = {
-        background: 'linear-gradient(180deg, #0f1115 0%, #12141a 100%)'
+        background: 'linear-gradient(180deg, #0f1115 0%, #12141a 100%)',
       }
       quickActionsStyle.value = {
-        background: '#131722'
+        background: '#131722',
       }
     } else {
       messagesContainerStyle.value = {}
@@ -339,10 +529,10 @@ onMounted(async () => {
   updateTheme()
   const observer = new MutationObserver(updateTheme)
   observer.observe(root, { attributes: true, attributeFilter: ['class'] })
-  ;(window as any).__aiChatThemeObserver = observer
+  ;(window as any).aiChatThemeObserver = observer
 })
 onUnmounted(() => {
-  const obs = (window as any).__aiChatThemeObserver
+  const obs = (window as any).aiChatThemeObserver
   if (obs && typeof obs.disconnect === 'function') obs.disconnect()
 })
 
@@ -350,7 +540,10 @@ onUnmounted(() => {
 watch(
   messages,
   () => {
-    saveHistory()
+    // Only save if we have a valid session ID
+    if (currentSessionId.value) {
+      saveHistory()
+    }
   },
   { deep: true }
 )
@@ -362,6 +555,16 @@ function renderMarkdown(md: string) {
     return md
   }
 }
+
+// Expose state and methods for parent sidebar controls
+defineExpose({
+  createNewChat,
+  clearMessages,
+  switchToSession,
+  chatSessions,
+  currentSessionId,
+  sessionNames
+})
 </script>
 
 <style scoped lang="less">
@@ -538,6 +741,20 @@ function renderMarkdown(md: string) {
     }
   }
 
+  .chat-history {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: var(--color-bg-2);
+    border-radius: 8px;
+
+    .chat-history-label {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--color-text-2);
+    }
+  }
+
   .quick-actions {
     margin-bottom: 12px;
     padding: 12px;
@@ -593,6 +810,8 @@ function renderMarkdown(md: string) {
   .content .text code, .content .text pre code { background: #0f1420; color: #e6e9ef; }
   .content .sources .sources-content { background: #141926; border-color: #2b3040; color: #cfd6e4; }
   .content .timestamp { opacity: 0.7; }
+  .chat-history { background: #131722; }
+  .chat-history .chat-history-label { color: #9aa4b2; }
   .quick-actions { background: #131722; }
   .quick-actions .quick-actions-label { color: #9aa4b2; }
 }
@@ -657,6 +876,12 @@ function renderMarkdown(md: string) {
 :deep(body.arco-theme-dark) .ai-chatbot .content .timestamp,
 :deep(.arco-theme-dark) .ai-chatbot .content .timestamp { opacity: 0.7 !important; }
 
+:deep(html.arco-theme-dark) .ai-chatbot .chat-history,
+:deep(body.arco-theme-dark) .ai-chatbot .chat-history,
+:deep(.arco-theme-dark) .ai-chatbot .chat-history { background: #131722 !important; }
+:deep(html.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label,
+:deep(body.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label,
+:deep(.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label { color: #9aa4b2 !important; }
 :deep(html.arco-theme-dark) .ai-chatbot .quick-actions,
 :deep(body.arco-theme-dark) .ai-chatbot .quick-actions,
 :deep(.arco-theme-dark) .ai-chatbot .quick-actions { background: #131722 !important; }

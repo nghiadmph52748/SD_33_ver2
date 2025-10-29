@@ -43,7 +43,7 @@ export interface HealthResponse {
 export async function chatWithAI(message: string): Promise<ChatResponse> {
   const response = await aiAxios.post<ChatResponse>('/chat', {
     message,
-    context: ''
+    context: '',
   })
   return response.data
 }
@@ -58,5 +58,5 @@ export async function checkAIHealth(): Promise<HealthResponse> {
 
 export default {
   chatWithAI,
-  checkAIHealth
+  checkAIHealth,
 }

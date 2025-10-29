@@ -12,7 +12,7 @@ const AI_CHATBOT: AppRouteRecordRaw = {
     icon: 'IconRobot',
     order: 7,
     roles: ['*'],
-    hideChildrenInMenu: true
+    hideChildrenInMenu: true,
   },
   children: [
     {
@@ -24,10 +24,10 @@ const AI_CHATBOT: AppRouteRecordRaw = {
         requiresAuth: false,
         roles: ['*'],
         hideInMenu: true,
-        activeMenu: 'ai-chatbot'
-      }
-    }
-  ]
+        activeMenu: 'ai-chatbot',
+      },
+    },
+  ],
 }
 
 export default AI_CHATBOT
