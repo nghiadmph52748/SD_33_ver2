@@ -5,7 +5,7 @@
     <a-row :gutter="16">
       <a-col :span="16">
         <div class="chatbot-wrap">
-          <AIChatbot ref="chatbotRef" @session-state="onSessionState" />
+          <AIChatbot ref="chatbotRef" @session-state="onSessionState" :enable-health-check="true" />
         </div>
       </a-col>
 

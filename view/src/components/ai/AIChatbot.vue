@@ -115,6 +115,11 @@ interface QuickAction {
   question: string
 }
 
+// Props
+const props = defineProps<{ suppressConnectionNotice?: boolean; enableHealthCheck?: boolean }>()
+const shouldNotifyConnection = props.suppressConnectionNotice !== true
+const shouldHealthCheck = props.enableHealthCheck === true
+
 // Emits
 const emit = defineEmits<{
   (e: 'session-state', payload: {
@@ -347,7 +352,9 @@ async function checkConnection() {
     isConnected.value = true
   } catch (error) {
     isConnected.value = false
-    Message.warning('AI service connection failed')
+    if (shouldNotifyConnection) {
+      Message.warning('AI service connection failed')
+    }
   }
 }
 
@@ -517,6 +524,8 @@ function clearMessages() {
 // scrollToBottom is defined earlier to satisfy no-use-before-define
 
 // Lifecycle
+let healthTimer: any = null
+
 onMounted(async () => {
   // Restore history first
   loadHistory()
@@ -527,10 +536,15 @@ onMounted(async () => {
     scrollToBottom()
   }, 100)
   
-  await checkConnection()
-
-  // Check connection every 30 seconds
-  setInterval(checkConnection, 30000)
+  if (shouldHealthCheck) {
+    await checkConnection()
+    // Check connection every 30 seconds only when enabled and tab visible
+    healthTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        checkConnection()
+      }
+    }, 30000)
+  }
 
   // Observe theme changes from Arco (class on <html>)
   const root = document.documentElement
@@ -554,6 +568,7 @@ onMounted(async () => {
   ;(window as any).aiChatThemeObserver = observer
 })
 onUnmounted(() => {
+  if (healthTimer) clearInterval(healthTimer)
   const obs = (window as any).aiChatThemeObserver
   if (obs && typeof obs.disconnect === 'function') obs.disconnect()
 })
