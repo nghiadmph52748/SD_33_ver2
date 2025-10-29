@@ -10,6 +10,8 @@ SUMMARY_CHANGES.md
 .env
 .env.*
 .env.example
+SQLQuery1_Test.sql
+*.md
 
 # Maven
 target/
