@@ -3,6 +3,14 @@
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
+    <!-- AI Assistant trigger -->
+    <div style="display: flex; justify-content: flex-end; margin: 8px 0 16px">
+      <a-button type="primary" @click="showAI = true">
+        <template #icon>🤖</template>
+        Hỏi AI về thống kê
+      </a-button>
+    </div>
+
     <!-- Bộ lọc thống kê -->
     <BoLocThongKe
       v-model:khoang-thoi-gian="khoangThoiGian"
@@ -93,6 +101,11 @@
         <BangSanPhamSapHetHang :du-lieu="sanPhamSapHetHang" :phan-trang="phanTrangLowStock" />
       </a-col>
     </a-row>
+
+    <!-- AI Assistant Drawer -->
+    <a-drawer :visible="showAI" :width="520" unmountOnClose @cancel="showAI = false" :footer="false" title="Trợ lý AI">
+      <AIChatbot />
+    </a-drawer>
   </div>
 </template>
 
@@ -105,6 +118,7 @@ import { useThongKeData } from '../composables/useThongKeData'
 import { useTinhToanThongKe } from '../composables/useTinhToanThongKe'
 import { useXuatExcel } from '../composables/useXuatExcel'
 import type { KhoangThoiGian, LoaiBieuDo } from '../types/thong-ke.types'
+import AIChatbot from '@/components/ai/AIChatbot.vue'
 
 // Import components
 import BoLocThongKe from './bo-loc-thong-ke.vue'
@@ -129,6 +143,7 @@ const khoangNgayTuyChon = ref<any[]>([])
 const kyDoanhThu = ref('6months')
 const kyTopProducts = ref('month')
 const kyTrangThaiDonHang = ref<'day' | 'month' | 'year'>('day')
+const showAI = ref(false)
 
 // ============= DATA FETCHING =============
 const { danhSachHoaDon, danhSachChiTietSanPham, taiToanBoDuLieu } = useThongKeData()

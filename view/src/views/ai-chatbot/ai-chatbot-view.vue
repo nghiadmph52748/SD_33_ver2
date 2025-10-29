@@ -4,7 +4,9 @@
 
     <a-row :gutter="16">
       <a-col :span="16">
-        <AIChatbot ref="chatbotRef" @session-state="onSessionState" />
+        <div class="chatbot-wrap">
+          <AIChatbot ref="chatbotRef" @session-state="onSessionState" />
+        </div>
       </a-col>
 
       <a-col :span="8">
@@ -251,6 +253,13 @@ function clearChatHistory() {
 <style scoped lang="less">
 .ai-chatbot-page {
   padding: 20px;
+
+  // Make left side chatbot fill viewport height so its input can stay pinned
+  .chatbot-wrap {
+    height: calc(100vh - 140px);
+    min-height: 520px;
+    display: flex;
+  }
 
   .feature-list {
     .feature-item {

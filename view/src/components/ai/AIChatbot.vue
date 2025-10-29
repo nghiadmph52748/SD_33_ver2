@@ -332,20 +332,23 @@ const quickActions: QuickAction[] = [
 ]
 
 // Methods
+function scrollToBottom() {
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTo({
+      top: messagesContainer.value.scrollHeight,
+      behavior: 'smooth'
+    })
+  }
+}
+
 async function checkConnection() {
   try {
     await checkAIHealth()
     isConnected.value = true
   } catch (error) {
     isConnected.value = false
-    console.error('AI service connection failed:', error)
+    Message.warning('AI service connection failed')
   }
-}
-
-function handleSearch(value?: string) {
-  // Use current input if value is undefined (e.g., press-enter)
-  const text = typeof value === 'string' ? value : input.value
-  sendMessage(text)
 }
 
 async function sendMessage(text: string = input.value) {
@@ -406,7 +409,7 @@ async function sendMessage(text: string = input.value) {
     // Persist
     saveHistory()
   } catch (error: any) {
-    Message.error('Lỗi khi gửi tin nhắn: ' + error.message)
+    Message.error(`Lỗi khi gửi tin nhắn: ${error.message}`)
 
     // Add error message
     messages.value.push({
@@ -418,6 +421,12 @@ async function sendMessage(text: string = input.value) {
   } finally {
     loading.value = false
   }
+}
+
+function handleSearch(value?: string) {
+  // Use current input if value is undefined (e.g., press-enter)
+  const text = typeof value === 'string' ? value : input.value
+  sendMessage(text)
 }
 
 function askQuestion(question: string) {
@@ -443,24 +452,7 @@ function switchToSession(sessionId: string) {
   }
 }
 
-function formatSessionTime(sessionId: string): string {
-  try {
-    const timestamp = parseInt(sessionId.split('_')[1], 10)
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-
-    if (diffInHours < 1) {
-      return 'Vừa xong'
-    }
-    if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}h trước`
-    }
-    return date.toLocaleDateString('vi-VN')
-  } catch {
-    return 'Chat cũ'
-  }
-}
+// Note: formatSessionTime removed here (unused in this component)
 
 function createNewChat() {
   // Save current session before creating new one
@@ -522,14 +514,7 @@ function clearMessages() {
   })
 }
 
-function scrollToBottom() {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTo({
-      top: messagesContainer.value.scrollHeight,
-      behavior: 'smooth'
-    })
-  }
-}
+// scrollToBottom is defined earlier to satisfy no-use-before-define
 
 // Lifecycle
 onMounted(async () => {
@@ -606,8 +591,13 @@ defineExpose({
 
 <style scoped lang="less">
 .ai-chatbot {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
   .chatbot-card {
-    height: 600px;
+    height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -643,8 +633,8 @@ defineExpose({
   .messages-container {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
-    margin-bottom: 16px;
+    padding: 12px 16px 84px; /* leave room for sticky input */
+    margin-bottom: 8px;
     /* Use Arco theme variables so it adapts to light/dark automatically */
     background: var(--color-bg-1) !important;
     border-radius: 12px;
@@ -793,7 +783,7 @@ defineExpose({
   }
 
   .quick-actions {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     padding: 12px;
     background: var(--color-bg-2);
     border-radius: 8px;
@@ -807,6 +797,13 @@ defineExpose({
   }
 
   .input-container {
+    position: sticky;
+    bottom: 0;
+    background: var(--color-bg-1);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-top: 1px solid var(--color-border-2);
+    z-index: 1;
     :deep(.arco-input-search) {
       .arco-input {
         border-radius: 20px 0 0 20px;

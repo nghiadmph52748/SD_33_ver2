@@ -33,12 +33,12 @@ cp .env.example .env
 Chỉnh sửa file `.env` với thông tin database:
 ```env
 LM_STUDIO_BASE_URL=http://localhost:3147/v1
-LM_STUDIO_MODEL=llama-3.2-3b-instruct
+LM_STUDIO_MODEL=openai/gpt-oss-20b
 
 DB_HOST=localhost
 DB_PORT=1433
 DB_NAME=GearUp
-DB_USER=your_username
+DB_USER=sa
 DB_PASSWORD=your_password
 
 REDIS_HOST=localhost

@@ -3,6 +3,8 @@ package org.example.be_sp.config;
 import java.util.List;
 
 import org.example.be_sp.security.JwtUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.messaging.Message;
@@ -22,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtUtils jwtUtils;
+    private static final Logger log = LoggerFactory.getLogger(WebSocketAuthChannelInterceptor.class);
 
     public WebSocketAuthChannelInterceptor(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
@@ -51,8 +54,10 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                             UsernamePasswordAuthenticationToken authentication = 
                                 new UsernamePasswordAuthenticationToken(username, null, List.of());
                             
-                            System.out.println("✅ [WebSocket Auth] User authenticated: " + username);
-                            System.out.println("✅ [WebSocket Auth] Principal name: " + authentication.getName());
+                            if (log.isDebugEnabled()) {
+                                log.debug("[WebSocket Auth] User authenticated: {}", username);
+                                log.debug("[WebSocket Auth] Principal name: {}", authentication.getName());
+                            }
                             
                             // Gán user vào STOMP session
                             accessor.setUser(authentication);
@@ -60,7 +65,9 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                             // Cũng gán vào SecurityContext cho các phương thức @MessageMapping
                             SecurityContextHolder.getContext().setAuthentication(authentication);
                             
-                            System.out.println("✅ [WebSocket Auth] Session user set to: " + accessor.getUser());
+                            if (log.isDebugEnabled()) {
+                                log.debug("[WebSocket Auth] Session user set to: {}", accessor.getUser());
+                            }
                         }
                     } catch (Exception e) {
                         // Token không hợp lệ - kết nối sẽ bị từ chối
