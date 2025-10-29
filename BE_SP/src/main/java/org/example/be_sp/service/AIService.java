@@ -1,6 +1,5 @@
 package org.example.be_sp.service;
 
-import org.example.be_sp.model.ai.ChatRequest;
 import org.example.be_sp.model.ai.ChatResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -9,9 +8,16 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class AIService {
@@ -20,9 +26,11 @@ public class AIService {
     private String aiServiceUrl;
 
     private final RestTemplate restTemplate;
+    private final ExecutorService executorService;
 
     public AIService() {
         this.restTemplate = new RestTemplate();
+        this.executorService = Executors.newCachedThreadPool();
     }
 
     /**
@@ -55,6 +63,7 @@ public class AIService {
     /**
      * Check AI service health
      */
+    @SuppressWarnings("unchecked")
     public Map<String, Object> checkHealth() {
         String url = aiServiceUrl + "/api/ai/chatbot/health";
 
@@ -64,5 +73,91 @@ public class AIService {
         } catch (Exception e) {
             throw new RuntimeException("AI service is unavailable: " + e.getMessage());
         }
+    }
+
+    /**
+     * Send chat message to AI service with streaming response
+     */
+    public SseEmitter chatStream(String message) {
+        SseEmitter emitter = new SseEmitter(300000L); // 5 minutes timeout
+        String url = aiServiceUrl + "/api/ai/chatbot/chat-stream";
+
+        executorService.execute(() -> {
+            BufferedReader reader = null;
+            try {
+                // Create connection
+                URL streamUrl = new URL(url);
+                HttpURLConnection connection = (HttpURLConnection) streamUrl.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setRequestProperty("Accept", "text/event-stream");
+                connection.setDoOutput(true);
+                connection.setConnectTimeout(10000); // 10 seconds
+                connection.setReadTimeout(300000); // 5 minutes
+
+                // Send request body
+                String jsonBody = String.format("{\"message\":\"%s\",\"context\":\"\"}", 
+                    message.replace("\"", "\\\"").replace("\n", "\\n"));
+                connection.getOutputStream().write(jsonBody.getBytes("UTF-8"));
+                connection.getOutputStream().flush();
+
+                // Check response code
+                int responseCode = connection.getResponseCode();
+                if (responseCode != 200) {
+                    throw new RuntimeException("HTTP error: " + responseCode);
+                }
+
+                // Read streaming response
+                reader = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream(), "UTF-8")
+                );
+
+                String line;
+                int eventCount = 0;
+                System.out.println("[Java Stream] Starting to forward events...");
+                
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("data: ")) {
+                        // Extract JSON data
+                        String jsonData = line.substring(6).trim();
+                        if (!jsonData.isEmpty()) {
+                            try {
+                                // Send as SSE event with proper format
+                                emitter.send(SseEmitter.event()
+                                    .data(jsonData)
+                                    .name("message"));
+                                
+                                eventCount++;
+                                
+                                // Log every 20 events
+                                if (eventCount % 20 == 0) {
+                                    System.out.println("[Java Stream] Forwarded " + eventCount + " events");
+                                }
+                            } catch (Exception e) {
+                                System.err.println("[Java Stream] Error sending event: " + e.getMessage());
+                                e.printStackTrace();
+                                throw e;
+                            }
+                        }
+                    }
+                }
+                
+                System.out.println("[Java Stream] Total events forwarded: " + eventCount);
+
+                emitter.complete();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                emitter.completeWithError(e);
+            } finally {
+                try {
+                    if (reader != null) reader.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        return emitter;
     }
 }

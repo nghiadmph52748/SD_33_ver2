@@ -32,6 +32,9 @@ interface ChatState {
   // Tổng số tin nhắn chưa đọc
   totalUnreadCount: number
 
+  // Online users tracking
+  onlineUsers: Set<number>
+
   // WebSocket connection state
   wsConnected: boolean
   wsConnecting: boolean
@@ -51,6 +54,7 @@ const useChatStore = defineStore('chat', {
     messages: {},
     activeConversationId: null,
     totalUnreadCount: 0,
+    onlineUsers: new Set<number>(),
     wsConnected: false,
     wsConnecting: false,
     stompClient: null,
@@ -293,6 +297,38 @@ const useChatStore = defineStore('chat', {
     },
 
     /**
+     * Lấy danh sách users đang online
+     */
+    async fetchOnlineUsers() {
+      try {
+        const token = getToken()
+        const response = await fetch('http://localhost:8080/api/presence/online-users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        const userIds: number[] = await response.json()
+        this.onlineUsers = new Set(userIds)
+        console.log('📊 Online users:', Array.from(this.onlineUsers))
+      } catch (error: any) {
+        console.error('Lỗi khi lấy danh sách online users:', error)
+      }
+    },
+
+    /**
+     * Update user presence status
+     */
+    updateUserPresence(userId: number, status: 'ONLINE' | 'OFFLINE') {
+      if (status === 'ONLINE') {
+        this.onlineUsers.add(userId)
+        console.log(`🟢 User ${userId} is now ONLINE`)
+      } else {
+        this.onlineUsers.delete(userId)
+        console.log(`🔴 User ${userId} is now OFFLINE`)
+      }
+    },
+
+    /**
      * Set active conversation
      */
     setActiveConversation(conversationId: number | null) {
@@ -365,6 +401,19 @@ const useChatStore = defineStore('chat', {
               console.error('❌ Error parsing read notification:', err)
             }
           })
+
+          // Subscribe to presence updates (online/offline status)
+          client.subscribe('/topic/presence', (message: IMessage) => {
+            try {
+              const presenceUpdate = JSON.parse(message.body)
+              this.updateUserPresence(presenceUpdate.userId, presenceUpdate.status)
+            } catch (err) {
+              console.error('❌ Error parsing presence update:', err)
+            }
+          })
+
+          // Fetch initial online users
+          this.fetchOnlineUsers()
         },
 
         onStompError: (frame) => {

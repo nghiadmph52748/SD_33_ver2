@@ -209,21 +209,23 @@ export default defineComponent({
   }
 }
 
-/* Hover + active styles for sidebar (both themes) */
-::deep(.arco-menu) {
+/* ========================================= */
+/* LIGHT MODE STYLES */
+/* ========================================= */
+::deep(.arco-menu-light) {
   .arco-menu-item,
   .arco-menu-inline-header {
     transition: background-color 0.15s ease, color 0.15s ease;
   }
   
-  /* Hover state - works for both selected and unselected items */
+  /* Hover state */
   .arco-menu-item:hover,
   .arco-menu-inline-header:hover {
     background: #e6f4ff !important;
     color: #1890ff !important;
   }
   
-  /* Selected state - stronger blue background */
+  /* Selected state */
   .arco-menu-selected,
   .arco-menu-selected > .arco-menu-inline-header {
     background: #bae7ff !important;
@@ -231,7 +233,7 @@ export default defineComponent({
     position: relative;
   }
   
-  /* Selected item hover - even stronger blue */
+  /* Selected item hover */
   .arco-menu-selected:hover,
   .arco-menu-selected:hover > .arco-menu-inline-header {
     background: #91d5ff !important;
@@ -252,24 +254,69 @@ export default defineComponent({
   }
 }
 
+/* ========================================= */
+/* DARK MODE STYLES */
+/* ========================================= */
+::deep(.arco-menu-dark) {
+  .arco-menu-item,
+  .arco-menu-inline-header {
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  
+  /* Hover state - darker blue for dark mode */
+  .arco-menu-item:hover,
+  .arco-menu-inline-header:hover {
+    background: rgba(24, 144, 255, 0.15) !important;
+    color: #69c0ff !important;
+  }
+  
+  /* Selected state - more visible in dark mode */
+  .arco-menu-selected,
+  .arco-menu-selected > .arco-menu-inline-header {
+    background: rgba(24, 144, 255, 0.25) !important;
+    color: #91d5ff !important;
+    position: relative;
+  }
+  
+  /* Selected item hover - stronger highlight */
+  .arco-menu-selected:hover,
+  .arco-menu-selected:hover > .arco-menu-inline-header {
+    background: rgba(24, 144, 255, 0.35) !important;
+    color: #bae7ff !important;
+  }
+  
+  /* Brighter blue border for dark mode */
+  .arco-menu-selected::before,
+  .arco-menu-selected > .arco-menu-inline-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: #69c0ff;
+    border-radius: 0 2px 2px 0;
+  }
+}
+
 /* Alternative approach with higher specificity */
-::deep(.arco-menu .arco-menu-item:hover) {
+::deep(.arco-menu-light .arco-menu-item:hover) {
   background: #e6f4ff !important;
   color: #1890ff !important;
 }
 
-::deep(.arco-menu .arco-menu-selected) {
+::deep(.arco-menu-light .arco-menu-selected) {
   background: #bae7ff !important;
   color: #0050b3 !important;
   position: relative;
 }
 
-::deep(.arco-menu .arco-menu-selected:hover) {
+::deep(.arco-menu-light .arco-menu-selected:hover) {
   background: #91d5ff !important;
   color: #003a8c !important;
 }
 
-::deep(.arco-menu .arco-menu-selected::before) {
+::deep(.arco-menu-light .arco-menu-selected::before) {
   content: '';
   position: absolute;
   left: 0;
@@ -279,27 +326,56 @@ export default defineComponent({
   background: #1890ff;
   border-radius: 0 2px 2px 0;
 }
+
+::deep(.arco-menu-dark .arco-menu-item:hover) {
+  background: rgba(24, 144, 255, 0.15) !important;
+  color: #69c0ff !important;
+}
+
+::deep(.arco-menu-dark .arco-menu-selected) {
+  background: rgba(24, 144, 255, 0.25) !important;
+  color: #91d5ff !important;
+  position: relative;
+}
+
+::deep(.arco-menu-dark .arco-menu-selected:hover) {
+  background: rgba(24, 144, 255, 0.35) !important;
+  color: #bae7ff !important;
+}
+
+::deep(.arco-menu-dark .arco-menu-selected::before) {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #69c0ff;
+  border-radius: 0 2px 2px 0;
+}
 </style>
 
 <style lang="less">
-/* Non-scoped styles for menu hover effects */
-.arco-menu .arco-menu-item:hover {
+/* ========================================= */
+/* NON-SCOPED STYLES - LIGHT MODE */
+/* ========================================= */
+.arco-menu-light .arco-menu-item:hover {
   background: #e6f4ff !important;
   color: #1890ff !important;
 }
 
-.arco-menu .arco-menu-selected {
+.arco-menu-light .arco-menu-selected {
   background: #bae7ff !important;
   color: #0050b3 !important;
   position: relative;
 }
 
-.arco-menu .arco-menu-selected:hover {
+.arco-menu-light .arco-menu-selected:hover {
   background: #91d5ff !important;
   color: #003a8c !important;
 }
 
-.arco-menu .arco-menu-selected::before {
+.arco-menu-light .arco-menu-selected::before {
   content: '';
   position: absolute;
   left: 0;
@@ -307,6 +383,36 @@ export default defineComponent({
   bottom: 0;
   width: 3px;
   background: #1890ff;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ========================================= */
+/* NON-SCOPED STYLES - DARK MODE */
+/* ========================================= */
+.arco-menu-dark .arco-menu-item:hover {
+  background: rgba(24, 144, 255, 0.15) !important;
+  color: #69c0ff !important;
+}
+
+.arco-menu-dark .arco-menu-selected {
+  background: rgba(24, 144, 255, 0.25) !important;
+  color: #91d5ff !important;
+  position: relative;
+}
+
+.arco-menu-dark .arco-menu-selected:hover {
+  background: rgba(24, 144, 255, 0.35) !important;
+  color: #bae7ff !important;
+}
+
+.arco-menu-dark .arco-menu-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #69c0ff;
   border-radius: 0 2px 2px 0;
 }
 </style>

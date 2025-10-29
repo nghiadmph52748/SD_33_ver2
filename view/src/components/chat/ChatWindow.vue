@@ -9,9 +9,12 @@
           </a-avatar>
           <div class="user-details">
             <h4>{{ otherUserName }}</h4>
-            <span v-if="chatStore.wsConnected" class="status-online">
+            <span v-if="isOtherUserOnline" class="status-online">
               <icon-check-circle-fill />
               Đang hoạt động
+            </span>
+            <span v-else class="status-offline">
+              Không hoạt động
             </span>
           </div>
         </div>
@@ -108,6 +111,14 @@ const otherUserId = computed(() => {
     return activeConversation.value.nhanVien2Id
   }
   return activeConversation.value.nhanVien1Id
+})
+
+/**
+ * Check người dùng kia có online không
+ */
+const isOtherUserOnline = computed(() => {
+  if (!otherUserId.value) return false
+  return chatStore.onlineUsers.has(otherUserId.value)
 })
 
 /**
@@ -247,6 +258,13 @@ function handleNewLine(_event: KeyboardEvent) {
         gap: 4px;
         font-size: 12px;
         color: rgb(var(--success-6));
+        font-weight: 500;
+      }
+
+      .status-offline {
+        font-size: 12px;
+        color: var(--color-text-3);
+        font-weight: 400;
       }
     }
   }
@@ -286,7 +304,7 @@ function handleNewLine(_event: KeyboardEvent) {
 
 .chat-input-area {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
   padding: 12px 16px;
   border-top: 1px solid var(--color-border-2);
@@ -300,9 +318,11 @@ function handleNewLine(_event: KeyboardEvent) {
   }
 
   :deep(.arco-btn-circle) {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
+    align-self: flex-end;
+    margin-bottom: 2px;
   }
 }
 

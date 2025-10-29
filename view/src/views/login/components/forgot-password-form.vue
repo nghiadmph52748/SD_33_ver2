@@ -99,17 +99,22 @@ const handleSubmit = async () => {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-text-1);
 }
 
 .forgot-heading p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-2);
   font-size: 14px;
   line-height: 1.5;
 }
 
 .forgot-form :deep(.arco-btn) {
   border-radius: 24px;
+}
+
+.forgot-form :deep(.arco-input),
+.forgot-form :deep(.arco-input-wrapper) {
+  border-radius: 18px;
 }
 </style>

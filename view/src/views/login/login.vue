@@ -83,26 +83,44 @@ export default defineComponent({
 .login-bg {
   min-height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%);
+  background: var(--color-bg-1);
   display: flex;
   align-items: center;
   justify-content: center;
+  
+  // Light mode gradient
+  body:not([arco-theme='dark']) & {
+    background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%);
+  }
+  
+  // Dark mode gradient
+  body[arco-theme='dark'] & {
+    background: linear-gradient(135deg, #1a1d2e 0%, #16181d 100%);
+  }
 }
+
 .container {
   display: flex;
   min-height: 500px;
   width: 520px;
   max-width: 96vw;
   border-radius: 18px;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-  background: #fff;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-2);
   position: relative;
   overflow: hidden;
   margin: 40px 0;
+  
+  // Dark mode shadow
+  body[arco-theme='dark'] & {
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  }
+  
   @media (max-width: 900px) {
     width: 98vw;
     min-height: unset;
   }
+  
   .content {
     border-radius: 18px;
     position: relative;
@@ -112,12 +130,14 @@ export default defineComponent({
     align-items: center;
     justify-content: center;
     padding: 40px 0;
-    background: #fff;
+    background: var(--color-bg-2);
+    
     @media (max-width: 900px) {
       padding: 24px 0;
     }
   }
 }
+
 .content-inner {
   width: 100%;
   display: flex;
@@ -135,11 +155,11 @@ export default defineComponent({
   margin: 16px 0 8px;
   font-size: 24px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-text-1);
 }
 
 .reset-success p {
-  color: #64748b;
+  color: var(--color-text-2);
   font-size: 14px;
   line-height: 1.6;
   margin-bottom: 24px;
@@ -147,7 +167,7 @@ export default defineComponent({
 
 .success-icon {
   font-size: 48px;
-  color: #22c55e;
+  color: rgb(var(--success-6));
 }
 
 .reset-success :deep(.arco-btn) {
@@ -168,21 +188,25 @@ export default defineComponent({
   margin-bottom: 24px;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--color-bg-3);
   padding: 6px 18px 6px 10px;
   border-radius: 24px;
-  box-shadow: 0 2px 8px 0 rgba(31, 38, 135, 0.08);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+  
   &-text {
     margin-left: 8px;
-    color: #00308f;
+    color: rgb(var(--primary-6));
     font-size: 22px;
     font-weight: bold;
     letter-spacing: 1px;
   }
+  
   img {
     height: 32px;
     width: 32px;
   }
+  
   @media (max-width: 900px) {
     margin: 16px auto;
     justify-content: center;

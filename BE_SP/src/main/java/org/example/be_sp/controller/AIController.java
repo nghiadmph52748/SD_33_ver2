@@ -4,8 +4,10 @@ import org.example.be_sp.model.ai.ChatRequest;
 import org.example.be_sp.model.ai.ChatResponse;
 import org.example.be_sp.service.AIService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -32,6 +34,15 @@ public class AIController {
                     .queryType("error")
                     .build());
         }
+    }
+
+    /**
+     * Chat with AI assistant - Streaming response
+     * POST /api/ai/chat-stream
+     */
+    @PostMapping(value = "/chat-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatStream(@RequestBody ChatRequest request) {
+        return aiService.chatStream(request.getMessage());
     }
 
     /**

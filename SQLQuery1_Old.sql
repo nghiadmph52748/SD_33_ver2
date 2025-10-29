@@ -1,6 +1,5 @@
 -- SQL Server script compatible with macOS
 -- Removed Windows-specific file paths and settings
--- UPDATED: 2025-10-29 - Optimization indexes moved to end of file (after all tables created)
 
 CREATE DATABASE [GearUp]
 GO
@@ -332,7 +331,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[hoa_don](
 	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_khach_hang] [int] NULL,
+	[id_khach_hang] [int] NOT NULL,
 	[id_phieu_giam_gia] [int] NULL,
 	[id_nhan_vien] [int] NULL,
 	[ma_hoa_don]  AS ('HD'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
@@ -1607,9 +1606,94 @@ GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD CHECK  (([ngay_het_han]>[ngay_nhan]))
 GO
 
+-- TỐI ƯU HÓA HIỆU NĂNG - INDEXES
+-- Ngày: 2025-10-29
+-- Mục đích: Cải thiện tốc độ truy vấn cho dữ liệu thường xuyên truy cập
+-- Ảnh hưởng: Tăng tốc 5-10 lần, chi phí ghi tối thiểu
+
+-- Indexes cho Foreign Keys (Quan trọng cho JOINs)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_san_pham_san_pham' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
+    CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_san_pham ON [dbo].[chi_tiet_san_pham]([id_san_pham]) INCLUDE ([gia_ban], [so_luong], [trang_thai]) WHERE [deleted] = 0
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_san_pham_mau_sac' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
+    CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_mau_sac ON [dbo].[chi_tiet_san_pham]([id_mau_sac]) WHERE [deleted] = 0
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_san_pham_kich_thuoc' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
+    CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_kich_thuoc ON [dbo].[chi_tiet_san_pham]([id_kich_thuoc]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_hoa_don_khach_hang ON [dbo].[hoa_don]([id_khach_hang]) INCLUDE ([tong_tien_sau_giam], [ngay_tao], [trang_thai]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_hoa_don_nhan_vien ON [dbo].[hoa_don]([id_nhan_vien]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_hoa_don_phieu_giam_gia ON [dbo].[hoa_don]([id_phieu_giam_gia]) WHERE [id_phieu_giam_gia] IS NOT NULL AND [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_hoa_don_chi_tiet_hoa_don ON [dbo].[hoa_don_chi_tiet]([id_hoa_don]) INCLUDE ([so_luong], [gia_ban], [thanh_tien]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_hoa_don_chi_tiet_san_pham ON [dbo].[hoa_don_chi_tiet]([id_chi_tiet_san_pham]) INCLUDE ([so_luong], [gia_ban]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_chi_tiet_dot_giam_gia_dot ON [dbo].[chi_tiet_dot_giam_gia]([id_dot_giam_gia]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_chi_tiet_dot_giam_gia_san_pham ON [dbo].[chi_tiet_dot_giam_gia]([id_chi_tiet_san_pham]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_ca_nhan_khach_hang ON [dbo].[phieu_giam_gia_ca_nhan]([id_khach_hang]) INCLUDE ([id_phieu_giam_gia], [trang_thai]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_ca_nhan_phieu ON [dbo].[phieu_giam_gia_ca_nhan]([id_phieu_giam_gia]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_tin_nhan_nguoi_gui ON [dbo].[tin_nhan]([id_nguoi_gui]) INCLUDE ([thoi_gian_gui], [da_doc]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_tin_nhan_nguoi_nhan ON [dbo].[tin_nhan]([id_nguoi_nhan], [da_doc]) INCLUDE ([thoi_gian_gui], [id_nguoi_gui]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_nhan_vien_1 ON [dbo].[cuoc_trao_doi]([id_nhan_vien_1]) INCLUDE ([thoi_gian_tin_nhan_cuoi], [so_tin_nhan_chua_doc_nv1]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_nhan_vien_2 ON [dbo].[cuoc_trao_doi]([id_nhan_vien_2]) INCLUDE ([thoi_gian_tin_nhan_cuoi], [so_tin_nhan_chua_doc_nv2]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_dia_chi_khach_hang_khach_hang ON [dbo].[dia_chi_khach_hang]([id_khach_hang]) INCLUDE ([mac_dinh], [trang_thai]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_san_pham_nha_san_xuat ON [dbo].[san_pham]([id_nha_san_xuat]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_san_pham_xuat_xu ON [dbo].[san_pham]([id_xuat_xu]) WHERE [deleted] = 0
+GO
+
+-- Indexes cho các cột Filter (Cho mệnh đề WHERE)
+CREATE NONCLUSTERED INDEX IX_hoa_don_ngay_tao ON [dbo].[hoa_don]([ngay_tao] DESC, [trang_thai]) INCLUDE ([tong_tien_sau_giam], [id_khach_hang]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_hoa_don_trang_thai ON [dbo].[hoa_don]([trang_thai], [ngay_tao] DESC) INCLUDE ([ma_hoa_don], [tong_tien_sau_giam]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_trang_thai ON [dbo].[chi_tiet_san_pham]([trang_thai], [id_san_pham]) INCLUDE ([so_luong], [gia_ban]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_so_luong ON [dbo].[chi_tiet_san_pham]([so_luong]) WHERE [deleted] = 0 AND [trang_thai] = 1 AND [so_luong] > 0
+GO
+CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_noi_bat ON [dbo].[phieu_giam_gia]([noi_bat], [trang_thai]) INCLUDE ([ma_phieu_giam_gia], [ten_phieu_giam_gia], [ngay_bat_dau], [ngay_ket_thuc]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_ngay ON [dbo].[phieu_giam_gia]([ngay_bat_dau], [ngay_ket_thuc]) WHERE [deleted] = 0 AND [trang_thai] = 1
+GO
+CREATE NONCLUSTERED INDEX IX_dot_giam_gia_ngay ON [dbo].[dot_giam_gia]([ngay_bat_dau], [ngay_ket_thuc]) INCLUDE ([ten_dot_giam_gia], [gia_tri_giam_gia]) WHERE [deleted] = 0 AND [trang_thai] = 1
+GO
+CREATE NONCLUSTERED INDEX IX_tin_nhan_da_doc ON [dbo].[tin_nhan]([da_doc], [id_nguoi_nhan]) INCLUDE ([thoi_gian_gui], [id_nguoi_gui]) WHERE [deleted] = 0
+GO
+
+-- Indexes cho Tìm kiếm (Cho tìm kiếm văn bản)  
+CREATE NONCLUSTERED INDEX IX_san_pham_ten_search ON [dbo].[san_pham]([ten_san_pham]) INCLUDE ([trang_thai]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_khach_hang_search ON [dbo].[khach_hang]([ten_khach_hang], [so_dien_thoai]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_nhan_vien_search ON [dbo].[nhan_vien]([ten_nhan_vien], [so_dien_thoai]) WHERE [deleted] = 0
+GO
+
+-- Indexes phức hợp (Cho truy vấn phức tạp)
+CREATE NONCLUSTERED INDEX IX_timeline_don_hang_composite ON [dbo].[timeline_don_hang]([id_hoa_don], [thoi_gian] DESC) INCLUDE ([trang_thai_moi], [ghi_chu]) WHERE [deleted] = 0
+GO
+CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_history_composite ON [dbo].[phieu_giam_gia_history]([id_phieu_giam_gia], [ngay_thay_doi] DESC) INCLUDE ([id_nhan_vien], [hanh_dong])
+GO
+CREATE NONCLUSTERED INDEX IX_dot_giam_gia_history_composite ON [dbo].[dot_giam_gia_history]([id_dot_giam_gia], [ngay_thay_doi] DESC) INCLUDE ([id_nhan_vien], [hanh_dong])
+GO
+
+-- Cập nhật thống kê
+EXEC sp_updatestats
+GO
+
 -- =====================================================================
--- LƯU Ý: OPTIMIZATION INDEXES SẼ ĐƯỢC TẠO Ở CUỐI FILE
--- Sau khi tất cả các tables, views, và stored procedures đã được tạo xong
+-- KẾT THÚC TỐI ƯU HÓA HIỆU NĂNG
 -- =====================================================================
 
 -- Thêm và cải thiện các trường cho bảng hóa đơn
@@ -2131,135 +2215,6 @@ BEGIN
         AND deleted = 0
 END
 GO
-
--- =====================================================================
--- TỐI ƯU HÓA HIỆU NĂNG - INDEXES
--- Ngày: 2025-10-29
--- Mục đích: Cải thiện tốc độ truy vấn cho dữ liệu thường xuyên truy cập
--- Ảnh hưởng: Tăng tốc 5-10 lần, chi phí ghi tối thiểu
--- LƯU Ý: Đặt ở cuối file sau khi tất cả tables đã được tạo
--- =====================================================================
-
-USE [GearUp]
-GO
-
--- Indexes cho Foreign Keys (Quan trọng cho JOINs)
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_san_pham_san_pham' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
-    CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_san_pham ON [dbo].[chi_tiet_san_pham]([id_san_pham]) INCLUDE ([gia_ban], [so_luong], [trang_thai]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_san_pham_mau_sac' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
-    CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_mau_sac ON [dbo].[chi_tiet_san_pham]([id_mau_sac]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_san_pham_kich_thuoc' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
-    CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_kich_thuoc ON [dbo].[chi_tiet_san_pham]([id_kich_thuoc]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_hoa_don_khach_hang' AND object_id = OBJECT_ID('hoa_don'))
-    CREATE NONCLUSTERED INDEX IX_hoa_don_khach_hang ON [dbo].[hoa_don]([id_khach_hang]) INCLUDE ([tong_tien_sau_giam], [ngay_tao], [trang_thai]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_hoa_don_nhan_vien' AND object_id = OBJECT_ID('hoa_don'))
-    CREATE NONCLUSTERED INDEX IX_hoa_don_nhan_vien ON [dbo].[hoa_don]([id_nhan_vien]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_hoa_don_phieu_giam_gia' AND object_id = OBJECT_ID('hoa_don'))
-    CREATE NONCLUSTERED INDEX IX_hoa_don_phieu_giam_gia ON [dbo].[hoa_don]([id_phieu_giam_gia]) WHERE [id_phieu_giam_gia] IS NOT NULL AND [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_hoa_don_chi_tiet_hoa_don' AND object_id = OBJECT_ID('hoa_don_chi_tiet'))
-    CREATE NONCLUSTERED INDEX IX_hoa_don_chi_tiet_hoa_don ON [dbo].[hoa_don_chi_tiet]([id_hoa_don]) INCLUDE ([so_luong], [gia_ban], [thanh_tien]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_hoa_don_chi_tiet_san_pham' AND object_id = OBJECT_ID('hoa_don_chi_tiet'))
-    CREATE NONCLUSTERED INDEX IX_hoa_don_chi_tiet_san_pham ON [dbo].[hoa_don_chi_tiet]([id_chi_tiet_san_pham]) INCLUDE ([so_luong], [gia_ban]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_dot_giam_gia_dot' AND object_id = OBJECT_ID('chi_tiet_dot_giam_gia'))
-    CREATE NONCLUSTERED INDEX IX_chi_tiet_dot_giam_gia_dot ON [dbo].[chi_tiet_dot_giam_gia]([id_dot_giam_gia]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_dot_giam_gia_san_pham' AND object_id = OBJECT_ID('chi_tiet_dot_giam_gia'))
-    CREATE NONCLUSTERED INDEX IX_chi_tiet_dot_giam_gia_san_pham ON [dbo].[chi_tiet_dot_giam_gia]([id_chi_tiet_san_pham]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_phieu_giam_gia_ca_nhan_khach_hang' AND object_id = OBJECT_ID('phieu_giam_gia_ca_nhan'))
-    CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_ca_nhan_khach_hang ON [dbo].[phieu_giam_gia_ca_nhan]([id_khach_hang]) INCLUDE ([id_phieu_giam_gia], [trang_thai]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_phieu_giam_gia_ca_nhan_phieu' AND object_id = OBJECT_ID('phieu_giam_gia_ca_nhan'))
-    CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_ca_nhan_phieu ON [dbo].[phieu_giam_gia_ca_nhan]([id_phieu_giam_gia]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_nguoi_gui' AND object_id = OBJECT_ID('tin_nhan'))
-    CREATE NONCLUSTERED INDEX IX_tin_nhan_nguoi_gui ON [dbo].[tin_nhan]([id_nguoi_gui]) INCLUDE ([thoi_gian_gui], [da_doc]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_nguoi_nhan' AND object_id = OBJECT_ID('tin_nhan'))
-    CREATE NONCLUSTERED INDEX IX_tin_nhan_nguoi_nhan ON [dbo].[tin_nhan]([id_nguoi_nhan], [da_doc]) INCLUDE ([thoi_gian_gui], [id_nguoi_gui]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_cuoc_trao_doi_nhan_vien_1' AND object_id = OBJECT_ID('cuoc_trao_doi'))
-    CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_nhan_vien_1 ON [dbo].[cuoc_trao_doi]([id_nhan_vien_1]) INCLUDE ([thoi_gian_tin_nhan_cuoi], [so_tin_nhan_chua_doc_nv1]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_cuoc_trao_doi_nhan_vien_2' AND object_id = OBJECT_ID('cuoc_trao_doi'))
-    CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_nhan_vien_2 ON [dbo].[cuoc_trao_doi]([id_nhan_vien_2]) INCLUDE ([thoi_gian_tin_nhan_cuoi], [so_tin_nhan_chua_doc_nv2]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_dia_chi_khach_hang_khach_hang' AND object_id = OBJECT_ID('dia_chi_khach_hang'))
-    CREATE NONCLUSTERED INDEX IX_dia_chi_khach_hang_khach_hang ON [dbo].[dia_chi_khach_hang]([id_khach_hang]) INCLUDE ([mac_dinh], [trang_thai]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_san_pham_nha_san_xuat' AND object_id = OBJECT_ID('san_pham'))
-    CREATE NONCLUSTERED INDEX IX_san_pham_nha_san_xuat ON [dbo].[san_pham]([id_nha_san_xuat]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_san_pham_xuat_xu' AND object_id = OBJECT_ID('san_pham'))
-    CREATE NONCLUSTERED INDEX IX_san_pham_xuat_xu ON [dbo].[san_pham]([id_xuat_xu]) WHERE [deleted] = 0
-GO
-
--- Indexes cho các cột Filter (Cho mệnh đề WHERE)
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_hoa_don_ngay_tao' AND object_id = OBJECT_ID('hoa_don'))
-    CREATE NONCLUSTERED INDEX IX_hoa_don_ngay_tao ON [dbo].[hoa_don]([ngay_tao] DESC, [trang_thai]) INCLUDE ([tong_tien_sau_giam], [id_khach_hang]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_hoa_don_trang_thai' AND object_id = OBJECT_ID('hoa_don'))
-    CREATE NONCLUSTERED INDEX IX_hoa_don_trang_thai ON [dbo].[hoa_don]([trang_thai], [ngay_tao] DESC) INCLUDE ([ma_hoa_don], [tong_tien_sau_giam]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_san_pham_trang_thai' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
-    CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_trang_thai ON [dbo].[chi_tiet_san_pham]([trang_thai], [id_san_pham]) INCLUDE ([so_luong], [gia_ban]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_chi_tiet_san_pham_so_luong' AND object_id = OBJECT_ID('chi_tiet_san_pham'))
-    CREATE NONCLUSTERED INDEX IX_chi_tiet_san_pham_so_luong ON [dbo].[chi_tiet_san_pham]([so_luong]) WHERE [deleted] = 0 AND [trang_thai] = 1 AND [so_luong] > 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_phieu_giam_gia_noi_bat' AND object_id = OBJECT_ID('phieu_giam_gia'))
-    CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_noi_bat ON [dbo].[phieu_giam_gia]([noi_bat], [trang_thai]) INCLUDE ([ma_phieu_giam_gia], [ten_phieu_giam_gia], [ngay_bat_dau], [ngay_ket_thuc]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_phieu_giam_gia_ngay' AND object_id = OBJECT_ID('phieu_giam_gia'))
-    CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_ngay ON [dbo].[phieu_giam_gia]([ngay_bat_dau], [ngay_ket_thuc]) WHERE [deleted] = 0 AND [trang_thai] = 1
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_dot_giam_gia_ngay' AND object_id = OBJECT_ID('dot_giam_gia'))
-    CREATE NONCLUSTERED INDEX IX_dot_giam_gia_ngay ON [dbo].[dot_giam_gia]([ngay_bat_dau], [ngay_ket_thuc]) INCLUDE ([ten_dot_giam_gia], [gia_tri_giam_gia]) WHERE [deleted] = 0 AND [trang_thai] = 1
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_da_doc' AND object_id = OBJECT_ID('tin_nhan'))
-    CREATE NONCLUSTERED INDEX IX_tin_nhan_da_doc ON [dbo].[tin_nhan]([da_doc], [id_nguoi_nhan]) INCLUDE ([thoi_gian_gui], [id_nguoi_gui]) WHERE [deleted] = 0
-GO
-
--- Indexes cho Tìm kiếm (Cho tìm kiếm văn bản)
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_san_pham_ten_search' AND object_id = OBJECT_ID('san_pham'))
-    CREATE NONCLUSTERED INDEX IX_san_pham_ten_search ON [dbo].[san_pham]([ten_san_pham]) INCLUDE ([trang_thai]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_khach_hang_search' AND object_id = OBJECT_ID('khach_hang'))
-    CREATE NONCLUSTERED INDEX IX_khach_hang_search ON [dbo].[khach_hang]([ten_khach_hang], [so_dien_thoai]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_nhan_vien_search' AND object_id = OBJECT_ID('nhan_vien'))
-    CREATE NONCLUSTERED INDEX IX_nhan_vien_search ON [dbo].[nhan_vien]([ten_nhan_vien], [so_dien_thoai]) WHERE [deleted] = 0
-GO
-
--- Indexes phức hợp (Cho truy vấn phức tạp)
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_timeline_don_hang_composite' AND object_id = OBJECT_ID('timeline_don_hang'))
-    CREATE NONCLUSTERED INDEX IX_timeline_don_hang_composite ON [dbo].[timeline_don_hang]([id_hoa_don], [thoi_gian] DESC) INCLUDE ([trang_thai_moi], [ghi_chu]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_phieu_giam_gia_history_composite' AND object_id = OBJECT_ID('phieu_giam_gia_history'))
-    CREATE NONCLUSTERED INDEX IX_phieu_giam_gia_history_composite ON [dbo].[phieu_giam_gia_history]([id_phieu_giam_gia], [ngay_thay_doi] DESC) INCLUDE ([id_nhan_vien], [hanh_dong])
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_dot_giam_gia_history_composite' AND object_id = OBJECT_ID('dot_giam_gia_history'))
-    CREATE NONCLUSTERED INDEX IX_dot_giam_gia_history_composite ON [dbo].[dot_giam_gia_history]([id_dot_giam_gia], [ngay_thay_doi] DESC) INCLUDE ([id_nhan_vien], [hanh_dong])
-GO
-
--- Cập nhật thống kê
-EXEC sp_updatestats
-GO
-
-PRINT '✓ Đã tạo 36 optimization indexes thành công!'
-GO
-
--- =====================================================================
--- KẾT THÚC TỐI ƯU HÓA HIỆU NĂNG
--- =====================================================================
 
 USE [master]
 GO
