@@ -17,6 +17,10 @@
               <icon-download class="action-icon" />
               {{ $t('thongKe.filter.exportExcel') }}
             </a-button>
+            <a-button type="primary" class="ai-btn" @click="$emit('hoiAI')">
+              🤖
+              Hỏi AI về thống kê
+            </a-button>
           </div>
         </div>
 
@@ -101,6 +105,7 @@ interface Emits {
   (e: 'update:khoangNgayTuyChon', value: any[]): void
   (e: 'datLai'): void
   (e: 'xuatExcel'): void
+  (e: 'hoiAI'): void
 }
 
 const emit = defineEmits<Emits>()
@@ -331,5 +336,27 @@ const thayDoiKhoangNgayTuyChon = (dates: any[]) => {
 
 .action-icon {
   font-size: 14px;
+}
+
+.ai-btn {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  height: 40px;
+}
+
+.ai-btn:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
 }
 </style>

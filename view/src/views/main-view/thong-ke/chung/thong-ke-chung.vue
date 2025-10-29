@@ -3,13 +3,7 @@
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
-    <!-- AI Assistant trigger -->
-    <div style="display: flex; justify-content: flex-end; margin: 8px 0 16px">
-      <a-button type="primary" @click="openAIAssistant">
-        <template #icon>🤖</template>
-        Hỏi AI về thống kê
-      </a-button>
-    </div>
+    <!-- AI Assistant trigger moved into BoLocThongKe -->
 
     <!-- Bộ lọc thống kê -->
     <BoLocThongKe
@@ -20,6 +14,7 @@
       :tong-doanh-thu="tongDoanhThu"
       @dat-lai="datLaiBoLoc"
       @xuat-excel="xuatBaoCaoExcel"
+      @hoiAI="openAIAssistant"
     />
 
     <!-- Thẻ thống kê 4 cột -->
