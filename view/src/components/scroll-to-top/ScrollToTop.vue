@@ -41,16 +41,16 @@ onUnmounted(() => {
   right: 32px;
   z-index: 999;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  background-color: #4ade80 !important;
-  border-color: #4ade80 !important;
+  background-color: #165dff !important;
+  border-color: #165dff !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .scroll-to-top-btn:hover {
-  background-color: #22c55e !important;
-  border-color: #22c55e !important;
+  background-color: #4080ff !important;
+  border-color: #4080ff !important;
   transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 6px 20px rgba(74, 222, 128, 0.4);
+  box-shadow: 0 6px 20px rgba(22, 93, 255, 0.3);
 }
 
 .scroll-to-top-btn:active {
