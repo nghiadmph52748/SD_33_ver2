@@ -49,6 +49,10 @@ public class ThongTinDonHang {
     @Column(name = "ghi_chu")
     private String ghiChu;
 
+    @ColumnDefault("1")
+    @Column(name = "trang_thai")
+    private Boolean trangThai;
+
     @ColumnDefault("0")
     @Column(name = "deleted")
     private Boolean deleted;

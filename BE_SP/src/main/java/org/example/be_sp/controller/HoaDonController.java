@@ -1,6 +1,8 @@
 package org.example.be_sp.controller;
 
+import org.example.be_sp.entity.HoaDon;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
+import org.example.be_sp.model.response.HoaDonResponse;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.HoaDonService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/hoa-don-management")
 @CrossOrigin(origins = "*")
 public class HoaDonController {
+
     @Autowired
     private HoaDonService hoaDonService;
 
@@ -38,8 +41,8 @@ public class HoaDonController {
 
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody BanHangTaiQuayRequest request) {
-        hoaDonService.add(request);
-        return new ResponseObject<>(true, null, "Thêm hóa đơn thành công");
+        HoaDonResponse created = hoaDonService.add(request);
+        return new ResponseObject<>(created, "Thêm hóa đơn thành công");
     }
 
     @PutMapping("/update/{id}")

@@ -49,14 +49,18 @@ public class ThongTinHoaDonService {
     }
     public void add(ThongTinHoaDonRequest thongTinHoaDonRequest) {
         ThongTinDonHang ttdh = MapperUtils.map(thongTinHoaDonRequest, ThongTinDonHang.class);
-        HoaDon hoaDon = hoaDonService.getById(thongTinHoaDonRequest.getIdHoaDon());
+        HoaDon hoaDon = hoaDonService.findById(thongTinHoaDonRequest.getIdHoaDon())
+            .orElseThrow(() -> new ApiException("Hóa đơn không tồn tại", "404"));
         ttdh.setIdHoaDon(hoaDon);
-        ttdh.setIdTrangThaiDonHang(trangThaiDonHangService.getById(thongTinHoaDonRequest.getIdTrangThaiDonHang()));
+        ttdh.setIdTrangThaiDonHang(trangThaiDonHangService.findById(thongTinHoaDonRequest.getIdTrangThaiDonHang())
+            .orElseThrow(() -> new ApiException("Trạng thái đơn hàng không tồn tại", "404")));
         
         // Đảm bảo thời gian được set đúng
         if (ttdh.getThoiGian() == null) {
             ttdh.setThoiGian(java.time.LocalDate.now());
         }
+        ttdh.setTrangThai(true);
+        ttdh.setDeleted(false);
         
         ThongTinDonHang saved = thongTinDonHangRepository.save(ttdh);
         
@@ -66,8 +70,10 @@ public class ThongTinHoaDonService {
     public void update(Integer id, ThongTinHoaDonRequest thongTinHoaDonRequest) {
         ThongTinDonHang ttdh = thongTinDonHangRepository.findById(id).orElseThrow(()-> new ApiException("Không tìm thấy thông tin đơn hàng","404" ));
         MapperUtils.mapToExisting(thongTinHoaDonRequest,ttdh);
-        ttdh.setIdHoaDon(hoaDonService.getById(thongTinHoaDonRequest.getIdHoaDon()));
-        ttdh.setIdTrangThaiDonHang(trangThaiDonHangService.getById(thongTinHoaDonRequest.getIdTrangThaiDonHang()));
+        ttdh.setIdHoaDon(hoaDonService.findById(thongTinHoaDonRequest.getIdHoaDon())
+            .orElseThrow(() -> new ApiException("Hóa đơn không tồn tại", "404")));
+        ttdh.setIdTrangThaiDonHang(trangThaiDonHangService.findById(thongTinHoaDonRequest.getIdTrangThaiDonHang())
+            .orElseThrow(() -> new ApiException("Trạng thái đơn hàng không tồn tại", "404")));
         thongTinDonHangRepository.save(ttdh);
     }
     public void delete(Integer id) {
@@ -185,11 +191,12 @@ public class ThongTinHoaDonService {
     public List<org.example.be_sp.model.response.SanPhamDaBanResponse> getSanPhamDaBanByHoaDonId(Integer hoaDonId) {
         try {
             // Lấy hóa đơn từ repository
-            var hoaDon = hoaDonService.getById(hoaDonId);
-            if (hoaDon == null) {
+            var hoaDonOpt = hoaDonService.findById(hoaDonId);
+            if (hoaDonOpt.isEmpty()) {
                 log.warn("Không tìm thấy hóa đơn với ID: {}", hoaDonId);
                 return new ArrayList<>();
             }
+            var hoaDon = hoaDonOpt.get();
             
             // Force load hóa đơn chi tiết
             if (hoaDon.getHoaDonChiTiets() != null) {

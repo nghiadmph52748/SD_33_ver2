@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class HoaDonChiTietService {
@@ -39,10 +40,39 @@ public class HoaDonChiTietService {
     public HoaDonChiTietResponse getById(Integer id) {
         return hoaDonChiTietRepository.findById(id).map(HoaDonChiTietResponse::new).orElseThrow(()-> new ApiException("HoaDonChiTiet not found with id: " + id,"404"));
     }
+    @Transactional
     public void add(HoaDonChiTietRequest hoaDonChiTietRequest) {
         HoaDonChiTiet hdct = MapperUtils.map( hoaDonChiTietRequest, HoaDonChiTiet.class);
         hdct.setIdHoaDon(hoaDonService.getById(hoaDonChiTietRequest.getIdHoaDon()));
-        hdct.setIdChiTietSanPham(chiTietSanPhamRepository.findChiTietSanPhamById(hoaDonChiTietRequest.getIdChiTietSanPham()));
+
+        // Accept both idChiTietSanPham and idBienTheSanPham from FE
+        Integer ctspId = hoaDonChiTietRequest.getIdChiTietSanPham() != null
+                ? hoaDonChiTietRequest.getIdChiTietSanPham()
+                : hoaDonChiTietRequest.getIdBienTheSanPham();
+        if (ctspId == null) {
+            throw new ApiException("Thiếu id chi tiết sản phẩm", "400");
+        }
+        var ctsp = chiTietSanPhamRepository.findChiTietSanPhamById(ctspId);
+        if (ctsp == null) {
+            throw new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + ctspId, "404");
+        }
+        hdct.setIdChiTietSanPham(ctsp);
+
+        // Validate quantity and update stock
+        Integer qty = hoaDonChiTietRequest.getSoLuong();
+        if (qty == null || qty <= 0) {
+            throw new ApiException("Số lượng phải lớn hơn 0", "400");
+        }
+        Integer currentStock = ctsp.getSoLuong() == null ? 0 : ctsp.getSoLuong();
+        if (currentStock < qty) {
+            throw new ApiException("Số lượng tồn kho không đủ", "400");
+        }
+        int newStock = currentStock - qty;
+        ctsp.setSoLuong(newStock);
+        if (newStock <= 0) {
+            ctsp.setTrangThai(false); // hết hàng
+        }
+        chiTietSanPhamRepository.save(ctsp);
         
         // Tự động điền tên sản phẩm chi tiết và mã sản phẩm chi tiết
         if (hdct.getIdChiTietSanPham() != null) {

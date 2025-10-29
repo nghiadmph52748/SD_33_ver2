@@ -10,6 +10,7 @@ import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
 import org.hibernate.annotations.Nationalized;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.Column;
@@ -29,6 +30,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "hoa_don")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class HoaDon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -98,7 +100,7 @@ public class HoaDon {
     @Column(name = "ten_phieu_giam_gia")
     private String tenPhieuGiamGia;
 
-    @Column(name = "ma_phieu_giam_gia", length = 8)
+    @Column(name = "ma_phieu_giam_gia", length = 7)
     private String maPhieuGiamGia;
 
     @Column(name = "ngay_tao")

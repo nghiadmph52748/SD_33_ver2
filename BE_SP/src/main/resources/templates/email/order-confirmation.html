@@ -269,7 +269,7 @@
                 </div>
                 <div class="order-detail-row">
                     <span class="order-detail-label">Ngày đặt:</span>
-                    <span class="order-detail-value" th:text="${#dates.format(order.orderDate, 'dd/MM/yyyy HH:mm')}">03/10/2024 14:30</span>
+                    <span class="order-detail-value" th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy')}">03/10/2024</span>
                 </div>
                 <div class="order-detail-row">
                     <span class="order-detail-label">Trạng thái:</span>
@@ -277,20 +277,20 @@
                         <span class="status-badge success-badge" th:text="${order.orderStatus}">Đã xác nhận</span>
                     </span>
                 </div>
-                <div class="order-detail-row" th:if="${order.customerPhone}">
+                <div class="order-detail-row" th:if="${order.phoneNumber}">
                     <span class="order-detail-label">Số điện thoại:</span>
-                    <span class="order-detail-value" th:text="${order.customerPhone}">0123456789</span>
+                    <span class="order-detail-value" th:text="${order.phoneNumber}">0123456789</span>
                 </div>
-                <div class="order-detail-row" th:if="${order.customerAddress}">
+                <div class="order-detail-row" th:if="${order.deliveryAddress}">
                     <span class="order-detail-label">Địa chỉ giao hàng:</span>
-                    <span class="order-detail-value" th:text="${order.customerAddress}">123 Đường ABC, Quận 1, TP.HCM</span>
+                    <span class="order-detail-value" th:text="${order.deliveryAddress}">123 Đường ABC, Quận 1, TP.HCM</span>
                 </div>
             </div>
             
             <!-- Products Section -->
             <div class="products-section">
                 <h3>👟 Sản phẩm đã đặt</h3>
-                <div th:each="item : ${order.orderItems}" class="product-item">
+                <div th:each="item : ${order.items}" class="product-item">
                     <div class="product-info">
                         <div class="product-name" th:text="${item.productName}">Nike Air Max 2024</div>
                         <div class="product-quantity">Số lượng: <span th:text="${item.quantity}">2</span></div>

@@ -7,8 +7,17 @@
     <a-card class="main-pos-card">
       <!-- <template #title> -->
       <div style="display: flex; width: 100%; align-items: center">
-        <div class="tabs-container" style="flex: 0 0 80%; display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
-          <a-tabs v-model:active-key="currentOrderIndex" type="button" @change="handleOrderChange" class="orders-tabs" style="flex: 1; min-width: max-content;">
+        <div
+          class="tabs-container"
+          style="flex: 0 0 80%; display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none"
+        >
+          <a-tabs
+            v-model:active-key="currentOrderIndex"
+            type="button"
+            @change="handleOrderChange"
+            class="orders-tabs"
+            style="flex: 1; min-width: max-content"
+          >
             <a-tab-pane v-for="(order, idx) in orders" :key="idx.toString()">
               <template #title>
                 <div class="tab-header">
@@ -28,7 +37,7 @@
             </a-tab-pane>
           </a-tabs>
         </div>
-        <div style="flex: 0 0 20%; text-align: center;margin-bottom: 16px;">
+        <div style="flex: 0 0 20%; text-align: center; margin-bottom: 16px">
           <a-button v-if="orders.length < 8" type="primary" size="medium" @click="createNewOrder">
             <template #icon>
               <icon-plus />
@@ -116,41 +125,27 @@
                         <img
                           v-if="record.image"
                           :src="record.image"
-                          style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px"
+                          style="width: 70px; height: 70px; object-fit: cover; border-radius: 4px"
                           :alt="record.productName"
                         />
                         <div>
-                          <div style="font-weight: 600; font-size: 13px">
+                          <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px">
                             {{ getProductDisplayName(record) }}
                           </div>
-                        </div>
-                      </div>
-                    </template>
-                    <template #info="{ record }">
-                      <div style="display: flex; flex-direction: column; gap: 2px; font-size: 11px">
-                        <div v-if="record.tenMauSac" style="display: flex; align-items: center; gap: 6px">
-                          <span style="color: #999; min-width: 30px">Màu:</span>
-                          <div style="display: flex; align-items: center; gap: 4px">
-                            <div
-                              v-if="record.maMau"
-                              style="width: 16px; height: 16px; border-radius: 2px; border: 1px solid #e5e5e5"
-                              :style="{ backgroundColor: record.maMau }"
-                            ></div>
-                            <strong>{{ record.tenMauSac }}</strong>
-                            <span v-if="record.maMau" style="color: #666; font-size: 10px">({{ record.maMau }})</span>
+                          <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; color: #666">
+                            <div v-if="record.tenMauSac" style="display: flex; align-items: center; gap: 4px">
+                              <div
+                                v-if="record.maMau"
+                                style="width: 12px; height: 12px; border-radius: 2px; border: 1px solid #e5e5e5"
+                                :style="{ backgroundColor: record.maMau }"
+                              ></div>
+                              <span>{{ record.maMau }}</span>
+                            </div>
+                            <div v-if="record.tenKichThuoc" style="display: flex; align-items: center; gap: 4px">
+                              <span>Size:</span>
+                              <strong>{{ record.tenKichThuoc }}</strong>
+                            </div>
                           </div>
-                        </div>
-                        <div v-if="record.tenKichThuoc" style="display: flex; align-items: center; gap: 6px">
-                          <span style="color: #999; min-width: 30px">Size:</span>
-                          <strong>{{ record.tenKichThuoc }}</strong>
-                        </div>
-                        <div v-if="record.tenDeGiay" style="display: flex; align-items: center; gap: 6px">
-                          <span style="color: #999; min-width: 30px">Đế:</span>
-                          <strong>{{ record.tenDeGiay }}</strong>
-                        </div>
-                        <div v-if="record.tenChatLieu" style="display: flex; align-items: center; gap: 6px">
-                          <span style="color: #999; min-width: 30px">Chất liệu:</span>
-                          <strong>{{ record.tenChatLieu }}</strong>
                         </div>
                       </div>
                     </template>
@@ -164,10 +159,28 @@
                       />
                     </template>
                     <template #price="{ record }">
-                      {{ formatCurrency(record.price) }}
+                      <div style="font-size: 12px">
+                        <div v-if="record.discount && record.discount > 0">
+                          <div style="text-decoration: line-through; color: #999; margin-bottom: 2px">
+                            {{ formatCurrency(record.price) }}
+                          </div>
+                          <div style="font-weight: 600; color: #f5222d; font-size: 14px">
+                            {{ formatCurrency(record.price * (1 - record.discount / 100)) }}
+                          </div>
+                        </div>
+                        <div v-else style="font-weight: 600; color: #f5222d; font-size: 14px">
+                          {{ formatCurrency(record.price) }}
+                        </div>
+                      </div>
                     </template>
                     <template #subtotal="{ record }">
-                      <strong>{{ formatCurrency(record.price * record.quantity) }}</strong>
+                      <strong>
+                        {{
+                          formatCurrency(
+                            (record.discount > 0 ? record.price * (1 - record.discount / 100) : record.price) * record.quantity
+                          )
+                        }}
+                      </strong>
                     </template>
                     <template #action="{ record }">
                       <a-button type="text" status="danger" size="small" @click="showDeleteProductConfirm(record)">
@@ -235,7 +248,6 @@
               <!-- Discount Section - Button Style -->
               <a-form-item :model="{}">
                 <a-button
-                  v-if="!paymentForm.value?.discountCode"
                   long
                   size="large"
                   type="secondary"
@@ -262,65 +274,59 @@
 
               <!-- Payment Method -->
               <a-form-item :model="{}" label="Phương Thức Thanh Toán">
-                <div style="display: flex; gap: 8px; width: 100%">
-                  <a-button
-                    :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'cash' }]"
-                    :type="paymentMethod.value === 'cash' ? 'primary' : 'secondary'"
-                    style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
-                    @click="selectPaymentMethod('cash')"
-                  >
-                    Tiền Mặt
-                  </a-button>
-                  <a-button
-                    :class="['payment-method-btn', { 'payment-method-active': paymentMethod.value === 'transfer' }]"
-                    :type="paymentMethod.value === 'transfer' ? 'primary' : 'secondary'"
-                    style="flex: 1; height: 48px; font-size: 14px; font-weight: 500; transition: all 0.2s ease"
-                    @click="selectPaymentMethod('transfer')"
-                  >
-                    Chuyển Khoản
-                  </a-button>
-                </div>
+                <a-radio-group v-model="paymentForm.method" @change="handlePaymentMethodChange">
+                  <a-radio value="cash">Tiền Mặt</a-radio>
+                  <a-radio value="transfer">Chuyển Khoản</a-radio>
+                  <a-radio value="both">Cả Hai</a-radio>
+                </a-radio-group>
               </a-form-item>
 
               <!-- Cash Input -->
               <a-form-item
                 :model="{}"
-                v-if="paymentMethod.value === 'cash'"
-                label="Tiền Nhận"
+                v-if="paymentForm.method === 'cash' || paymentForm.method === 'both'"
+                label="Tiền Mặt"
                 class="cash-input-container"
                 style="transition: all 0.3s ease"
               >
                 <a-input-number
-                  v-model:model-value="paymentForm.value.cashReceived"
-                  :min="finalPrice"
-                  placeholder="Nhập số tiền khách đưa"
+                  v-model:model-value="paymentForm.cashReceived"
+                  :min="0"
+                  :max="paymentForm.method === 'both' ? finalPrice : undefined"
+                  placeholder="Nhập số tiền mặt"
                   style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
                   :precision="0"
                   :formatter="(value) => formatCurrency(value || 0)"
                   :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
-                  @update:model-value="(val) => (paymentForm.value.cashReceived = val || 0)"
+                  @update:model-value="(val) => handleCashAmountChange(val || 0)"
                 />
-                <div v-if="paymentForm.value?.cashReceived > 0" class="cash-feedback" style="margin-top: 8px">
-                  <div v-if="change >= 0" class="cash-change-positive">
-                    <span class="cash-icon">💰</span>
-                    <span class="cash-text">
-                      Tiền thối:
-                      <strong>{{ formatCurrency(change) }}</strong>
-                    </span>
-                  </div>
-                  <div v-else class="cash-change-negative">
-                    <span class="cash-icon">⚠️</span>
-                    <span class="cash-text">
-                      Thiếu:
-                      <strong>{{ formatCurrency(Math.abs(change)) }}</strong>
-                    </span>
-                  </div>
-                </div>
+              </a-form-item>
+
+              <!-- Transfer Input -->
+              <a-form-item
+                :model="{}"
+                v-if="paymentForm.method === 'transfer' || paymentForm.method === 'both'"
+                label="Chuyển Khoản"
+                class="transfer-input-container"
+                style="transition: all 0.3s ease"
+              >
+                <a-input-number
+                  v-model:model-value="paymentForm.transferReceived"
+                  :min="0"
+                  :max="paymentForm.method === 'both' ? finalPrice : undefined"
+                  placeholder="Nhập số tiền chuyển khoản"
+                  style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
+                  :precision="0"
+                  :formatter="(value) => formatCurrency(value || 0)"
+                  :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
+                  @update:model-value="(val) => handleTransferAmountChange(val || 0)"
+                />
               </a-form-item>
 
               <!-- Transfer Notes -->
-              <a-alert v-if="paymentMethod.value === 'transfer'" type="info" title="Chuyển Khoản" closable>
-                <p>Vui lòng chuyển khoản theo thông tin cung cấp. Mã hoá đơn: {{ currentOrder?.id }}</p>
+              <a-alert v-if="paymentForm.method === 'transfer' || paymentForm.method === 'both'" type="info" title="Chuyển Khoản" closable>
+                <p>Vui lòng chuyển khoản theo thông tin cung cấp. Mã hoá đơn: {{ currentOrder?.orderCode }}</p>
+                <p v-if="paymentForm.method === 'both'">Số tiền chuyển khoản: {{ formatCurrency(paymentForm.transferReceived || 0) }}</p>
               </a-alert>
 
               <!-- Selected Voucher Info -->
@@ -902,7 +908,6 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck } from '@arco-design/web-vue/es/icon'
 import {
   getBienTheSanPhamPage,
-  getBienTheSanPhamById,
   getChatLieuOptions,
   getDeGiayOptions,
   getMauSacOptions,
@@ -915,15 +920,23 @@ import {
 } from '@/api/san-pham/bien-the'
 import { layDanhSachKhachHang, type KhachHangResponse } from '@/api/khach-hang'
 import { fetchCoupons, type CouponApiModel } from '@/api/discount-management'
+import {
+  createHoaDon,
+  createHoaDonChiTiet,
+  createHinhThucThanhToan,
+  createThongTinHoaDon,
+  BanHangTaiQuayRequest, HoaDonChiTietApiModel, HinhThucThanhToanApiModel, ThongTinHoaDonApiModel,
+} from '@/api/hoa-don'
 import { Message } from '@arco-design/web-vue'
 import { Html5Qrcode, Html5QrcodeSupportedFormats, Html5QrcodeScannerState } from 'html5-qrcode'
-
+import { useUserStore } from '@/store'
 // ==================== TYPES ====================
 interface CartItem {
   id: string
   productId: string
   productName: string
   price: number
+  discount: number
   quantity: number
   image?: string
   // Thông tin chi tiết sản phẩm
@@ -952,6 +965,7 @@ interface Customer {
 }
 
 // ==================== STATE ====================
+const userStoreInstance = useUserStore()
 const orders = ref<Order[]>([])
 const currentOrderIndex = ref('0')
 const customers = ref<Customer[]>([])
@@ -1009,8 +1023,9 @@ const voucherPagination = ref({
 
 const paymentForm = ref({
   discountCode: null as string | null,
-  method: 'cash' as 'cash' | 'transfer' | 'card',
+  method: 'cash' as 'cash' | 'transfer' | 'both',
   cashReceived: 0,
+  transferReceived: 0,
 })
 
 const orderType = ref('counter')
@@ -1052,14 +1067,6 @@ const selectedCustomer = computed(() => {
 const selectedCoupon = computed(() => {
   if (!paymentForm.value?.discountCode) return null
   const coupon = coupons.value.find((c) => c.maPhieuGiamGia === paymentForm.value?.discountCode)
-  if (coupon) {
-    console.log('🔍 [DEBUG] Selected coupon:', {
-      maPhieuGiamGia: coupon.maPhieuGiamGia,
-      loaiPhieuGiamGia: coupon.loaiPhieuGiamGia,
-      giaTriGiamGia: coupon.giaTriGiamGia,
-      hoaDonToiThieu: coupon.hoaDonToiThieu,
-    })
-  }
   return coupon
 })
 
@@ -1154,7 +1161,10 @@ const paginatedCartItems = computed(() => {
 
 const subtotal = computed(() => {
   if (!currentOrder.value) return 0
-  return currentOrder.value.items.reduce((sum, cartItem) => sum + cartItem.price * cartItem.quantity, 0)
+  return currentOrder.value.items.reduce((sum, cartItem) => {
+    const discountedPrice = cartItem.discount > 0 ? cartItem.price * (1 - cartItem.discount / 100) : cartItem.price
+    return sum + discountedPrice * cartItem.quantity
+  }, 0)
 })
 
 const discountAmount = computed(() => {
@@ -1164,24 +1174,15 @@ const discountAmount = computed(() => {
   const discountValue = Number(coupon.giaTriGiamGia) || 0
   const subtotalValue = subtotal.value
 
-  console.log('🔍 [DEBUG] Calculating discount:', {
-    coupon: coupon.maPhieuGiamGia,
-    loaiPhieuGiamGia: coupon.loaiPhieuGiamGia,
-    giaTriGiamGia: discountValue,
-    subtotal: subtotalValue,
-  })
-
   // Check if it's percentage discount (loaiPhieuGiamGia = false means percentage)
   if (!coupon.loaiPhieuGiamGia) {
     // Percentage discount (loaiPhieuGiamGia = false)
     const percentage = discountValue / 100 // Convert from 10 to 0.1
     const discount = subtotalValue * percentage
-    console.log('🔍 [DEBUG] Percentage discount:', { percentage, discount })
     return discount
   } else {
     // Fixed amount discount (loaiPhieuGiamGia = true)
     const discount = Math.min(discountValue, subtotalValue) // Don't exceed subtotal
-    console.log('🔍 [DEBUG] Fixed amount discount:', { discountValue, subtotalValue, discount })
     return discount
   }
 })
@@ -1190,13 +1191,17 @@ const finalPrice = computed(() => {
   return subtotal.value - discountAmount.value
 })
 
+const totalReceived = computed(() => {
+  return (paymentForm.value?.cashReceived || 0) + (paymentForm.value?.transferReceived || 0)
+})
+
 const change = computed(() => {
-  return (paymentForm.value?.cashReceived || 0) - finalPrice.value
+  return totalReceived.value - finalPrice.value
 })
 
 const paymentMethod = computed({
   get: () => paymentForm.value.method,
-  set: (value: 'cash' | 'transfer' | 'card') => {
+  set: (value: 'cash' | 'transfer' | 'both') => {
     paymentForm.value.method = value
   },
 })
@@ -1207,11 +1212,20 @@ const canConfirmOrder = computed(() => {
   }
 
   // Nếu thanh toán bằng tiền mặt, cần đủ tiền
-  if (paymentMethod === 'cash') {
+  if (paymentForm.value.method === 'cash') {
     return (paymentForm.value.cashReceived || 0) >= finalPrice.value
   }
 
-  // Các phương thức khác không cần kiểm tra tiền
+  // Nếu thanh toán bằng chuyển khoản, cần đủ tiền
+  if (paymentForm.value.method === 'transfer') {
+    return (paymentForm.value.transferReceived || 0) >= finalPrice.value
+  }
+
+  // Nếu thanh toán cả hai, tổng tiền nhận cần đủ
+  if (paymentForm.value.method === 'both') {
+    return totalReceived.value >= finalPrice.value
+  }
+
   return true
 })
 
@@ -1367,15 +1381,8 @@ const cartColumns = [
     title: 'Sản Phẩm',
     dataIndex: 'product',
     key: 'product',
-    width: 200,
+    width: 300,
     slotName: 'product',
-  },
-  {
-    title: 'Thông Tin',
-    dataIndex: 'info',
-    key: 'info',
-    width: 180,
-    slotName: 'info',
   },
   {
     title: 'Số Lượng',
@@ -1586,9 +1593,9 @@ const confirmAddProduct = () => {
         productId: selectedProductForAdd.value.id?.toString() || '',
         productName: selectedProductForAdd.value.tenSanPham || '',
         price: selectedProductForAdd.value.giaBan || 0,
+        discount: selectedProductForAdd.value.giaTriGiamGia || 0,
         quantity: quantity,
         image: selectedProductForAdd.value.anhSanPham?.[0] || '',
-        // Thông tin chi tiết sản phẩm
         tenChiTietSanPham: selectedProductForAdd.value.tenChiTietSanPham || '',
         tenMauSac: selectedProductForAdd.value.tenMauSac || '',
         maMau: selectedProductForAdd.value.maMau || '',
@@ -1680,7 +1687,6 @@ const updateQuantity = (itemId: string, quantity: number) => {
         console.error('❌ [DEBUG] Sản phẩm hết hàng:', item.productName)
         throw new Error(`Sản phẩm "${item.productName}" đã hết hàng. Không thể tăng số lượng!`)
       }
-
       if (diff > 0) {
         const newTotalInCart = oldQuantity + diff
         if (newTotalInCart > totalAvailable) {
@@ -1837,7 +1843,7 @@ const addNewCustomer = () => {
   newCustomerForm.value = { name: '', phone: '', email: '', address: '' }
 }
 
-const confirmOrder = () => {
+const confirmOrder = async () => {
   try {
     if (!canConfirmOrder.value) {
       throw new Error('Đơn hàng không thể xác nhận')
@@ -1868,18 +1874,148 @@ const confirmOrder = () => {
     }
 
     confirmLoading.value = true
-    setTimeout(() => {
-      try {
-        Message.success('Đơn hàng đã được xác nhận')
-        confirmLoading.value = false
-      } catch (successError) {
-        console.error('Lỗi khi hiển thị thông báo thành công:', successError)
-        confirmLoading.value = false
+
+    // Prepare order data for API - use BanHangTaiQuayRequest format, don't send auto-generated IDs
+    const orderData: Partial<BanHangTaiQuayRequest> = {
+      // Customer info - convert to ID if available
+      idKhachHang: selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id) : undefined,
+      tenNguoiNhan: selectedCustomer.value?.name || 'Khách lẻ',
+      soDienThoaiNguoiNhan: selectedCustomer.value?.phone || '',
+      emailNguoiNhan: selectedCustomer.value?.email || '',
+      diaChiNhanHang: selectedCustomer.value?.address || '',
+      idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id) : undefined,
+      idNhanVien: userStoreInstance.id,
+      idPhuongThucThanhToan: paymentForm.value.method === 'cash' ? 1 : paymentForm.value.method === 'transfer' ? 2 : 3, // 1: Tiền mặt, 2: Chuyển khoản, 3: Cả hai
+      idTrangThaiDonHang: 1, // Assuming 1 is "Completed" status
+
+      // Product list - convert cart items to HashMap<idSanPham, soLuong>
+      danhSachSanPham: currentOrder.value.items.reduce(
+        (acc, item) => {
+          const productId = parseInt(item.productId)
+          if (!isNaN(productId)) {
+            acc[productId] = item.quantity
+          }
+          return acc
+        },
+        {} as Record<number, number>
+      ),
+
+      // Financial info
+      tongTien: subtotal.value,
+      tongTienSauGiam: finalPrice.value,
+      phiVanChuyen: 0, // POS orders have no shipping fee
+
+      // Dates
+      ngayTao: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+      ngayThanhToan: new Date().toISOString().split('T')[0], // Current date
+
+      // Order type and status
+      loaiDon: false, // Tại quầy (POS)
+      trangThai: true, // Đã thanh toán (completed)
+      deleted: false,
+      createAt: new Date().toISOString().split('T')[0],
+      createBy: userStoreInstance.id,
+      // Notes
+      ghiChu: `Đơn hàng tại quầy - ${currentOrder.value.orderCode}`,
+    }
+
+    // Step 1: Create main invoice
+    const invoiceResponse = await createHoaDon(orderData)
+    console.log('[DEBUG] Invoice creation response:', invoiceResponse)
+    if (!invoiceResponse) {
+      throw new Error('Không thể tạo hóa đơn chính')
+    }
+
+    const invoiceId = invoiceResponse.id
+    if (!invoiceId) {
+      throw new Error('Không nhận được ID hóa đơn')
+    }
+
+    // Step 2: Create invoice details for each product
+    const invoiceDetailPromises = currentOrder.value.items.map(async (item) => {
+      const productId = parseInt(item.productId)
+      const discountedPrice = item.discount > 0 ? item.price * (1 - item.discount / 100) : item.price
+      const subtotal = discountedPrice * item.quantity
+
+      return createHoaDonChiTiet({
+        idHoaDon: invoiceId,
+        idBienTheSanPham: productId,
+        soLuong: item.quantity,
+        giaBan: item.price,
+        giaTriGiamGia: item.discount > 0 ? item.discount : undefined,
+        thanhTien: subtotal,
+        ghiChu: `Sản phẩm: ${item.productName}`,
+        trangThai: true,
+        deleted: false,
+        createAt: new Date().toISOString().split('T')[0],
+        createBy: userStoreInstance.id,
+      } as Omit<HoaDonChiTietApiModel, 'id'>)
+    })
+
+    // Wait for all invoice details to be created
+    await Promise.all(invoiceDetailPromises)
+
+    // Step 3: Create payment method information
+    const paymentMethodPromises = []
+
+    if (paymentForm.value.method === 'cash' || paymentForm.value.method === 'both') {
+      if (paymentForm.value.cashReceived > 0) {
+        paymentMethodPromises.push(
+          createHinhThucThanhToan({
+            idHoaDon: invoiceId,
+            idPhuongThucThanhToan: 1,
+            tienMat: paymentForm.value.cashReceived,
+            tienChuyenKhoan: 0,
+            trangThai: true,
+            deleted: false,
+          } as Omit<HinhThucThanhToanApiModel, 'id'>)
+        )
       }
-    }, 500)
+    }
+
+    if (paymentForm.value.method === 'transfer' || paymentForm.value.method === 'both') {
+      if (paymentForm.value.transferReceived > 0) {
+        paymentMethodPromises.push(
+          createHinhThucThanhToan({
+            idHoaDon: invoiceId,
+            hinhThucThanhToan: 'Chuyển khoản',
+            soTien: paymentForm.value.transferReceived,
+            ghiChu: 'Thanh toán bằng chuyển khoản',
+            trangThai: true,
+            deleted: false,
+            createAt: new Date().toISOString().split('T')[0],
+            createBy: userStoreInstance.id,
+          } as Omit<HinhThucThanhToanApiModel, 'id'>)
+        )
+      }
+    }
+
+    // Wait for payment methods to be created
+    if (paymentMethodPromises.length > 0) {
+      await Promise.all(paymentMethodPromises)
+    }
+
+    // Step 4: Create order status tracking
+    await createThongTinHoaDon({
+      idHoaDon: invoiceId,
+      idTrangThaiDonHang: 2, // Status: "Đã xác nhận" (Confirmed)
+      ghiChu: `Đơn hàng tại quầy đã được xác nhận`,
+    })
+
+    Message.success(`Đơn hàng ${currentOrder.value.orderCode} đã được xác nhận thành công!`)
+
+    // Reset order after successful confirmation
+    createNewOrder()
+    paymentForm.value = {
+      discountCode: null,
+      method: 'cash',
+      cashReceived: 0,
+      transferReceived: 0,
+    }
   } catch (error) {
     console.error('Lỗi khi xác nhận đơn hàng:', error)
     Message.error(error.message || 'Có lỗi xảy ra khi xác nhận đơn hàng. Vui lòng thử lại.')
+  } finally {
     confirmLoading.value = false
   }
 }
@@ -2049,8 +2185,33 @@ const selectVoucher = (coupon: CouponApiModel) => {
   Message.success(`Đã áp dụng voucher: ${coupon.tenPhieuGiamGia}`)
 }
 
-const selectPaymentMethod = (method: 'cash' | 'transfer' | 'card') => {
-  paymentMethod.value = method
+const selectPaymentMethod = (method: 'cash' | 'transfer' | 'both') => {
+  paymentForm.value.method = method
+}
+
+const handlePaymentMethodChange = (value: string) => {
+  paymentForm.value.method = value as 'cash' | 'transfer' | 'both'
+
+  // Set default amount to finalPrice when method changes
+  if (value === 'cash') {
+    paymentForm.value.cashReceived = finalPrice.value
+    paymentForm.value.transferReceived = 0
+  } else if (value === 'transfer') {
+    paymentForm.value.transferReceived = finalPrice.value
+    paymentForm.value.cashReceived = 0
+  } else if (value === 'both') {
+    // For 'both', split equally or set cash to full amount initially
+    paymentForm.value.cashReceived = finalPrice.value
+    paymentForm.value.transferReceived = 0
+  }
+}
+
+const handleCashAmountChange = (value: number) => {
+  paymentForm.value.cashReceived = value || 0
+}
+
+const handleTransferAmountChange = (value: number) => {
+  paymentForm.value.transferReceived = value || 0
 }
 
 const clearVoucher = () => {
@@ -2270,6 +2431,7 @@ const addProductToCart = async (product: BienTheSanPham, quantity: number) => {
         productId: product.id?.toString() || '',
         productName: product.tenSanPham || '',
         price: product.giaBan || 0,
+        discount: product.giaTriGiamGia || 0,
         quantity: quantity,
         image: product.anhSanPham?.[0] || '',
         tenChiTietSanPham: product.tenChiTietSanPham || '',
@@ -2322,7 +2484,7 @@ watch([showQRScanner, showDeleteProductModal], async ([qrOpen, deleteProductOpen
 
     // Then start camera
     setTimeout(() => {
-      requestCameraPermission()
+      initQRScanner()
     }, 100)
   } else if (!qrOpen) {
     // QR Modal closed, cleanup scanner
@@ -2570,9 +2732,9 @@ onMounted(() => {
   }
 }
 
-/* Cash Input Styling */
-.cash-input-container {
-  animation: cashInputSlideIn 0.3s ease-out;
+/* Transfer Input Styling */
+.transfer-input-container {
+  animation: transferInputSlideIn 0.3s ease-out;
 
   :deep(.arco-input-number) {
     .arco-input {
@@ -2590,7 +2752,7 @@ onMounted(() => {
   }
 }
 
-@keyframes cashInputSlideIn {
+@keyframes transferInputSlideIn {
   0% {
     opacity: 0;
     transform: translateY(-10px);

@@ -331,7 +331,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[hoa_don](
 	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_khach_hang] [int] NOT NULL,
+	[id_khach_hang] [int] NULL,
 	[id_phieu_giam_gia] [int] NULL,
 	[id_nhan_vien] [int] NULL,
 	[ma_hoa_don]  AS ('HD'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,

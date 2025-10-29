@@ -33,6 +33,10 @@ public class BanHangTaiQuayRequest {
     private Boolean trangThai;
     private Boolean deleted;
     private String ghiChu;
+    private LocalDate createAt;
+    private Integer createBy;
+    private LocalDate updateAt;
+    private Integer updateBy;
     
     // Các trường mới cho nhân viên và phiếu giảm giá
     private String tenNhanVien;

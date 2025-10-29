@@ -6,6 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TrangThaiDonHangRepository extends JpaRepository<TrangThaiDonHang, Integer> {
-    TrangThaiDonHang getById(Integer id);
 }
 

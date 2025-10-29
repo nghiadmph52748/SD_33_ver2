@@ -10,7 +10,5 @@ import java.time.LocalDate;
 public class ThongTinHoaDonRequest {
     private Integer idHoaDon;
     private Integer idTrangThaiDonHang;
-    private LocalDate thoiGian;
     private String ghiChu;
-    private Boolean deleted;
 }

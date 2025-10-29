@@ -61,11 +61,19 @@ public class HoaDonService {
         HoaDon hoaDon = hoaDonRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn","404"));
         return new HoaDonResponse(hoaDon);
     }
-    public void add(BanHangTaiQuayRequest request) {
+    public HoaDonResponse add(BanHangTaiQuayRequest request) {
         HoaDon hd = MapperUtils.map(request, HoaDon.class);
-        hd.setIdKhachHang(khachHangRepository.findKhachHangById(request.getIdKhachHang()));
-        hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
-        hd.setIdNhanVien(nhanVienRepository.getById(request.getIdNhanVien()));
+        if (request.getIdKhachHang() != null) {
+            hd.setIdKhachHang(khachHangRepository.findById(request.getIdKhachHang())
+                .orElseThrow(() -> new ApiException("Khách hàng không tồn tại", "404")));
+        }
+        if (request.getIdPhieuGiamGia() != null) {
+            hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
+        }
+        if (request.getIdNhanVien() != null) {
+            hd.setIdNhanVien(nhanVienRepository.findById(request.getIdNhanVien())
+                .orElseThrow(() -> new ApiException("Nhân viên không tồn tại", "404")));
+        }
         
         // Tự động điền tên và mã nhân viên
         if (hd.getIdNhanVien() != null) {
@@ -91,6 +99,7 @@ public class HoaDonService {
         
         // Send order confirmation email
         sendOrderConfirmationEmail(savedHoaDon);
+        return new HoaDonResponse(savedHoaDon);
     }
     public HoaDonResponse update(Integer id, BanHangTaiQuayRequest request) {
         HoaDon hd = hoaDonRepository.findById(id)
@@ -148,7 +157,8 @@ public class HoaDonService {
 
         // Gán lại các quan hệ
         if (request.getIdKhachHang() != null) {
-            hd.setIdKhachHang(khachHangRepository.findKhachHangById(request.getIdKhachHang()));
+            hd.setIdKhachHang(khachHangRepository.findById(request.getIdKhachHang())
+                .orElseThrow(() -> new ApiException("Khách hàng không tồn tại", "404")));
         }
         if (request.getIdPhieuGiamGia() != null) {
             hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
@@ -176,9 +186,7 @@ public class HoaDonService {
                 }
             }
         }
-
         hd.setUpdateAt(LocalDate.now());
-
         HoaDon saved = hoaDonRepository.save(hd);
         return new HoaDonResponse(saved);
     }

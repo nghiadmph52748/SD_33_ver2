@@ -8,6 +8,8 @@ import java.util.Set;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Nationalized;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -23,6 +25,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "phieu_giam_gia")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class PhieuGiamGia {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
