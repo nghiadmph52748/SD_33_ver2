@@ -274,7 +274,7 @@ function clearChatHistory() {
 
       span:not(.icon) {
         font-size: 14px;
-        color: #4e5969;
+        color: var(--color-text-2);
       }
     }
   }
@@ -300,15 +300,17 @@ function clearChatHistory() {
       border: 1px solid transparent;
       margin-bottom: 4px;
 
+      // Light mode hover
       &:hover {
-        background-color: #f7f8fa;
-        border-color: #e5e6eb;
+        background-color: var(--color-fill-2);
+        border-color: var(--color-border-2);
       }
 
+      // Active state - different for light/dark
       &.active {
-        background-color: #e8f4ff;
-        border-color: #165dff;
-        box-shadow: 0 2px 8px rgba(22, 93, 255, 0.1);
+        background-color: rgb(var(--primary-1));
+        border-color: rgb(var(--primary-6));
+        box-shadow: 0 2px 8px rgba(var(--primary-6), 0.15);
       }
 
       .session-title {
@@ -319,7 +321,7 @@ function clearChatHistory() {
 
         .session-name {
           font-weight: 500;
-          color: #1d2129;
+          color: var(--color-text-1);
           font-size: 14px;
           flex: 1;
           overflow: hidden;
@@ -334,17 +336,50 @@ function clearChatHistory() {
         justify-content: space-between;
         align-items: center;
         font-size: 12px;
-        color: #86909c;
+        color: var(--color-text-3);
 
         .session-time {
           font-weight: 400;
         }
 
         .message-count {
-          background-color: #f2f3f5;
+          background-color: var(--color-fill-3);
+          color: var(--color-text-2);
           padding: 2px 6px;
           border-radius: 4px;
           font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+/* ========================================= */
+/* DARK MODE SPECIFIC OVERRIDES */
+/* ========================================= */
+body[arco-theme='dark'] {
+  .ai-chatbot-page {
+    .chat-history {
+      .session-item {
+        // Dark mode hover - subtle overlay
+        &:hover {
+          background-color: var(--color-fill-2);
+          border-color: var(--color-border-2);
+        }
+
+        // Active state in dark mode - brighter blue
+        &.active {
+          background-color: rgba(var(--primary-6), 0.2);
+          border-color: rgb(var(--primary-5));
+          box-shadow: 0 2px 8px rgba(var(--primary-5), 0.2);
+        }
+      }
+    }
+
+    .feature-list {
+      .feature-item {
+        span:not(.icon) {
+          color: var(--color-text-2);
         }
       }
     }

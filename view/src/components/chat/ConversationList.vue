@@ -24,13 +24,21 @@
           :class="{ active: conversation.id === activeConversationId }"
           @click="handleSelectConversation(conversation)"
         >
-          <!-- Avatar -->
-          <a-avatar :size="48" class="conversation-avatar">
-            <img v-if="getOtherUserAvatar(conversation)" :src="getOtherUserAvatar(conversation)" alt="avatar" />
-            <template v-else>
-              <icon-user />
-            </template>
-          </a-avatar>
+          <!-- Avatar with Online Status -->
+          <div class="avatar-wrapper">
+            <a-avatar :size="48" class="conversation-avatar">
+              <img v-if="getOtherUserAvatar(conversation)" :src="getOtherUserAvatar(conversation)" alt="avatar" />
+              <template v-else>
+                <icon-user />
+              </template>
+            </a-avatar>
+            <!-- Online Status Indicator -->
+            <span 
+              v-if="isUserOnline(conversation)" 
+              class="online-status"
+              :class="{ 'status-online': isUserOnline(conversation) }"
+            />
+          </div>
 
           <!-- Content -->
           <div class="conversation-content">
@@ -192,6 +200,22 @@ function isLastMessageSeenByOther(conversation: Conversation): boolean {
 }
 
 /**
+ * Kiểm tra user có đang online không
+ * Logic: Check từ WebSocket presence tracking (real-time)
+ */
+function isUserOnline(conversation: Conversation): boolean {
+  const currentUserId = userStore.id
+  
+  // Xác định user còn lại (không phải mình)
+  const otherUserId = currentUserId === conversation.nhanVien1Id 
+    ? conversation.nhanVien2Id 
+    : conversation.nhanVien1Id
+  
+  // Check từ online users set (WebSocket presence tracking)
+  return chatStore.onlineUsers.has(otherUserId)
+}
+
+/**
  * Xử lý khi click vào conversation
  */
 async function handleSelectConversation(conversation: Conversation) {
@@ -337,8 +361,33 @@ async function handleNewChat(userId: number) {
     background: var(--color-fill-3);
   }
 
-  .conversation-avatar {
+  // Avatar wrapper with online status
+  .avatar-wrapper {
+    position: relative;
     flex-shrink: 0;
+
+    .conversation-avatar {
+      flex-shrink: 0;
+    }
+
+    // Online status dot
+    .online-status {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--color-bg-1);
+      background-color: var(--color-text-4);
+      transition: background-color 0.3s ease;
+
+      &.status-online {
+        background-color: rgb(var(--success-6));
+        box-shadow: 0 0 0 2px rgba(var(--success-6), 0.2);
+        animation: pulse-online 2s ease-in-out infinite;
+      }
+    }
   }
 
   .conversation-content {
@@ -409,6 +458,18 @@ async function handleNewChat(userId: number) {
         flex-shrink: 0;
       }
     }
+  }
+}
+
+// Pulse animation for online status
+@keyframes pulse-online {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
   }
 }
 </style>
