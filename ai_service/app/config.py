@@ -4,7 +4,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     # LM Studio
     lm_studio_base_url: str = "http://localhost:3147/v1"
-    lm_studio_model: str = "openai/gpt-oss-20b"
+    lm_studio_model: str = "deepseek-r1"
     
     # Database
     db_host: str = "localhost"

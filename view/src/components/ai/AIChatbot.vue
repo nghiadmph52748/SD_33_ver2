@@ -36,7 +36,13 @@
               {{ msg.role === 'user' ? '👤' : '🤖' }}
             </div>
             <div class="content">
-              <div class="text" v-html="renderMarkdown(msg.content)"></div>
+              <div v-if="msg.isThinking" class="text thinking-mode">
+                Đang suy nghĩ...<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              </div>
+              <div v-else-if="msg.content" class="text" v-html="renderMarkdown(msg.content)"></div>
+              <div v-else-if="msg.role === 'assistant'" class="text typing-indicator">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              </div>
               <div class="timestamp">{{ msg.timestamp }}</div>
             </div>
           </div>
@@ -47,7 +53,7 @@
           <div class="message-wrapper">
             <div class="avatar">🤖</div>
             <div class="content">
-              <a-spin :size="16" /> Đang suy nghĩ...
+              <a-spin :size="16" /> Đang nhập...
             </div>
           </div>
         </div>
@@ -96,7 +102,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { parse as markedParse } from 'marked'
-import { chatWithAI, checkAIHealth } from '@/api/ai'
+import { chatWithAI, chatWithAIStream, checkAIHealth } from '@/api/ai'
 import { Message } from '@arco-design/web-vue'
 import { IconSend } from '@arco-design/web-vue/es/icon'
 
@@ -106,6 +112,7 @@ interface ChatMessage {
   content: string
   sources?: string
   timestamp: string
+  isThinking?: boolean
 }
 
 interface QuickAction {
@@ -376,7 +383,6 @@ async function sendMessage(text: string = input.value) {
 
   // Clear input
   input.value = ''
-  loading.value = true
 
   // Persist
   saveHistory()
@@ -385,48 +391,100 @@ async function sendMessage(text: string = input.value) {
   await nextTick()
   scrollToBottom()
 
+  // Create AI message placeholder for streaming
+  const aiMessageId = Date.now() + 1
+  const aiMessage: ChatMessage = {
+    id: aiMessageId,
+    role: 'assistant',
+    content: '',
+    timestamp: new Date().toLocaleTimeString('vi-VN')
+  }
+  messages.value.push(aiMessage)
+  
+  // Turn off loading immediately after creating placeholder
+  // The placeholder itself shows typing indicator
+  loading.value = false
+
   try {
-    const response = await chatWithAI(text)
+    let insideThinkTag = false
+    let fullContent = ''
+    
+    // Use streaming API
+    await chatWithAIStream(
+      text,
+      // onChunk - Append text as it arrives
+      (chunk: string) => {
+        
+        // Accumulate full content to detect <think> tags
+        fullContent += chunk
+        
+        // Check for <think> tag opening/closing
+        if (fullContent.includes('<think>')) {
+          insideThinkTag = true
+        }
+        if (fullContent.includes('</think>')) {
+          insideThinkTag = false
+          // Remove all thinking content
+          fullContent = fullContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+        }
+        
+        const msgIndex = messages.value.findIndex(m => m.id === aiMessageId)
+        if (msgIndex !== -1) {
+          // Show thinking indicator when inside think tags
+          if (insideThinkTag) {
+            messages.value[msgIndex].isThinking = true
+            messages.value[msgIndex].content = ''
+          } else {
+            // Show actual content when outside think tags
+            messages.value[msgIndex].isThinking = false
+            messages.value[msgIndex].content = fullContent
+          }
+          // Scroll while streaming
+          nextTick(() => scrollToBottom())
+        }
+      },
+      // onComplete
+      () => {
+        loading.value = false
+        
+        // Auto-generate session name after first user message
+        const userMessages = messages.value.filter((msg) => msg.role === 'user' && msg.id !== 0)
+        const currentName = sessionNames.value[currentSessionId.value]
+        if (
+          userMessages.length === 1 &&
+          (!currentName || currentName === 'Cuộc trò chuyện mới')
+        ) {
+          const newName = generateSessionName(messages.value)
+          sessionNames.value[currentSessionId.value] = newName
+        }
 
-    // Add AI response
-    const aiMessage: ChatMessage = {
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: response.message,
-      sources: response.sources || undefined,
-      timestamp: new Date().toLocaleTimeString('vi-VN')
-    }
-    messages.value.push(aiMessage)
-
-    // Auto-generate session name after first user message
-    const userMessages = messages.value.filter((msg) => msg.role === 'user' && msg.id !== 0)
-    const currentName = sessionNames.value[currentSessionId.value]
-    if (
-      userMessages.length === 1 &&
-      (!currentName || currentName === 'Cuộc trò chuyện mới')
-    ) {
-      const newName = generateSessionName(messages.value)
-      sessionNames.value[currentSessionId.value] = newName
-    }
-
-    // Scroll to bottom
-    await nextTick()
-    scrollToBottom()
-
-    // Persist
-    saveHistory()
+        // Persist
+        saveHistory()
+        
+        // Final scroll
+        nextTick(() => scrollToBottom())
+      },
+      // onError
+      (error: string) => {
+        loading.value = false
+        Message.error(`Lỗi khi gửi tin nhắn: ${error}`)
+        
+        // Update message with error
+        const msgIndex = messages.value.findIndex(m => m.id === aiMessageId)
+        if (msgIndex !== -1) {
+          messages.value[msgIndex].content = '❌ Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
+        }
+      }
+    )
   } catch (error: any) {
-    Message.error(`Lỗi khi gửi tin nhắn: ${error.message}`)
-
-    // Add error message
-    messages.value.push({
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: '❌ Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.',
-      timestamp: new Date().toLocaleTimeString('vi-VN')
-    })
-  } finally {
     loading.value = false
+    Message.error(`Lỗi khi gửi tin nhắn: ${error.message}`)
+    
+    // Update message with error
+    const msgIndex = messages.value.findIndex(m => m.id === aiMessageId)
+    if (msgIndex !== -1) {
+      messages.value[msgIndex].content = '❌ Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
+    }
   }
 }
 
@@ -997,5 +1055,77 @@ defineExpose({
 
 :deep(.arco-theme-dark) .ai-chatbot .empty-description {
   color: #9aa4b2 !important;
+}
+
+/* Typing indicator */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.typing-indicator .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-text-3);
+  animation: typingDot 1.4s infinite;
+}
+
+/* Thinking mode indicator */
+.thinking-mode {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(22, 93, 255, 0.1), rgba(123, 97, 255, 0.1));
+  border-radius: 8px;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.thinking-mode .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgb(var(--primary-6));
+  animation: typingDot 1.4s infinite;
+  margin-left: 2px;
+}
+
+.typing-indicator .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-indicator .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.thinking-mode .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.thinking-mode .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-mode .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingDot {
+  0%, 60%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>

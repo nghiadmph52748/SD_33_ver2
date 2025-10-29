@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from app.utils.lm_studio import lm_client
 from app.utils.database import db_client
 import logging
 from datetime import datetime
+import json
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chatbot", tags=["Chatbot"])
@@ -379,6 +381,83 @@ async def chat(request: ChatRequest):
     
     except Exception as e:
         logger.error(f"Chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/chat-stream")
+async def chat_stream(request: ChatRequest):
+    """Chat with AI assistant - Streaming response"""
+    try:
+        logger.info(f"[STREAM] Received request: {request.message[:50]}...")
+        
+        # 1. Detect intent
+        intent = detect_intent(request.message)
+        logger.info(f"[STREAM] Detected intent: {intent}")
+        
+        # 2. Query database
+        db_context = query_database(intent, request.message)
+        logger.info(f"[STREAM] DB context length: {len(db_context)}")
+        
+        # 3. Build messages for LLM
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"{request.message}\n\n**Dữ liệu từ hệ thống:**\n{db_context}"}
+        ]
+        
+        # 4. Stream generator function
+        async def generate():
+            try:
+                logger.info("[STREAM] Starting generation...")
+                
+                # Send initial metadata
+                start_event = json.dumps({'type': 'start', 'intent': intent})
+                logger.info(f"[STREAM] Sending start event: {start_event}")
+                yield f"data: {start_event}\n\n"
+                
+                # Call LM Studio with streaming enabled
+                logger.info("[STREAM] Calling LM Studio...")
+                stream = lm_client.chat(
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=500,
+                    stream=True
+                )
+                
+                chunk_count = 0
+                # Stream each chunk
+                for chunk in stream:
+                    if chunk.choices[0].delta.content:
+                        content = chunk.choices[0].delta.content
+                        chunk_count += 1
+                        content_event = json.dumps({'type': 'content', 'content': content})
+                        yield f"data: {content_event}\n\n"
+                        
+                        if chunk_count % 10 == 0:
+                            logger.info(f"[STREAM] Sent {chunk_count} chunks")
+                
+                logger.info(f"[STREAM] Total chunks sent: {chunk_count}")
+                
+                # Send end signal
+                end_event = json.dumps({'type': 'end'})
+                logger.info(f"[STREAM] Sending end event: {end_event}")
+                yield f"data: {end_event}\n\n"
+                
+            except Exception as e:
+                logger.error(f"[STREAM] Error during generation: {e}", exc_info=True)
+                error_event = json.dumps({'type': 'error', 'error': str(e)})
+                yield f"data: {error_event}\n\n"
+        
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+    
+    except Exception as e:
+        logger.error(f"[STREAM] Chat stream error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/health")
