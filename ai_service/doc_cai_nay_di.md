@@ -1,13 +1,3 @@
-## Cài đặt
-
-**Yêu cầu:**
-- Python 3.10+
-- LM Studio chạy trên localhost:3147
-- SQL Server
-- Spring Boot backend chạy trên localhost:8080
-
-**Các bước cài đặt:**
-
 1. Di chuyển vào thư mục ai_service:
 ```bash
 cd ai_service
@@ -39,7 +29,7 @@ DB_HOST=localhost
 DB_PORT=1433
 DB_NAME=GearUp
 DB_USER=sa
-DB_PASSWORD=your_password
+DB_PASSWORD=mat_khau
 
 REDIS_HOST=localhost
 REDIS_PORT=6379
