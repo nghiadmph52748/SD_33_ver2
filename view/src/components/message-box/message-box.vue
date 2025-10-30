@@ -168,9 +168,10 @@ const openAll = () => {
   window.location.hash = '#/notifications'
 }
 
-// Fetch notifications on mount
+// Fetch notifications and connect WebSocket on mount
 onMounted(() => {
   notificationStore.fetchNotifications()
+  notificationStore.connectWebSocket()
 })
 </script>
 

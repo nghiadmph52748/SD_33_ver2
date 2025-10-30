@@ -298,6 +298,10 @@ const selectFirstResult = () => {
 }
 onMounted(async () => {
   if (userStore.id) {
+    // Fetch notifications and connect WebSocket
+    await notificationStore.fetchNotifications()
+    notificationStore.connectWebSocket()
+    
     // Fetch unread count
     await chatStore.fetchUnreadCount()
     

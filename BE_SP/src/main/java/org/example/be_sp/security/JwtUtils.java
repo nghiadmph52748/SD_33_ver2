@@ -132,4 +132,49 @@ public class JwtUtils {
             return false;
         }
     }
+
+    /**
+     * Generate a test token for testing purposes (24 hour expiration)
+     * WARNING: Only use in development/testing!
+     * 
+     * @param username Username for the test token
+     * @return JWT token valid for 24 hours
+     */
+    public String generateTestToken(String username) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("test", true);
+        return createToken(claims, username, 86400000); // 24 hours
+    }
+
+    /**
+     * Print a test token to console for quick testing
+     * Run this method to get a valid JWT token
+     */
+    public static void main(String[] args) {
+        JwtUtils jwtUtils = new JwtUtils();
+        
+        // Generate test tokens
+        String testToken = jwtUtils.generateTestToken("admin");
+        String testToken2 = jwtUtils.generateTestToken("user1");
+        
+        System.out.println("=".repeat(80));
+        System.out.println("TEST JWT TOKENS (Valid for 24 hours)");
+        System.out.println("=".repeat(80));
+        System.out.println();
+        System.out.println("Username: admin");
+        System.out.println("Token: " + testToken);
+        System.out.println();
+        System.out.println("Copy this for curl command:");
+        System.out.println("-H \"Authorization: Bearer " + testToken + "\"");
+        System.out.println();
+        System.out.println("=".repeat(80));
+        System.out.println();
+        System.out.println("Username: user1");
+        System.out.println("Token: " + testToken2);
+        System.out.println();
+        System.out.println("Copy this for curl command:");
+        System.out.println("-H \"Authorization: Bearer " + testToken2 + "\"");
+        System.out.println();
+        System.out.println("=".repeat(80));
+    }
 }

@@ -13,8 +13,15 @@ export interface MessageRecord {
 }
 export type MessageListType = MessageRecord[]
 
+// Backend response wrapper
+interface ApiResponse<T> {
+  isSuccess: boolean
+  data: T
+  message: string
+}
+
 export function queryMessageList() {
-  return axios.post<MessageListType>('/api/message/list')
+  return axios.post<ApiResponse<MessageListType>>('/api/message/list')
 }
 
 interface MessageStatus {

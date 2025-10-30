@@ -46,6 +46,8 @@ public class HoaDonService {
     PhieuGiamGiaService phieuGiamGiaService;
     @Autowired
     private EmailService emailService;
+    @Autowired
+    private NotificationService notificationService;
 
 
 
@@ -99,6 +101,24 @@ public class HoaDonService {
         
         // Send order confirmation email
         sendOrderConfirmationEmail(savedHoaDon);
+        
+        // 🔔 NOTIFICATION: New order created
+        try {
+            // Notify staff member assigned to order
+            if (savedHoaDon.getIdNhanVien() != null) {
+                notificationService.createNotification(
+                    savedHoaDon.getIdNhanVien().getId(),
+                    "todo",
+                    "Đơn hàng mới #" + savedHoaDon.getMaHoaDon(),
+                    "Chờ xử lý",
+                    "Đơn hàng mới từ " + (savedHoaDon.getTenNguoiNhan() != null ? savedHoaDon.getTenNguoiNhan() : "khách hàng"),
+                    2  // in progress
+                );
+            }
+        } catch (Exception e) {
+            log.error("Failed to send order creation notification: {}", e.getMessage());
+        }
+        
         return new HoaDonResponse(savedHoaDon);
     }
     public HoaDonResponse update(Integer id, BanHangTaiQuayRequest request) {
@@ -187,7 +207,29 @@ public class HoaDonService {
             }
         }
         hd.setUpdateAt(LocalDate.now());
+        
+        // Track original status before update
+        Boolean originalStatus = hd.getTrangThai();
+        
         HoaDon saved = hoaDonRepository.save(hd);
+        
+        //NOTIFICATION: Order status updated
+        if (request.getTrangThai() != null && !request.getTrangThai().equals(originalStatus) && saved.getIdKhachHang() != null) {
+            try {
+                String statusText = saved.getTrangThai() ? "Đã hoàn thành" : "Đang xử lý";
+                notificationService.createNotification(
+                    saved.getIdKhachHang().getId(),
+                    "notice",
+                    "Cập nhật đơn hàng #" + saved.getMaHoaDon(),
+                    statusText,
+                    "Trạng thái đơn hàng của bạn: " + statusText,
+                    saved.getTrangThai() ? 1 : 2  // 1 = completed, 2 = in progress
+                );
+            } catch (Exception e) {
+                log.error("Failed to send order update notification: {}", e.getMessage());
+            }
+        }
+        
         return new HoaDonResponse(saved);
     }
 

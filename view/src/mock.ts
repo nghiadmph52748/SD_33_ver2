@@ -1,7 +1,7 @@
 import Mock from 'mockjs'
 
 import './mock/user'
-import './mock/message-box'
+// import './mock/message-box' // Disabled: Using real API for notifications
 
 import '@/views/list/card/mock'
 import '@/views/list/search-table/mock'

@@ -812,6 +812,87 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[thong_bao]    Script Date: 10/30/2025 03:24:00 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[thong_bao](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[loai] [varchar](20) NOT NULL,
+	[tieu_de] [nvarchar](200) NOT NULL,
+	[tieu_de_phu] [nvarchar](200) NULL,
+	[anh_dai_dien] [nvarchar](500) NULL,
+	[noi_dung] [nvarchar](max) NULL,
+	[thoi_gian_tao] [datetime2](7) NOT NULL,
+	[trang_thai] [int] NOT NULL,
+	[loai_tin_nhan] [int] NULL,
+	[id_nguoi_dung] [int] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[thong_bao] ADD  DEFAULT (getdate()) FOR [thoi_gian_tao]
+GO
+ALTER TABLE [dbo].[thong_bao] ADD  DEFAULT ((0)) FOR [trang_thai]
+GO
+ALTER TABLE [dbo].[thong_bao] ADD  DEFAULT ((0)) FOR [deleted]
+GO
+/****** Object:  Table [dbo].[cai_dat_thong_bao]    Script Date: 10/30/2025 04:02:00 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[cai_dat_thong_bao](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_nguoi_dung] [int] NOT NULL,
+	[bat_thong_bao_don_hang] [bit] NOT NULL,
+	[bat_canh_bao_ton_kho] [bit] NOT NULL,
+	[bat_thong_bao_he_thong] [bit] NOT NULL,
+	[bat_tin_nhan_chat] [bit] NOT NULL,
+	[bat_thong_bao_web] [bit] NOT NULL,
+	[bat_thong_bao_email] [bit] NOT NULL,
+	[bat_che_do_im_lang] [bit] NOT NULL,
+	[gio_bat_dau_im_lang] [int] NOT NULL,
+	[gio_ket_thuc_im_lang] [int] NOT NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((1)) FOR [bat_thong_bao_don_hang]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((1)) FOR [bat_canh_bao_ton_kho]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((1)) FOR [bat_thong_bao_he_thong]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((1)) FOR [bat_tin_nhan_chat]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((1)) FOR [bat_thong_bao_web]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((0)) FOR [bat_thong_bao_email]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((0)) FOR [bat_che_do_im_lang]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((22)) FOR [gio_bat_dau_im_lang]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((7)) FOR [gio_ket_thuc_im_lang]
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  DEFAULT ((0)) FOR [deleted]
+GO
 SET IDENTITY_INSERT [dbo].[anh_san_pham] ON 
 GO
 INSERT [dbo].[anh_san_pham] ([id], [duong_dan_anh], [ten_anh], [mau_anh], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'https://res.cloudinary.com/dlgbdwd96/image/upload/v1759817800/SD_73/bb70c82e45f17b28c1d2fd401eefd419.png', N'Abc - Đen', N'Đen', 1, 0, CAST(N'2025-10-12' AS Date), 1, NULL, NULL)
@@ -1512,6 +1593,35 @@ GO
 ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
 ADD CONSTRAINT FK_cuoc_trao_doi_nguoi_gui_cuoi 
 FOREIGN KEY([id_nguoi_gui_cuoi]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+ALTER TABLE [dbo].[thong_bao] WITH CHECK
+ADD CONSTRAINT FK_thong_bao_nhan_vien 
+FOREIGN KEY([id_nguoi_dung]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+-- SET options required for filtered indexes
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE NONCLUSTERED INDEX IX_thong_bao_nguoi_dung
+ON [dbo].[thong_bao] ([id_nguoi_dung], [trang_thai], [deleted], [thoi_gian_tao] DESC)
+GO
+CREATE NONCLUSTERED INDEX IX_thong_bao_chua_doc
+ON [dbo].[thong_bao] ([id_nguoi_dung], [trang_thai])
+WHERE [trang_thai] = 0 AND [deleted] = 0
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] WITH CHECK
+ADD CONSTRAINT FK_cai_dat_thong_bao_nhan_vien 
+FOREIGN KEY([id_nguoi_dung]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao] CHECK CONSTRAINT FK_cai_dat_thong_bao_nhan_vien
+GO
+ALTER TABLE [dbo].[cai_dat_thong_bao]
+ADD CONSTRAINT UQ_cai_dat_thong_bao_nguoi_dung UNIQUE([id_nguoi_dung])
+GO
+CREATE NONCLUSTERED INDEX IX_cai_dat_thong_bao_nguoi_dung
+ON [dbo].[cai_dat_thong_bao] ([id_nguoi_dung])
+WHERE [deleted] = 0
 GO
 CREATE NONCLUSTERED INDEX IX_tin_nhan_conversation
 ON [dbo].[tin_nhan] ([id_nguoi_gui], [id_nguoi_nhan], [thoi_gian_gui] DESC)

@@ -1,13 +1,14 @@
 package org.example.be_sp.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.be_sp.controller.NotificationWebSocketController;
 import org.example.be_sp.entity.Notification;
 import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.response.NotificationResponse;
 import org.example.be_sp.repository.NotificationRepository;
 import org.example.be_sp.repository.NhanVienRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,12 +17,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class NotificationService {
     
     private final NotificationRepository notificationRepository;
     private final NhanVienRepository nhanVienRepository;
+    private final NotificationWebSocketController webSocketController;
+    
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            NhanVienRepository nhanVienRepository,
+            @Lazy NotificationWebSocketController webSocketController) {
+        this.notificationRepository = notificationRepository;
+        this.nhanVienRepository = nhanVienRepository;
+        this.webSocketController = webSocketController;
+    }
     
     /**
      * Get all notifications for a user
@@ -74,7 +84,18 @@ public class NotificationService {
         notification.setDeleted(false);
         notification.setCreatedAt(LocalDateTime.now());
         
-        return notificationRepository.save(notification);
+        Notification savedNotification = notificationRepository.save(notification);
+        
+        // Push notification via WebSocket
+        try {
+            NotificationResponse response = NotificationResponse.fromEntity(savedNotification);
+            webSocketController.sendNotificationToUser(userId, response);
+            log.info("📬 Real-time notification sent to user {}", userId);
+        } catch (Exception e) {
+            log.error("Failed to send real-time notification: {}", e.getMessage());
+        }
+        
+        return savedNotification;
     }
     
     /**
@@ -89,7 +110,7 @@ public class NotificationService {
             createNotification(user.getId(), type, title, subTitle, content, messageType);
         }
         
-        log.info("Broadcast notification created for {} users", allUsers.size());
+        log.info("📢 Broadcast notification created for {} users", allUsers.size());
     }
     
     /**

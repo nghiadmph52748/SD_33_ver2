@@ -1,10 +1,16 @@
 import { defineStore } from 'pinia'
 import { queryMessageList, setMessageStatus, MessageRecord } from '@/api/message'
+import { Client, IMessage } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
+import { getToken } from '@/utils/auth'
 
 export interface NotificationState {
   messages: MessageRecord[]
   loading: boolean
   unreadCount: number
+  wsConnected: boolean
+  wsConnecting: boolean
+  stompClient: Client | null
 }
 
 const useNotificationStore = defineStore('notification', {
@@ -12,6 +18,9 @@ const useNotificationStore = defineStore('notification', {
     messages: [],
     loading: false,
     unreadCount: 0,
+    wsConnected: false,
+    wsConnecting: false,
+    stompClient: null,
   }),
 
   getters: {
@@ -41,8 +50,10 @@ const useNotificationStore = defineStore('notification', {
     async fetchNotifications() {
       this.loading = true
       try {
-        const { data } = await queryMessageList()
-        const normalized = (data || []).map((m) => ({
+        const response = await queryMessageList()
+        // Backend returns ResponseObject with data property containing the notifications array
+        const notifications = response.data?.data || []
+        const normalized = notifications.map((m) => ({
           // Ensure required fields exist for UI rendering
           id: m.id,
           title: m.title || 'Thông báo',
@@ -55,41 +66,8 @@ const useNotificationStore = defineStore('notification', {
           messageType: m.messageType,
         }))
 
-        // If no data returned, provide a small demo list so UI is not empty
-        this.messages = normalized.length
-          ? normalized
-          : [
-              {
-                id: 1,
-                title: 'Nguyễn Văn A',
-                subTitle: 'Tin nhắn riêng',
-                content: 'Yêu cầu phê duyệt đã được gửi, vui lòng kiểm tra',
-                time: new Date().toLocaleString('vi-VN'),
-                status: 0,
-                type: 'message',
-                messageType: 2,
-              },
-              {
-                id: 2,
-                title: 'Hệ thống',
-                subTitle: 'Cảnh báo',
-                content: 'Phiên đăng nhập sẽ hết hạn sau 10 phút',
-                time: new Date(Date.now() - 3600_000).toLocaleString('vi-VN'),
-                status: 0,
-                type: 'notice',
-                messageType: 3,
-              },
-              {
-                id: 3,
-                title: 'Việc cần làm',
-                subTitle: 'Đánh giá PR',
-                content: 'Xem lại yêu cầu hợp nhất #128',
-                time: new Date(Date.now() - 24 * 3600_000).toLocaleString('vi-VN'),
-                status: 1,
-                type: 'todo',
-                messageType: 1,
-              },
-            ]
+        // Use real data from backend
+        this.messages = normalized
         this.unreadCount = this.totalUnread
       } catch (error) {
         console.error('Failed to fetch notifications:', error)
@@ -136,6 +114,74 @@ const useNotificationStore = defineStore('notification', {
       this.messages.unshift(notification)
       if (notification.status === 0) {
         this.unreadCount += 1
+      }
+    },
+
+    // Connect to WebSocket for real-time notifications
+    connectWebSocket() {
+      if (this.wsConnected || this.wsConnecting) {
+        return
+      }
+
+      const token = getToken()
+      if (!token) {
+        console.warn('No token available for WebSocket connection')
+        return
+      }
+
+      this.wsConnecting = true
+
+      const client = new Client({
+        webSocketFactory: () => new SockJS('http://localhost:8080/ws-chat'),
+        connectHeaders: {
+          Authorization: `Bearer ${token}`,
+        },
+        debug: () => {}, // Disable debug logs in production
+        reconnectDelay: 5000,
+        heartbeatOutgoing: 4000,
+
+        onConnect: () => {
+          console.log('✅ Notification WebSocket connected')
+          this.wsConnected = true
+          this.wsConnecting = false
+
+          // Subscribe to notification topic
+          client.subscribe('/user/queue/notifications', (message: IMessage) => {
+            try {
+              const notification: MessageRecord = JSON.parse(message.body)
+              console.log('📬 Received notification:', notification)
+              this.addNotification(notification)
+            } catch (err) {
+              console.error('❌ Error parsing notification:', err)
+            }
+          })
+        },
+
+        onStompError: (frame) => {
+          console.error('❌ Notification STOMP error:', frame.headers.message)
+          this.wsConnected = false
+          this.wsConnecting = false
+        },
+
+        onWebSocketClose: () => {
+          console.log('🔌 Notification WebSocket closed')
+          this.wsConnected = false
+          this.wsConnecting = false
+        },
+      })
+
+      client.activate()
+      this.stompClient = client
+    },
+
+    // Disconnect WebSocket
+    disconnectWebSocket() {
+      if (this.stompClient) {
+        this.stompClient.deactivate()
+        this.stompClient = null
+        this.wsConnected = false
+        this.wsConnecting = false
+        console.log('🔌 Notification WebSocket disconnected')
       }
     },
   },

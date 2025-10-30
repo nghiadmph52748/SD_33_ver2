@@ -9,7 +9,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notification")
+@Table(name = "thong_bao")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,32 +20,32 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     
-    @Column(name = "type", nullable = false, length = 20)
+    @Column(name = "loai", nullable = false, length = 20)
     private String type; // message, notice, todo
     
-    @Column(name = "title", nullable = false, length = 200)
+    @Column(name = "tieu_de", nullable = false, length = 200)
     private String title;
     
-    @Column(name = "sub_title", length = 200)
+    @Column(name = "tieu_de_phu", length = 200)
     private String subTitle;
     
-    @Column(name = "avatar", length = 500)
+    @Column(name = "anh_dai_dien", length = 500)
     private String avatar;
     
-    @Column(name = "content", columnDefinition = "TEXT")
+    @Column(name = "noi_dung", columnDefinition = "NVARCHAR(MAX)")
     private String content;
     
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "thoi_gian_tao", nullable = false)
     private LocalDateTime createdAt;
     
-    @Column(name = "status", nullable = false)
-    private Integer status; // 0 = unread, 1 = read
+    @Column(name = "trang_thai", nullable = false)
+    private Integer status; // 0 = chưa đọc, 1 = đã đọc
     
-    @Column(name = "message_type")
-    private Integer messageType; // 0 = not started, 1 = opened, 2 = in progress, 3 = almost expired
+    @Column(name = "loai_tin_nhan")
+    private Integer messageType; // 0 = chưa bắt đầu, 1 = đã mở, 2 = đang xử lý, 3 = sắp hết hạn
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "id_nguoi_dung")
     private NhanVien user; // User who receives this notification
     
     @Column(name = "deleted")
