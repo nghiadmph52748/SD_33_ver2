@@ -88,9 +88,10 @@ const menuWidth = computed(() => {
   return appStore.menuCollapse ? 48 : appStore.menuWidth
 })
 const paddingStyle = computed(() => {
-  const paddingLeft = renderMenu.value && !hideMenu.value ? { paddingLeft: `${menuWidth.value}px` } : {}
-  const paddingTop = navbar.value ? { paddingTop: navbarHeight } : {}
-  return { ...paddingLeft, ...paddingTop }
+  // Offset content relative to fixed sider/navbar using margins (no inner padding)
+  const offsetLeft = renderMenu.value && !hideMenu.value ? { marginLeft: `${menuWidth.value}px` } : {}
+  const offsetTop = navbar.value ? { marginTop: navbarHeight } : {}
+  return { ...offsetLeft, ...offsetTop }
 })
 // Navbar dynamic offset to avoid overlapping the sider
 const navbarStyle = computed(() => {

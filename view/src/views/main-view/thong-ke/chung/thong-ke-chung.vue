@@ -316,7 +316,7 @@ onMounted(async () => {
 
 <style scoped>
 .thong-ke-chung {
-  padding: 0 20px 20px 20px;
+  padding: 0;
 }
 
 .stats-grid {
