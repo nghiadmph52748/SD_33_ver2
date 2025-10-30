@@ -62,7 +62,6 @@ export async function chatWithAIStream(
   onError: (error: string) => void
 ): Promise<void> {
   try {
-    console.log('[AI Stream] Starting request for:', message)
     const token = getToken()
     const response = await fetch('http://localhost:8080/api/ai/chat-stream', {
       method: 'POST',
@@ -72,13 +71,11 @@ export async function chatWithAIStream(
       },
       body: JSON.stringify({ message, context: '' }),
     })
-
-    console.log('[AI Stream] Response status:', response.status)
     
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[AI Stream] Error response:', errorText)
-      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`)
+      console.error('[AI Stream] HTTP error:', response.status, errorText)
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
 
     const reader = response.body?.getReader()
@@ -88,18 +85,12 @@ export async function chatWithAIStream(
       throw new Error('No response body')
     }
 
-    console.log('[AI Stream] Starting to read stream...')
     let buffer = ''
-    let eventCount = 0
-
     let hasCompleted = false
     
     while (true) {
       const { done, value } = await reader.read()
-      if (done) {
-        console.log('[AI Stream] 🏁 Stream ended, total events:', eventCount)
-        break
-      }
+      if (done) break
 
       const chunk = decoder.decode(value, { stream: true })
       buffer += chunk
@@ -116,31 +107,21 @@ export async function chatWithAIStream(
             if (!jsonStr) continue
             
             const data = JSON.parse(jsonStr)
-            eventCount++
-            
-            if (eventCount % 20 === 0) {
-              console.log('[AI Stream] Received', eventCount, 'events')
-            }
             
             if (data.type === 'content') {
               onChunk(data.content)
             } else if (data.type === 'end') {
-              console.log('[AI Stream] ✅ Received END event, total:', eventCount)
               hasCompleted = true
               onComplete()
               return
             } else if (data.type === 'error') {
-              console.error('[AI Stream] ❌ Error:', data.error)
+              console.error('[AI Stream] Error:', data.error)
               hasCompleted = true
               onError(data.error)
               return
-            } else if (data.type === 'start') {
-              console.log('[AI Stream] ▶️ Started, intent:', data.intent)
-            } else {
-              console.warn('[AI Stream] ⚠️ Unknown event type:', data.type, data)
             }
           } catch (e) {
-            console.warn('[AI Stream] Parse error for line:', line, e)
+            // Ignore parse errors for incomplete chunks
           }
         }
         // Skip event name lines
@@ -152,11 +133,10 @@ export async function chatWithAIStream(
 
     // If stream ended without explicit end event, still call onComplete
     if (!hasCompleted) {
-      console.log('[AI Stream] ⚠️ Stream ended without END event, completing anyway')
       onComplete()
     }
   } catch (error: any) {
-    console.error('[AI Stream] Exception:', error)
+    console.error('[AI Stream] Error:', error.message)
     onError(error.message || 'Unknown error')
   }
 }

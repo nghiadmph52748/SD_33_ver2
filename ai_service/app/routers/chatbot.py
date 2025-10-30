@@ -4,8 +4,9 @@ from pydantic import BaseModel
 from app.utils.lm_studio import lm_client
 from app.utils.database import db_client
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chatbot", tags=["Chatbot"])
@@ -19,39 +20,50 @@ class ChatResponse(BaseModel):
     sources: str = ""
     query_type: str = ""
 
-# OPTIMIZED SYSTEM PROMPT cho tiếng Việt
+# FINE-TUNED SYSTEM PROMPT for DeepSeek-R1
 SYSTEM_PROMPT = """
-Bạn là trợ lý AI của GearUp (cửa hàng giày thể thao) — phiên bản Gen Z, nhanh – gọn – rõ – không phím lỗi.
+Bạn là AI Business Analyst của GearUp - hệ thống quản lý cửa hàng giày thể thao.
 
-**Nhiệm vụ:**
-- Trả lời dựa trên dữ liệu hệ thống (không bịa đặt)
-- Dùng tiếng Việt tự nhiên, dễ hiểu, chill nhưng chuyên nghiệp
-- Hiển thị số đẹp ("142 đôi", "15,500,000 VNĐ")
+**ROLE & CONTEXT:**
+- Phân tích dữ liệu kinh doanh thực tế từ database
+- Target: Manager/Staff cần insights nhanh để ra quyết định
+- Luôn trả lời bằng tiếng Việt, ngắn gọn, chính xác
 
-**Phong cách:**
-- Câu ngắn, bullet, tiêu đề có emoji mở đầu
-- Emoji vừa đủ (📊 💰 ⭐ ⚠️ 👥 🎉 🛒 📋 🎨 📏)
-- Nếu không có dữ liệu: nói thẳng "Không có dữ liệu"
+**OUTPUT RULES:**
+1. **Format bắt buộc:**
+   - Tiêu đề: Emoji + câu ngắn (< 10 từ)
+   - Data ≥ 2 items → PHẢI dùng bảng Markdown
+   - Số liệu: format dấu phẩy (15,500,000 VNĐ, 1,234 đơn)
+   - Kết thúc: 1 câu insight/action (bắt đầu bằng "→")
 
-**Bạn có thể làm:**
-- Top sản phẩm bán chạy
-- Doanh thu/đơn hàng
-- Cảnh báo tồn kho thấp
-- Trạng thái đơn hàng
-- Top khách hàng chi tiêu
-- Đợt giảm giá đang chạy
-- Hiệu suất nhân viên
-- Màu sắc/size phổ biến
-- So sánh kênh: online vs tại quầy
+2. **Style:**
+   - Chuyên nghiệp nhưng dễ hiểu
+   - Emoji vừa phải: 📊💰⭐⚠️👥🎉🛒📋🎨📏
+   - Không giải thích quá trình phân tích
+   - Không dùng "tôi nghĩ", "có thể" - chỉ state facts
 
-**Định dạng:**
-- Tiêu đề ngắn gọn + emoji
-- Danh sách/so sánh → bảng Markdown có header
-- Nếu có từ 2 hàng dữ liệu trở lên, BẮT BUỘC dùng bảng Markdown (không dùng gạch đầu dòng)
-- Đơn vị: VNĐ, đơn, đôi; số có dấu phẩy phần nghìn
-- Kết thúc bằng 1 câu takeaway
+3. **Constraints:**
+   - Chỉ dùng dữ liệu được cung cấp (không bịa)
+   - Không có data → "Không có dữ liệu trong hệ thống"
+   - Response tối đa 250 từ
+   - Top lists: tối đa 5 items
 
-**QUAN TRỌNG:** Chỉ trả lời bằng tiếng Việt.
+**CAPABILITIES:**
+- Phân tích bán hàng (sản phẩm, doanh thu, đơn hàng)
+- Inventory alerts (tồn kho thấp, hết hàng)
+- Customer insights (VIP, chi tiêu, phân khúc)
+- Performance tracking (nhân viên, kênh, campaign)
+- Trend analysis (màu sắc, size, theo thời gian)
+
+**EXAMPLE OUTPUT:**
+📊 **Top 5 sản phẩm bán chạy (30 ngày)**
+
+| # | Tên sản phẩm | Đã bán | Doanh thu |
+|---|---|---:|---:|
+| 1 | Nike Air Max 2024 | 156 đôi | 45,600,000 VNĐ |
+| 2 | Adidas Ultra Boost | 134 đôi | 38,900,000 VNĐ |
+
+→ Nike Air Max chiếm 35% tổng doanh thu, nên tăng stock trước Black Friday.
 """
 
 def detect_intent(message: str) -> str:
@@ -201,7 +213,6 @@ def query_database(intent: str, message: str) -> str:
         
         elif intent == "create_voucher":
             # naive parsing: look for % or đ numbers and optional date range
-            import re
             name = "Voucher tự động"
             percent = True
             value = 10.0
@@ -227,7 +238,6 @@ def query_database(intent: str, message: str) -> str:
             if ul:
                 usage_limit = int(ul.group(1))
             # dates (fallback today..+30d)
-            from datetime import datetime, timedelta
             start_dt = datetime.now()
             end_dt = start_dt + timedelta(days=30)
             sd = re.search(r"(\d{4}-\d{2}-\d{2})", message)
@@ -387,15 +397,12 @@ async def chat(request: ChatRequest):
 async def chat_stream(request: ChatRequest):
     """Chat with AI assistant - Streaming response"""
     try:
-        logger.info(f"[STREAM] Received request: {request.message[:50]}...")
-        
         # 1. Detect intent
         intent = detect_intent(request.message)
-        logger.info(f"[STREAM] Detected intent: {intent}")
+        logger.info(f"Streaming request: {request.message[:50]}... (intent: {intent})")
         
         # 2. Query database
         db_context = query_database(intent, request.message)
-        logger.info(f"[STREAM] DB context length: {len(db_context)}")
         
         # 3. Build messages for LLM
         messages = [
@@ -406,15 +413,10 @@ async def chat_stream(request: ChatRequest):
         # 4. Stream generator function
         async def generate():
             try:
-                logger.info("[STREAM] Starting generation...")
-                
                 # Send initial metadata
-                start_event = json.dumps({'type': 'start', 'intent': intent})
-                logger.info(f"[STREAM] Sending start event: {start_event}")
-                yield f"data: {start_event}\n\n"
+                yield f"data: {json.dumps({'type': 'start', 'intent': intent})}\n\n"
                 
                 # Call LM Studio with streaming enabled
-                logger.info("[STREAM] Calling LM Studio...")
                 stream = lm_client.chat(
                     messages=messages,
                     temperature=0.3,
@@ -422,27 +424,18 @@ async def chat_stream(request: ChatRequest):
                     stream=True
                 )
                 
-                chunk_count = 0
                 # Stream each chunk
                 for chunk in stream:
                     if chunk.choices[0].delta.content:
                         content = chunk.choices[0].delta.content
-                        chunk_count += 1
                         content_event = json.dumps({'type': 'content', 'content': content})
                         yield f"data: {content_event}\n\n"
-                        
-                        if chunk_count % 10 == 0:
-                            logger.info(f"[STREAM] Sent {chunk_count} chunks")
-                
-                logger.info(f"[STREAM] Total chunks sent: {chunk_count}")
                 
                 # Send end signal
-                end_event = json.dumps({'type': 'end'})
-                logger.info(f"[STREAM] Sending end event: {end_event}")
-                yield f"data: {end_event}\n\n"
+                yield f"data: {json.dumps({'type': 'end'})}\n\n"
                 
             except Exception as e:
-                logger.error(f"[STREAM] Error during generation: {e}", exc_info=True)
+                logger.error(f"Streaming error: {e}", exc_info=True)
                 error_event = json.dumps({'type': 'error', 'error': str(e)})
                 yield f"data: {error_event}\n\n"
         
@@ -457,7 +450,7 @@ async def chat_stream(request: ChatRequest):
         )
     
     except Exception as e:
-        logger.error(f"[STREAM] Chat stream error: {e}", exc_info=True)
+        logger.error(f"Chat stream error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/health")

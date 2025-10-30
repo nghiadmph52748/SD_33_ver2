@@ -113,36 +113,19 @@ public class AIService {
                 );
 
                 String line;
-                int eventCount = 0;
-                System.out.println("[Java Stream] Starting to forward events...");
                 
                 while ((line = reader.readLine()) != null) {
                     if (line.startsWith("data: ")) {
                         // Extract JSON data
                         String jsonData = line.substring(6).trim();
                         if (!jsonData.isEmpty()) {
-                            try {
-                                // Send as SSE event with proper format
-                                emitter.send(SseEmitter.event()
-                                    .data(jsonData)
-                                    .name("message"));
-                                
-                                eventCount++;
-                                
-                                // Log every 20 events
-                                if (eventCount % 20 == 0) {
-                                    System.out.println("[Java Stream] Forwarded " + eventCount + " events");
-                                }
-                            } catch (Exception e) {
-                                System.err.println("[Java Stream] Error sending event: " + e.getMessage());
-                                e.printStackTrace();
-                                throw e;
-                            }
+                            // Send as SSE event with proper format
+                            emitter.send(SseEmitter.event()
+                                .data(jsonData)
+                                .name("message"));
                         }
                     }
                 }
-                
-                System.out.println("[Java Stream] Total events forwarded: " + eventCount);
 
                 emitter.complete();
 
