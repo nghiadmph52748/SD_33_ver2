@@ -95,22 +95,19 @@
       </div>
     </a-drawer>
 
-    <!-- Floating button (ẩn khi scroll xuống) -->
-    <transition name="slide-fade">
-      <a-button
-        v-show="!isScrolledDown"
-        type="primary"
-        shape="circle"
-        size="large"
-        class="floating-btn"
-        @click="toggleDrawer"
-      >
-        <template #icon>
-          <icon-message :size="24" />
-        </template>
-        <a-badge v-if="chatStore.totalUnreadCount > 0" :count="chatStore.totalUnreadCount" :offset="[-8, 8]" />
-      </a-button>
-    </transition>
+    <!-- Floating chat button (moves up when scroll-to-top appears) -->
+    <a-button
+      type="primary"
+      shape="circle"
+      size="large"
+      :class="['floating-btn', { 'moved-up': isScrolledDown }]"
+      @click="toggleDrawer"
+    >
+      <template #icon>
+        <icon-message :size="24" />
+      </template>
+      <a-badge v-if="chatStore.totalUnreadCount > 0" :count="chatStore.totalUnreadCount" :offset="[-8, 8]" />
+    </a-button>
   </div>
 </template>
 
@@ -265,7 +262,7 @@ watch(drawerVisible, async (visible) => {
   }
 })
 
-// Ẩn button khi scroll xuống
+// Track scroll to move chat button when scroll-to-top appears
 const checkScroll = () => {
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop
   isScrolledDown.value = scrollTop > 300
@@ -292,6 +289,10 @@ if (typeof window !== 'undefined') {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0 !important;
 
+  &.moved-up {
+    right: 92px;
+  }
+
   &:hover {
     transform: scale(1.1);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
@@ -312,24 +313,6 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Slide fade animation
-.slide-fade-enter-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.slide-fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 1, 1);
-}
-
-.slide-fade-enter-from {
-  transform: translateY(20px) scale(0.8);
-  opacity: 0;
-}
-
-.slide-fade-leave-to {
-  transform: translateY(20px) scale(0.8);
-  opacity: 0;
-}
 
 .drawer-title {
   display: flex;

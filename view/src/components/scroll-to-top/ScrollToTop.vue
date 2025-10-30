@@ -37,13 +37,16 @@ onUnmounted(() => {
 <style scoped>
 .scroll-to-top-btn {
   position: fixed;
-  bottom: 32px;
-  right: 32px;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
   z-index: 999;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   background-color: #165dff !important;
   border-color: #165dff !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0 !important;
 }
 
 .scroll-to-top-btn:hover {
