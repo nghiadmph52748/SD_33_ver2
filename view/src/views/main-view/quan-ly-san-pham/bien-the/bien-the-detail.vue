@@ -1,7 +1,5 @@
 <template>
   <div class="variant-detail-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-container">
@@ -142,8 +140,6 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { IconArrowLeft, IconEdit } from '@arco-design/web-vue/es/icon'
 import { getBienTheById, type BienTheSanPham } from '@/api/san-pham/bien-the'
 
@@ -152,7 +148,6 @@ const route = useRoute()
 const router = useRouter()
 
 // Breadcrumb
-const { breadcrumbItems } = useBreadcrumb()
 
 // State
 const loading = ref(true)

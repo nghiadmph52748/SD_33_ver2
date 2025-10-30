@@ -11,7 +11,7 @@
         <ChatWindow v-if="chatStore.activeConversationId" />
 
         <!-- Empty State -->
-        <a-empty v-else class="empty-state" description="Chọn cuộc trò chuyện để bắt đầu nhắn tin">
+        <a-empty v-else class="empty-state" :description="$t('chat.empty.description')">
           <template #image>
             <icon-message :size="80" />
           </template>
@@ -23,7 +23,7 @@
     <div v-if="!chatStore.wsConnected && chatStore.wsConnecting" class="connection-status">
       <a-space>
         <a-spin :size="14" />
-        <span>Đang kết nối...</span>
+        <span>{{ $t('chat.connection.connecting') }}</span>
       </a-space>
     </div>
   </div>

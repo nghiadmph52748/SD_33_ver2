@@ -1,7 +1,5 @@
 <template>
   <div class="add-customer-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Card 1: Thông tin khách hàng -->
     <a-card title="Thông tin khách hàng" style="margin-bottom: 16px">
@@ -261,16 +259,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { themKhachHang, type KhachHangRequest } from '@/api/khach-hang'
 import { Message, Modal } from '@arco-design/web-vue'
 import { IconDelete, IconSave, IconClose, IconStar, IconPlus } from '@arco-design/web-vue/es/icon'
 
 const router = useRouter()
-
-// Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 
 const formRef = ref()
 

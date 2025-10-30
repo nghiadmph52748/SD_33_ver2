@@ -1,7 +1,5 @@
 <template>
   <div class="add-employee-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
     <!-- Card 1: Thông tin nhân viên -->
     <a-card title="Thông tin nhân viên" :loading="loading">
       <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">
@@ -309,8 +307,6 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { themNhanVien, type NhanVienRequest } from '@/api/nhan-vien'
 import { Message, Modal } from '@arco-design/web-vue'
 import { IconUpload, IconClose, IconSave } from '@arco-design/web-vue/es/icon'
@@ -324,7 +320,6 @@ const cccdFileInputRef = ref<HTMLInputElement | null>(null)
 
 // Router
 const router = useRouter()
-const { breadcrumbItems } = useBreadcrumb()
 
 const provinces = ref<{ value: string; label: string; code: number }[]>([])
 const districts = ref<{ value: string; label: string; code: number }[]>([])

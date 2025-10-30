@@ -1,7 +1,5 @@
 <template>
   <div class="update-customer-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Card 1: Thông tin khách hàng -->
     <a-card title="Thông tin khách hàng" style="margin-bottom: 16px" :loading="dangTai">
@@ -276,15 +274,12 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { layChiTietKhachHang, capNhatKhachHang, themKhachHang, type KhachHangRequest } from '@/api/khach-hang'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { IconClose, IconSave, IconPlus, IconStar, IconDelete } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 
 const route = useRoute()
 const router = useRouter()
 const provinces = ref<{ value: string; label: string; code: number }[]>([])
-const { breadcrumbItems } = useBreadcrumb()
 
 const dangTai = ref(false)
 const form = ref<any>({

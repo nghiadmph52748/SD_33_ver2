@@ -1,4 +1,5 @@
 import localeMessageBox from '@/components/message-box/locale/vi-VN'
+import localeAI from '@/components/ai/locale/vi-VN'
 import localeLogin from '@/views/login/locale/vi-VN'
 
 import localeCardList from '@/views/list/card/locale/vi-VN'
@@ -23,6 +24,8 @@ import localeUserInfo from '@/views/user/info/locale/vi-VN'
 import localeUserSetting from '@/views/user/setting/locale/vi-VN'
 import localeDiscount from '@/views/main-view/quan-ly-giam-gia/locale/vi-VN'
 import localeThongKe from '@/views/main-view/thong-ke/locale/vi-VN'
+import localeChat from '@/views/chat/locale/vi-VN'
+import localeAIChatbot from '@/views/ai-chatbot/locale/vi-VN'
 
 // Dashboard components don't use localization
 /** simple end */
@@ -92,6 +95,7 @@ export default {
   'navbar.action.locale': 'Chuyển sang tiếng Việt',
   ...localeSettings,
   ...localeMessageBox,
+  ...localeAI,
   ...localeLogin,
   ...localeSearchTable,
   ...localeCardList,
@@ -109,5 +113,7 @@ export default {
   ...localeUserSetting,
   ...localeDiscount,
   ...localeThongKe,
+  ...localeChat,
+  ...localeAIChatbot,
   /** simple end */
 }

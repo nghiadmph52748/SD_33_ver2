@@ -3,15 +3,15 @@
     <!-- Header -->
     <div class="conversation-header">
       <div class="header-top">
-        <h3>Tin nhắn</h3>
+        <h3>{{ $t('chat.header.title') }}</h3>
         <a-button type="primary" size="small" @click="showNewChatModal = true">
           <template #icon>
             <icon-plus />
           </template>
-          Tạo mới
+          {{ $t('chat.header.newChat') }}
         </a-button>
       </div>
-      <a-input-search v-model="searchQuery" placeholder="Tìm kiếm cuộc trò chuyện..." class="search-input" allow-clear />
+      <a-input-search v-model="searchQuery" :placeholder="$t('chat.search.placeholder')" class="search-input" allow-clear />
     </div>
 
     <!-- Conversation list -->

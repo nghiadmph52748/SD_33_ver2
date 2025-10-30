@@ -1,7 +1,5 @@
 <template>
   <div class="invoice-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -209,8 +207,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { fetchHoaDonList, type HoaDonApiModel } from '@/api/hoa-don'
 import {
   IconFile,
@@ -230,7 +226,6 @@ import {
 const router = useRouter()
 
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 
 // Data from API
 const invoicesList = ref<any[]>([

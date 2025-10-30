@@ -1,7 +1,5 @@
 <template>
   <div class="product-attribute-image-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -299,8 +297,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { useUserStore } from '@/store'
 import { Message } from '@arco-design/web-vue'
 import { IconUpload, IconFolder, IconApps, IconList, IconEdit, IconDownload, IconDelete, IconRefresh } from '@arco-design/web-vue/es/icon'
@@ -320,7 +316,6 @@ interface FileWithUrl extends File {
 }
 
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 
 // User store
 const userStore = useUserStore()

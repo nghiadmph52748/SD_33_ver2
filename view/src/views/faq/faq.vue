@@ -1,7 +1,5 @@
 <template>
   <div class="faq-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <div class="faq-content">
       <div class="faq-section">
@@ -105,11 +103,8 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 
 onMounted(() => {
   // console.log('FAQ page loaded')

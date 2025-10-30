@@ -1,6 +1,6 @@
 <template>
   <a-layout class="layout" :class="{ mobile: appStore.hideMenu }">
-    <div v-if="navbar" class="layout-navbar">
+    <div v-if="navbar" class="layout-navbar" :style="navbarStyle">
       <NavBar />
     </div>
     <a-layout>
@@ -91,6 +91,14 @@ const paddingStyle = computed(() => {
   const paddingLeft = renderMenu.value && !hideMenu.value ? { paddingLeft: `${menuWidth.value}px` } : {}
   const paddingTop = navbar.value ? { paddingTop: navbarHeight } : {}
   return { ...paddingLeft, ...paddingTop }
+})
+// Navbar dynamic offset to avoid overlapping the sider
+const navbarStyle = computed(() => {
+  const left = renderMenu.value && !hideMenu.value ? menuWidth.value : 0
+  return {
+    left: `${left}px`,
+    right: '0', // stretch to the right to avoid rounding gaps
+  }
 })
 const setCollapsed = (val: boolean) => {
   if (!isInit.value) return // for page initialization menu state problem
@@ -199,17 +207,16 @@ onMounted(() => {
     overflow-y: hidden;
     background-color: var(--color-fill-2);
     transition: all 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
+  }
 
-    .layout-navbar {
-      transition: all 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 100;
-      width: 100%;
-      min-width: 0;
-      height: @nav-size-height;
-    }
+  .layout-navbar {
+    transition: all 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
+    position: fixed;
+    top: 0;
+    z-index: 100;
+    min-width: 0;
+    height: @nav-size-height;
+    /* left and width are controlled via inline navbarStyle */
   }
 
   .arco-layout-sider-collapsed {
@@ -218,16 +225,6 @@ onMounted(() => {
 
       .arco-typography {
         color: transparent;
-      }
-    }
-
-    + .layout-content {
-      .layout-navbar {
-        left: 50px !important;
-
-        .navbar {
-          width: calc(100% - 50px) !important;
-        }
       }
     }
   }

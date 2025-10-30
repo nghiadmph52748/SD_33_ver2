@@ -1,7 +1,5 @@
 <template>
   <div class="variant-update-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Loading State -->
     <div v-if="initialLoading" class="loading-container">
@@ -233,8 +231,6 @@ import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { IconArrowLeft, IconEye, IconRefresh, IconSave } from '@arco-design/web-vue/es/icon'
 import {
   getBienTheById,
@@ -257,7 +253,6 @@ const router = useRouter()
 const userStore = useUserStore()
 
 // Breadcrumb
-const { breadcrumbItems } = useBreadcrumb()
 
 // State
 const initialLoading = ref(true)

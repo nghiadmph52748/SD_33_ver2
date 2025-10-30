@@ -1,7 +1,5 @@
 <template>
   <div class="product-category-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
     <!-- Search and Filter -->
     <a-card class="filters-card">
       <a-form :model="filters" layout="vertical">
@@ -195,8 +193,6 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { debounce } from 'lodash'
 import { useUserStore } from '@/store'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import {
   getDanhMucSanPhamList,
   getAllDanhMucSanPham,
@@ -210,7 +206,6 @@ import { Message } from '@arco-design/web-vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 // Form and modal
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
 // Edit inline mode state
 const selectedRowKeys = ref<number[]>([])

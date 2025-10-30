@@ -1,7 +1,5 @@
 <template>
   <div class="customer-detail-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Card thông tin khách hàng -->
     <a-card title="Chi tiết khách hàng" class="detail-card" :loading="dangTai">
@@ -53,14 +51,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { layChiTietKhachHang } from '@/api/khach-hang'
 import { IconArrowLeft } from '@arco-design/web-vue/es/icon'
 
 const route = useRoute()
 const router = useRouter()
-const { breadcrumbItems } = useBreadcrumb()
 
 const dangTai = ref(false)
 const khachHang = ref<any>(null)

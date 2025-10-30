@@ -1,4 +1,5 @@
 import localeMessageBox from '@/components/message-box/locale/en-US'
+import localeAI from '@/components/ai/locale/en-US'
 import localeLogin from '@/views/login/locale/en-US'
 
 import localeCardList from '@/views/list/card/locale/en-US'
@@ -23,6 +24,8 @@ import localeUserInfo from '@/views/user/info/locale/en-US'
 import localeUserSetting from '@/views/user/setting/locale/en-US'
 import localeDiscount from '@/views/main-view/quan-ly-giam-gia/locale/en-US'
 import localeThongKe from '@/views/main-view/thong-ke/locale/en-US'
+import localeChat from '@/views/chat/locale/en-US'
+import localeAIChatbot from '@/views/ai-chatbot/locale/en-US'
 
 // Dashboard components don't use localization
 /** simple end */
@@ -88,6 +91,7 @@ export default {
   'navbar.action.locale': 'Switch to English',
   ...localeSettings,
   ...localeMessageBox,
+  ...localeAI,
   ...localeLogin,
   ...localeSearchTable,
   ...localeCardList,
@@ -105,5 +109,7 @@ export default {
   ...localeUserSetting,
   ...localeDiscount,
   ...localeThongKe,
+  ...localeChat,
+  ...localeAIChatbot,
   /** simple end */
 }

@@ -1,7 +1,5 @@
 <template>
   <div class="product-attribute-material-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -229,8 +227,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { Message } from '@arco-design/web-vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 import {
@@ -258,7 +254,6 @@ import {
 } from '../../../../../api/san-pham/thuoc-tinh/chat-lieu'
 
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 // Filters
 const filters = ref({

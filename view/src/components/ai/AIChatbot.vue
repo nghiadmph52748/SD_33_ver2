@@ -1,11 +1,16 @@
 <template>
   <div class="ai-chatbot" :class="{ 'is-dark': isDark }">
-    <a-card class="chatbot-card" :bordered="false">
+    <a-card class="chatbot-card" :bordered="false" :body-style="{ padding: '0' }">
       <template #title>
         <div class="chatbot-header">
           <span class="title">🤖 Trợ Lý AI</span>
           <a-space>
             <a-badge :status="isConnected ? 'success' : 'error'" :text="isConnected ? 'Online' : 'Offline'" />
+            <a-button type="text" size="small" @click="openExpandedView">
+              <template #icon>
+                <icon-expand />
+              </template>
+            </a-button>
           </a-space>
         </div>
       </template>
@@ -37,7 +42,7 @@
                         <span v-if="msg.isThinking" class="thinking-status">● Đang xử lý...</span>
                       </div>
                     </template>
-                    <div class="thinking-content" :ref="el => msg.isThinking && setThinkingRef(el, msg.id)">
+                    <div class="thinking-content" :ref="(el) => msg.isThinking && setThinkingRef(el, msg.id)">
                       <div v-html="renderMarkdown(msg.thinkingContent)"></div>
                       <div v-if="msg.isThinking" class="streaming-cursor">▊</div>
                     </div>
@@ -80,7 +85,7 @@
 
                 <!-- Gợi ý tiếp theo -->
                 <div v-if="msg.followUpSuggestions && msg.followUpSuggestions.length > 0" class="follow-up-suggestions">
-                  <div class="suggestions-label">💡 Câu hỏi tiếp theo:</div>
+                  <div class="suggestions-label">{{ $t('ai.suggestions.followUp') }}</div>
                   <a-space wrap :size="6" class="suggestions-buttons">
                     <a-button
                       v-for="(suggestion, idx) in msg.followUpSuggestions"
@@ -126,7 +131,7 @@
 
       <!-- Quick Actions -->
       <div class="quick-actions" :style="quickActionsStyle">
-        <div class="quick-actions-label">💡 Gợi ý nhanh:</div>
+        <div class="quick-actions-label">{{ $t('ai.suggestions.label') }}</div>
         <a-space wrap :size="8">
           <a-button
             v-for="action in quickActions"
@@ -160,15 +165,121 @@
         </a-input-search>
       </div>
     </a-card>
+
+    <!-- Expanded View Modal -->
+    <a-modal
+      v-model:visible="showExpandedModal"
+      :closable="true"
+      fullscreen
+      :mask-closable="false"
+      unmount-on-close
+      title="🤖 Trợ Lý AI"
+      :class="['chat-expanded-modal', { 'is-dark': isDark }]"
+    >
+      <!-- Messages Area -->
+      <div class="expanded-messages" ref="expandedMessagesContainer">
+        <!-- Empty state -->
+        <div v-if="messages.length === 0" class="expanded-empty-state">
+          <div class="empty-icon">💬</div>
+          <div class="empty-title">Chào mừng đến với GearUp AI!</div>
+          <div class="empty-description">Bắt đầu cuộc trò chuyện bằng cách đặt câu hỏi bên dưới.</div>
+        </div>
+
+        <!-- Messages -->
+        <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role]">
+          <div class="message-wrapper">
+            <div class="avatar">
+              {{ msg.role === 'user' ? '👤' : '🤖' }}
+            </div>
+            <div class="content">
+              <!-- Thinking Mode -->
+              <div v-if="msg.thinkingContent" class="thinking-block">
+                <a-collapse :default-active-key="['1']" :bordered="false">
+                  <a-collapse-item key="1">
+                    <template #header>
+                      <div class="thinking-header-wrapper">
+                        <span class="thinking-label">Quá trình phân tích</span>
+                        <span v-if="msg.isThinking" class="thinking-status">● Đang xử lý...</span>
+                      </div>
+                    </template>
+                    <div class="thinking-content">
+                      <div v-html="renderMarkdown(msg.thinkingContent)"></div>
+                    </div>
+                  </a-collapse-item>
+                </a-collapse>
+              </div>
+              
+              <!-- Content -->
+              <div v-if="msg.content" class="text" v-html="renderMarkdown(msg.content)"></div>
+              
+              <!-- Follow-up suggestions -->
+              <div v-if="msg.followUpSuggestions && msg.followUpSuggestions.length > 0" class="follow-up-suggestions">
+                <div class="suggestions-label">{{ $t('ai.suggestions.followUp') }}</div>
+                <a-space wrap :size="6" class="suggestions-buttons">
+                  <a-button
+                    v-for="(suggestion, idx) in msg.followUpSuggestions"
+                    :key="idx"
+                    size="small"
+                    type="text"
+                    :disabled="isProcessing"
+                    @click="askQuestion(suggestion)"
+                    class="suggestion-btn"
+                  >
+                    {{ suggestion }}
+                  </a-button>
+                </a-space>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div v-if="loading" class="message assistant">
+          <div class="message-wrapper">
+            <div class="avatar">🤖</div>
+            <div class="content">
+              <a-spin :size="16" />
+              Đang nhập...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Footer - Outside modal body -->
+      <template #footer>
+        <div class="expanded-input-footer">
+          <div class="input-wrapper">
+            <a-input-search
+              v-model="input"
+              placeholder="Hỏi AI bất cứ điều gì về hệ thống..."
+              size="large"
+              :loading="isProcessing"
+              :disabled="isProcessing"
+              allow-clear
+              search-button
+              @search="handleSearch"
+              @press-enter="handleSearch"
+              class="expanded-search-input"
+            >
+              <template #button-icon>
+                <icon-send />
+              </template>
+              <template #button-default>{{ isProcessing ? 'Đang xử lý...' : 'Gửi' }}</template>
+            </a-input-search>
+          </div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { parse as markedParse } from 'marked'
 import { chatWithAI, chatWithAIStream, checkAIHealth } from '@/api/ai'
 import { Message } from '@arco-design/web-vue'
-import { IconSend } from '@arco-design/web-vue/es/icon'
+import { IconSend, IconExpand } from '@arco-design/web-vue/es/icon'
 
 interface ChatMessage {
   id: number
@@ -191,6 +302,12 @@ interface QuickAction {
   question: string
 }
 
+interface SessionState {
+  sessions: Record<string, ChatMessage[]>
+  currentSessionId: string
+  sessionNames: Record<string, string>
+}
+
 // Props
 const props = defineProps<{ suppressConnectionNotice?: boolean; enableHealthCheck?: boolean }>()
 const shouldNotifyConnection = props.suppressConnectionNotice !== true
@@ -198,14 +315,7 @@ const shouldHealthCheck = props.enableHealthCheck === true
 
 // Emits
 const emit = defineEmits<{
-  (
-    e: 'session-state',
-    payload: {
-      sessions: Record<string, ChatMessage[]>
-      currentSessionId: string
-      sessionNames: Record<string, string>
-    }
-  ): void
+  'session-state': [state: SessionState]
 }>()
 
 // State
@@ -224,7 +334,8 @@ const loading = ref(false)
 const isProcessing = ref(false) // Prevent concurrent requests
 const isConnected = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
-const isDark = ref(false)
+const isDark = ref(document.body.hasAttribute('arco-theme'))
+const showExpandedModal = ref(false)
 const messagesContainerStyle = ref<Record<string, string>>({})
 const quickActionsStyle = ref<Record<string, string>>({})
 const currentSessionId = ref<string>('')
@@ -365,44 +476,46 @@ function loadHistory() {
   })
 }
 
-const quickActions: QuickAction[] = [
+const { t } = useI18n()
+
+const quickActions = computed<QuickAction[]>(() => [
   {
     id: 'slow-products',
-    label: 'SP bán chậm tuần này',
+    label: t('ai.suggestions.slowProducts'),
     icon: '📊',
     question: 'Top 5 sản phẩm bán chậm nhất tuần này?',
   },
   {
     id: 'revenue-compare',
-    label: 'So sánh DT tháng',
+    label: t('ai.suggestions.revenueCompare'),
     icon: '💰',
     question: 'So sánh doanh thu tháng này với tháng trước?',
   },
   {
     id: 'low-stock-alert',
-    label: 'Cảnh báo tồn kho',
+    label: t('ai.suggestions.lowStock'),
     icon: '⚠️',
     question: 'Sản phẩm nào tồn kho dưới mức an toàn?',
   },
   {
     id: 'pending-orders',
-    label: 'Đơn chờ xác nhận',
+    label: t('ai.suggestions.pendingOrders'),
     icon: '📋',
     question: 'Bao nhiêu đơn hàng đang chờ xác nhận?',
   },
   {
     id: 'employee-performance',
-    label: 'Top NV hiệu suất cao',
+    label: t('ai.suggestions.topEmployees'),
     icon: '👨‍💼',
     question: 'Top 3 nhân viên có tỷ lệ chuyển đổi cao nhất?',
   },
   {
     id: 'channel-compare',
-    label: 'So sánh kênh bán',
+    label: t('ai.suggestions.channelCompare'),
     icon: '🛒',
     question: 'So sánh hiệu suất kênh Web vs Tại quầy?',
   },
-]
+])
 
 // Methods
 function scrollToBottom() {
@@ -419,6 +532,25 @@ function setThinkingRef(el: any, msgId: number) {
   if (el) {
     nextTick(() => {
       el.scrollTop = el.scrollHeight
+    })
+  }
+}
+
+// Open expanded view
+function openExpandedView() {
+  showExpandedModal.value = true
+  nextTick(() => {
+    scrollExpandedToBottom()
+  })
+}
+
+const expandedMessagesContainer = ref<HTMLElement | null>(null)
+
+function scrollExpandedToBottom() {
+  if (expandedMessagesContainer.value) {
+    expandedMessagesContainer.value.scrollTo({
+      top: expandedMessagesContainer.value.scrollHeight,
+      behavior: 'smooth',
     })
   }
 }
@@ -565,16 +697,16 @@ async function sendMessage(text: string = input.value) {
       () => {
         loading.value = false
         isProcessing.value = false
-        
+
         // Force close thinking mode if stream ended while still thinking
         const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
           const msg = messages.value[msgIndex]
-          
+
           // If still in thinking mode when stream ends, force finalize
           if (msg.isThinking || insideThinkTag) {
             msg.isThinking = false
-            
+
             // Extract whatever thinking content we have
             if (fullContent.includes('<think>')) {
               const thinkMatch = fullContent.match(/<think>([\s\S]*?)(?:<\/think>|$)/)
@@ -582,7 +714,7 @@ async function sendMessage(text: string = input.value) {
                 msg.thinkingContent = thinkMatch[1].trim()
               }
             }
-            
+
             // Set content to whatever we have after removing think tags
             msg.content = fullContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()
             msg.processingStatus = 'ready'
@@ -781,6 +913,13 @@ watch(
     if (currentSessionId.value) {
       saveHistory()
     }
+    
+    // Auto-scroll expanded view if it's open
+    if (showExpandedModal.value) {
+      nextTick(() => {
+        scrollExpandedToBottom()
+      })
+    }
   },
   { deep: true }
 )
@@ -807,10 +946,12 @@ defineExpose({
 <style scoped lang="less">
 .ai-chatbot {
   height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
 
   .chatbot-card {
+    width: 100%;
     height: 100%;
     min-height: 0;
     display: flex;
@@ -821,7 +962,7 @@ defineExpose({
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 16px;
+      padding: 0 !important;
       overflow: hidden;
       /* make card body transparent so container background is visible */
       background: transparent !important;
@@ -852,7 +993,7 @@ defineExpose({
   .messages-container {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 16px 16px; /* Normal bottom padding */
+    padding: 12px 12px 16px; /* Reduce right padding */
     margin-bottom: 8px;
     /* Use Arco theme variables so it adapts to light/dark automatically */
     background: var(--color-bg-1) !important;
@@ -885,6 +1026,10 @@ defineExpose({
     &.user {
       .message-wrapper {
         flex-direction: row-reverse;
+
+        .avatar {
+          margin-top: 0;
+        }
 
         .content {
           background: #165dff;
@@ -920,6 +1065,7 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-top: 2px;
   }
 
   .content {
@@ -927,7 +1073,6 @@ defineExpose({
     border-radius: 14px;
     max-width: 72%;
     word-wrap: break-word;
-    margin-left: 8px;
 
     .text {
       line-height: 1.7;
@@ -1051,7 +1196,7 @@ defineExpose({
     background: rgba(18, 20, 26, 0.95);
     border-top-color: #272b36;
   }
-  
+
   .messages-container {
     background: linear-gradient(180deg, #0f1115 0%, #12141a 100%);
     &::-webkit-scrollbar-track {
@@ -1352,29 +1497,29 @@ defineExpose({
 /* Thinking Block Styles - Collapsible Clean Design */
 .thinking-block {
   margin-bottom: 12px;
-  
+
   :deep(.arco-collapse) {
     background: transparent;
     border: none;
   }
-  
+
   :deep(.arco-collapse-item) {
     background: linear-gradient(135deg, rgba(123, 97, 255, 0.06), rgba(22, 93, 255, 0.06));
     border: 1px solid rgba(123, 97, 255, 0.2);
     border-radius: 8px;
   }
-  
+
   :deep(.arco-collapse-item-header) {
     padding: 10px 14px !important;
     background: transparent;
     display: flex !important;
     align-items: center !important;
-    
+
     &:hover {
       background: rgba(123, 97, 255, 0.05);
     }
   }
-  
+
   // Header wrapper - clean flex layout
   .thinking-header-wrapper {
     display: flex !important;
@@ -1383,7 +1528,7 @@ defineExpose({
     flex: 1;
     min-width: 0;
     margin-left: 20px; // Space from dropdown icon
-    
+
     .thinking-label {
       font-weight: 600;
       color: var(--color-text-1);
@@ -1391,7 +1536,7 @@ defineExpose({
       flex: 1;
       min-width: 0;
     }
-    
+
     .thinking-status {
       font-size: 11px;
       color: rgb(var(--primary-6));
@@ -1410,7 +1555,7 @@ defineExpose({
     background: var(--color-bg-2);
     border-top: 1px solid rgba(123, 97, 255, 0.15);
   }
-  
+
   .thinking-content {
     padding: 12px 14px;
     font-size: 13px;
@@ -1422,27 +1567,34 @@ defineExpose({
     overflow-y: auto;
 
     // Tight spacing for all elements
-    p, div, span, ul, ol, li {
+    p,
+    div,
+    span,
+    ul,
+    ol,
+    li {
       margin: 0;
       padding: 0;
       line-height: 1.5;
     }
-    
+
     // Small gap between paragraphs only
-    p + p, div + div {
+    p + p,
+    div + div {
       margin-top: 8px;
     }
-    
+
     // Lists spacing
-    ul, ol {
+    ul,
+    ol {
       padding-left: 20px;
       margin: 4px 0;
     }
-    
+
     li {
       margin: 2px 0;
     }
-    
+
     /* Custom scrollbar */
     &::-webkit-scrollbar {
       width: 4px;
@@ -1462,18 +1614,18 @@ defineExpose({
       }
     }
   }
-  
+
   // Loading state for thinking block
   .thinking-loading {
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    
+
     .loading-dots {
       display: flex;
       gap: 6px;
-      
+
       .dot {
         width: 8px;
         height: 8px;
@@ -1481,24 +1633,26 @@ defineExpose({
         background: rgb(var(--primary-6));
         opacity: 0.3;
         animation: dotPulse 1.4s ease-in-out infinite;
-        
+
         &:nth-child(1) {
           animation-delay: 0s;
         }
-        
+
         &:nth-child(2) {
           animation-delay: 0.2s;
         }
-        
+
         &:nth-child(3) {
           animation-delay: 0.4s;
         }
       }
     }
   }
-  
+
   @keyframes dotPulse {
-    0%, 60%, 100% {
+    0%,
+    60%,
+    100% {
       opacity: 0.3;
       transform: scale(1);
     }
@@ -1545,16 +1699,16 @@ defineExpose({
     background: linear-gradient(135deg, rgba(123, 97, 255, 0.1), rgba(22, 93, 255, 0.1));
     border-color: rgba(123, 97, 255, 0.3);
   }
-  
+
   :deep(.arco-collapse-item-header:hover) {
     background: rgba(123, 97, 255, 0.08);
   }
-  
+
   :deep(.arco-collapse-item-content) {
     background: #1a1f2e;
     border-top-color: rgba(123, 97, 255, 0.2);
   }
-  
+
   .thinking-content {
     color: #9aa4b2;
   }
@@ -1686,5 +1840,168 @@ defineExpose({
   background: rgba(22, 93, 255, 0.15) !important;
   border-color: rgb(var(--primary-5)) !important;
   color: rgb(var(--primary-5)) !important;
+}
+
+/* Expanded Modal Styles */
+.chat-expanded-modal {
+  :deep(.arco-modal) {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  :deep(.arco-modal-body) {
+    padding: 0;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  :deep(.arco-modal-footer) {
+    padding: 0 !important;
+    border-top: none;
+    flex-shrink: 0;
+  }
+}
+
+.expanded-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--color-bg-2);
+
+  .expanded-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-3);
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .empty-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--color-text-1);
+    }
+
+    .empty-description {
+      font-size: 14px;
+      color: var(--color-text-3);
+    }
+  }
+
+  .message {
+    margin-bottom: 24px;
+
+    .message-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+
+      .avatar {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-primary-light-1);
+        border-radius: 50%;
+        font-size: 20px;
+        margin-top: 4px;
+      }
+
+      .content {
+        flex: 1;
+        min-width: 0;
+
+        .text {
+          font-size: 15px;
+          line-height: 1.6;
+          color: var(--color-text-1);
+        }
+      }
+    }
+
+    &.user {
+      .avatar {
+        background: var(--color-fill-3);
+        margin-top: 0;
+      }
+
+      .content {
+        background: var(--color-fill-2);
+        padding: 14px 18px;
+        border-radius: 16px;
+
+        .text {
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-fill-1);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-fill-3);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--color-fill-4);
+    }
+  }
+}
+
+.expanded-input-footer {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-top: 1px solid var(--color-border-2);
+  z-index: 1;
+  backdrop-filter: blur(8px);
+  
+  .input-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  :deep(.arco-input-search) {
+    .arco-input {
+      border-radius: 20px 0 0 20px;
+    }
+
+    .arco-input-append {
+      border-radius: 0 20px 20px 0;
+    }
+
+    .arco-btn {
+      border-radius: 0 20px 20px 0;
+      height: 100%;
+    }
+    
+    .arco-input-search-btn {
+      border-radius: 0 20px 20px 0;
+    }
+  }
+}
+
+// Dark mode for expanded input
+.chat-expanded-modal.is-dark .expanded-input-footer {
+  border-top-color: #272b36;
 }
 </style>

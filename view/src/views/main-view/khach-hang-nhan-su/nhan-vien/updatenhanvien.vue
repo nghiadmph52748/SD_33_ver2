@@ -1,7 +1,5 @@
 <template>
   <div class="edit-employee-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Card 1: Thông tin nhân viên -->
     <a-card title="Thông tin nhân viên" :loading="loading">
@@ -284,8 +282,6 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { layChiTietNhanVien, capNhatNhanVien, type NhanVienRequest } from '@/api/nhan-vien'
 import { Modal, Message } from '@arco-design/web-vue'
 import { IconUpload, IconClose, IconSave } from '@arco-design/web-vue/es/icon'
@@ -293,7 +289,6 @@ import { useUserStore } from '@/store'
 
 const route = useRoute()
 const router = useRouter()
-const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 const loading = ref(false)
 const formRef = ref(null)

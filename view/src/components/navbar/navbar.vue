@@ -1,12 +1,13 @@
 <template>
   <div class="navbar">
     <div class="left-side">
-      <a-space>
+      <a-space :size="12" align="center">
         <icon-menu-fold
           v-if="!topMenu && appStore.device === 'mobile'"
           style="font-size: 22px; cursor: pointer"
           @click="toggleDrawerMenu"
         />
+        <Breadcrumb :items="breadcrumbItems" />
       </a-space>
     </div>
     <ul class="right-side">
@@ -172,6 +173,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { LOCALE_OPTIONS } from '@/locale'
 import { useAppStore as useStore } from '@/store'
 import MessageBox from '../message-box/message-box.vue'
+import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import useBreadcrumb from '@/hooks/breadcrumb'
 
 const { t, locale } = useI18n()
 const currentLocale = ref(locale.value)
@@ -192,6 +195,8 @@ const theme = computed(() => {
   return appStore.theme
 })
 const topMenu = computed(() => appStore.topMenu && appStore.menu)
+// Breadcrumb items based on current route
+const { breadcrumbItems } = useBreadcrumb()
 const isDark = useDark({
   selector: 'body',
   attribute: 'arco-theme',
@@ -328,21 +333,30 @@ onMounted(async () => {
 .navbar {
   display: flex;
   justify-content: space-between;
-  height: 100%;
+  align-items: center;
   background-color: var(--color-bg-2);
   border-bottom: 1px solid var(--color-border);
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
+  /* Let outer .layout-navbar (fixed) control offset/width */
+  position: relative;
   height: 60px;
-  z-index: 99;
+  width: 100%;
+  z-index: 1;
 }
 
 .left-side {
   display: flex;
   align-items: center;
   padding-left: 20px;
+  flex: 1;
+  min-width: 0; /* allow children to shrink */
+
+  :deep(.arco-breadcrumb) {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
+  }
 }
 
 .right-side {

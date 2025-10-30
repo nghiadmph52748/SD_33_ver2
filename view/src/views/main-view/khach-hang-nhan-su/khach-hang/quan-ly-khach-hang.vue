@@ -1,7 +1,5 @@
 <template>
   <div class="customer-management-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -149,8 +147,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
 import * as XLSX from 'xlsx'
 import { IconPlus, IconRefresh, IconDownload, IconEdit, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
@@ -187,8 +183,6 @@ const chinhSuaKhach = (khach: any) => {
   // console.log('ID cần sửa:', khach.id)
   router.push({ name: 'UpdateKhachHang', params: { id: khach.id } })
 }
-
-const { breadcrumbItems } = useBreadcrumb()
 
 const boLoc = ref({
   timKiem: '',

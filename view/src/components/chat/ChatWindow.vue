@@ -11,9 +11,9 @@
             <h4>{{ otherUserName }}</h4>
             <span v-if="isOtherUserOnline" class="status-online">
               <icon-check-circle-fill />
-              Đang hoạt động
+              {{ $t('chat.status.active') }}
             </span>
-            <span v-else class="status-offline">Không hoạt động</span>
+            <span v-else class="status-offline">{{ $t('chat.status.inactive') }}</span>
           </div>
         </div>
         <div class="header-actions">
@@ -34,7 +34,7 @@
       <div class="chat-input-area">
         <a-textarea
           v-model="messageInput"
-          :placeholder="`Nhắn tin tới ${otherUserName}...`"
+          :placeholder="$t('chat.input.placeholder', { name: otherUserName })"
           :auto-size="{ minRows: 1, maxRows: 5 }"
           class="message-input"
           @keydown.enter.exact="handleSendMessage"

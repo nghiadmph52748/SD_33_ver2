@@ -1,7 +1,5 @@
 <template>
   <div class="promotion-management-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -543,8 +541,6 @@ import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/store'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import router from '@/router'
 import downloadCsv from '@/utils/export-csv'
 import {
@@ -574,9 +570,8 @@ import {
   IconClose,
 } from '@arco-design/web-vue/es/icon'
 
-// Breadcrumb setup
+// Setup
 const { t } = useI18n()
-const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 
 // Check if user is admin

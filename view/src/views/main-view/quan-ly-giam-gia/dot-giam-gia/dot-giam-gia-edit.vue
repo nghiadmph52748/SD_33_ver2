@@ -1,7 +1,5 @@
 <template>
   <div class="promotion-edit-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Back Button -->
     <div class="header-actions">
@@ -321,9 +319,7 @@ import {
 import dayjs from 'dayjs'
 import axios from 'axios'
 import soleIcon from '@/assets/icons/soles.png'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import PageActions from '@/components/page-actions/page-actions.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import {
   updatePromotionCampaign,
   fetchPromotionProductDetails,
@@ -338,7 +334,6 @@ import { useRouter } from 'vue-router'
 // Router
 const router = useRouter()
 const { t } = useI18n()
-const { breadcrumbItems } = useBreadcrumb()
 
 // Get promotion ID from route params
 const promotionId = computed(() => Number(router.currentRoute.value.params.id))

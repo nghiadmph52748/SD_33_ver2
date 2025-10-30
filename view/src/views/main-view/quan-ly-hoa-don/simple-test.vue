@@ -1,7 +1,5 @@
 <template>
   <div class="invoice-detail-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Page Header -->
     <div class="page-header">
@@ -146,14 +144,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { IconClockCircle, IconCheckCircle, IconFile } from '@arco-design/web-vue/es/icon'
 import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
-const { breadcrumbItems } = useBreadcrumb()
 
 const invoiceId = ref(route.params.id)
 

@@ -1,7 +1,5 @@
 <template>
   <div class="coupon-edit-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Back Button -->
     <div style="margin-bottom: 16px">
@@ -237,9 +235,7 @@ import router from '@/router'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
 import { useI18n } from 'vue-i18n'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import PageActions from '@/components/page-actions/page-actions.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { fetchCustomers, type CustomerApiModel, updateCoupon } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { IconPlus, IconDelete, IconLeft, IconUp } from '@arco-design/web-vue/es/icon'
@@ -247,7 +243,6 @@ import dayjs from 'dayjs'
 
 // Router
 const { t } = useI18n()
-const { breadcrumbItems } = useBreadcrumb()
 
 // Get coupon ID from route params
 const couponId = computed(() => Number(router.currentRoute.value.params.id))

@@ -1,7 +1,5 @@
 <template>
   <div class="product-variant-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -417,8 +415,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 import { IconEdit, IconCheck, IconClose, IconRefresh, IconDownload, IconEye, IconScan } from '@arco-design/web-vue/es/icon'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import {
   getSanPhamOptions,
   getMauSacOptions,
@@ -438,7 +434,6 @@ import { Html5Qrcode } from 'html5-qrcode'
 import { deleteBienTheSanPham, getBienTheSanPhamPage, updateBienTheSanPham, getBienTheSanPhamById } from '../../../../api/san-pham/bien-the'
 
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 
 // Router setup
 const route = useRoute()

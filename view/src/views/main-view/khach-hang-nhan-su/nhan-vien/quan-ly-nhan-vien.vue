@@ -1,7 +1,5 @@
 <template>
   <div class="staff-management-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -163,8 +161,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { Message } from '@arco-design/web-vue'
 import * as XLSX from 'xlsx'
 import { layDanhSachNhanVien, capNhatNhanVien } from '@/api/nhan-vien'
@@ -255,7 +251,6 @@ const cancelToggleStatus = () => {
 }
 
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 // Modal and for
 const router = useRouter()
 

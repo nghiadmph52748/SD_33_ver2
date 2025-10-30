@@ -1,7 +1,5 @@
 <template>
   <div class="product-attribute-color-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -235,8 +233,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { Message } from '@arco-design/web-vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 import {
@@ -259,7 +255,6 @@ import colorNamer from 'color-namer'
 import { createMauSac, getMauSacList, updateMauSac, deleteMauSac, type MauSac } from '../../../../../api/san-pham/thuoc-tinh/mau-sac'
 
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 // Filters
 const filters = ref({

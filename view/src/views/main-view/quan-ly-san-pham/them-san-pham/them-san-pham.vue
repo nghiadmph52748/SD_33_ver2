@@ -1,7 +1,6 @@
 <template>
   <div class="add-product-page">
     <!-- Breadcrumb - Changed to add variants only, not create new products -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Product Form -->
     <a-card title="Thêm biến thể sản phẩm" class="product-form-card">
@@ -830,8 +829,6 @@
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import {
   IconCheck,
   IconClose,
@@ -869,7 +866,6 @@ import {
 import { uploadMutipartFile, getAnhSanPhamByTenMau } from '@/api/san-pham/thuoc-tinh/anh-san-pham'
 
 // Breadcrumb setup
-const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
 const userStore = useUserStore()
 

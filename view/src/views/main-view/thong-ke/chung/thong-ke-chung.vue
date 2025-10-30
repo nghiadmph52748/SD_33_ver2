@@ -1,8 +1,5 @@
 <template>
   <div class="thong-ke-chung">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
-
     <!-- AI Assistant trigger moved into BoLocThongKe -->
 
     <!-- Bộ lọc thống kê -->
@@ -103,8 +100,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { useThongKeData } from '../composables/useThongKeData'
 import { useTinhToanThongKe } from '../composables/useTinhToanThongKe'
 import { useXuatExcel } from '../composables/useXuatExcel'
@@ -125,7 +120,6 @@ import BangSanPhamSapHetHang from './bang-san-pham-sap-het-hang.vue'
 
 // ============= SETUP =============
 const { t } = useI18n()
-const { breadcrumbItems } = useBreadcrumb()
 
 // ============= STATE =============
 const khoangThoiGian = ref<KhoangThoiGian>('today')

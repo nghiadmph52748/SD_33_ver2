@@ -13,7 +13,7 @@
       <template #title>
         <div class="drawer-title">
           <icon-message />
-          <span>Tin nhắn</span>
+          <span>{{ $t('chat.header.title') }}</span>
           <a-badge v-if="chatStore.totalUnreadCount > 0" :count="chatStore.totalUnreadCount" :max-count="99" />
         </div>
       </template>

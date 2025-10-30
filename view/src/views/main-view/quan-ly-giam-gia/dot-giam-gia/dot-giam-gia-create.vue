@@ -1,6 +1,5 @@
 <template>
   <div class="promotion-create-page">
-    <Breadcrumb :items="breadcrumbItems" />
 
     <a-card class="promotion-card">
       <a-form ref="formRef" :model="formState" :rules="rules" layout="vertical">
@@ -290,8 +289,6 @@ import { reactive, ref, onMounted, watch, computed } from 'vue'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
 import { useI18n } from 'vue-i18n'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import PageActions from '@/components/page-actions/page-actions.vue'
 import {
   createPromotionCampaign,
@@ -309,7 +306,6 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const { t } = useI18n()
-const { breadcrumbItems } = useBreadcrumb()
 
 const formRef = ref<FormInstance>()
 const confirmSaveVisible = ref(false)

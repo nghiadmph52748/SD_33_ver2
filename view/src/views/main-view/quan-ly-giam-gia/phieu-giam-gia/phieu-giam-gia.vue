@@ -1,7 +1,5 @@
 <template>
   <div class="coupon-management-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Filters and Search -->
     <a-card class="filters-card">
@@ -672,8 +670,6 @@ import { Message } from '@arco-design/web-vue'
 import { useI18n } from 'vue-i18n'
 
 import { useUserStore } from '@/store'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import router from '@/router'
 import {
   IconPlus,
@@ -703,9 +699,8 @@ import {
 } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 
-// Breadcrumb setup
+// Setup
 const { t } = useI18n()
-const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 
 const isAdmin = computed(() => {

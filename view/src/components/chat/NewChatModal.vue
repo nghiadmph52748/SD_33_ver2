@@ -1,6 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible" title="Tin nhắn mới" :width="500" @ok="handleSelectUser" @cancel="handleCancel">
-    <a-input-search v-model="searchQuery" placeholder="Tìm kiếm nhân viên..." class="search-input" allow-clear />
+  <a-modal v-model:visible="visible" :title="$t('chat.newChat.title')" :width="500" @ok="handleSelectUser" @cancel="handleCancel">
+    <a-input-search v-model="searchQuery" :placeholder="$t('chat.newChat.search')" class="search-input" allow-clear />
 
     <a-spin :loading="loading" class="spin-container">
       <div class="user-list">

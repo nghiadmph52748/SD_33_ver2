@@ -1,6 +1,5 @@
 <template>
   <div class="coupon-create-page">
-    <Breadcrumb :items="breadcrumbItems" />
 
     <a-card class="coupon-card" :class="{ 'featured-layout': formState.featured }">
       <div :class="formState.featured ? 'two-column-container' : ''">
@@ -244,16 +243,13 @@ import { computed, reactive, ref, watch, onMounted, onUnmounted } from 'vue'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { Message } from '@arco-design/web-vue'
 import { IconUp } from '@arco-design/web-vue/es/icon'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import PageActions from '@/components/page-actions/page-actions.vue'
-import useBreadcrumb from '@/hooks/breadcrumb'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { createCoupon, fetchCoupons, fetchCustomers, type CustomerApiModel } from '@/api/discount-management'
 import dayjs from 'dayjs'
 
 const { t } = useI18n()
-const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
 
 const formRef = ref<FormInstance>()

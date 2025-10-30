@@ -1,7 +1,5 @@
 <template>
   <div class="pos-system">
-    <!-- Header -->
-    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Main Layout -->
     <a-card class="main-pos-card">
@@ -904,7 +902,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck } from '@arco-design/web-vue/es/icon'
 import {
   getBienTheSanPhamPage,
@@ -1048,7 +1045,7 @@ const cartPagination = ref({
 // Force re-render key cho cart table khi có lỗi cập nhật quantity
 const cartTableKey = ref(0)
 
-const breadcrumbItems = ['menu.ban-hang-tai-quay']
+const breadcrumbItems = []
 
 // ==================== COMPUTED ====================
 const currentOrder = computed(() => {
