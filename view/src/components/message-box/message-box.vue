@@ -6,34 +6,18 @@
         <div class="header-left">
           <icon-notification class="header-icon" />
           <span class="header-title">Thông báo</span>
-          <a-badge
-            v-if="notificationStore.totalUnread > 0"
-            :count="notificationStore.totalUnread"
-            :max-count="99"
-            class="header-badge"
-          />
+          <a-badge v-if="notificationStore.totalUnread > 0" :count="notificationStore.totalUnread" :max-count="99" class="header-badge" />
         </div>
         <a-space :size="4">
           <a-tooltip content="Đánh dấu tất cả đã đọc">
-            <a-button
-              type="text"
-              size="small"
-              :disabled="notificationStore.totalUnread === 0"
-              @click="markAll"
-            >
+            <a-button type="text" size="small" :disabled="notificationStore.totalUnread === 0" @click="markAll">
               <template #icon>
                 <icon-check-circle />
               </template>
             </a-button>
           </a-tooltip>
           <a-tooltip content="Xóa tất cả">
-            <a-button
-              type="text"
-              size="small"
-              status="danger"
-              :disabled="!renderList.length"
-              @click="confirmClearAll"
-            >
+            <a-button type="text" size="small" status="danger" :disabled="!renderList.length" @click="confirmClearAll">
               <template #icon>
                 <icon-delete />
               </template>
@@ -43,24 +27,13 @@
       </div>
 
       <!-- Tabs -->
-      <a-tabs
-        v-model:active-key="messageType"
-        type="line"
-        size="small"
-        class="notification-tabs"
-        destroy-on-hide
-      >
+      <a-tabs v-model:active-key="messageType" type="line" size="small" class="notification-tabs" destroy-on-hide>
         <a-tab-pane v-for="item in tabList" :key="item.key">
           <template #title>
             <a-space :size="4">
               <component :is="item.icon" v-if="item.icon" />
               <span>{{ item.title }}</span>
-              <a-badge
-                v-if="unreadCountByType(item.key) > 0"
-                :count="unreadCountByType(item.key)"
-                :max-count="99"
-                :offset="[6, -2]"
-              />
+              <a-badge v-if="unreadCountByType(item.key) > 0" :count="unreadCountByType(item.key)" :max-count="99" :offset="[6, -2]" />
             </a-space>
           </template>
 
@@ -74,13 +47,7 @@
           </div>
 
           <!-- List -->
-          <List
-            v-else
-            :render-list="renderList"
-            :unread-count="unreadCount"
-            @item-click="handleItemClick"
-            @more="openAll"
-          />
+          <List v-else :render-list="renderList" :unread-count="unreadCount" @item-click="handleItemClick" @more="openAll" />
         </a-tab-pane>
       </a-tabs>
     </a-spin>

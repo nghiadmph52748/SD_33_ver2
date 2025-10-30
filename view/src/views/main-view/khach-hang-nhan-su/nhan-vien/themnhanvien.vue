@@ -290,21 +290,19 @@
     </a-modal>
     <!-- Modal quét QR -->
     <a-modal
-  v-model:visible="showQRModal"
-  title="Quét mã QR CCCD"
-  ok-text="Đóng"
-  cancel-text="Hủy"
-  hide-cancel
-  width="400px"
-  @ok="closeQRModal"
-  @cancel="closeQRModal"
->
-
+      v-model:visible="showQRModal"
+      title="Quét mã QR CCCD"
+      ok-text="Đóng"
+      cancel-text="Hủy"
+      hide-cancel
+      width="400px"
+      @ok="closeQRModal"
+      @cancel="closeQRModal"
+    >
       <div style="text-align: center">
         <video ref="videoRef" autoplay playsinline style="width: 100%; border-radius: 8px" />
       </div>
     </a-modal>
-    
   </div>
 </template>
 
@@ -462,9 +460,7 @@ const openQRModal = async () => {
 
           formData.value.cccd = cccd || ''
           formData.value.tenNhanVien = ten || ''
-          formData.value.ngaySinh = dob
-            ? `${dob.slice(4, 8)}-${dob.slice(2, 4)}-${dob.slice(0, 2)}`
-            : ''
+          formData.value.ngaySinh = dob ? `${dob.slice(4, 8)}-${dob.slice(2, 4)}-${dob.slice(0, 2)}` : ''
           formData.value.gioiTinh = gioiTinh?.toLowerCase().includes('nam')
 
           const addressParts = diaChi.split(',').map((x) => x.trim())
@@ -494,7 +490,6 @@ const openQRModal = async () => {
   await qrScanner.value.start()
 }
 
-
 // Xử lý khi người dùng tải ảnh CCCD
 const handleCCCDImageUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -504,34 +499,31 @@ const handleCCCDImageUpload = async (event: Event) => {
   try {
     const result = await QrScanner.scanImage(file)
     if (result) {
-  const raw = result.trim()
-  const parts = raw.split('|')
-  if (parts.length > 5) {
-    const cccd = parts[0]
-    const ten = parts[2]
-    const dob = parts[3]
-    const gioiTinh = parts[4]
-    const diaChi = parts[5]
+      const raw = result.trim()
+      const parts = raw.split('|')
+      if (parts.length > 5) {
+        const cccd = parts[0]
+        const ten = parts[2]
+        const dob = parts[3]
+        const gioiTinh = parts[4]
+        const diaChi = parts[5]
 
-    formData.value.cccd = cccd || ''
-    formData.value.tenNhanVien = ten || ''
-    formData.value.ngaySinh = dob
-      ? `${dob.slice(4, 8)}-${dob.slice(2, 4)}-${dob.slice(0, 2)}`
-      : ''
-    formData.value.gioiTinh = gioiTinh?.toLowerCase().includes('nam')
+        formData.value.cccd = cccd || ''
+        formData.value.tenNhanVien = ten || ''
+        formData.value.ngaySinh = dob ? `${dob.slice(4, 8)}-${dob.slice(2, 4)}-${dob.slice(0, 2)}` : ''
+        formData.value.gioiTinh = gioiTinh?.toLowerCase().includes('nam')
 
-    const addressParts = diaChi.split(',').map((x) => x.trim())
-    formData.value.diaChiCuThe = addressParts[0] || ''
-    formData.value.phuong = addressParts[1] || ''
-    formData.value.quan = addressParts[2] || ''
-    formData.value.thanhPho = addressParts[3] || ''
+        const addressParts = diaChi.split(',').map((x) => x.trim())
+        formData.value.diaChiCuThe = addressParts[0] || ''
+        formData.value.phuong = addressParts[1] || ''
+        formData.value.quan = addressParts[2] || ''
+        formData.value.thanhPho = addressParts[3] || ''
 
-    Message.success('✅ Đã tự động điền thông tin từ ảnh CCCD!')
-  } else {
-    Message.warning('Không thể đọc được đầy đủ thông tin từ ảnh CCCD!')
-  }
-}
-
+        Message.success('✅ Đã tự động điền thông tin từ ảnh CCCD!')
+      } else {
+        Message.warning('Không thể đọc được đầy đủ thông tin từ ảnh CCCD!')
+      }
+    }
   } catch (err) {
     console.error('Không đọc được mã QR:', err)
     Message.warning('Không phát hiện được mã QR trong ảnh này.')

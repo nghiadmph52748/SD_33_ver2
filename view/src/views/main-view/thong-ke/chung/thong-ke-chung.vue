@@ -52,11 +52,7 @@
     <!-- Biểu đồ Row 1: Doanh thu + Top sản phẩm -->
     <a-row :gutter="16" class="charts-section">
       <a-col :span="17">
-        <BieuDoDoanhThu
-          v-model:ky-doanh-thu="kyDoanhThu"
-          :du-lieu-doanh-thu="duLieuDoanhThu"
-          :loai-bieu-do="loaiBieuDo"
-        />
+        <BieuDoDoanhThu v-model:ky-doanh-thu="kyDoanhThu" :du-lieu-doanh-thu="duLieuDoanhThu" :loai-bieu-do="loaiBieuDo" />
       </a-col>
       <a-col :span="7">
         <DanhSachSanPhamBanChay v-model:ky-thong-ke="kyTopProducts" :du-lieu-san-pham="duLieuSanPhamBanChay" />
@@ -239,10 +235,10 @@ const xuatBaoCaoExcel = () => {
 const openAIAssistant = async () => {
   showAI.value = true
   await nextTick()
-  
+
   // Generate comprehensive statistics prompt
   const prompt = generateStatisticsPrompt()
-  
+
   // Send the prompt to AI chatbot
   if (aiChatbotRef.value) {
     aiChatbotRef.value.sendMessage(prompt)
@@ -255,10 +251,10 @@ const generateStatisticsPrompt = () => {
   const weekData = duLieuTuan.value
   const monthData = duLieuThang.value
   const yearData = duLieuNam.value
-  
+
   const topProducts = sanPhamBanChayNhat.value.slice(0, 5)
   const lowStockProducts = sanPhamSapHetHang.value.slice(0, 5)
-  
+
   return `Hãy phân tích chi tiết dữ liệu thống kê kinh doanh của tôi:
 
 📊 **THỐNG KÊ TỔNG QUAN:**
@@ -274,14 +270,15 @@ const generateStatisticsPrompt = () => {
 - Năm này: ${yearData.revenue.toLocaleString('vi-VN')} VNĐ (${yearData.orders} đơn)
 
 🏆 **TOP 5 SẢN PHẨM BÁN CHẠY:**
-${topProducts.map((product, index) => 
-  `${index + 1}. ${product.tenSanPham} - ${product.soLuongBan} sản phẩm - ${product.doanhThu.toLocaleString('vi-VN')} VNĐ`
-).join('\n')}
+${topProducts
+  .map(
+    (product, index) =>
+      `${index + 1}. ${product.tenSanPham} - ${product.soLuongBan} sản phẩm - ${product.doanhThu.toLocaleString('vi-VN')} VNĐ`
+  )
+  .join('\n')}
 
 ⚠️ **SẢN PHẨM SẮP HẾT HÀNG:**
-${lowStockProducts.map((product, index) => 
-  `${index + 1}. ${product.tenSanPham} - Còn ${product.soLuongTon} sản phẩm`
-).join('\n')}
+${lowStockProducts.map((product, index) => `${index + 1}. ${product.tenSanPham} - Còn ${product.soLuongTon} sản phẩm`).join('\n')}
 
 📊 **DỮ LIỆU BIỂU ĐỒ:**
 - Doanh thu theo ${kyDoanhThu.value}: ${duLieuDoanhThu.value.length} điểm dữ liệu

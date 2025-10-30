@@ -5,7 +5,13 @@
     <a-spin :loading="loading" class="spin-container">
       <div class="user-list">
         <div v-if="filteredUsers.length > 0" class="user-items">
-          <div v-for="user in filteredUsers" :key="user.id" class="user-item" :class="{ selected: selectedUserId === user.id }" @click="selectedUserId = user.id">
+          <div
+            v-for="user in filteredUsers"
+            :key="user.id"
+            class="user-item"
+            :class="{ selected: selectedUserId === user.id }"
+            @click="selectedUserId = user.id"
+          >
             <a-avatar :size="40">
               <icon-user />
             </a-avatar>
@@ -63,7 +69,12 @@ const loading = ref(false)
 const filteredUsers = computed(() => {
   if (!searchQuery.value) return users.value
   const query = searchQuery.value.toLowerCase()
-  return users.value.filter((user) => user.hoTen.toLowerCase().includes(query) || (user.email && user.email.toLowerCase().includes(query)) || (user.sdt && user.sdt.includes(query)))
+  return users.value.filter(
+    (user) =>
+      user.hoTen.toLowerCase().includes(query) ||
+      (user.email && user.email.toLowerCase().includes(query)) ||
+      (user.sdt && user.sdt.includes(query))
+  )
 })
 
 async function fetchUsers() {
@@ -71,10 +82,10 @@ async function fetchUsers() {
   try {
     const response = await axios.get('/api/nhan-vien-management/playlist')
     console.log('API Response:', response.data)
-    
+
     // Thử nhiều cách parse khác nhau
     let allUsers = []
-    
+
     if (Array.isArray(response.data)) {
       allUsers = response.data
     } else if (response.data.data) {
@@ -86,9 +97,9 @@ async function fetchUsers() {
     } else if (response.data.content) {
       allUsers = response.data.content
     }
-    
+
     console.log('All users:', allUsers.length, allUsers)
-    
+
     // Map và loại bỏ user hiện tại
     users.value = allUsers
       .map((user: any) => ({
@@ -96,7 +107,7 @@ async function fetchUsers() {
         hoTen: user.tenNhanVien || user.email || user.soDienThoai || 'Không có tên',
       }))
       .filter((user: any) => user.id !== userStore.id)
-    
+
     console.log('Filtered users:', users.value.length, 'người', users.value)
   } catch (error: any) {
     console.error('Fetch users error:', error)

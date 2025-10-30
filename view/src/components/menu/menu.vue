@@ -110,7 +110,7 @@ export default defineComponent({
     listenerRouteChange((newRoute) => {
       const { requiresAuth, activeMenu, hideInMenu } = newRoute.meta
       console.log('Route changed:', newRoute.name, { requiresAuth, activeMenu, hideInMenu })
-      
+
       // Handle routes with activeMenu or requireAuth
       if (activeMenu || (requiresAuth && !hideInMenu)) {
         const menuOpenKeys = findMenuOpenKeys((activeMenu || newRoute.name) as string)
@@ -215,16 +215,18 @@ export default defineComponent({
 ::deep(.arco-menu-light) {
   .arco-menu-item,
   .arco-menu-inline-header {
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
   }
-  
+
   /* Hover state */
   .arco-menu-item:hover,
   .arco-menu-inline-header:hover {
     background: #e6f4ff !important;
     color: #1890ff !important;
   }
-  
+
   /* Selected state */
   .arco-menu-selected,
   .arco-menu-selected > .arco-menu-inline-header {
@@ -232,14 +234,14 @@ export default defineComponent({
     color: #0050b3 !important;
     position: relative;
   }
-  
+
   /* Selected item hover */
   .arco-menu-selected:hover,
   .arco-menu-selected:hover > .arco-menu-inline-header {
     background: #91d5ff !important;
     color: #003a8c !important;
   }
-  
+
   /* Blue left border for selected items */
   .arco-menu-selected::before,
   .arco-menu-selected > .arco-menu-inline-header::before {
@@ -260,16 +262,18 @@ export default defineComponent({
 ::deep(.arco-menu-dark) {
   .arco-menu-item,
   .arco-menu-inline-header {
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
   }
-  
+
   /* Hover state - darker blue for dark mode */
   .arco-menu-item:hover,
   .arco-menu-inline-header:hover {
     background: rgba(24, 144, 255, 0.15) !important;
     color: #69c0ff !important;
   }
-  
+
   /* Selected state - more visible in dark mode */
   .arco-menu-selected,
   .arco-menu-selected > .arco-menu-inline-header {
@@ -277,14 +281,14 @@ export default defineComponent({
     color: #91d5ff !important;
     position: relative;
   }
-  
+
   /* Selected item hover - stronger highlight */
   .arco-menu-selected:hover,
   .arco-menu-selected:hover > .arco-menu-inline-header {
     background: rgba(24, 144, 255, 0.35) !important;
     color: #bae7ff !important;
   }
-  
+
   /* Brighter blue border for dark mode */
   .arco-menu-selected::before,
   .arco-menu-selected > .arco-menu-inline-header::before {

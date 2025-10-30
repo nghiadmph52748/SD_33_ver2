@@ -17,10 +17,7 @@
               <icon-download class="action-icon" />
               {{ $t('thongKe.filter.exportExcel') }}
             </a-button>
-            <a-button type="primary" class="ai-btn" @click="$emit('hoiAI')">
-              🤖
-              Hỏi AI về thống kê
-            </a-button>
+            <a-button type="primary" class="ai-btn" @click="$emit('hoiAI')">Hỏi AI về thống kê</a-button>
           </div>
         </div>
 

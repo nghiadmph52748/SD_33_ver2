@@ -65,11 +65,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import {
-  IconExclamationCircleFill,
-  IconExclamation,
-  IconClockCircle,
-} from '@arco-design/web-vue/es/icon'
+import { IconExclamationCircleFill, IconExclamation, IconClockCircle } from '@arco-design/web-vue/es/icon'
 import type { SanPhamSapHetHang } from '../types/thong-ke.types'
 
 interface Props {

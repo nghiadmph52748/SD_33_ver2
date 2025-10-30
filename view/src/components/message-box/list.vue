@@ -54,9 +54,13 @@
                     {{ formatTime(item.time) }}
                   </span>
                   <a-space :size="8" class="item-actions">
-                    <a-link :hoverable="false"> <icon-eye /> Xem </a-link>
+                    <a-link :hoverable="false">
+                      <icon-eye />
+                      Xem
+                    </a-link>
                     <a-link v-if="!item.status" :hoverable="false" @click.stop="onItemClick(item)">
-                      <icon-check /> Đánh dấu
+                      <icon-check />
+                      Đánh dấu
                     </a-link>
                   </a-space>
                 </div>
@@ -219,14 +223,14 @@ function getStatusText(messageType?: number) {
 const grouped = computed(() => {
   const groups: Record<string, any> = {}
   const items = props.renderList || []
-  
+
   // Use forEach instead of for...of to avoid iterator issues
   items.forEach((it) => {
     const label = getRelativeLabel(it.time)
     if (!groups[label]) groups[label] = []
     groups[label].push(it)
   })
-  
+
   return Object.keys(groups).map((k) => ({ key: k, label: k, items: groups[k] }))
 })
 </script>

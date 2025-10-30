@@ -301,15 +301,15 @@ onMounted(async () => {
     // Fetch notifications and connect WebSocket
     await notificationStore.fetchNotifications()
     notificationStore.connectWebSocket()
-    
+
     // Fetch unread count
     await chatStore.fetchUnreadCount()
-    
+
     // Auto-connect WebSocket nếu chưa connect
     if (!chatStore.wsConnected && !chatStore.wsConnecting) {
       await chatStore.connectWebSocket()
     }
-    
+
     // Fallback: Polling unread count mỗi 5s nếu WebSocket fail
     setInterval(async () => {
       if (!chatStore.wsConnected) {
@@ -369,7 +369,10 @@ onMounted(async () => {
     border-color: rgb(var(--gray-2));
     color: rgb(var(--gray-8));
     font-size: 16px;
-    transition: background-color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease,
+      border-color 0.15s ease;
   }
 
   .nav-btn:hover,

@@ -304,8 +304,8 @@ const useChatStore = defineStore('chat', {
         const token = getToken()
         const response = await fetch('http://localhost:8080/api/presence/online-users', {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         })
         const userIds: number[] = await response.json()
         this.onlineUsers = new Set(userIds)

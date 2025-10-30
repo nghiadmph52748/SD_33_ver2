@@ -1,9 +1,5 @@
 <template>
-  <div 
-    class="message-wrapper" 
-    :class="{ 'sent': isSent, 'received': !isSent }"
-    :style="{ justifyContent: isSent ? 'flex-end' : 'flex-start' }"
-  >
+  <div class="message-wrapper" :class="{ sent: isSent, received: !isSent }" :style="{ justifyContent: isSent ? 'flex-end' : 'flex-start' }">
     <div class="message-item">
       <!-- Avatar (chỉ hiển thị cho tin nhắn nhận) -->
       <a-avatar v-if="!isSent" :size="28" class="message-avatar">
@@ -12,25 +8,25 @@
 
       <!-- Message bubble -->
       <div class="message-bubble">
-      <!-- Sender name (chỉ hiện cho tin nhắn nhận) -->
-      <div v-if="!isSent && showSenderName" class="message-sender">
-        {{ message.senderName }}
-      </div>
+        <!-- Sender name (chỉ hiện cho tin nhắn nhận) -->
+        <div v-if="!isSent && showSenderName" class="message-sender">
+          {{ message.senderName }}
+        </div>
 
-      <!-- Content -->
-      <div class="message-content">
-        {{ message.content }}
-      </div>
+        <!-- Content -->
+        <div class="message-content">
+          {{ message.content }}
+        </div>
 
-      <!-- Timestamp and status -->
-      <div class="message-meta">
-        <span class="message-time">{{ formatTime(message.sentAt) }}</span>
-        <!-- Read status (chỉ hiện cho tin nhắn gửi) -->
-        <span v-if="isSent" class="message-status">
-          <icon-check-circle-fill v-if="message.isRead" class="read-icon" />
-          <icon-check-circle v-else class="sent-icon" />
-        </span>
-      </div>
+        <!-- Timestamp and status -->
+        <div class="message-meta">
+          <span class="message-time">{{ formatTime(message.sentAt) }}</span>
+          <!-- Read status (chỉ hiện cho tin nhắn gửi) -->
+          <span v-if="isSent" class="message-status">
+            <icon-check-circle-fill v-if="message.isRead" class="read-icon" />
+            <icon-check-circle v-else class="sent-icon" />
+          </span>
+        </div>
       </div>
     </div>
   </div>

@@ -19,22 +19,31 @@ class ChatResponse(BaseModel):
     message: str
     sources: str = ""
     query_type: str = ""
+    data_source: str = ""  # Nguồn dữ liệu
+    follow_up_suggestions: list[str] = []  # Gợi ý câu hỏi tiếp theo
+    data_context: dict = {}  # Ngữ cảnh: time_range, channel, etc.
 
 # FINE-TUNED SYSTEM PROMPT for DeepSeek-R1
 SYSTEM_PROMPT = """
 Bạn là AI Business Analyst của GearUp - hệ thống quản lý cửa hàng giày thể thao.
 
+**CRITICAL LANGUAGE RULE:**
+- YOU MUST OUTPUT 100% IN VIETNAMESE (TIẾNG VIỆT) ONLY
+- ABSOLUTELY NO Chinese characters (汉字/漢字) allowed in output
+- ONLY use Vietnamese vocabulary and grammar
+- If you don't know Vietnamese word, use English instead (NOT Chinese)
+
 **ROLE & CONTEXT:**
 - Phân tích dữ liệu kinh doanh thực tế từ database
 - Target: Manager/Staff cần insights nhanh để ra quyết định
-- Luôn trả lời bằng tiếng Việt, ngắn gọn, chính xác
+- Luôn trả lời bằng tiếng Việt thuần túy, ngắn gọn, chính xác
 
 **OUTPUT RULES:**
 1. **Format bắt buộc:**
-   - Tiêu đề: Emoji + câu ngắn (< 10 từ)
+   - Tiêu đề: Emoji + câu ngắn (< 10 từ) BẰNG TIẾNG VIỆT
    - Data ≥ 2 items → PHẢI dùng bảng Markdown
    - Số liệu: format dấu phẩy (15,500,000 VNĐ, 1,234 đơn)
-   - Kết thúc: 1 câu insight/action (bắt đầu bằng "→")
+   - Kết thúc: 1 câu insight/action (bắt đầu bằng "→") BẰNG TIẾNG VIỆT
 
 2. **Style:**
    - Chuyên nghiệp nhưng dễ hiểu
@@ -45,7 +54,7 @@ Bạn là AI Business Analyst của GearUp - hệ thống quản lý cửa hàng
 3. **Constraints:**
    - Chỉ dùng dữ liệu được cung cấp (không bịa)
    - Không có data → "Không có dữ liệu trong hệ thống"
-   - Response tối đa 250 từ
+   - Response tối đa 250 từ TIẾNG VIỆT
    - Top lists: tối đa 5 items
 
 **CAPABILITIES:**
@@ -97,6 +106,73 @@ def detect_intent(message: str) -> str:
         return "customers"
     else:
         return "general"
+
+def get_data_source_info(intent: str) -> str:
+    """Get data source information for each intent"""
+    sources = {
+        "top_products": "Dữ liệu bán hàng 30 ngày gần nhất",
+        "revenue": "Dữ liệu doanh thu và đơn hàng 30 ngày gần nhất",
+        "low_stock": "Dữ liệu tồn kho thời gian thực",
+        "order_status": "Dữ liệu đơn hàng hiện tại",
+        "customers_detail": "Dữ liệu khách hàng toàn hệ thống",
+        "discounts": "Dữ liệu campaign đang hoạt động",
+        "employees": "Dữ liệu hiệu suất nhân viên",
+        "products_color": "Dữ liệu bán hàng theo màu sắc",
+        "products_size": "Dữ liệu bán hàng theo size",
+        "channel_dist": "Dữ liệu kênh bán hàng (Online vs POS)",
+        "create_voucher": "Hệ thống quản lý voucher",
+    }
+    return sources.get(intent, "Dữ liệu hệ thống GearUp")
+
+def get_follow_up_suggestions(intent: str) -> list[str]:
+    """Get follow-up question suggestions based on intent"""
+    suggestions = {
+        "top_products": [
+            "Sản phẩm nào bán chậm nhất?",
+            "So sánh doanh thu tháng này với tháng trước?",
+            "Tồn kho của các sản phẩm này còn bao nhiêu?"
+        ],
+        "revenue": [
+            "Khách hàng VIP chi tiêu nhiều nhất?",
+            "Phân tích theo kênh bán hàng?",
+            "Nhân viên nào bán hàng tốt nhất?"
+        ],
+        "low_stock": [
+            "Sản phẩm nào bán chạy nhất cần nhập thêm?",
+            "Doanh thu của các sản phẩm sắp hết?",
+            "Tạo mã giảm giá để xả hàng tồn kho?"
+        ],
+        "order_status": [
+            "Đơn hàng nào đang chờ xác nhận?",
+            "Doanh thu từ đơn đã hoàn thành?",
+            "Nhân viên nào xử lý nhiều đơn nhất?"
+        ],
+        "customers_detail": [
+            "Sản phẩm nào họ mua nhiều nhất?",
+            "Xu hướng mua hàng theo tháng?",
+            "Tạo voucher cho khách VIP?"
+        ],
+        "discounts": [
+            "Hiệu quả của các đợt giảm giá?",
+            "Tạo mã giảm giá mới?",
+            "Sản phẩm nào cần khuyến mãi?"
+        ],
+        "employees": [
+            "Tỷ lệ chuyển đổi của từng nhân viên?",
+            "Kênh bán hàng nào nhân viên hoạt động nhiều?",
+            "So sánh hiệu suất theo tháng?"
+        ],
+        "channel_dist": [
+            "Sản phẩm bán chạy ở mỗi kênh?",
+            "Nhân viên nào bán online tốt nhất?",
+            "Xu hướng theo thời gian?"
+        ],
+    }
+    return suggestions.get(intent, [
+        "Top sản phẩm bán chạy?",
+        "Doanh thu tháng này?",
+        "Tồn kho sắp hết?"
+    ])
 
 def query_database(intent: str, message: str) -> str:
     """Query database based on intent"""
@@ -378,15 +454,22 @@ async def chat(request: ChatRequest):
         response = lm_client.chat(
             messages=messages,
             temperature=0.3,
-            max_tokens=500  # Tăng lên để response đầy đủ
+            max_tokens=2000  # Increased for thinking mode + full response
         )
         
         ai_message = response.choices[0].message.content
         
         return ChatResponse(
             message=ai_message,
-            sources='',
-            query_type=intent
+            sources=get_data_source_info(intent),
+            query_type=intent,
+            data_source=get_data_source_info(intent),
+            follow_up_suggestions=get_follow_up_suggestions(intent),
+            data_context={
+                "time_range": "30_days",
+                "channel": "all",
+                "timestamp": datetime.now().isoformat()
+            }
         )
     
     except Exception as e:
@@ -413,14 +496,24 @@ async def chat_stream(request: ChatRequest):
         # 4. Stream generator function
         async def generate():
             try:
-                # Send initial metadata
-                yield f"data: {json.dumps({'type': 'start', 'intent': intent})}\n\n"
+                # Send initial metadata with data source and follow-up
+                metadata = {
+                    'type': 'start',
+                    'intent': intent,
+                    'data_source': get_data_source_info(intent),
+                    'follow_up_suggestions': get_follow_up_suggestions(intent),
+                    'data_context': {
+                        'time_range': '30_days',
+                        'channel': 'all'
+                    }
+                }
+                yield f"data: {json.dumps(metadata)}\n\n"
                 
                 # Call LM Studio with streaming enabled
                 stream = lm_client.chat(
                     messages=messages,
                     temperature=0.3,
-                    max_tokens=500,
+                    max_tokens=2000,  # Increased for thinking mode + final answer
                     stream=True
                 )
                 

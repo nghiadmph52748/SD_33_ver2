@@ -13,9 +13,7 @@
               <icon-check-circle-fill />
               Đang hoạt động
             </span>
-            <span v-else class="status-offline">
-              Không hoạt động
-            </span>
+            <span v-else class="status-offline">Không hoạt động</span>
           </div>
         </div>
         <div class="header-actions">

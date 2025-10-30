@@ -57,7 +57,7 @@ export async function chatWithAI(message: string): Promise<ChatResponse> {
  */
 export async function chatWithAIStream(
   message: string,
-  onChunk: (text: string) => void,
+  onChunk: (text: string, metadata?: any) => void,
   onComplete: () => void,
   onError: (error: string) => void
 ): Promise<void> {
@@ -67,11 +67,11 @@ export async function chatWithAIStream(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
+        Authorization: token ? `Bearer ${token}` : '',
       },
       body: JSON.stringify({ message, context: '' }),
     })
-    
+
     if (!response.ok) {
       const errorText = await response.text()
       console.error('[AI Stream] HTTP error:', response.status, errorText)
@@ -87,14 +87,14 @@ export async function chatWithAIStream(
 
     let buffer = ''
     let hasCompleted = false
-    
+
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
       const chunk = decoder.decode(value, { stream: true })
       buffer += chunk
-      
+
       // Process complete lines
       const lines = buffer.split('\n')
       buffer = lines.pop() || '' // Keep incomplete line in buffer
@@ -105,10 +105,13 @@ export async function chatWithAIStream(
           try {
             const jsonStr = line.substring(5).trim() // Remove "data:" prefix
             if (!jsonStr) continue
-            
+
             const data = JSON.parse(jsonStr)
-            
-            if (data.type === 'content') {
+
+            if (data.type === 'start') {
+              // Send metadata from start event
+              onChunk('', data)
+            } else if (data.type === 'content') {
               onChunk(data.content)
             } else if (data.type === 'end') {
               hasCompleted = true

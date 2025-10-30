@@ -1,13 +1,13 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import useNotificationStore from '../notification'
 import * as messageApi from '@/api/message'
 import type { MessageRecord } from '@/api/message'
+import useNotificationStore from '../notification'
 
 // Mock the API
 vi.mock('@/api/message')
 vi.mock('@/utils/auth', () => ({
-  getToken: vi.fn(() => 'mock-token')
+  getToken: vi.fn(() => 'mock-token'),
 }))
 
 // Mock WebSocket
@@ -16,12 +16,12 @@ vi.mock('@stomp/stompjs', () => ({
     activate: vi.fn(),
     deactivate: vi.fn(),
     subscribe: vi.fn(),
-    publish: vi.fn()
-  }))
+    publish: vi.fn(),
+  })),
 }))
 
 vi.mock('sockjs-client', () => ({
-  default: vi.fn()
+  default: vi.fn(),
 }))
 
 describe('Notification Store', () => {
@@ -33,7 +33,7 @@ describe('Notification Store', () => {
   describe('State', () => {
     it('should have initial state', () => {
       const store = useNotificationStore()
-      
+
       expect(store.messages).toEqual([])
       expect(store.loading).toBe(false)
       expect(store.unreadCount).toBe(0)
@@ -46,7 +46,7 @@ describe('Notification Store', () => {
   describe('Getters', () => {
     it('should filter messages by type', () => {
       const store = useNotificationStore()
-      
+
       store.messages = [
         { id: 1, type: 'message', status: 0 } as MessageRecord,
         { id: 2, type: 'notice', status: 0 } as MessageRecord,
@@ -60,7 +60,7 @@ describe('Notification Store', () => {
 
     it('should filter unread messages by type', () => {
       const store = useNotificationStore()
-      
+
       store.messages = [
         { id: 1, type: 'message', status: 0 } as MessageRecord,
         { id: 2, type: 'message', status: 1 } as MessageRecord,
@@ -74,7 +74,7 @@ describe('Notification Store', () => {
 
     it('should calculate total unread count', () => {
       const store = useNotificationStore()
-      
+
       store.messages = [
         { id: 1, type: 'message', status: 0 } as MessageRecord,
         { id: 2, type: 'notice', status: 0 } as MessageRecord,
@@ -86,7 +86,7 @@ describe('Notification Store', () => {
 
     it('should calculate unread count by type', () => {
       const store = useNotificationStore()
-      
+
       store.messages = [
         { id: 1, type: 'message', status: 0 } as MessageRecord,
         { id: 2, type: 'message', status: 0 } as MessageRecord,
@@ -127,9 +127,7 @@ describe('Notification Store', () => {
       })
 
       it('should handle fetch error gracefully', async () => {
-        vi.mocked(messageApi.queryMessageList).mockRejectedValue(
-          new Error('Network error')
-        )
+        vi.mocked(messageApi.queryMessageList).mockRejectedValue(new Error('Network error'))
 
         const store = useNotificationStore()
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -138,7 +136,7 @@ describe('Notification Store', () => {
 
         expect(store.loading).toBe(false)
         expect(consoleSpy).toHaveBeenCalled()
-        
+
         consoleSpy.mockRestore()
       })
 
@@ -182,15 +180,13 @@ describe('Notification Store', () => {
       })
 
       it('should handle mark as read error', async () => {
-        vi.mocked(messageApi.setMessageStatus).mockRejectedValue(
-          new Error('API error')
-        )
+        vi.mocked(messageApi.setMessageStatus).mockRejectedValue(new Error('API error'))
 
         const store = useNotificationStore()
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
         await expect(store.markAsRead([1])).rejects.toThrow()
-        
+
         consoleSpy.mockRestore()
       })
     })
@@ -215,9 +211,7 @@ describe('Notification Store', () => {
 
       it('should do nothing if no unread notifications', async () => {
         const store = useNotificationStore()
-        store.messages = [
-          { id: 1, status: 1 } as MessageRecord,
-        ]
+        store.messages = [{ id: 1, status: 1 } as MessageRecord]
 
         await store.markAllAsRead()
 
@@ -228,10 +222,7 @@ describe('Notification Store', () => {
     describe('clearAll', () => {
       it('should clear all notifications', () => {
         const store = useNotificationStore()
-        store.messages = [
-          { id: 1, status: 0 } as MessageRecord,
-          { id: 2, status: 1 } as MessageRecord,
-        ]
+        store.messages = [{ id: 1, status: 0 } as MessageRecord, { id: 2, status: 1 } as MessageRecord]
         store.unreadCount = 1
 
         store.clearAll()
@@ -244,9 +235,7 @@ describe('Notification Store', () => {
     describe('addNotification', () => {
       it('should add new notification to beginning', () => {
         const store = useNotificationStore()
-        store.messages = [
-          { id: 1, status: 0 } as MessageRecord,
-        ]
+        store.messages = [{ id: 1, status: 0 } as MessageRecord]
 
         const newNotification: MessageRecord = {
           id: 2,

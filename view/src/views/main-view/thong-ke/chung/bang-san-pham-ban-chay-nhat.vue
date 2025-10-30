@@ -12,7 +12,15 @@
         <div class="no-data-text">{{ $t('thongKe.topSellingTable.noData') }}</div>
         <div class="no-data-subtext">{{ $t('thongKe.topSellingTable.noDataSub') }}</div>
       </div>
-      <a-table v-else :columns="cot" :data="duLieu" :pagination="phanTrang" :scroll="{ x: 800 }" class="top-selling-table" :bordered="false">
+      <a-table
+        v-else
+        :columns="cot"
+        :data="duLieu"
+        :pagination="phanTrang"
+        :scroll="{ x: 800 }"
+        class="top-selling-table"
+        :bordered="false"
+      >
         <template #stt="{ record, rowIndex }">
           <div :class="['rank-badge', getRankClass(rowIndex)]">
             <span class="rank-number">{{ rowIndex + 1 }}</span>
@@ -74,7 +82,6 @@ const getRankClass = (index: number): string => {
   if (index === 2) return 'rank-bronze'
   return 'rank-default'
 }
-
 
 const cot = [
   {

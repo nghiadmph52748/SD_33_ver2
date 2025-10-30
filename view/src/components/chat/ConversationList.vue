@@ -33,11 +33,7 @@
               </template>
             </a-avatar>
             <!-- Online Status Indicator -->
-            <span 
-              v-if="isUserOnline(conversation)" 
-              class="online-status"
-              :class="{ 'status-online': isUserOnline(conversation) }"
-            />
+            <span v-if="isUserOnline(conversation)" class="online-status" :class="{ 'status-online': isUserOnline(conversation) }" />
           </div>
 
           <!-- Content -->
@@ -180,12 +176,12 @@ function getUnreadCount(conversation: Conversation): number {
  */
 function isLastMessageSeenByOther(conversation: Conversation): boolean {
   const currentUserId = userStore.id
-  
+
   // Chỉ hiển thị "seen" nếu tin nhắn cuối là của mình
   if (conversation.lastSenderId !== currentUserId) {
     return false
   }
-  
+
   // Kiểm tra người kia có unread count = 0 không
   // Nếu currentUserId = nhanVien1, kiểm tra unreadCountNv2
   // Nếu currentUserId = nhanVien2, kiểm tra unreadCountNv1
@@ -195,7 +191,7 @@ function isLastMessageSeenByOther(conversation: Conversation): boolean {
   if (currentUserId === conversation.nhanVien2Id) {
     return conversation.unreadCountNv1 === 0
   }
-  
+
   return false
 }
 
@@ -205,12 +201,10 @@ function isLastMessageSeenByOther(conversation: Conversation): boolean {
  */
 function isUserOnline(conversation: Conversation): boolean {
   const currentUserId = userStore.id
-  
+
   // Xác định user còn lại (không phải mình)
-  const otherUserId = currentUserId === conversation.nhanVien1Id 
-    ? conversation.nhanVien2Id 
-    : conversation.nhanVien1Id
-  
+  const otherUserId = currentUserId === conversation.nhanVien1Id ? conversation.nhanVien2Id : conversation.nhanVien1Id
+
   // Check từ online users set (WebSocket presence tracking)
   return chatStore.onlineUsers.has(otherUserId)
 }
@@ -220,18 +214,18 @@ function isUserOnline(conversation: Conversation): boolean {
  */
 async function handleSelectConversation(conversation: Conversation) {
   chatStore.setActiveConversation(conversation.id)
-  
+
   // Nếu có tin nhắn chưa đọc, tự động mark as read
   if (hasUnread(conversation)) {
     const currentUserId = userStore.id
     let otherUserId: number | null = null
-    
+
     if (currentUserId === conversation.nhanVien1Id) {
       otherUserId = conversation.nhanVien2Id
     } else if (currentUserId === conversation.nhanVien2Id) {
       otherUserId = conversation.nhanVien1Id
     }
-    
+
     if (otherUserId) {
       // Gọi mark as read ngay lập tức
       await chatStore.markAsRead(otherUserId)
@@ -247,9 +241,7 @@ async function handleNewChat(userId: number) {
   try {
     // Kiểm tra xem đã có conversation chưa
     const existingConv = (chatStore.conversations || []).find(
-      (c) =>
-        (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
-        (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+      (c) => (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) || (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
     )
 
     if (existingConv) {
@@ -268,14 +260,12 @@ async function handleNewChat(userId: number) {
       console.log('🔄 Fetching conversation...')
       // Lấy conversation vừa tạo qua API
       await chatStore.fetchConversations()
-      
+
       // Mở conversation
       const newConv = (chatStore.conversations || []).find(
-        (c) =>
-          (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
-          (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+        (c) => (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) || (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
       )
-      
+
       if (newConv) {
         console.log('✅ Conversation found, opening:', newConv)
         chatStore.setActiveConversation(newConv.id)
@@ -463,7 +453,8 @@ async function handleNewChat(userId: number) {
 
 // Pulse animation for online status
 @keyframes pulse-online {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }

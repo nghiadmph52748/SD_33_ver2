@@ -87,12 +87,12 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   // Light mode gradient
   body:not([arco-theme='dark']) & {
     background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%);
   }
-  
+
   // Dark mode gradient
   body[arco-theme='dark'] & {
     background: linear-gradient(135deg, #1a1d2e 0%, #16181d 100%);
@@ -110,17 +110,17 @@ export default defineComponent({
   position: relative;
   overflow: hidden;
   margin: 40px 0;
-  
+
   // Dark mode shadow
   body[arco-theme='dark'] & {
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
   }
-  
+
   @media (max-width: 900px) {
     width: 98vw;
     min-height: unset;
   }
-  
+
   .content {
     border-radius: 18px;
     position: relative;
@@ -131,7 +131,7 @@ export default defineComponent({
     justify-content: center;
     padding: 40px 0;
     background: var(--color-bg-2);
-    
+
     @media (max-width: 900px) {
       padding: 24px 0;
     }
@@ -193,7 +193,7 @@ export default defineComponent({
   border-radius: 24px;
   box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(10px);
-  
+
   &-text {
     margin-left: 8px;
     color: rgb(var(--primary-6));
@@ -201,12 +201,12 @@ export default defineComponent({
     font-weight: bold;
     letter-spacing: 1px;
   }
-  
+
   img {
     height: 32px;
     width: 32px;
   }
-  
+
   @media (max-width: 900px) {
     margin: 16px auto;
     justify-content: center;

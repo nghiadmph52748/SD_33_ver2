@@ -3,7 +3,7 @@
     <a-skeleton v-if="notificationStore.loading" :animation="true">
       <a-skeleton-line :rows="3" />
     </a-skeleton>
-    
+
     <div v-else-if="latestNotifications.length > 0" class="notifications-list">
       <div
         v-for="notification in latestNotifications"
@@ -26,9 +26,9 @@
           <div class="content">{{ notification.content }}</div>
         </div>
       </div>
-      
+
       <a-divider />
-      
+
       <div class="view-all">
         <a-link @click="viewAllNotifications">
           {{ $t('userInfo.viewAll') || 'Xem tất cả' }}
@@ -36,7 +36,7 @@
         </a-link>
       </div>
     </div>
-    
+
     <a-result v-else status="404">
       <template #subtitle>
         {{ $t('userInfo.nodata') }}
@@ -64,16 +64,16 @@ const formatTime = (time: string) => {
   const date = new Date(time)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
-  
+
   if (minutes < 1) return 'Vừa xong'
   if (minutes < 60) return `${minutes} phút trước`
   if (hours < 24) return `${hours} giờ trước`
   if (days < 7) return `${days} ngày trước`
-  
+
   return date.toLocaleDateString('vi-VN')
 }
 
@@ -82,7 +82,7 @@ const handleNotificationClick = async (notification: MessageRecord) => {
   if (notification.status === 0) {
     await notificationStore.markAsRead([notification.id])
   }
-  
+
   // Navigate based on notification type
   // You can customize this based on your routing needs
 }

@@ -16,7 +16,9 @@
       </div>
     </div>
     <div class="the-details">
-      <span class="the-detail-text">{{ $t('thongKe.card.productsSold') }}: {{ sanPhamDaBan }} | {{ $t('thongKe.card.ordersCount') }}: {{ soDonHang }}</span>
+      <span class="the-detail-text">
+        {{ $t('thongKe.card.productsSold') }}: {{ sanPhamDaBan }} | {{ $t('thongKe.card.ordersCount') }}: {{ soDonHang }}
+      </span>
     </div>
   </a-card>
 </template>

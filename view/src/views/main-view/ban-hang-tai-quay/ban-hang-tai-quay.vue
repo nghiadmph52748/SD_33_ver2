@@ -925,7 +925,10 @@ import {
   createHoaDonChiTiet,
   createHinhThucThanhToan,
   createThongTinHoaDon,
-  BanHangTaiQuayRequest, HoaDonChiTietApiModel, HinhThucThanhToanApiModel, ThongTinHoaDonApiModel,
+  BanHangTaiQuayRequest,
+  HoaDonChiTietApiModel,
+  HinhThucThanhToanApiModel,
+  ThongTinHoaDonApiModel,
 } from '@/api/hoa-don'
 import { Message } from '@arco-design/web-vue'
 import { Html5Qrcode, Html5QrcodeSupportedFormats, Html5QrcodeScannerState } from 'html5-qrcode'

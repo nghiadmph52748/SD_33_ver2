@@ -5,10 +5,7 @@
         <div class="chatbot-header">
           <span class="title">🤖 Trợ Lý AI</span>
           <a-space>
-            <a-badge
-              :status="isConnected ? 'success' : 'error'"
-              :text="isConnected ? 'Online' : 'Offline'"
-            />
+            <a-badge :status="isConnected ? 'success' : 'error'" :text="isConnected ? 'Online' : 'Offline'" />
           </a-space>
         </div>
       </template>
@@ -20,29 +17,96 @@
           <div class="empty-content">
             <div class="empty-icon">💬</div>
             <div class="empty-title">Chào mừng đến với GearUp AI!</div>
-            <div class="empty-description">
-              Hãy bắt đầu cuộc trò chuyện bằng cách đặt câu hỏi hoặc sử dụng các gợi ý bên dưới.
-            </div>
+            <div class="empty-description">Hãy bắt đầu cuộc trò chuyện bằng cách đặt câu hỏi hoặc sử dụng các gợi ý bên dưới.</div>
           </div>
         </div>
 
-        <div
-          v-for="msg in messages"
-          :key="msg.id"
-          :class="['message', msg.role]"
-        >
+        <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role]">
           <div class="message-wrapper">
             <div class="avatar">
               {{ msg.role === 'user' ? '👤' : '🤖' }}
             </div>
             <div class="content">
-              <div v-if="msg.isThinking" class="text thinking-mode">
-                Đang suy nghĩ...<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <!-- Thinking mode - collapsible with clean design -->
+              <div v-if="msg.thinkingContent" class="thinking-block">
+                <a-collapse :default-active-key="['1']" :bordered="false">
+                  <a-collapse-item key="1">
+                    <template #header>
+                      <div class="thinking-header-wrapper">
+                        <span class="thinking-label">Quá trình phân tích</span>
+                        <span v-if="msg.isThinking" class="thinking-status">● Đang xử lý...</span>
+                      </div>
+                    </template>
+                    <div class="thinking-content" :ref="el => msg.isThinking && setThinkingRef(el, msg.id)">
+                      <div v-html="renderMarkdown(msg.thinkingContent)"></div>
+                      <div v-if="msg.isThinking" class="streaming-cursor">▊</div>
+                    </div>
+                  </a-collapse-item>
+                </a-collapse>
               </div>
-              <div v-else-if="msg.content" class="text" v-html="renderMarkdown(msg.content)"></div>
-              <div v-else-if="msg.role === 'assistant'" class="text typing-indicator">
-                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+
+              <!-- Initial thinking block - show collapsed even before content arrives -->
+              <div v-else-if="msg.role === 'assistant' && !msg.thinkingContent && !msg.content" class="thinking-block">
+                <a-collapse :bordered="false">
+                  <a-collapse-item key="1">
+                    <template #header>
+                      <div class="thinking-header-wrapper">
+                        <span class="thinking-label">Quá trình phân tích</span>
+                        <span class="thinking-status">● Đang xử lý...</span>
+                      </div>
+                    </template>
+                    <div class="thinking-content thinking-loading">
+                      <div class="loading-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                      </div>
+                    </div>
+                  </a-collapse-item>
+                </a-collapse>
               </div>
+
+              <!-- Content display - ALWAYS show if has content -->
+              <div v-if="msg.content" class="text" v-html="renderMarkdown(msg.content)"></div>
+
+              <!-- Data Source & Follow-up Suggestions (chỉ cho assistant) -->
+              <div v-if="msg.role === 'assistant' && msg.content" class="message-metadata">
+                <!-- Nguồn dữ liệu -->
+                <div v-if="msg.dataSource" class="data-source">
+                  <span class="metadata-icon">📊</span>
+                  <span class="metadata-label">Nguồn:</span>
+                  <span class="metadata-value">{{ msg.dataSource }}</span>
+                </div>
+
+                <!-- Gợi ý tiếp theo -->
+                <div v-if="msg.followUpSuggestions && msg.followUpSuggestions.length > 0" class="follow-up-suggestions">
+                  <div class="suggestions-label">💡 Câu hỏi tiếp theo:</div>
+                  <a-space wrap :size="6" class="suggestions-buttons">
+                    <a-button
+                      v-for="(suggestion, idx) in msg.followUpSuggestions"
+                      :key="idx"
+                      size="mini"
+                      type="text"
+                      :disabled="isProcessing"
+                      @click="askQuestion(suggestion)"
+                      class="suggestion-btn"
+                    >
+                      {{ suggestion }}
+                    </a-button>
+                  </a-space>
+                </div>
+              </div>
+
+              <!-- Typing indicator - fallback -->
+              <div
+                v-else-if="msg.role === 'assistant' && !msg.isThinking && !msg.processingStatus && !msg.content"
+                class="text typing-indicator"
+              >
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+
               <div class="timestamp">{{ msg.timestamp }}</div>
             </div>
           </div>
@@ -53,13 +117,12 @@
           <div class="message-wrapper">
             <div class="avatar">🤖</div>
             <div class="content">
-              <a-spin :size="16" /> Đang nhập...
+              <a-spin :size="16" />
+              Đang nhập...
             </div>
           </div>
         </div>
       </div>
-
-      
 
       <!-- Quick Actions -->
       <div class="quick-actions" :style="quickActionsStyle">
@@ -70,6 +133,7 @@
             :key="action.id"
             size="small"
             type="outline"
+            :disabled="isProcessing"
             @click="askQuestion(action.question)"
           >
             {{ action.icon }} {{ action.label }}
@@ -82,8 +146,8 @@
         <a-input-search
           v-model="input"
           placeholder="Hỏi AI bất cứ điều gì về hệ thống..."
-          :loading="loading"
-          :disabled="!isConnected"
+          :loading="loading || isProcessing"
+          :disabled="!isConnected || isProcessing"
           allow-clear
           search-button
           @search="handleSearch"
@@ -92,7 +156,7 @@
           <template #button-icon>
             <icon-send />
           </template>
-          <template #button-default>Gửi</template>
+          <template #button-default>{{ isProcessing ? 'Đang xử lý...' : 'Gửi' }}</template>
         </a-input-search>
       </div>
     </a-card>
@@ -113,6 +177,11 @@ interface ChatMessage {
   sources?: string
   timestamp: string
   isThinking?: boolean
+  thinkingContent?: string // Nội dung reasoning bên trong <think> tags
+  dataSource?: string // Nguồn dữ liệu
+  followUpSuggestions?: string[] // Gợi ý câu hỏi tiếp theo
+  queryType?: string // Loại truy vấn
+  processingStatus?: string // Trạng thái xử lý: 'querying' | 'analyzing' | 'ready'
 }
 
 interface QuickAction {
@@ -129,11 +198,14 @@ const shouldHealthCheck = props.enableHealthCheck === true
 
 // Emits
 const emit = defineEmits<{
-  (e: 'session-state', payload: {
-    sessions: Record<string, ChatMessage[]>
-    currentSessionId: string
-    sessionNames: Record<string, string>
-  }): void
+  (
+    e: 'session-state',
+    payload: {
+      sessions: Record<string, ChatMessage[]>
+      currentSessionId: string
+      sessionNames: Record<string, string>
+    }
+  ): void
 }>()
 
 // State
@@ -143,12 +215,13 @@ const messages = ref<ChatMessage[]>([
     role: 'assistant',
     content:
       'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? 😊',
-    timestamp: new Date().toLocaleTimeString('vi-VN')
-  }
+    timestamp: new Date().toLocaleTimeString('vi-VN'),
+  },
 ])
 
 const input = ref('')
 const loading = ref(false)
+const isProcessing = ref(false) // Prevent concurrent requests
 const isConnected = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
 const isDark = ref(false)
@@ -205,21 +278,21 @@ function saveHistory() {
     if (currentSessionId.value) {
       chatSessions.value[currentSessionId.value] = [...messages.value]
     }
-    
+
     // Save all sessions
     localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(chatSessions.value))
-    
+
     // Save session names
     localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(sessionNames.value))
-    
+
     // Also save current session as active (for backward compatibility)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.value))
-    
+
     // Notify parent about session state changes
     emit('session-state', {
       sessions: chatSessions.value,
       currentSessionId: currentSessionId.value,
-      sessionNames: sessionNames.value
+      sessionNames: sessionNames.value,
     })
   } catch {
     // ignore storage errors
@@ -236,7 +309,7 @@ function loadHistory() {
         chatSessions.value = parsed
       }
     }
-    
+
     // Load session names
     const namesRaw = localStorage.getItem(SESSION_NAMES_KEY)
     if (namesRaw) {
@@ -245,7 +318,7 @@ function loadHistory() {
         sessionNames.value = parsed
       }
     }
-    
+
     // If we have existing sessions, use the most recent one
     if (Object.keys(chatSessions.value).length > 0) {
       // Get the most recent session (highest timestamp)
@@ -255,7 +328,7 @@ function loadHistory() {
         const timestampB = parseInt(b.split('_')[1], 10)
         return timestampB - timestampA // Most recent first
       })
-      
+
       const [mostRecentSessionId] = sortedSessions
       currentSessionId.value = mostRecentSessionId
       messages.value = [...chatSessions.value[currentSessionId.value]]
@@ -273,7 +346,7 @@ function loadHistory() {
           sessionNames.value[currentSessionId.value] = generateSessionName(parsed)
         }
       }
-      
+
       // If still no session, create new one
       if (!currentSessionId.value) {
         currentSessionId.value = generateSessionId()
@@ -288,59 +361,47 @@ function loadHistory() {
   emit('session-state', {
     sessions: chatSessions.value,
     currentSessionId: currentSessionId.value,
-    sessionNames: sessionNames.value
+    sessionNames: sessionNames.value,
   })
 }
 
 const quickActions: QuickAction[] = [
   {
-    id: 'top-products',
-    label: 'Top sản phẩm',
+    id: 'slow-products',
+    label: 'SP bán chậm tuần này',
     icon: '📊',
-    question: 'Sản phẩm nào bán chạy nhất?'
+    question: 'Top 5 sản phẩm bán chậm nhất tuần này?',
   },
   {
-    id: 'revenue',
-    label: 'Doanh thu',
+    id: 'revenue-compare',
+    label: 'So sánh DT tháng',
     icon: '💰',
-    question: 'Doanh thu tháng này thế nào?'
+    question: 'So sánh doanh thu tháng này với tháng trước?',
   },
   {
-    id: 'low-stock',
-    label: 'Tồn kho thấp',
+    id: 'low-stock-alert',
+    label: 'Cảnh báo tồn kho',
     icon: '⚠️',
-    question: 'Sản phẩm nào sắp hết hàng?'
+    question: 'Sản phẩm nào tồn kho dưới mức an toàn?',
   },
   {
-    id: 'order-status',
-    label: 'Trạng thái đơn',
+    id: 'pending-orders',
+    label: 'Đơn chờ xác nhận',
     icon: '📋',
-    question: 'Trạng thái đơn hàng thế nào?'
+    question: 'Bao nhiêu đơn hàng đang chờ xác nhận?',
   },
   {
-    id: 'top-customers',
-    label: 'Top khách hàng',
-    icon: '👥',
-    question: 'Khách hàng nào chi tiêu nhiều nhất?'
-  },
-  {
-    id: 'discounts',
-    label: 'Đợt giảm giá',
-    icon: '🎉',
-    question: 'Đợt giảm giá nào đang hoạt động?'
-  },
-  {
-    id: 'employees',
-    label: 'Nhân viên',
+    id: 'employee-performance',
+    label: 'Top NV hiệu suất cao',
     icon: '👨‍💼',
-    question: 'Nhân viên nào bán hàng tốt nhất?'
+    question: 'Top 3 nhân viên có tỷ lệ chuyển đổi cao nhất?',
   },
   {
-    id: 'channel',
-    label: 'Kênh bán hàng',
+    id: 'channel-compare',
+    label: 'So sánh kênh bán',
     icon: '🛒',
-    question: 'Bán online hay tại quầy nhiều hơn?'
-  }
+    question: 'So sánh hiệu suất kênh Web vs Tại quầy?',
+  },
 ]
 
 // Methods
@@ -348,7 +409,16 @@ function scrollToBottom() {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTo({
       top: messagesContainer.value.scrollHeight,
-      behavior: 'smooth'
+      behavior: 'smooth',
+    })
+  }
+}
+
+// Auto-scroll thinking content to bottom when streaming
+function setThinkingRef(el: any, msgId: number) {
+  if (el) {
+    nextTick(() => {
+      el.scrollTop = el.scrollHeight
     })
   }
 }
@@ -372,12 +442,20 @@ async function sendMessage(text: string = input.value) {
     return
   }
 
+  // Prevent concurrent requests
+  if (isProcessing.value) {
+    Message.warning('Đang xử lý câu hỏi trước, vui lòng đợi...')
+    return
+  }
+
+  isProcessing.value = true
+
   // Add user message
   const userMessage: ChatMessage = {
     id: Date.now(),
     role: 'user',
     content: text.trim(),
-    timestamp: new Date().toLocaleTimeString('vi-VN')
+    timestamp: new Date().toLocaleTimeString('vi-VN'),
   }
   messages.value.push(userMessage)
 
@@ -397,47 +475,87 @@ async function sendMessage(text: string = input.value) {
     id: aiMessageId,
     role: 'assistant',
     content: '',
-    timestamp: new Date().toLocaleTimeString('vi-VN')
+    timestamp: new Date().toLocaleTimeString('vi-VN'),
+    processingStatus: 'querying',
+    dataSource: '',
+    followUpSuggestions: [],
+    queryType: '',
   }
   messages.value.push(aiMessage)
-  
+
   // Turn off loading immediately after creating placeholder
   // The placeholder itself shows typing indicator
   loading.value = false
 
   try {
     let insideThinkTag = false
+    let thinkingTagClosed = false
     let fullContent = ''
-    
+    let thinkingContent = ''
+    let thinkingContentLive = '' // Live thinking content while streaming
+    let contentAfterThinking = ''
+
     // Use streaming API
     await chatWithAIStream(
       text,
       // onChunk - Append text as it arrives
-      (chunk: string) => {
-        
+      (chunk: string, metadata?: any) => {
         // Accumulate full content to detect <think> tags
         fullContent += chunk
-        
-        // Check for <think> tag opening/closing
-        if (fullContent.includes('<think>')) {
+
+        // Check for <think> tag opening
+        if (fullContent.includes('<think>') && !insideThinkTag && !thinkingTagClosed) {
           insideThinkTag = true
         }
-        if (fullContent.includes('</think>')) {
+
+        // Check for <think> tag closing
+        if (fullContent.includes('</think>') && insideThinkTag) {
           insideThinkTag = false
-          // Remove all thinking content
-          fullContent = fullContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+          thinkingTagClosed = true
+
+          // Extract final thinking content
+          const thinkMatch = fullContent.match(/<think>([\s\S]*?)<\/think>/)
+          if (thinkMatch) {
+            thinkingContent = thinkMatch[1].trim()
+          }
+
+          // Remove thinking tags from content
+          contentAfterThinking = fullContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+        } else if (thinkingTagClosed) {
+          // Continue accumulating content after thinking tags closed
+          contentAfterThinking = fullContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
         }
-        
-        const msgIndex = messages.value.findIndex(m => m.id === aiMessageId)
+
+        // Extract live thinking content while inside <think> tags
+        if (insideThinkTag) {
+          const liveMatch = fullContent.match(/<think>([\s\S]*?)$/)
+          if (liveMatch) {
+            thinkingContentLive = liveMatch[1]
+          }
+        }
+
+        const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
-          // Show thinking indicator when inside think tags
+          // Update metadata if provided (from 'start' event)
+          if (metadata) {
+            if (metadata.data_source) messages.value[msgIndex].dataSource = metadata.data_source
+            if (metadata.follow_up_suggestions) messages.value[msgIndex].followUpSuggestions = metadata.follow_up_suggestions
+            if (metadata.intent) messages.value[msgIndex].queryType = metadata.intent
+            messages.value[msgIndex].processingStatus = 'analyzing'
+          }
+
+          // Show thinking content while inside think tags (live update)
           if (insideThinkTag) {
             messages.value[msgIndex].isThinking = true
+            messages.value[msgIndex].thinkingContent = thinkingContentLive // Update live
             messages.value[msgIndex].content = ''
+            messages.value[msgIndex].processingStatus = 'analyzing'
           } else {
             // Show actual content when outside think tags
             messages.value[msgIndex].isThinking = false
-            messages.value[msgIndex].content = fullContent
+            messages.value[msgIndex].thinkingContent = thinkingContent // Final content
+            messages.value[msgIndex].content = contentAfterThinking || fullContent
+            messages.value[msgIndex].processingStatus = 'ready'
           }
           // Scroll while streaming
           nextTick(() => scrollToBottom())
@@ -446,31 +564,53 @@ async function sendMessage(text: string = input.value) {
       // onComplete
       () => {
         loading.value = false
+        isProcessing.value = false
         
+        // Force close thinking mode if stream ended while still thinking
+        const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
+        if (msgIndex !== -1) {
+          const msg = messages.value[msgIndex]
+          
+          // If still in thinking mode when stream ends, force finalize
+          if (msg.isThinking || insideThinkTag) {
+            msg.isThinking = false
+            
+            // Extract whatever thinking content we have
+            if (fullContent.includes('<think>')) {
+              const thinkMatch = fullContent.match(/<think>([\s\S]*?)(?:<\/think>|$)/)
+              if (thinkMatch) {
+                msg.thinkingContent = thinkMatch[1].trim()
+              }
+            }
+            
+            // Set content to whatever we have after removing think tags
+            msg.content = fullContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()
+            msg.processingStatus = 'ready'
+          }
+        }
+
         // Auto-generate session name after first user message
         const userMessages = messages.value.filter((msg) => msg.role === 'user' && msg.id !== 0)
         const currentName = sessionNames.value[currentSessionId.value]
-        if (
-          userMessages.length === 1 &&
-          (!currentName || currentName === 'Cuộc trò chuyện mới')
-        ) {
+        if (userMessages.length === 1 && (!currentName || currentName === 'Cuộc trò chuyện mới')) {
           const newName = generateSessionName(messages.value)
           sessionNames.value[currentSessionId.value] = newName
         }
 
         // Persist
         saveHistory()
-        
+
         // Final scroll
         nextTick(() => scrollToBottom())
       },
       // onError
       (error: string) => {
         loading.value = false
+        isProcessing.value = false
         Message.error(`Lỗi khi gửi tin nhắn: ${error}`)
-        
+
         // Update message with error
-        const msgIndex = messages.value.findIndex(m => m.id === aiMessageId)
+        const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
           messages.value[msgIndex].content = '❌ Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
         }
@@ -478,10 +618,11 @@ async function sendMessage(text: string = input.value) {
     )
   } catch (error: any) {
     loading.value = false
+    isProcessing.value = false
     Message.error(`Lỗi khi gửi tin nhắn: ${error.message}`)
-    
+
     // Update message with error
-    const msgIndex = messages.value.findIndex(m => m.id === aiMessageId)
+    const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
     if (msgIndex !== -1) {
       messages.value[msgIndex].content = '❌ Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
     }
@@ -504,11 +645,11 @@ function switchToSession(sessionId: string) {
     if (currentSessionId.value) {
       chatSessions.value[currentSessionId.value] = [...messages.value]
     }
-    
+
     // Switch to selected session
     currentSessionId.value = sessionId
     messages.value = [...chatSessions.value[sessionId]]
-    
+
     // Save and scroll
     saveHistory()
     nextTick(() => {
@@ -524,30 +665,31 @@ function createNewChat() {
   if (currentSessionId.value && messages.value.length > 1) {
     chatSessions.value[currentSessionId.value] = [...messages.value]
   }
-  
+
   // Create new session
   currentSessionId.value = generateSessionId()
   messages.value = [
     {
       id: 0,
       role: 'assistant',
-      content: 'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? 😊',
-      timestamp: new Date().toLocaleTimeString('vi-VN')
-    }
+      content:
+        'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? 😊',
+      timestamp: new Date().toLocaleTimeString('vi-VN'),
+    },
   ]
-  
+
   // Set default name for new session
   sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
-  
+
   // Save new session
   chatSessions.value[currentSessionId.value] = [...messages.value]
   saveHistory()
-  
+
   // Scroll to bottom
   nextTick(() => {
     scrollToBottom()
   })
-  
+
   Message.success('Đã tạo cuộc trò chuyện mới')
 }
 
@@ -556,23 +698,23 @@ function clearMessages() {
   chatSessions.value = {}
   sessionNames.value = {}
   currentSessionId.value = generateSessionId()
-  
+
   messages.value = [
     {
       id: 0,
       role: 'assistant',
       content: 'Đã xóa lịch sử chat. Tôi có thể giúp gì cho bạn? 🤖',
-      timestamp: new Date().toLocaleTimeString('vi-VN')
-    }
+      timestamp: new Date().toLocaleTimeString('vi-VN'),
+    },
   ]
-  
+
   // Set default name for new session
   sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
-  
+
   // Save cleared state
   chatSessions.value[currentSessionId.value] = [...messages.value]
   saveHistory()
-  
+
   // Scroll to bottom
   nextTick(() => {
     scrollToBottom()
@@ -588,12 +730,12 @@ onMounted(async () => {
   // Restore history first
   loadHistory()
   await nextTick()
-  
+
   // Scroll to bottom after loading history
   setTimeout(() => {
     scrollToBottom()
   }, 100)
-  
+
   if (shouldHealthCheck) {
     await checkConnection()
     // Check connection every 30 seconds only when enabled and tab visible
@@ -658,7 +800,7 @@ defineExpose({
   switchToSession,
   chatSessions,
   currentSessionId,
-  sessionNames
+  sessionNames,
 })
 </script>
 
@@ -667,7 +809,7 @@ defineExpose({
   height: 100%;
   display: flex;
   flex-direction: column;
-  
+
   .chatbot-card {
     height: 100%;
     min-height: 0;
@@ -701,12 +843,16 @@ defineExpose({
       font-size: 16px;
       font-weight: 600;
     }
+
+    :deep(.arco-switch) {
+      margin-right: 8px;
+    }
   }
 
   .messages-container {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 16px 84px; /* leave room for sticky input */
+    padding: 12px 16px 16px; /* Normal bottom padding */
     margin-bottom: 8px;
     /* Use Arco theme variables so it adapts to light/dark automatically */
     background: var(--color-bg-1) !important;
@@ -787,7 +933,9 @@ defineExpose({
       line-height: 1.7;
       white-space: normal;
 
-      h1, h2, h3 {
+      h1,
+      h2,
+      h3 {
         margin: 0 0 8px 0;
         font-weight: 600;
       }
@@ -799,7 +947,8 @@ defineExpose({
         border: 1px solid var(--color-border-2);
       }
 
-      th, td {
+      th,
+      td {
         border: 1px solid var(--color-border-2);
         padding: 8px 10px;
         text-align: left;
@@ -809,8 +958,9 @@ defineExpose({
         background: var(--color-fill-2);
         font-weight: 600;
       }
-      code, pre code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      code,
+      pre code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
       }
     }
 
@@ -872,11 +1022,12 @@ defineExpose({
   .input-container {
     position: sticky;
     bottom: 0;
-    background: var(--color-bg-1);
+    background: var(--color-bg-2);
     padding-top: 8px;
     padding-bottom: 8px;
     border-top: 1px solid var(--color-border-2);
     z-index: 1;
+    backdrop-filter: blur(8px);
     :deep(.arco-input-search) {
       .arco-input {
         border-radius: 20px 0 0 20px;
@@ -896,11 +1047,22 @@ defineExpose({
 
 /* Component-level dark mode using .is-dark to avoid global scoping issues */
 .ai-chatbot.is-dark {
+  .input-container {
+    background: rgba(18, 20, 26, 0.95);
+    border-top-color: #272b36;
+  }
+  
   .messages-container {
     background: linear-gradient(180deg, #0f1115 0%, #12141a 100%);
-    &::-webkit-scrollbar-track { background: #161922; }
-    &::-webkit-scrollbar-thumb { background: #2a2f3a; }
-    &::-webkit-scrollbar-thumb:hover { background: #3a4150; }
+    &::-webkit-scrollbar-track {
+      background: #161922;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #2a2f3a;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: #3a4150;
+    }
   }
   .message.assistant .content {
     background: #151823;
@@ -911,16 +1073,42 @@ defineExpose({
   .message.user .message-wrapper .content {
     box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
   }
-  .content .text table { border-color: #2b3040; }
-  .content .text th, .content .text td { border-color: #2b3040; }
-  .content .text th { background: #1b2030; color: #e6e9ef; }
-  .content .text code, .content .text pre code { background: #0f1420; color: #e6e9ef; }
-  .content .sources .sources-content { background: #141926; border-color: #2b3040; color: #cfd6e4; }
-  .content .timestamp { opacity: 0.7; }
-  .chat-history { background: #131722; }
-  .chat-history .chat-history-label { color: #9aa4b2; }
-  .quick-actions { background: #131722; }
-  .quick-actions .quick-actions-label { color: #9aa4b2; }
+  .content .text table {
+    border-color: #2b3040;
+  }
+  .content .text th,
+  .content .text td {
+    border-color: #2b3040;
+  }
+  .content .text th {
+    background: #1b2030;
+    color: #e6e9ef;
+  }
+  .content .text code,
+  .content .text pre code {
+    background: #0f1420;
+    color: #e6e9ef;
+  }
+  .content .sources .sources-content {
+    background: #141926;
+    border-color: #2b3040;
+    color: #cfd6e4;
+  }
+  .content .timestamp {
+    opacity: 0.7;
+  }
+  .chat-history {
+    background: #131722;
+  }
+  .chat-history .chat-history-label {
+    color: #9aa4b2;
+  }
+  .quick-actions {
+    background: #131722;
+  }
+  .quick-actions .quick-actions-label {
+    color: #9aa4b2;
+  }
 }
 
 /* Dark theme overrides for Arco (.arco-theme-dark on body/html)
@@ -933,13 +1121,19 @@ defineExpose({
 
 :deep(html.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-track,
 :deep(body.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-track,
-:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-track { background: #161922 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-track {
+  background: #161922 !important;
+}
 :deep(html.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb,
 :deep(body.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb,
-:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb { background: #2a2f3a !important; }
+:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb {
+  background: #2a2f3a !important;
+}
 :deep(html.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb:hover,
 :deep(body.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb:hover,
-:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb:hover { background: #3a4150 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .messages-container::-webkit-scrollbar-thumb:hover {
+  background: #3a4150 !important;
+}
 
 :deep(html.arco-theme-dark) .ai-chatbot .message.assistant .content,
 :deep(body.arco-theme-dark) .ai-chatbot .message.assistant .content,
@@ -958,43 +1152,67 @@ defineExpose({
 
 :deep(html.arco-theme-dark) .ai-chatbot .content .text table,
 :deep(body.arco-theme-dark) .ai-chatbot .content .text table,
-:deep(.arco-theme-dark) .ai-chatbot .content .text table { border-color: #2b3040 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .content .text table {
+  border-color: #2b3040 !important;
+}
 :deep(html.arco-theme-dark) .ai-chatbot .content .text th,
 :deep(body.arco-theme-dark) .ai-chatbot .content .text th,
 :deep(.arco-theme-dark) .ai-chatbot .content .text th,
 :deep(html.arco-theme-dark) .ai-chatbot .content .text td,
 :deep(body.arco-theme-dark) .ai-chatbot .content .text td,
-:deep(.arco-theme-dark) .ai-chatbot .content .text td { border-color: #2b3040 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .content .text td {
+  border-color: #2b3040 !important;
+}
 :deep(html.arco-theme-dark) .ai-chatbot .content .text th,
 :deep(body.arco-theme-dark) .ai-chatbot .content .text th,
-:deep(.arco-theme-dark) .ai-chatbot .content .text th { background: #1b2030 !important; color: #e6e9ef !important; }
+:deep(.arco-theme-dark) .ai-chatbot .content .text th {
+  background: #1b2030 !important;
+  color: #e6e9ef !important;
+}
 :deep(html.arco-theme-dark) .ai-chatbot .content .text code,
 :deep(body.arco-theme-dark) .ai-chatbot .content .text code,
 :deep(.arco-theme-dark) .ai-chatbot .content .text code,
 :deep(html.arco-theme-dark) .ai-chatbot .content .text pre code,
 :deep(body.arco-theme-dark) .ai-chatbot .content .text pre code,
-:deep(.arco-theme-dark) .ai-chatbot .content .text pre code { background: #0f1420 !important; color: #e6e9ef !important; }
+:deep(.arco-theme-dark) .ai-chatbot .content .text pre code {
+  background: #0f1420 !important;
+  color: #e6e9ef !important;
+}
 
 :deep(html.arco-theme-dark) .ai-chatbot .content .sources .sources-content,
 :deep(body.arco-theme-dark) .ai-chatbot .content .sources .sources-content,
-:deep(.arco-theme-dark) .ai-chatbot .content .sources .sources-content { background: #141926 !important; border-color: #2b3040 !important; color: #cfd6e4 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .content .sources .sources-content {
+  background: #141926 !important;
+  border-color: #2b3040 !important;
+  color: #cfd6e4 !important;
+}
 
 :deep(html.arco-theme-dark) .ai-chatbot .content .timestamp,
 :deep(body.arco-theme-dark) .ai-chatbot .content .timestamp,
-:deep(.arco-theme-dark) .ai-chatbot .content .timestamp { opacity: 0.7 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .content .timestamp {
+  opacity: 0.7 !important;
+}
 
 :deep(html.arco-theme-dark) .ai-chatbot .chat-history,
 :deep(body.arco-theme-dark) .ai-chatbot .chat-history,
-:deep(.arco-theme-dark) .ai-chatbot .chat-history { background: #131722 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .chat-history {
+  background: #131722 !important;
+}
 :deep(html.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label,
 :deep(body.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label,
-:deep(.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label { color: #9aa4b2 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label {
+  color: #9aa4b2 !important;
+}
 :deep(html.arco-theme-dark) .ai-chatbot .quick-actions,
 :deep(body.arco-theme-dark) .ai-chatbot .quick-actions,
-:deep(.arco-theme-dark) .ai-chatbot .quick-actions { background: #131722 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .quick-actions {
+  background: #131722 !important;
+}
 :deep(html.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label,
 :deep(body.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label,
-:deep(.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label { color: #9aa4b2 !important; }
+:deep(.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label {
+  color: #9aa4b2 !important;
+}
 
 @keyframes fadeIn {
   from {
@@ -1119,7 +1337,9 @@ defineExpose({
 }
 
 @keyframes typingDot {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
@@ -1127,5 +1347,344 @@ defineExpose({
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Thinking Block Styles - Collapsible Clean Design */
+.thinking-block {
+  margin-bottom: 12px;
+  
+  :deep(.arco-collapse) {
+    background: transparent;
+    border: none;
+  }
+  
+  :deep(.arco-collapse-item) {
+    background: linear-gradient(135deg, rgba(123, 97, 255, 0.06), rgba(22, 93, 255, 0.06));
+    border: 1px solid rgba(123, 97, 255, 0.2);
+    border-radius: 8px;
+  }
+  
+  :deep(.arco-collapse-item-header) {
+    padding: 10px 14px !important;
+    background: transparent;
+    display: flex !important;
+    align-items: center !important;
+    
+    &:hover {
+      background: rgba(123, 97, 255, 0.05);
+    }
+  }
+  
+  // Header wrapper - clean flex layout
+  .thinking-header-wrapper {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    margin-left: 20px; // Space from dropdown icon
+    
+    .thinking-label {
+      font-weight: 600;
+      color: var(--color-text-1);
+      font-size: 14px;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .thinking-status {
+      font-size: 11px;
+      color: rgb(var(--primary-6));
+      font-weight: 600;
+      animation: pulse 1.5s ease-in-out infinite;
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding: 2px 8px;
+      background: rgba(var(--primary-6), 0.1);
+      border-radius: 12px;
+    }
+  }
+
+  :deep(.arco-collapse-item-content) {
+    padding: 0;
+    background: var(--color-bg-2);
+    border-top: 1px solid rgba(123, 97, 255, 0.15);
+  }
+  
+  .thinking-content {
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-2);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Text', system-ui, sans-serif;
+    white-space: pre-wrap;
+    max-height: 300px;
+    overflow-y: auto;
+
+    // Tight spacing for all elements
+    p, div, span, ul, ol, li {
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    
+    // Small gap between paragraphs only
+    p + p, div + div {
+      margin-top: 8px;
+    }
+    
+    // Lists spacing
+    ul, ol {
+      padding-left: 20px;
+      margin: 4px 0;
+    }
+    
+    li {
+      margin: 2px 0;
+    }
+    
+    /* Custom scrollbar */
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--color-fill-2);
+      border-radius: 2px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--color-fill-4);
+      border-radius: 2px;
+
+      &:hover {
+        background: var(--color-fill-3);
+      }
+    }
+  }
+  
+  // Loading state for thinking block
+  .thinking-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    
+    .loading-dots {
+      display: flex;
+      gap: 6px;
+      
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgb(var(--primary-6));
+        opacity: 0.3;
+        animation: dotPulse 1.4s ease-in-out infinite;
+        
+        &:nth-child(1) {
+          animation-delay: 0s;
+        }
+        
+        &:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+        
+        &:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+      }
+    }
+  }
+  
+  @keyframes dotPulse {
+    0%, 60%, 100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    30% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+
+  .streaming-cursor {
+    display: inline-block;
+    font-family: monospace;
+    color: rgb(var(--primary-6));
+    font-size: 14px;
+    font-weight: bold;
+    animation: blink 0.8s step-end infinite;
+    margin-left: 2px;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.ai-chatbot.is-dark .thinking-block {
+  :deep(.arco-collapse-item) {
+    background: linear-gradient(135deg, rgba(123, 97, 255, 0.1), rgba(22, 93, 255, 0.1));
+    border-color: rgba(123, 97, 255, 0.3);
+  }
+  
+  :deep(.arco-collapse-item-header:hover) {
+    background: rgba(123, 97, 255, 0.08);
+  }
+  
+  :deep(.arco-collapse-item-content) {
+    background: #1a1f2e;
+    border-top-color: rgba(123, 97, 255, 0.2);
+  }
+  
+  .thinking-content {
+    color: #9aa4b2;
+  }
+}
+
+/* Processing Status Styles */
+.processing-status {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(22, 93, 255, 0.05), rgba(123, 97, 255, 0.05));
+  border-radius: 8px;
+  border: 1px solid rgba(22, 93, 255, 0.15);
+
+  .status-text {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.ai-chatbot.is-dark .processing-status {
+  background: linear-gradient(135deg, rgba(22, 93, 255, 0.1), rgba(123, 97, 255, 0.1));
+  border-color: rgba(22, 93, 255, 0.25);
+}
+
+/* Message Metadata Styles */
+.message-metadata {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.data-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-3);
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+
+  .metadata-icon {
+    font-size: 12px;
+  }
+
+  .metadata-label {
+    font-weight: 600;
+  }
+
+  .metadata-value {
+    font-style: italic;
+  }
+}
+
+.follow-up-suggestions {
+  margin-top: 8px;
+
+  .suggestions-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-2);
+    margin-bottom: 8px;
+  }
+
+  .suggestions-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .suggestion-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    height: auto;
+    min-height: 24px;
+    border: 1px solid var(--color-border-2);
+    background: var(--color-bg-1);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgb(var(--primary-1));
+      border-color: rgb(var(--primary-6));
+      color: rgb(var(--primary-6));
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(var(--primary-6), 0.15);
+    }
+  }
+}
+
+/* Dark mode metadata styles */
+.ai-chatbot.is-dark {
+  .data-source {
+    background: #1a1f2e;
+    border: 1px solid #272b36;
+  }
+
+  .suggestion-btn {
+    background: #151823;
+    border-color: #272b36;
+    color: #9aa4b2;
+
+    &:hover {
+      background: rgba(22, 93, 255, 0.15);
+      border-color: rgb(var(--primary-5));
+      color: rgb(var(--primary-5));
+    }
+  }
+}
+
+:deep(.arco-theme-dark) .ai-chatbot .data-source {
+  background: #1a1f2e !important;
+  border: 1px solid #272b36 !important;
+  color: #9aa4b2 !important;
+}
+
+:deep(.arco-theme-dark) .ai-chatbot .suggestion-btn {
+  background: #151823 !important;
+  border-color: #272b36 !important;
+  color: #9aa4b2 !important;
+}
+
+:deep(.arco-theme-dark) .ai-chatbot .suggestion-btn:hover {
+  background: rgba(22, 93, 255, 0.15) !important;
+  border-color: rgb(var(--primary-5)) !important;
+  color: rgb(var(--primary-5)) !important;
 }
 </style>

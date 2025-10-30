@@ -10,41 +10,67 @@
       </a-col>
 
       <a-col :span="8">
+        <!-- Context Settings Card -->
+        <a-card title="⚙️ Cài đặt ngữ cảnh" :bordered="false" style="margin-bottom: 16px">
+          <a-form :model="contextSettings" layout="vertical" size="small">
+            <a-form-item label="Phạm vi thời gian" field="timeRange">
+              <a-select v-model="contextSettings.timeRange" placeholder="Chọn phạm vi">
+                <a-option value="today">Hôm nay</a-option>
+                <a-option value="7_days">7 ngày qua</a-option>
+                <a-option value="30_days">30 ngày qua</a-option>
+                <a-option value="90_days">90 ngày qua</a-option>
+                <a-option value="custom">Tùy chỉnh</a-option>
+              </a-select>
+            </a-form-item>
+
+            <a-form-item label="Kênh bán hàng" field="channel">
+              <a-select v-model="contextSettings.channel" placeholder="Chọn kênh">
+                <a-option value="all">Tất cả</a-option>
+                <a-option value="online">Online</a-option>
+                <a-option value="pos">Tại quầy</a-option>
+              </a-select>
+            </a-form-item>
+
+            <a-space>
+              <a-button type="primary" size="small" @click="applyContextSettings">
+                <template #icon>
+                  <icon-check />
+                </template>
+                Áp dụng
+              </a-button>
+              <a-button size="small" @click="resetContextSettings">
+                <template #icon>
+                  <icon-refresh />
+                </template>
+                Đặt lại
+              </a-button>
+            </a-space>
+          </a-form>
+        </a-card>
+
         <!-- Chat History Card -->
         <a-card title="Lịch sử chat" :bordered="false" style="margin-bottom: 16px">
-          <div v-if="sortedSessions.length === 0" class="empty-history">
+          <!-- Search box -->
+          <div style="margin-bottom: 12px">
+            <a-input-search v-model="searchQuery" placeholder="Tìm kiếm trong lịch sử..." allow-clear size="small" />
+          </div>
+          <div v-if="filteredSessions.length === 0" class="empty-history">
             <a-empty description="Chưa có lịch sử chat" :image="false">
               <template #description>
-                <span style="color: #86909c; font-size: 14px">
-                  Tạo cuộc trò chuyện mới để bắt đầu
-                </span>
+                <span style="color: #86909c; font-size: 14px">Tạo cuộc trò chuyện mới để bắt đầu</span>
               </template>
             </a-empty>
           </div>
-          
+
           <div v-else class="chat-history">
-            <a-list
-              :bordered="false"
-              :split="false"
-              size="small"
-              :data="sortedSessions"
-            >
+            <a-list :bordered="false" :split="false" size="small" :data="filteredSessions">
               <template #item="{ item }">
-                <a-list-item
-                  :class="['session-item', { active: item.id === currentSessionId }]"
-                  @click="onSwitchSession(item.id)"
-                >
+                <a-list-item :class="['session-item', { active: item.id === currentSessionId }]" @click="onSwitchSession(item.id)">
                   <a-list-item-meta>
                     <template #title>
                       <div class="session-title">
                         <span class="session-name">{{ item.name }}</span>
-                        <a-tag
-                          v-if="item.id === currentSessionId"
-                          size="small"
-                          color="blue"
-                        >
-                          Đang chọn
-                        </a-tag>
+                        <a-tag v-if="item.id === currentSessionId" size="small" color="blue">Đang chọn</a-tag>
                       </div>
                     </template>
                     <template #description>
@@ -81,8 +107,8 @@
         <!-- Info Card -->
         <a-card title="Giới thiệu" :bordered="false" style="margin-bottom: 16px">
           <p>
-            <strong>GearUp AI</strong> là trợ lý thông minh giúp bạn tra cứu thông tin nhanh
-            chóng trong hệ thống GearUp.
+            <strong>GearUp AI</strong>
+            là trợ lý thông minh giúp bạn tra cứu thông tin nhanh chóng trong hệ thống GearUp.
           </p>
           <a-divider />
           <div class="feature-list">
@@ -126,30 +152,22 @@
           <a-list :bordered="false" size="small">
             <a-list-item>
               <a-list-item-meta>
-                <template #description>
-                  Sử dụng các nút "Gợi ý nhanh" để truy vấn thông tin phổ biến
-                </template>
+                <template #description>Sử dụng các nút "Gợi ý nhanh" để truy vấn thông tin phổ biến</template>
               </a-list-item-meta>
             </a-list-item>
             <a-list-item>
               <a-list-item-meta>
-                <template #description>
-                  Hỏi bằng ngôn ngữ tự nhiên, ví dụ: "Giày nào bán nhiều nhất?"
-                </template>
+                <template #description>Hỏi bằng ngôn ngữ tự nhiên, ví dụ: "Giày nào bán nhiều nhất?"</template>
               </a-list-item-meta>
             </a-list-item>
             <a-list-item>
               <a-list-item-meta>
-                <template #description>
-                  AI sẽ truy vấn dữ liệu thực tế từ hệ thống và trả lời chính xác
-                </template>
+                <template #description>AI sẽ truy vấn dữ liệu thực tế từ hệ thống và trả lời chính xác</template>
               </a-list-item-meta>
             </a-list-item>
             <a-list-item>
               <a-list-item-meta>
-                <template #description>
-                  Dữ liệu được cache để tối ưu tốc độ phản hồi
-                </template>
+                <template #description>Dữ liệu được cache để tối ưu tốc độ phản hồi</template>
               </a-list-item-meta>
             </a-list-item>
           </a-list>
@@ -164,7 +182,7 @@
 <script setup lang="ts">
 import { ref, computed, watchEffect } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import { IconPlus, IconDelete } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete, IconCheck, IconRefresh } from '@arco-design/web-vue/es/icon'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import AIChatbot from '@/components/ai/AIChatbot.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
@@ -173,6 +191,15 @@ const { breadcrumbItems } = useBreadcrumb()
 
 // Reference to the chatbot component
 const chatbotRef = ref<InstanceType<typeof AIChatbot> | null>(null)
+
+// Context settings
+const contextSettings = ref({
+  timeRange: '30_days',
+  channel: 'all',
+})
+
+// Search query
+const searchQuery = ref('')
 
 // Mirror child state for template by subscribing to child's refs
 const sessions = ref<Record<string, any>>({})
@@ -195,11 +222,11 @@ function onSessionState(payload: { sessions: Record<string, any>; currentSession
 // Sorted sessions for display
 const sortedSessions = computed(() => {
   const ids = Object.keys(sessions.value)
-  const list = ids.map(sessionId => ({
+  const list = ids.map((sessionId) => ({
     id: sessionId,
     name: sessionNames.value[sessionId] || 'Cuộc trò chuyện mới',
     messageCount: sessions.value[sessionId]?.length || 0,
-    timestamp: parseInt(sessionId.split('_')[1], 10) || 0
+    timestamp: parseInt(sessionId.split('_')[1], 10) || 0,
   }))
 
   // If nothing is persisted yet but we have an active session, show it
@@ -209,11 +236,21 @@ const sortedSessions = computed(() => {
       id: sid,
       name: sessionNames.value[sid] || 'Cuộc trò chuyện mới',
       messageCount: 0,
-      timestamp: parseInt((sid.split('_')[1] || '0'), 10) || Date.now()
+      timestamp: parseInt(sid.split('_')[1] || '0', 10) || Date.now(),
     })
   }
 
   return list.sort((a, b) => b.timestamp - a.timestamp)
+})
+
+// Filtered sessions based on search query
+const filteredSessions = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return sortedSessions.value
+  }
+
+  const query = searchQuery.value.toLowerCase()
+  return sortedSessions.value.filter((session) => session.name.toLowerCase().includes(query))
 })
 
 function onSwitchSession(sessionId: string) {
@@ -247,6 +284,21 @@ function clearChatHistory() {
   if (chatbotRef.value) {
     chatbotRef.value.clearMessages()
   }
+}
+
+function applyContextSettings() {
+  Message.success(
+    `Đã áp dụng: ${contextSettings.value.timeRange === '30_days' ? '30 ngày qua' : contextSettings.value.timeRange}, Kênh: ${contextSettings.value.channel === 'all' ? 'Tất cả' : contextSettings.value.channel}`
+  )
+  // TODO: Gửi context settings cho AI service khi query
+}
+
+function resetContextSettings() {
+  contextSettings.value = {
+    timeRange: '30_days',
+    channel: 'all',
+  }
+  Message.info('Đã đặt lại cài đặt mặc định')
 }
 </script>
 

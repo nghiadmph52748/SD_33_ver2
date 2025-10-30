@@ -48,12 +48,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import {
-  IconCalendar,
-  IconFile,
-  IconArrowUp,
-  IconArrowDown,
-} from '@arco-design/web-vue/es/icon'
+import { IconCalendar, IconFile, IconArrowUp, IconArrowDown } from '@arco-design/web-vue/es/icon'
 import type { DuLieuBangChiTiet } from '../types/thong-ke.types'
 
 interface Props {

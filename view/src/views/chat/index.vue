@@ -132,7 +132,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  
+
   :deep(.arco-empty-description) {
     color: var(--color-text-2);
     font-size: 16px;

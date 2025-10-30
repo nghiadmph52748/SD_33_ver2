@@ -96,13 +96,7 @@
     </a-drawer>
 
     <!-- Floating chat button (moves up when scroll-to-top appears) -->
-    <a-button
-      type="primary"
-      shape="circle"
-      size="large"
-      :class="['floating-btn', { 'moved-up': isScrolledDown }]"
-      @click="toggleDrawer"
-    >
+    <a-button type="primary" shape="circle" size="large" :class="['floating-btn', { 'moved-up': isScrolledDown }]" @click="toggleDrawer">
       <template #icon>
         <icon-message :size="24" />
       </template>
@@ -173,11 +167,11 @@ async function selectConversation(id: number) {
   if (conv) {
     const otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
     await chatStore.fetchMessages(otherUserId)
-    
+
     // Scroll to bottom to show latest messages
     await nextTick()
     scrollToBottom()
-    
+
     // Auto mark as read if has unread messages
     const unreadCount = getUnreadCount(conv)
     if (unreadCount > 0) {
@@ -237,15 +231,12 @@ watch(
 )
 
 // Auto-scroll when conversation changes (for cached messages)
-watch(
-  activeConversation,
-  async (newConv) => {
-    if (newConv) {
-      await nextTick()
-      scrollToBottom()
-    }
+watch(activeConversation, async (newConv) => {
+  if (newConv) {
+    await nextTick()
+    scrollToBottom()
   }
-)
+})
 
 // Connect WebSocket and scroll when drawer opens
 watch(drawerVisible, async (visible) => {
@@ -253,7 +244,7 @@ watch(drawerVisible, async (visible) => {
     if (!chatStore.wsConnected) {
       await chatStore.connectWebSocket()
     }
-    
+
     // Scroll to bottom if already in a conversation
     if (activeConversation.value) {
       await nextTick()
@@ -312,7 +303,6 @@ if (typeof window !== 'undefined') {
     right: -4px;
   }
 }
-
 
 .drawer-title {
   display: flex;
