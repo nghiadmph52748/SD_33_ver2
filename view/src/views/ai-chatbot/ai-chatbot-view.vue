@@ -1,16 +1,14 @@
 <template>
   <div class="ai-chatbot-page">
     <!-- Chat Section - Full Width -->
-    <a-row :gutter="16" style="margin-bottom: 16px; padding: 0 20px">
-      <a-col :span="24">
-        <div class="chatbot-wrap">
-          <AIChatbot ref="chatbotRef" @session-state="onSessionState" :enable-health-check="true" />
-        </div>
-      </a-col>
-    </a-row>
+    <div class="chat-row">
+      <div class="chatbot-wrap">
+        <AIChatbot ref="chatbotRef" @session-state="onSessionState" :enable-health-check="true" />
+      </div>
+    </div>
 
     <!-- Sidebar Components - Bottom Section -->
-    <a-row :gutter="16" style="padding: 0 20px">
+    <a-row :gutter="16" style="padding: 0 20px; margin-top: 16px">
       <a-col :span="24">
         <div class="sidebar-grid">
         <!-- Context Settings Card -->
@@ -299,14 +297,42 @@ function resetContextSettings() {
 }
 </script>
 
+<style lang="less">
+// Global override to ensure layout-content is full height with no padding
+.layout-content {
+  height: 100% !important;
+  
+  .arco-layout-content {
+    padding: 0 !important;
+    height: 100% !important;
+  }
+}
+</style>
+
 <style scoped lang="less">
 .ai-chatbot-page {
-  padding: 20px;
+  padding: 0;
+  height: 100%; // Take full height from parent
+  min-height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 
-  // Make chatbot fill appropriate height
+  // Chat row takes full available height and width
+  .chat-row {
+    height: calc(100vh - 60px); // Full viewport minus navbar
+    min-height: calc(100vh - 60px);
+    width: 100%;
+    padding: 0 20px; // Match sidebar padding
+    display: flex;
+    flex-shrink: 0; // Don't shrink
+  }
+
+  // Make chatbot wrapper fill all available space
   .chatbot-wrap {
-    height: calc(100vh - 160px);
-    min-height: 600px;
+    height: 100%;
+    width: 100%;
+    min-height: 0;
     display: flex;
   }
 
