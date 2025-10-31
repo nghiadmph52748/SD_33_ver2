@@ -21,7 +21,7 @@
         :doanh-thu="duLieuHienThi.revenue"
         :san-pham-da-ban="duLieuHienThi.productsSold"
         :so-don-hang="duLieuHienThi.orders"
-        :loai-mau="khoangThoiGian"
+        :loai-mau="khoangThoiGian === 'custom' ? 'today' : khoangThoiGian"
       />
       <TheThongKe
         :tieu-de="$t('thongKe.card.thisWeek')"
@@ -267,7 +267,7 @@ const generateStatisticsPrompt = () => {
 ${topProducts
   .map(
     (product, index) =>
-      `${index + 1}. ${product.tenSanPham} - ${product.soLuongBan} sản phẩm - ${product.doanhThu.toLocaleString('vi-VN')} VNĐ`
+      `${index + 1}. ${product.tenSanPham} - ${product.soLuongDaBan} sản phẩm - ${(product.giaBan * product.soLuongDaBan).toLocaleString('vi-VN')} VNĐ`
   )
   .join('\n')}
 

@@ -3,7 +3,14 @@
     <a-card class="chatbot-card" :bordered="false" :body-style="{ padding: '0' }">
       <template #title>
         <div class="chatbot-header">
-          <span class="title">🤖 Trợ Lý AI</span>
+          <span class="title">
+            <img 
+              src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
+              alt="AI Icon" 
+              style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;"
+            />
+            Trợ Lý AI
+          </span>
           <a-space>
             <a-badge :status="isConnected ? 'success' : 'error'" :text="isConnected ? 'Online' : 'Offline'" />
             <a-button type="text" size="small" @click="openExpandedView">
@@ -29,7 +36,13 @@
         <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role]">
           <div class="message-wrapper">
             <div class="avatar">
-              {{ msg.role === 'user' ? '👤' : '🤖' }}
+              <span v-if="msg.role === 'user'">👤</span>
+              <img 
+                v-else
+                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
+                alt="AI" 
+                style="width: 28px; height: 28px;"
+              />
             </div>
             <div class="content">
               <!-- Thinking mode - collapsible with clean design -->
@@ -120,7 +133,13 @@
         <!-- Loading indicator -->
         <div v-if="loading" class="message assistant">
           <div class="message-wrapper">
-            <div class="avatar">🤖</div>
+            <div class="avatar">
+              <img 
+                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
+                alt="AI" 
+                style="width: 28px; height: 28px;"
+              />
+            </div>
             <div class="content">
               <a-spin :size="16" />
               Đang nhập...
@@ -173,7 +192,7 @@
       fullscreen
       :mask-closable="false"
       unmount-on-close
-      title="🤖 Trợ Lý AI"
+      :title="expandedModalTitle"
       :class="['chat-expanded-modal', { 'is-dark': isDark }]"
     >
       <!-- Messages Area -->
@@ -189,7 +208,13 @@
         <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role]">
           <div class="message-wrapper">
             <div class="avatar">
-              {{ msg.role === 'user' ? '👤' : '🤖' }}
+              <span v-if="msg.role === 'user'">👤</span>
+              <img 
+                v-else
+                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
+                alt="AI" 
+                style="width: 28px; height: 28px;"
+              />
             </div>
             <div class="content">
               <!-- Thinking Mode -->
@@ -236,7 +261,13 @@
         <!-- Loading indicator -->
         <div v-if="loading" class="message assistant">
           <div class="message-wrapper">
-            <div class="avatar">🤖</div>
+            <div class="avatar">
+              <img 
+                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
+                alt="AI" 
+                style="width: 28px; height: 28px;"
+              />
+            </div>
             <div class="content">
               <a-spin :size="16" />
               Đang nhập...
@@ -477,6 +508,8 @@ function loadHistory() {
 }
 
 const { t } = useI18n()
+
+const expandedModalTitle = 'Trợ Lý AI'
 
 const quickActions = computed<QuickAction[]>(() => [
   {
@@ -835,7 +868,7 @@ function clearMessages() {
     {
       id: 0,
       role: 'assistant',
-      content: 'Đã xóa lịch sử chat. Tôi có thể giúp gì cho bạn? 🤖',
+      content: 'Đã xóa lịch sử chat. Tôi có thể giúp gì cho bạn?',
       timestamp: new Date().toLocaleTimeString('vi-VN'),
     },
   ]

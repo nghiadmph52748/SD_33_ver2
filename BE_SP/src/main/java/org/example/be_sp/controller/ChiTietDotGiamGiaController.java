@@ -3,8 +3,6 @@ package org.example.be_sp.controller;
 import org.example.be_sp.model.request.ChiTietDotGiamGiaRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.ChiTietDotGiamGiaService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,8 +20,6 @@ import java.util.List;
 @RequestMapping("/api/chi-tiet-dot-giam-gia-management")
 @CrossOrigin(origins = "*")
 public class ChiTietDotGiamGiaController {
-    private static final Logger log = LoggerFactory.getLogger(ChiTietDotGiamGiaController.class);
-
     @Autowired
     ChiTietDotGiamGiaService service;
 

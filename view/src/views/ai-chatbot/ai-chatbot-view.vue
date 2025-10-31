@@ -11,44 +11,6 @@
     <a-row :gutter="16" style="padding: 0 20px; margin-top: 16px">
       <a-col :span="24">
         <div class="sidebar-grid">
-        <!-- Context Settings Card -->
-        <a-card :title="$t('aiChatbot.context.title')" :bordered="false">
-          <a-form :model="contextSettings" layout="vertical" size="small">
-            <a-form-item :label="$t('aiChatbot.context.timeRange')" field="timeRange">
-              <a-select v-model="contextSettings.timeRange" :placeholder="$t('aiChatbot.context.timeRange.placeholder')">
-                <a-option value="today">{{ $t('aiChatbot.context.timeRange.today') }}</a-option>
-                <a-option value="7_days">{{ $t('aiChatbot.context.timeRange.7days') }}</a-option>
-                <a-option value="30_days">{{ $t('aiChatbot.context.timeRange.30days') }}</a-option>
-                <a-option value="90_days">{{ $t('aiChatbot.context.timeRange.90days') }}</a-option>
-                <a-option value="custom">{{ $t('aiChatbot.context.timeRange.custom') }}</a-option>
-              </a-select>
-            </a-form-item>
-
-            <a-form-item :label="$t('aiChatbot.context.channel')" field="channel">
-              <a-select v-model="contextSettings.channel" :placeholder="$t('aiChatbot.context.channel.placeholder')">
-                <a-option value="all">{{ $t('aiChatbot.context.channel.all') }}</a-option>
-                <a-option value="online">{{ $t('aiChatbot.context.channel.online') }}</a-option>
-                <a-option value="pos">{{ $t('aiChatbot.context.channel.pos') }}</a-option>
-              </a-select>
-            </a-form-item>
-
-            <a-space>
-              <a-button type="primary" size="small" @click="applyContextSettings">
-                <template #icon>
-                  <icon-check />
-                </template>
-                {{ $t('aiChatbot.context.apply') }}
-              </a-button>
-              <a-button size="small" @click="resetContextSettings">
-                <template #icon>
-                  <icon-refresh />
-                </template>
-                {{ $t('aiChatbot.context.reset') }}
-              </a-button>
-            </a-space>
-          </a-form>
-        </a-card>
-
         <!-- Chat History Card -->
         <a-card :title="$t('aiChatbot.history.title')" :bordered="false" style="margin-bottom: 16px">
           <!-- Search box -->
@@ -181,17 +143,11 @@
 <script setup lang="ts">
 import { ref, computed, watchEffect } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import { IconPlus, IconDelete, IconCheck, IconRefresh } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete } from '@arco-design/web-vue/es/icon'
 import AIChatbot from '@/components/ai/AIChatbot.vue'
 
 // Reference to the chatbot component
 const chatbotRef = ref<InstanceType<typeof AIChatbot> | null>(null)
-
-// Context settings
-const contextSettings = ref({
-  timeRange: '30_days',
-  channel: 'all',
-})
 
 // Search query
 const searchQuery = ref('')
@@ -279,21 +235,6 @@ function clearChatHistory() {
   if (chatbotRef.value) {
     chatbotRef.value.clearMessages()
   }
-}
-
-function applyContextSettings() {
-  Message.success(
-    `Đã áp dụng: ${contextSettings.value.timeRange === '30_days' ? '30 ngày qua' : contextSettings.value.timeRange}, Kênh: ${contextSettings.value.channel === 'all' ? 'Tất cả' : contextSettings.value.channel}`
-  )
-  // TODO: Gửi context settings cho AI service khi query
-}
-
-function resetContextSettings() {
-  contextSettings.value = {
-    timeRange: '30_days',
-    channel: 'all',
-  }
-  Message.info('Đã đặt lại cài đặt mặc định')
 }
 </script>
 

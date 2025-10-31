@@ -1,6 +1,5 @@
 package org.example.be_sp.controller;
 
-import org.example.be_sp.entity.HoaDon;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
 import org.example.be_sp.model.response.HoaDonResponse;
 import org.example.be_sp.model.response.ResponseObject;

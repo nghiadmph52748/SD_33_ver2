@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-import org.apache.commons.compress.utils.IOUtils;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -239,7 +238,7 @@ public class NhanVienController {
         }
 
         // Gửi file về client
-        IOUtils.copy(templateStream, response.getOutputStream());
+        templateStream.transferTo(response.getOutputStream());
         response.flushBuffer();
         templateStream.close();
     }

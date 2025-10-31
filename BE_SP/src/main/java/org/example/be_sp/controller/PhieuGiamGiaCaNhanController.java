@@ -4,7 +4,6 @@ import org.example.be_sp.model.request.PhieuGiamGiaCaNhanRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.PhieuGiamGiaCaNhanService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
