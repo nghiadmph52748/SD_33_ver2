@@ -202,8 +202,7 @@
             <a-form :model="{}" layout="vertical">
               <a-form-item label="Chọn Khách Hàng">
                 <a-select
-                  :model-value="currentOrder?.customerId"
-                  placeholder="--- Chọn khách hàng ---"
+                  :model-value="currentOrder?.customerId || ''"
                   allow-search
                   filterable
                   @update:model-value="updateCustomerId"
