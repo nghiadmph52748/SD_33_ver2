@@ -270,6 +270,110 @@
                 </a-button>
               </a-form-item>
 
+              <!-- Delivery Address & Shipping Fee (only for delivery orders) -->
+              <div v-if="orderType === 'delivery'" style="margin-bottom: 16px">
+                <!-- Show customer address if available -->
+                <a-alert 
+                  v-if="selectedCustomer?.address"
+                  type="info" 
+                  style="margin-bottom: 12px"
+                >
+                  <template #icon>
+                    <icon-info-circle />
+                  </template>
+                  <div style="font-size: 12px">
+                    <strong>Đơn giao hàng</strong>
+                    <p style="margin: 4px 0 0 0; color: #666">
+                      Địa chỉ nhận hàng: {{ selectedCustomer.address }}
+                    </p>
+                  </div>
+                </a-alert>
+
+                <!-- Location form for walk-in customers -->
+                <div v-if="currentOrder?.customerId === '' && !selectedCustomer">
+                  <a-divider orientation="left" style="margin: 12px 0">Địa chỉ giao hàng</a-divider>
+                  <a-row :gutter="[12, 12]">
+                    <a-col :span="12">
+                      <a-form-item label="Tỉnh/Thành phố" required>
+                        <a-select
+                          v-model="walkInLocation.thanhPho"
+                          placeholder="-- Chọn tỉnh/thành phố --"
+                          :options="provinces"
+                          @change="onWalkInProvinceChange"
+                          option-label-prop="label"
+                          allow-search
+                          allow-clear
+                        />
+                      </a-form-item>
+                    </a-col>
+                    <a-col :span="12">
+                      <a-form-item label="Quận/Huyện" required>
+                        <a-select
+                          v-model="walkInLocation.quan"
+                          placeholder="-- Chọn quận/huyện --"
+                          :options="walkInLocation.districts"
+                          @change="onWalkInDistrictChange"
+                          option-label-prop="label"
+                          allow-search
+                          allow-clear
+                          :disabled="!walkInLocation.thanhPho"
+                        />
+                      </a-form-item>
+                    </a-col>
+                    <a-col :span="12">
+                      <a-form-item label="Phường/Xã" required>
+                        <a-select
+                          v-model="walkInLocation.phuong"
+                          placeholder="-- Chọn phường/xã --"
+                          :options="walkInLocation.wards"
+                          option-label-prop="label"
+                          allow-search
+                          allow-clear
+                          :disabled="!walkInLocation.quan"
+                        />
+                      </a-form-item>
+                    </a-col>
+                    <a-col :span="12">
+                      <a-form-item label="Địa chỉ cụ thể" required>
+                        <a-input
+                          v-model="walkInLocation.diaChiCuThe"
+                          placeholder="Số nhà, đường..."
+                        />
+                      </a-form-item>
+                    </a-col>
+                  </a-row>
+                </div>
+
+                <!-- Warning for registered customers without address -->
+                <a-alert 
+                  v-if="selectedCustomer && !selectedCustomer.address"
+                  type="warning" 
+                  style="margin-bottom: 12px"
+                >
+                  <template #icon>
+                    <icon-exclamation-circle />
+                  </template>
+                  <div style="font-size: 12px">
+                    <strong>⚠️ Khách hàng chưa có địa chỉ</strong>
+                    <p style="margin: 4px 0 0 0; color: #666">
+                      Vui lòng chọn khách hàng khác hoặc chọn "Khách lẻ" để nhập địa chỉ
+                    </p>
+                  </div>
+                </a-alert>
+                
+                <a-form-item label="Phí Vận Chuyển" required>
+                  <a-input-number
+                    v-model:model-value="shippingFee"
+                    :min="0"
+                    placeholder="Nhập phí vận chuyển"
+                    style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
+                    :precision="0"
+                    :formatter="(value) => formatCurrency(value || 0)"
+                    :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
+                  />
+                </a-form-item>
+              </div>
+
               <!-- Payment Method -->
               <a-form-item :model="{}" label="Phương Thức Thanh Toán">
                 <a-radio-group v-model="paymentForm.method" @change="handlePaymentMethodChange">
@@ -358,6 +462,10 @@
                   <span :class="discountAmount > 0 ? 'discount-text' : ''">
                     {{ discountAmount > 0 ? '-' : '' }}{{ formatCurrency(discountAmount) }}
                   </span>
+                </p>
+                <p v-if="orderType === 'delivery'" class="summary-row">
+                  <span>Phí vận chuyển:</span>
+                  <strong style="color: #1890ff">{{ formatCurrency(shippingFee) }}</strong>
                 </p>
                 <p class="summary-row total">
                   <span>Thành tiền:</span>
@@ -902,7 +1010,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck, IconInfoCircle, IconExclamationCircle } from '@arco-design/web-vue/es/icon'
 import {
   getBienTheSanPhamPage,
   getChatLieuOptions,
@@ -1029,12 +1137,24 @@ const paymentForm = ref({
 })
 
 const orderType = ref('counter')
+const shippingFee = ref(0)
 
 const newCustomerForm = ref({
   name: '',
   phone: '',
   email: '',
   address: '',
+})
+
+// Location data for walk-in customers
+const provinces = ref<{ value: string; label: string; code: number }[]>([])
+const walkInLocation = ref({
+  thanhPho: '',
+  quan: '',
+  phuong: '',
+  diaChiCuThe: '',
+  districts: [] as { value: string; label: string; code: number }[],
+  wards: [] as { value: string; label: string }[],
 })
 
 const cartPagination = ref({
@@ -1188,7 +1308,10 @@ const discountAmount = computed(() => {
 })
 
 const finalPrice = computed(() => {
-  return subtotal.value - discountAmount.value
+  const basePrice = subtotal.value - discountAmount.value
+  // Add shipping fee for delivery orders
+  const shipping = orderType.value === 'delivery' ? shippingFee.value : 0
+  return basePrice + shipping
 })
 
 const totalReceived = computed(() => {
@@ -1209,6 +1332,21 @@ const paymentMethod = computed({
 const canConfirmOrder = computed(() => {
   if (!currentOrder.value?.items.length || finalPrice.value <= 0) {
     return false
+  }
+
+  // For delivery orders, require address (from customer OR walk-in location form)
+  if (orderType.value === 'delivery') {
+    // If registered customer, require address
+    if (selectedCustomer.value && !selectedCustomer.value.address) {
+      return false
+    }
+    // If walk-in customer, require location form to be filled
+    if (!selectedCustomer.value && currentOrder.value?.customerId === '') {
+      if (!walkInLocation.value.thanhPho || !walkInLocation.value.quan || 
+          !walkInLocation.value.phuong || !walkInLocation.value.diaChiCuThe) {
+        return false
+      }
+    }
   }
 
   // Nếu thanh toán bằng tiền mặt, cần đủ tiền
@@ -1812,13 +1950,15 @@ const clearCart = () => {
 
 const updateCustomerId = (customerId: string) => {
   if (currentOrder.value) {
-    currentOrder.value.customerId = customerId || null
+    // Keep empty string for "Khách lẻ", convert undefined to null
+    currentOrder.value.customerId = customerId === '' ? '' : (customerId || null)
   }
 }
 
 const handleCustomerChange = (customerId: string) => {
   if (currentOrder.value) {
-    currentOrder.value.customerId = customerId || null
+    // Keep empty string for "Khách lẻ", convert undefined to null
+    currentOrder.value.customerId = customerId === '' ? '' : (customerId || null)
   }
 }
 
@@ -1876,13 +2016,25 @@ const confirmOrder = async () => {
     confirmLoading.value = true
 
     // Prepare order data for API - use BanHangTaiQuayRequest format, don't send auto-generated IDs
+    // Build address for walk-in customers
+    let walkInAddress = ''
+    if (!selectedCustomer.value && currentOrder.value.customerId === '') {
+      const addressParts = [
+        walkInLocation.value.diaChiCuThe,
+        walkInLocation.value.phuong,
+        walkInLocation.value.quan,
+        walkInLocation.value.thanhPho,
+      ].filter(Boolean)
+      walkInAddress = addressParts.join(', ')
+    }
+
     const orderData: Partial<BanHangTaiQuayRequest> = {
       // Customer info - convert to ID if available
       idKhachHang: selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id) : undefined,
       tenNguoiNhan: selectedCustomer.value?.name || 'Khách lẻ',
       soDienThoaiNguoiNhan: selectedCustomer.value?.phone || '',
       emailNguoiNhan: selectedCustomer.value?.email || '',
-      diaChiNhanHang: selectedCustomer.value?.address || '',
+      diaChiNhanHang: selectedCustomer.value?.address || walkInAddress,
       idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id) : undefined,
       idNhanVien: userStoreInstance.id,
       idPhuongThucThanhToan: paymentForm.value.method === 'cash' ? 1 : paymentForm.value.method === 'transfer' ? 2 : 3, // 1: Tiền mặt, 2: Chuyển khoản, 3: Cả hai
@@ -1903,20 +2055,22 @@ const confirmOrder = async () => {
       // Financial info
       tongTien: subtotal.value,
       tongTienSauGiam: finalPrice.value,
-      phiVanChuyen: 0, // POS orders have no shipping fee
+      phiVanChuyen: orderType.value === 'delivery' ? shippingFee.value : 0,
 
       // Dates
       ngayTao: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
-      ngayThanhToan: new Date().toISOString().split('T')[0], // Current date
+      ngayThanhToan: orderType.value === 'counter' ? new Date().toISOString().split('T')[0] : undefined, // Payment date only for counter orders
 
       // Order type and status
-      loaiDon: false, // Tại quầy (POS)
-      trangThai: true, // Đã thanh toán (completed)
+      loaiDon: orderType.value === 'delivery', // true = Giao hàng, false = Tại quầy
+      trangThai: orderType.value === 'counter', // Counter orders paid immediately, delivery orders pending
       deleted: false,
       createAt: new Date().toISOString().split('T')[0],
       createBy: userStoreInstance.id,
       // Notes
-      ghiChu: `Đơn hàng tại quầy - ${currentOrder.value.orderCode}`,
+      ghiChu: orderType.value === 'delivery' 
+        ? `Đơn giao hàng - ${currentOrder.value.orderCode} - Phí ship: ${formatCurrency(shippingFee.value)}`
+        : `Đơn hàng tại quầy - ${currentOrder.value.orderCode}`,
     }
 
     // Step 1: Create main invoice
@@ -2002,7 +2156,8 @@ const confirmOrder = async () => {
       ghiChu: `Đơn hàng tại quầy đã được xác nhận`,
     })
 
-    Message.success(`Đơn hàng ${currentOrder.value.orderCode} đã được xác nhận thành công!`)
+    const orderTypeText = orderType.value === 'delivery' ? 'giao hàng' : 'tại quầy'
+    Message.success(`Đơn ${orderTypeText} ${currentOrder.value.orderCode} đã được xác nhận thành công!`)
 
     // Reset order after successful confirmation
     createNewOrder()
@@ -2011,6 +2166,17 @@ const confirmOrder = async () => {
       method: 'cash',
       cashReceived: 0,
       transferReceived: 0,
+    }
+    shippingFee.value = 0
+    orderType.value = 'counter'
+    // Reset walk-in location form
+    walkInLocation.value = {
+      thanhPho: '',
+      quan: '',
+      phuong: '',
+      diaChiCuThe: '',
+      districts: [],
+      wards: [],
     }
   } catch (error) {
     console.error('Lỗi khi xác nhận đơn hàng:', error)
@@ -2497,11 +2663,69 @@ watch([showQRScanner, showDeleteProductModal], async ([qrOpen, deleteProductOpen
   }
 })
 
+// Location API functions
+const loadProvinces = async () => {
+  try {
+    const res = await fetch('https://provinces.open-api.vn/api/p/')
+    const data = await res.json()
+    provinces.value = data.map((p: any) => ({
+      value: p.name,
+      label: p.name,
+      code: p.code,
+    }))
+  } catch (error) {
+    console.error('Error loading provinces:', error)
+  }
+}
+
+const onWalkInProvinceChange = async (value: string) => {
+  walkInLocation.value.districts = []
+  walkInLocation.value.wards = []
+  walkInLocation.value.quan = ''
+  walkInLocation.value.phuong = ''
+
+  const province = provinces.value.find((p) => p.value === value)
+  if (province) {
+    try {
+      const res = await fetch(`https://provinces.open-api.vn/api/p/${province.code}?depth=2`)
+      const data = await res.json()
+      walkInLocation.value.districts = data.districts.map((d: any) => ({
+        value: d.name,
+        label: d.name,
+        code: d.code,
+      }))
+    } catch (error) {
+      console.error('Error loading districts:', error)
+    }
+  }
+}
+
+const onWalkInDistrictChange = async (value: string) => {
+  walkInLocation.value.wards = []
+  walkInLocation.value.phuong = ''
+
+  const district = walkInLocation.value.districts.find((d) => d.value === value)
+  if (district) {
+    try {
+      const res = await fetch(`https://provinces.open-api.vn/api/d/${district.code}?depth=2`)
+      const data = await res.json()
+      walkInLocation.value.wards = data.wards.map((w: any) => ({
+        value: w.name,
+        label: w.name,
+      }))
+    } catch (error) {
+      console.error('Error loading wards:', error)
+    }
+  }
+}
+
 onMounted(() => {
   // Initialize with one empty order
   createNewOrder()
   // Load data from API
   loadInitialData()
+  // Load provinces for location picker
+  loadProvinces()
 })
 </script>
 
@@ -2729,37 +2953,6 @@ onMounted(() => {
   50% {
     opacity: 1;
     transform: scale(1.1);
-  }
-}
-
-/* Transfer Input Styling */
-.transfer-input-container {
-  animation: transferInputSlideIn 0.3s ease-out;
-
-  :deep(.arco-input-number) {
-    .arco-input {
-      border-radius: 8px;
-      border: 2px solid #e6f7ff;
-      background: #fafaff;
-      transition: all 0.2s ease;
-
-      &:focus,
-      &:hover {
-        border-color: #1890ff;
-        box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
-      }
-    }
-  }
-}
-
-@keyframes transferInputSlideIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
