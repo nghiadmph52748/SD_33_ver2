@@ -2942,7 +2942,7 @@ watch(
 <style scoped>
 .add-product-page {
   background-color: var(--color-fill-2);
-  padding: 8px 20px;
+  padding: 16px 20px;
   padding-bottom: 0;
 }
 

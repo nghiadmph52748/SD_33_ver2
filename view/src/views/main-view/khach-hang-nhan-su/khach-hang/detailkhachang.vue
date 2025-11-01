@@ -145,4 +145,7 @@ onMounted(() => {
   margin-top: 16px;
   text-align: right;
 }
+.customer-detail-page {
+  padding: 16px 20px;
+}
 </style>

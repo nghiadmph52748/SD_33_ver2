@@ -614,7 +614,7 @@ const handleCancel = () => {
 
 <style scoped>
 .edit-employee-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .upload-container {

@@ -626,7 +626,7 @@ onMounted(() => {
 
 <style scoped>
 .invoice-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px;
 }
 
 .stats-grid {

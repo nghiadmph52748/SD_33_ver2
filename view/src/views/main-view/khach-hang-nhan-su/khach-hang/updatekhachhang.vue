@@ -648,6 +648,6 @@ onMounted(() => {
 
 <style scoped>
 .update-customer-page {
-  padding: 20px;
+  padding: 16px 20px;
 }
 </style>

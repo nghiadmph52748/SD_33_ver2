@@ -222,7 +222,7 @@ onMounted(() => {
 
 <style scoped>
 .variant-detail-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .loading-container {

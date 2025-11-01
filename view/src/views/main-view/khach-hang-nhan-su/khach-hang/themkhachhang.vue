@@ -516,6 +516,6 @@ const handleCancel = () => {
 
 <style scoped>
 .add-customer-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 </style>

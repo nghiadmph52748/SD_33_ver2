@@ -975,7 +975,7 @@ const confirmSave = async () => {
 
 <style scoped>
 .coupon-create-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .coupon-card {

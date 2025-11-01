@@ -647,7 +647,7 @@ onMounted(async () => {
 
 <style scoped>
 .variant-update-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .loading-container {

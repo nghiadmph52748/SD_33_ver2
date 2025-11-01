@@ -473,9 +473,9 @@
               <!-- Delivery Address & Shipping Fee (only for delivery orders) -->
               <div v-if="orderType === 'delivery'" style="margin-bottom: 16px">
                 <!-- Show customer address if available -->
-                <a-alert 
+                <a-alert
                   v-if="selectedCustomer?.address"
-                  type="info" 
+                  type="info"
                   style="margin-bottom: 12px"
                 >
                   <template #icon>
@@ -545,9 +545,9 @@
                 </div>
 
                 <!-- Warning for registered customers without address -->
-                <a-alert 
+                <a-alert
                   v-if="selectedCustomer && !selectedCustomer.address"
-                  type="warning" 
+                  type="warning"
                   style="margin-bottom: 12px"
                 >
                   <template #icon>
@@ -560,7 +560,7 @@
                     </p>
                   </div>
                 </a-alert>
-                
+
                 <a-form-item label="Phí Vận Chuyển" required>
                   <a-input-number
                     v-model:model-value="shippingFee"
@@ -1425,10 +1425,10 @@ const bestVoucher = computed(() => {
 const hasBetterVoucher = computed(() => {
   if (!selectedCoupon.value || !bestVoucher.value) return false
   if (selectedCoupon.value.id === bestVoucher.value.id) return false
-  
+
   const currentDiscount = calculateVoucherDiscount(selectedCoupon.value)
   const bestDiscount = calculateVoucherDiscount(bestVoucher.value)
-  
+
   return bestDiscount > currentDiscount
 })
 
@@ -1590,7 +1590,7 @@ const canConfirmOrder = computed(() => {
     }
     // If walk-in customer, require location form to be filled
     if (!selectedCustomer.value && currentOrder.value?.customerId === '') {
-      if (!walkInLocation.value.thanhPho || !walkInLocation.value.quan || 
+      if (!walkInLocation.value.thanhPho || !walkInLocation.value.quan ||
           !walkInLocation.value.phuong || !walkInLocation.value.diaChiCuThe) {
         return false
       }
@@ -2316,7 +2316,7 @@ const confirmOrder = async () => {
       createAt: new Date().toISOString().split('T')[0],
       createBy: userStoreInstance.id,
       // Notes
-      ghiChu: orderType.value === 'delivery' 
+      ghiChu: orderType.value === 'delivery'
         ? `Đơn giao hàng - ${currentOrder.value.orderCode} - Phí ship: ${formatCurrency(shippingFee.value)}`
         : `Đơn hàng tại quầy - ${currentOrder.value.orderCode}`,
     }
@@ -2990,7 +2990,7 @@ onMounted(() => {
   loadInitialData()
   // Load provinces for location picker
   loadProvinces()
-  
+
   // Set up auto-refresh for vouchers (every 30 seconds)
   voucherRefreshInterval = window.setInterval(() => {
     refreshVouchers()
@@ -3007,7 +3007,7 @@ onBeforeUnmount(() => {
 
 <style scoped lang="less">
 .pos-system {
-  padding: 16px;
+  padding: 16px 20px;
 }
 
 .main-pos-card {
@@ -3071,7 +3071,7 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
   }
-  
+
   :deep(.arco-badge-custom-dot) {
     border-radius: 50%;
   }

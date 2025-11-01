@@ -661,7 +661,7 @@ onMounted(() => {
 
 <style scoped>
 .product-attribute-size-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .filters-card,

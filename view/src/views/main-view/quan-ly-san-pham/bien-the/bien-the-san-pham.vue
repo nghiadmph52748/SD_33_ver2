@@ -1604,7 +1604,7 @@ watch(
 
 <style scoped>
 .product-variant-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .page-header {

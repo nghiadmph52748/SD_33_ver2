@@ -843,7 +843,7 @@ onMounted(async () => {
 
 <style scoped>
 .promotion-edit-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .header-actions {

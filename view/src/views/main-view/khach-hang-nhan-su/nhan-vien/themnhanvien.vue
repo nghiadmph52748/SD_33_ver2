@@ -736,7 +736,7 @@ const handleCancel = () => {
 
 <style scoped>
 .add-employee-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .mt-2 {

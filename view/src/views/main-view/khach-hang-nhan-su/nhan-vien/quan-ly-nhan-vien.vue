@@ -485,7 +485,7 @@ onMounted(async () => {
   padding: 6px 8px;
 }
 .staff-management-page {
-  padding: 0 20px 20px 20px;
+  padding: 16px 20px;
 }
 
 .stats-grid {
