@@ -270,6 +270,206 @@
                 </a-button>
               </a-form-item>
 
+              <!-- Best voucher suggestion (when no voucher selected) -->
+              <div
+                v-if="!selectedCoupon && bestVoucher"
+                style="
+                  margin-bottom: 12px;
+                    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+                    border: 1px solid #91d5ff;
+                    border-radius: 8px;
+                    padding: 16px;
+                    margin-top: 12px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: block;
+                    width: 100%;
+                    box-sizing: border-box;
+                  "
+                  @click="selectVoucher(bestVoucher)"
+                  @mouseenter="(e) => e.currentTarget.style.transform = 'translateY(-2px)'"
+                  @mouseleave="(e) => e.currentTarget.style.transform = 'translateY(0)'"
+                >
+                  <div style="display: flex; align-items: center; gap: 12px">
+                    <div style="
+                      background: linear-gradient(135deg, #1890ff 0%, #0050b3 100%);
+                      width: 40px;
+                      height: 40px;
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+                    ">
+                      <icon-gift style="font-size: 20px; color: #fff" />
+                    </div>
+                    <div style="flex: 1">
+                      <div style="font-size: 14px; font-weight: 600; color: #0050b3; margin-bottom: 4px">
+                        Gợi ý voucher tốt nhất
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px">
+                        <span style="
+                          background: #fff;
+                          color: #1890ff;
+                          padding: 4px 12px;
+                          border-radius: 4px;
+                          font-weight: 700;
+                          font-size: 13px;
+                          border: 1px dashed #1890ff;
+                        ">
+                          {{ bestVoucher.maPhieuGiamGia }}
+                        </span>
+                        <span style="color: #666; font-size: 12px">Tiết kiệm</span>
+                        <span style="
+                          color: #52c41a;
+                          font-weight: 700;
+                          font-size: 16px;
+                        ">
+                          {{ formatCurrency(calculateVoucherDiscount(bestVoucher)) }}
+                        </span>
+                      </div>
+                    </div>
+                    <icon-right style="color: #1890ff; font-size: 20px" />
+                  </div>
+              </div>
+
+              <!-- Warning: Better voucher available - Redesigned -->
+              <div
+                v-if="hasBetterVoucher && bestVoucher && selectedCoupon"
+                style="
+                  background: linear-gradient(135deg, #fff7e6 0%, #fff3e0 100%);
+                  border: 2px solid #ff9800;
+                  border-radius: 12px;
+                  padding: 20px;
+                  margin-top: 12px;
+                  display: block;
+                  width: 100%;
+                  box-sizing: border-box;
+                  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);
+                  position: relative;
+                  overflow: hidden;
+                "
+              >
+                <!-- Animated background pattern -->
+                <div style="
+                  position: absolute;
+                  top: -50%;
+                  right: -10%;
+                  width: 200px;
+                  height: 200px;
+                  background: radial-gradient(circle, rgba(255, 152, 0, 0.1) 0%, transparent 70%);
+                  border-radius: 50%;
+                  animation: pulse 3s ease-in-out infinite;
+                "></div>
+
+                <div style="position: relative; z-index: 1">
+                  <!-- Header with icon -->
+                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px">
+                    <div style="
+                      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+                      width: 48px;
+                      height: 48px;
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+                    ">
+                      <icon-gift style="font-size: 24px; color: #fff" />
+                    </div>
+                    <div style="flex: 1">
+                      <div style="font-size: 16px; font-weight: 700; color: #e65100; line-height: 1.3">
+                        Có voucher tiết kiệm hơn!
+                      </div>
+                      <div style="font-size: 12px; color: #f57c00; margin-top: 2px">
+                        Đổi ngay để được giảm giá cao hơn
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Voucher comparison card -->
+                  <div style="
+                    background: #fff;
+                    border-radius: 10px;
+                    padding: 16px;
+                    margin-bottom: 16px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                  ">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
+                      <div style="display: flex; align-items: center; gap: 10px">
+                        <span style="
+                          background: #fff;
+                          color: #ff9800;
+                          padding: 8px 16px;
+                          border-radius: 8px;
+                          font-weight: 800;
+                          font-size: 15px;
+                          letter-spacing: 0.5px;
+                          border: 2px dashed #ff9800;
+                          box-shadow: 0 2px 4px rgba(255, 152, 0, 0.15);
+                        ">
+                          {{ bestVoucher.maPhieuGiamGia }}
+                        </span>
+                      </div>
+                      <div style="text-align: right">
+                        <div style="font-size: 11px; color: #666; margin-bottom: 2px">Tiết kiệm thêm</div>
+                        <div style="
+                          color: #2e7d32;
+                          font-weight: 800;
+                          font-size: 18px;
+                          display: flex;
+                          align-items: center;
+                          justify-content: flex-end;
+                          gap: 4px;
+                        ">
+                          <span style="font-size: 16px">+</span>
+                          {{ formatCurrency(calculateVoucherDiscount(bestVoucher) - calculateVoucherDiscount(selectedCoupon)) }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Benefit indicator -->
+                    <div style="
+                      background: linear-gradient(90deg, #e8f5e9 0%, #f1f8e9 100%);
+                      border-left: 3px solid #4caf50;
+                      padding: 10px 12px;
+                      border-radius: 6px;
+                    ">
+                      <div style="display: flex; align-items: center; gap: 8px">
+                        <span style="font-size: 16px">✓</span>
+                        <span style="font-size: 12px; color: #2e7d32; font-weight: 600">
+                          Giảm giá tốt hơn {{ Math.round((calculateVoucherDiscount(bestVoucher) / calculateVoucherDiscount(selectedCoupon) - 1) * 100) }}% so với voucher hiện tại
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- CTA Button -->
+                  <a-button
+                    type="primary"
+                    long
+                    size="large"
+                    style="
+                      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+                      border: none;
+                      font-weight: 700;
+                      height: 48px;
+                      font-size: 15px;
+                      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+                      transition: all 0.3s ease;
+                    "
+                    @click="selectVoucher(bestVoucher)"
+                    @mouseenter="(e) => e.currentTarget.style.transform = 'translateY(-2px)'"
+                    @mouseleave="(e) => e.currentTarget.style.transform = 'translateY(0)'"
+                  >
+                    <template #icon>
+                      <icon-swap />
+                    </template>
+                    Chuyển ngay để tiết kiệm hơn
+                  </a-button>
+                </div>
+              </div>
+
               <!-- Delivery Address & Shipping Fee (only for delivery orders) -->
               <div v-if="orderType === 'delivery'" style="margin-bottom: 16px">
                 <!-- Show customer address if available -->
@@ -781,6 +981,9 @@
                   <div style="font-size: 16px; font-weight: 600; color: #333">
                     {{ coupon.maPhieuGiamGia }}
                   </div>
+                  <a-tag v-if="bestVoucher && coupon.id === bestVoucher.id" color="gold" size="small">
+                    ⭐ Tốt nhất
+                  </a-tag>
                   <a-tag v-if="!isVoucherEligible(coupon)" color="red" size="small">
                     {{ getVoucherStatus(coupon) }}
                   </a-tag>
@@ -1009,8 +1212,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck, IconInfoCircle, IconExclamationCircle } from '@arco-design/web-vue/es/icon'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck, IconInfoCircle, IconExclamationCircle, IconRight, IconSwap, IconGift } from '@arco-design/web-vue/es/icon'
 import {
   getBienTheSanPhamPage,
   getChatLieuOptions,
@@ -1197,6 +1400,51 @@ const eligibleVouchersCount = computed(() => {
 const hasEligibleVouchers = computed(() => {
   return eligibleVouchersCount.value > 0
 })
+
+// Find the best voucher based on discount amount
+const bestVoucher = computed(() => {
+  const eligible = coupons.value.filter((coupon) => isVoucherEligible(coupon))
+  if (eligible.length === 0) return null
+
+  // Calculate actual discount amount for each voucher
+  let bestCoupon = eligible[0]
+  let maxDiscount = calculateVoucherDiscount(bestCoupon)
+
+  for (const coupon of eligible) {
+    const discount = calculateVoucherDiscount(coupon)
+    if (discount > maxDiscount) {
+      maxDiscount = discount
+      bestCoupon = coupon
+    }
+  }
+
+  return bestCoupon
+})
+
+// Check if there's a better voucher than the currently selected one
+const hasBetterVoucher = computed(() => {
+  if (!selectedCoupon.value || !bestVoucher.value) return false
+  if (selectedCoupon.value.id === bestVoucher.value.id) return false
+  
+  const currentDiscount = calculateVoucherDiscount(selectedCoupon.value)
+  const bestDiscount = calculateVoucherDiscount(bestVoucher.value)
+  
+  return bestDiscount > currentDiscount
+})
+
+// Calculate actual discount amount for a voucher
+const calculateVoucherDiscount = (coupon: CouponApiModel): number => {
+  const discountValue = Number(coupon.giaTriGiamGia) || 0
+  const subtotalValue = subtotal.value
+
+  if (!coupon.loaiPhieuGiamGia) {
+    // Percentage discount
+    return subtotalValue * (discountValue / 100)
+  } else {
+    // Fixed amount discount
+    return Math.min(discountValue, subtotalValue)
+  }
+}
 
 // Function to get voucher status text
 const getVoucherStatus = (coupon: CouponApiModel) => {
@@ -2719,6 +2967,22 @@ const onWalkInDistrictChange = async (value: string) => {
   }
 }
 
+// Refresh vouchers periodically
+const refreshVouchers = async () => {
+  try {
+    const couponsResponse = await fetchCoupons()
+    if (couponsResponse) {
+      coupons.value = couponsResponse
+      voucherPagination.value.total = couponsResponse.length
+    }
+  } catch (error) {
+    console.error('Error refreshing vouchers:', error)
+  }
+}
+
+// Auto-refresh vouchers every 30 seconds
+let voucherRefreshInterval: number | null = null
+
 onMounted(() => {
   // Initialize with one empty order
   createNewOrder()
@@ -2726,6 +2990,18 @@ onMounted(() => {
   loadInitialData()
   // Load provinces for location picker
   loadProvinces()
+  
+  // Set up auto-refresh for vouchers (every 30 seconds)
+  voucherRefreshInterval = window.setInterval(() => {
+    refreshVouchers()
+  }, 30000) // 30 seconds
+})
+
+// Cleanup interval on unmount
+onBeforeUnmount(() => {
+  if (voucherRefreshInterval !== null) {
+    clearInterval(voucherRefreshInterval)
+  }
 })
 </script>
 
@@ -2777,6 +3053,27 @@ onMounted(() => {
 
   .tab-close-btn {
     margin-left: 8px;
+  }
+
+  :deep(.arco-badge) {
+    line-height: 1;
+  }
+
+  :deep(.arco-badge-number) {
+    min-width: 20px;
+    height: 20px;
+    line-height: 20px;
+    padding: 0 6px;
+    font-size: 12px;
+    border-radius: 10px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  :deep(.arco-badge-custom-dot) {
+    border-radius: 50%;
   }
 }
 
@@ -2933,20 +3230,30 @@ onMounted(() => {
   }
 }
 
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(250, 140, 22, 0.4);
+  }
+  50% {
+    opacity: 0.95;
+    box-shadow: 0 0 0 8px rgba(250, 140, 22, 0);
+  }
+}
+
 @keyframes paymentActiveGlow {
   0% {
     opacity: 0.8;
     transform: scaleX(1);
   }
-  100% {
+  50% {
     opacity: 1;
     transform: scaleX(1.02);
   }
 }
 
 @keyframes paymentCheckPulse {
-  0%,
-  100% {
+  0%, 100% {
     opacity: 0.7;
     transform: scale(1);
   }
