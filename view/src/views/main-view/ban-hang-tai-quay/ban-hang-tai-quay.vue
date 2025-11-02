@@ -65,7 +65,7 @@
             :has-eligible-vouchers="hasEligibleVouchers"
             :eligible-vouchers-count="eligibleVouchersCount"
             :selected-customer="selectedCustomer as any"
-            :is-walk-in="!selectedCustomer && currentOrder?.customerId === ''"
+            :is-walk-in="isWalkIn"
             :provinces="provinces"
             :walk-in-location="walkInLocation as any"
             :selected-coupon="selectedCoupon as any"
@@ -344,6 +344,13 @@ const subtotal = computed(() => {
   }, 0)
 })
 
+// Computed property to check if current customer is walk-in
+const isWalkIn = computed(() => {
+  const customerId = currentOrder.value?.customerId
+  // Walk-in customer: no selected customer AND customerId is either null or empty string
+  return !selectedCustomer.value && (customerId === '' || customerId === null || customerId === undefined)
+})
+
 // Initialize payment before voucher to avoid TDZ
 const {
   paymentForm,
@@ -462,12 +469,12 @@ const handleCustomerChange = async (customerId: string) => {
       return
     }
 
-    // Call API to update customer
-    const parsedCustomerId = customerId === '' ? null : customerId ? parseInt(customerId) : null
-    await updateInvoiceCustomer(invoiceId, parsedCustomerId)
+    // Wait for Vue to update the DOM and computed properties after updateCustomerId was called
+    await nextTick()
 
-    // Update local state
-    currentOrder.value.customerId = customerId === '' ? '' : customerId || null
+    // Call API to update customer - pass walkInLocation for walk-in customers
+    await updateInvoiceCustomer(invoiceId, walkInLocation)
+
     Message.success('Khách hàng đã được cập nhật')
   } catch (error) {
     console.error('Lỗi cập nhật khách hàng:', error)
@@ -687,6 +694,17 @@ watch(selectedCustomer, async (newCustomer) => {
   }
 })
 
+// Watch for isWalkIn changes to debug reactivity
+watch(() => [isWalkIn.value, orderType.value, currentOrder.value?.customerId], ([walkIn, type, custId]) => {
+  console.log('🔍 Walk-in state changed:', {
+    isWalkIn: walkIn,
+    orderType: type,
+    customerId: custId,
+    selectedCustomer: selectedCustomer.value,
+    shouldShowAddressFields: walkIn && type === 'delivery'
+  })
+}, { immediate: true })
+
 
 // Refresh vouchers periodically
 const refreshVouchers = async () => {
@@ -856,7 +874,7 @@ const canConfirmOrder = computed(() => {
   if (!currentOrder.value?.items.length || finalPrice.value <= 0) return false
   if (orderType.value === 'delivery') {
     if (selectedCustomer.value && !selectedCustomer.value.address) return false
-    if (!selectedCustomer.value && currentOrder.value?.customerId === '') {
+    if (isWalkIn.value) {
       const wl = walkInLocation.value
       if (!wl.thanhPho || !wl.quan || !wl.phuong || !wl.diaChiCuThe) return false
     }

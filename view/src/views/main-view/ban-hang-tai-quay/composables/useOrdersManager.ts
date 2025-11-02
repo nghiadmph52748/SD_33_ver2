@@ -40,7 +40,7 @@ export function useOrdersManager(params: {
         id: invoiceId.toString(),
         orderCode: generateOrderCode(),
         items: [],
-        customerId: null,
+        customerId: '',
         createdAt: new Date(),
       }
       orders.value.push(newOrder)

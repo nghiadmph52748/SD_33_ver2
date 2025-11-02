@@ -14,7 +14,7 @@
       </div>
 
       <div v-else style="margin-bottom: 16px; padding: 12px; background: #fff7e6; border-radius: 6px; border: 1px solid #ffd591">
-        <div style="font-size: 12px; color: #d48806">⚠️ Chưa có sản phẩm nào trong giỏ hàng</div>
+        <div style="font-size: 12px; color: #d48806">Chưa có sản phẩm nào trong giỏ hàng</div>
       </div>
 
       <div v-if="coupons.length > 0">
@@ -42,12 +42,12 @@
               <div style="font-size: 12px; color: #86909c; line-height: 1.4">{{ coupon.tenPhieuGiamGia }}</div>
 
               <div style="margin-top: 8px; font-size: 11px; color: #666">
-                <span v-if="!isVoucherEligibleFn(coupon)" style="color: #ff4d4f">❌ {{ getVoucherStatusFn(coupon) }}</span>
+                <span v-if="!isVoucherEligibleFn(coupon)" style="color: #ff4d4f">{{ getVoucherStatusFn(coupon) }}</span>
                 <span v-else>
                   <span>💰 {{ getDiscountDisplayFn(coupon) }} giảm giá</span>
                   <span v-if="coupon.hoaDonToiThieu" style="margin-left: 12px">Min: {{ formatCurrency(Number(coupon.hoaDonToiThieu)) }}</span>
-                  <span v-if="coupon.soLuongDung" style="margin-left: 12px">📊 Còn: {{ coupon.soLuongDung }} lượt</span>
-                  <span v-if="coupon.ngayKetThuc" style="margin-left: 12px">⏰ Hết hạn: {{ coupon.ngayKetThuc }}</span>
+                  <span v-if="coupon.soLuongDung" style="margin-left: 12px">Còn: {{ coupon.soLuongDung }} lượt</span>
+                  <span v-if="coupon.ngayKetThuc" style="margin-left: 12px">Hết hạn: {{ coupon.ngayKetThuc }}</span>
                 </span>
               </div>
             </div>

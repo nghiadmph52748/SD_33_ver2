@@ -87,6 +87,7 @@ export function usePayment(params: { currentOrder: Ref<Order | null> }) {
   }
 
   const onWalkInProvinceChange = async (value: string) => {
+    walkInLocation.value.thanhPho = value
     walkInLocation.value.districts = []
     walkInLocation.value.wards = []
     walkInLocation.value.quan = ''
@@ -103,6 +104,7 @@ export function usePayment(params: { currentOrder: Ref<Order | null> }) {
   }
 
   const onWalkInDistrictChange = async (value: string) => {
+    walkInLocation.value.quan = value
     walkInLocation.value.wards = []
     walkInLocation.value.phuong = ''
 
