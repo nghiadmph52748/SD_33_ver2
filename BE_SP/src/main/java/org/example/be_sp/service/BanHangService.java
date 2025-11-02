@@ -282,7 +282,8 @@ public class BanHangService {
 
     public void updateHTTT(Integer idHoaDon, Integer idPTTT, Integer idNhanVien) {
         HoaDon hoaDon = hdRepository.findById(idHoaDon).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
-        HinhThucThanhToan httt = htttRepository.findByIdHoaDonAndTrangThaiAndDeleted(hdRepository.findById(idHoaDon).orElseThrow(),
+        HinhThucThanhToan httt =
+                htttRepository.findByIdHoaDonAndTrangThaiAndDeleted(hdRepository.findById(idHoaDon).orElseThrow(),
                 true,
                 false);
         httt.setIdHoaDon(hoaDon);
