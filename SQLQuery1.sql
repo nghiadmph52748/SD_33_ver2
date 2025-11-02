@@ -1015,9 +1015,9 @@ SET IDENTITY_INSERT [dbo].[hinh_thuc_thanh_toan] OFF
 GO
 SET IDENTITY_INSERT [dbo].[hoa_don] ON 
 GO
-INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ten_hoa_don], giao_hang, [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, 2, N'Đơn hàng giày Nike mới', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(2500000.00 AS Decimal(18, 2)), CAST(2250000.00 AS Decimal(18, 2)), N'Giao hàng trong ngày', N'Phạm Văn A', N'Số 10 Ngõ ABC, Phúc Xá, Ba Đình, Hà Nội', N'0123456789', N'khachhang1@gmail.com', NULL, NULL, NULL, NULL, CAST(N'2025-09-27' AS Date), CAST(N'2025-09-27' AS Date), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ten_hoa_don], loai_don, [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, 2, N'Đơn hàng giày Nike mới', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(2500000.00 AS Decimal(18, 2)), CAST(2250000.00 AS Decimal(18, 2)), N'Giao hàng trong ngày', N'Phạm Văn A', N'Số 10 Ngõ ABC, Phúc Xá, Ba Đình, Hà Nội', N'0123456789', N'khachhang1@gmail.com', NULL, NULL, NULL, NULL, CAST(N'2025-09-27' AS Date), CAST(N'2025-09-27' AS Date), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ten_hoa_don], giao_hang, [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 2, 2, 2, N'Đơn hàng giày Adidas mới', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(3200000.00 AS Decimal(18, 2)), CAST(3000000.00 AS Decimal(18, 2)), N'Giao hàng sáng mai', N'Hoàng Thị B', N'Số 20 Đường XYZ, Bạch Mai, Hai Bà Trưng, Hà Nội', N'0987654321', N'khachhang2@gmail.com', NULL, NULL, NULL, NULL, CAST(N'2025-09-27' AS Date), CAST(N'2025-09-27' AS Date), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ten_hoa_don], loai_don, [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 2, 2, 2, N'Đơn hàng giày Adidas mới', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(3200000.00 AS Decimal(18, 2)), CAST(3000000.00 AS Decimal(18, 2)), N'Giao hàng sáng mai', N'Hoàng Thị B', N'Số 20 Đường XYZ, Bạch Mai, Hai Bà Trưng, Hà Nội', N'0987654321', N'khachhang2@gmail.com', NULL, NULL, NULL, NULL, CAST(N'2025-09-27' AS Date), CAST(N'2025-09-27' AS Date), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[hoa_don] OFF
 GO
@@ -1407,7 +1407,7 @@ ALTER TABLE [dbo].[hinh_thuc_thanh_toan] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
 ALTER TABLE [dbo].[hinh_thuc_thanh_toan] ADD  DEFAULT ((0)) FOR [deleted]
 GO
-ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((0)) FOR giao_hang
+ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((0)) FOR [loai_don]
 GO
 ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
@@ -2034,7 +2034,7 @@ SELECT
     hd.id,
     hd.ma_hoa_don,
     hd.ten_hoa_don,
-    hd.giao_hang,
+    hd.loai_don,
     hd.mo_ta_loai_don,
     hd.thoi_gian_tao,
     hd.ngay_tao,
