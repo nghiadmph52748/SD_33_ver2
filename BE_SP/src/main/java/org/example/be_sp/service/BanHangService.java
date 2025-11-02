@@ -286,6 +286,12 @@ public class BanHangService {
                 htttRepository.findByIdHoaDonAndTrangThaiAndDeleted(hdRepository.findById(idHoaDon).orElseThrow(),
                 true,
                 false);
+        
+        // Create new HinhThucThanhToan if none exists
+        if (httt == null) {
+            httt = new HinhThucThanhToan();
+        }
+        
         httt.setIdHoaDon(hoaDon);
         httt.setIdPhuongThucThanhToan(ptttRepository.findById(idPTTT).orElseThrow());
         httt.setTrangThai(true);
