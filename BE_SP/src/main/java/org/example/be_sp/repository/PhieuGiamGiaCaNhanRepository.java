@@ -1,6 +1,7 @@
 package org.example.be_sp.repository;
 
 import org.example.be_sp.entity.KhachHang;
+import org.example.be_sp.entity.PhieuGiamGia;
 import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -14,4 +15,7 @@ public interface PhieuGiamGiaCaNhanRepository extends JpaRepository<PhieuGiamGia
     List<PhieuGiamGiaCaNhan> findAllByIdKhachHang(KhachHang idKhachHang);
 
     List<PhieuGiamGiaCaNhan> findAllByIdKhachHangAndDeletedAndTrangThai(KhachHang idKhachHang, Boolean deleted, Boolean trangThai);
+
+    PhieuGiamGiaCaNhan findByIdKhachHangAndIdPhieuGiamGiaAndTrangThaiAndDeleted(KhachHang idKhachHang, PhieuGiamGia idPhieuGiamGia,
+                                                               Boolean trangThai, Boolean deleted);
 }

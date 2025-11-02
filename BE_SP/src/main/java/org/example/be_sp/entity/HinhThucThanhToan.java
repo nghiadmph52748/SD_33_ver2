@@ -60,7 +60,7 @@ public class HinhThucThanhToan {
 //    private String loaiGiaoDich;
 
     @Column(name = "trang_thai")
-    private String trangThai;
+    private Boolean trangThai;
 
 
 //    @Column(name = "nhan_vien_xac_nhan")

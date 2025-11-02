@@ -148,7 +148,7 @@ public class HoaDonService {
             hd.setPhiVanChuyen(request.getPhiVanChuyen());
         }
         if (request.getLoaiDon() != null) {
-            hd.setLoaiDon(request.getLoaiDon());   // ✅ update loại đơn
+            hd.setGiaoHang(request.getLoaiDon());   // ✅ update loại đơn
         }
         if (request.getTrangThai() != null) {
             hd.setTrangThai(request.getTrangThai());
@@ -344,7 +344,7 @@ public class HoaDonService {
                 hoaDon.setIdKhachHang(khachHang);
                 hoaDon.setIdNhanVien(nhanVien);
                 hoaDon.setTenHoaDon("Hóa đơn mẫu " + i);
-                hoaDon.setLoaiDon(false); // Tại quầy
+                hoaDon.setGiaoHang(false); // Tại quầy
                 hoaDon.setPhiVanChuyen(BigDecimal.ZERO);
                 hoaDon.setTongTien(BigDecimal.valueOf(1000000 * i));
                 hoaDon.setTongTienSauGiam(BigDecimal.valueOf(1000000 * i));

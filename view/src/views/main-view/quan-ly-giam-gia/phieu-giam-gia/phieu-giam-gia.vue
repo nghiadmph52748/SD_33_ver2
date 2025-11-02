@@ -1,6 +1,5 @@
 <template>
   <div class="coupon-management-page">
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form :model="filters" layout="vertical">
@@ -665,7 +664,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useI18n } from 'vue-i18n'
 
@@ -1848,8 +1847,43 @@ const resetFilters = async () => {
   await loadCoupons()
 }
 
+// BroadcastChannel for real-time coupon updates when used in POS
+let couponBroadcastChannel: BroadcastChannel | null = null
+let couponRefreshInterval: number | null = null
+
 onMounted(() => {
   loadCoupons()
+
+  // Setup BroadcastChannel for real-time coupon updates
+  try {
+    couponBroadcastChannel = new BroadcastChannel('coupon-update-channel')
+    couponBroadcastChannel.onmessage = (event) => {
+      if (event.data.type === 'COUPON_USED' || event.data.type === 'COUPON_UPDATED') {
+        console.log(`[BroadcastChannel] ${event.data.type} received, refreshing coupon list`)
+        // Reload coupon list when coupon is used in POS
+        loadCoupons()
+      }
+    }
+  } catch (error) {
+    console.warn('BroadcastChannel not supported, falling back to polling', error)
+  }
+
+  // Set up auto-refresh for coupon list (every 20 seconds for fallback)
+  couponRefreshInterval = window.setInterval(() => {
+    loadCoupons()
+  }, 20000) // 20 seconds
+})
+
+onBeforeUnmount(() => {
+  if (couponRefreshInterval !== null) {
+    clearInterval(couponRefreshInterval)
+  }
+
+  // Close BroadcastChannel
+  if (couponBroadcastChannel) {
+    couponBroadcastChannel.close()
+    console.log('[BroadcastChannel] Closed')
+  }
 })
 </script>
 

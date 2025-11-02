@@ -1,6 +1,5 @@
 <template>
   <div class="invoice-page">
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form layout="inline" :model="filters">
@@ -204,7 +203,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { fetchHoaDonList, type HoaDonApiModel } from '@/api/hoa-don'
@@ -426,7 +425,10 @@ const calculateStatistics = () => {
 
   // Đếm hóa đơn hôm nay
   todayInvoices.value = invoicesList.value.filter((invoice) => {
-    const invoiceDate = new Date(invoice.ngayTao || invoice.createdAt)
+    const dateStr = invoice.ngayTao || invoice.createdAt
+    if (!dateStr) return false
+    const invoiceDate = new Date(dateStr)
+    if (isNaN(invoiceDate.getTime())) return false
     return invoiceDate.toISOString().split('T')[0] === todayStr
   }).length
 
@@ -619,8 +621,45 @@ const cancelSelected = () => {
   // Implement batch cancel logic
 }
 
+// BroadcastChannel for real-time sync with other pages
+let orderBroadcastChannel: BroadcastChannel | null = null
+
+// Auto-refresh invoice list interval
+let invoiceRefreshInterval: number | null = null
+
 onMounted(() => {
   fetchInvoices()
+
+  // Setup BroadcastChannel for real-time sync when orders are confirmed/deleted
+  try {
+    orderBroadcastChannel = new BroadcastChannel('order-update-channel')
+    orderBroadcastChannel.onmessage = (event) => {
+      if (event.data.type === 'ORDER_CONFIRMED' || event.data.type === 'ORDER_DELETED' || event.data.type === 'ORDER_UPDATED') {
+        console.log(`[BroadcastChannel] ${event.data.type} received, refreshing invoice list`)
+        // Immediately refresh invoice list when order is confirmed/deleted from POS
+        fetchInvoices()
+      }
+    }
+  } catch (error) {
+    console.warn('BroadcastChannel not supported, falling back to polling', error)
+  }
+
+  // Set up auto-refresh for invoice list (every 10 seconds for fallback)
+  invoiceRefreshInterval = window.setInterval(() => {
+    fetchInvoices()
+  }, 10000) // 10 seconds
+})
+
+onBeforeUnmount(() => {
+  if (invoiceRefreshInterval !== null) {
+    clearInterval(invoiceRefreshInterval)
+  }
+
+  // Close BroadcastChannel
+  if (orderBroadcastChannel) {
+    orderBroadcastChannel.close()
+    console.log('[BroadcastChannel] Closed')
+  }
 })
 </script>
 

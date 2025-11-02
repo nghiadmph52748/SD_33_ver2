@@ -74,7 +74,7 @@ public class HoaDonResponse {
 
 
         this.tenHoaDon = hd.getTenHoaDon();
-        this.loaiDon = hd.getLoaiDon();
+        this.loaiDon = hd.getGiaoHang();
         this.phiVanChuyen = hd.getPhiVanChuyen();
         this.tongTien = hd.getTongTien();
         this.tongTienSauGiam = hd.getTongTienSauGiam();

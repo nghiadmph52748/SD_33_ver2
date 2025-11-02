@@ -10,7 +10,6 @@ import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
 import org.hibernate.annotations.Nationalized;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.Column;
@@ -30,7 +29,6 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "hoa_don")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class HoaDon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,8 +57,8 @@ public class HoaDon {
     private String tenHoaDon;
 
     @ColumnDefault("0")
-    @Column(name = "loai_don")
-    private Boolean loaiDon;
+    @Column(name = "giao_hang")
+    private Boolean giaoHang;
 
     @Column(name = "phi_van_chuyen", precision = 18, scale = 2)
     private BigDecimal phiVanChuyen;
@@ -129,15 +127,26 @@ public class HoaDon {
     @Column(name = "update_by")
     private Integer updateBy;
 
+    @Column(name = "trang_thai_thanh_toan")
+    private Boolean trangThaiThanhToan;
+
+    @Column(name = "so_tien_da_thanh_toan", precision = 18, scale = 2)
+    private BigDecimal soTienDaThanhToan;
+
+    @Column(name = "so_tien_con_lai", precision = 18, scale = 2)
+    private BigDecimal soTienConLai;
+
     @OneToMany(mappedBy = "idHoaDon")
     @JsonManagedReference
     private Set<HinhThucThanhToan> hinhThucThanhToans;
-
 
     @OneToMany(mappedBy = "idHoaDon")
     private Set<HoaDonChiTiet> hoaDonChiTiets = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "idHoaDon")
     private Set<ThongTinDonHang> thongTinDonHangs = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "idHoaDon")
+    private Set<TimelineDonHang> timelineDonHangs = new LinkedHashSet<>();
 
 }

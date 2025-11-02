@@ -16,6 +16,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PhieuGiamGiaResponse {
+
     Integer id;
     String maPhieuGiamGia;
     String tenPhieuGiamGia;
@@ -31,6 +32,7 @@ public class PhieuGiamGiaResponse {
     String moTa;
     Boolean deleted;
     Boolean featured;
+    Boolean personalUsed;  // For personal vouchers (featured=true): true if customer already used this voucher
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 
@@ -42,9 +44,9 @@ public class PhieuGiamGiaResponse {
         this.giaTriGiamGia = d.getGiaTriGiamGia();
         this.idKhachHang = (d.getPhieuGiamGiaCaNhans() != null && !d.getPhieuGiamGiaCaNhans().isEmpty())
                 ? d.getPhieuGiamGiaCaNhans().stream()
-                .filter(p -> !Boolean.TRUE.equals(p.getDeleted()))
-                .map(p -> p.getIdKhachHang().getId())
-                .toList()
+                        .filter(p -> !Boolean.TRUE.equals(p.getDeleted()))
+                        .map(p -> p.getIdKhachHang().getId())
+                        .toList()
                 : List.of();
         this.hoaDonToiThieu = d.getHoaDonToiThieu();
         this.soLuongDung = d.getSoLuongDung();
@@ -54,7 +56,13 @@ public class PhieuGiamGiaResponse {
         this.moTa = d.getMoTa();
         this.deleted = d.getDeleted();
         this.featured = d.getFeatured();
+        this.personalUsed = null;  // Default: not marked as used by specific customer
         this.createdAt = d.getCreatedAt();
         this.updatedAt = d.getUpdatedAt();
+    }
+
+    public PhieuGiamGiaResponse(PhieuGiamGia d, Boolean personalUsed) {
+        this(d);
+        this.personalUsed = personalUsed;
     }
 }

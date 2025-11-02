@@ -1,6 +1,5 @@
 <template>
   <div class="product-variant-page">
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form :model="filters" layout="vertical">
@@ -410,7 +409,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
@@ -1518,6 +1517,10 @@ watch(
   }
 )
 
+// BroadcastChannel for real-time stock updates from POS
+let stockBroadcastChannel: BroadcastChannel | null = null
+let stockRefreshInterval: number | null = null
+
 onMounted(() => {
   // Parse new variants from query params first
   parseNewVariants()
@@ -1544,8 +1547,42 @@ onMounted(() => {
     loadBienTheList()
   }
 
+  // Setup BroadcastChannel for real-time stock updates from POS
+  try {
+    stockBroadcastChannel = new BroadcastChannel('stock-update-channel')
+    stockBroadcastChannel.onmessage = (event) => {
+      if (event.data.type === 'STOCK_CHANGE') {
+        const { productId, needsRefresh } = event.data
+        if (needsRefresh) {
+          console.log(`[BroadcastChannel] Stock change detected for product ${productId}, reloading product list`)
+          // Reload product list to refresh stock quantities
+          loadBienTheList()
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('BroadcastChannel not supported, falling back to polling', error)
+  }
+
+  // Set up auto-refresh for product list (every 15 seconds for fallback)
+  stockRefreshInterval = window.setInterval(() => {
+    loadBienTheList()
+  }, 15000) // 15 seconds
+
   // Highlighting sẽ được giữ cho đến khi user tự tắt hoặc thực hiện tìm kiếm/lọc
   // Không tự động tắt sau 30s nữa
+})
+
+onBeforeUnmount(() => {
+  if (stockRefreshInterval !== null) {
+    clearInterval(stockRefreshInterval)
+  }
+
+  // Close BroadcastChannel
+  if (stockBroadcastChannel) {
+    stockBroadcastChannel.close()
+    console.log('[BroadcastChannel] Closed')
+  }
 })
 
 // Watch for variants data changes to ensure proper sorting

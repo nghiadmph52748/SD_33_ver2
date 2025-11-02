@@ -61,6 +61,10 @@ public class DiaChiKhachHang {
     @Column(name = "mac_dinh")
     private Boolean macDinh;
 
+    @ColumnDefault("1")
+    @Column(name = "trang_thai")
+    private Boolean trangThai;
+
     @ColumnDefault("0")
     @Column(name = "deleted")
     private Boolean deleted;

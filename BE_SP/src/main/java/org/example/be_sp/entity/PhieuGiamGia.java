@@ -5,19 +5,10 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Nationalized;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,7 +16,6 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "phieu_giam_gia")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class PhieuGiamGia {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

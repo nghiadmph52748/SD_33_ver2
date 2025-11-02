@@ -1,6 +1,5 @@
 <template>
   <div class="pos-system">
-
     <!-- Main Layout -->
     <a-card class="main-pos-card">
       <!-- <template #title> -->
@@ -235,7 +234,7 @@
             <template #title>
               <div style="display: flex; justify-content: space-between; align-items: center">
                 <span>Thanh Toán</span>
-                <a-select v-model="orderType" placeholder="Loại đơn" style="width: 120px">
+                <a-select v-model="orderType" placeholder="Loại đơn" style="width: 120px" @change="handleOrderTypeChange">
                   <a-option value="counter">Tại quầy</a-option>
                   <a-option value="delivery">Giao hàng</a-option>
                 </a-select>
@@ -274,23 +273,24 @@
                 v-if="!selectedCoupon && bestVoucher"
                 style="
                   margin-bottom: 12px;
-                    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-                    border: 1px solid #91d5ff;
-                    border-radius: 8px;
-                    padding: 16px;
-                    margin-top: 12px;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    display: block;
-                    width: 100%;
-                    box-sizing: border-box;
-                  "
-                  @click="selectVoucher(bestVoucher)"
-                  @mouseenter="(e) => e.currentTarget.style.transform = 'translateY(-2px)'"
-                  @mouseleave="(e) => e.currentTarget.style.transform = 'translateY(0)'"
-                >
-                  <div style="display: flex; align-items: center; gap: 12px">
-                    <div style="
+                  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+                  border: 1px solid #91d5ff;
+                  border-radius: 8px;
+                  padding: 16px;
+                  margin-top: 12px;
+                  cursor: pointer;
+                  transition: all 0.3s ease;
+                  display: block;
+                  width: 100%;
+                  box-sizing: border-box;
+                "
+                @click="selectVoucher(bestVoucher)"
+                @mouseenter="(e) => (e.currentTarget.style.transform = 'translateY(-2px)')"
+                @mouseleave="(e) => (e.currentTarget.style.transform = 'translateY(0)')"
+              >
+                <div style="display: flex; align-items: center; gap: 12px">
+                  <div
+                    style="
                       background: linear-gradient(135deg, #1890ff 0%, #0050b3 100%);
                       width: 40px;
                       height: 40px;
@@ -299,15 +299,15 @@
                       align-items: center;
                       justify-content: center;
                       box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
-                    ">
-                      <icon-gift style="font-size: 20px; color: #fff" />
-                    </div>
-                    <div style="flex: 1">
-                      <div style="font-size: 14px; font-weight: 600; color: #0050b3; margin-bottom: 4px">
-                        Gợi ý voucher tốt nhất
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 8px">
-                        <span style="
+                    "
+                  >
+                    <icon-gift style="font-size: 20px; color: #fff" />
+                  </div>
+                  <div style="flex: 1">
+                    <div style="font-size: 14px; font-weight: 600; color: #0050b3; margin-bottom: 4px">Gợi ý voucher tốt nhất</div>
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <span
+                        style="
                           background: #fff;
                           color: #1890ff;
                           padding: 4px 12px;
@@ -315,21 +315,18 @@
                           font-weight: 700;
                           font-size: 13px;
                           border: 1px dashed #1890ff;
-                        ">
-                          {{ bestVoucher.maPhieuGiamGia }}
-                        </span>
-                        <span style="color: #666; font-size: 12px">Tiết kiệm</span>
-                        <span style="
-                          color: #52c41a;
-                          font-weight: 700;
-                          font-size: 16px;
-                        ">
-                          {{ formatCurrency(calculateVoucherDiscount(bestVoucher)) }}
-                        </span>
-                      </div>
+                        "
+                      >
+                        {{ bestVoucher.maPhieuGiamGia }}
+                      </span>
+                      <span style="color: #666; font-size: 12px">Tiết kiệm</span>
+                      <span style="color: #52c41a; font-weight: 700; font-size: 16px">
+                        {{ formatCurrency(calculateVoucherDiscount(bestVoucher)) }}
+                      </span>
                     </div>
-                    <icon-right style="color: #1890ff; font-size: 20px" />
                   </div>
+                  <icon-right style="color: #1890ff; font-size: 20px" />
+                </div>
               </div>
 
               <!-- Warning: Better voucher available - Redesigned -->
@@ -350,77 +347,83 @@
                 "
               >
                 <!-- Animated background pattern -->
-                <div style="
-                  position: absolute;
-                  top: -50%;
-                  right: -10%;
-                  width: 200px;
-                  height: 200px;
-                  background: radial-gradient(circle, rgba(255, 152, 0, 0.1) 0%, transparent 70%);
-                  border-radius: 50%;
-                  animation: pulse 3s ease-in-out infinite;
-                "></div>
+                <div
+                  style="
+                    position: absolute;
+                    top: -50%;
+                    right: -10%;
+                    width: 200px;
+                    height: 200px;
+                    background: radial-gradient(circle, rgba(255, 152, 0, 0.1) 0%, transparent 70%);
+                    border-radius: 50%;
+                    animation: pulse 3s ease-in-out infinite;
+                  "
+                ></div>
 
                 <div style="position: relative; z-index: 1">
                   <!-- Header with icon -->
                   <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px">
-                    <div style="
-                      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-                      width: 48px;
-                      height: 48px;
-                      border-radius: 50%;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
-                    ">
+                    <div
+                      style="
+                        background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+                      "
+                    >
                       <icon-gift style="font-size: 24px; color: #fff" />
                     </div>
                     <div style="flex: 1">
-                      <div style="font-size: 16px; font-weight: 700; color: #e65100; line-height: 1.3">
-                        Có voucher tiết kiệm hơn!
-                      </div>
-                      <div style="font-size: 12px; color: #f57c00; margin-top: 2px">
-                        Đổi ngay để được giảm giá cao hơn
-                      </div>
+                      <div style="font-size: 16px; font-weight: 700; color: #e65100; line-height: 1.3">Có voucher tiết kiệm hơn!</div>
+                      <div style="font-size: 12px; color: #f57c00; margin-top: 2px">Đổi ngay để được giảm giá cao hơn</div>
                     </div>
                   </div>
 
                   <!-- Voucher comparison card -->
-                  <div style="
-                    background: #fff;
-                    border-radius: 10px;
-                    padding: 16px;
-                    margin-bottom: 16px;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-                  ">
+                  <div
+                    style="
+                      background: #fff;
+                      border-radius: 10px;
+                      padding: 16px;
+                      margin-bottom: 16px;
+                      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                    "
+                  >
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
                       <div style="display: flex; align-items: center; gap: 10px">
-                        <span style="
-                          background: #fff;
-                          color: #ff9800;
-                          padding: 8px 16px;
-                          border-radius: 8px;
-                          font-weight: 800;
-                          font-size: 15px;
-                          letter-spacing: 0.5px;
-                          border: 2px dashed #ff9800;
-                          box-shadow: 0 2px 4px rgba(255, 152, 0, 0.15);
-                        ">
+                        <span
+                          style="
+                            background: #fff;
+                            color: #ff9800;
+                            padding: 8px 16px;
+                            border-radius: 8px;
+                            font-weight: 800;
+                            font-size: 15px;
+                            letter-spacing: 0.5px;
+                            border: 2px dashed #ff9800;
+                            box-shadow: 0 2px 4px rgba(255, 152, 0, 0.15);
+                          "
+                        >
                           {{ bestVoucher.maPhieuGiamGia }}
                         </span>
                       </div>
                       <div style="text-align: right">
                         <div style="font-size: 11px; color: #666; margin-bottom: 2px">Tiết kiệm thêm</div>
-                        <div style="
-                          color: #2e7d32;
-                          font-weight: 800;
-                          font-size: 18px;
-                          display: flex;
-                          align-items: center;
-                          justify-content: flex-end;
-                          gap: 4px;
-                        ">
+                        <div
+                          style="
+                            color: #2e7d32;
+                            font-weight: 800;
+                            font-size: 18px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: flex-end;
+                            gap: 4px;
+                          "
+                        >
                           <span style="font-size: 16px">+</span>
                           {{ formatCurrency(calculateVoucherDiscount(bestVoucher) - calculateVoucherDiscount(selectedCoupon)) }}
                         </div>
@@ -428,16 +431,20 @@
                     </div>
 
                     <!-- Benefit indicator -->
-                    <div style="
-                      background: linear-gradient(90deg, #e8f5e9 0%, #f1f8e9 100%);
-                      border-left: 3px solid #4caf50;
-                      padding: 10px 12px;
-                      border-radius: 6px;
-                    ">
+                    <div
+                      style="
+                        background: linear-gradient(90deg, #e8f5e9 0%, #f1f8e9 100%);
+                        border-left: 3px solid #4caf50;
+                        padding: 10px 12px;
+                        border-radius: 6px;
+                      "
+                    >
                       <div style="display: flex; align-items: center; gap: 8px">
                         <span style="font-size: 16px">✓</span>
                         <span style="font-size: 12px; color: #2e7d32; font-weight: 600">
-                          Giảm giá tốt hơn {{ Math.round((calculateVoucherDiscount(bestVoucher) / calculateVoucherDiscount(selectedCoupon) - 1) * 100) }}% so với voucher hiện tại
+                          Giảm giá tốt hơn
+                          {{ Math.round((calculateVoucherDiscount(bestVoucher) / calculateVoucherDiscount(selectedCoupon) - 1) * 100) }}% so
+                          với voucher hiện tại
                         </span>
                       </div>
                     </div>
@@ -458,8 +465,8 @@
                       transition: all 0.3s ease;
                     "
                     @click="selectVoucher(bestVoucher)"
-                    @mouseenter="(e) => e.currentTarget.style.transform = 'translateY(-2px)'"
-                    @mouseleave="(e) => e.currentTarget.style.transform = 'translateY(0)'"
+                    @mouseenter="(e) => (e.currentTarget.style.transform = 'translateY(-2px)')"
+                    @mouseleave="(e) => (e.currentTarget.style.transform = 'translateY(0)')"
                   >
                     <template #icon>
                       <icon-swap />
@@ -472,19 +479,13 @@
               <!-- Delivery Address & Shipping Fee (only for delivery orders) -->
               <div v-if="orderType === 'delivery'" style="margin-bottom: 16px">
                 <!-- Show customer address if available -->
-                <a-alert
-                  v-if="selectedCustomer?.address"
-                  type="info"
-                  style="margin-bottom: 12px"
-                >
+                <a-alert v-if="selectedCustomer?.address" type="info" style="margin-bottom: 12px">
                   <template #icon>
                     <icon-info-circle />
                   </template>
                   <div style="font-size: 12px">
                     <strong>Đơn giao hàng</strong>
-                    <p style="margin: 4px 0 0 0; color: #666">
-                      Địa chỉ nhận hàng: {{ selectedCustomer.address }}
-                    </p>
+                    <p style="margin: 4px 0 0 0; color: #666">Địa chỉ nhận hàng: {{ selectedCustomer.address }}</p>
                   </div>
                 </a-alert>
 
@@ -534,29 +535,20 @@
                     </a-col>
                     <a-col :span="12">
                       <a-form-item label="Địa chỉ cụ thể" required>
-                        <a-input
-                          v-model="walkInLocation.diaChiCuThe"
-                          placeholder="Số nhà, đường..."
-                        />
+                        <a-input v-model="walkInLocation.diaChiCuThe" placeholder="Số nhà, đường..." />
                       </a-form-item>
                     </a-col>
                   </a-row>
                 </div>
 
                 <!-- Warning for registered customers without address -->
-                <a-alert
-                  v-if="selectedCustomer && !selectedCustomer.address"
-                  type="warning"
-                  style="margin-bottom: 12px"
-                >
+                <a-alert v-if="selectedCustomer && !selectedCustomer.address" type="warning" style="margin-bottom: 12px">
                   <template #icon>
                     <icon-exclamation-circle />
                   </template>
                   <div style="font-size: 12px">
                     <strong>⚠️ Khách hàng chưa có địa chỉ</strong>
-                    <p style="margin: 4px 0 0 0; color: #666">
-                      Vui lòng chọn khách hàng khác hoặc chọn "Khách lẻ" để nhập địa chỉ
-                    </p>
+                    <p style="margin: 4px 0 0 0; color: #666">Vui lòng chọn khách hàng khác hoặc chọn "Khách lẻ" để nhập địa chỉ</p>
                   </div>
                 </a-alert>
 
@@ -980,9 +972,7 @@
                   <div style="font-size: 16px; font-weight: 600; color: #333">
                     {{ coupon.maPhieuGiamGia }}
                   </div>
-                  <a-tag v-if="bestVoucher && coupon.id === bestVoucher.id" color="gold" size="small">
-                    ⭐ Tốt nhất
-                  </a-tag>
+                  <a-tag v-if="bestVoucher && coupon.id === bestVoucher.id" color="gold" size="small">⭐ Tốt nhất</a-tag>
                   <a-tag v-if="!isVoucherEligible(coupon)" color="red" size="small">
                     {{ getVoucherStatus(coupon) }}
                   </a-tag>
@@ -1105,7 +1095,8 @@
       @cancel="showAddProductConfirmModal = false"
       ok-text="Thêm"
       cancel-text="Hủy"
-      :ok-button-props="{ disabled: !isQuantityValid }"
+      :ok-button-props="{ disabled: !isQuantityValid || confirmLoading, loading: confirmLoading }"
+      :cancel-button-props="{ disabled: confirmLoading }"
     >
       <div v-if="selectedProductForAdd">
         <!-- Product Info -->
@@ -1207,12 +1198,88 @@
         </div>
       </div>
     </a-modal>
+
+    <!-- Confirm Order - Better Voucher Modal -->
+    <a-modal
+      v-model:visible="showConfirmOrderModal"
+      title="⚠️ Có Phiếu Giảm Giá Tốt Hơn"
+      width="600px"
+      :footer="null"
+      @cancel="cancelConfirmOrder"
+    >
+      <div style="padding: 20px 0">
+        <!-- Warning Message -->
+        <div style="margin-bottom: 24px; padding: 12px 16px; background: #fff7e6; border-left: 4px solid #faad14; border-radius: 4px">
+          <div style="color: #faad14; font-weight: 600; margin-bottom: 8px">💡 Gợi ý</div>
+          <div style="color: #666; line-height: 1.6">
+            Chúng tôi tìm thấy phiếu giảm giá với mức giảm cao hơn. Bạn có muốn quay lại để chọn phiếu tốt nhất không?
+          </div>
+        </div>
+
+        <!-- Suggested Vouchers List -->
+        <div v-if="suggestedBetterVouchers.length > 0" style="margin-bottom: 24px">
+          <div style="font-weight: 600; margin-bottom: 12px; color: #262626">Phiếu giảm giá tốt hơn:</div>
+
+          <div
+            v-for="(voucher, idx) in suggestedBetterVouchers"
+            :key="idx"
+            style="
+              padding: 12px;
+              margin-bottom: 8px;
+              border: 1px solid #e5e5e5;
+              border-radius: 6px;
+              background: #fafafa;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <div>
+              <div style="font-weight: 600; color: #262626">{{ voucher.tenPhieuGiamGia }}</div>
+              <div style="font-size: 12px; color: #999; margin-top: 4px">
+                Còn: {{ voucher.soLuongDung }} lượt | Min: {{ formatCurrency(voucher.hoaDonToiThieu) }}
+              </div>
+            </div>
+            <div style="text-align: right">
+              <div style="font-size: 16px; font-weight: 700; color: #52c41a">-{{ formatCurrency(calculateVoucherDiscount(voucher)) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Selected Voucher Info -->
+        <div v-if="selectedCoupon" style="margin-bottom: 24px; padding: 12px; background: #f0f0f0; border-radius: 6px">
+          <div style="font-size: 12px; color: #999; margin-bottom: 4px">Phiếu đang chọn:</div>
+          <div style="font-weight: 600; color: #262626">{{ selectedCoupon.tenPhieuGiamGia }}</div>
+          <div style="font-size: 14px; color: #666; margin-top: 4px">-{{ formatCurrency(calculateVoucherDiscount(selectedCoupon)) }}</div>
+        </div>
+        <div v-else style="margin-bottom: 24px; padding: 12px; background: #f0f0f0; border-radius: 6px">
+          <div style="font-size: 12px; color: #999">Không có phiếu giảm giá</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end">
+          <a-button type="default" @click="cancelConfirmOrder">Quay lại</a-button>
+          <a-button type="primary" :loading="confirmLoading" @click="doConfirmOrder">Bỏ qua và thanh toán</a-button>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import { IconPlus, IconClose, IconDelete, IconQrcode, IconCheck, IconInfoCircle, IconExclamationCircle, IconRight, IconSwap, IconGift } from '@arco-design/web-vue/es/icon'
+import {
+  IconPlus,
+  IconClose,
+  IconDelete,
+  IconQrcode,
+  IconCheck,
+  IconInfoCircle,
+  IconExclamationCircle,
+  IconRight,
+  IconSwap,
+  IconGift,
+} from '@arco-design/web-vue/es/icon'
 import {
   getBienTheSanPhamPage,
   getChatLieuOptions,
@@ -1226,23 +1293,33 @@ import {
   type KichThuoc,
 } from '@/api/san-pham/bien-the'
 import { layDanhSachKhachHang, type KhachHangResponse } from '@/api/khach-hang'
-import { fetchCoupons, type CouponApiModel } from '@/api/discount-management'
+import { type CouponApiModel } from '@/api/discount-management'
 import {
-  createHoaDon,
-  createHoaDonChiTiet,
-  createHinhThucThanhToan,
-  createThongTinHoaDon,
-  BanHangTaiQuayRequest,
-  HoaDonChiTietApiModel,
-  HinhThucThanhToanApiModel,
-  ThongTinHoaDonApiModel,
-} from '@/api/hoa-don'
-import { Message } from '@arco-design/web-vue'
+  createInvoice,
+  deleteInvoice,
+  addProductToInvoice,
+  updateProductQuantityInInvoice,
+  deleteProductsFromInvoice,
+  updateCustomerForInvoice,
+  updateShippingMethod,
+  updatePaymentMethod,
+  updateVoucher,
+  confirmPosOrder,
+  getPosActiveCoupons,
+  getPosActiveCouponsForCustomer,
+  type PhieuGiamGiaResponse,
+  type UpdateCustomerRequest,
+  type UpdatePaymentMethodRequest,
+  type UpdateVoucherRequest,
+  type ConfirmBanHangRequest,
+} from '@/api/pos'
+import { Message, Modal } from '@arco-design/web-vue'
 import { Html5Qrcode, Html5QrcodeSupportedFormats, Html5QrcodeScannerState } from 'html5-qrcode'
 import { useUserStore } from '@/store'
 // ==================== TYPES ====================
 interface CartItem {
   id: string
+  idHoaDonChiTiets?: number[] // Server-side IDs for all invoice detail entries (array because each add creates new entry)
   productId: string
   productName: string
   price: number
@@ -1309,6 +1386,17 @@ const showDeleteConfirmModal = ref(false)
 const showAddProductConfirmModal = ref(false)
 const showDeleteProductModal = ref(false)
 
+// Confirm order modal state
+const showConfirmOrderModal = ref(false)
+const suggestedBetterVouchers = ref<CouponApiModel[]>([])
+const confirmOrderRequest = ref<any>(null)
+
+// Throttle state for API calls to avoid excessive requests
+let lastVoucherRefreshTime = 0
+let lastStockRefreshTime = 0
+const VOUCHER_THROTTLE_MS = 2000 // 2 seconds throttle between voucher refresh calls
+const STOCK_THROTTLE_MS = 1000 // 1 second throttle between stock refresh calls
+
 // QR Scanner state
 const qrScannerInstance = ref<Html5Qrcode | null>(null)
 const deleteConfirmOrderIndex = ref<number | null>(null)
@@ -1318,6 +1406,9 @@ const productQuantityInput = ref(1)
 const quantityInputRef = ref<any>(null)
 const confirmLoading = ref(false)
 const loadingData = ref(false)
+
+// Broadcast channel for real-time sync between tabs/windows
+let stockBroadcastChannel: BroadcastChannel | null = null
 
 const productPagination = ref({
   current: 1,
@@ -1402,10 +1493,18 @@ const hasEligibleVouchers = computed(() => {
 
 // Find the best voucher based on discount amount
 const bestVoucher = computed(() => {
+  // ONLY suggest vouchers that are TRULY USABLE right now
   const eligible = coupons.value.filter((coupon) => isVoucherEligible(coupon))
+
   if (eligible.length === 0) return null
 
-  // Calculate actual discount amount for each voucher
+  // If best voucher is already selected, skip it
+  if (selectedCoupon.value && eligible.length > 1) {
+    const filtered = eligible.filter((c) => c.id !== selectedCoupon.value?.id)
+    if (filtered.length === 0) return null
+  }
+
+  // Calculate actual discount amount for each eligible voucher
   let bestCoupon = eligible[0]
   let maxDiscount = calculateVoucherDiscount(bestCoupon)
 
@@ -1417,14 +1516,27 @@ const bestVoucher = computed(() => {
     }
   }
 
+  // Only return if it's actually better than the selected one
+  if (selectedCoupon.value) {
+    const selectedDiscount = calculateVoucherDiscount(selectedCoupon.value)
+    if (calculateVoucherDiscount(bestCoupon) <= selectedDiscount) {
+      return null
+    }
+  }
+
   return bestCoupon
 })
 
 // Check if there's a better voucher than the currently selected one
 const hasBetterVoucher = computed(() => {
-  if (!selectedCoupon.value || !bestVoucher.value) return false
+  // Only show suggestion if there's a best voucher available
+  if (!bestVoucher.value) return false
+
+  // And if it's different from the currently selected one
+  if (!selectedCoupon.value) return false
   if (selectedCoupon.value.id === bestVoucher.value.id) return false
 
+  // And if it gives more discount
   const currentDiscount = calculateVoucherDiscount(selectedCoupon.value)
   const bestDiscount = calculateVoucherDiscount(bestVoucher.value)
 
@@ -1432,7 +1544,9 @@ const hasBetterVoucher = computed(() => {
 })
 
 // Calculate actual discount amount for a voucher
-const calculateVoucherDiscount = (coupon: CouponApiModel): number => {
+const calculateVoucherDiscount = (coupon: CouponApiModel | null | undefined): number => {
+  if (!coupon) return 0
+
   const discountValue = Number(coupon.giaTriGiamGia) || 0
   const subtotalValue = subtotal.value
 
@@ -1447,6 +1561,10 @@ const calculateVoucherDiscount = (coupon: CouponApiModel): number => {
 
 // Function to get voucher status text
 const getVoucherStatus = (coupon: CouponApiModel) => {
+  if (coupon.trangThai !== true) {
+    return 'Không hoạt động'
+  }
+
   if (!currentOrder.value || currentOrder.value.items.length === 0) {
     return 'Chưa có sản phẩm'
   }
@@ -1484,8 +1602,47 @@ const getDiscountDisplay = (coupon: CouponApiModel) => {
   }
 }
 
+// Function to show voucher suggestion modal when a better voucher is found
+const showVoucherSuggestion = (betterVoucher: CouponApiModel) => {
+  const currentDiscount = selectedCoupon.value ? calculateVoucherDiscount(selectedCoupon.value) : 0
+  const newDiscount = calculateVoucherDiscount(betterVoucher)
+  const savingsAmount = newDiscount - currentDiscount
+
+  Modal.confirm({
+    title: '💡 Có phiếu giảm giá tốt hơn!',
+    content: `
+      <div style="text-align: left; line-height: 1.8;">
+        <p><strong>Phiếu hiện tại:</strong> ${selectedCoupon.value?.tenPhieuGiamGia}</p>
+        <p style="color: #666; margin-bottom: 16px;">Tiết kiệm: <span style="color: #52c41a; font-weight: 600;">${formatCurrency(currentDiscount)}</span></p>
+
+        <p><strong style="color: #0960bd;">✨ Phiếu tốt hơn:</strong> ${betterVoucher.tenPhieuGiamGia}</p>
+        <p style="color: #666; margin-bottom: 16px;">Tiết kiệm: <span style="color: #52c41a; font-weight: 600;">${formatCurrency(newDiscount)}</span></p>
+
+        <p style="background: #fafafa; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #52c41a;">
+          <span style="color: #52c41a; font-weight: 600;">💰 Tiết kiệm thêm: ${formatCurrency(savingsAmount)}</span>
+        </p>
+      </div>
+    `,
+    okText: 'Áp dụng phiếu tốt hơn',
+    cancelText: 'Giữ phiếu cũ',
+    onOk() {
+      // Apply the better voucher
+      paymentForm.value.discountCode = betterVoucher.maPhieuGiamGia
+      Message.success(`Đã áp dụng phiếu "${betterVoucher.tenPhieuGiamGia}"`)
+    },
+    onCancel() {
+      // User chose to keep current voucher
+    },
+  })
+}
+
 // Computed to check if voucher is eligible for current order
 const isVoucherEligible = (coupon: CouponApiModel) => {
+  // Check if voucher is active
+  if (coupon.trangThai !== true) {
+    return false
+  }
+
   // Check if order has items
   if (!currentOrder.value || currentOrder.value.items.length === 0) {
     return false
@@ -1536,22 +1693,7 @@ const subtotal = computed(() => {
 
 const discountAmount = computed(() => {
   if (!selectedCoupon.value || !currentOrder.value) return 0
-
-  const coupon = selectedCoupon.value
-  const discountValue = Number(coupon.giaTriGiamGia) || 0
-  const subtotalValue = subtotal.value
-
-  // Check if it's percentage discount (loaiPhieuGiamGia = false means percentage)
-  if (!coupon.loaiPhieuGiamGia) {
-    // Percentage discount (loaiPhieuGiamGia = false)
-    const percentage = discountValue / 100 // Convert from 10 to 0.1
-    const discount = subtotalValue * percentage
-    return discount
-  } else {
-    // Fixed amount discount (loaiPhieuGiamGia = true)
-    const discount = Math.min(discountValue, subtotalValue) // Don't exceed subtotal
-    return discount
-  }
+  return calculateVoucherDiscount(selectedCoupon.value)
 })
 
 const finalPrice = computed(() => {
@@ -1589,8 +1731,12 @@ const canConfirmOrder = computed(() => {
     }
     // If walk-in customer, require location form to be filled
     if (!selectedCustomer.value && currentOrder.value?.customerId === '') {
-      if (!walkInLocation.value.thanhPho || !walkInLocation.value.quan ||
-          !walkInLocation.value.phuong || !walkInLocation.value.diaChiCuThe) {
+      if (
+        !walkInLocation.value.thanhPho ||
+        !walkInLocation.value.quan ||
+        !walkInLocation.value.phuong ||
+        !walkInLocation.value.diaChiCuThe
+      ) {
         return false
       }
     }
@@ -1813,16 +1959,28 @@ const generateOrderCode = (): string => {
   return code
 }
 
-const createNewOrder = () => {
-  const newOrder: Order = {
-    id: `ORDER_${Date.now()}`,
-    orderCode: generateOrderCode(),
-    items: [],
-    customerId: null,
-    createdAt: new Date(),
+const createNewOrder = async () => {
+  try {
+    // Create invoice on server first (returns invoiceId)
+    const invoiceId = await createNewInvoice()
+
+    // Create local order object with the returned invoiceId
+    const newOrder: Order = {
+      id: invoiceId.toString(),
+      orderCode: generateOrderCode(),
+      items: [],
+      customerId: null,
+      createdAt: new Date(),
+    }
+
+    // Add to orders list
+    orders.value.push(newOrder)
+    currentOrderIndex.value = (orders.value.length - 1).toString()
+    Message.success('Đơn hàng mới đã được tạo')
+  } catch (error) {
+    console.error('Lỗi tạo đơn hàng:', error)
+    Message.error(error.message || 'Không thể tạo đơn hàng mới')
   }
-  orders.value.push(newOrder)
-  currentOrderIndex.value = (orders.value.length - 1).toString()
 }
 
 const deleteOrderByIndex = (index: number) => {
@@ -1862,6 +2020,28 @@ const confirmDeleteOrder = async () => {
       const orderIndex = deleteConfirmOrderIndex.value
       const orderToDelete = orders.value[orderIndex]
 
+      if (orderToDelete?.id) {
+        const invoiceId = parseInt(orderToDelete.id)
+        if (!isNaN(invoiceId)) {
+          // Call API to delete invoice
+          await deleteInvoice(invoiceId, userStoreInstance.id)
+
+          // Broadcast order deletion to other tabs/pages
+          try {
+            const orderBroadcastChannel = new BroadcastChannel('order-update-channel')
+            orderBroadcastChannel.postMessage({
+              type: 'ORDER_DELETED',
+              invoiceId: invoiceId,
+              orderCode: orderToDelete.orderCode,
+              timestamp: new Date().toISOString(),
+            })
+            orderBroadcastChannel.close()
+          } catch (error) {
+            console.warn('BroadcastChannel broadcast failed:', error)
+          }
+        }
+      }
+
       if (orderToDelete && orderToDelete.items.length > 0) {
         // Hoàn lại tất cả số lượng vào kho trước khi xóa đơn hàng
         orderToDelete.items.forEach((item) => {
@@ -1879,7 +2059,7 @@ const confirmDeleteOrder = async () => {
             // Cập nhật số lượng đã bán
             soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
           } catch (itemError) {
-            console.warn(`⚠️ Lỗi khi hoàn stock cho sản phẩm ${item.productName}:`, itemError)
+            console.warn(`Lỗi khi hoàn stock cho sản phẩm ${item.productName}:`, itemError)
           }
         })
       }
@@ -1890,8 +2070,8 @@ const confirmDeleteOrder = async () => {
       deleteConfirmOrderIndex.value = null
       Message.success('Đơn hàng đã được xoá')
     } catch (error) {
-      console.error('❌ Lỗi khi xóa đơn hàng:', error)
-      Message.error('Có lỗi xảy ra khi xóa đơn hàng')
+      console.error('Lỗi xóa đơn hàng:', error)
+      Message.error(error.message || 'Có lỗi xảy ra khi xóa đơn hàng')
     }
   }
 }
@@ -1923,59 +2103,59 @@ const handleQuantityChange = (val: number) => {
   }
 }
 
-const confirmAddProduct = () => {
+const confirmAddProduct = async () => {
   try {
+    confirmLoading.value = true
+
     if (!selectedProductForAdd.value || !currentOrder.value) {
-      console.error('❌ [DEBUG] Thiếu dữ liệu sản phẩm hoặc đơn hàng')
       throw new Error('Dữ liệu sản phẩm hoặc đơn hàng không hợp lệ')
     }
 
+    let invoiceId = parseInt(currentOrder.value.id)
     const quantity = productQuantityInput.value
-    const stock = selectedProductForAdd.value.soLuong || 0
+    const productId = selectedProductForAdd.value.id
+
     if (!quantity || quantity < 1) {
       Message.error('Số lượng phải lớn hơn 0')
       return
     }
 
-    // Kiểm tra tồn kho
-    try {
-      if (stock <= 0) {
-        console.error('❌ [DEBUG] Sản phẩm hết hàng:', selectedProductForAdd.value.tenSanPham)
-        throw new Error(`Sản phẩm "${selectedProductForAdd.value.tenSanPham}" đã hết hàng. Không thể thêm vào giỏ!`)
-      }
-      if (quantity > stock) {
-        console.error('❌ [DEBUG] Tồn kho không đủ:', { requested: quantity, available: stock })
-        throw new Error(`Tồn kho không đủ. Yêu cầu: ${quantity} cái | Còn lại: ${stock} cái`)
-      }
-    } catch (stockError) {
-      Message.error(`❌ ${stockError.message}`)
+    if (!productId || isNaN(productId)) {
+      Message.error('ID sản phẩm không hợp lệ')
       return
     }
 
-    // Kiểm tra sản phẩm đã tồn tại
-    const existingItem = currentOrder.value.items.find((item) => item.productId === selectedProductForAdd.value?.id?.toString())
-    if (existingItem) {
-      const newTotalQuantity = existingItem.quantity + quantity
-      try {
-        if (stock <= 0) {
-          console.error('❌ [DEBUG] Sản phẩm hết hàng khi cập nhật:', selectedProductForAdd.value.tenSanPham)
-          throw new Error(`Sản phẩm "${selectedProductForAdd.value.tenSanPham}" đã hết hàng. Không thể tăng số lượng!`)
-        }
-        if (newTotalQuantity > stock) {
-          console.error('❌ [DEBUG] Tổng số lượng vượt kho:', { current: existingItem.quantity, adding: quantity, available: stock })
-          throw new Error(`Tổng số lượng (${newTotalQuantity}) vượt quá tồn kho (${stock})`)
-        }
-      } catch (totalStockError) {
-        Message.error(`⚠️ ${totalStockError.message}`)
-        return
-      }
+    // Create invoice on server if not yet created
+    if (isNaN(invoiceId)) {
+      invoiceId = await createNewInvoice()
 
-      existingItem.quantity = newTotalQuantity
+      if (!invoiceId) {
+        throw new Error('Không thể tạo hóa đơn')
+      }
+      // Update currentOrder with the new invoiceId
+      currentOrder.value.id = invoiceId.toString()
+    }
+
+    // Call API to add product to invoice
+    const idHoaDonChiTiet = await addProductToInvoice(invoiceId, productId, quantity, userStoreInstance.id)
+
+    // Update local cart
+    const existingItem = currentOrder.value.items.find((item) => item.productId === productId.toString())
+    if (existingItem) {
+      existingItem.quantity += quantity
+      if (idHoaDonChiTiet) {
+        // Push new id to array (each add creates new HoaDonChiTiet in backend)
+        if (!existingItem.idHoaDonChiTiets) {
+          existingItem.idHoaDonChiTiets = []
+        }
+        existingItem.idHoaDonChiTiets.push(idHoaDonChiTiet)
+      }
       Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${existingItem.quantity}`)
     } else {
       const item: CartItem = {
         id: `${Date.now()}_${Math.random()}`,
-        productId: selectedProductForAdd.value.id?.toString() || '',
+        idHoaDonChiTiets: idHoaDonChiTiet ? [idHoaDonChiTiet] : [],
+        productId: productId.toString(),
         productName: selectedProductForAdd.value.tenSanPham || '',
         price: selectedProductForAdd.value.giaBan || 0,
         discount: selectedProductForAdd.value.giaTriGiamGia || 0,
@@ -1992,50 +2172,71 @@ const confirmAddProduct = () => {
       Message.success('Thêm sản phẩm thành công')
     }
 
-    // Cập nhật tồn kho
-    const productId = selectedProductForAdd.value.id
+    // Reload all products to get accurate stock from server
+    await loadAllProducts()
 
-    if (!productId) {
-      console.error('❌ [DEBUG] Không tìm thấy ID sản phẩm')
-      throw new Error('Không tìm thấy ID sản phẩm')
+    // Broadcast stock change to other tabs/windows (trigger refresh)
+    if (stockBroadcastChannel) {
+      stockBroadcastChannel.postMessage({
+        type: 'STOCK_CHANGE',
+        productId,
+        needsRefresh: true, // Signal other tabs to refresh stock
+      })
     }
 
-    const productInVariants = allProductVariants.value.find((p) => p.id === productId)
-    if (productInVariants) {
-      const oldStock = productInVariants.soLuong || 0
-      productInVariants.soLuong = oldStock - quantity
-    }
-
-    soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + quantity
-
+    // Close modals
     showAddProductConfirmModal.value = false
     showProductModal.value = false
     selectedProductForAdd.value = null
     productQuantityInput.value = 1
   } catch (error) {
-    console.error('❌ [DEBUG] Lỗi trong confirmAddProduct:', error.message)
-    Message.error('Có lỗi xảy ra khi thêm sản phẩm. Vui lòng thử lại.')
+    console.error('Lỗi thêm sản phẩm:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi thêm sản phẩm')
+  } finally {
+    confirmLoading.value = false
   }
 }
 
 const handleOrderChange = (key: string) => {
   currentOrderIndex.value = key
   cartPagination.value.current = 1
+
+  // Reset pagination to show from first item
+  cartPagination.value.current = 1
 }
 
-const updateQuantity = (itemId: string, quantity: number) => {
+const handleOrderTypeChange = async (value: string) => {
+  try {
+    orderType.value = value as 'counter' | 'delivery'
+
+    // Call API to update shipping method if we have an active invoice
+    if (currentOrder.value?.id) {
+      const invoiceId = parseInt(currentOrder.value.id)
+      if (!isNaN(invoiceId)) {
+        await updateInvoiceShipping(invoiceId)
+      }
+    }
+
+    if (value === 'delivery') {
+      Message.info('Vui lòng nhập địa chỉ giao hàng')
+    }
+  } catch (error) {
+    console.error('Lỗi cập nhật loại đơn:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi cập nhật loại đơn')
+  }
+}
+
+const updateQuantity = async (itemId: string, quantity: number) => {
   let item: CartItem | undefined
   let oldQuantity = 1
 
   try {
     if (!currentOrder.value) {
-      console.error('❌ [DEBUG] Không tìm thấy đơn hàng hiện tại')
       throw new Error('Không tìm thấy đơn hàng hiện tại')
     }
 
     item = currentOrder.value.items.find((i) => i.id === itemId)
     if (!item) {
-      console.error('❌ [DEBUG] Không tìm thấy sản phẩm trong giỏ hàng:', itemId)
       throw new Error('Không tìm thấy sản phẩm trong giỏ hàng')
     }
 
@@ -2051,37 +2252,24 @@ const updateQuantity = (itemId: string, quantity: number) => {
     const productId = parseInt(item.productId)
 
     if (isNaN(productId)) {
-      console.error('❌ [DEBUG] ID sản phẩm không hợp lệ:', item.productId)
       throw new Error('ID sản phẩm không hợp lệ')
     }
 
     const productInVariants = allProductVariants.value.find((p) => p.id === productId)
 
     if (!productInVariants) {
-      console.error('❌ [DEBUG] Không tìm thấy thông tin sản phẩm trong kho:', productId)
       throw new Error('Không tìm thấy thông tin sản phẩm trong kho')
     }
 
     // Kiểm tra tồn kho
     try {
-      // Tính tổng số lượng khả dụng: số trong kho hiện tại + số đã có trong giỏ
+      // Tính số lượng khả dụng trong kho: số hiện tại trong kho + số có trong giỏ (có thể lấy lại được)
       const currentStockInWarehouse = productInVariants.soLuong || 0
-      const totalAvailable = currentStockInWarehouse + oldQuantity
 
-      if (totalAvailable <= 0 && diff > 0) {
-        console.error('❌ [DEBUG] Sản phẩm hết hàng:', item.productName)
-        throw new Error(`Sản phẩm "${item.productName}" đã hết hàng. Không thể tăng số lượng!`)
-      }
       if (diff > 0) {
-        const newTotalInCart = oldQuantity + diff
-        if (newTotalInCart > totalAvailable) {
-          console.error('❌ [DEBUG] Tồn kho không đủ:', {
-            requested: newTotalInCart,
-            available: totalAvailable,
-            currentInWarehouse: currentStockInWarehouse,
-            currentInCart: oldQuantity,
-          })
-          throw new Error(`Tồn kho không đủ! Yêu cầu: ${newTotalInCart} cái | Còn lại: ${totalAvailable} cái`)
+        // Nếu tăng: kiểm tra xem tồn kho có đủ để tăng không
+        if (currentStockInWarehouse < diff) {
+          throw new Error(`Tồn kho không đủ! Yêu cầu tăng: ${diff} cái | Còn lại trong kho: ${currentStockInWarehouse} cái`)
         }
       }
     } catch (stockError) {
@@ -2092,15 +2280,30 @@ const updateQuantity = (itemId: string, quantity: number) => {
       cartTableKey.value++
       return
     }
-    // Cập nhật số lượng trong kho
-    productInVariants.soLuong = (productInVariants.soLuong || 0) - diff
-    // Track số lượng đã bán
-    soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) + diff
-    // Cập nhật quantity cuối cùng
+
+    // Call API to update quantity on server
+    if (item.idHoaDonChiTiet) {
+      await updateProductQuantityInInvoice(item.idHoaDonChiTiet, newQuantity, userStoreInstance.id)
+    }
+
+    // DO NOT update stock locally - backend already handles it
+    // Just update the quantity in cart
     item.quantity = newQuantity
+
+    // Immediately refresh product stock to get accurate data for next operations
+    await refreshProductStock()
+
+    // Broadcast stock change to other tabs/windows (trigger refresh)
+    if (stockBroadcastChannel) {
+      stockBroadcastChannel.postMessage({
+        type: 'STOCK_CHANGE',
+        productId,
+        needsRefresh: true, // Signal other tabs to refresh stock
+      })
+    }
   } catch (error) {
-    console.error('❌ Lỗi trong updateQuantity:', error.message)
-    Message.error('Có lỗi xảy ra khi cập nhật số lượng. Vui lòng thử lại.')
+    console.error('Lỗi cập nhật số lượng:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi cập nhật số lượng')
     // Reset lại giá trị input về số lượng cũ khi có lỗi hệ thống
     if (item) {
       item.quantity = oldQuantity
@@ -2118,17 +2321,17 @@ const resetQuantity = (itemId: string, previousQuantity: number) => {
   }
 }
 
-const removeFromCart = (itemId: string) => {
+const removeFromCart = async (itemId: string) => {
   try {
     if (!currentOrder.value) {
-      console.error('❌ [DEBUG] Không tìm thấy đơn hàng hiện tại')
+      Message.error('Không tìm thấy đơn hàng hiện tại')
       throw new Error('Không tìm thấy đơn hàng hiện tại')
     }
 
     const index = currentOrder.value.items.findIndex((i) => i.id === itemId)
 
     if (index === -1) {
-      console.error('❌ [DEBUG] Không tìm thấy sản phẩm trong giỏ hàng:', itemId)
+      Message.error('Không tìm thấy sản phẩm trong giỏ hàng')
       throw new Error('Không tìm thấy sản phẩm trong giỏ hàng')
     }
 
@@ -2136,41 +2339,48 @@ const removeFromCart = (itemId: string) => {
     const productId = parseInt(item.productId)
 
     if (isNaN(productId)) {
-      console.error('❌ [DEBUG] ID sản phẩm không hợp lệ:', item.productId)
+      Message.error('ID sản phẩm không hợp lệ')
       throw new Error('ID sản phẩm không hợp lệ')
     }
 
-    // Hoàn lại số lượng vào kho
-    const productInVariants = allProductVariants.value.find((p) => p.id === productId)
-
-    if (productInVariants) {
-      productInVariants.soLuong = (productInVariants.soLuong || 0) + item.quantity
+    const invoiceId = parseInt(currentOrder.value.id)
+    if (!isNaN(invoiceId) && item.idHoaDonChiTiets && item.idHoaDonChiTiets.length > 0) {
+      // Call API to delete ALL invoice detail IDs for this product (may have multiple from repeated adds)
+      await deleteProductsFromInvoice(item.idHoaDonChiTiets, userStoreInstance.id)
     }
 
-    // Cập nhật số lượng đã bán
-    soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
-
     currentOrder.value.items.splice(index, 1)
-    // Message success sẽ được hiển thị trong modal confirm
+
+    // Reload all products to get accurate stock from server
+    await loadAllProducts()
+
+    Message.success('Sản phẩm đã được xóa khỏi giỏ hàng')
   } catch (error) {
-    console.error('❌ [DEBUG] Lỗi trong removeFromCart:', error.message)
-    Message.error('Có lỗi xảy ra khi xóa sản phẩm. Vui lòng thử lại.')
+    console.error('Lỗi xóa sản phẩm:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi xóa sản phẩm')
   }
 }
 
-const clearCart = () => {
+const clearCart = async () => {
   try {
     if (!currentOrder.value) {
-      console.error('❌ [DEBUG] Không tìm thấy đơn hàng hiện tại')
+      Message.error('Không tìm thấy đơn hàng hiện tại')
       throw new Error('Không tìm thấy đơn hàng hiện tại')
     }
 
+    const invoiceDetailIds: number[] = []
+
     // Hoàn lại tất cả số lượng vào kho và cập nhật số lượng đã bán
-    currentOrder.value.items.forEach((item, index) => {
+    currentOrder.value.items.forEach((item) => {
       try {
         const productId = parseInt(item.productId)
         if (isNaN(productId)) {
           return
+        }
+
+        // Collect invoice detail IDs for API call
+        if (item.idHoaDonChiTiet) {
+          invoiceDetailIds.push(item.idHoaDonChiTiet)
         }
 
         const productInVariants = allProductVariants.value.find((p) => p.id === productId)
@@ -2181,31 +2391,53 @@ const clearCart = () => {
         // Cập nhật số lượng đã bán
         soldQuantitiesByProductId.value[productId] = (soldQuantitiesByProductId.value[productId] || 0) - item.quantity
       } catch (itemError) {
-        console.warn(`⚠️ Lỗi khi xử lý sản phẩm ${item.productName}:`, itemError)
+        console.warn(`Lỗi khi xử lý sản phẩm ${item.productName}:`, itemError)
       }
     })
 
-    currentOrder.value.items = []
+    // Call API to delete all products from invoice
+    if (invoiceDetailIds.length > 0) {
+      await deleteProductsFromInvoice(invoiceDetailIds, userStoreInstance.id)
+    }
 
+    currentOrder.value.items = []
     Message.success('Đã xóa tất cả sản phẩm khỏi giỏ hàng')
   } catch (error) {
-    console.error('❌ Lỗi trong clearCart:', error)
-    console.error('❌ Stack trace:', error.stack)
-    Message.error('Có lỗi xảy ra khi xóa giỏ hàng. Vui lòng thử lại.')
+    console.error('Lỗi xóa giỏ hàng:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi xóa giỏ hàng')
   }
 }
 
 const updateCustomerId = (customerId: string) => {
   if (currentOrder.value) {
     // Keep empty string for "Khách lẻ", convert undefined to null
-    currentOrder.value.customerId = customerId === '' ? '' : (customerId || null)
+    currentOrder.value.customerId = customerId === '' ? '' : customerId || null
   }
 }
 
-const handleCustomerChange = (customerId: string) => {
-  if (currentOrder.value) {
-    // Keep empty string for "Khách lẻ", convert undefined to null
-    currentOrder.value.customerId = customerId === '' ? '' : (customerId || null)
+const handleCustomerChange = async (customerId: string) => {
+  try {
+    if (!currentOrder.value) {
+      Message.error('Không có đơn hàng được chọn')
+      return
+    }
+
+    const invoiceId = parseInt(currentOrder.value.id)
+    if (isNaN(invoiceId)) {
+      Message.error('ID hóa đơn không hợp lệ')
+      return
+    }
+
+    // Call API to update customer
+    const parsedCustomerId = customerId === '' ? null : customerId ? parseInt(customerId) : null
+    await updateInvoiceCustomer(invoiceId, parsedCustomerId)
+
+    // Update local state
+    currentOrder.value.customerId = customerId === '' ? '' : customerId || null
+    Message.success('Khách hàng đã được cập nhật')
+  } catch (error) {
+    console.error('Lỗi cập nhật khách hàng:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi cập nhật khách hàng')
   }
 }
 
@@ -2213,59 +2445,82 @@ const handleCustomerSearch = () => {
   // Placeholder for search implementation
 }
 
-const addNewCustomer = () => {
-  if (!newCustomerForm.value?.name || !newCustomerForm.value?.phone) {
-    // Show error
-    return
+const addNewCustomer = async () => {
+  try {
+    if (!newCustomerForm.value?.name || !newCustomerForm.value?.phone) {
+      Message.error('Vui lòng nhập tên và số điện thoại khách hàng')
+      return
+    }
+
+    const customer: Customer = {
+      id: `CUSTOMER_${Date.now()}`,
+      ...newCustomerForm.value,
+    }
+    customers.value.push(customer)
+
+    // If current order exists, update customer in invoice via API
+    if (currentOrder.value) {
+      const invoiceId = parseInt(currentOrder.value.id)
+      if (!isNaN(invoiceId)) {
+        await updateInvoiceCustomer(invoiceId)
+      }
+      currentOrder.value.customerId = customer.id
+    }
+
+    showAddCustomerModal.value = false
+    newCustomerForm.value = { name: '', phone: '', email: '', address: '' }
+    Message.success('Thêm khách hàng thành công')
+  } catch (error) {
+    console.error('Lỗi thêm khách hàng:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi thêm khách hàng')
   }
-  const customer: Customer = {
-    id: `CUSTOMER_${Date.now()}`,
-    ...newCustomerForm.value,
-  }
-  customers.value.push(customer)
-  if (currentOrder.value) {
-    currentOrder.value.customerId = customer.id
-  }
-  showAddCustomerModal.value = false
-  newCustomerForm.value = { name: '', phone: '', email: '', address: '' }
 }
 
-const confirmOrder = async () => {
+const createNewInvoice = async () => {
   try {
-    if (!canConfirmOrder.value) {
-      throw new Error('Đơn hàng không thể xác nhận')
+    // Create invoice on server (no items needed at this point)
+    const invoiceId = await createInvoice(userStoreInstance.id)
+    if (!invoiceId) {
+      throw new Error('Không thể tạo hóa đơn')
     }
-
-    // Kiểm tra tồn kho lần cuối trước khi xác nhận đơn hàng
-    if (!currentOrder.value) {
-      throw new Error('Không tìm thấy đơn hàng hiện tại')
+    // Update currentOrder with the created invoiceId
+    if (currentOrder.value) {
+      currentOrder.value.id = invoiceId.toString()
     }
+    Message.success(`Hóa đơn #${invoiceId} đã được tạo`)
+    return invoiceId
+  } catch (error) {
+    console.error('Lỗi tạo hóa đơn:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi tạo hóa đơn')
+    throw error
+  }
+}
 
+const addProductsToInvoice = async (invoiceId: number) => {
+  try {
+    if (!currentOrder.value?.items.length) {
+      throw new Error('Giỏ hàng trống')
+    }
     for (const item of currentOrder.value.items) {
       const productId = parseInt(item.productId)
-      if (isNaN(productId)) {
-        throw new Error(`ID sản phẩm không hợp lệ: ${item.productId}`)
-      }
-
-      const productInVariants = allProductVariants.value.find((p) => p.id === productId)
-      if (!productInVariants) {
-        throw new Error(`Không tìm thấy thông tin tồn kho cho sản phẩm: ${item.productName}`)
-      }
-
-      const availableStock = productInVariants.soLuong || 0
-      if (item.quantity > availableStock) {
-        throw new Error(
-          `Tồn kho không đủ cho sản phẩm "${item.productName}". Yêu cầu: ${item.quantity} cái | Còn lại: ${availableStock} cái`
-        )
+      if (isNaN(productId)) continue
+      const idHoaDonChiTiet = await addProductToInvoice(invoiceId, productId, item.quantity, userStoreInstance.id)
+      if (idHoaDonChiTiet) {
+        item.idHoaDonChiTiet = idHoaDonChiTiet
       }
     }
+    Message.success(`${currentOrder.value.items.length} sản phẩm đã được thêm vào hóa đơn`)
+  } catch (error) {
+    console.error('Lỗi thêm sản phẩm:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi thêm sản phẩm')
+    throw error
+  }
+}
 
-    confirmLoading.value = true
-
-    // Prepare order data for API - use BanHangTaiQuayRequest format, don't send auto-generated IDs
-    // Build address for walk-in customers
+const updateInvoiceCustomer = async (invoiceId: number) => {
+  try {
     let walkInAddress = ''
-    if (!selectedCustomer.value && currentOrder.value.customerId === '') {
+    if (!selectedCustomer.value && currentOrder.value?.customerId === '') {
       const addressParts = [
         walkInLocation.value.diaChiCuThe,
         walkInLocation.value.phuong,
@@ -2275,139 +2530,252 @@ const confirmOrder = async () => {
       walkInAddress = addressParts.join(', ')
     }
 
-    const orderData: Partial<BanHangTaiQuayRequest> = {
-      // Customer info - convert to ID if available
-      idKhachHang: selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id) : undefined,
-      tenNguoiNhan: selectedCustomer.value?.name || 'Khách lẻ',
-      soDienThoaiNguoiNhan: selectedCustomer.value?.phone || '',
-      emailNguoiNhan: selectedCustomer.value?.email || '',
-      diaChiNhanHang: selectedCustomer.value?.address || walkInAddress,
-      idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id) : undefined,
-      idNhanVien: userStoreInstance.id,
-      idPhuongThucThanhToan: paymentForm.value.method === 'cash' ? 1 : paymentForm.value.method === 'transfer' ? 2 : 3, // 1: Tiền mặt, 2: Chuyển khoản, 3: Cả hai
-      idTrangThaiDonHang: 1, // Assuming 1 is "Completed" status
-
-      // Product list - convert cart items to HashMap<idSanPham, soLuong>
-      danhSachSanPham: currentOrder.value.items.reduce(
-        (acc, item) => {
-          const productId = parseInt(item.productId)
-          if (!isNaN(productId)) {
-            acc[productId] = item.quantity
-          }
-          return acc
-        },
-        {} as Record<number, number>
-      ),
-
-      // Financial info
-      tongTien: subtotal.value,
-      tongTienSauGiam: finalPrice.value,
-      phiVanChuyen: orderType.value === 'delivery' ? shippingFee.value : 0,
-
-      // Dates
-      ngayTao: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
-      ngayThanhToan: orderType.value === 'counter' ? new Date().toISOString().split('T')[0] : undefined, // Payment date only for counter orders
-
-      // Order type and status
-      loaiDon: orderType.value === 'delivery', // true = Giao hàng, false = Tại quầy
-      trangThai: orderType.value === 'counter', // Counter orders paid immediately, delivery orders pending
-      deleted: false,
-      createAt: new Date().toISOString().split('T')[0],
-      createBy: userStoreInstance.id,
-      // Notes
-      ghiChu: orderType.value === 'delivery'
-        ? `Đơn giao hàng - ${currentOrder.value.orderCode} - Phí ship: ${formatCurrency(shippingFee.value)}`
-        : `Đơn hàng tại quầy - ${currentOrder.value.orderCode}`,
-    }
-
-    // Step 1: Create main invoice
-    const invoiceResponse = await createHoaDon(orderData)
-    console.log('[DEBUG] Invoice creation response:', invoiceResponse)
-    if (!invoiceResponse) {
-      throw new Error('Không thể tạo hóa đơn chính')
-    }
-
-    const invoiceId = invoiceResponse.id
-    if (!invoiceId) {
-      throw new Error('Không nhận được ID hóa đơn')
-    }
-
-    // Step 2: Create invoice details for each product
-    const invoiceDetailPromises = currentOrder.value.items.map(async (item) => {
-      const productId = parseInt(item.productId)
-      const discountedPrice = item.discount > 0 ? item.price * (1 - item.discount / 100) : item.price
-      const subtotal = discountedPrice * item.quantity
-
-      return createHoaDonChiTiet({
-        idHoaDon: invoiceId,
-        idBienTheSanPham: productId,
-        soLuong: item.quantity,
-        giaBan: item.price,
-        giaTriGiamGia: item.discount > 0 ? item.discount : undefined,
-        thanhTien: subtotal,
-        ghiChu: `Sản phẩm: ${item.productName}`,
-        trangThai: true,
-        deleted: false,
-        createAt: new Date().toISOString().split('T')[0],
-        createBy: userStoreInstance.id,
-      } as Omit<HoaDonChiTietApiModel, 'id'>)
-    })
-
-    // Wait for all invoice details to be created
-    await Promise.all(invoiceDetailPromises)
-
-    // Step 3: Create payment method information
-    const paymentMethodPromises = []
-
-    if (paymentForm.value.method === 'cash' || paymentForm.value.method === 'both') {
-      if (paymentForm.value.cashReceived > 0) {
-        paymentMethodPromises.push(
-          createHinhThucThanhToan({
-            idHoaDon: invoiceId,
-            idPhuongThucThanhToan: 1,
-            tienMat: paymentForm.value.cashReceived,
-            tienChuyenKhoan: 0,
-            trangThai: true,
-            deleted: false,
-          } as Omit<HinhThucThanhToanApiModel, 'id'>)
-        )
-      }
-    }
-
-    if (paymentForm.value.method === 'transfer' || paymentForm.value.method === 'both') {
-      if (paymentForm.value.transferReceived > 0) {
-        paymentMethodPromises.push(
-          createHinhThucThanhToan({
-            idHoaDon: invoiceId,
-            hinhThucThanhToan: 'Chuyển khoản',
-            soTien: paymentForm.value.transferReceived,
-            ghiChu: 'Thanh toán bằng chuyển khoản',
-            trangThai: true,
-            deleted: false,
-            createAt: new Date().toISOString().split('T')[0],
-            createBy: userStoreInstance.id,
-          } as Omit<HinhThucThanhToanApiModel, 'id'>)
-        )
-      }
-    }
-
-    // Wait for payment methods to be created
-    if (paymentMethodPromises.length > 0) {
-      await Promise.all(paymentMethodPromises)
-    }
-
-    // Step 4: Create order status tracking
-    await createThongTinHoaDon({
+    const customerId = selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id) : undefined
+    const updateCustomerRequest: UpdateCustomerRequest = {
       idHoaDon: invoiceId,
-      idTrangThaiDonHang: 2, // Status: "Đã xác nhận" (Confirmed)
-      ghiChu: `Đơn hàng tại quầy đã được xác nhận`,
+      idKhachHang: customerId,
+      tenKhachHang: selectedCustomer.value?.name || 'Khách lẻ',
+      soDienThoai: selectedCustomer.value?.phone,
+      diaChiKhachHang: selectedCustomer.value?.address || walkInAddress,
+      emailKhachHang: selectedCustomer.value?.email,
+      idNhanVien: userStoreInstance.id,
+    }
+    await updateCustomerForInvoice(updateCustomerRequest)
+
+    // Only show success message if switching TO a customer (not when clearing to walk-in)
+    if (selectedCustomer.value) {
+      Message.success('Thông tin khách hàng đã được cập nhật')
+    }
+  } catch (error) {
+    console.error('Lỗi cập nhật khách hàng:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi cập nhật khách hàng')
+    throw error
+  }
+}
+
+const updateInvoiceShipping = async (invoiceId: number) => {
+  try {
+    if (orderType.value !== 'delivery') {
+      Message.info('Đơn hàng tại quầy, không cần cập nhật giao hàng')
+      return
+    }
+    await updateShippingMethod(invoiceId, userStoreInstance.id)
+    Message.success('Hình thức giao hàng đã được cập nhật')
+  } catch (error) {
+    console.error('Lỗi cập nhật giao hàng:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi cập nhật giao hàng')
+    throw error
+  }
+}
+
+const updateInvoicePayment = async (invoiceId: number, paymentMethod: 'cash' | 'transfer' | 'both') => {
+  try {
+    const paymentMethodId = paymentMethod === 'cash' ? 1 : paymentMethod === 'transfer' ? 2 : 3
+    const updatePaymentRequest: UpdatePaymentMethodRequest = {
+      idHoaDon: invoiceId,
+      idPTTT: paymentMethodId,
+      idNhanVien: userStoreInstance.id,
+    }
+    await updatePaymentMethod(updatePaymentRequest)
+    const methodName = paymentMethod === 'cash' ? 'Tiền mặt' : paymentMethod === 'transfer' ? 'Chuyển khoản' : 'Cả hai'
+    Message.success(`Hình thức thanh toán (${methodName}) đã được cập nhật`)
+  } catch (error) {
+    console.error('Lỗi cập nhật thanh toán:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi cập nhật hình thức thanh toán')
+    throw error
+  }
+}
+
+const updateInvoiceVoucher = async (invoiceId: number, voucherId: number) => {
+  try {
+    const updateVoucherRequest: UpdateVoucherRequest = {
+      idHoaDon: invoiceId,
+      idPhieuGiamGia: voucherId,
+      idNhanVien: userStoreInstance.id,
+    }
+
+    await updateVoucher(updateVoucherRequest)
+    Message.success('Voucher đã được áp dụng')
+  } catch (error) {
+    console.error('Lỗi cập nhật voucher:', error)
+
+    // Check if error is due to empty cart
+    if (error.message && error.message.includes('chưa có sản phẩm')) {
+      Message.error('Giỏ hàng trống hoặc dữ liệu chưa được tải. Vui lòng thử lại sau vài giây.')
+    } else {
+      Message.error(error.message || 'Có lỗi xảy ra khi cập nhật voucher')
+    }
+    throw error
+  }
+}
+
+// Check if there are better vouchers available than currently selected one
+const checkBetterVouchers = (): CouponApiModel[] => {
+  if (!coupons.value || coupons.value.length === 0) return []
+
+  const orderSubtotal =
+    currentOrder.value?.items.reduce((sum: number, item: CartItem) => {
+      const discountedPrice = item.discount > 0 ? item.price * (1 - item.discount / 100) : item.price
+      return sum + discountedPrice * item.quantity
+    }, 0) || 0
+
+  // Helper: Calculate actual discount amount for comparison
+  const getActualDiscount = (coupon: CouponApiModel): number => {
+    const discountValue = Number(coupon.giaTriGiamGia) || 0
+
+    if (!coupon.loaiPhieuGiamGia) {
+      // Percentage discount: calculate actual amount
+      return orderSubtotal * (discountValue / 100)
+    } else {
+      // Fixed amount: cap at order subtotal
+      return Math.min(discountValue, orderSubtotal)
+    }
+  }
+
+  // Find available vouchers with higher actual discount value
+  const betterVouchers = coupons.value.filter((coupon) => {
+    // Skip if already selected
+    if (selectedCoupon.value?.id === coupon.id) return false
+
+    // Check if voucher is applicable (min order amount)
+    if (orderSubtotal < (coupon.hoaDonToiThieu || 0)) return false
+
+    // Check if currently selected voucher exists and compare actual discount amounts
+    if (selectedCoupon.value) {
+      const betterDiscount = getActualDiscount(coupon)
+      const currentDiscount = getActualDiscount(selectedCoupon.value as CouponApiModel)
+      return betterDiscount > currentDiscount
+    }
+
+    return true
+  })
+
+  return betterVouchers
+}
+
+const confirmOrder = async () => {
+  try {
+    if (!currentOrder.value?.id) {
+      throw new Error('Vui lòng tạo hóa đơn trước')
+    }
+
+    const invoiceId = parseInt(currentOrder.value.id)
+
+    // Show confirmation dialog first
+    return new Promise<void>((resolve) => {
+      Modal.confirm({
+        title: '🔔 Xác Nhận Đơn Hàng',
+        content: `Bạn có chắc chắn muốn xác nhận đơn hàng ${currentOrder.value?.orderCode}?`,
+        okText: 'Xác nhận',
+        cancelText: 'Huỷ',
+        onOk: async () => {
+          try {
+            // Build the confirm request with all current data
+            let walkInAddress = ''
+            if (!selectedCustomer.value && currentOrder.value.customerId === '') {
+              const addressParts = [
+                walkInLocation.value.diaChiCuThe,
+                walkInLocation.value.phuong,
+                walkInLocation.value.quan,
+                walkInLocation.value.thanhPho,
+              ].filter(Boolean)
+              walkInAddress = addressParts.join(', ')
+            }
+
+            const customerId = selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id) : undefined
+            const paymentMethodId = paymentForm.value.method === 'cash' ? 1 : paymentForm.value.method === 'transfer' ? 2 : 3
+
+            const confirmRequest: ConfirmBanHangRequest = {
+              idHoaDon: invoiceId,
+              idKhachHang: customerId || null,
+              tenKhachHang: selectedCustomer.value?.name || 'Khách lẻ',
+              soDienThoai: selectedCustomer.value?.phone || null,
+              diaChiKhachHang: selectedCustomer.value?.address || walkInAddress || null,
+              emailKhachHang: selectedCustomer.value?.email || null,
+              idPTTT: paymentMethodId,
+              idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id) : null,
+              idNhanVien: userStoreInstance.id,
+            }
+
+            // Check for better vouchers
+            suggestedBetterVouchers.value = checkBetterVouchers()
+            confirmOrderRequest.value = confirmRequest
+
+            // If there are better vouchers available, show warning modal to suggest them
+            // Otherwise proceed with confirmation directly
+            if (suggestedBetterVouchers.value.length > 0) {
+              // Show confirm modal with suggestion of better vouchers
+              showConfirmOrderModal.value = true
+            } else {
+              // No better vouchers found - proceed with confirmation directly
+              await doConfirmOrder()
+            }
+
+            resolve()
+          } catch (error) {
+            console.error('Lỗi khi xác nhận đơn hàng:', error)
+            Message.error(error.message || 'Có lỗi xảy ra khi xác nhận đơn hàng. Vui lòng thử lại.')
+            resolve()
+          }
+        },
+        onCancel: () => {
+          resolve()
+        },
+      })
     })
+  } catch (error) {
+    console.error('Lỗi khi mở dialog xác nhận:', error)
+    Message.error(error.message || 'Có lỗi xảy ra. Vui lòng thử lại.')
+  }
+}
+
+// Execute actual order confirmation after modal approval
+const doConfirmOrder = async () => {
+  try {
+    confirmLoading.value = true
+    await confirmPosOrder(confirmOrderRequest.value)
 
     const orderTypeText = orderType.value === 'delivery' ? 'giao hàng' : 'tại quầy'
-    Message.success(`Đơn ${orderTypeText} ${currentOrder.value.orderCode} đã được xác nhận thành công!`)
+    const customerText = selectedCustomer.value?.name || 'Khách lẻ'
+    const finalPriceText = formatCurrency(finalPrice.value)
 
-    // Reset order after successful confirmation
-    createNewOrder()
+    // Build detailed success message
+    let successMessage = `✅ Đơn ${orderTypeText} ${currentOrder.value.orderCode} xác nhận thành công!`
+    if (selectedCoupon.value) {
+      successMessage += ` (Áp dụng: ${selectedCoupon.value.tenPhieuGiamGia})`
+    }
+
+    Message.success(successMessage)
+
+    // Broadcast order confirmation to other tabs/pages
+    try {
+      const orderBroadcastChannel = new BroadcastChannel('order-update-channel')
+      orderBroadcastChannel.postMessage({
+        type: 'ORDER_CONFIRMED',
+        invoiceId: currentOrder.value.id,
+        orderCode: currentOrder.value.orderCode,
+        timestamp: new Date().toISOString(),
+      })
+      orderBroadcastChannel.close()
+    } catch (error) {
+      console.warn('BroadcastChannel broadcast failed:', error)
+    }
+
+    // Remove confirmed order from list (close it)
+    const currentOrderIdx = parseInt(currentOrderIndex.value)
+    if (currentOrderIdx >= 0 && currentOrderIdx < orders.value.length) {
+      orders.value.splice(currentOrderIdx, 1)
+    }
+
+    // If no more orders, create a new one
+    if (orders.value.length === 0) {
+      createNewOrder()
+    } else {
+      // Switch to previous order or first order if we deleted the last one
+      currentOrderIndex.value = Math.max(0, currentOrderIdx - 1).toString()
+    }
+
+    // Reset payment form
     paymentForm.value = {
       discountCode: null,
       method: 'cash',
@@ -2416,7 +2784,6 @@ const confirmOrder = async () => {
     }
     shippingFee.value = 0
     orderType.value = 'counter'
-    // Reset walk-in location form
     walkInLocation.value = {
       thanhPho: '',
       quan: '',
@@ -2425,12 +2792,19 @@ const confirmOrder = async () => {
       districts: [],
       wards: [],
     }
+
+    // Close modal
+    showConfirmOrderModal.value = false
   } catch (error) {
     console.error('Lỗi khi xác nhận đơn hàng:', error)
     Message.error(error.message || 'Có lỗi xảy ra khi xác nhận đơn hàng. Vui lòng thử lại.')
   } finally {
     confirmLoading.value = false
   }
+}
+
+const cancelConfirmOrder = () => {
+  showConfirmOrderModal.value = false
 }
 
 const printOrder = () => {
@@ -2483,8 +2857,10 @@ const loadFilterOptions = async () => {
 const loadInitialData = async () => {
   loadingData.value = true
   try {
-    // Load customers
-    const customersResponse = await layDanhSachKhachHang()
+    // Parallel load: customers, filter options, and coupons simultaneously
+    const [customersResponse, couponsResponse] = await Promise.all([layDanhSachKhachHang(), getPosActiveCoupons()])
+
+    // Process customers in parallel
     if (customersResponse?.data) {
       customers.value = customersResponse.data.map((c: KhachHangResponse) => ({
         id: c.id.toString(),
@@ -2496,13 +2872,18 @@ const loadInitialData = async () => {
     }
 
     // Load filter options from server
-    await loadFilterOptions()
-
-    // Load coupons
-    const couponsResponse = await fetchCoupons()
+    loadFilterOptions()
+    // Process coupons - Filter to only show PUBLIC coupons on initial load (for walk-in customers)
+    // Personal coupons will be loaded when customer is selected
     if (couponsResponse) {
-      coupons.value = couponsResponse
-      voucherPagination.value.total = couponsResponse.length
+      // Filter: Only show PUBLIC vouchers (featured=false) with available quantity (soLuongDung > 0 and trangThai === true)
+      // Also exclude vouchers with negative soLuongDung (already sold out)
+      coupons.value = (couponsResponse as CouponApiModel[]).filter((coupon) => {
+        const quantity = coupon.soLuongDung ?? 0
+        // IMPORTANT: On initial load, only show public coupons (featured=false) for walk-in customers
+        return !coupon.featured && quantity > 0 && coupon.trangThai === true
+      })
+      voucherPagination.value.total = coupons.value.length
     }
   } catch (error) {
     console.error('Error loading data:', error)
@@ -2523,40 +2904,39 @@ const loadProductPage = async (page: number) => {
 
 const loadAllProducts = async () => {
   try {
-    // Load all products (assuming API supports large pageSize or we need to load in batches)
-    let allProducts: BienTheSanPham[] = []
-    let pageIndex = 0
-    let hasMore = true
+    // First, fetch the first page to determine total pages needed
+    const firstPageResponse = await getBienTheSanPhamPage(0, undefined, 100)
+    if (!firstPageResponse?.data?.data) {
+      throw new Error('Failed to load products')
+    }
 
-    // eslint-disable-next-line no-await-in-loop
-    while (hasMore) {
-      // eslint-disable-next-line no-await-in-loop
-      const productsResponse = await getBienTheSanPhamPage(pageIndex, undefined, 100)
-      if (productsResponse?.data?.data) {
-        const products = productsResponse.data.data
-        if (Array.isArray(products) && products.length > 0) {
-          allProducts = allProducts.concat(products)
-          pageIndex += 1
-          hasMore = products.length === 100
-        } else {
-          hasMore = false
+    let allProducts: BienTheSanPham[] = [...(firstPageResponse.data.data || [])]
+
+    // Calculate how many pages we need to load
+    const pageSize = 100
+    const totalPages = Math.ceil((firstPageResponse.data.total || 0) / pageSize)
+
+    // If there are more pages, load them in parallel (instead of sequential)
+    if (totalPages > 1) {
+      const pagePromises = []
+      for (let pageIndex = 1; pageIndex < totalPages; pageIndex++) {
+        pagePromises.push(getBienTheSanPhamPage(pageIndex, undefined, pageSize))
+      }
+
+      // Wait for all pages in parallel
+      const results = await Promise.all(pagePromises)
+      for (const result of results) {
+        if (result?.data?.data && Array.isArray(result.data.data)) {
+          allProducts = allProducts.concat(result.data.data)
         }
-      } else {
-        hasMore = false
       }
     }
 
-    // Áp dụng lại số lượng đã bán cho mỗi sản phẩm
-    allProducts.forEach((product) => {
-      const productId = product.id
-      const soldQuantity = soldQuantitiesByProductId.value[productId] || 0
-      if (soldQuantity > 0 && product.soLuong) {
-        product.soLuong = Math.max(0, product.soLuong - soldQuantity)
-      }
-    })
+    // Filter out products with soLuong = 0
+    const availableProducts = allProducts.filter((product) => (product.soLuong ?? 0) > 0)
 
-    allProductVariants.value = allProducts
-    productPagination.value.total = allProducts.length
+    allProductVariants.value = availableProducts
+    productPagination.value.total = availableProducts.length
     productPagination.value.current = 1
   } catch (error) {
     console.error('Error loading all products:', error)
@@ -2586,36 +2966,112 @@ const handleProductModalCancel = () => {
   resetProductFilters()
 }
 
-const selectVoucher = (coupon: CouponApiModel) => {
-  // Only allow selection if voucher is eligible
-  if (!isVoucherEligible(coupon)) {
-    Message.warning('Voucher này không đủ điều kiện áp dụng cho đơn hàng hiện tại')
-    return
-  }
+const selectVoucher = async (coupon: CouponApiModel) => {
+  try {
+    // Only allow selection if voucher is eligible
+    if (!isVoucherEligible(coupon)) {
+      Message.warning('Voucher này không đủ điều kiện áp dụng cho đơn hàng hiện tại')
+      return
+    }
 
-  paymentForm.value.discountCode = coupon.maPhieuGiamGia || coupon.id.toString()
-  showVoucherModal.value = false
-  Message.success(`Đã áp dụng voucher: ${coupon.tenPhieuGiamGia}`)
+    if (!currentOrder.value) {
+      Message.error('Không có đơn hàng được chọn')
+      return
+    }
+
+    // Check if cart has products - IMPORTANT: validate before API call
+    if (!currentOrder.value.items || currentOrder.value.items.length === 0) {
+      Message.error('Vui lòng thêm sản phẩm vào giỏ hàng trước khi áp dụng voucher')
+      return
+    }
+
+    // Additional validation: ensure cart has valid items with quantity > 0
+    const validItems = currentOrder.value.items.filter((item: CartItem) => item.quantity > 0)
+    if (validItems.length === 0) {
+      Message.error('Giỏ hàng không có sản phẩm hợp lệ. Vui lòng thêm sản phẩm trước khi áp dụng voucher')
+      return
+    }
+
+    const invoiceId = parseInt(currentOrder.value.id)
+    const voucherId = coupon.id
+
+    // Call API to update voucher
+    await updateInvoiceVoucher(invoiceId, voucherId)
+
+    // Broadcast coupon update to other tabs/pages
+    try {
+      const couponBroadcastChannel = new BroadcastChannel('coupon-update-channel')
+      couponBroadcastChannel.postMessage({
+        type: 'COUPON_UPDATED',
+        voucherId: voucherId,
+        couponCode: coupon.maPhieuGiamGia,
+        timestamp: new Date().toISOString(),
+      })
+      couponBroadcastChannel.close()
+    } catch (error) {
+      console.warn('BroadcastChannel broadcast failed:', error)
+    }
+
+    // Update local state
+    paymentForm.value.discountCode = coupon.maPhieuGiamGia || coupon.id.toString()
+
+    // Auto-set default payment amount to final price after voucher discount
+    // This way user only needs to confirm payment without recalculating
+    if (paymentForm.value.method === 'cash') {
+      paymentForm.value.cashReceived = finalPrice.value
+    } else if (paymentForm.value.method === 'transfer') {
+      paymentForm.value.transferReceived = finalPrice.value
+    } else if (paymentForm.value.method === 'both') {
+      paymentForm.value.cashReceived = finalPrice.value
+      paymentForm.value.transferReceived = 0
+    }
+
+    showVoucherModal.value = false
+    Message.success(`Đã áp dụng voucher: ${coupon.tenPhieuGiamGia}`)
+  } catch (error) {
+    console.error('Lỗi áp dụng voucher:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi áp dụng voucher')
+  }
 }
 
 const selectPaymentMethod = (method: 'cash' | 'transfer' | 'both') => {
   paymentForm.value.method = method
 }
 
-const handlePaymentMethodChange = (value: string) => {
-  paymentForm.value.method = value as 'cash' | 'transfer' | 'both'
+const handlePaymentMethodChange = async (value: string) => {
+  try {
+    if (!currentOrder.value) {
+      Message.error('Không có đơn hàng được chọn')
+      return
+    }
 
-  // Set default amount to finalPrice when method changes
-  if (value === 'cash') {
-    paymentForm.value.cashReceived = finalPrice.value
-    paymentForm.value.transferReceived = 0
-  } else if (value === 'transfer') {
-    paymentForm.value.transferReceived = finalPrice.value
-    paymentForm.value.cashReceived = 0
-  } else if (value === 'both') {
-    // For 'both', split equally or set cash to full amount initially
-    paymentForm.value.cashReceived = finalPrice.value
-    paymentForm.value.transferReceived = 0
+    const invoiceId = parseInt(currentOrder.value.id)
+    if (isNaN(invoiceId)) {
+      Message.error('ID hóa đơn không hợp lệ')
+      return
+    }
+
+    // Call API to update payment method
+    await updateInvoicePayment(invoiceId, value as 'cash' | 'transfer' | 'both')
+
+    // Update local state
+    paymentForm.value.method = value as 'cash' | 'transfer' | 'both'
+
+    // Set default amount to finalPrice when method changes
+    if (value === 'cash') {
+      paymentForm.value.cashReceived = finalPrice.value
+      paymentForm.value.transferReceived = 0
+    } else if (value === 'transfer') {
+      paymentForm.value.transferReceived = finalPrice.value
+      paymentForm.value.cashReceived = 0
+    } else if (value === 'both') {
+      // For 'both', split equally or set cash to full amount initially
+      paymentForm.value.cashReceived = finalPrice.value
+      paymentForm.value.transferReceived = 0
+    }
+  } catch (error) {
+    console.error('Lỗi cập nhật phương thức thanh toán:', error)
+    Message.error(error.message || 'Có lỗi xảy ra khi cập nhật phương thức thanh toán')
   }
 }
 
@@ -2864,8 +3320,7 @@ const addProductToCart = async (product: BienTheSanPham, quantity: number) => {
       productInVariants.soLuong = Math.max(0, productInVariants.soLuong - quantity)
     }
 
-    // Track sold quantity
-    soldQuantitiesByProductId.value[product.id] = (soldQuantitiesByProductId.value[product.id] || 0) + quantity
+    // Stock tracking is handled by backend, no need to track locally
   } catch (error) {
     console.error('Error adding product to cart:', error)
     throw error
@@ -2907,6 +3362,25 @@ watch([showQRScanner, showDeleteProductModal], async ([qrOpen, deleteProductOpen
   if (!deleteProductOpen) {
     // Reset delete product state when modal closes
     productToDelete.value = null
+  }
+})
+
+// Watch for customer selection change - load customer-specific vouchers
+watch(selectedCustomer, async (newCustomer) => {
+  if (newCustomer && newCustomer.id) {
+    const idKhachHang = parseInt(newCustomer.id)
+
+    // Add small delay to ensure state is fully updated
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    await refreshVouchersForCustomer(idKhachHang)
+  } else {
+    // No customer selected, load all public vouchers
+
+    // Add small delay to ensure state is fully updated
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    await refreshVouchers()
   }
 })
 
@@ -2969,13 +3443,117 @@ const onWalkInDistrictChange = async (value: string) => {
 // Refresh vouchers periodically
 const refreshVouchers = async () => {
   try {
-    const couponsResponse = await fetchCoupons()
+    const couponsResponse = await getPosActiveCoupons()
     if (couponsResponse) {
-      coupons.value = couponsResponse
-      voucherPagination.value.total = couponsResponse.length
+      // Filter coupons: Only show PUBLIC vouchers (featured=false) with available quantity (soLuongDung > 0 and trangThai === true)
+      // Also exclude vouchers with negative soLuongDung (already sold out)
+      // IMPORTANT: Walk-in customers can ONLY use public coupons (featured=false), NOT personal coupons (featured=true)
+      const newCoupons = (couponsResponse as CouponApiModel[]).filter((coupon) => {
+        const quantity = coupon.soLuongDung ?? 0
+        // Filter: featured=false (public) AND quantity > 0 AND active
+        return !coupon.featured && quantity > 0 && coupon.trangThai === true
+      })
+
+      // Check if current selected coupon still exists and is valid
+      if (selectedCoupon.value && !newCoupons.find((c) => c.maPhieuGiamGia === selectedCoupon.value?.maPhieuGiamGia)) {
+        // Current coupon is no longer available, clear it
+        paymentForm.value.discountCode = null
+      }
+
+      // Find the BEST eligible voucher (highest discount)
+      const eligibleVouchers = newCoupons.filter((coupon) => isVoucherEligible(coupon))
+      let bestVoucher: CouponApiModel | null = null
+      let maxDiscount = 0
+
+      for (const coupon of eligibleVouchers) {
+        const discount = calculateVoucherDiscount(coupon)
+        if (discount > maxDiscount) {
+          maxDiscount = discount
+          bestVoucher = coupon
+        }
+      }
+
+      // Check if selected voucher is still eligible
+      const isSelectedEligible =
+        selectedCoupon.value && eligibleVouchers.some((c) => c.maPhieuGiamGia === selectedCoupon.value?.maPhieuGiamGia)
+
+      // If selected voucher is no longer eligible, clear it automatically
+      if (selectedCoupon.value && !isSelectedEligible) {
+        paymentForm.value.discountCode = null
+      }
+
+      // Only show suggestion if:
+      // 1. We found a best voucher
+      // 2. User has selected a voucher
+      // 3. Selected voucher IS ELIGIBLE (otherwise it means it became ineligible, not that we found something better)
+      // 4. Best voucher is different from selected one
+      // 5. Best voucher gives MORE discount than selected one (with at least 1000 VND difference to avoid noise)
+      const bestDiscount = calculateVoucherDiscount(bestVoucher)
+      const selectedDiscount = calculateVoucherDiscount(selectedCoupon.value)
+      const discountDifference = bestDiscount - selectedDiscount
+
+      if (
+        bestVoucher &&
+        selectedCoupon.value &&
+        isSelectedEligible &&
+        bestVoucher.maPhieuGiamGia !== selectedCoupon.value.maPhieuGiamGia &&
+        discountDifference > 1000 // Only suggest if difference is > 1000 VND to avoid noise
+      ) {
+        // Found a better voucher! Show suggestion
+        showVoucherSuggestion(bestVoucher)
+      }
+
+      coupons.value = newCoupons
+      voucherPagination.value.total = newCoupons.length
     }
   } catch (error) {
     console.error('Error refreshing vouchers:', error)
+  }
+}
+
+// Refresh vouchers for specific customer (load public + personal vouchers)
+const refreshVouchersForCustomer = async (idKhachHang: number) => {
+  try {
+    const couponsResponse = await getPosActiveCouponsForCustomer(idKhachHang)
+    if (couponsResponse) {
+      // Filter coupons: only show active vouchers with available quantity (soLuongDung > 0 and trangThai === true)
+      // Also exclude vouchers with negative soLuongDung (already sold out)
+      let newCoupons = (couponsResponse as CouponApiModel[]).filter((coupon) => {
+        const quantity = coupon.soLuongDung ?? 0
+        return quantity > 0 && coupon.trangThai === true
+      })
+
+      // Deduplicate: keep only first occurrence of each coupon ID (in case backend returns duplicates)
+      const seenIds = new Set<string>()
+      newCoupons = newCoupons.filter((coupon) => {
+        if (seenIds.has(coupon.id.toString())) {
+          return false
+        }
+        seenIds.add(coupon.id.toString())
+        return true
+      })
+
+      // Check if current selected coupon still exists and is valid
+      if (selectedCoupon.value && !newCoupons.find((c) => c.maPhieuGiamGia === selectedCoupon.value?.maPhieuGiamGia)) {
+        // Current coupon is no longer available for this customer, clear it
+        paymentForm.value.discountCode = null
+      }
+
+      coupons.value = newCoupons
+      voucherPagination.value.total = newCoupons.length
+    }
+  } catch (error) {
+    console.error('Error refreshing vouchers for customer:', error)
+  }
+}
+
+// Refresh product stock from server (for real-time sync between tabs/windows)
+const refreshProductStock = async () => {
+  try {
+    // Load all products to ensure we have up-to-date stock for all items
+    await loadAllProducts()
+  } catch (error) {
+    console.error('Error refreshing product stock:', error)
   }
 }
 
@@ -2983,23 +3561,115 @@ const refreshVouchers = async () => {
 let voucherRefreshInterval: number | null = null
 
 onMounted(() => {
-  // Initialize with one empty order
-  createNewOrder()
+  // Initialize with one empty order (local state only, will create on server when needed)
+  const initialOrder: Order = {
+    id: '',
+    orderCode: generateOrderCode(),
+    items: [],
+    customerId: null,
+    createdAt: new Date(),
+  }
+  orders.value.push(initialOrder)
+  currentOrderIndex.value = '0'
+
   // Load data from API
   loadInitialData()
   // Load provinces for location picker
   loadProvinces()
 
-  // Set up auto-refresh for vouchers (every 30 seconds)
+  // Setup BroadcastChannel for real-time sync between tabs/windows
+  try {
+    stockBroadcastChannel = new BroadcastChannel('stock-update-channel')
+    stockBroadcastChannel.onmessage = (event) => {
+      if (event.data.type === 'STOCK_CHANGE') {
+        const { productId, newStock, needsRefresh } = event.data
+
+        if (needsRefresh) {
+          // Trigger immediate refresh instead of waiting for next interval
+          refreshProductStock()
+        } else if (newStock !== undefined) {
+          // Direct stock update (for add-to-cart from other pages)
+          const product = allProductVariants.value.find((p) => p.id === productId)
+          if (product) {
+            product.soLuong = newStock
+          }
+        }
+      }
+    }
+
+    // Setup BroadcastChannel for coupon updates
+    const couponBroadcastChannel = new BroadcastChannel('coupon-update-channel')
+    couponBroadcastChannel.onmessage = (event) => {
+      if (event.data.type === 'COUPON_CHANGE') {
+        // Refresh vouchers for current customer or public vouchers
+        if (selectedCustomer.value && selectedCustomer.value.id) {
+          const idKhachHang = parseInt(selectedCustomer.value.id)
+          refreshVouchersForCustomer(idKhachHang)
+        } else {
+          refreshVouchers()
+        }
+      }
+    }
+    // Store for cleanup
+    // @ts-ignore
+    window.__couponBroadcastChannel = couponBroadcastChannel
+  } catch (error) {
+    console.warn('BroadcastChannel not supported, falling back to polling', error)
+  }
+
+  // Set up auto-refresh for vouchers (every 4 seconds for near real-time updates)
   voucherRefreshInterval = window.setInterval(() => {
-    refreshVouchers()
-  }, 30000) // 30 seconds
+    // Throttle: only refresh if enough time has passed since last refresh
+    const now = Date.now()
+    if (now - lastVoucherRefreshTime < VOUCHER_THROTTLE_MS) {
+      return // Skip this refresh cycle
+    }
+    lastVoucherRefreshTime = now
+
+    // If customer is selected, refresh customer-specific vouchers
+    // Otherwise, refresh public vouchers only
+    if (selectedCustomer.value && selectedCustomer.value.id) {
+      const idKhachHang = parseInt(selectedCustomer.value.id)
+      refreshVouchersForCustomer(idKhachHang)
+    } else {
+      refreshVouchers()
+    }
+  }, 4000) // 4 seconds (faster near real-time sync)
+
+  // Set up auto-refresh for product stock (every 2.5 seconds for near real-time sync between tabs)
+  const stockRefreshInterval = window.setInterval(() => {
+    // Throttle: only refresh if enough time has passed since last refresh
+    const now = Date.now()
+    if (now - lastStockRefreshTime < STOCK_THROTTLE_MS) {
+      return // Skip this refresh cycle
+    }
+    lastStockRefreshTime = now
+
+    refreshProductStock()
+  }, 2500) // 2.5 seconds (faster for real-time stock updates)
+
+  // Store interval ID for cleanup
+  // @ts-ignore
+  window.__stockRefreshInterval = stockRefreshInterval
 })
 
-// Cleanup interval on unmount
+// Cleanup intervals on unmount
 onBeforeUnmount(() => {
   if (voucherRefreshInterval !== null) {
     clearInterval(voucherRefreshInterval)
+  }
+  // @ts-ignore
+  if (window.__stockRefreshInterval) {
+    clearInterval(window.__stockRefreshInterval)
+  }
+
+  // Close BroadcastChannels
+  if (stockBroadcastChannel) {
+    stockBroadcastChannel.close()
+  }
+  // @ts-ignore
+  if (window.__couponBroadcastChannel) {
+    window.__couponBroadcastChannel.close()
   }
 })
 </script>
@@ -3230,7 +3900,8 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     box-shadow: 0 0 0 0 rgba(250, 140, 22, 0.4);
   }
@@ -3252,7 +3923,8 @@ onBeforeUnmount(() => {
 }
 
 @keyframes paymentCheckPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
     transform: scale(1);
   }
