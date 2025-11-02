@@ -1125,25 +1125,20 @@ onBeforeUnmount(() => {
     margin-left: 8px;
   }
 
-  :deep(.arco-badge) {
-    line-height: 1;
-  }
-
-  :deep(.arco-badge-number) {
-    min-width: 20px;
-    height: 20px;
-    line-height: 20px;
-    padding: 0 6px;
-    font-size: 12px;
-    border-radius: 10px;
-    box-sizing: border-box;
-    display: flex;
+  .item-count-badge {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-  }
-
-  :deep(.arco-badge-custom-dot) {
-    border-radius: 50%;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    color: #fff;
+    background-color: #f5222d;
+    border-radius: 10px;
+    box-sizing: border-box;
   }
 }
 

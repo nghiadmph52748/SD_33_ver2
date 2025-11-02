@@ -6,7 +6,9 @@
           <template #title>
             <div class="tab-header">
               <span>Đơn #{{ idx + 1 }} ({{ order.orderCode }})</span>
-              <a-badge v-if="order.items && order.items.length > 0" :count="order.items.reduce((sum, item) => sum + item.quantity, 0)" :style="{ backgroundColor: '#f5222d' }" />
+              <span v-if="order.items && order.items.length > 0" class="item-count-badge">
+                {{ order.items.reduce((sum, item) => sum + item.quantity, 0) }}
+              </span>
               <a-button type="text" size="mini" status="danger" class="tab-close-btn" @click.stop="$emit('delete', idx)">
                 <template #icon>
                   <icon-close />
@@ -38,3 +40,31 @@ defineProps<{ orders: Order[]; activeKey: string; canAdd: boolean }>()
 
 defineEmits<{ (e: 'change', key: string): void; (e: 'delete', index: number): void; (e: 'add'): void }>()
 </script>
+
+<style scoped>
+.tab-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: #fff;
+  background-color: #f5222d;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.tab-close-btn {
+  margin-left: auto;
+}
+</style>
