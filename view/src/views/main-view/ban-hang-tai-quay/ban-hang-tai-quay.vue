@@ -1362,6 +1362,10 @@ const coupons = ref<CouponApiModel[]>([])
 // Track số lượng đã bán của mỗi sản phẩm (để tính toán lại tồn kho khi reload)
 const soldQuantitiesByProductId = ref<Record<string | number, number>>({})
 
+// Cache dữ liệu để chỉ reload khi có thay đổi
+const cachedProducts = ref<Map<number, number>>(new Map()) // productId -> soLuong
+const cachedCoupons = ref<string>('') // JSON string of coupon data for comparison
+
 const customerSearchText = ref('')
 const productSearchText = ref('')
 const productFilters = ref({
@@ -2282,8 +2286,19 @@ const updateQuantity = async (itemId: string, quantity: number) => {
     }
 
     // Call API to update quantity on server
-    if (item.idHoaDonChiTiet) {
-      await updateProductQuantityInInvoice(item.idHoaDonChiTiet, newQuantity, userStoreInstance.id)
+    // Update all invoice detail IDs for this product (may have multiple from repeated adds)
+    if (item.idHoaDonChiTiets && item.idHoaDonChiTiets.length > 0) {
+      // Calculate new quantity per invoice detail (distributed equally)
+      const quantityPerDetail = Math.max(1, Math.floor(newQuantity / item.idHoaDonChiTiets.length))
+      const remainingQuantity = newQuantity % item.idHoaDonChiTiets.length
+
+      // Update each invoice detail with distributed quantity
+      for (let idx = 0; idx < item.idHoaDonChiTiets.length; idx++) {
+        const detailId = item.idHoaDonChiTiets[idx]
+        // Give extra quantity to the last item if there's a remainder
+        const detailQuantity = idx === item.idHoaDonChiTiets.length - 1 ? quantityPerDetail + remainingQuantity : quantityPerDetail
+        await updateProductQuantityInInvoice(detailId, detailQuantity, userStoreInstance.id)
+      }
     }
 
     // DO NOT update stock locally - backend already handles it
@@ -2369,6 +2384,7 @@ const clearCart = async () => {
     }
 
     const invoiceDetailIds: number[] = []
+    const affectedProductIds: number[] = []
 
     // Hoàn lại tất cả số lượng vào kho và cập nhật số lượng đã bán
     currentOrder.value.items.forEach((item) => {
@@ -2378,9 +2394,11 @@ const clearCart = async () => {
           return
         }
 
-        // Collect invoice detail IDs for API call
-        if (item.idHoaDonChiTiet) {
-          invoiceDetailIds.push(item.idHoaDonChiTiet)
+        affectedProductIds.push(productId)
+
+        // Collect ALL invoice detail IDs for API call (may have multiple from repeated adds)
+        if (item.idHoaDonChiTiets && item.idHoaDonChiTiets.length > 0) {
+          invoiceDetailIds.push(...item.idHoaDonChiTiets)
         }
 
         const productInVariants = allProductVariants.value.find((p) => p.id === productId)
@@ -2401,6 +2419,25 @@ const clearCart = async () => {
     }
 
     currentOrder.value.items = []
+
+    // Broadcast stock changes to other tabs/windows for each affected product
+    try {
+      const stockBroadcastChannelForClear = new BroadcastChannel('stock-update-channel')
+      for (const productId of affectedProductIds) {
+        stockBroadcastChannelForClear.postMessage({
+          type: 'STOCK_CHANGE',
+          productId,
+          needsRefresh: true, // Signal other tabs to refresh stock
+        })
+      }
+      stockBroadcastChannelForClear.close()
+    } catch (error) {
+      console.warn('BroadcastChannel broadcast failed:', error)
+    }
+
+    // Trigger immediate stock refresh
+    await refreshProductStock()
+
     Message.success('Đã xóa tất cả sản phẩm khỏi giỏ hàng')
   } catch (error) {
     console.error('Lỗi xóa giỏ hàng:', error)
@@ -3103,6 +3140,24 @@ const initQRScanner = async () => {
       qrScannerInstance.value = null
     }
 
+    // Request camera permissions explicitly before initializing scanner
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      // Close the stream after getting permission
+      stream.getTracks().forEach(track => track.stop())
+    } catch (permissionError) {
+      console.error('❌ Camera permission error:', permissionError)
+      if (permissionError.name === 'NotAllowedError') {
+        Message.error('Quyền truy cập camera bị từ chối. Vui lòng cho phép truy cập camera trong trình duyệt.')
+      } else if (permissionError.name === 'NotFoundError') {
+        Message.error('Không tìm thấy camera trên thiết bị. Vui lòng kết nối camera và thử lại.')
+      } else {
+        Message.error('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.')
+      }
+      showQRScanner.value = false
+      return
+    }
+
     // Check if DOM element exists
     const qrReaderElement = document.getElementById('qr-reader')
     if (!qrReaderElement) {
@@ -3320,6 +3375,22 @@ const addProductToCart = async (product: BienTheSanPham, quantity: number) => {
       productInVariants.soLuong = Math.max(0, productInVariants.soLuong - quantity)
     }
 
+    // Broadcast stock change to other tabs/windows (trigger refresh)
+    try {
+      const qrStockBroadcastChannel = new BroadcastChannel('stock-update-channel')
+      qrStockBroadcastChannel.postMessage({
+        type: 'STOCK_CHANGE',
+        productId: product.id,
+        needsRefresh: true, // Signal other tabs to refresh stock
+      })
+      qrStockBroadcastChannel.close()
+    } catch (error) {
+      console.warn('BroadcastChannel broadcast failed:', error)
+    }
+
+    // Trigger immediate stock refresh
+    await refreshProductStock()
+
     // Stock tracking is handled by backend, no need to track locally
   } catch (error) {
     console.error('Error adding product to cart:', error)
@@ -3446,17 +3517,21 @@ const refreshVouchers = async () => {
     const couponsResponse = await getPosActiveCoupons()
     if (couponsResponse) {
       // Filter coupons: Only show PUBLIC vouchers (featured=false) with available quantity (soLuongDung > 0 and trangThai === true)
-      // Also exclude vouchers with negative soLuongDung (already sold out)
-      // IMPORTANT: Walk-in customers can ONLY use public coupons (featured=false), NOT personal coupons (featured=true)
       const newCoupons = (couponsResponse as CouponApiModel[]).filter((coupon) => {
         const quantity = coupon.soLuongDung ?? 0
-        // Filter: featured=false (public) AND quantity > 0 AND active
         return !coupon.featured && quantity > 0 && coupon.trangThai === true
       })
 
+      // Compare with cached data - ONLY update if different
+      const newCouponsJson = JSON.stringify(newCoupons.map((c) => ({ id: c.id, maPhieuGiamGia: c.maPhieuGiamGia, soLuongDung: c.soLuongDung, giaTriGiamGia: c.giaTriGiamGia })))
+      if (newCouponsJson === cachedCoupons.value) {
+        // No change, skip update
+        return
+      }
+      cachedCoupons.value = newCouponsJson
+
       // Check if current selected coupon still exists and is valid
       if (selectedCoupon.value && !newCoupons.find((c) => c.maPhieuGiamGia === selectedCoupon.value?.maPhieuGiamGia)) {
-        // Current coupon is no longer available, clear it
         paymentForm.value.discountCode = null
       }
 
@@ -3482,12 +3557,6 @@ const refreshVouchers = async () => {
         paymentForm.value.discountCode = null
       }
 
-      // Only show suggestion if:
-      // 1. We found a best voucher
-      // 2. User has selected a voucher
-      // 3. Selected voucher IS ELIGIBLE (otherwise it means it became ineligible, not that we found something better)
-      // 4. Best voucher is different from selected one
-      // 5. Best voucher gives MORE discount than selected one (with at least 1000 VND difference to avoid noise)
       const bestDiscount = calculateVoucherDiscount(bestVoucher)
       const selectedDiscount = calculateVoucherDiscount(selectedCoupon.value)
       const discountDifference = bestDiscount - selectedDiscount
@@ -3497,9 +3566,8 @@ const refreshVouchers = async () => {
         selectedCoupon.value &&
         isSelectedEligible &&
         bestVoucher.maPhieuGiamGia !== selectedCoupon.value.maPhieuGiamGia &&
-        discountDifference > 1000 // Only suggest if difference is > 1000 VND to avoid noise
+        discountDifference > 1000
       ) {
-        // Found a better voucher! Show suggestion
         showVoucherSuggestion(bestVoucher)
       }
 
@@ -3516,14 +3584,13 @@ const refreshVouchersForCustomer = async (idKhachHang: number) => {
   try {
     const couponsResponse = await getPosActiveCouponsForCustomer(idKhachHang)
     if (couponsResponse) {
-      // Filter coupons: only show active vouchers with available quantity (soLuongDung > 0 and trangThai === true)
-      // Also exclude vouchers with negative soLuongDung (already sold out)
+      // Filter coupons: only show active vouchers with available quantity
       let newCoupons = (couponsResponse as CouponApiModel[]).filter((coupon) => {
         const quantity = coupon.soLuongDung ?? 0
         return quantity > 0 && coupon.trangThai === true
       })
 
-      // Deduplicate: keep only first occurrence of each coupon ID (in case backend returns duplicates)
+      // Deduplicate
       const seenIds = new Set<string>()
       newCoupons = newCoupons.filter((coupon) => {
         if (seenIds.has(coupon.id.toString())) {
@@ -3533,9 +3600,16 @@ const refreshVouchersForCustomer = async (idKhachHang: number) => {
         return true
       })
 
+      // Compare with cached data - ONLY update if different
+      const newCouponsJson = JSON.stringify(newCoupons.map((c) => ({ id: c.id, maPhieuGiamGia: c.maPhieuGiamGia, soLuongDung: c.soLuongDung, giaTriGiamGia: c.giaTriGiamGia })))
+      if (newCouponsJson === cachedCoupons.value) {
+        // No change, skip update
+        return
+      }
+      cachedCoupons.value = newCouponsJson
+
       // Check if current selected coupon still exists and is valid
       if (selectedCoupon.value && !newCoupons.find((c) => c.maPhieuGiamGia === selectedCoupon.value?.maPhieuGiamGia)) {
-        // Current coupon is no longer available for this customer, clear it
         paymentForm.value.discountCode = null
       }
 
@@ -3548,10 +3622,67 @@ const refreshVouchersForCustomer = async (idKhachHang: number) => {
 }
 
 // Refresh product stock from server (for real-time sync between tabs/windows)
+// ONLY updates if data actually changed to avoid unnecessary re-renders
 const refreshProductStock = async () => {
   try {
-    // Load all products to ensure we have up-to-date stock for all items
-    await loadAllProducts()
+    const firstPageResponse = await getBienTheSanPhamPage(0, undefined, 100)
+    if (!firstPageResponse?.data?.data) {
+      throw new Error('Failed to load products')
+    }
+
+    let allProducts: BienTheSanPham[] = [...(firstPageResponse.data.data || [])]
+
+    // Calculate how many pages we need to load
+    const pageSize = 100
+    const totalPages = Math.ceil((firstPageResponse.data.total || 0) / pageSize)
+
+    // If there are more pages, load them in parallel
+    if (totalPages > 1) {
+      const pagePromises = []
+      for (let pageIndex = 1; pageIndex < totalPages; pageIndex++) {
+        pagePromises.push(getBienTheSanPhamPage(pageIndex, undefined, pageSize))
+      }
+      const results = await Promise.all(pagePromises)
+      for (const result of results) {
+        if (result?.data?.data && Array.isArray(result.data.data)) {
+          allProducts = allProducts.concat(result.data.data)
+        }
+      }
+    }
+
+    // Filter out products with soLuong = 0
+    const availableProducts = allProducts.filter((product) => (product.soLuong ?? 0) > 0)
+
+    // Check if data actually changed by comparing stock quantities
+    let hasChanged = false
+    
+    // Check if count changed
+    if (availableProducts.length !== allProductVariants.value.length) {
+      hasChanged = true
+    } else {
+      // Check if any stock quantities changed
+      for (const product of availableProducts) {
+        const cachedStock = cachedProducts.value.get(product.id)
+        if (cachedStock === undefined || cachedStock !== product.soLuong) {
+          hasChanged = true
+          break
+        }
+      }
+    }
+
+    // ONLY update if there's actual change
+    if (hasChanged) {
+      // Update cache
+      cachedProducts.value.clear()
+      for (const product of availableProducts) {
+        cachedProducts.value.set(product.id, product.soLuong)
+      }
+
+      // Update state
+      allProductVariants.value = availableProducts
+      productPagination.value.total = availableProducts.length
+      productPagination.value.current = 1
+    }
   } catch (error) {
     console.error('Error refreshing product stock:', error)
   }
@@ -3563,7 +3694,7 @@ let voucherRefreshInterval: number | null = null
 onMounted(() => {
   // Do NOT initialize with an empty order - let user create orders manually by clicking "Thêm Đơn"
   // orders.value will be empty until user explicitly creates the first order
-  
+
   // Load data from API
   loadInitialData()
   // Load provinces for location picker
