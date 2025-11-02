@@ -57,7 +57,7 @@ public class HoaDon {
     private String tenHoaDon;
 
     @ColumnDefault("0")
-    @Column(name = "giao_hang")
+    @Column(name = "loai_don")
     private Boolean giaoHang;
 
     @Column(name = "phi_van_chuyen", precision = 18, scale = 2)

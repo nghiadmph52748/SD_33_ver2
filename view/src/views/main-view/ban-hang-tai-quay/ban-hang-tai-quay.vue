@@ -2767,13 +2767,13 @@ const doConfirmOrder = async () => {
       orders.value.splice(currentOrderIdx, 1)
     }
 
-    // If no more orders, create a new one
-    if (orders.value.length === 0) {
-      createNewOrder()
-    } else {
+    // Do NOT auto-create a new order - let user manually create the next one
+    // Just switch to previous order if available
+    if (orders.value.length > 0) {
       // Switch to previous order or first order if we deleted the last one
       currentOrderIndex.value = Math.max(0, currentOrderIdx - 1).toString()
     }
+    // If no more orders, leave it empty - user must click "Thêm Đơn" to create a new one
 
     // Reset payment form
     paymentForm.value = {
@@ -3561,17 +3561,9 @@ const refreshProductStock = async () => {
 let voucherRefreshInterval: number | null = null
 
 onMounted(() => {
-  // Initialize with one empty order (local state only, will create on server when needed)
-  const initialOrder: Order = {
-    id: '',
-    orderCode: generateOrderCode(),
-    items: [],
-    customerId: null,
-    createdAt: new Date(),
-  }
-  orders.value.push(initialOrder)
-  currentOrderIndex.value = '0'
-
+  // Do NOT initialize with an empty order - let user create orders manually by clicking "Thêm Đơn"
+  // orders.value will be empty until user explicitly creates the first order
+  
   // Load data from API
   loadInitialData()
   // Load provinces for location picker
