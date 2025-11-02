@@ -5,7 +5,7 @@
         <a-tab-pane v-for="(order, idx) in orders" :key="idx.toString()">
           <template #title>
             <div class="tab-header">
-              <span>Đơn #{{ idx + 1 }} ({{ order.orderCode }})</span>
+              <span class="order-text">Đơn #{{ idx + 1 }} ({{ order.orderCode }})</span>
               <span v-if="order.items && order.items.length > 0" class="item-count-badge">
                 {{ order.items.reduce((sum, item) => sum + item.quantity, 0) }}
               </span>
@@ -46,6 +46,13 @@ defineEmits<{ (e: 'change', key: string): void; (e: 'delete', index: number): vo
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.order-text {
+  display: inline-flex;
+  align-items: center;
+  line-height: 20px;
+  vertical-align: middle;
 }
 
 .item-count-badge {
