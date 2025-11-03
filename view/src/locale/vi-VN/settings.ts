@@ -11,17 +11,12 @@ export default {
   'settings.navbar.screen.toFull': 'Nhấp để chuyển sang chế độ toàn màn hình',
   'settings.navbar.screen.toExit': 'Nhấp để thoát chế độ toàn màn hình',
   'settings.navbar.alerts': 'Thông báo',
-  'settings.menu': 'Menu',
-  'settings.topMenu': 'Menu trên cùng',
-  'settings.tabBar': 'Thanh tab',
   'settings.footer': 'Chân trang',
   'settings.otherSettings': 'Cài đặt khác',
-  'settings.colorWeak': 'Màu yếu',
   'settings.alertContent':
     'Sau khi cấu hình chỉ có hiệu lực tạm thời, nếu bạn muốn thực sự ảnh hưởng đến dự án, hãy nhấp vào nút "Sao chép cài đặt" bên dưới và thay thế cấu hình trong settings.json.',
   'settings.copySettings': 'Sao chép cài đặt',
   'settings.copySettings.message': 'Sao chép thành công, vui lòng dán vào file src/settings.json.',
   'settings.close': 'Đóng',
   'settings.color.tooltip': '10 màu gradient được tạo theo màu chủ đề',
-  'settings.menuFromServer': 'Menu từ máy chủ',
 }

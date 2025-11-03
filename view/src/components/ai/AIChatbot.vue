@@ -13,11 +13,6 @@
           </span>
           <a-space>
             <a-badge :status="isConnected ? 'success' : 'error'" :text="isConnected ? 'Online' : 'Offline'" />
-            <a-button type="text" size="small" @click="openExpandedView">
-              <template #icon>
-                <icon-expand />
-              </template>
-            </a-button>
           </a-space>
         </div>
       </template>
@@ -33,52 +28,71 @@
           </div>
         </div>
 
-        <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role]">
+        <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role, { 'suggestions-only': !msg.content && msg.followUpSuggestions }]">
           <div class="message-wrapper">
             <div class="avatar">
-              <span v-if="msg.role === 'user'">👤</span>
-              <img 
+              <a-avatar
+                v-if="msg.role === 'user'"
+                :size="40"
+                :style="userAvatarStyle"
+              >
+                {{ userInitials }}
+              </a-avatar>
+              <img
                 v-else
-                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
-                alt="AI" 
+                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
+                alt="AI"
                 style="width: 28px; height: 28px;"
               />
             </div>
             <div class="content">
-              <!-- Thinking mode - collapsible with clean design -->
-              <div v-if="msg.thinkingContent" class="thinking-block">
-                <a-collapse :default-active-key="['1']" :bordered="false">
-                  <a-collapse-item key="1">
-                    <template #header>
-                      <div class="thinking-header-wrapper">
-                        <span class="thinking-label">Quá trình phân tích</span>
-                        <span v-if="msg.isThinking" class="thinking-status">● Đang xử lý...</span>
+              <!-- Show EITHER loading indicator OR thinking block when isThinking -->
+              <template v-if="msg.role === 'assistant' && msg.isThinking">
+                <!-- Loading indicator - when no thinking content yet -->
+                <div v-if="!msg.thinkingContent" class="processing-indicator">
+                  <a-spin :size="16" />
+                  <span style="margin-left: 8px;">Đang suy nghĩ...</span>
+                  <span class="thinking-dots" aria-label="thinking">
+                    <span class="dot" />
+                    <span class="dot" />
+                    <span class="dot" />
+                  </span>
+                </div>
+                
+                <!-- Thinking Block - when thinking content exists -->
+                <div v-else class="thinking-block">
+                  <a-collapse :default-active-key="['1']">
+                    <a-collapse-item key="1">
+                      <template #header>
+                        <div class="thinking-header-wrapper">
+                          <span class="thinking-label">Đang suy nghĩ...</span>
+                          <span class="thinking-dots" aria-label="thinking">
+                            <span class="dot" />
+                            <span class="dot" />
+                            <span class="dot" />
+                          </span>
+                        </div>
+                      </template>
+                      <div class="thinking-content" :ref="(el) => setThinkingRef(el, msg.id)">
+                        {{ msg.thinkingContent }}
+                        <span class="streaming-cursor">▋</span>
                       </div>
-                    </template>
-                    <div class="thinking-content" :ref="(el) => msg.isThinking && setThinkingRef(el, msg.id)">
-                      <div v-html="renderMarkdown(msg.thinkingContent)"></div>
-                      <div v-if="msg.isThinking" class="streaming-cursor">▊</div>
-                    </div>
-                  </a-collapse-item>
-                </a-collapse>
-              </div>
+                    </a-collapse-item>
+                  </a-collapse>
+                </div>
+              </template>
 
-              <!-- Initial thinking block - show collapsed even before content arrives -->
-              <div v-else-if="msg.role === 'assistant' && !msg.thinkingContent && !msg.content" class="thinking-block">
-                <a-collapse :bordered="false">
+              <!-- Thinking Block when done (not actively thinking) -->
+              <div v-if="msg.role === 'assistant' && !msg.isThinking && msg.thinkingContent" class="thinking-block">
+                <a-collapse :default-active-key="[]">
                   <a-collapse-item key="1">
                     <template #header>
                       <div class="thinking-header-wrapper">
-                        <span class="thinking-label">Quá trình phân tích</span>
-                        <span class="thinking-status">● Đang xử lý...</span>
+                        <span class="thinking-label">Đã xong</span>
                       </div>
                     </template>
-                    <div class="thinking-content thinking-loading">
-                      <div class="loading-dots">
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                      </div>
+                    <div class="thinking-content">
+                      {{ msg.thinkingContent }}
                     </div>
                   </a-collapse-item>
                 </a-collapse>
@@ -87,37 +101,35 @@
               <!-- Content display - ALWAYS show if has content -->
               <div v-if="msg.content" class="text" v-html="renderMarkdown(msg.content)"></div>
 
-              <!-- Data Source & Follow-up Suggestions (chỉ cho assistant) -->
-              <div v-if="msg.role === 'assistant' && msg.content" class="message-metadata">
-                <!-- Nguồn dữ liệu -->
-                <div v-if="msg.dataSource" class="data-source">
+              <!-- Data Source (only for messages with content) -->
+              <div v-if="msg.role === 'assistant' && msg.content && msg.dataSource" class="message-metadata">
+                <div class="data-source">
                   <span class="metadata-icon">📊</span>
                   <span class="metadata-label">Nguồn:</span>
                   <span class="metadata-value">{{ msg.dataSource }}</span>
                 </div>
+              </div>
 
-                <!-- Gợi ý tiếp theo -->
-                <div v-if="msg.followUpSuggestions && msg.followUpSuggestions.length > 0" class="follow-up-suggestions">
-                  <div class="suggestions-label">{{ $t('ai.suggestions.followUp') }}</div>
-                  <a-space wrap :size="6" class="suggestions-buttons">
-                    <a-button
-                      v-for="(suggestion, idx) in msg.followUpSuggestions"
-                      :key="idx"
-                      size="mini"
-                      type="text"
-                      :disabled="isProcessing"
-                      @click="askQuestion(suggestion)"
-                      class="suggestion-btn"
-                    >
-                      {{ suggestion }}
-                    </a-button>
-                  </a-space>
-                </div>
+              <!-- Follow-up Suggestions (only for messages WITHOUT content AND not processing) -->
+              <div v-if="msg.role === 'assistant' && msg.isSuggestionsOnly === true && msg.followUpSuggestions && msg.followUpSuggestions.length > 0 && !isProcessing" class="follow-up-suggestions">
+                <a-space wrap :size="6" class="suggestions-buttons">
+                  <a-button
+                    v-for="(suggestion, idx) in msg.followUpSuggestions"
+                    :key="idx"
+                    size="mini"
+                    type="text"
+                    :disabled="isProcessing"
+                    @click="askQuestion(suggestion)"
+                    class="suggestion-btn"
+                  >
+                    {{ suggestion }}
+                  </a-button>
+                </a-space>
               </div>
 
               <!-- Typing indicator - fallback -->
               <div
-                v-else-if="msg.role === 'assistant' && !msg.isThinking && !msg.processingStatus && !msg.content"
+                v-if="msg.role === 'assistant' && !msg.isThinking && !msg.processingStatus && !msg.content && !msg.followUpSuggestions"
                 class="text typing-indicator"
               >
                 <span class="dot"></span>
@@ -125,7 +137,7 @@
                 <span class="dot"></span>
               </div>
 
-              <div class="timestamp">{{ msg.timestamp }}</div>
+              <div v-if="msg.timestamp" class="timestamp">{{ msg.timestamp }}</div>
             </div>
           </div>
         </div>
@@ -146,23 +158,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="quick-actions" :style="quickActionsStyle">
-        <div class="quick-actions-label">{{ $t('ai.suggestions.label') }}</div>
-        <a-space wrap :size="8">
-          <a-button
-            v-for="action in quickActions"
-            :key="action.id"
-            size="small"
-            type="outline"
-            :disabled="isProcessing"
-            @click="askQuestion(action.question)"
-          >
-            {{ action.icon }} {{ action.label }}
-          </a-button>
-        </a-space>
       </div>
 
       <!-- Input Box -->
@@ -185,122 +180,7 @@
       </div>
     </a-card>
 
-    <!-- Expanded View Modal -->
-    <a-modal
-      v-model:visible="showExpandedModal"
-      :closable="true"
-      fullscreen
-      :mask-closable="false"
-      unmount-on-close
-      :title="expandedModalTitle"
-      :class="['chat-expanded-modal', { 'is-dark': isDark }]"
-    >
-      <!-- Messages Area -->
-      <div class="expanded-messages" ref="expandedMessagesContainer">
-        <!-- Empty state -->
-        <div v-if="messages.length === 0" class="expanded-empty-state">
-          <div class="empty-icon">💬</div>
-          <div class="empty-title">Chào mừng đến với GearUp AI!</div>
-          <div class="empty-description">Bắt đầu cuộc trò chuyện bằng cách đặt câu hỏi bên dưới.</div>
-        </div>
-
-        <!-- Messages -->
-        <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role]">
-          <div class="message-wrapper">
-            <div class="avatar">
-              <span v-if="msg.role === 'user'">👤</span>
-              <img 
-                v-else
-                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
-                alt="AI" 
-                style="width: 28px; height: 28px;"
-              />
-            </div>
-            <div class="content">
-              <!-- Thinking Mode -->
-              <div v-if="msg.thinkingContent" class="thinking-block">
-                <a-collapse :default-active-key="['1']" :bordered="false">
-                  <a-collapse-item key="1">
-                    <template #header>
-                      <div class="thinking-header-wrapper">
-                        <span class="thinking-label">Quá trình phân tích</span>
-                        <span v-if="msg.isThinking" class="thinking-status">● Đang xử lý...</span>
-                      </div>
-                    </template>
-                    <div class="thinking-content">
-                      <div v-html="renderMarkdown(msg.thinkingContent)"></div>
-                    </div>
-                  </a-collapse-item>
-                </a-collapse>
-              </div>
-              
-              <!-- Content -->
-              <div v-if="msg.content" class="text" v-html="renderMarkdown(msg.content)"></div>
-              
-              <!-- Follow-up suggestions -->
-              <div v-if="msg.followUpSuggestions && msg.followUpSuggestions.length > 0" class="follow-up-suggestions">
-                <div class="suggestions-label">{{ $t('ai.suggestions.followUp') }}</div>
-                <a-space wrap :size="6" class="suggestions-buttons">
-                  <a-button
-                    v-for="(suggestion, idx) in msg.followUpSuggestions"
-                    :key="idx"
-                    size="small"
-                    type="text"
-                    :disabled="isProcessing"
-                    @click="askQuestion(suggestion)"
-                    class="suggestion-btn"
-                  >
-                    {{ suggestion }}
-                  </a-button>
-                </a-space>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Loading indicator -->
-        <div v-if="loading" class="message assistant">
-          <div class="message-wrapper">
-            <div class="avatar">
-              <img 
-                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
-                alt="AI" 
-                style="width: 28px; height: 28px;"
-              />
-            </div>
-            <div class="content">
-              <a-spin :size="16" />
-              Đang nhập...
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Input Footer - Outside modal body -->
-      <template #footer>
-        <div class="expanded-input-footer">
-          <div class="input-wrapper">
-            <a-input-search
-              v-model="input"
-              placeholder="Hỏi AI bất cứ điều gì về hệ thống..."
-              size="large"
-              :loading="isProcessing"
-              :disabled="isProcessing"
-              allow-clear
-              search-button
-              @search="handleSearch"
-              @press-enter="handleSearch"
-              class="expanded-search-input"
-            >
-              <template #button-icon>
-                <icon-send />
-              </template>
-              <template #button-default>{{ isProcessing ? 'Đang xử lý...' : 'Gửi' }}</template>
-            </a-input-search>
-          </div>
-        </div>
-      </template>
-    </a-modal>
+    <!-- Expanded view removed -->
   </div>
 </template>
 
@@ -310,7 +190,8 @@ import { useI18n } from 'vue-i18n'
 import { parse as markedParse } from 'marked'
 import { chatWithAI, chatWithAIStream, checkAIHealth } from '@/api/ai'
 import { Message } from '@arco-design/web-vue'
-import { IconSend, IconExpand } from '@arco-design/web-vue/es/icon'
+import { IconSend } from '@arco-design/web-vue/es/icon'
+import { useUserStore } from '@/store'
 
 interface ChatMessage {
   id: number
@@ -324,6 +205,7 @@ interface ChatMessage {
   followUpSuggestions?: string[] // Gợi ý câu hỏi tiếp theo
   queryType?: string // Loại truy vấn
   processingStatus?: string // Trạng thái xử lý: 'querying' | 'analyzing' | 'ready'
+  isSuggestionsOnly?: boolean // Flag to render follow-up suggestions card
 }
 
 interface QuickAction {
@@ -358,20 +240,53 @@ const messages = ref<ChatMessage[]>([
       'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? 😊',
     timestamp: new Date().toLocaleTimeString('vi-VN'),
   },
+  {
+    id: -1,
+    role: 'assistant',
+    content: '',
+    timestamp: '',
+    followUpSuggestions: [
+      'Sản phẩm nào đang bán chạy nhất?',
+      'So sánh top 3 sản phẩm bán chạy nhất',
+      'Sản phẩm nào sắp hết hàng?',
+      'Doanh thu hôm nay là bao nhiêu?',
+    ],
+    isSuggestionsOnly: true,
+  },
 ])
 
+const userStore = useUserStore()
 const input = ref('')
 const loading = ref(false)
 const isProcessing = ref(false) // Prevent concurrent requests
-const isConnected = ref(false)
+const isConnected = ref(!shouldHealthCheck)
 const messagesContainer = ref<HTMLElement | null>(null)
 const isDark = ref(document.body.hasAttribute('arco-theme'))
-const showExpandedModal = ref(false)
 const messagesContainerStyle = ref<Record<string, string>>({})
-const quickActionsStyle = ref<Record<string, string>>({})
 const currentSessionId = ref<string>('')
 const chatSessions = ref<Record<string, ChatMessage[]>>({})
 const sessionNames = ref<Record<string, string>>({})
+
+const userInitials = computed(() => {
+  const displayName = (userStore.name || userStore.tenTaiKhoan || '').trim()
+  if (!displayName) {
+    return 'U'
+  }
+  const parts = displayName.split(/\s+/)
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+  const first = parts[0][0] || ''
+  const last = parts[parts.length - 1][0] || ''
+  const initials = `${first}${last}`.toUpperCase()
+  return initials || 'U'
+})
+
+const userAvatarStyle = computed(() => ({
+  backgroundColor: 'var(--color-fill-3)',
+  color: 'var(--color-text-1)',
+  fontWeight: '600',
+}))
 
 const STORAGE_KEY = 'gearup_ai_chat_history_v1'
 const CHAT_SESSIONS_KEY = 'gearup_ai_chat_sessions_v1'
@@ -379,6 +294,26 @@ const SESSION_NAMES_KEY = 'gearup_ai_session_names_v1'
 
 function generateSessionId(): string {
   return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+function normalizeSuggestionMessages(msgs: ChatMessage[]): void {
+  msgs.forEach((msg) => {
+    if (msg.content && msg.isSuggestionsOnly) {
+      msg.isSuggestionsOnly = false
+      return
+    }
+
+    if (
+      msg.role === 'assistant' &&
+      !msg.content &&
+      Array.isArray(msg.followUpSuggestions) &&
+      msg.followUpSuggestions.length > 0 &&
+      !msg.processingStatus &&
+      !msg.isThinking
+    ) {
+      msg.isSuggestionsOnly = true
+    }
+  })
 }
 
 function generateSessionName(msgs: ChatMessage[]): string {
@@ -416,9 +351,13 @@ function generateSessionName(msgs: ChatMessage[]): string {
 
 function saveHistory() {
   try {
+    normalizeSuggestionMessages(messages.value)
+
+    const messagesToSave = [...messages.value]
+
     // Save current session
     if (currentSessionId.value) {
-      chatSessions.value[currentSessionId.value] = [...messages.value]
+      chatSessions.value[currentSessionId.value] = [...messagesToSave]
     }
 
     // Save all sessions
@@ -428,7 +367,7 @@ function saveHistory() {
     localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(sessionNames.value))
 
     // Also save current session as active (for backward compatibility)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.value))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messagesToSave))
 
     // Notify parent about session state changes
     emit('session-state', {
@@ -449,6 +388,9 @@ function loadHistory() {
       const parsed: Record<string, ChatMessage[]> = JSON.parse(sessionsRaw)
       if (parsed && typeof parsed === 'object') {
         chatSessions.value = parsed
+        Object.values(chatSessions.value).forEach((sessionMessages) => {
+          normalizeSuggestionMessages(sessionMessages)
+        })
       }
     }
 
@@ -474,6 +416,27 @@ function loadHistory() {
       const [mostRecentSessionId] = sortedSessions
       currentSessionId.value = mostRecentSessionId
       messages.value = [...chatSessions.value[currentSessionId.value]]
+      normalizeSuggestionMessages(messages.value)
+      const hasSuggestionCard = messages.value.some(
+        msg => msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content && Array.isArray(msg.followUpSuggestions)
+      )
+
+      // Add separate suggestions message if it's just the welcome message
+      if (!hasSuggestionCard && messages.value.length === 1 && messages.value[0].id === 0 && messages.value[0].role === 'assistant') {
+        messages.value.push({
+          id: -1,
+          role: 'assistant',
+          content: '',
+          timestamp: '',
+          followUpSuggestions: [
+            'Sản phẩm nào đang bán chạy nhất?',
+            'So sánh top 3 sản phẩm bán chạy nhất',
+            'Sản phẩm nào sắp hết hàng?',
+            'Doanh thu hôm nay là bao nhiêu?',
+          ],
+          isSuggestionsOnly: true,
+        })
+      }
     } else {
       // Load current session (backward compatibility)
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -481,6 +444,26 @@ function loadHistory() {
         const parsed: ChatMessage[] = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           messages.value = parsed
+          normalizeSuggestionMessages(messages.value)
+          const hasSuggestionCard = messages.value.some(
+            msg => msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content && Array.isArray(msg.followUpSuggestions)
+          )
+          // Add separate suggestions message if it's just the welcome message
+          if (!hasSuggestionCard && messages.value.length === 1 && messages.value[0].id === 0 && messages.value[0].role === 'assistant') {
+            messages.value.push({
+              id: -1,
+              role: 'assistant',
+              content: '',
+              timestamp: '',
+              followUpSuggestions: [
+                'Sản phẩm nào đang bán chạy nhất?',
+                'So sánh top 3 sản phẩm bán chạy nhất',
+                'Sản phẩm nào sắp hết hàng?',
+                'Doanh thu hôm nay là bao nhiêu?',
+              ],
+              isSuggestionsOnly: true,
+            })
+          }
           // Generate a session ID for existing history
           currentSessionId.value = generateSessionId()
           chatSessions.value[currentSessionId.value] = parsed
@@ -509,47 +492,6 @@ function loadHistory() {
 
 const { t } = useI18n()
 
-const expandedModalTitle = 'Trợ Lý AI'
-
-const quickActions = computed<QuickAction[]>(() => [
-  {
-    id: 'slow-products',
-    label: t('ai.suggestions.slowProducts'),
-    icon: '📊',
-    question: 'Top 5 sản phẩm bán chậm nhất tuần này?',
-  },
-  {
-    id: 'revenue-compare',
-    label: t('ai.suggestions.revenueCompare'),
-    icon: '💰',
-    question: 'So sánh doanh thu tháng này với tháng trước?',
-  },
-  {
-    id: 'low-stock-alert',
-    label: t('ai.suggestions.lowStock'),
-    icon: '⚠️',
-    question: 'Sản phẩm nào tồn kho dưới mức an toàn?',
-  },
-  {
-    id: 'pending-orders',
-    label: t('ai.suggestions.pendingOrders'),
-    icon: '📋',
-    question: 'Bao nhiêu đơn hàng đang chờ xác nhận?',
-  },
-  {
-    id: 'employee-performance',
-    label: t('ai.suggestions.topEmployees'),
-    icon: '👨‍💼',
-    question: 'Top 3 nhân viên có tỷ lệ chuyển đổi cao nhất?',
-  },
-  {
-    id: 'channel-compare',
-    label: t('ai.suggestions.channelCompare'),
-    icon: '🛒',
-    question: 'So sánh hiệu suất kênh Web vs Tại quầy?',
-  },
-])
-
 // Methods
 function scrollToBottom() {
   if (messagesContainer.value) {
@@ -569,24 +511,7 @@ function setThinkingRef(el: any, msgId: number) {
   }
 }
 
-// Open expanded view
-function openExpandedView() {
-  showExpandedModal.value = true
-  nextTick(() => {
-    scrollExpandedToBottom()
-  })
-}
-
-const expandedMessagesContainer = ref<HTMLElement | null>(null)
-
-function scrollExpandedToBottom() {
-  if (expandedMessagesContainer.value) {
-    expandedMessagesContainer.value.scrollTo({
-      top: expandedMessagesContainer.value.scrollHeight,
-      behavior: 'smooth',
-    })
-  }
-}
+// Expanded view removed
 
 async function checkConnection() {
   try {
@@ -615,6 +540,21 @@ async function sendMessage(text: string = input.value) {
 
   isProcessing.value = true
 
+  // Remove suggestions-only messages before sending new message
+  messages.value = messages.value.filter(
+    msg => !(msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content)
+  )
+
+  // Clear followUpSuggestions from ALL previous messages to hide old suggestions
+  messages.value.forEach(msg => {
+    if (msg.role === 'assistant' && msg.followUpSuggestions) {
+      msg.followUpSuggestions = undefined
+    }
+  })
+
+  // Wait for UI to update after removing suggestions
+  await nextTick()
+
   // Add user message
   const userMessage: ChatMessage = {
     id: Date.now(),
@@ -624,17 +564,7 @@ async function sendMessage(text: string = input.value) {
   }
   messages.value.push(userMessage)
 
-  // Clear input
-  input.value = ''
-
-  // Persist
-  saveHistory()
-
-  // Scroll to bottom
-  await nextTick()
-  scrollToBottom()
-
-  // Create AI message placeholder for streaming
+  // Create AI message placeholder immediately with thinking mode
   const aiMessageId = Date.now() + 1
   const aiMessage: ChatMessage = {
     id: aiMessageId,
@@ -642,14 +572,26 @@ async function sendMessage(text: string = input.value) {
     content: '',
     timestamp: new Date().toLocaleTimeString('vi-VN'),
     processingStatus: 'querying',
+    isThinking: true,
+    thinkingContent: '',
     dataSource: '',
-    followUpSuggestions: [],
     queryType: '',
   }
   messages.value.push(aiMessage)
 
+  // Clear input first
+  input.value = ''
+
+  // Force multiple UI update cycles to ensure loading indicator renders
+  await nextTick()
+  await nextTick()
+  scrollToBottom()
+
+  // Persist after UI updates
+  saveHistory()
+
   // Turn off loading immediately after creating placeholder
-  // The placeholder itself shows typing indicator
+  // The placeholder itself shows typing/thinking indicator
   loading.value = false
 
   try {
@@ -716,11 +658,22 @@ async function sendMessage(text: string = input.value) {
             messages.value[msgIndex].content = ''
             messages.value[msgIndex].processingStatus = 'analyzing'
           } else {
-            // Show actual content when outside think tags
-            messages.value[msgIndex].isThinking = false
-            messages.value[msgIndex].thinkingContent = thinkingContent // Final content
-            messages.value[msgIndex].content = contentAfterThinking || fullContent
-            messages.value[msgIndex].processingStatus = 'ready'
+            // If there is no renderable content yet (e.g., metadata-only or empty chunk), keep thinking indicator
+            const hasRenderableContent =
+              (contentAfterThinking && contentAfterThinking.length > 0) ||
+              (!fullContent.includes('<think>') && fullContent.trim().length > 0)
+
+            if (!hasRenderableContent) {
+              messages.value[msgIndex].isThinking = true
+              messages.value[msgIndex].processingStatus = 'analyzing'
+              messages.value[msgIndex].content = ''
+            } else {
+              // Show actual content when outside think tags
+              messages.value[msgIndex].isThinking = false
+              messages.value[msgIndex].thinkingContent = thinkingContent // Final content
+              messages.value[msgIndex].content = contentAfterThinking || fullContent
+              messages.value[msgIndex].processingStatus = 'ready'
+            }
           }
           // Scroll while streaming
           nextTick(() => scrollToBottom())
@@ -762,8 +715,26 @@ async function sendMessage(text: string = input.value) {
           sessionNames.value[currentSessionId.value] = newName
         }
 
-        // Persist
+        // Persist (before adding suggestions so they don't get saved)
         saveHistory()
+
+        // Auto-generate suggestions card after AI response (after saving)
+        const aiMsg = messages.value.find((m) => m.id === aiMessageId)
+        if (aiMsg && aiMsg.followUpSuggestions && aiMsg.followUpSuggestions.length > 0) {
+          // Move suggestions to a separate message and remove from the AI content bubble
+          const suggestions = [...aiMsg.followUpSuggestions]
+          aiMsg.followUpSuggestions = undefined
+          aiMsg.isSuggestionsOnly = false
+          const suggestionsMessage: ChatMessage = {
+            id: Date.now() + 2,
+            role: 'assistant',
+            content: '',
+            timestamp: '',
+            followUpSuggestions: suggestions,
+            isSuggestionsOnly: true,
+          }
+          messages.value.push(suggestionsMessage)
+        }
 
         // Final scroll
         nextTick(() => scrollToBottom())
@@ -814,6 +785,7 @@ function switchToSession(sessionId: string) {
     // Switch to selected session
     currentSessionId.value = sessionId
     messages.value = [...chatSessions.value[sessionId]]
+    normalizeSuggestionMessages(messages.value)
 
     // Save and scroll
     saveHistory()
@@ -841,7 +813,21 @@ function createNewChat() {
         'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? 😊',
       timestamp: new Date().toLocaleTimeString('vi-VN'),
     },
+    {
+      id: -1,
+      role: 'assistant',
+      content: '',
+      timestamp: '',
+      followUpSuggestions: [
+        'Sản phẩm nào đang bán chạy nhất?',
+        'So sánh top 3 sản phẩm bán chạy nhất',
+        'Sản phẩm nào sắp hết hàng?',
+        'Doanh thu hôm nay là bao nhiêu?',
+      ],
+      isSuggestionsOnly: true,
+    },
   ]
+  normalizeSuggestionMessages(messages.value)
 
   // Set default name for new session
   sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
@@ -871,7 +857,21 @@ function clearMessages() {
       content: 'Đã xóa lịch sử chat. Tôi có thể giúp gì cho bạn?',
       timestamp: new Date().toLocaleTimeString('vi-VN'),
     },
+    {
+      id: -1,
+      role: 'assistant',
+      content: '',
+      timestamp: '',
+      followUpSuggestions: [
+        'Sản phẩm nào đang bán chạy nhất?',
+        'So sánh top 3 sản phẩm bán chạy nhất',
+        'Sản phẩm nào sắp hết hàng?',
+        'Doanh thu hôm nay là bao nhiêu?',
+      ],
+      isSuggestionsOnly: true,
+    },
   ]
+  normalizeSuggestionMessages(messages.value)
 
   // Set default name for new session
   sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
@@ -919,12 +919,8 @@ onMounted(async () => {
       messagesContainerStyle.value = {
         background: 'linear-gradient(180deg, #0f1115 0%, #12141a 100%)',
       }
-      quickActionsStyle.value = {
-        background: '#131722',
-      }
     } else {
       messagesContainerStyle.value = {}
-      quickActionsStyle.value = {}
     }
   }
   updateTheme()
@@ -947,12 +943,10 @@ watch(
       saveHistory()
     }
     
-    // Auto-scroll expanded view if it's open
-    if (showExpandedModal.value) {
-      nextTick(() => {
-        scrollExpandedToBottom()
-      })
-    }
+    // Auto-scroll after message updates
+    nextTick(() => {
+      scrollToBottom()
+    })
   },
   { deep: true }
 )
@@ -1028,6 +1022,7 @@ defineExpose({
     overflow-y: auto;
     padding: 12px 12px 16px; /* Reduce right padding */
     margin-bottom: 8px;
+    min-height: 0; /* Allow flex shrinking */
     /* Use Arco theme variables so it adapts to light/dark automatically */
     background: var(--color-bg-1) !important;
     border-radius: 12px;
@@ -1052,7 +1047,7 @@ defineExpose({
     }
   }
 
-  .message {
+.message {
     margin-bottom: 16px;
     animation: fadeIn 0.3s ease-in;
 
@@ -1093,12 +1088,19 @@ defineExpose({
   .avatar {
     font-size: 24px;
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-top: 2px;
+
+    :deep(.arco-avatar) {
+      width: 40px;
+      height: 40px;
+      font-size: 16px;
+      font-weight: 600;
+    }
   }
 
   .content {
@@ -1106,6 +1108,50 @@ defineExpose({
     border-radius: 14px;
     max-width: 72%;
     word-wrap: break-word;
+
+    :deep(table) {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      border: 1px solid var(--color-border-2);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--color-bg-1);
+    }
+
+    :deep(th),
+    :deep(td) {
+      padding: 8px 12px;
+      border: 1px solid var(--color-border-2);
+      text-align: left;
+      font-size: 13px;
+    }
+
+    :deep(th) {
+      background: var(--color-fill-2);
+      font-weight: 600;
+    }
+
+    :deep(tr:nth-child(even) td) {
+      background: var(--color-fill-1);
+    }
+
+    :deep(ul),
+    :deep(ol) {
+      padding-left: 20px;
+      margin: 8px 0;
+    }
+
+    :deep(li) {
+      margin-bottom: 4px;
+    }
+
+    .processing-indicator {
+      display: flex;
+      align-items: center;
+      color: var(--color-text-2);
+      font-size: 14px;
+    }
 
     .text {
       line-height: 1.7;
@@ -1183,29 +1229,16 @@ defineExpose({
     }
   }
 
-  .quick-actions {
-    margin-bottom: 8px;
-    padding: 12px;
-    background: var(--color-bg-2);
-    border-radius: 8px;
-
-    .quick-actions-label {
-      font-size: 12px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: var(--color-text-2);
-    }
-  }
-
   .input-container {
-    position: sticky;
-    bottom: 0;
+    margin-top: auto;
+    position: static;
     background: var(--color-bg-2);
     padding-top: 8px;
     padding-bottom: 8px;
     border-top: 1px solid var(--color-border-2);
     z-index: 1;
     backdrop-filter: blur(8px);
+    flex-shrink: 0; /* Prevent input from shrinking */
     :deep(.arco-input-search) {
       .arco-input {
         border-radius: 20px 0 0 20px;
@@ -1279,12 +1312,6 @@ defineExpose({
     background: #131722;
   }
   .chat-history .chat-history-label {
-    color: #9aa4b2;
-  }
-  .quick-actions {
-    background: #131722;
-  }
-  .quick-actions .quick-actions-label {
     color: #9aa4b2;
   }
 }
@@ -1379,16 +1406,6 @@ defineExpose({
 :deep(html.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label,
 :deep(body.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label,
 :deep(.arco-theme-dark) .ai-chatbot .chat-history .chat-history-label {
-  color: #9aa4b2 !important;
-}
-:deep(html.arco-theme-dark) .ai-chatbot .quick-actions,
-:deep(body.arco-theme-dark) .ai-chatbot .quick-actions,
-:deep(.arco-theme-dark) .ai-chatbot .quick-actions {
-  background: #131722 !important;
-}
-:deep(html.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label,
-:deep(body.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label,
-:deep(.arco-theme-dark) .ai-chatbot .quick-actions .quick-actions-label {
   color: #9aa4b2 !important;
 }
 
@@ -1695,6 +1712,26 @@ defineExpose({
     }
   }
 
+  /* Reusable thinking dots */
+  .thinking-dots {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: rgb(var(--primary-6));
+      animation: typingDot 1.4s infinite;
+    }
+
+    .dot:nth-child(1) { animation-delay: 0s; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+  }
+
   .streaming-cursor {
     display: inline-block;
     font-family: monospace;
@@ -1804,13 +1841,6 @@ defineExpose({
 .follow-up-suggestions {
   margin-top: 8px;
 
-  .suggestions-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-text-2);
-    margin-bottom: 8px;
-  }
-
   .suggestions-buttons {
     display: flex;
     flex-wrap: wrap;
@@ -1876,165 +1906,4 @@ defineExpose({
 }
 
 /* Expanded Modal Styles */
-.chat-expanded-modal {
-  :deep(.arco-modal) {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-
-  :deep(.arco-modal-body) {
-    padding: 0;
-    flex: 1;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  :deep(.arco-modal-footer) {
-    padding: 0 !important;
-    border-top: none;
-    flex-shrink: 0;
-  }
-}
-
-.expanded-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-  background: var(--color-bg-2);
-
-  .expanded-empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--color-text-3);
-
-    .empty-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-    }
-
-    .empty-title {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: var(--color-text-1);
-    }
-
-    .empty-description {
-      font-size: 14px;
-      color: var(--color-text-3);
-    }
-  }
-
-  .message {
-    margin-bottom: 24px;
-
-    .message-wrapper {
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-
-      .avatar {
-        width: 40px;
-        height: 40px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--color-primary-light-1);
-        border-radius: 50%;
-        font-size: 20px;
-        margin-top: 4px;
-      }
-
-      .content {
-        flex: 1;
-        min-width: 0;
-
-        .text {
-          font-size: 15px;
-          line-height: 1.6;
-          color: var(--color-text-1);
-        }
-      }
-    }
-
-    &.user {
-      .avatar {
-        background: var(--color-fill-3);
-        margin-top: 0;
-      }
-
-      .content {
-        background: var(--color-fill-2);
-        padding: 14px 18px;
-        border-radius: 16px;
-
-        .text {
-          margin: 0;
-        }
-      }
-    }
-  }
-
-  /* Custom scrollbar */
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: var(--color-fill-1);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-3);
-    border-radius: 4px;
-
-    &:hover {
-      background: var(--color-fill-4);
-    }
-  }
-}
-
-.expanded-input-footer {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  border-top: 1px solid var(--color-border-2);
-  z-index: 1;
-  backdrop-filter: blur(8px);
-  
-  .input-wrapper {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  
-  :deep(.arco-input-search) {
-    .arco-input {
-      border-radius: 20px 0 0 20px;
-    }
-
-    .arco-input-append {
-      border-radius: 0 20px 20px 0;
-    }
-
-    .arco-btn {
-      border-radius: 0 20px 20px 0;
-      height: 100%;
-    }
-    
-    .arco-input-search-btn {
-      border-radius: 0 20px 20px 0;
-    }
-  }
-}
-
-// Dark mode for expanded input
-.chat-expanded-modal.is-dark .expanded-input-footer {
-  border-top-color: #272b36;
-}
 </style>

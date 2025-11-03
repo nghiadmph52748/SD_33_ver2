@@ -279,9 +279,13 @@ if (typeof window !== 'undefined') {
   z-index: 999;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
 
   &.moved-up {
-    right: 92px;
+    right: 96px; // Equal 16px gap from scroll-to-top button
   }
 
   &:hover {
@@ -291,10 +295,14 @@ if (typeof window !== 'undefined') {
 
   :deep(.arco-btn-icon) {
     margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   :deep(.arco-icon) {
     margin: 0 !important;
+    display: block;
   }
 
   :deep(.arco-badge) {

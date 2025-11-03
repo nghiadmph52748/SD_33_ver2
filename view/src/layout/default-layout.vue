@@ -47,9 +47,14 @@
           </a-layout-content>
           <Footer v-if="footer" />
 
+          <!-- Floating AI Button -->
+          <transition name="fade">
+            <FloatingAIButton v-if="userStore.id && !isOnAIChatbotPage" />
+          </transition>
+
           <!-- Floating Chat Button (ẩn khi đang ở trang /chat) -->
           <transition name="fade">
-            <FloatingChatButton v-if="userStore.id && !isOnChatPage" />
+            <FloatingChatButton v-if="userStore.id && !isOnChatPage && !isOnAIChatbotPage" />
           </transition>
         </a-layout>
       </a-layout>
@@ -62,6 +67,7 @@ import Footer from '@/components/footer/footer.vue'
 import Menu from '@/components/menu/menu.vue'
 import NavBar from '@/components/navbar/navbar.vue'
 import FloatingChatButton from '@/components/chat/FloatingChatButton.vue'
+import FloatingAIButton from '@/components/ai/FloatingAIButton.vue'
 import usePermission from '@/hooks/permission'
 import useResponsive from '@/hooks/responsive'
 import { useAppStore, useUserStore } from '@/store'
@@ -77,6 +83,8 @@ const route = useRoute()
 
 // Ẩn floating chat button khi đang ở bất kỳ trang chat nào (/chat, /chat/index, /chat/:id)
 const isOnChatPage = computed(() => route.path.startsWith('/chat'))
+// Ẩn các floating button khi đang ở trang trợ lý AI toàn màn hình
+const isOnAIChatbotPage = computed(() => route.path.startsWith('/ai-chatbot'))
 const permission = usePermission()
 useResponsive(true)
 const navbarHeight = `60px`

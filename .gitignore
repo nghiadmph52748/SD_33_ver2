@@ -13,6 +13,16 @@ SUMMARY_CHANGES.md
 SQLQuery1_Test.sql
 *.md
 
+# Mobile Admin React Native
+mobile-admin/ios/Pods/
+mobile-admin/ios/build/
+mobile-admin/ios/DerivedData/
+mobile-admin/android/.gradle/
+mobile-admin/android/build/
+mobile-admin/android/app/build/
+mobile-admin/android/app/release/
+mobile-admin/android/local.properties
+
 # Maven
 target/
 pom.xml.tag
@@ -132,4 +142,3 @@ ai_service/app/models/*.pkl
 ai_service/app/models/*.joblib
 ai_service/app/models/*.h5
 ai_service/notebooks/.ipynb_checkpoints/
-

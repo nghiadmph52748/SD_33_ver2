@@ -17,7 +17,6 @@
   >
     <template #title>{{ $t('settings.title') }}</template>
     <Block :options="contentOpts" :title="$t('settings.content')" />
-    <Block :options="othersOpts" :title="$t('settings.otherSettings')" />
     <a-alert>{{ $t('settings.alertContent') }}</a-alert>
   </a-drawer>
 </template>
@@ -49,24 +48,11 @@ const contentOpts = computed(() => [
   //   defaultVal: appStore.topMenu,
   // },
   { name: 'settings.footer', key: 'footer', defaultVal: appStore.footer },
-  { name: 'settings.tabBar', key: 'tabBar', defaultVal: appStore.tabBar },
-  {
-    name: 'settings.menuFromServer',
-    key: 'menuFromServer',
-    defaultVal: appStore.menuFromServer,
-  },
   {
     name: 'settings.menuWidth',
     key: 'menuWidth',
     defaultVal: appStore.menuWidth,
     type: 'number',
-  },
-])
-const othersOpts = computed(() => [
-  {
-    name: 'settings.colorWeak',
-    key: 'colorWeak',
-    defaultVal: appStore.colorWeak,
   },
 ])
 
