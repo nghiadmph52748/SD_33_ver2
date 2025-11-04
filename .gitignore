@@ -1,6 +1,7 @@
 .idea
 .DS_Store
 .vscode
+.cursor
 AGENTS.md
 WARP.md
 node_modules
