@@ -29,7 +29,7 @@ const App: React.FC = () => {
           <NavigationContainer>
             {isRestoring ? <SplashScreen /> : <RootNavigator />}
           </NavigationContainer>
-          <StatusBar barStyle="light-content" />
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} animated />
         </PaperProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
