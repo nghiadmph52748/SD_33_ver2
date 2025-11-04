@@ -17,7 +17,7 @@
             </a-button>
           </a-tooltip>
           <a-tooltip content="Xóa tất cả">
-            <a-button type="text" size="small" status="danger" :disabled="!renderList.length" @click="confirmClearAll">
+            <a-button type="text" size="small" status="danger" :disabled="!renderList.length" @click="clearAll">
               <template #icon>
                 <icon-delete />
               </template>
@@ -59,7 +59,7 @@ import { MessageListType } from '@/api/message'
 import useNotificationStore from '@/store/modules/notification'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Modal, Message } from '@arco-design/web-vue'
+import { Message } from '@arco-design/web-vue'
 import List from './list.vue'
 
 interface TabItem {
@@ -108,17 +108,9 @@ const handleItemClick = async (items: MessageListType) => {
   }
 }
 
-const confirmClearAll = () => {
-  Modal.warning({
-    title: 'Xác nhận xóa',
-    content: 'Bạn có chắc chắn muốn xóa tất cả thông báo?',
-    okText: 'Xóa',
-    cancelText: 'Hủy',
-    onOk: () => {
-      notificationStore.clearAll()
-      Message.success('Đã xóa tất cả thông báo')
-    },
-  })
+const clearAll = () => {
+  notificationStore.clearAll()
+  Message.success('Đã xóa tất cả thông báo')
 }
 
 const markAll = async () => {

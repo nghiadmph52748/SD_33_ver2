@@ -3,6 +3,53 @@ import { queryMessageList, setMessageStatus, MessageRecord } from '@/api/message
 import { Client, IMessage } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { getToken } from '@/utils/auth'
+import axios from 'axios'
+
+const READ_STORAGE_KEY = 'readNotificationIds'
+const LOCAL_NOTI_STORAGE_KEY = 'localNotifications'
+
+function loadReadIds(): Set<number> {
+  try {
+    const raw = localStorage.getItem(READ_STORAGE_KEY)
+    if (!raw) return new Set<number>()
+    const parsed = JSON.parse(raw) as number[]
+    return new Set<number>(Array.isArray(parsed) ? parsed : [])
+  } catch {
+    return new Set<number>()
+  }
+}
+
+function saveReadIds(ids: Set<number>): void {
+  try {
+    localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(Array.from(ids)))
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function loadLocalNotifications(): MessageRecord[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_NOTI_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as MessageRecord[]) : []
+  } catch {
+    return []
+  }
+}
+
+function saveLocalNotifications(notifications: MessageRecord[]): void {
+  try {
+    localStorage.setItem(LOCAL_NOTI_STORAGE_KEY, JSON.stringify(notifications))
+  } catch {
+    // ignore storage errors
+  }
+}
+
+// Heuristic: treat IDs larger than 32-bit int as local-only (dev/test)
+function isLocalOnlyId(id: number): boolean {
+  return id > 2147483647
+}
 
 export interface NotificationState {
   messages: MessageRecord[]
@@ -53,6 +100,7 @@ const useNotificationStore = defineStore('notification', {
         const response = await queryMessageList()
         // Backend returns ResponseObject with data property containing the notifications array
         const notifications = response.data?.data || []
+        const readIds = loadReadIds()
         const normalized = notifications.map((m) => ({
           // Ensure required fields exist for UI rendering
           id: m.id,
@@ -60,14 +108,27 @@ const useNotificationStore = defineStore('notification', {
           subTitle: m.subTitle || '',
           content: m.content || '',
           time: m.time || new Date().toISOString(),
-          status: (m.status as 0 | 1) ?? 0,
+          // If backend marks as read keep it; otherwise honor local read state
+          status: (m.status as 0 | 1) ?? (readIds.has(m.id) ? 1 : 0),
           avatar: m.avatar,
           type: m.type || (m.messageType === 0 ? 'todo' : 'message'),
           messageType: m.messageType,
         }))
 
-        // Use real data from backend
-        this.messages = normalized
+        // Merge with locally stored notifications (dev/test or realtime persisted ones)
+        const localList = loadLocalNotifications()
+        const backendIds = new Set(normalized.map((n) => n.id))
+        const merged = [...normalized]
+        for (const local of localList) {
+          if (!backendIds.has(local.id)) {
+            // Apply read state from storage
+            const status = (local.status as 0 | 1) ?? (readIds.has(local.id) ? 1 : 0)
+            merged.push({ ...local, status })
+          }
+        }
+
+        // Use merged data
+        this.messages = merged
         this.unreadCount = this.totalUnread
       } catch (error) {
         console.error('Failed to fetch notifications:', error)
@@ -80,7 +141,12 @@ const useNotificationStore = defineStore('notification', {
     // Mark messages as read
     async markAsRead(ids: number[]) {
       try {
-        await setMessageStatus({ ids })
+        const backendIds = ids.filter((id) => !isLocalOnlyId(id))
+        const localOnlyIds = ids.filter((id) => isLocalOnlyId(id))
+
+        if (backendIds.length > 0) {
+          await setMessageStatus({ ids: backendIds })
+        }
         // Update local state
         this.messages = this.messages.map((msg) => {
           if (ids.includes(msg.id)) {
@@ -89,6 +155,18 @@ const useNotificationStore = defineStore('notification', {
           return msg
         })
         this.unreadCount = this.totalUnread
+
+        // Persist read ids locally
+        const readIds = loadReadIds()
+        ids.forEach((id) => readIds.add(id))
+        saveReadIds(readIds)
+
+        // If any are local-only, persist updated local notifications list
+        if (localOnlyIds.length > 0) {
+          const localList = loadLocalNotifications()
+          const updatedLocalList = localList.map((n) => (localOnlyIds.includes(n.id) ? { ...n, status: 1 } : n))
+          saveLocalNotifications(updatedLocalList)
+        }
       } catch (error) {
         console.error('Failed to mark messages as read:', error)
         throw error
@@ -107,13 +185,33 @@ const useNotificationStore = defineStore('notification', {
     clearAll() {
       this.messages = []
       this.unreadCount = 0
+      // Also clear persisted local data
+      try {
+        localStorage.removeItem(LOCAL_NOTI_STORAGE_KEY)
+        localStorage.removeItem(READ_STORAGE_KEY)
+      } catch {}
     },
 
     // Add a new notification (for real-time updates)
     addNotification(notification: MessageRecord) {
-      this.messages.unshift(notification)
-      if (notification.status === 0) {
+      const readIds = loadReadIds()
+      const normalized: MessageRecord = {
+        ...notification,
+        status: (notification.status as 0 | 1) ?? (readIds.has(notification.id) ? 1 : 0),
+      }
+
+      this.messages.unshift(normalized)
+      if (normalized.status === 0) {
         this.unreadCount += 1
+      }
+
+      // Persist local-only notifications so they survive reloads
+      if (isLocalOnlyId(normalized.id)) {
+        const localList = loadLocalNotifications()
+        // de-dupe by id
+        const exists = localList.some((n) => n.id === normalized.id)
+        const updated = exists ? localList.map((n) => (n.id === normalized.id ? normalized : n)) : [normalized, ...localList]
+        saveLocalNotifications(updated)
       }
     },
 
@@ -131,8 +229,11 @@ const useNotificationStore = defineStore('notification', {
 
       this.wsConnecting = true
 
+      const baseURL = axios.defaults.baseURL || 'http://localhost:8080'
+      const wsUrl = `${baseURL}/ws-chat`
+
       const client = new Client({
-        webSocketFactory: () => new SockJS('http://localhost:8080/ws-chat'),
+        webSocketFactory: () => new SockJS(wsUrl),
         connectHeaders: {
           Authorization: `Bearer ${token}`,
         },

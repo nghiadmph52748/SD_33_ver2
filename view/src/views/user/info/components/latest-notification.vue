@@ -54,9 +54,11 @@ import type { MessageRecord } from '@/api/message'
 const router = useRouter()
 const notificationStore = useNotificationStore()
 
-// Get latest 5 notifications
+// Get latest 5 notifications (sorted by time desc)
 const latestNotifications = computed(() => {
-  return notificationStore.messages.slice(0, 5)
+  return [...notificationStore.messages]
+    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+    .slice(0, 5)
 })
 
 // Format time to relative format
@@ -84,12 +86,17 @@ const handleNotificationClick = async (notification: MessageRecord) => {
   }
 
   // Navigate based on notification type
-  // You can customize this based on your routing needs
+  if (notification.type === 'message') {
+    router.push('/chat')
+    return
+  }
+
+  // default: go to user info page
+  router.push('/user/info')
 }
 
 const viewAllNotifications = () => {
-  // Navigate to notifications page (implement routing as needed)
-  router.push('/notifications')
+  router.push('/user/info')
 }
 
 // Fetch notifications and connect WebSocket on mount
