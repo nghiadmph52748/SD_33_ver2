@@ -50,25 +50,29 @@ const CustomersScreen: React.FC = () => {
         keyExtractor={(item) => item.id.toString()}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={loadCustomers} />}
         ListEmptyComponent={!isLoading ? <ListEmpty title="Chưa có khách hàng" /> : null}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <List.Item
-            title={item.tenKhachHang}
-            description={`${item.email} • ${item.soDienThoai}`}
-            onPress={() => navigation.navigate(SCREENS.STACK.CUSTOMER_DETAILS, { customerId: item.id })}
-            left={() => (
-              <Avatar.Text
-                label={item.tenKhachHang?.substring(0, 2).toUpperCase() ?? 'KH'}
-                size={42}
-                style={styles.avatar}
-              />
-            )}
-            right={() => (
-              <View style={styles.infoRight}>
-                <Text style={styles.totalOrder}>{item.tongDon} đơn</Text>
-                <Text style={styles.segment}>{item.phanLoaiText ?? 'Chưa phân loại'}</Text>
-              </View>
-            )}
-          />
+          <View style={styles.listItem}>
+            <List.Item
+              title={item.tenKhachHang}
+              description={`${item.email} • ${item.soDienThoai}`}
+              onPress={() => navigation.navigate(SCREENS.STACK.CUSTOMER_DETAILS, { customerId: item.id })}
+              left={(props) => (
+                <Avatar.Text
+                  label={item.tenKhachHang?.substring(0, 2).toUpperCase() ?? 'KH'}
+                  size={42}
+                  style={[styles.avatar, { marginLeft: 8 }]}
+                />
+              )}
+              right={(props) => (
+                <View style={styles.infoRight}>
+                  <Text style={styles.totalOrder}>{item.tongDon} đơn</Text>
+                  <Text style={styles.segment}>{item.phanLoaiText ?? 'Chưa phân loại'}</Text>
+                </View>
+              )}
+              style={styles.listItemInner}
+            />
+          </View>
         )}
         contentContainerStyle={styles.listContent}
       />
@@ -82,20 +86,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   listContent: {
-    paddingBottom: 32,
+    paddingBottom: 100,
+  },
+  listItem: {
+    paddingHorizontal: 0,
+  },
+  listItemInner: {
+    paddingLeft: 0,
+    paddingRight: 8,
   },
   avatar: {
     backgroundColor: '#f97316',
   },
   infoRight: {
     alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   totalOrder: {
     fontWeight: '600',
+    fontSize: 15,
   },
   segment: {
     color: '#64748b',
     fontSize: 12,
+    marginTop: 2,
   },
 })
 

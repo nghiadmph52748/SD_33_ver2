@@ -106,7 +106,7 @@ import { useXuatExcel } from '../composables/useXuatExcel'
 import type { KhoangThoiGian, LoaiBieuDo } from '../types/thong-ke.types'
 import AIChatbot from '@/components/ai/AIChatbot.vue'
 
-// Import components
+// Import components6
 import BoLocThongKe from './bo-loc-thong-ke.vue'
 import TheThongKe from './the-thong-ke.vue'
 import BieuDoDoanhThu from './bieu-do-doanh-thu.vue'

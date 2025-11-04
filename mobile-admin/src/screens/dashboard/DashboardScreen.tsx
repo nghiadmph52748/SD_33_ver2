@@ -39,7 +39,9 @@ const DashboardScreen: React.FC = () => {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={styles.contentContainer}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={loadSummary} />}
+      showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
         <Text variant="titleLarge" style={styles.title}>
@@ -167,6 +169,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  contentContainer: {
+    paddingBottom: 100,
   },
   header: {
     paddingHorizontal: 16,

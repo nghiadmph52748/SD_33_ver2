@@ -69,6 +69,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     padding: 16,
+    paddingBottom: 100,
   },
   card: {
     borderRadius: 16,

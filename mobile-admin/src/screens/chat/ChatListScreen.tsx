@@ -53,6 +53,7 @@ const ChatListScreen: React.FC = () => {
         keyExtractor={(item) => item.id.toString()}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={loadConversations} />}
         ListEmptyComponent={!isLoading ? <ListEmpty title="Chưa có cuộc trò chuyện" /> : null}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
           const isFirstUser = item.nhanVien1Id === currentUser?.id
           const partnerId = isFirstUser ? item.nhanVien2Id : item.nhanVien1Id
@@ -60,26 +61,29 @@ const ChatListScreen: React.FC = () => {
           const unread = isFirstUser ? item.unreadCountNv1 : item.unreadCountNv2
 
           return (
-            <List.Item
-              title={partnerName}
-              description={item.lastMessageContent ?? 'Chưa có tin nhắn'}
-              onPress={() => navigation.navigate(SCREENS.STACK.CHAT_ROOM, { partnerId, partnerName })}
-              left={() => (
-                <Avatar.Text
-                  label={partnerName?.substring(0, 2).toUpperCase() ?? 'NV'}
-                  size={44}
-                  style={styles.avatar}
-                />
-              )}
-              right={() => (
-                <View style={styles.rightContent}>
-                  <Text style={styles.timestamp}>
-                    {item.lastMessageTime ? new Date(item.lastMessageTime).toLocaleTimeString('vi-VN') : ''}
-                  </Text>
-                  {unread > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{unread}</Text></View> : null}
-                </View>
-              )}
-            />
+            <View style={styles.listItem}>
+              <List.Item
+                title={partnerName}
+                description={item.lastMessageContent ?? 'Chưa có tin nhắn'}
+                onPress={() => navigation.navigate(SCREENS.STACK.CHAT_ROOM, { partnerId, partnerName })}
+                left={(props) => (
+                  <Avatar.Text
+                    label={partnerName?.substring(0, 2).toUpperCase() ?? 'NV'}
+                    size={44}
+                    style={[styles.avatar, { marginLeft: 8 }]}
+                  />
+                )}
+                right={(props) => (
+                  <View style={styles.rightContent}>
+                    <Text style={styles.timestamp}>
+                      {item.lastMessageTime ? new Date(item.lastMessageTime).toLocaleTimeString('vi-VN') : ''}
+                    </Text>
+                    {unread > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{unread}</Text></View> : null}
+                  </View>
+                )}
+                style={styles.listItemInner}
+              />
+            </View>
           )
         }}
         contentContainerStyle={styles.listContent}
@@ -100,13 +104,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   listContent: {
-    paddingBottom: 32,
+    paddingBottom: 100,
+  },
+  listItem: {
+    paddingHorizontal: 0,
+  },
+  listItemInner: {
+    paddingLeft: 0,
+    paddingRight: 8,
   },
   avatar: {
     backgroundColor: '#2563eb',
   },
   rightContent: {
     alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   timestamp: {
     color: '#64748b',
@@ -128,6 +141,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 12,
+    paddingBottom: 100,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: '#e2e8f0',
   },

@@ -1,5 +1,8 @@
 import React from 'react'
+import { Platform, StyleSheet } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { BlurView } from 'expo-blur'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 
 import { SCREENS } from '../constants/routes'
@@ -24,6 +27,7 @@ const Tab = createBottomTabNavigator<AppTabParamList>()
 
 const AppTabs = () => {
   const unreadCount = useChatStore((state) => state.unreadCount)
+  const insets = useSafeAreaInsets()
 
   return (
     <Tab.Navigator
@@ -31,6 +35,38 @@ const AppTabs = () => {
         headerShown: false,
         tabBarActiveTintColor: '#2563eb',
         tabBarInactiveTintColor: '#94a3b8',
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          paddingTop: 8,
+          borderTopColor: 'transparent',
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+            },
+            android: {
+              elevation: 8,
+            },
+          }),
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
+        tabBarBackground: () => (
+          <BlurView
+            intensity={80}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+          />
+        ),
         tabBarIcon: ({ color, size }) => {
           let iconName: string
 

@@ -38,7 +38,7 @@ const ProductDetailScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Card style={styles.card}>
         <Card.Title title={product.tenSanPham ?? 'Sản phẩm'} subtitle={`Mã biến thể: ${product.maChiTietSanPham ?? '—'}`} />
         <Card.Content>
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 100,
   },
   card: {
     borderRadius: 16,

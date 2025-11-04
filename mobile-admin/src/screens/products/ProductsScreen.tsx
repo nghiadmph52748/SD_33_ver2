@@ -74,27 +74,31 @@ const ProductsScreen: React.FC = () => {
         ListEmptyComponent={!isLoading ? <ListEmpty title="Chưa có sản phẩm" /> : null}
         onEndReachedThreshold={0.3}
         onEndReached={handleLoadMore}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <List.Item
-            title={item.tenSanPham ?? 'Sản phẩm'}
-            description={`Mã biến thể: ${item.maChiTietSanPham ?? '—'}`}
-            onPress={() => navigation.navigate(SCREENS.STACK.PRODUCT_DETAILS, { productId: item.id })}
-            left={() => (
-              <Avatar.Text
-                label={item.tenSanPham?.substring(0, 2).toUpperCase() ?? 'SP'}
-                size={42}
-                style={styles.avatar}
-              />
-            )}
-            right={() => (
-              <View style={styles.productRight}>
-                <Text style={styles.price}>{currencyFormatter.format(item.giaBan ?? 0)}</Text>
-                <Chip icon="package-variant" style={styles.stockChip}>
-                  {item.soLuong} tồn
-                </Chip>
-              </View>
-            )}
-          />
+          <View style={styles.listItem}>
+            <List.Item
+              title={item.tenSanPham ?? 'Sản phẩm'}
+              description={`Mã biến thể: ${item.maChiTietSanPham ?? '—'}`}
+              onPress={() => navigation.navigate(SCREENS.STACK.PRODUCT_DETAILS, { productId: item.id })}
+              left={(props) => (
+                <Avatar.Text
+                  label={item.tenSanPham?.substring(0, 2).toUpperCase() ?? 'SP'}
+                  size={42}
+                  style={[styles.avatar, { marginLeft: 8 }]}
+                />
+              )}
+              right={(props) => (
+                <View style={styles.productRight}>
+                  <Text style={styles.price}>{currencyFormatter.format(item.giaBan ?? 0)}</Text>
+                  <Chip icon="package-variant" style={styles.stockChip}>
+                    {item.soLuong} tồn
+                  </Chip>
+                </View>
+              )}
+              style={styles.listItemInner}
+            />
+          </View>
         )}
         contentContainerStyle={styles.listContent}
       />
@@ -108,19 +112,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   listContent: {
-    paddingBottom: 32,
+    paddingBottom: 100,
+  },
+  listItem: {
+    paddingHorizontal: 0,
+  },
+  listItemInner: {
+    paddingLeft: 0,
+    paddingRight: 8,
   },
   avatar: {
     backgroundColor: '#2563eb',
   },
   productRight: {
     alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   price: {
     fontWeight: '600',
+    fontSize: 15,
   },
   stockChip: {
     marginTop: 4,
+    height: 28,
   },
 })
 

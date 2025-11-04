@@ -39,19 +39,20 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     paddingHorizontal: 16,
     paddingVertical: 20,
   },
   indicator: {
     width: 6,
-    height: '100%',
+    minHeight: 60,
     borderRadius: 16,
     backgroundColor: '#2563eb',
     marginRight: 16,
   },
   content: {
     flex: 1,
+    justifyContent: 'center',
   },
   title: {
     color: '#475569',
@@ -59,10 +60,10 @@ const styles = StyleSheet.create({
   },
   value: {
     fontWeight: '700',
-    marginBottom: 4,
   },
   subtitle: {
     color: '#64748b',
+    marginTop: 4,
   },
 })
 

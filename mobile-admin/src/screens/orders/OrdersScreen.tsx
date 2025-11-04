@@ -60,22 +60,26 @@ const OrdersScreen: React.FC = () => {
         keyExtractor={(item) => item.id.toString()}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={loadOrders} />}
         ListEmptyComponent={!isLoading ? <ListEmpty title="Chưa có đơn hàng" /> : null}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <List.Item
-            title={`Đơn hàng #${item.id}`}
-            description={`Khách hàng: ${item.tenNguoiNhan ?? 'N/A'}`}
-            onPress={() => navigation.navigate(SCREENS.STACK.ORDER_DETAILS, { orderId: item.id })}
-            right={() => (
-              <View style={styles.itemRight}>
-                <Text style={styles.amount}>
-                  {currencyFormatter.format(item.tongTienSauGiam ?? item.tongTien ?? 0)}
-                </Text>
-                <Text style={styles.date}>
-                  {item.ngayTao ? new Date(item.ngayTao).toLocaleDateString('vi-VN') : '—'}
-                </Text>
-              </View>
-            )}
-          />
+          <View style={styles.listItem}>
+            <List.Item
+              title={`Đơn hàng #${item.id}`}
+              description={`Khách hàng: ${item.tenNguoiNhan ?? 'N/A'}`}
+              onPress={() => navigation.navigate(SCREENS.STACK.ORDER_DETAILS, { orderId: item.id })}
+              right={(props) => (
+                <View style={styles.itemRight}>
+                  <Text style={styles.amount}>
+                    {currencyFormatter.format(item.tongTienSauGiam ?? item.tongTien ?? 0)}
+                  </Text>
+                  <Text style={styles.date}>
+                    {item.ngayTao ? new Date(item.ngayTao).toLocaleDateString('vi-VN') : '—'}
+                  </Text>
+                </View>
+              )}
+              style={styles.listItemInner}
+            />
+          </View>
         )}
         contentContainerStyle={styles.listContent}
       />
@@ -89,17 +93,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   listContent: {
-    paddingBottom: 32,
+    paddingBottom: 100,
+  },
+  listItem: {
+    paddingHorizontal: 0,
+  },
+  listItemInner: {
+    paddingLeft: 8,
+    paddingRight: 8,
   },
   itemRight: {
     alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   amount: {
     fontWeight: '600',
+    fontSize: 15,
   },
   date: {
     color: '#64748b',
     fontSize: 12,
+    marginTop: 2,
   },
 })
 

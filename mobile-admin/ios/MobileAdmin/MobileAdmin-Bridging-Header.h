@@ -1,3 +1,8 @@
 //
-// Use this file to import your target's public headers that you would like to expose to Swift.
+// Bridging header for React Native integration.
 //
+#import <React-RCTAppDelegate/RCTAppSetupUtils.h>
+#import <React/RCTBridge.h>
+#import <React/RCTBundleURLProvider.h>
+#import <React/RCTLinkingManager.h>
+#import <React/RCTRootView.h>
