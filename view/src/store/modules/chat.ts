@@ -304,10 +304,10 @@ const useChatStore = defineStore('chat', {
             console.log(`Marked ${updatedCount} messages as read`)
           }
         } else {
-          console.warn('⚠️ Conversation not found for markAsRead, senderId:', senderId, 'conversationId:', conversationId)
+          console.warn('Conversation not found for markAsRead, senderId:', senderId, 'conversationId:', conversationId)
         }
       } catch (error: any) {
-        console.error('❌ Lỗi khi đánh dấu đã đọc:', error)
+        console.error('Lỗi khi đánh dấu đã đọc:', error)
       }
     },
 

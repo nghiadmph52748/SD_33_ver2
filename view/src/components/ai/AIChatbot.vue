@@ -118,7 +118,7 @@
                     :key="idx"
                     size="mini"
                     type="text"
-                    :disabled="isProcessing"
+                    :disabled="!isConnected || isProcessing"
                     @click="askQuestion(suggestion)"
                     class="suggestion-btn"
                   >
@@ -164,7 +164,7 @@
       <div class="input-container">
         <a-input-search
           v-model="input"
-          placeholder="Hỏi AI bất cứ điều gì về hệ thống..."
+          :placeholder="isConnected ? 'Hỏi AI bất cứ điều gì về hệ thống...' : 'AI đang offline...'"
           :loading="loading || isProcessing"
           :disabled="!isConnected || isProcessing"
           allow-clear
@@ -222,7 +222,11 @@ interface SessionState {
 }
 
 // Props
-const props = defineProps<{ suppressConnectionNotice?: boolean; enableHealthCheck?: boolean }>()
+const props = defineProps<{ 
+  suppressConnectionNotice?: boolean
+  enableHealthCheck?: boolean
+  connectionStatus?: boolean
+}>()
 const shouldNotifyConnection = props.suppressConnectionNotice !== true
 const shouldHealthCheck = props.enableHealthCheck === true
 
@@ -259,7 +263,19 @@ const userStore = useUserStore()
 const input = ref('')
 const loading = ref(false)
 const isProcessing = ref(false) // Prevent concurrent requests
-const isConnected = ref(!shouldHealthCheck)
+// Use connectionStatus prop if provided, otherwise check health on mount
+const isConnected = ref(props.connectionStatus ?? !shouldHealthCheck)
+
+// Watch connectionStatus prop and sync with local state
+watch(
+  () => props.connectionStatus,
+  (newStatus) => {
+    if (newStatus !== undefined) {
+      isConnected.value = newStatus
+    }
+  },
+  { immediate: true }
+)
 const messagesContainer = ref<HTMLElement | null>(null)
 const isDark = ref(document.body.hasAttribute('arco-theme'))
 const messagesContainerStyle = ref<Record<string, string>>({})

@@ -23,6 +23,7 @@
           ref="chatbotRef"
           :suppress-connection-notice="true"
           :enable-health-check="false"
+          :connection-status="isConnected"
           @session-state="handleSessionState"
         />
       </div>
