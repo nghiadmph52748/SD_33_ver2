@@ -100,13 +100,20 @@
       <template #icon>
         <icon-message :size="24" />
       </template>
+      <!-- Connection status indicator -->
+      <div
+        v-if="!chatStore.wsConnected"
+        class="connection-indicator"
+        :class="{ connecting: chatStore.wsConnecting }"
+        :title="chatStore.wsConnecting ? 'Đang kết nối...' : 'Mất kết nối'"
+      />
       <a-badge v-if="chatStore.totalUnreadCount > 0" :count="chatStore.totalUnreadCount" :offset="[-8, 8]" />
     </a-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { IconMessage, IconUser, IconSend, IconLeft, IconCheckCircle, IconCheckCircleFill } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import dayjs from 'dayjs'
@@ -145,8 +152,10 @@ const activeConversationName = computed(() => {
 })
 
 const filteredConversations = computed(() => {
-  if (!searchKeyword.value) return chatStore.conversations
-  return chatStore.conversations.filter((conv) => {
+  // Force reactivity by accessing the conversations array
+  const conversations = chatStore.conversations
+  if (!searchKeyword.value) return conversations
+  return conversations.filter((conv) => {
     const name = getOtherUserName(conv).toLowerCase()
     return name.includes(searchKeyword.value.toLowerCase())
   })
@@ -174,8 +183,11 @@ async function selectConversation(id: number) {
 
     // Auto mark as read if has unread messages
     const unreadCount = getUnreadCount(conv)
+    console.log('Selecting conversation:', id, 'unread count:', unreadCount)
     if (unreadCount > 0) {
-      await chatStore.markAsRead(otherUserId)
+      // Pass conversation ID to ensure correct conversation is updated
+      await chatStore.markAsRead(otherUserId, id)
+      console.log('Marked conversation as read')
     }
   }
 }
@@ -184,7 +196,7 @@ function backToList() {
   chatStore.setActiveConversation(null)
 }
 
-function formatTime(time: string) {
+function formatTime(time: string | null | undefined) {
   if (!time) return ''
   const now = dayjs()
   const msgTime = dayjs(time)
@@ -193,7 +205,8 @@ function formatTime(time: string) {
   return msgTime.format('DD/MM')
 }
 
-function formatMessageTime(time: string) {
+function formatMessageTime(time: string | null | undefined) {
+  if (!time) return ''
   return dayjs(time).format('HH:mm')
 }
 
@@ -230,6 +243,38 @@ watch(
   }
 )
 
+// Watch for new messages in the active conversation and auto-mark as read
+watch(
+  () => activeMessages.value,
+  async (messages, oldMessages) => {
+    // Only process if drawer is open and we have an active conversation
+    if (!drawerVisible.value || !activeConversation.value) return
+
+    // Check if there's a new unread message
+    if (Array.isArray(messages) && messages.length > 0) {
+      const otherUserId =
+        userStore.id === activeConversation.value.nhanVien1Id
+          ? activeConversation.value.nhanVien2Id
+          : activeConversation.value.nhanVien1Id
+
+      // Find new unread messages from the other user
+      const newUnreadMessages = messages.filter(
+        (msg: any) => msg.senderId === otherUserId && !msg.isRead
+      )
+
+      if (newUnreadMessages.length > 0) {
+        console.log(`📖 Auto-marking ${newUnreadMessages.length} new message(s) as read`)
+        try {
+          await chatStore.markAsRead(otherUserId, activeConversation.value.id)
+        } catch (error) {
+          console.error('Error auto-marking new messages as read:', error)
+        }
+      }
+    }
+  },
+  { deep: true, immediate: false }
+)
+
 // Auto-scroll when conversation changes (for cached messages)
 watch(activeConversation, async (newConv) => {
   if (newConv) {
@@ -238,12 +283,37 @@ watch(activeConversation, async (newConv) => {
   }
 })
 
+// Connect WebSocket when component mounts to receive real-time messages
+onMounted(async () => {
+  // Fetch initial data
+  await chatStore.fetchConversations()
+  await chatStore.fetchUnreadCount()
+
+  // Connect WebSocket for real-time updates
+  if (!chatStore.wsConnected && !chatStore.wsConnecting) {
+    await chatStore.connectWebSocket()
+  }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  // Don't disconnect WebSocket here - keep it alive for real-time updates
+  // It will be disconnected when user logs out
+})
+
 // Connect WebSocket and scroll when drawer opens
 watch(drawerVisible, async (visible) => {
   if (visible) {
-    if (!chatStore.wsConnected) {
+    // Ensure WebSocket is connected
+    if (!chatStore.wsConnected && !chatStore.wsConnecting) {
       await chatStore.connectWebSocket()
     }
+
+    // Refresh conversations when drawer opens
+    if (chatStore.conversations.length === 0) {
+      await chatStore.fetchConversations()
+    }
+    await chatStore.fetchUnreadCount()
 
     // Scroll to bottom if already in a conversation
     if (activeConversation.value) {
@@ -252,6 +322,56 @@ watch(drawerVisible, async (visible) => {
     }
   }
 })
+
+// Watch for real-time unread count updates
+watch(
+  () => chatStore.totalUnreadCount,
+  (newCount, oldCount) => {
+    // Badge will automatically update via reactivity
+    if (newCount > oldCount && newCount > 0) {
+      // Optional: Show notification when new message arrives
+      console.log(`📬 New message! Unread count: ${newCount}`)
+    }
+  }
+)
+
+// Auto-mark messages as read when drawer is open and user is viewing the conversation
+watch(
+  () => [drawerVisible.value, activeConversation.value, activeMessages.value],
+  async (values) => {
+    const [isDrawerOpen, currentConv, messages] = values
+    // Only auto-mark if:
+    // 1. Drawer is open
+    // 2. User is viewing a conversation (type check)
+    // 3. There are messages in the conversation
+    if (
+      isDrawerOpen &&
+      currentConv &&
+      currentConv !== null &&
+      typeof currentConv === 'object' &&
+      'nhanVien1Id' in currentConv &&
+      Array.isArray(messages) &&
+      messages.length > 0
+    ) {
+      const otherUserId = userStore.id === currentConv.nhanVien1Id ? currentConv.nhanVien2Id : currentConv.nhanVien1Id
+      
+      // Check if there are unread messages from the other user
+      const hasUnreadMessages = messages.some(
+        (msg: any) => msg.senderId === otherUserId && !msg.isRead
+      )
+      
+      if (hasUnreadMessages) {
+        console.log('📖 Auto-marking messages as read (drawer open, viewing conversation)')
+        try {
+          await chatStore.markAsRead(otherUserId, currentConv.id)
+        } catch (error) {
+          console.error('Error auto-marking messages as read:', error)
+        }
+      }
+    }
+  },
+  { deep: true, immediate: false }
+)
 
 // Track scroll to move chat button when scroll-to-top appears
 const checkScroll = () => {
@@ -309,6 +429,32 @@ if (typeof window !== 'undefined') {
     position: absolute;
     top: -4px;
     right: -4px;
+  }
+
+  .connection-indicator {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 8px;
+    height: 8px;
+    background-color: #f5222d;
+    border-radius: 50%;
+    border: 1px solid #fff;
+    z-index: 1;
+
+    &.connecting {
+      background-color: #faad14;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }
 

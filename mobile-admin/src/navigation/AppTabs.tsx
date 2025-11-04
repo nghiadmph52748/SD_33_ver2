@@ -3,7 +3,7 @@ import { Platform, StyleSheet } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { BlurView } from 'expo-blur'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 import { SCREENS } from '../constants/routes'
 import ChatNavigator from './ChatNavigator'
@@ -84,7 +84,7 @@ const AppTabs = () => {
               iconName = 'account-group'
               break
             case SCREENS.APP.CHAT_TAB:
-              iconName = 'message-text'
+              iconName = 'message'
               break
             case SCREENS.APP.PROFILE_TAB:
             default:

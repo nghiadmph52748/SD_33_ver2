@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native'
 import React, { useEffect, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import { Button, Card, Divider, List, Text } from 'react-native-paper'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 
 import { fetchDashboardSummary, DashboardSummary } from '../../api/dashboard'
 import { SCREENS } from '../../constants/routes'
@@ -50,14 +51,34 @@ const DashboardScreen: React.FC = () => {
         <Text variant="bodyMedium" style={styles.subtitle}>
           Cùng theo dõi hoạt động kinh doanh hôm nay.
         </Text>
-        <Button
-          mode="contained-tonal"
-          icon="robot"
-          onPress={() => navigation.navigate(SCREENS.STACK.AI_ASSISTANT)}
-        >
-          Hỏi AI về hiệu suất
-        </Button>
       </View>
+
+      <Card style={styles.aiCard} onPress={() => navigation.navigate(SCREENS.STACK.AI_ASSISTANT)}>
+        <Card.Content style={styles.aiCardContent}>
+          <View style={styles.aiCardHeader}>
+            <View style={styles.aiIcon}>
+              <MaterialCommunityIcons name="robot" size={28} color="#fff" />
+            </View>
+            <View style={styles.aiCardText}>
+              <Text variant="titleMedium" style={styles.aiTitle}>
+                AI Assistant
+              </Text>
+              <Text variant="bodySmall" style={styles.aiDescription}>
+                Hỏi AI về doanh thu, đơn hàng, sản phẩm và phân tích kinh doanh
+              </Text>
+            </View>
+          </View>
+          <Button
+            mode="contained"
+            icon="arrow-right"
+            contentStyle={styles.aiButtonContent}
+            labelStyle={styles.aiButtonLabel}
+            onPress={() => navigation.navigate(SCREENS.STACK.AI_ASSISTANT)}
+          >
+            Bắt đầu trò chuyện
+          </Button>
+        </Card.Content>
+      </Card>
 
       <View style={styles.metricRow}>
         <MetricCard
@@ -184,6 +205,51 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: 16,
     color: '#475569',
+  },
+  aiCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: '#f0f9ff',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+  },
+  aiCardContent: {
+    padding: 16,
+  },
+  aiCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  aiIcon: {
+    backgroundColor: '#6366f1',
+    marginRight: 12,
+    borderRadius: 24,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 0,
+  },
+  aiCardText: {
+    flex: 1,
+  },
+  aiTitle: {
+    fontWeight: '700',
+    marginBottom: 4,
+    color: '#1e293b',
+  },
+  aiDescription: {
+    color: '#64748b',
+    lineHeight: 20,
+  },
+  aiButtonContent: {
+    flexDirection: 'row-reverse',
+  },
+  aiButtonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   metricRow: {
     flexDirection: 'row',

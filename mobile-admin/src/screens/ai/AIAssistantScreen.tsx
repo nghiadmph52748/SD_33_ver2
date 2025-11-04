@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native'
 import { Avatar, Button, Card, Text, TextInput } from 'react-native-paper'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { chatWithAI } from '../../api/ai'
 import { notifyError } from '../../utils/notifications'
@@ -12,6 +13,7 @@ interface ChatHistoryItem {
 }
 
 const AIAssistantScreen: React.FC = () => {
+  const insets = useSafeAreaInsets()
   const [messages, setMessages] = useState<ChatHistoryItem[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -60,10 +62,40 @@ const AIAssistantScreen: React.FC = () => {
             {item.role === 'user' ? <Avatar.Icon icon="account" size={36} style={styles.avatarUser} /> : null}
           </View>
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          messages.length === 0 && styles.emptyListContent,
+          { paddingBottom: 80 + insets.bottom },
+        ]}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Avatar.Icon icon="robot" size={64} style={styles.emptyAvatar} />
+            <Text variant="titleLarge" style={styles.emptyTitle}>
+              AI Assistant
+            </Text>
+            <Text variant="bodyMedium" style={styles.emptyDescription}>
+              Hỏi tôi về doanh thu, đơn hàng, sản phẩm hoặc bất kỳ thông tin kinh doanh nào bạn cần phân tích.
+            </Text>
+            <View style={styles.suggestionsContainer}>
+              <Text variant="labelMedium" style={styles.suggestionsTitle}>
+                Gợi ý câu hỏi:
+              </Text>
+              <View style={styles.suggestionChip}>
+                <Text style={styles.suggestionText}>📊 Doanh thu hôm nay là bao nhiêu?</Text>
+              </View>
+              <View style={styles.suggestionChip}>
+                <Text style={styles.suggestionText}>📦 Sản phẩm nào bán chạy nhất?</Text>
+              </View>
+              <View style={styles.suggestionChip}>
+                <Text style={styles.suggestionText}>👥 Khách hàng nào mua nhiều nhất?</Text>
+              </View>
+            </View>
+          </View>
+        }
+        showsVerticalScrollIndicator={false}
       />
 
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: 60 + insets.bottom }]}>
         <TextInput
           mode="outlined"
           placeholder="Hỏi AI về doanh thu, đơn hàng..."
@@ -84,7 +116,53 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#f8fafc' },
   listContent: {
     padding: 16,
-    paddingBottom: 32,
+  },
+  emptyListContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 48,
+  },
+  emptyAvatar: {
+    backgroundColor: '#6366f1',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#1e293b',
+  },
+  emptyDescription: {
+    textAlign: 'center',
+    color: '#64748b',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  suggestionsContainer: {
+    width: '100%',
+    alignItems: 'flex-start',
+  },
+  suggestionsTitle: {
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#475569',
+  },
+  suggestionChip: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#334155',
   },
   messageRow: {
     flexDirection: 'row',

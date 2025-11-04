@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { Client, IMessage } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
+import axios from 'axios'
 import {
   layDanhSachCuocTroChuyen,
   layDanhSachTinNhan,
@@ -246,39 +247,67 @@ const useChatStore = defineStore('chat', {
     /**
      * Đánh dấu tin nhắn đã đọc
      */
-    async markAsRead(senderId: number) {
+    async markAsRead(senderId: number, conversationId?: number) {
       try {
         await danhDauDaDoc(senderId)
 
         // Cập nhật state local
         const userStore = useUserStore()
-        const conversation = this.conversations.find(
-          (c) =>
-            (c.nhanVien1Id === senderId && c.nhanVien2Id === userStore.id) || (c.nhanVien2Id === senderId && c.nhanVien1Id === userStore.id)
-        )
+        // Try to find conversation by ID first, then fallback to sender lookup
+        let conversation = conversationId
+          ? this.conversations.find((c) => c.id === conversationId)
+          : null
+
+        if (!conversation) {
+          conversation = this.conversations.find(
+            (c) =>
+              (c.nhanVien1Id === senderId && c.nhanVien2Id === userStore.id) ||
+              (c.nhanVien2Id === senderId && c.nhanVien1Id === userStore.id)
+          )
+        }
 
         if (conversation) {
-          // Reset unread count
-          if (userStore.id === conversation.nhanVien1Id) {
-            conversation.unreadCountNv1 = 0
-          } else if (userStore.id === conversation.nhanVien2Id) {
-            conversation.unreadCountNv2 = 0
+          const conversationId = conversation.id
+          console.log('Marking conversation as read:', conversationId, 'senderId:', senderId)
+          
+          // Reset unread count - directly mutate to ensure reactivity
+          const conversationIndex = this.conversations.findIndex((c) => c.id === conversationId)
+          if (conversationIndex >= 0) {
+            if (userStore.id === conversation.nhanVien1Id) {
+              this.conversations[conversationIndex].unreadCountNv1 = 0
+              console.log('Reset unreadCountNv1 to 0')
+            } else if (userStore.id === conversation.nhanVien2Id) {
+              this.conversations[conversationIndex].unreadCountNv2 = 0
+              console.log('Reset unreadCountNv2 to 0')
+            }
+            
+            // Also update the conversation reference we have
+            conversation.unreadCountNv1 = this.conversations[conversationIndex].unreadCountNv1
+            conversation.unreadCountNv2 = this.conversations[conversationIndex].unreadCountNv2
           }
+          
+          // Update total unread count immediately
           this.updateTotalUnreadCount()
+          console.log('Updated total unread count:', this.totalUnreadCount)
 
           // Cập nhật isRead = true cho tất cả messages từ sender trong conversation
           const messages = this.messages[conversation.id]
           if (messages) {
+            let updatedCount = 0
             messages.forEach((msg) => {
               if (msg.senderId === senderId && !msg.isRead) {
                 msg.isRead = true
                 msg.readAt = new Date().toISOString()
+                updatedCount++
               }
             })
+            console.log(`Marked ${updatedCount} messages as read`)
           }
+        } else {
+          console.warn('⚠️ Conversation not found for markAsRead, senderId:', senderId, 'conversationId:', conversationId)
         }
       } catch (error: any) {
-        console.error('Lỗi khi đánh dấu đã đọc:', error)
+        console.error('❌ Lỗi khi đánh dấu đã đọc:', error)
       }
     },
 
@@ -340,31 +369,43 @@ const useChatStore = defineStore('chat', {
      */
     connectWebSocket() {
       if (this.wsConnected || this.wsConnecting) {
+        console.log('WebSocket already connected or connecting, skipping...')
         return
       }
 
       const token = getToken()
       if (!token) {
+        console.warn('No token available, cannot connect WebSocket')
         return
       }
 
       this.wsConnecting = true
+      console.log('Connecting to WebSocket...')
+
+      // Get base URL from axios defaults or use localhost
+      const baseURL = axios.defaults.baseURL || 'http://localhost:8080'
+      const wsUrl = `${baseURL}/ws-chat`
+      console.log('WebSocket URL:', wsUrl)
 
       // Tạo STOMP client với SockJS
       const client = new Client({
-        webSocketFactory: () => new SockJS('http://localhost:8080/ws-chat'),
+        webSocketFactory: () => new SockJS(wsUrl),
 
         connectHeaders: {
           Authorization: `Bearer ${token}`,
         },
 
-        // Debug disabled in production
-        debug: () => {},
+        // Enable debug logging to see what's happening
+        debug: (str) => {
+          console.log('[STOMP Debug]', str)
+        },
 
         reconnectDelay: 5000, // Auto-reconnect sau 5s
+        heartbeatIncoming: 4000,
         heartbeatOutgoing: 4000,
 
-        onConnect: () => {
+        onConnect: (frame) => {
+          console.log('WebSocket connected successfully!', frame)
           this.wsConnected = true
           this.wsConnecting = false
 
@@ -372,23 +413,51 @@ const useChatStore = defineStore('chat', {
           const userId = userStore.id
           const username = userStore.tenTaiKhoan
 
+          console.log(`Connected as user ${userId} (${username})`)
+
           // Subscribe để nhận tin nhắn
           // Spring WebSocket tự động resolve /user/queue/messages đến session của user hiện tại
+          // Backend sends to: /user/{username}/queue/messages
+          // Frontend subscribes to: /user/queue/messages (Spring auto-resolves to current user)
           const subscriptionDestination = `/user/queue/messages`
+          console.log(`Subscribing to: ${subscriptionDestination} for user: ${username} (ID: ${userId})`)
 
           const subscription = client.subscribe(subscriptionDestination, (message: IMessage) => {
+            console.log('========== RAW WEBSOCKET MESSAGE RECEIVED ==========')
+            console.log('Message headers:', message.headers)
+            console.log('Message body:', message.body)
+            console.log('===================================================')
+            
             try {
               const chatMessage: ChatMessage = JSON.parse(message.body)
+              console.log('📬 Parsed chat message:', chatMessage)
+              console.log('Message details:', {
+                id: chatMessage.id,
+                senderId: chatMessage.senderId,
+                receiverId: chatMessage.receiverId,
+                content: chatMessage.content?.substring(0, 50),
+              })
+              
               this.handleIncomingMessage(chatMessage)
+              console.log('Message processed successfully')
             } catch (err) {
-              console.error('❌ Error parsing message:', err)
+              console.error('Error parsing message:', err)
+              console.error('Raw message body:', message.body)
             }
+          }, {
+            // Add headers if needed
           })
+
+          console.log('Subscribed to messages:', subscription.id)
+          console.log('Subscription destination:', subscriptionDestination)
+          
+          // Store subscription for debugging
+          ;(window as any).chatSubscription = subscription
 
           // Subscribe typing notifications
           client.subscribe(`/user/queue/typing`, (message: IMessage) => {
             const notification = JSON.parse(message.body)
-            console.log('Typing notification:', notification)
+            console.log('⌨Typing notification:', notification)
             // TODO: Handle typing indicator in UI
           })
 
@@ -396,9 +465,10 @@ const useChatStore = defineStore('chat', {
           const readSubscription = client.subscribe(`/user/queue/read`, (message: IMessage) => {
             try {
               const readNotification = JSON.parse(message.body)
+              console.log('Read notification:', readNotification)
               this.handleReadNotification(readNotification)
             } catch (err) {
-              console.error('❌ Error parsing read notification:', err)
+              console.error('Error parsing read notification:', err)
             }
           })
 
@@ -406,9 +476,10 @@ const useChatStore = defineStore('chat', {
           client.subscribe('/topic/presence', (message: IMessage) => {
             try {
               const presenceUpdate = JSON.parse(message.body)
+              console.log('Presence update:', presenceUpdate)
               this.updateUserPresence(presenceUpdate.userId, presenceUpdate.status)
             } catch (err) {
-              console.error('❌ Error parsing presence update:', err)
+              console.error('Error parsing presence update:', err)
             }
           })
 
@@ -417,13 +488,36 @@ const useChatStore = defineStore('chat', {
         },
 
         onStompError: (frame) => {
-          console.error('❌ STOMP error:', frame.headers.message)
-          console.error('Details:', frame.body)
+          console.error('STOMP error:', frame.headers.message)
+          console.error('Error details:', frame.body)
+          console.error('Error command:', frame.command)
           this.wsConnected = false
           this.wsConnecting = false
+          Message.error(`WebSocket error: ${frame.headers.message || 'Connection failed'}`)
         },
 
-        onWebSocketClose: () => {
+        onWebSocketError: (event) => {
+          console.error('WebSocket error:', event)
+          this.wsConnected = false
+          this.wsConnecting = false
+          Message.error('WebSocket connection error')
+        },
+
+        onWebSocketClose: (event) => {
+          console.log('WebSocket closed:', event.code, event.reason)
+          this.wsConnected = false
+          this.wsConnecting = false
+          // Try to reconnect after a delay
+          setTimeout(() => {
+            if (!this.wsConnected && !this.wsConnecting) {
+              console.log('Attempting to reconnect WebSocket...')
+              this.connectWebSocket()
+            }
+          }, 5000)
+        },
+
+        onDisconnect: () => {
+          console.log('🔌 WebSocket disconnected')
           this.wsConnected = false
           this.wsConnecting = false
         },
@@ -431,6 +525,7 @@ const useChatStore = defineStore('chat', {
 
       client.activate()
       this.stompClient = client
+      console.log('🚀 WebSocket client activated')
     },
 
     /**
@@ -448,23 +543,70 @@ const useChatStore = defineStore('chat', {
     /**
      * Xử lý tin nhắn đến từ WebSocket
      */
-    handleIncomingMessage(message: ChatMessage) {
+    async handleIncomingMessage(message: ChatMessage) {
+      console.log('========== HANDLE INCOMING MESSAGE ==========')
+      console.log('Full message:', message)
+      const userStore = useUserStore()
       console.log('Sender ID:', message.senderId, 'Receiver ID:', message.receiverId)
-      console.log('Current user ID:', useUserStore().id)
+      console.log('Current user ID:', userStore.id)
+      console.log('Current user username:', userStore.tenTaiKhoan)
 
-      // Thêm tin nhắn vào state (nếu đang mở conversation)
+      // Nếu không phải tin nhắn gửi cho mình, bỏ qua
+      if (message.receiverId !== userStore.id) {
+        console.log('Message not for current user, ignoring')
+        console.log(`Expected receiver: ${userStore.id}, Got: ${message.receiverId}`)
+        return
+      }
+
+      console.log('Message is for current user, processing...')
+
+      // Thêm tin nhắn vào state
+      console.log('Step 1: Adding message to state...')
       this.addMessageToState(message)
 
-      // Cập nhật conversation list
+      // Cập nhật conversation list (sẽ tự động cập nhật unread count)
+      console.log('Step 2: Updating conversation with new message...')
       this.updateConversationWithNewMessage(message)
 
-      // Refresh unread count
-      this.fetchUnreadCount()
+      // Nếu conversation chưa tồn tại, fetch lại danh sách
+      const conversationExists = this.conversations.some(
+        (c) =>
+          (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
+          (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId)
+      )
 
-      // Refresh conversations nếu chưa có
-      if (this.conversations.length === 0) {
+      if (!conversationExists) {
+        console.log('🔄 Conversation not found, fetching conversations...')
         this.fetchConversations()
+      } else {
+        // Update total unread count immediately (không cần gọi API)
+        console.log('Step 3: Updating total unread count...')
+        this.updateTotalUnreadCount()
+        console.log(`📊 New total unread count: ${this.totalUnreadCount}`)
       }
+
+      // Auto-mark as read if user is currently viewing this conversation
+      // Check if there's an active conversation with the sender
+      if (this.activeConversationId) {
+        const activeConv = this.conversations.find((c) => c.id === this.activeConversationId)
+        if (activeConv) {
+          const matchesSender =
+            (activeConv.nhanVien1Id === message.senderId && activeConv.nhanVien2Id === userStore.id) ||
+            (activeConv.nhanVien2Id === message.senderId && activeConv.nhanVien1Id === userStore.id)
+
+          if (matchesSender) {
+            console.log('📖 Auto-marking message as read (user is viewing this conversation)')
+            // Mark as read immediately without waiting for API
+            try {
+              await this.markAsRead(message.senderId, this.activeConversationId)
+            } catch (error) {
+              console.error('Error auto-marking message as read:', error)
+            }
+          }
+        }
+      }
+      
+      console.log('✅ ========== MESSAGE HANDLING COMPLETE ==========')
     },
 
     /**
@@ -473,7 +615,7 @@ const useChatStore = defineStore('chat', {
     addMessageToState(message: ChatMessage) {
       // Tìm conversation chứa tin nhắn này
       const userStore = useUserStore()
-      const conversation = this.conversations.find(
+      let conversation = this.conversations.find(
         (c) =>
           (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
           (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId) ||
@@ -481,8 +623,25 @@ const useChatStore = defineStore('chat', {
           (c.nhanVien2Id === message.receiverId && c.nhanVien1Id === message.senderId)
       )
 
+      // Nếu không tìm thấy conversation, tạo tạm thời (sẽ được update sau khi fetch)
       if (!conversation) {
-        return
+        console.log('Conversation not found for message, creating temporary one')
+        // Tạo conversation tạm với ID timestamp
+        const tempId = Date.now()
+        conversation = {
+          id: tempId,
+          maCuocTraoDoi: `temp-${tempId}`,
+          nhanVien1Id: userStore.id!,
+          nhanVien1Name: userStore.name || '',
+          nhanVien2Id: message.senderId === userStore.id ? message.receiverId : message.senderId,
+          nhanVien2Name: message.senderId === userStore.id ? message.receiverName : message.senderName,
+          lastMessageContent: message.content,
+          lastMessageTime: message.sentAt,
+          lastSenderId: message.senderId,
+          unreadCountNv1: 0,
+          unreadCountNv2: 0,
+        }
+        this.conversations.unshift(conversation)
       }
 
       // Thêm tin nhắn vào conversation đó
@@ -503,6 +662,8 @@ const useChatStore = defineStore('chat', {
       } else {
         // Add new message
         this.messages[conversation.id].push(message)
+        // Sort messages by sentAt to maintain order
+        this.messages[conversation.id].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())
       }
     },
 
@@ -511,27 +672,53 @@ const useChatStore = defineStore('chat', {
      */
     updateConversationWithNewMessage(message: ChatMessage) {
       const userStore = useUserStore()
-      const conversation = this.conversations.find(
+      let conversation = this.conversations.find(
         (c) =>
           (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
           (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId)
       )
 
-      if (conversation) {
-        conversation.lastMessageContent = message.content
-        conversation.lastMessageTime = message.sentAt
-        conversation.lastSenderId = message.senderId
-
-        // Tăng unread count nếu không phải tin nhắn của mình
-        if (message.senderId !== userStore.id) {
-          if (userStore.id === conversation.nhanVien1Id) {
-            conversation.unreadCountNv1++
-          } else if (userStore.id === conversation.nhanVien2Id) {
-            conversation.unreadCountNv2++
-          }
+      // Nếu conversation chưa tồn tại, tạo một conversation tạm thời
+      if (!conversation) {
+        console.log('🆕 Creating temporary conversation for new message')
+        conversation = {
+          id: Date.now(), // Temporary ID
+          maCuocTraoDoi: `temp-${Date.now()}`,
+          nhanVien1Id: userStore.id!,
+          nhanVien1Name: userStore.name || '',
+          nhanVien2Id: message.senderId === userStore.id ? message.receiverId : message.senderId,
+          nhanVien2Name: message.senderId === userStore.id ? message.receiverName : message.senderName,
+          lastMessageContent: message.content,
+          lastMessageTime: message.sentAt,
+          lastSenderId: message.senderId,
+          unreadCountNv1: 0,
+          unreadCountNv2: 0,
         }
+        this.conversations.unshift(conversation) // Add to beginning
+      }
 
-        this.updateTotalUnreadCount()
+      // Cập nhật conversation
+      conversation.lastMessageContent = message.content
+      conversation.lastMessageTime = message.sentAt
+      conversation.lastSenderId = message.senderId
+
+      // Tăng unread count nếu không phải tin nhắn của mình
+      if (message.senderId !== userStore.id) {
+        if (userStore.id === conversation.nhanVien1Id) {
+          conversation.unreadCountNv1 = (conversation.unreadCountNv1 || 0) + 1
+        } else if (userStore.id === conversation.nhanVien2Id) {
+          conversation.unreadCountNv2 = (conversation.unreadCountNv2 || 0) + 1
+        }
+      }
+
+      // Update total unread count immediately
+      this.updateTotalUnreadCount()
+
+      // Nếu là conversation tạm, fetch lại để lấy ID thật
+      if (conversation.id > 1000000000000) {
+        // Temporary ID (timestamp)
+        console.log('🔄 Fetching conversations to get real conversation ID...')
+        this.fetchConversations()
       }
     },
 

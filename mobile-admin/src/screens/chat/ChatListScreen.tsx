@@ -2,6 +2,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import React, { useCallback, useMemo, useState } from 'react'
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native'
 import { Avatar, List, Text } from 'react-native-paper'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Conversation, fetchConversations, getUnreadCount } from '../../api/chat'
 import { ListEmpty, SearchInput } from '../../components'
@@ -15,6 +16,7 @@ const ChatListScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ChatStackParamList>>()
   const currentUser = useAuthStore((state) => state.user)
   const { conversations, setConversations, setUnreadCount, unreadCount } = useChatStore()
+  const insets = useSafeAreaInsets()
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -70,7 +72,7 @@ const ChatListScreen: React.FC = () => {
                   <Avatar.Text
                     label={partnerName?.substring(0, 2).toUpperCase() ?? 'NV'}
                     size={44}
-                    style={[styles.avatar, { marginLeft: 8 }]}
+                    style={styles.avatar}
                   />
                 )}
                 right={(props) => (
@@ -86,10 +88,10 @@ const ChatListScreen: React.FC = () => {
             </View>
           )
         }}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 80 + insets.bottom }]}
       />
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 60 + insets.bottom }]}>
         <Text variant="bodySmall" style={styles.unreadSummary}>
           Tổng số tin chưa đọc: {unreadCount}
         </Text>
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   listContent: {
-    paddingBottom: 100,
+    paddingBottom: 16,
   },
   listItem: {
     paddingHorizontal: 0,
@@ -115,6 +117,7 @@ const styles = StyleSheet.create({
   },
   avatar: {
     backgroundColor: '#2563eb',
+    marginLeft: 8,
   },
   rightContent: {
     alignItems: 'flex-end',
@@ -141,9 +144,10 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 12,
-    paddingBottom: 100,
+    paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: '#e2e8f0',
+    backgroundColor: '#fff',
   },
   unreadSummary: {
     textAlign: 'center',

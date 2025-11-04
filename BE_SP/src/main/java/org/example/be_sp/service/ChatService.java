@@ -94,7 +94,33 @@ public class ChatService {
         // Cập nhật hoặc tạo cuộc trò chuyện
         updateOrCreateConversation(senderId, request.getReceiverId(), request.getContent());
 
-        return new TinNhanResponse(savedMessage);
+        // Convert to response for WebSocket notification
+        TinNhanResponse messageResponse = new TinNhanResponse(savedMessage);
+
+        // Gửi tin nhắn real-time tới receiver qua WebSocket (dùng username)
+        try {
+            String receiverUsername = receiver.getTenTaiKhoan();
+            String senderUsername = sender.getTenTaiKhoan();
+            
+            // Send to receiver
+            messagingTemplate.convertAndSendToUser(
+                receiverUsername,
+                "/queue/messages",
+                messageResponse
+            );
+            
+            // Also send confirmation to sender (for consistency)
+            messagingTemplate.convertAndSendToUser(
+                senderUsername,
+                "/queue/messages",
+                messageResponse
+            );
+        } catch (Exception e) {
+            // Log error but don't fail the request if WebSocket fails
+            System.err.println("Error sending WebSocket notification: " + e.getMessage());
+        }
+
+        return messageResponse;
     }
 
     /**

@@ -1,13 +1,15 @@
-import { RouteProp, useRoute } from '@react-navigation/native'
+import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native'
 import React, { useCallback, useEffect, useState } from 'react'
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native'
 import { Button, Text, TextInput } from 'react-native-paper'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ChatMessage, fetchMessages, markMessagesAsRead, sendMessage } from '../../api/chat'
 import { LoadingOverlay } from '../../components'
 import { SCREENS } from '../../constants/routes'
 import { ChatStackParamList } from '../../navigation/ChatNavigator'
 import useAuthStore from '../../store/useAuthStore'
+import useChatStore from '../../store/useChatStore'
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -26,6 +28,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage }) 
 const ChatRoomScreen: React.FC = () => {
   const route = useRoute<RouteProp<ChatStackParamList, typeof SCREENS.STACK.CHAT_ROOM>>()
   const currentUser = useAuthStore((state) => state.user)
+  const clearUnreadForConversation = useChatStore((state) => state.clearUnreadForConversation)
+  const insets = useSafeAreaInsets()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -48,17 +52,45 @@ const ChatRoomScreen: React.FC = () => {
 
         setMessages((prev) => (append ? [...prev, ...sortedMessages] : sortedMessages))
 
+        // Mark messages as read on the server
         await markMessagesAsRead(route.params.partnerId)
+        
+        // Update local store to clear unread count immediately
+        if (currentUser?.id) {
+          clearUnreadForConversation(route.params.partnerId, currentUser.id)
+        }
       } finally {
         setIsLoading(false)
       }
     },
-    [route.params.partnerId, totalPages]
+    [route.params.partnerId, totalPages, currentUser?.id, clearUnreadForConversation]
   )
 
   useEffect(() => {
     loadMessages(0, false)
   }, [loadMessages])
+
+  // Mark messages as read when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      // Mark messages as read and update store when screen is focused
+      const markAsRead = async () => {
+        try {
+          await markMessagesAsRead(route.params.partnerId)
+          if (currentUser?.id) {
+            clearUnreadForConversation(route.params.partnerId, currentUser.id)
+          }
+        } catch (error) {
+          console.error('Error marking messages as read:', error)
+        }
+      }
+      
+      // Only mark as read if we have messages loaded
+      if (messages.length > 0) {
+        markAsRead()
+      }
+    }, [route.params.partnerId, currentUser?.id, clearUnreadForConversation, messages.length])
+  )
 
   const handleSend = async () => {
     if (!input.trim()) return
@@ -90,13 +122,14 @@ const ChatRoomScreen: React.FC = () => {
         renderItem={({ item }) => (
           <MessageBubble message={item} isOwnMessage={item.senderId === currentUser?.id} />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 80 + insets.bottom }]}
         inverted
         onEndReachedThreshold={0.3}
         onEndReached={handleLoadMore}
+        showsVerticalScrollIndicator={false}
       />
 
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: 60 + insets.bottom }]}>
         <TextInput
           mode="outlined"
           placeholder="Nhập tin nhắn"
@@ -116,7 +149,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   listContent: {
     padding: 16,
-    paddingBottom: 24,
   },
   messageContainer: {
     maxWidth: '80%',

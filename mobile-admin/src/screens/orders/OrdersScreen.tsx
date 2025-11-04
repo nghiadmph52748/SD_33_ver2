@@ -63,22 +63,22 @@ const OrdersScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.listItem}>
-            <List.Item
-              title={`Đơn hàng #${item.id}`}
-              description={`Khách hàng: ${item.tenNguoiNhan ?? 'N/A'}`}
-              onPress={() => navigation.navigate(SCREENS.STACK.ORDER_DETAILS, { orderId: item.id })}
+          <List.Item
+            title={`Đơn hàng #${item.id}`}
+            description={`Khách hàng: ${item.tenNguoiNhan ?? 'N/A'}`}
+            onPress={() => navigation.navigate(SCREENS.STACK.ORDER_DETAILS, { orderId: item.id })}
               right={(props) => (
-                <View style={styles.itemRight}>
-                  <Text style={styles.amount}>
-                    {currencyFormatter.format(item.tongTienSauGiam ?? item.tongTien ?? 0)}
-                  </Text>
-                  <Text style={styles.date}>
-                    {item.ngayTao ? new Date(item.ngayTao).toLocaleDateString('vi-VN') : '—'}
-                  </Text>
-                </View>
-              )}
+              <View style={styles.itemRight}>
+                <Text style={styles.amount}>
+                  {currencyFormatter.format(item.tongTienSauGiam ?? item.tongTien ?? 0)}
+                </Text>
+                <Text style={styles.date}>
+                  {item.ngayTao ? new Date(item.ngayTao).toLocaleDateString('vi-VN') : '—'}
+                </Text>
+              </View>
+            )}
               style={styles.listItemInner}
-            />
+          />
           </View>
         )}
         contentContainerStyle={styles.listContent}
