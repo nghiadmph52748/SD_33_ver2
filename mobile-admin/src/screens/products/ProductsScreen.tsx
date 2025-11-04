@@ -91,8 +91,14 @@ const ProductsScreen: React.FC = () => {
               right={(props) => (
                 <View style={styles.productRight}>
                   <Text style={styles.price}>{currencyFormatter.format(item.giaBan ?? 0)}</Text>
-                  <Chip icon="package-variant" style={styles.stockChip}>
-                    {item.soLuong} tồn
+                  <Chip
+                    icon="package-variant"
+                    compact
+                    mode="flat"
+                    style={styles.stockChip}
+                    contentStyle={styles.stockChipContent}
+                  >
+                    <Text style={styles.stockChipText}>{item.soLuong} tồn</Text>
                   </Chip>
                 </View>
               )}
@@ -110,6 +116,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    zIndex: 0,
   },
   listContent: {
     paddingBottom: 100,
@@ -135,7 +142,17 @@ const styles = StyleSheet.create({
   },
   stockChip: {
     marginTop: 4,
-    height: 28,
+    alignSelf: 'flex-start',
+    borderRadius: 14,
+  },
+  stockChipContent: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    minHeight: 28,
+  },
+  stockChipText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 })
 

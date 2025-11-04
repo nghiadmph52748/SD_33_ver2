@@ -60,17 +60,70 @@ const ProductDetailScreen: React.FC = () => {
 
           <List.Section>
             <List.Subheader>Thuộc tính</List.Subheader>
-            <View style={styles.chipRow}>
-              {product.tenMauSac ? <Chip icon="palette">{product.tenMauSac}</Chip> : null}
-              {product.tenKichThuoc ? <Chip icon="resize">{product.tenKichThuoc}</Chip> : null}
-              {product.tenChatLieu ? <Chip icon="format-texture">{product.tenChatLieu}</Chip> : null}
-              {product.tenTrongLuong ? <Chip icon="weight">{product.tenTrongLuong}</Chip> : null}
+            {/* Row 1: Color | Size */}
+            <View style={styles.chipRowLine}>
+              <View style={styles.chipHalf}>
+                {product.tenMauSac ? (
+                  <Chip icon="palette" compact mode="flat" style={[styles.chip, styles.chipContent]}>
+                    <Text style={styles.chipText}>{product.tenMauSac}</Text>
+                  </Chip>
+                ) : null}
+              </View>
+              <View style={styles.chipHalf}>
+                {product.tenKichThuoc ? (
+                  <Chip icon="resize" compact mode="flat" style={[styles.chip, styles.chipContent]}>
+                    <Text style={styles.chipText}>{product.tenKichThuoc}</Text>
+                  </Chip>
+                ) : null}
+              </View>
             </View>
-            <View style={styles.chipRow}>
-              {product.tenNhaSanXuat ? <Chip>{`NSX: ${product.tenNhaSanXuat}`}</Chip> : null}
-              {product.tenXuatXu ? <Chip>{`Xuất xứ: ${product.tenXuatXu}`}</Chip> : null}
-              {product.tenDeGiay ? <Chip>{`Đế: ${product.tenDeGiay}`}</Chip> : null}
+
+            {/* Row 2: Material | Weight */}
+            <View style={styles.chipRowLine}>
+              <View style={styles.chipHalf}>
+                {product.tenChatLieu ? (
+                  <Chip icon="format-texture" compact mode="flat" style={[styles.chip, styles.chipContent]}>
+                    <Text style={styles.chipText}>{product.tenChatLieu}</Text>
+                  </Chip>
+                ) : null}
+              </View>
+              <View style={styles.chipHalf}>
+                {product.tenTrongLuong ? (
+                  <Chip icon="weight" compact mode="flat" style={[styles.chip, styles.chipContent]}>
+                    <Text style={styles.chipText}>{product.tenTrongLuong}</Text>
+                  </Chip>
+                ) : null}
+              </View>
             </View>
+
+            {/* Row 3: Manufacturer | Origin */}
+            <View style={styles.chipRowLine}>
+              <View style={styles.chipHalf}>
+                {product.tenNhaSanXuat ? (
+                  <Chip compact mode="flat" style={[styles.chip, styles.chipContent]}>
+                    <Text style={styles.chipText}>{`NSX: ${product.tenNhaSanXuat}`}</Text>
+                  </Chip>
+                ) : null}
+              </View>
+              <View style={styles.chipHalf}>
+                {product.tenXuatXu ? (
+                  <Chip compact mode="flat" style={[styles.chip, styles.chipContent]}>
+                    <Text style={styles.chipText}>{`Xuất xứ: ${product.tenXuatXu}`}</Text>
+                  </Chip>
+                ) : null}
+              </View>
+            </View>
+
+            {/* Row 4: Sole (full width) */}
+            {product.tenDeGiay ? (
+              <View style={styles.chipRowLine}>
+                <View style={styles.chipFull}>
+                  <Chip compact mode="flat" style={[styles.chip, styles.chipContent]}>
+                    <Text style={styles.chipText}>{`Đế: ${product.tenDeGiay}`}</Text>
+                  </Chip>
+                </View>
+              </View>
+            ) : null}
           </List.Section>
 
           <Divider style={styles.divider} />
@@ -104,11 +157,45 @@ const styles = StyleSheet.create({
   divider: {
     marginVertical: 12,
   },
+  chipRowLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  chipHalf: {
+    width: '48%',
+  },
+  chipFull: {
+    width: '100%',
+  },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     rowGap: 8,
     columnGap: 8,
+    justifyContent: 'flex-start',
+  },
+  chip: {
+    borderRadius: 13,
+    alignSelf: 'flex-start',
+    marginRight: 0,
+    marginBottom: 0,
+    width: '100%',
+  },
+  chipCol: {
+    flexBasis: '48%',
+    maxWidth: '48%',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  chipContent: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    minHeight: 28,
+  },
+  chipText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 })
 

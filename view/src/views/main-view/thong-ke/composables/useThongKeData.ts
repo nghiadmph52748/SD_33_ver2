@@ -1,5 +1,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
+import { fetchHoaDonList, type HoaDonApiModel } from '@/api/hoa-don'
+import { getBienTheSanPhamList, type BienTheSanPham } from '@/api/san-pham/bien-the'
 import type { HoaDon, SanPham, ChiTietSanPham } from '../types/thong-ke.types'
 
 export function useThongKeData() {
@@ -13,9 +15,9 @@ export function useThongKeData() {
     try {
       dangTai.value = true
       loi.value = null
-      const res = await axios.get('/api/hoa-don-management/playlist')
-      const hoaDon = res.data ?? []
-      danhSachHoaDon.value = Array.isArray(hoaDon) ? hoaDon : []
+      // Use official API helper (returns envelope-normalized data)
+      const hoaDon = await fetchHoaDonList()
+      danhSachHoaDon.value = Array.isArray(hoaDon) ? (hoaDon as unknown as HoaDon[]) : []
     } catch (error) {
       loi.value = 'Không thể tải danh sách hóa đơn'
       danhSachHoaDon.value = []
@@ -31,7 +33,7 @@ export function useThongKeData() {
       loi.value = null
       const res = await axios.get('/api/san-pham-management/playlist')
       const sanPham = res.data ?? []
-      danhSachSanPham.value = Array.isArray(sanPham) ? sanPham : []
+      danhSachSanPham.value = Array.isArray(sanPham) ? (sanPham as SanPham[]) : []
     } catch (error) {
       loi.value = 'Không thể tải danh sách sản phẩm'
       danhSachSanPham.value = []
@@ -45,9 +47,12 @@ export function useThongKeData() {
     try {
       dangTai.value = true
       loi.value = null
-      const res = await axios.get('/api/chi-tiet-san-pham-management/playlist')
+      // Use official product variant API
+      const res = await getBienTheSanPhamList(0)
       const chiTietSanPham = res.data ?? []
-      danhSachChiTietSanPham.value = Array.isArray(chiTietSanPham) ? chiTietSanPham : []
+      danhSachChiTietSanPham.value = Array.isArray(chiTietSanPham)
+        ? (chiTietSanPham as unknown as ChiTietSanPham[])
+        : []
     } catch (error) {
       loi.value = 'Không thể tải chi tiết sản phẩm'
       danhSachChiTietSanPham.value = []

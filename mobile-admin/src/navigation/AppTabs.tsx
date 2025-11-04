@@ -37,9 +37,11 @@ const AppTabs = () => {
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
           position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
           backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.95)',
           borderTopWidth: 0,
-          elevation: 0,
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
           paddingTop: 8,
@@ -50,20 +52,24 @@ const AppTabs = () => {
               shadowOffset: { width: 0, height: -2 },
               shadowOpacity: 0.1,
               shadowRadius: 8,
+              zIndex: 1000,
             },
             android: {
               elevation: 8,
+              zIndex: 1000,
             },
           }),
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          marginBottom: Platform.OS === 'ios' ? 2 : 0, // nudge label into view
         },
         tabBarBackground: () => (
           <BlurView
             intensity={80}
             tint="light"
+            // Let RN render order handle layering so labels remain visible
             style={StyleSheet.absoluteFill}
           />
         ),
