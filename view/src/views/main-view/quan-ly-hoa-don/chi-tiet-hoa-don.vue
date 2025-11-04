@@ -267,7 +267,7 @@
             <span>Timeline Đơn Hàng</span>
           </div>
         </template>
-        <TimelineDonHang :hoa-don-id="Number(invoiceId)" />
+        <TimelineDonHang v-if="invoiceId" :hoa-don-id="Number(invoiceId)" />
       </a-card>
 
       <!-- Tổng kết đơn hàng -->

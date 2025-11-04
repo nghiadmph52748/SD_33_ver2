@@ -973,6 +973,7 @@ const {
   calculateVoucherDiscount,
   coupons,
   userId: userStoreInstance.id,
+  userName: userStoreInstance.name,
   orders,
   currentOrderIndex,
   shippingFee,

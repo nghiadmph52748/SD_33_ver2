@@ -2,6 +2,7 @@ import { ref, type Ref } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import type { CouponApiModel } from '@/api/discount-management'
 import type { ConfirmBanHangRequest } from '@/api/pos'
+import { createInvoiceTimeline, createConfirmOrderTimeline } from '@/utils/timeline-helper'
 
 interface CartItem {
   id: string
@@ -38,6 +39,7 @@ export function useCheckout(params: {
   calculateVoucherDiscount: (coupon: CouponApiModel | null | undefined) => number
   coupons: Ref<CouponApiModel[]>
   userId: number
+  userName?: string
   orders: Ref<Order[]>
   currentOrderIndex: Ref<string>
   shippingFee: Ref<number>
@@ -61,6 +63,7 @@ export function useCheckout(params: {
     calculateVoucherDiscount,
     coupons,
     userId,
+    userName,
     orders,
     currentOrderIndex,
     shippingFee,
@@ -173,7 +176,24 @@ export function useCheckout(params: {
       confirmLoading.value = true
       if (!confirmOrderRequest.value) throw new Error('Thiếu dữ liệu đơn hàng để xác nhận')
 
+      const invoiceId = confirmOrderRequest.value.idHoaDon
+      const paymentMethod = paymentForm.value.method
+
       await confirmPosOrder(confirmOrderRequest.value)
+
+      // Tạo timeline tự động dựa trên payment method
+      try {
+        // Tạo timeline "Tạo đơn hàng" và các bước tiếp theo
+        await createInvoiceTimeline(invoiceId, paymentMethod, userId, userName)
+        
+        // Nếu là transfer hoặc both, tạo thêm các bước xác nhận, chuẩn bị, giao hàng
+        if (paymentMethod === 'transfer' || paymentMethod === 'both') {
+          await createConfirmOrderTimeline(invoiceId, paymentMethod, userId, userName)
+        }
+      } catch (timelineError) {
+        console.error('Lỗi khi tạo timeline (không ảnh hưởng đến đơn hàng):', timelineError)
+        // Không throw error để không ảnh hưởng đến flow chính
+      }
 
       const orderTypeText = orderType.value === 'delivery' ? 'giao hàng' : 'tại quầy'
       let successMessage = `✅ Đơn ${orderTypeText} ${currentOrder.value!.orderCode} xác nhận thành công!`
