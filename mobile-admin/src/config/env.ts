@@ -2,7 +2,21 @@
 // For iOS Simulator: localhost works (shares host network)
 // For Android Emulator: 10.0.2.2 is the special IP for host machine
 // For physical devices: Need actual network IP (e.g., 172.20.10.2 or your machine's IP)
-import { Platform } from 'react-native'
+import { Platform, NativeModules } from 'react-native'
+
+const extractHostFromExpo = (): string | null => {
+  try {
+    // Works in RN/Expo: scriptURL like 'exp://192.168.2.120:8081' or 'http://localhost:8081'
+    const scriptURL: string | undefined = (NativeModules as any)?.SourceCode?.scriptURL
+    if (scriptURL && scriptURL.includes('://')) {
+      const afterProtocol = scriptURL.split('://')[1]
+      const hostPort = afterProtocol.split('/')[0]
+      const host = hostPort.split(':')[0]
+      if (host && host !== 'localhost') return host
+    }
+  } catch {}
+  return null
+}
 
 const getDefaultBaseURL = () => {
   // Use environment variable if set
@@ -10,10 +24,13 @@ const getDefaultBaseURL = () => {
     return process.env.API_BASE_URL
   }
 
-  // For iOS Simulator, use machine IP (more reliable than localhost)
-  // You can also try 'http://localhost:8080' if machine IP doesn't work
+  // Try to derive host IP from the Expo host URI so it follows your current network (e.g., 172.20.x or 192.168.x)
+  const expoHost = extractHostFromExpo()
+  if (expoHost) return `http://${expoHost}:8080`
+
+  // iOS Simulator fallback
   if (Platform.OS === 'ios') {
-    return 'http://192.168.2.120:8080'
+    return 'http://localhost:8080'
   }
 
   // For Android Emulator, use 10.0.2.2 (special IP that maps to host's localhost)
