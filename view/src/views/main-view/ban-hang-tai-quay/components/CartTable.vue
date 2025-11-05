@@ -81,11 +81,7 @@
 
       <template #subtotal="{ record }">
         <strong>
-          {{
-            formatCurrency(
-              (record.discount > 0 ? record.price * (1 - record.discount / 100) : record.price) * record.quantity
-            )
-          }}
+          {{ formatCurrency((record.discount > 0 ? record.price * (1 - record.discount / 100) : record.price) * record.quantity) }}
         </strong>
       </template>
 
@@ -139,5 +135,4 @@ const columns = [
   { title: 'Thành Tiền', dataIndex: 'subtotal', key: 'subtotal', slotName: 'subtotal', width: 130, align: 'right' as const },
   { title: 'Thao Tác', dataIndex: 'action', key: 'action', slotName: 'action', width: 80, align: 'center' as const },
 ]
-
 </script>

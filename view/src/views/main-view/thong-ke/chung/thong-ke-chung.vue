@@ -307,7 +307,6 @@ watch(sanPhamSapHetHang, (newValue) => {
   phanTrangLowStock.value.total = newValue.length
 })
 
-
 onMounted(async () => {
   await taiToanBoDuLieu()
   capNhatToanBoDuLieu('day')

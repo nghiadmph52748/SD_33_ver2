@@ -1,6 +1,5 @@
 <template>
   <div class="coupon-edit-page">
-
     <!-- Back Button -->
     <div style="margin-bottom: 16px">
       <a-button @click="goBack">

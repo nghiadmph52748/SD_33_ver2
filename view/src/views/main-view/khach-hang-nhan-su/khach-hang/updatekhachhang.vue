@@ -1,6 +1,5 @@
 <template>
   <div class="update-customer-page">
-
     <!-- Card 1: Thông tin khách hàng -->
     <a-card title="Thông tin khách hàng" style="margin-bottom: 16px" :loading="dangTai">
       <a-form :model="form" layout="vertical">

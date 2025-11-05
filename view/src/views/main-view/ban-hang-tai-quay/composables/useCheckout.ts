@@ -185,7 +185,7 @@ export function useCheckout(params: {
       try {
         // Tạo timeline "Tạo đơn hàng" và các bước tiếp theo
         await createInvoiceTimeline(invoiceId, paymentMethod, userId, userName)
-        
+
         // Nếu là transfer hoặc both, tạo thêm các bước xác nhận, chuẩn bị, giao hàng
         if (paymentMethod === 'transfer' || paymentMethod === 'both') {
           await createConfirmOrderTimeline(invoiceId, paymentMethod, userId, userName)

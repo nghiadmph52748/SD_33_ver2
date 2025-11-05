@@ -1,0 +1,770 @@
+{
+  "metadata": {
+    "analysis_timestamp_iso8601": "2025-11-05T20:11:18.213244",
+    "schema_version": "1.0.0",
+    "analyzer_version": "1.0.0",
+    "website_url": "https://www.nike.com/vn/t/air-max-nuaxis-shoes-2GDM9K/HF1233-101",
+    "pages_analyzed_count": 1,
+    "analysis_summary": "Analyzed 1 pages from www.nike.com"
+  },
+  "website_info": {
+    "base_url": "https://www.nike.com",
+    "domain_name": "www.nike.com",
+    "page_title": "Nike Air Max Nuaxis Women's Shoes. Nike VN",
+    "meta_description": "Find the Nike Air Max Nuaxis Women's Shoes at Nike.com.  Free delivery and returns on select orders.",
+    "pages_analyzed": [
+      {
+        "url": "https://www.nike.com/vn/t/air-max-nuaxis-shoes-2GDM9K/HF1233-101",
+        "title": "Nike Air Max Nuaxis Women's Shoes. Nike VN",
+        "load_time_ms": 11362.2
+      }
+    ]
+  },
+  "design_system": {
+    "color_palette": {
+      "primary_colors": [
+        {
+          "hex_code": "#111",
+          "rgb_values": null,
+          "usage_context": "primary_palette"
+        },
+        {
+          "hex_code": "#5400CC",
+          "rgb_values": "rgb(84, 0, 204)",
+          "usage_context": "primary_palette"
+        },
+        {
+          "hex_code": "#9E9EA0",
+          "rgb_values": "rgb(158, 158, 160)",
+          "usage_context": "primary_palette"
+        },
+        {
+          "hex_code": "#D33918",
+          "rgb_values": "rgb(211, 57, 24)",
+          "usage_context": "primary_palette"
+        },
+        {
+          "hex_code": "#5D180C",
+          "rgb_values": "rgb(93, 24, 12)",
+          "usage_context": "primary_palette"
+        }
+      ],
+      "secondary_colors": [],
+      "background_colors": [
+        {
+          "hex_code": "#FFFFFF",
+          "rgb_values": "rgb(255, 255, 255)",
+          "usage_context": "background"
+        },
+        {
+          "hex_code": "#F5F5F5",
+          "rgb_values": "rgb(245, 245, 245)",
+          "usage_context": "background"
+        }
+      ],
+      "text_colors": [
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(27,127,204,.8)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(0,0,0,.15)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(17, 17, 17, 0.06)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(17, 17, 17, 0.03)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": "#FFFFFF",
+          "rgb_values": "rgb(255, 255, 255)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(17, 17, 17, 0.18)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(0,0,0,.2)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(0,0,0,.8)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(0,0,0,.06)",
+          "usage_context": "text"
+        },
+        {
+          "hex_code": null,
+          "rgb_values": "rgba(0,0,0,.00004)",
+          "usage_context": "text"
+        }
+      ],
+      "accent_colors": []
+    },
+    "typography": {
+      "font_families": [
+        {
+          "name": "Helvetica Now Text",
+          "source": "system_font",
+          "weights_available": [
+            "400"
+          ]
+        },
+        {
+          "name": "Times New Roman",
+          "source": "system_font",
+          "weights_available": [
+            "400"
+          ]
+        }
+      ],
+      "font_sizes": [
+        {
+          "size_px": 16.0,
+          "element_type": "mixed",
+          "usage_count": 200
+        }
+      ],
+      "font_weights": [
+        {
+          "weight_value": "400",
+          "usage_context": "text_styling"
+        }
+      ],
+      "line_heights": [
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "html"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "head"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "style"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "meta"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "link"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "title"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "script"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "noscript"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "body"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "div"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "svg"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "symbol"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "path"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "rect"
+        },
+        {
+          "value": 28.0,
+          "unit": "px",
+          "element_type": "circle"
+        }
+      ],
+      "heading_hierarchy": [
+        {
+          "level": 1,
+          "font_size_px": 24.0,
+          "font_weight": "500",
+          "line_height": 28.8
+        },
+        {
+          "level": 2,
+          "font_size_px": 16.0,
+          "font_weight": "400",
+          "line_height": 24.0
+        },
+        {
+          "level": 4,
+          "font_size_px": 24.0,
+          "font_weight": "500",
+          "line_height": 28.8
+        }
+      ]
+    },
+    "spacing_system": {
+      "padding_values_px": [
+        0.0
+      ],
+      "margin_values_px": [
+        0.0
+      ],
+      "gap_values_px": []
+    },
+    "layout_system": {
+      "container_widths_px": [
+        8,
+        24,
+        36,
+        70,
+        168,
+        180,
+        376,
+        912,
+        1016,
+        1920
+      ],
+      "grid_systems": [
+        {
+          "type": "css_grid",
+          "columns": "152px 152px 152px 152px 152px 152px 152px 152px 152px 152px 152px 152px",
+          "gap_px": 0
+        },
+        {
+          "type": "css_grid",
+          "columns": "152px 152px 152px 152px 152px 152px 152px 152px 152px 152px 152px 152px",
+          "gap_px": 0
+        },
+        {
+          "type": "css_grid",
+          "columns": "152px 152px 152px 152px 152px 152px 152px 152px 152px 152px 152px 152px 0px",
+          "gap_px": 0
+        }
+      ],
+      "flexbox_patterns": [
+        {
+          "direction": "row",
+          "wrap": "wrap",
+          "justify_content": "flex-start"
+        }
+      ],
+      "responsive_breakpoints": [
+        {
+          "breakpoint_name": "min-width-960px",
+          "min_width_px": 960,
+          "max_width_px": null
+        },
+        {
+          "breakpoint_name": "min-width-960px",
+          "min_width_px": 960,
+          "max_width_px": null
+        },
+        {
+          "breakpoint_name": "min-width-960px",
+          "min_width_px": 960,
+          "max_width_px": null
+        },
+        {
+          "breakpoint_name": "min-width-960px",
+          "min_width_px": 960,
+          "max_width_px": null
+        },
+        {
+          "breakpoint_name": "min-width-960px",
+          "min_width_px": 960,
+          "max_width_px": null
+        }
+      ]
+    }
+  },
+  "components": {
+    "product_cards": [
+      {
+        "element_type": "div",
+        "structure_html": "<div class=\"grid-item product-imagery pt12-md d-sm-h d-lg-b css-gv5k5e e4lt99o0 nds-grid-item\"><div class=\"mr0-sm mr2-lg css-1d0qj4p\" data-testid=\"ImageCarousel\" style=\"height:669px;top:40px\"><div class=\"css-1wg28dk\" data-testid=\"ThumbnailListContainer\"><div class=\"d-sm-flx flx-jc-sm-fs flx-ai-sm-fe css-1cv5ztv\" data-testid=\"Thumbnail-0\"><input class=\"css-wr1v03\" id=\"20f14d48-36de-4856-a779-eb29f259326e\" name=\"Thumbnails\" type=\"radio\" value=\"20f14d48-36de-4856-a779-eb29f259326e\"/><label class=\"c",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 1674
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "div",
+        "structure_html": "<div class=\"grid-item product-title pt4-sm pt12-lg pl6-lg mb2-sm css-y1so9b nds-grid-item\"><div id=\"title-container\"><p class=\"nds-text css-1drvez1 e1yhcai00 text-align-start appearance-body1Strong color-var(--podium-cds-color-text-badge) weight-regular\" data-testid=\"product_badge\" id=\"pdp_product_badge\">Sustainable Materials</p><h1 class=\"nds-text css-1h3ryhm e1yhcai00 text-align-start appearance-title4 color-primary weight-regular\" data-testid=\"product_title\" id=\"pdp_product_title\">Nike Air Ma",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 1674
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "h2",
+        "structure_html": "<h2 class=\"nds-text product_subtitle css-17kvvgb e1yhcai00 text-align-start appearance-body1 color-secondary weight-regular\" data-testid=\"product_subtitle\" id=\"pdp_product_subtitle\">Women's Shoes</h2>",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 1674
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "div",
+        "structure_html": "<div class=\"product-info-accordions mb8-sm\"><div><div class=\"css-1o4ggdz e1whplt30\" data-nr-component=\"accordion\" data-testid=\"pdp-info-accordions\"><details class=\"nds-details untouched is-animated css-3rxweh e196znjh0\" data-nr-accordion-panel=\"shipping-accordion\" data-testid=\"shipping-accordion\" id=\"pdp-info-accordions__shipping-accordion\"><summary><span class=\"nds-summary-wrapper\"><h4 class=\"nds-text css-1m2rxfq e1yhcai00 appearance-title4 color-primary weight-regular\" data-testid=\"shipping-ti",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 1674
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "div",
+        "structure_html": "<div class=\"css-1jt12t5 e4lt99o0 nds-grid-item\"><nav aria-label=\"Brand navigation\"><ul class=\"desktop-brandList css-1olsx5c\"><li><a aria-label=\"Jordan\" class=\"brand-link\" data-testid=\"link\" href=\"https://www.nike.com/vn/jordan\"><svg aria-hidden=\"true\" fill=\"none\" focusable=\"false\" height=\"24px\" role=\"img\" viewbox=\"0 0 24 24\" width=\"24px\"><path clip-rule=\"evenodd\" d=\"M13.182 3.733c-.012-.039-.012-.039-.012-.072a.966.966 0 01.922-1.007.97.97 0 011.007.922.964.964 0 01-.917 1.007c-.027.004-.062 0-.",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "div",
+        "structure_html": "<div class=\"user-menu-wrapper css-1jt12t5 e4lt99o0 nds-grid-item\"><nav aria-label=\"User navigation\" class=\"css-12b3723\"><ul class=\"desktop-list\"><li class=\"link-item css-bsejbh\" data-testid=\"desktop-drop-down-styled-wrapper-div\"><a class=\"interactive-profile-element\" data-testid=\"link\" href=\"https://www.nike.com/vn/retail\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" data-testid=\"desktop-user-menu-item-message-0\" role=\"presentation\">Find a Store</p",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "li",
+        "structure_html": "<li class=\"link-item css-bsejbh\" data-testid=\"desktop-drop-down-styled-wrapper-div\"><a class=\"interactive-profile-element\" data-testid=\"link\" href=\"https://www.nike.com/vn/retail\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" data-testid=\"desktop-user-menu-item-message-0\" role=\"presentation\">Find a Store</p></a><div class=\"vertical-line\"></div></li>",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "li",
+        "structure_html": "<li class=\"link-item css-bsejbh\" data-testid=\"desktop-drop-down-styled-wrapper-div\"><a class=\"interactive-profile-element\" data-testid=\"link\" href=\"https://www.nike.com/vn/help\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" data-testid=\"desktop-user-menu-item-message-1\" role=\"presentation\">Help</p></a><details class=\"css-1qehhq\"><summary aria-expanded=\"false\" aria-haspopup=\"menu\" aria-label=\"Help menu\" class=\"drop-down-accessibility-button\" role=\"me",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "div",
+        "structure_html": "<div class=\"desktop-user-item-dropdown-popover\" data-testid=\"dropdown-details-container\"><div class=\"css-w3vz3o\" role=\"menu\"><a class=\"dropdown__list_title\" data-testid=\"link\" href=\"https://www.nike.com/vn/help\"><p class=\"nds-text css-xrit3w e1yhcai00 appearance-body3Strong color-secondary weight-regular\">Help</p></a><ul aria-label=\"Order Status\"><li class=\"dropdown__sub_list_item\"><a class=\"\" data-testid=\"link\" href=\"https://www.nike.com/vn/orders\" role=\"menuitem\"><p class=\"nds-text css-t62sze ",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "li",
+        "structure_html": "<li class=\"dropdown__sub_list_item\"><a class=\"\" data-testid=\"link\" href=\"https://www.nike.com/vn/orders\" role=\"menuitem\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" role=\"presentation\">Order Status</p></a></li>",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "li",
+        "structure_html": "<li class=\"dropdown__sub_list_item\"><a class=\"\" data-testid=\"link\" href=\"https://www.nike.com/vn/help/a/shipping-delivery-gs\" role=\"menuitem\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" role=\"presentation\">Dispatch and Delivery</p></a></li>",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "li",
+        "structure_html": "<li class=\"dropdown__sub_list_item\"><a class=\"\" data-testid=\"link\" href=\"https://www.nike.com/vn/help/a/returns-policy-gs\" role=\"menuitem\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" role=\"presentation\">Returns</p></a></li>",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "li",
+        "structure_html": "<li class=\"dropdown__sub_list_item\"><a class=\"\" data-testid=\"link\" href=\"https://www.nike.com/vn/help/#contact\" role=\"menuitem\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" role=\"presentation\">Contact Us</p></a></li>",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      },
+      {
+        "element_type": "li",
+        "structure_html": "<li class=\"dropdown__sub_list_item\"><a class=\"\" data-testid=\"link\" href=\"https://agreementservice.svs.nike.com/vn/en_gb/rest/agreement?agreementType=privacyPolicy&amp;uxId=com.nike.unite&amp;country=VN&amp;language=en&amp;requestType=redirect\" role=\"menuitem\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" role=\"presentation\">Privacy Policy</p></a></li>",
+        "styling_css": "",
+        "dimensions": {
+          "width_px": 912,
+          "height_px": 36
+        },
+        "consistency_score_percentage": null
+      }
+    ],
+    "tables": [],
+    "navigation": [
+      {
+        "nav_type": "nav",
+        "structure_html": "<nav aria-label=\"Global navigation\" class=\"pre-l-header-container css-1ngngh8\"><a class=\"css-1iigv7v\" href=\"#skip-to-content\">Skip to main content</a><div class=\"css-1j2tzxk\" data-testid=\"top-bar-container\"><div class=\"nds-grid topbar-grid css-11zqdgk ehf3nt20\"><div class=\"css-1jt12t5 e4lt99o0 nds-grid-item\"><nav aria-label=\"Brand navigation\"><ul class=\"desktop-brandList css-1olsx5c\"><li><a aria-label=\"Jordan\" class=\"brand-link\" data-testid=\"link\" href=\"https://www.nike.com/vn/jordan\"><svg aria-hidden=\"true\" fill=\"none\" focusable=\"false\" height=\"24px\" role=\"img\" viewbox=\"0 0 24 24\" width=\"24px\"><path clip-rule=\"evenodd\" d=\"M13.182 3.733c-.012-.039-.012-.039-.012-.072a.966.966 0 01.922-1.007.97.97 0 011.007.922.964.964 0 01-.917 1.007c-.027.004-.062 0-.101 0-.016.004-.04.004-.056.022-.056.084.14.073-.005.44 0 0 0 .038-.012.077-.012.14-.08.562-.096.793.029.04.04.05.029.13a6.003 6.003 0 01-.09.534c-.04.14-.096.174-.147.202-.073.298-.095.545-.281.905-.022.276-.045.35-.106.484-.017.4.01.46-",
+        "item_count": 377,
+        "styling_css": ""
+      },
+      {
+        "nav_type": "nav",
+        "structure_html": "<nav aria-label=\"Brand navigation\"><ul class=\"desktop-brandList css-1olsx5c\"><li><a aria-label=\"Jordan\" class=\"brand-link\" data-testid=\"link\" href=\"https://www.nike.com/vn/jordan\"><svg aria-hidden=\"true\" fill=\"none\" focusable=\"false\" height=\"24px\" role=\"img\" viewbox=\"0 0 24 24\" width=\"24px\"><path clip-rule=\"evenodd\" d=\"M13.182 3.733c-.012-.039-.012-.039-.012-.072a.966.966 0 01.922-1.007.97.97 0 011.007.922.964.964 0 01-.917 1.007c-.027.004-.062 0-.101 0-.016.004-.04.004-.056.022-.056.084.14.073-.005.44 0 0 0 .038-.012.077-.012.14-.08.562-.096.793.029.04.04.05.029.13a6.003 6.003 0 01-.09.534c-.04.14-.096.174-.147.202-.073.298-.095.545-.281.905-.022.276-.045.35-.106.484-.017.4.01.46-.281 1.101-.08.3-.017.507.05.821.068.321.276.461.298.793.05.771.017 1.305-.163 1.907l.135.348c.18.084.618.326.36.675.343.19.865.394 1.28.781.176.147.35.315.513.5.316.057.276.08.506.231.675.438 1.749 1.304 2.373 1.906.112.067.147.112.236.163.01.023.017.034.01.04-.026.072-.026.072-.06.14.039.04.095.073.134.107.",
+        "item_count": 2,
+        "styling_css": ""
+      },
+      {
+        "nav_type": "nav",
+        "structure_html": "<nav aria-label=\"User navigation\" class=\"css-12b3723\"><ul class=\"desktop-list\"><li class=\"link-item css-bsejbh\" data-testid=\"desktop-drop-down-styled-wrapper-div\"><a class=\"interactive-profile-element\" data-testid=\"link\" href=\"https://www.nike.com/vn/retail\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" data-testid=\"desktop-user-menu-item-message-0\" role=\"presentation\">Find a Store</p></a><div class=\"vertical-line\"></div></li><li class=\"link-item css-bsejbh\" data-testid=\"desktop-drop-down-styled-wrapper-div\"><a class=\"interactive-profile-element\" data-testid=\"link\" href=\"https://www.nike.com/vn/help\"><p class=\"nds-text css-t62sze e1yhcai00 appearance-body3Strong color-primary weight-regular\" data-testid=\"desktop-user-menu-item-message-1\" role=\"presentation\">Help</p></a><details class=\"css-1qehhq\"><summary aria-expanded=\"false\" aria-haspopup=\"menu\" aria-label=\"Help menu\" class=\"drop-down-accessibility-button\" role=\"menuitem\" tabindex=\"0\"><s",
+        "item_count": 25,
+        "styling_css": ""
+      }
+    ],
+    "buttons": [
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      },
+      {
+        "button_type": "button",
+        "styles_css": "",
+        "sizes": [
+          {
+            "width_px": 121,
+            "height_px": 26
+          }
+        ],
+        "states": [],
+        "consistency_score_percentage": null
+      }
+    ],
+    "forms": [
+      {
+        "form_type": "form",
+        "input_types": [
+          "search"
+        ],
+        "styling_css": "",
+        "structure_html": "<form><div class=\"gn-search-bar top-bar-visible css-1l8tt2z e1l5bdmo0 search-bar-container\"><div class=\"bar-swoosh-container\"><svg class=\"swoosh-svg\" fill=\"none\" height=\"22\" viewbox=\"0 0 64 22\" width=\"64\" xmlns=\"http://www.w3.org/2000/svg\"><path clip-rule=\"evenodd\" d=\"M17.7277 12.1511C15.999 12.598 14.4241 12.8196 13.0469 12.8196C11.3396 12.8196 9.94617 12.4728 8.97074 11.7793C4.02962 8.28845 8.54956 0.885548 9.06118 0.0629324C6.88551 2.37923 4.65235 4.80341 2.89851 7.44593C-0.0575023 11.9597 -0.812655 16.2475 0.910825 18.906C2.23896 20.9642 4.40042 22 7.37517 22C10.0146 22 13.2975 21.1832 17.1928 19.5559L64 0.0173385L63.9981 0L17.7277 12.1511Z\" fill=\"#111111\" fill-rule=\"evenodd\"></path></svg></div><div class=\"bar-input-container\"><div class=\"css-hxsfhq e15tloos0\"><div class=\"search-input-container\"><div class=\"search-start-icon-container\"><button aria-label=\"Search\" class=\"nds-btn nds-button--icon-only search-start-btn css-1pto8ls ex41m6f0 btn-secondary-dark\" id=\"nav-search-icon\" type"
+      }
+    ]
+  },
+  "css_analysis": {
+    "external_stylesheets": [
+      {
+        "url": "https://www.nike.com/assets/ncss/glyphs/2.6/css/glyphs.min.css",
+        "rules_count_integer": 110,
+        "file_size_bytes": 4533
+      },
+      {
+        "url": "https://www.nike.com/static/ncss/4.3/dotcom/desktop/css/ncss.en-gb.min.css",
+        "rules_count_integer": 1893,
+        "file_size_bytes": 145237
+      },
+      {
+        "url": "https://www.nike.com/assets/experience/dotcom-pdp/pdp-experience/_next/static/css/1e24f7c001bb3873.css",
+        "rules_count_integer": 7,
+        "file_size_bytes": 614
+      },
+      {
+        "url": "https://www.nike.com/assets/experience/dotcom-pdp/pdp-experience/_next/static/css/b3d647148e76b27a.css",
+        "rules_count_integer": 362,
+        "file_size_bytes": 69615
+      },
+      {
+        "url": "https://nikeconsumerservices.my.site.com/ESWWebEnglishGuest1710548726868/assets/styles/bootstrap.min.css",
+        "rules_count_integer": 91,
+        "file_size_bytes": 15590
+      },
+      {
+        "url": "https://widgets.turnto.com/v5/widgets/ZhFiFzTWXNodQyjsite/css/pdp-page.21af3dadaefb655760d3.css",
+        "rules_count_integer": 643,
+        "file_size_bytes": 62601
+      },
+      {
+        "url": "https://widgets.turnto.com/v5/widgets/ZhFiFzTWXNodQyjsite/css/turnto-custom.e35658f1eb8c5e9f88ed3a862443e06e.css",
+        "rules_count_integer": 205,
+        "file_size_bytes": 19332
+      }
+    ],
+    "inline_styles_count_integer": 79,
+    "media_queries": [
+      {
+        "breakpoint_min_width_px": 960,
+        "rules_count_integer": 1
+      },
+      {
+        "breakpoint_min_width_px": 960,
+        "rules_count_integer": 1
+      },
+      {
+        "breakpoint_min_width_px": 960,
+        "rules_count_integer": 1
+      },
+      {
+        "breakpoint_min_width_px": 960,
+        "rules_count_integer": 1
+      },
+      {
+        "breakpoint_min_width_px": 960,
+        "rules_count_integer": 1
+      },
+      {
+        "breakpoint_min_width_px": 80,
+        "rules_count_integer": 1
+      },
+      {
+        "breakpoint_min_width_px": 80,
+        "rules_count_integer": 1
+      },
+      {
+        "breakpoint_min_width_px": 80,
+        "rules_count_integer": 1
+      }
+    ],
+    "keyframes": [],
+    "css_organization_metrics": {
+      "total_rules_count_integer": 3311,
+      "unique_selectors_count_integer": 0,
+      "css_file_count_integer": 0
+    }
+  },
+  "html_structure": {
+    "semantic_elements": [
+      {
+        "tag_name": "header",
+        "count_integer": 2,
+        "usage_context_string": "semantic_html5"
+      },
+      {
+        "tag_name": "nav",
+        "count_integer": 5,
+        "usage_context_string": "semantic_html5"
+      },
+      {
+        "tag_name": "main",
+        "count_integer": 1,
+        "usage_context_string": "semantic_html5"
+      },
+      {
+        "tag_name": "section",
+        "count_integer": 3,
+        "usage_context_string": "semantic_html5"
+      },
+      {
+        "tag_name": "aside",
+        "count_integer": 1,
+        "usage_context_string": "semantic_html5"
+      },
+      {
+        "tag_name": "footer",
+        "count_integer": 1,
+        "usage_context_string": "semantic_html5"
+      },
+      {
+        "tag_name": "details",
+        "count_integer": 13,
+        "usage_context_string": "semantic_html5"
+      },
+      {
+        "tag_name": "summary",
+        "count_integer": 13,
+        "usage_context_string": "semantic_html5"
+      }
+    ],
+    "dom_complexity": {
+      "total_elements_count_integer": 2462,
+      "max_depth_integer": 30,
+      "class_usage_count_integer": 1770
+    },
+    "accessibility_features": {
+      "aria_labels_count_integer": 64,
+      "alt_texts_count_integer": 22,
+      "semantic_html_score_percentage": 0
+    }
+  },
+  "ux_consistency_analysis": {
+    "color_consistency_score_percentage": 12.66,
+    "typography_consistency_score_percentage": 100.0,
+    "spacing_consistency_score_percentage": 100.0,
+    "component_consistency_score_percentage": 75.0,
+    "overall_consistency_rating_string": "good",
+    "consistency_issues": [
+      {
+        "issue_type_string": "color_inconsistency",
+        "severity_string": "medium",
+        "affected_pages_list": [
+          "https://www.nike.com/vn/t/air-max-nuaxis-shoes-2GDM9K/HF1233-101"
+        ],
+        "recommendation_string": "Standardize color palette to improve visual consistency"
+      }
+    ]
+  }
+}

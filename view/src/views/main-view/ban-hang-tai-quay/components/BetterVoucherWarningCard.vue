@@ -71,7 +71,17 @@
           </div>
           <div style="text-align: right">
             <div style="font-size: 11px; color: #666; margin-bottom: 2px">Tiết kiệm thêm</div>
-            <div style="color: #2e7d32; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: flex-end; gap: 4px">
+            <div
+              style="
+                color: #2e7d32;
+                font-weight: 800;
+                font-size: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 4px;
+              "
+            >
               <span style="font-size: 16px">+</span>
               {{ formatCurrency(calculateVoucherDiscount(bestVoucher as any) - calculateVoucherDiscount(selectedCoupon as any)) }}
             </div>
@@ -79,7 +89,21 @@
         </div>
       </div>
 
-      <a-button type="primary" long size="large" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); border: none; font-weight: 700; height: 48px; font-size: 15px; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3); transition: all 0.3s ease;" @click="$emit('select')">
+      <a-button
+        type="primary"
+        long
+        size="large"
+        style="
+          background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+          border: none;
+          font-weight: 700;
+          height: 48px;
+          font-size: 15px;
+          box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+          transition: all 0.3s ease;
+        "
+        @click="$emit('select')"
+      >
         <template #icon>
           <icon-swap />
         </template>
@@ -114,7 +138,11 @@ function formatCurrency(value: number) {
 <style scoped>
 @keyframes pulse {
   0%,
-  100% { opacity: 1; }
-  50% { opacity: 0.95; }
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.95;
+  }
 }
 </style>

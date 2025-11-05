@@ -1,6 +1,5 @@
 <template>
   <div class="promotion-edit-page">
-
     <!-- Back Button -->
     <div class="header-actions">
       <a-button @click="goBack">

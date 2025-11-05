@@ -1,6 +1,5 @@
 <template>
   <div class="promotion-create-page">
-
     <a-card class="promotion-card">
       <a-form ref="formRef" :model="formState" :rules="rules" layout="vertical">
         <a-row :gutter="16">

@@ -1,15 +1,11 @@
 <template>
-  <a-modal
-    :visible="visible"
-    title="Có Phiếu Giảm Giá Tốt Hơn"
-    width="600px"
-    :footer="null"
-    @cancel="$emit('cancel')"
-  >
+  <a-modal :visible="visible" title="Có Phiếu Giảm Giá Tốt Hơn" width="600px" :footer="null" @cancel="$emit('cancel')">
     <div style="padding: 20px 0">
       <div style="margin-bottom: 24px; padding: 12px 16px; background: #fff7e6; border-left: 4px solid #faad14; border-radius: 4px">
         <div style="color: #faad14; font-weight: 600; margin-bottom: 8px">💡 Gợi ý</div>
-        <div style="color: #666; line-height: 1.6">Chúng tôi tìm thấy phiếu giảm giá với mức giảm cao hơn. Bạn có muốn quay lại để chọn phiếu tốt nhất không?</div>
+        <div style="color: #666; line-height: 1.6">
+          Chúng tôi tìm thấy phiếu giảm giá với mức giảm cao hơn. Bạn có muốn quay lại để chọn phiếu tốt nhất không?
+        </div>
       </div>
 
       <div v-if="suggestedBetterVouchers.length > 0" style="margin-bottom: 24px">
@@ -17,11 +13,22 @@
         <div
           v-for="(voucher, idx) in suggestedBetterVouchers"
           :key="idx"
-          style="padding: 12px; margin-bottom: 8px; border: 1px solid #e5e5e5; border-radius: 6px; background: #fafafa; display: flex; justify-content: space-between; align-items: center;"
+          style="
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            background: #fafafa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
         >
           <div>
             <div style="font-weight: 600; color: #262626">{{ voucher.tenPhieuGiamGia }}</div>
-            <div style="font-size: 12px; color: #999; margin-top: 4px">Còn: {{ voucher.soLuongDung }} lượt | Min: {{ formatCurrency(voucher.hoaDonToiThieu) }}</div>
+            <div style="font-size: 12px; color: #999; margin-top: 4px">
+              Còn: {{ voucher.soLuongDung }} lượt | Min: {{ formatCurrency(voucher.hoaDonToiThieu) }}
+            </div>
           </div>
           <div style="text-align: right">
             <div style="font-size: 16px; font-weight: 700; color: #52c41a">-{{ formatCurrency(calculateVoucherDiscount(voucher)) }}</div>

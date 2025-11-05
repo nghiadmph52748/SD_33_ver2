@@ -10,22 +10,16 @@
       :footer="false"
       class="ai-fullscreen-modal"
     >
-      <template #title>
-        <div class="modal-title">
-          <icon-robot />
-          <span>Trợ Lý AI</span>
-          <a-badge :status="isConnected ? 'success' : 'error'" :text="isConnected ? 'Online' : 'Offline'" />
-        </div>
-      </template>
-
       <div class="modal-content">
-        <AIChatbot
-          ref="chatbotRef"
-          :suppress-connection-notice="true"
-          :enable-health-check="false"
-          :connection-status="isConnected"
-          @session-state="handleSessionState"
-        />
+        <a-card class="chatbot-card" :bordered="false">
+          <AIChatbot
+            ref="chatbotRef"
+            :suppress-connection-notice="true"
+            :enable-health-check="false"
+            :connection-status="isConnected"
+            @session-state="handleSessionState"
+          />
+        </a-card>
       </div>
     </a-modal>
 

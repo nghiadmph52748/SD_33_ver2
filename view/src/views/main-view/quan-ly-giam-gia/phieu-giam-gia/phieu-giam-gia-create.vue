@@ -1,6 +1,5 @@
 <template>
   <div class="coupon-create-page">
-
     <a-card class="coupon-card" :class="{ 'featured-layout': formState.featured }">
       <div :class="formState.featured ? 'two-column-container' : ''">
         <!-- Left Column: Form -->

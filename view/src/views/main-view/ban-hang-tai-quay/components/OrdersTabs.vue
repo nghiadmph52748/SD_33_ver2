@@ -1,7 +1,16 @@
 <template>
   <div style="display: flex; width: 100%; align-items: center">
-    <div class="tabs-container" style="flex: 0 0 80%; display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none">
-      <a-tabs :active-key="activeKey" type="button" @change="$emit('change', $event)" class="orders-tabs" style="flex: 1; min-width: max-content">
+    <div
+      class="tabs-container"
+      style="flex: 0 0 80%; display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none"
+    >
+      <a-tabs
+        :active-key="activeKey"
+        type="button"
+        @change="$emit('change', $event)"
+        class="orders-tabs"
+        style="flex: 1; min-width: max-content"
+      >
         <a-tab-pane v-for="(order, idx) in orders" :key="idx.toString()">
           <template #title>
             <div class="tab-header">
@@ -33,8 +42,13 @@
 <script setup lang="ts">
 import { IconPlus, IconClose } from '@arco-design/web-vue/es/icon'
 
-interface CartItem { quantity: number }
-interface Order { orderCode: string; items: CartItem[] }
+interface CartItem {
+  quantity: number
+}
+interface Order {
+  orderCode: string
+  items: CartItem[]
+}
 
 defineProps<{ orders: Order[]; activeKey: string; canAdd: boolean }>()
 

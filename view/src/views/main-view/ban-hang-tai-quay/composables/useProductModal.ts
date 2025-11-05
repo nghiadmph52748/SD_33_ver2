@@ -1,7 +1,7 @@
 import { ref, computed, type Ref } from 'vue'
 import { type BienTheSanPham, type ChatLieu, type DeGiay, type MauSac, type KichThuoc } from '@/api/san-pham/bien-the'
-import { fetchFilterOptions, fetchAllAvailableProducts } from '../services/productService'
 import { Message } from '@arco-design/web-vue'
+import { fetchFilterOptions, fetchAllAvailableProducts } from '../services/productService'
 
 export function useProductModal(params: { allProductVariants: Ref<BienTheSanPham[]> }) {
   const { allProductVariants } = params

@@ -1,5 +1,5 @@
 <template>
-  <a-card title="Chi Tiết Nhân Viên" style="padding: 16px 20px;">
+  <a-card title="Chi Tiết Nhân Viên" style="padding: 16px 20px">
     <a-descriptions bordered column="2">
       <a-descriptions-item label="Tên nhân viên">{{ formData.tenNhanVien }}</a-descriptions-item>
       <a-descriptions-item label="Tên tài khoản">{{ formData.tenTaiKhoan }}</a-descriptions-item>

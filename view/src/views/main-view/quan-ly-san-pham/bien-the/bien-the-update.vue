@@ -1,6 +1,5 @@
 <template>
   <div class="variant-update-page">
-
     <!-- Loading State -->
     <div v-if="initialLoading" class="loading-container">
       <a-spin :size="40" />

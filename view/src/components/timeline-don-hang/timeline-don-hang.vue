@@ -42,74 +42,74 @@
     <!-- Timeline content -->
     <div class="timeline-content-wrapper">
       <!-- Debug info -->
-      <div v-if="false" style="padding: 8px; background: #f0f0f0; margin-bottom: 8px; font-size: 12px;">
+      <div v-if="false" style="padding: 8px; background: #f0f0f0; margin-bottom: 8px; font-size: 12px">
         Debug: loading={{ loading }}, timelineData.length={{ timelineData.length }}, hoaDonId={{ props.hoaDonId }}
       </div>
-      
+
       <div v-if="loading" class="timeline-loading">
         <a-spin />
         <p>Đang tải timeline...</p>
       </div>
 
       <div v-else-if="timelineData.length > 0" class="timeline-content">
-      <div
-        v-for="(item, index) in timelineData"
-        :key="item.id"
-        class="timeline-item"
-        :class="{ 'is-last': index === timelineData.length - 1 }"
-      >
-        <div class="timeline-marker">
-          <div class="timeline-dot" :class="getStatusClass(item.hanhDong)">
-            <icon-check v-if="item.hanhDong === 'Hoàn thành'" />
-            <icon-clock-circle v-else-if="item.hanhDong === 'Giao hàng'" />
-            <icon-check-circle v-else-if="item.hanhDong === 'Xác nhận giao hàng'" />
-            <icon-edit v-else-if="item.hanhDong === 'Chuẩn bị'" />
-            <icon-check-circle v-else-if="item.hanhDong === 'Xác nhận'" />
-            <icon-plus v-else />
-          </div>
-          <div v-if="index !== timelineData.length - 1" class="timeline-line"></div>
-        </div>
-
-        <div class="timeline-content-item">
-          <div class="timeline-header-item">
-            <span class="timeline-title">{{ item.trangThaiMoi }}</span>
-            <span class="timeline-time">{{ formatTime(item.thoiGian) }}</span>
+        <div
+          v-for="(item, index) in timelineData"
+          :key="item.id"
+          class="timeline-item"
+          :class="{ 'is-last': index === timelineData.length - 1 }"
+        >
+          <div class="timeline-marker">
+            <div class="timeline-dot" :class="getStatusClass(item.hanhDong)">
+              <icon-check v-if="item.hanhDong === 'Hoàn thành'" />
+              <icon-clock-circle v-else-if="item.hanhDong === 'Giao hàng'" />
+              <icon-check-circle v-else-if="item.hanhDong === 'Xác nhận giao hàng'" />
+              <icon-edit v-else-if="item.hanhDong === 'Chuẩn bị'" />
+              <icon-check-circle v-else-if="item.hanhDong === 'Xác nhận'" />
+              <icon-plus v-else />
+            </div>
+            <div v-if="index !== timelineData.length - 1" class="timeline-line"></div>
           </div>
 
-          <div class="timeline-description">
-            <p>
-              <strong>Hành động:</strong>
-              {{ item.hanhDong }}
-            </p>
-            <p v-if="item.moTa">
-              <strong>Mô tả:</strong>
-              {{ item.moTa }}
-            </p>
-            <p v-if="item.ghiChu">
-              <strong>Ghi chú:</strong>
-              {{ item.ghiChu }}
-            </p>
-            <p v-if="item.trangThaiCu">
-              <strong>Trạng thái cũ:</strong>
-              {{ item.trangThaiCu }}
-            </p>
-          </div>
+          <div class="timeline-content-item">
+            <div class="timeline-header-item">
+              <span class="timeline-title">{{ item.trangThaiMoi }}</span>
+              <span class="timeline-time">{{ formatTime(item.thoiGian) }}</span>
+            </div>
 
-          <div class="timeline-meta">
-            <a-tag size="small" color="blue">{{ item.tenNhanVien || 'Hệ thống' }}</a-tag>
+            <div class="timeline-description">
+              <p>
+                <strong>Hành động:</strong>
+                {{ item.hanhDong }}
+              </p>
+              <p v-if="item.moTa">
+                <strong>Mô tả:</strong>
+                {{ item.moTa }}
+              </p>
+              <p v-if="item.ghiChu">
+                <strong>Ghi chú:</strong>
+                {{ item.ghiChu }}
+              </p>
+              <p v-if="item.trangThaiCu">
+                <strong>Trạng thái cũ:</strong>
+                {{ item.trangThaiCu }}
+              </p>
+            </div>
+
+            <div class="timeline-meta">
+              <a-tag size="small" color="blue">{{ item.tenNhanVien || 'Hệ thống' }}</a-tag>
               <a-tag v-if="item.id > 1000000000000" size="small" color="orange">Tạm thời</a-tag>
-            <span class="timeline-ip" v-if="item.ipAddress">{{ item.ipAddress }}</span>
+              <span class="timeline-ip" v-if="item.ipAddress">{{ item.ipAddress }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-else class="timeline-empty">
+      <div v-else class="timeline-empty">
         <a-empty description="Chưa có dữ liệu timeline">
           <template #image>
             <icon-file :size="48" />
           </template>
-          <p style="color: #86909c; margin-top: 8px;">
+          <p style="color: #86909c; margin-top: 8px">
             Đơn hàng này chưa có lịch sử cập nhật trạng thái.
             <br />
             Timeline sẽ được cập nhật khi có thay đổi trạng thái đơn hàng.
@@ -149,7 +149,17 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { fetchTimelineByHoaDonId, type TimelineItem } from '@/api/timeline'
 import { fetchHoaDonById, type HoaDonApiModel } from '@/api/hoa-don'
-import { IconRefresh, IconCheck, IconClockCircle, IconEdit, IconCheckCircle, IconPlus, IconFile, IconArrowRight, IconPlayArrow } from '@arco-design/web-vue/es/icon'
+import {
+  IconRefresh,
+  IconCheck,
+  IconClockCircle,
+  IconEdit,
+  IconCheckCircle,
+  IconPlus,
+  IconFile,
+  IconArrowRight,
+  IconPlayArrow,
+} from '@arco-design/web-vue/es/icon'
 import { createTimelineItem } from '@/api/timeline'
 import { getUserInfo } from '@/api/user'
 
@@ -178,7 +188,7 @@ const fetchOrderInfo = async () => {
     const data = await fetchHoaDonById(id)
     orderInfo.value = data
     console.log('Đã lấy thông tin đơn hàng:', data)
-    
+
     // Nếu timeline đang trống và có thông tin đơn hàng, tạo fallback
     if (timelineData.value.length === 0 && orderInfo.value) {
       console.log('Timeline trống, tạo fallback từ thông tin đơn hàng vừa lấy')
@@ -204,7 +214,7 @@ const createFallbackTimeline = (): TimelineItem[] => {
     id = typeof props.hoaDonId === 'string' ? Number(props.hoaDonId) : props.hoaDonId
     if (isNaN(id)) id = null
   }
-  
+
   // Nếu vẫn không có ID, sử dụng ID từ props trực tiếp
   if (!id && props.hoaDonId) {
     const parsed = Number(props.hoaDonId)
@@ -212,31 +222,33 @@ const createFallbackTimeline = (): TimelineItem[] => {
       id = parsed
     }
   }
-  
+
   if (!id || id <= 0) {
     console.error('❌ Không thể lấy ID đơn hàng để tạo fallback timeline', {
       propsHoaDonId: props.hoaDonId,
       orderInfoId: orderInfo.value?.id,
-      getHoaDonIdResult: getHoaDonId()
+      getHoaDonIdResult: getHoaDonId(),
     })
     // Vẫn trả về timeline cơ bản với ID = 0
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
-    return [{
-      id: Date.now(),
-      idHoaDon: 0,
-      trangThaiMoi: 'Tạo đơn hàng',
-      hanhDong: 'Tạo mới',
-      moTa: 'Đơn hàng đã được tạo',
-      thoiGian: now,
-      tenNhanVien: 'Hệ thống',
-    }]
+    return [
+      {
+        id: Date.now(),
+        idHoaDon: 0,
+        trangThaiMoi: 'Tạo đơn hàng',
+        hanhDong: 'Tạo mới',
+        moTa: 'Đơn hàng đã được tạo',
+        thoiGian: now,
+        tenNhanVien: 'Hệ thống',
+      },
+    ]
   }
-  
+
   console.log('📝 Tạo fallback timeline với ID:', id)
-  
+
   const timeline: TimelineItem[] = []
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
-  
+
   // Nếu có thông tin đơn hàng từ API, sử dụng thông tin đó
   if (orderInfo.value) {
     console.log('📋 Có thông tin đơn hàng, tạo timeline từ thông tin đầy đủ')
@@ -269,14 +281,14 @@ const createFallbackTimeline = (): TimelineItem[] => {
         tenNhanVien: orderInfo.value.tenNhanVien || 'Hệ thống',
       })
     }
-    
+
     // Nếu có ngày thanh toán, thêm mốc thanh toán
     if (orderInfo.value.ngayThanhToan) {
       let ngayThanhToanFormatted = orderInfo.value.ngayThanhToan
       if (ngayThanhToanFormatted.includes('T')) {
         ngayThanhToanFormatted = ngayThanhToanFormatted.slice(0, 19).replace('T', ' ')
       }
-        timeline.push({
+      timeline.push({
         id: -2, // ID âm để phân biệt với database IDs
         idHoaDon: id,
         trangThaiCu: 'Tạo đơn hàng',
@@ -300,7 +312,7 @@ const createFallbackTimeline = (): TimelineItem[] => {
       tenNhanVien: 'Hệ thống',
     })
   }
-  
+
   console.log('✅ Fallback timeline đã tạo với', timeline.length, 'mốc')
   return timeline
 }
@@ -323,12 +335,12 @@ const fetchTimeline = async () => {
       return
     }
     console.log('📥 Đang lấy timeline cho đơn hàng:', id)
-    
+
     let apiSucceeded = false
     try {
       const data = await fetchTimelineByHoaDonId(id)
       console.log('✅ Dữ liệu timeline nhận được từ API:', data)
-      
+
       // Đảm bảo data là array và sắp xếp theo thời gian
       if (Array.isArray(data) && data.length > 0) {
         // Sắp xếp timeline từ API theo thời gian
@@ -336,9 +348,12 @@ const fetchTimeline = async () => {
           const parseTime = (timeStr: string) => {
             if (!timeStr) return 0
             try {
-              const normalized = typeof timeStr === 'string' && timeStr.includes('T') 
-                ? timeStr 
-                : (typeof timeStr === 'string' ? timeStr.replace(' ', 'T') : new Date(timeStr).toISOString())
+              const normalized =
+                typeof timeStr === 'string' && timeStr.includes('T')
+                  ? timeStr
+                  : typeof timeStr === 'string'
+                    ? timeStr.replace(' ', 'T')
+                    : new Date(timeStr).toISOString()
               const date = new Date(normalized)
               return isNaN(date.getTime()) ? 0 : date.getTime()
             } catch {
@@ -356,7 +371,7 @@ const fetchTimeline = async () => {
         timelineData.value = []
       }
       apiSucceeded = true
-      
+
       if (timelineData.value.length === 0) {
         console.warn('⚠️ Timeline trống từ API cho đơn hàng:', id)
       } else {
@@ -368,7 +383,7 @@ const fetchTimeline = async () => {
       apiSucceeded = false
       timelineData.value = []
     }
-    
+
     // Nếu timeline trống (API lỗi hoặc không có dữ liệu), thử tạo fallback
     if (timelineData.value.length === 0) {
       console.log('📝 Timeline trống, tạo fallback timeline')
@@ -380,15 +395,17 @@ const fetchTimeline = async () => {
         console.error('❌ Không thể tạo fallback timeline')
         // Vẫn tạo timeline cơ bản
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
-        timelineData.value = [{
-          id: Date.now(),
-          idHoaDon: id || 0,
-          trangThaiMoi: 'Tạo đơn hàng',
-          hanhDong: 'Tạo mới',
-          moTa: 'Đơn hàng đã được tạo',
-          thoiGian: now,
-          tenNhanVien: 'Hệ thống',
-        }]
+        timelineData.value = [
+          {
+            id: Date.now(),
+            idHoaDon: id || 0,
+            trangThaiMoi: 'Tạo đơn hàng',
+            hanhDong: 'Tạo mới',
+            moTa: 'Đơn hàng đã được tạo',
+            thoiGian: now,
+            tenNhanVien: 'Hệ thống',
+          },
+        ]
         console.log('✅ Đã tạo timeline cơ bản:', timelineData.value.length, 'mốc')
       }
     }
@@ -397,7 +414,7 @@ const fetchTimeline = async () => {
     console.error('Chi tiết lỗi:', {
       message: error?.message,
       status: error?.response?.status,
-      data: error?.response?.data
+      data: error?.response?.data,
     })
     // Thử tạo fallback timeline
     const fallbackTimeline = createFallbackTimeline()
@@ -408,15 +425,17 @@ const fetchTimeline = async () => {
       // Vẫn tạo timeline cơ bản
       const id = getHoaDonId() || 0
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
-      timelineData.value = [{
-        id: Date.now(),
-        idHoaDon: id,
-        trangThaiMoi: 'Tạo đơn hàng',
-        hanhDong: 'Tạo mới',
-        moTa: 'Đơn hàng đã được tạo',
-        thoiGian: now,
-        tenNhanVien: 'Hệ thống',
-      }]
+      timelineData.value = [
+        {
+          id: Date.now(),
+          idHoaDon: id,
+          trangThaiMoi: 'Tạo đơn hàng',
+          hanhDong: 'Tạo mới',
+          moTa: 'Đơn hàng đã được tạo',
+          thoiGian: now,
+          tenNhanVien: 'Hệ thống',
+        },
+      ]
       console.log('✅ Đã tạo timeline cơ bản sau khi lỗi:', timelineData.value.length, 'mốc')
     }
   } finally {
@@ -432,7 +451,7 @@ const refreshTimeline = async () => {
     console.log('📥 Đang lấy thông tin đơn hàng...')
     await fetchOrderInfo()
     console.log('✅ Đã lấy thông tin đơn hàng:', orderInfo.value?.id)
-    
+
     console.log('📥 Đang lấy timeline...')
     await fetchTimeline()
     console.log('✅ Đã lấy timeline, số lượng mốc:', timelineData.value.length)
@@ -463,14 +482,14 @@ const formatTime = (timeString: string) => {
       console.warn('Không thể parse thời gian:', timeString)
       return timeString
     }
-  return date.toLocaleString('vi-VN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
+    return date.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
   } catch (error) {
     console.error('Lỗi khi format thời gian:', timeString, error)
     return timeString
@@ -531,7 +550,7 @@ const getCurrentStatusColor = () => {
   if (timelineData.value.length > 0) {
     const latestStatus = timelineData.value[timelineData.value.length - 1]
     const hanhDong = latestStatus.hanhDong
-    
+
     switch (hanhDong) {
       case 'Hoàn thành':
         return 'green'
@@ -573,7 +592,7 @@ const loadUserInfo = async () => {
         id: response.data.id,
         name: response.data.tenNhanVien,
         tenNhanVien: response.data.tenNhanVien,
-        maNhanVien: response.data.maNhanVien
+        maNhanVien: response.data.maNhanVien,
       }
     }
   } catch (error) {
@@ -586,7 +605,7 @@ const loadUserInfo = async () => {
 const matchesStatus = (status: string, ...patterns: string[]): boolean => {
   if (!status) return false
   const normalized = status.trim().toLowerCase()
-  return patterns.some(pattern => {
+  return patterns.some((pattern) => {
     const normalizedPattern = pattern.trim().toLowerCase()
     return normalized === normalizedPattern || normalized.includes(normalizedPattern) || normalizedPattern.includes(normalized)
   })
@@ -597,20 +616,20 @@ const availableActions = computed(() => {
     console.log('⚠️ Timeline trống, không có actions')
     return []
   }
-  
+
   const lastStatus = timelineData.value[timelineData.value.length - 1]
   const currentStatus = lastStatus.trangThaiMoi || lastStatus.hanhDong || ''
   const actions: any[] = []
-  
+
   console.log('🔄 Tính toán availableActions:')
   console.log('  - Timeline length:', timelineData.value.length)
   console.log('  - Last item:', {
     id: lastStatus.id,
     trangThaiMoi: lastStatus.trangThaiMoi,
     hanhDong: lastStatus.hanhDong,
-    currentStatus: currentStatus
+    currentStatus: currentStatus,
   })
-  
+
   // Xác định các action có sẵn dựa trên trạng thái hiện tại
   // Sử dụng cả trangThaiMoi và hanhDong để matching linh hoạt hơn
   if (matchesStatus(currentStatus, 'Tạo đơn hàng', 'Tạo mới', 'tạo đơn', 'tạo mới')) {
@@ -622,14 +641,15 @@ const availableActions = computed(() => {
       nextStatus: 'Xác nhận đơn hàng',
       action: 'Xác nhận',
       moTa: 'Nhân viên xác nhận đơn hàng',
-      ghiChu: 'Kiểm tra thông tin khách hàng'
+      ghiChu: 'Kiểm tra thông tin khách hàng',
     })
   }
-  
+
   // Check cả trangThaiMoi và hanhDong
-  const isConfirmed = matchesStatus(currentStatus, 'Xác nhận đơn hàng', 'Xác nhận', 'xác nhận đơn', 'xác nhận') ||
-                     matchesStatus(lastStatus.hanhDong || '', 'Xác nhận', 'xác nhận')
-  
+  const isConfirmed =
+    matchesStatus(currentStatus, 'Xác nhận đơn hàng', 'Xác nhận', 'xác nhận đơn', 'xác nhận') ||
+    matchesStatus(lastStatus.hanhDong || '', 'Xác nhận', 'xác nhận')
+
   if (isConfirmed) {
     actions.push({
       key: 'prepare',
@@ -639,10 +659,10 @@ const availableActions = computed(() => {
       nextStatus: 'Đang chuẩn bị hàng',
       action: 'Chuẩn bị',
       moTa: 'Bắt đầu chuẩn bị sản phẩm',
-      ghiChu: 'Lấy hàng từ kho'
+      ghiChu: 'Lấy hàng từ kho',
     })
   }
-  
+
   if (matchesStatus(currentStatus, 'Đang chuẩn bị hàng', 'Chuẩn bị', 'chuẩn bị hàng', 'chuẩn bị')) {
     actions.push({
       key: 'confirmShipping',
@@ -652,10 +672,10 @@ const availableActions = computed(() => {
       nextStatus: 'Xác nhận giao hàng',
       action: 'Xác nhận giao hàng',
       moTa: 'Xác nhận đơn hàng đã sẵn sàng để giao',
-      ghiChu: 'Kiểm tra hàng hóa và địa chỉ giao hàng'
+      ghiChu: 'Kiểm tra hàng hóa và địa chỉ giao hàng',
     })
   }
-  
+
   if (matchesStatus(currentStatus, 'Xác nhận giao hàng', 'xác nhận giao')) {
     actions.push({
       key: 'shipping',
@@ -665,10 +685,10 @@ const availableActions = computed(() => {
       nextStatus: 'Đang giao hàng',
       action: 'Giao hàng',
       moTa: 'Đơn hàng đang được giao',
-      ghiChu: 'Giao cho shipper'
+      ghiChu: 'Giao cho shipper',
     })
   }
-  
+
   if (matchesStatus(currentStatus, 'Đang giao hàng', 'Giao hàng', 'giao hàng')) {
     actions.push({
       key: 'complete',
@@ -678,16 +698,20 @@ const availableActions = computed(() => {
       nextStatus: 'Hoàn thành',
       action: 'Hoàn thành',
       moTa: 'Đơn hàng đã giao thành công',
-      ghiChu: 'Khách hàng đã nhận hàng'
+      ghiChu: 'Khách hàng đã nhận hàng',
     })
   }
-  
-  console.log('✅ Available actions:', actions.length, actions.map(a => a.label))
+
+  console.log(
+    '✅ Available actions:',
+    actions.length,
+    actions.map((a) => a.label)
+  )
   if (actions.length === 0) {
     console.warn('⚠️ Không tìm thấy action phù hợp cho trạng thái:', {
       currentStatus,
       trangThaiMoi: lastStatus.trangThaiMoi,
-      hanhDong: lastStatus.hanhDong
+      hanhDong: lastStatus.hanhDong,
     })
   }
   return actions
@@ -700,21 +724,21 @@ const handleStatusChange = async (action: any) => {
     alert('Không có ID đơn hàng')
     return
   }
-  
+
   if (!currentUser.value) {
     await loadUserInfo()
   }
-  
+
   const lastStatus = timelineData.value[timelineData.value.length - 1]
-  
+
   try {
     actionLoading.value = action.key
-    
+
     // Format thời gian giống như timeline-helper (YYYY-MM-DD HH:mm:ss)
     // Đảm bảo thời gian hiện tại để item mới luôn ở cuối sau khi sort
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
     const nowTimestamp = Date.now() // Timestamp để sort
-    
+
     const timelineDataPayload = {
       idHoaDon: id,
       idNhanVien: currentUser.value?.id || orderInfo.value?.idNhanVien || 0,
@@ -726,14 +750,14 @@ const handleStatusChange = async (action: any) => {
       ghiChu: action.ghiChu || '',
       thoiGian: now,
     }
-    
+
     console.log('Đang tạo timeline với dữ liệu:', timelineDataPayload)
-    
+
     try {
       // Thử tạo timeline qua API
       const timelineItem = await createTimelineItem(timelineDataPayload)
       console.log('Đã tạo timeline mới qua API:', timelineItem)
-      
+
       // Thêm timeline mới vào danh sách ngay lập tức để hiển thị
       // Convert thoiGian từ response (có thể là Instant string hoặc number) sang string
       let thoiGianString = now
@@ -756,17 +780,22 @@ const handleStatusChange = async (action: any) => {
           }
         }
       }
-      
+
       // Đảm bảo thoiGianString là thời gian hiện tại nếu không có từ API
       if (!thoiGianString || thoiGianString === now) {
         thoiGianString = now
       }
-      
+
       const newTimelineItem: TimelineItem = {
         id: timelineItem?.id || nowTimestamp,
         idHoaDon: timelineItem?.idHoaDon || id,
         idNhanVien: timelineItem?.idNhanVien || currentUser.value?.id || orderInfo.value?.idNhanVien || 0,
-        tenNhanVien: timelineItem?.tenNhanVien || currentUser.value?.tenNhanVien || currentUser.value?.name || orderInfo.value?.tenNhanVien || 'Hệ thống',
+        tenNhanVien:
+          timelineItem?.tenNhanVien ||
+          currentUser.value?.tenNhanVien ||
+          currentUser.value?.name ||
+          orderInfo.value?.tenNhanVien ||
+          'Hệ thống',
         trangThaiCu: timelineItem?.trangThaiCu || lastStatus?.trangThaiMoi || undefined,
         trangThaiMoi: timelineItem?.trangThaiMoi || action.nextStatus,
         hanhDong: timelineItem?.hanhDong || action.action,
@@ -776,26 +805,29 @@ const handleStatusChange = async (action: any) => {
         ipAddress: timelineItem?.ipAddress,
         userAgent: timelineItem?.userAgent,
       }
-      
+
       console.log('🔍 New timeline item được tạo:', {
         id: newTimelineItem.id,
         trangThaiMoi: newTimelineItem.trangThaiMoi,
         hanhDong: newTimelineItem.hanhDong,
         thoiGian: newTimelineItem.thoiGian,
-        nowTimestamp: nowTimestamp
+        nowTimestamp: nowTimestamp,
       })
-      
+
       // Thêm vào timeline hiện tại ngay lập tức để UI cập nhật
       // Tạo array mới để đảm bảo Vue reactivity
       const updatedTimeline = [...timelineData.value, newTimelineItem]
-      
+
       // Log trước khi sort để debug
-      console.log('🔍 Trước khi sort:', updatedTimeline.map(item => ({
-        id: item.id,
-        trangThaiMoi: item.trangThaiMoi,
-        thoiGian: item.thoiGian
-      })))
-      
+      console.log(
+        '🔍 Trước khi sort:',
+        updatedTimeline.map((item) => ({
+          id: item.id,
+          trangThaiMoi: item.trangThaiMoi,
+          thoiGian: item.thoiGian,
+        }))
+      )
+
       // Sắp xếp lại timeline theo thời gian để đảm bảo thứ tự đúng (tăng dần)
       // Item mới (thêm vào cuối cùng) sẽ có thời gian mới nhất và ID lớn nhất
       updatedTimeline.sort((a, b) => {
@@ -807,7 +839,7 @@ const handleStatusChange = async (action: any) => {
             let normalized = timeStr.includes('T') ? timeStr : timeStr.replace(' ', 'T')
             const date = new Date(normalized)
             const timestamp = isNaN(date.getTime()) ? 0 : date.getTime()
-            
+
             // Nếu parse thành công, return timestamp
             // Nếu không parse được (timestamp = 0), dùng ID làm fallback
             return timestamp
@@ -818,16 +850,16 @@ const handleStatusChange = async (action: any) => {
         }
         const timeA = parseTime(a.thoiGian)
         const timeB = parseTime(b.thoiGian)
-        
+
         // Nếu cả hai đều không parse được thời gian, sort by ID
         if (timeA === 0 && timeB === 0) {
           return (a.id || 0) - (b.id || 0)
         }
-        
+
         // Nếu một trong hai không parse được, item có thời gian hợp lệ sẽ được ưu tiên
         if (timeA === 0) return -1 // a không có thời gian -> đưa lên đầu
-        if (timeB === 0) return 1   // b không có thời gian -> đưa lên đầu
-        
+        if (timeB === 0) return 1 // b không có thời gian -> đưa lên đầu
+
         // Nếu thời gian bằng nhau, sort by ID
         // Database IDs (dương) sẽ được ưu tiên hơn fallback IDs (âm)
         // Trong database IDs, ID lớn hơn (item mới hơn) sẽ ở cuối
@@ -842,27 +874,30 @@ const handleStatusChange = async (action: any) => {
           // Cả hai đều là fallback IDs, sort tăng dần
           return (a.id || 0) - (b.id || 0)
         }
-        
+
         // Sort tăng dần theo thời gian (cũ nhất -> mới nhất)
         return timeA - timeB
       })
-      
+
       // Log sau khi sort để debug
-      console.log('🔍 Sau khi sort:', updatedTimeline.map(item => ({
-        id: item.id,
-        trangThaiMoi: item.trangThaiMoi,
-        hanhDong: item.hanhDong,
-        thoiGian: item.thoiGian,
-        parsedTime: new Date(item.thoiGian.replace(' ', 'T')).getTime()
-      })))
-      
+      console.log(
+        '🔍 Sau khi sort:',
+        updatedTimeline.map((item) => ({
+          id: item.id,
+          trangThaiMoi: item.trangThaiMoi,
+          hanhDong: item.hanhDong,
+          thoiGian: item.thoiGian,
+          parsedTime: new Date(item.thoiGian.replace(' ', 'T')).getTime(),
+        }))
+      )
+
       // Update với array đã sắp xếp
       timelineData.value = updatedTimeline
-      
+
       console.log('✅ Đã thêm timeline mới vào danh sách (từ API):', newTimelineItem)
       console.log('📊 Tổng số timeline hiện tại:', timelineData.value.length)
       console.log('🔍 Trạng thái mới của timeline:', newTimelineItem.trangThaiMoi, '| Hanh dong:', newTimelineItem.hanhDong)
-      
+
       // Log để debug availableActions - phải lấy item cuối cùng SAU KHI SẮP XẾP
       const lastItem = timelineData.value[timelineData.value.length - 1]
       console.log('🔍 Last timeline item (SAU KHI SẮP XẾP):', {
@@ -870,39 +905,42 @@ const handleStatusChange = async (action: any) => {
         trangThaiMoi: lastItem.trangThaiMoi,
         hanhDong: lastItem.hanhDong,
         thoiGian: lastItem.thoiGian,
-        isNewItem: lastItem.id === newTimelineItem.id
+        isNewItem: lastItem.id === newTimelineItem.id,
       })
-      
+
       // Verify item mới có ở cuối không
       if (lastItem.id !== newTimelineItem.id) {
         console.error('❌ LỖI: Item mới KHÔNG ở cuối sau khi sort!')
         console.error('Item mới:', {
           id: newTimelineItem.id,
           trangThaiMoi: newTimelineItem.trangThaiMoi,
-          thoiGian: newTimelineItem.thoiGian
+          thoiGian: newTimelineItem.thoiGian,
         })
         console.error('Item cuối:', {
           id: lastItem.id,
           trangThaiMoi: lastItem.trangThaiMoi,
-          thoiGian: lastItem.thoiGian
+          thoiGian: lastItem.thoiGian,
         })
         // Force item mới vào cuối
-        timelineData.value = [...timelineData.value.filter(item => item.id !== newTimelineItem.id), newTimelineItem]
+        timelineData.value = [...timelineData.value.filter((item) => item.id !== newTimelineItem.id), newTimelineItem]
         console.log('✅ Đã force item mới vào cuối')
       }
-      
+
       // Log tất cả items để debug
-      console.log('📋 Tất cả timeline items (SAU KHI FIX):', timelineData.value.map(item => ({
-        id: item.id,
-        trangThaiMoi: item.trangThaiMoi,
-        hanhDong: item.hanhDong,
-        thoiGian: item.thoiGian
-      })))
-      
+      console.log(
+        '📋 Tất cả timeline items (SAU KHI FIX):',
+        timelineData.value.map((item) => ({
+          id: item.id,
+          trangThaiMoi: item.trangThaiMoi,
+          hanhDong: item.hanhDong,
+          thoiGian: item.thoiGian,
+        }))
+      )
+
       // Force Vue to recalculate computed property by triggering a reactive update
       // This ensures availableActions is recalculated immediately
-      await new Promise(resolve => setTimeout(resolve, 0))
-      
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
       // Không cần refresh ngay vì API đã trả về data đúng
       // Chỉ refresh nếu muốn đảm bảo đồng bộ sau vài giây (optional)
       // setTimeout(async () => {
@@ -923,12 +961,12 @@ const handleStatusChange = async (action: any) => {
       //     console.warn('⚠️ Lỗi khi refresh timeline từ server, giữ timeline hiện tại:', error)
       //   }
       // }, 3000)
-      
+
       alert('Cập nhật trạng thái thành công!')
     } catch (apiError: any) {
       // Nếu API lỗi, tạo timeline local tạm thời
       console.warn('API timeline lỗi, tạo timeline local:', apiError?.message)
-      
+
       const newTimelineItem: TimelineItem = {
         id: Date.now(), // ID tạm thời
         idHoaDon: id,
@@ -941,11 +979,11 @@ const handleStatusChange = async (action: any) => {
         ghiChu: (action.ghiChu || '') + ' (Lưu tạm thời - chờ API backend)',
         thoiGian: now,
       }
-      
+
       // Thêm vào timeline hiện tại
       // Tạo array mới để đảm bảo Vue reactivity
       const updatedTimeline = [...timelineData.value, newTimelineItem]
-      
+
       // Sắp xếp lại timeline theo thời gian (tăng dần)
       updatedTimeline.sort((a, b) => {
         // Parse thời gian: YYYY-MM-DD HH:mm:ss -> Date
@@ -962,43 +1000,46 @@ const handleStatusChange = async (action: any) => {
         }
         const timeA = parseTime(a.thoiGian)
         const timeB = parseTime(b.thoiGian)
-        
+
         // Nếu thời gian bằng nhau, sort by ID
         if (timeA === timeB) {
           return (a.id || 0) - (b.id || 0)
         }
-        
+
         // Sort tăng dần theo thời gian (cũ nhất -> mới nhất)
         return timeA - timeB
       })
-      
+
       // Update với array đã sắp xếp
       timelineData.value = updatedTimeline
-      
+
       console.log('✅ Đã thêm timeline local:', newTimelineItem)
       console.log('📊 Tổng số timeline hiện tại:', timelineData.value.length)
       console.log('🔍 Trạng thái mới của timeline:', newTimelineItem.trangThaiMoi, '| Hanh dong:', newTimelineItem.hanhDong)
-      
+
       // Log để debug availableActions - phải lấy item cuối cùng SAU KHI SẮP XẾP
       const lastItem = timelineData.value[timelineData.value.length - 1]
       console.log('🔍 Last timeline item (local, SAU KHI SẮP XẾP):', {
         id: lastItem.id,
         trangThaiMoi: lastItem.trangThaiMoi,
         hanhDong: lastItem.hanhDong,
-        thoiGian: lastItem.thoiGian
+        thoiGian: lastItem.thoiGian,
       })
-      
+
       // Log tất cả items để debug
-      console.log('📋 Tất cả timeline items (local):', timelineData.value.map(item => ({
-        id: item.id,
-        trangThaiMoi: item.trangThaiMoi,
-        hanhDong: item.hanhDong,
-        thoiGian: item.thoiGian
-      })))
-      
+      console.log(
+        '📋 Tất cả timeline items (local):',
+        timelineData.value.map((item) => ({
+          id: item.id,
+          trangThaiMoi: item.trangThaiMoi,
+          hanhDong: item.hanhDong,
+          thoiGian: item.thoiGian,
+        }))
+      )
+
       // Force Vue to recalculate computed property
-      await new Promise(resolve => setTimeout(resolve, 0))
-      
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
       alert('Cập nhật trạng thái thành công! (Lưu tạm thời - API backend chưa sẵn sàng)')
     }
   } catch (error: any) {
@@ -1007,9 +1048,9 @@ const handleStatusChange = async (action: any) => {
       message: error?.message,
       status: error?.response?.status,
       data: error?.response?.data,
-      stack: error?.stack
+      stack: error?.stack,
     })
-    
+
     // Hiển thị thông báo lỗi chi tiết hơn
     let errorMessage = 'Lỗi khi cập nhật trạng thái'
     if (error?.response?.data) {
@@ -1024,7 +1065,7 @@ const handleStatusChange = async (action: any) => {
     } else if (error?.message) {
       errorMessage += ': ' + error.message
     }
-    
+
     alert(errorMessage)
   } finally {
     actionLoading.value = null
@@ -1042,15 +1083,19 @@ onMounted(async () => {
 })
 
 // Watch prop để reload khi hoaDonId thay đổi
-watch(() => props.hoaDonId, async (newId, oldId) => {
-  console.log('🔄 hoaDonId thay đổi từ', oldId, '->', newId)
-  if (newId) {
-    await refreshTimeline()
-  } else {
-    timelineData.value = []
-    loading.value = false
-  }
-}, { immediate: false })
+watch(
+  () => props.hoaDonId,
+  async (newId, oldId) => {
+    console.log('🔄 hoaDonId thay đổi từ', oldId, '->', newId)
+    if (newId) {
+      await refreshTimeline()
+    } else {
+      timelineData.value = []
+      loading.value = false
+    }
+  },
+  { immediate: false }
+)
 </script>
 
 <style scoped>

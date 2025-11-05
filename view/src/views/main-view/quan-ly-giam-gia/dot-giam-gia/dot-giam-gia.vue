@@ -1,6 +1,5 @@
 <template>
   <div class="promotion-management-page">
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form :model="filters" layout="vertical">

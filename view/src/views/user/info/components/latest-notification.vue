@@ -56,9 +56,7 @@ const notificationStore = useNotificationStore()
 
 // Get latest 5 notifications (sorted by time desc)
 const latestNotifications = computed(() => {
-  return [...notificationStore.messages]
-    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-    .slice(0, 5)
+  return [...notificationStore.messages].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5)
 })
 
 // Format time to relative format

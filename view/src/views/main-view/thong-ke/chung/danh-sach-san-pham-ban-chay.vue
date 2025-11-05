@@ -9,7 +9,7 @@
         <a-option value="month">{{ $t('thongKe.topProducts.month') }}</a-option>
       </a-select>
     </template>
-    
+
     <div class="products-wrapper">
       <a-list :data="duLieuSanPham" :bordered="false">
         <template #item="{ item, index }">
@@ -18,12 +18,12 @@
               <template #avatar>
                 <a-badge :count="index + 1" :number-style="getBadgeStyle(index)">
                   <a-avatar :size="48" :style="getAvatarStyle(index)">
-                    <img v-if="item.image" :src="item.image" :alt="item.name" style="width: 100%; height: 100%; object-fit: cover;" />
-                    <icon-image v-else style="font-size: 24px;" />
+                    <img v-if="item.image" :src="item.image" :alt="item.name" style="width: 100%; height: 100%; object-fit: cover" />
+                    <icon-image v-else style="font-size: 24px" />
                   </a-avatar>
                 </a-badge>
               </template>
-              
+
               <template #title>
                 <div class="product-header">
                   <span class="product-name">{{ item.name }}</span>
@@ -33,7 +33,7 @@
                   </a-tag>
                 </div>
               </template>
-              
+
               <template #description>
                 <a-space :size="16" class="product-stats">
                   <span class="stat-item">
@@ -53,7 +53,7 @@
           </a-list-item>
         </template>
       </a-list>
-      
+
       <a-empty v-if="duLieuSanPham.length === 0" />
     </div>
   </a-card>
@@ -92,19 +92,19 @@ const getBadgeStyle = (index: number) => {
     return {
       backgroundColor: colors[index],
       color: '#fff',
-      fontWeight: 'bold'
+      fontWeight: 'bold',
     }
   }
   return {
     backgroundColor: 'rgb(var(--primary-6))',
-    color: '#fff'
+    color: '#fff',
   }
 }
 
 const getAvatarStyle = (index: number) => {
   return {
     background: 'var(--color-fill-2)',
-    border: '2px solid var(--color-border-2)'
+    border: '2px solid var(--color-border-2)',
   }
 }
 </script>

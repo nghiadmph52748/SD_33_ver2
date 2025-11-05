@@ -1,6 +1,5 @@
 <template>
   <div class="edit-employee-page">
-
     <!-- Card 1: Thông tin nhân viên -->
     <a-card title="Thông tin nhân viên" :loading="loading">
       <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">

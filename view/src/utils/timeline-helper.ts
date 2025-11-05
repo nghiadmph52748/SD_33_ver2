@@ -146,11 +146,7 @@ export async function createConfirmOrderTimeline(
  * @param idNhanVien - ID nhân viên
  * @param tenNhanVien - Tên nhân viên
  */
-export async function createCompleteOrderTimeline(
-  idHoaDon: number,
-  idNhanVien: number,
-  tenNhanVien?: string
-): Promise<void> {
+export async function createCompleteOrderTimeline(idHoaDon: number, idNhanVien: number, tenNhanVien?: string): Promise<void> {
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
 
   try {
@@ -170,4 +166,3 @@ export async function createCompleteOrderTimeline(
     throw error
   }
 }
-

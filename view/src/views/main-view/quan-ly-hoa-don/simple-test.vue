@@ -1,6 +1,5 @@
 <template>
   <div class="invoice-detail-page">
-
     <!-- Page Header -->
     <div class="page-header">
       <div class="header-content">

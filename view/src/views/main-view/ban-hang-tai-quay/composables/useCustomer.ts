@@ -1,9 +1,9 @@
 import { ref, computed, type Ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import { fetchCustomers } from '../services/customerService'
 import type { KhachHangResponse } from '@/api/khach-hang'
-import { updateCustomerForInvoice } from '../services/posService'
 import { useUserStore } from '@/store'
+import { fetchCustomers } from '../services/customerService'
+import { updateCustomerForInvoice } from '../services/posService'
 
 interface AddressInfo {
   thanhPho: string

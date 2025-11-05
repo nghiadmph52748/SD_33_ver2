@@ -254,9 +254,7 @@ const useChatStore = defineStore('chat', {
         // Cập nhật state local
         const userStore = useUserStore()
         // Try to find conversation by ID first, then fallback to sender lookup
-        let conversation = conversationId
-          ? this.conversations.find((c) => c.id === conversationId)
-          : null
+        let conversation = conversationId ? this.conversations.find((c) => c.id === conversationId) : null
 
         if (!conversation) {
           conversation = this.conversations.find(
@@ -269,7 +267,7 @@ const useChatStore = defineStore('chat', {
         if (conversation) {
           const conversationId = conversation.id
           console.log('Marking conversation as read:', conversationId, 'senderId:', senderId)
-          
+
           // Reset unread count - directly mutate to ensure reactivity
           const conversationIndex = this.conversations.findIndex((c) => c.id === conversationId)
           if (conversationIndex >= 0) {
@@ -280,12 +278,12 @@ const useChatStore = defineStore('chat', {
               this.conversations[conversationIndex].unreadCountNv2 = 0
               console.log('Reset unreadCountNv2 to 0')
             }
-            
+
             // Also update the conversation reference we have
             conversation.unreadCountNv1 = this.conversations[conversationIndex].unreadCountNv1
             conversation.unreadCountNv2 = this.conversations[conversationIndex].unreadCountNv2
           }
-          
+
           // Update total unread count immediately
           this.updateTotalUnreadCount()
           console.log('Updated total unread count:', this.totalUnreadCount)
@@ -422,35 +420,39 @@ const useChatStore = defineStore('chat', {
           const subscriptionDestination = `/user/queue/messages`
           console.log(`Subscribing to: ${subscriptionDestination} for user: ${username} (ID: ${userId})`)
 
-          const subscription = client.subscribe(subscriptionDestination, (message: IMessage) => {
-            console.log('========== RAW WEBSOCKET MESSAGE RECEIVED ==========')
-            console.log('Message headers:', message.headers)
-            console.log('Message body:', message.body)
-            console.log('===================================================')
-            
-            try {
-              const chatMessage: ChatMessage = JSON.parse(message.body)
-              console.log('📬 Parsed chat message:', chatMessage)
-              console.log('Message details:', {
-                id: chatMessage.id,
-                senderId: chatMessage.senderId,
-                receiverId: chatMessage.receiverId,
-                content: chatMessage.content?.substring(0, 50),
-              })
-              
-              this.handleIncomingMessage(chatMessage)
-              console.log('Message processed successfully')
-            } catch (err) {
-              console.error('Error parsing message:', err)
-              console.error('Raw message body:', message.body)
+          const subscription = client.subscribe(
+            subscriptionDestination,
+            (message: IMessage) => {
+              console.log('========== RAW WEBSOCKET MESSAGE RECEIVED ==========')
+              console.log('Message headers:', message.headers)
+              console.log('Message body:', message.body)
+              console.log('===================================================')
+
+              try {
+                const chatMessage: ChatMessage = JSON.parse(message.body)
+                console.log('📬 Parsed chat message:', chatMessage)
+                console.log('Message details:', {
+                  id: chatMessage.id,
+                  senderId: chatMessage.senderId,
+                  receiverId: chatMessage.receiverId,
+                  content: chatMessage.content?.substring(0, 50),
+                })
+
+                this.handleIncomingMessage(chatMessage)
+                console.log('Message processed successfully')
+              } catch (err) {
+                console.error('Error parsing message:', err)
+                console.error('Raw message body:', message.body)
+              }
+            },
+            {
+              // Add headers if needed
             }
-          }, {
-            // Add headers if needed
-          })
+          )
 
           console.log('Subscribed to messages:', subscription.id)
           console.log('Subscription destination:', subscriptionDestination)
-          
+
           // Store subscription for debugging
           ;(window as any).chatSubscription = subscription
 
@@ -605,7 +607,7 @@ const useChatStore = defineStore('chat', {
           }
         }
       }
-      
+
       console.log('✅ ========== MESSAGE HANDLING COMPLETE ==========')
     },
 

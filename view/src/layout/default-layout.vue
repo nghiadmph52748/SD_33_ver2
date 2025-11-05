@@ -47,11 +47,6 @@
           </a-layout-content>
           <Footer v-if="footer" />
 
-          <!-- Floating AI Button -->
-          <transition name="fade">
-            <FloatingAIButton v-if="userStore.id && !isOnAIChatbotPage" />
-          </transition>
-
           <!-- Floating Chat Button (ẩn khi đang ở trang /chat) -->
           <transition name="fade">
             <FloatingChatButton v-if="userStore.id && !isOnChatPage && !isOnAIChatbotPage" />
@@ -67,7 +62,6 @@ import Footer from '@/components/footer/footer.vue'
 import Menu from '@/components/menu/menu.vue'
 import NavBar from '@/components/navbar/navbar.vue'
 import FloatingChatButton from '@/components/chat/FloatingChatButton.vue'
-import FloatingAIButton from '@/components/ai/FloatingAIButton.vue'
 import usePermission from '@/hooks/permission'
 import useResponsive from '@/hooks/responsive'
 import { useAppStore, useUserStore } from '@/store'

@@ -12,15 +12,35 @@
     >
       <template #title>
         <div class="drawer-title">
-          <icon-message />
-          <span>{{ $t('chat.header.title') }}</span>
-          <a-badge v-if="chatStore.totalUnreadCount > 0" :count="chatStore.totalUnreadCount" :max-count="99" />
+          <div class="title-actions">
+            <a-button-group>
+              <a-button size="small" :type="headerMode === 'human' ? 'primary' : 'secondary'" @click="selectHeaderMode('human')">
+                Chat với nhân viên
+              </a-button>
+              <a-button size="small" :type="headerMode === 'ai' ? 'primary' : 'secondary'" @click="selectHeaderMode('ai')">
+                Chat AI
+              </a-button>
+            </a-button-group>
+          </div>
         </div>
       </template>
 
       <div class="drawer-content">
+        <!-- AI Chat -->
+        <div v-if="headerMode === 'ai'" class="ai-chat-container">
+          <a-card class="chatbot-card" :bordered="false">
+            <AIChatbot
+              ref="chatbotRef"
+              :suppress-connection-notice="true"
+              :enable-health-check="false"
+              :connection-status="aiConnected"
+              @session-state="handleSessionState"
+            />
+          </a-card>
+        </div>
+
         <!-- Conversation list -->
-        <div v-if="!activeConversation" class="conversation-list-mini">
+        <div v-else-if="headerMode === 'human' && !activeConversation" class="conversation-list-mini">
           <a-input-search v-model="searchKeyword" placeholder="Tìm kiếm..." class="search-box" />
 
           <a-spin :loading="chatStore.loadingConversations" class="conversations-spin">
@@ -47,7 +67,7 @@
         </div>
 
         <!-- Chat window mini -->
-        <div v-else class="chat-window-mini">
+        <div v-else-if="headerMode === 'human' && activeConversation" class="chat-window-mini">
           <div class="mini-header">
             <a-button type="text" size="small" @click="backToList">
               <template #icon>
@@ -98,7 +118,10 @@
     <!-- Floating chat button (moves up when scroll-to-top appears) -->
     <a-button type="primary" shape="circle" size="large" :class="['floating-btn', { 'moved-up': isScrolledDown }]" @click="toggleDrawer">
       <template #icon>
-        <icon-message :size="24" />
+        <span class="dual-icon">
+          <icon-message :size="22" />
+          <icon-robot :size="14" class="ai-mini" />
+        </span>
       </template>
       <!-- Connection status indicator -->
       <div
@@ -109,16 +132,19 @@
       />
       <a-badge v-if="chatStore.totalUnreadCount > 0" :count="chatStore.totalUnreadCount" :offset="[-8, 8]" />
     </a-button>
+    <!-- Single floating button used for both Chat and AI -->
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { IconMessage, IconUser, IconSend, IconLeft, IconCheckCircle, IconCheckCircleFill } from '@arco-design/web-vue/es/icon'
+import { IconMessage, IconUser, IconSend, IconLeft, IconCheckCircle, IconCheckCircleFill, IconRobot } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import dayjs from 'dayjs'
 import useChatStore from '@/store/modules/chat'
 import useUserStore from '@/store/modules/user'
+import AIChatbot from '@/components/ai/AIChatbot.vue'
+import { checkAIHealth } from '@/api/ai'
 
 const chatStore = useChatStore()
 const userStore = useUserStore()
@@ -128,6 +154,13 @@ const searchKeyword = ref('')
 const messageInput = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
 const isScrolledDown = ref(false)
+
+// AI assistant state
+const aiConnected = ref(false)
+const chatbotRef = ref<InstanceType<typeof AIChatbot> | null>(null)
+
+// Header mode toggle
+const headerMode = ref<'human' | 'ai'>('human')
 
 const activeConversation = computed(() => chatStore.activeConversation)
 const activeMessages = computed(() => chatStore.activeMessages)
@@ -167,6 +200,23 @@ function toggleDrawer() {
   if (drawerVisible.value && chatStore.conversations.length === 0) {
     chatStore.fetchConversations()
     chatStore.fetchUnreadCount()
+  }
+}
+
+function toggleAIModal() {
+  headerMode.value = 'ai'
+  drawerVisible.value = true
+  if (!aiConnected.value) {
+    checkAIConnection()
+  }
+}
+
+async function checkAIConnection() {
+  try {
+    await checkAIHealth()
+    aiConnected.value = true
+  } catch (error) {
+    aiConnected.value = false
   }
 }
 
@@ -234,6 +284,19 @@ function handleScroll() {
   // Reserved for future features
 }
 
+function handleSessionState(state: any) {
+  // Forward-looking hook for session state if needed
+  // eslint-disable-next-line no-console
+  console.log('Session state updated:', state)
+}
+
+function selectHeaderMode(mode: 'human' | 'ai') {
+  headerMode.value = mode
+  if (mode === 'ai' && !aiConnected.value) {
+    checkAIConnection()
+  }
+}
+
 // Auto-scroll when messages change
 watch(
   () => activeMessages.value.length,
@@ -253,14 +316,10 @@ watch(
     // Check if there's a new unread message
     if (Array.isArray(messages) && messages.length > 0) {
       const otherUserId =
-        userStore.id === activeConversation.value.nhanVien1Id
-          ? activeConversation.value.nhanVien2Id
-          : activeConversation.value.nhanVien1Id
+        userStore.id === activeConversation.value.nhanVien1Id ? activeConversation.value.nhanVien2Id : activeConversation.value.nhanVien1Id
 
       // Find new unread messages from the other user
-      const newUnreadMessages = messages.filter(
-        (msg: any) => msg.senderId === otherUserId && !msg.isRead
-      )
+      const newUnreadMessages = messages.filter((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
       if (newUnreadMessages.length > 0) {
         console.log(`📖 Auto-marking ${newUnreadMessages.length} new message(s) as read`)
@@ -293,6 +352,9 @@ onMounted(async () => {
   if (!chatStore.wsConnected && !chatStore.wsConnecting) {
     await chatStore.connectWebSocket()
   }
+
+  // Pre-check AI connection
+  await checkAIConnection()
 })
 
 // Cleanup on unmount
@@ -301,24 +363,38 @@ onUnmounted(() => {
   // It will be disconnected when user logs out
 })
 
+// Watch header mode changes
+watch(headerMode, async (mode) => {
+  if (mode === 'ai' && !aiConnected.value) {
+    await checkAIConnection()
+  }
+})
+
 // Connect WebSocket and scroll when drawer opens
 watch(drawerVisible, async (visible) => {
   if (visible) {
-    // Ensure WebSocket is connected
-    if (!chatStore.wsConnected && !chatStore.wsConnecting) {
-      await chatStore.connectWebSocket()
+    // If AI mode, check AI connection
+    if (headerMode.value === 'ai' && !aiConnected.value) {
+      await checkAIConnection()
     }
 
-    // Refresh conversations when drawer opens
-    if (chatStore.conversations.length === 0) {
-      await chatStore.fetchConversations()
-    }
-    await chatStore.fetchUnreadCount()
+    // Ensure WebSocket is connected for human chat
+    if (headerMode.value === 'human') {
+      if (!chatStore.wsConnected && !chatStore.wsConnecting) {
+        await chatStore.connectWebSocket()
+      }
 
-    // Scroll to bottom if already in a conversation
-    if (activeConversation.value) {
-      await nextTick()
-      scrollToBottom()
+      // Refresh conversations when drawer opens
+      if (chatStore.conversations.length === 0) {
+        await chatStore.fetchConversations()
+      }
+      await chatStore.fetchUnreadCount()
+
+      // Scroll to bottom if already in a conversation
+      if (activeConversation.value) {
+        await nextTick()
+        scrollToBottom()
+      }
     }
   }
 })
@@ -354,12 +430,10 @@ watch(
       messages.length > 0
     ) {
       const otherUserId = userStore.id === currentConv.nhanVien1Id ? currentConv.nhanVien2Id : currentConv.nhanVien1Id
-      
+
       // Check if there are unread messages from the other user
-      const hasUnreadMessages = messages.some(
-        (msg: any) => msg.senderId === otherUserId && !msg.isRead
-      )
-      
+      const hasUnreadMessages = messages.some((msg: any) => msg.senderId === otherUserId && !msg.isRead)
+
       if (hasUnreadMessages) {
         console.log('📖 Auto-marking messages as read (drawer open, viewing conversation)')
         try {
@@ -449,8 +523,31 @@ if (typeof window !== 'undefined') {
   }
 }
 
+.dual-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  :deep(.arco-icon) {
+    display: block;
+  }
+
+  .ai-mini {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    background: var(--color-bg-2);
+    border-radius: 50%;
+    padding: 1px;
+  }
+}
+
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -459,17 +556,106 @@ if (typeof window !== 'undefined') {
 }
 
 .drawer-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.title-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  justify-content: center;
+}
+
+/* Center header content and keep close button pinned right */
+.chat-drawer :deep(.arco-drawer-header) {
+  position: relative;
+  display: block;
+  text-align: center;
+}
+
+.chat-drawer :deep(.arco-drawer-header-title) {
+  display: inline-block;
+}
+
+.chat-drawer :deep(.arco-drawer-close-btn) {
+  position: absolute;
+  right: 16px;
 }
 
 .drawer-content {
   height: calc(100vh - 120px);
   display: flex;
   flex-direction: column;
+}
+
+.ai-chat-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .chatbot-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: none;
+    border: none;
+
+    :deep(.arco-card-body) {
+      flex: 1;
+      display: flex !important;
+      flex-direction: column !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      min-height: 0 !important;
+    }
+  }
+
+  :deep(.ai-chatbot) {
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+
+    .chatbot-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      box-shadow: none;
+      border: none;
+      min-height: 0;
+
+      :deep(.arco-card-header) {
+        flex-shrink: 0;
+      }
+
+      :deep(.arco-card-body) {
+        flex: 1;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        min-height: 0 !important;
+      }
+    }
+
+    .messages-container {
+      overflow-y: auto;
+      padding: 12px;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+    }
+
+    .input-container {
+      padding: 12px;
+      border-top: 1px solid var(--color-border-2);
+      background: var(--color-bg-2);
+      flex-shrink: 0 !important;
+    }
+  }
 }
 
 .conversation-list-mini {

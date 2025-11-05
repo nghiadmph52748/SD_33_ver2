@@ -11,129 +11,129 @@
     <a-row :gutter="16" style="padding: 0 20px; margin-top: 16px">
       <a-col :span="24">
         <div class="sidebar-grid">
-        <!-- Chat History Card -->
-        <a-card :title="$t('aiChatbot.history.title')" :bordered="false" style="margin-bottom: 16px">
-          <!-- Search box -->
-          <div style="margin-bottom: 12px">
-            <a-input-search v-model="searchQuery" :placeholder="$t('aiChatbot.history.search.placeholder')" allow-clear size="small" />
-          </div>
-          <div v-if="filteredSessions.length === 0" class="empty-history">
-            <a-empty :description="$t('aiChatbot.history.empty.description')" :image="false">
-              <template #description>
-                <span style="color: #86909c; font-size: 14px">{{ $t('aiChatbot.history.empty.subtitle') }}</span>
-              </template>
-            </a-empty>
-          </div>
+          <!-- Chat History Card -->
+          <a-card :title="$t('aiChatbot.history.title')" :bordered="false" style="margin-bottom: 16px">
+            <!-- Search box -->
+            <div style="margin-bottom: 12px">
+              <a-input-search v-model="searchQuery" :placeholder="$t('aiChatbot.history.search.placeholder')" allow-clear size="small" />
+            </div>
+            <div v-if="filteredSessions.length === 0" class="empty-history">
+              <a-empty :description="$t('aiChatbot.history.empty.description')" :image="false">
+                <template #description>
+                  <span style="color: #86909c; font-size: 14px">{{ $t('aiChatbot.history.empty.subtitle') }}</span>
+                </template>
+              </a-empty>
+            </div>
 
-          <div v-else class="chat-history">
-            <a-list :bordered="false" :split="false" size="small" :data="filteredSessions">
-              <template #item="{ item }">
-                <a-list-item :class="['session-item', { active: item.id === currentSessionId }]" @click="onSwitchSession(item.id)">
-                  <a-list-item-meta>
-                    <template #title>
-                      <div class="session-title">
-                        <span class="session-name">{{ item.name }}</span>
-                        <a-tag v-if="item.id === currentSessionId" size="small" color="blue">{{ $t('aiChatbot.history.active') }}</a-tag>
-                      </div>
-                    </template>
-                    <template #description>
-                      <div class="session-info">
-                        <span class="session-time">{{ formatSessionTime(item.id) }}</span>
-                        <span class="message-count">{{ $t('aiChatbot.history.messageCount', { count: item.messageCount }) }}</span>
-                      </div>
-                    </template>
-                  </a-list-item-meta>
-                </a-list-item>
-              </template>
-            </a-list>
-          </div>
-        </a-card>
+            <div v-else class="chat-history">
+              <a-list :bordered="false" :split="false" size="small" :data="filteredSessions">
+                <template #item="{ item }">
+                  <a-list-item :class="['session-item', { active: item.id === currentSessionId }]" @click="onSwitchSession(item.id)">
+                    <a-list-item-meta>
+                      <template #title>
+                        <div class="session-title">
+                          <span class="session-name">{{ item.name }}</span>
+                          <a-tag v-if="item.id === currentSessionId" size="small" color="blue">{{ $t('aiChatbot.history.active') }}</a-tag>
+                        </div>
+                      </template>
+                      <template #description>
+                        <div class="session-info">
+                          <span class="session-time">{{ formatSessionTime(item.id) }}</span>
+                          <span class="message-count">{{ $t('aiChatbot.history.messageCount', { count: item.messageCount }) }}</span>
+                        </div>
+                      </template>
+                    </a-list-item-meta>
+                  </a-list-item>
+                </template>
+              </a-list>
+            </div>
+          </a-card>
 
-        <!-- Quick Actions Card -->
-        <a-card :title="$t('aiChatbot.actions.title')" :bordered="false">
-          <a-space direction="vertical" :size="12" style="width: 100%">
-            <a-button type="primary" long @click="createNewChat">
-              <template #icon>
-                <icon-plus />
-              </template>
-              {{ $t('aiChatbot.actions.newChat') }}
-            </a-button>
-            <a-button type="outline" long @click="clearChatHistory">
-              <template #icon>
-                <icon-delete />
-              </template>
-              {{ $t('aiChatbot.actions.clearHistory') }}
-            </a-button>
-          </a-space>
-        </a-card>
+          <!-- Quick Actions Card -->
+          <a-card :title="$t('aiChatbot.actions.title')" :bordered="false">
+            <a-space direction="vertical" :size="12" style="width: 100%">
+              <a-button type="primary" long @click="createNewChat">
+                <template #icon>
+                  <icon-plus />
+                </template>
+                {{ $t('aiChatbot.actions.newChat') }}
+              </a-button>
+              <a-button type="outline" long @click="clearChatHistory">
+                <template #icon>
+                  <icon-delete />
+                </template>
+                {{ $t('aiChatbot.actions.clearHistory') }}
+              </a-button>
+            </a-space>
+          </a-card>
 
-        <!-- Info Card -->
-        <a-card :title="$t('aiChatbot.intro.title')" :bordered="false">
-          <p v-html="$t('aiChatbot.intro.description')"></p>
+          <!-- Info Card -->
+          <a-card :title="$t('aiChatbot.intro.title')" :bordered="false">
+            <p v-html="$t('aiChatbot.intro.description')"></p>
             <a-divider />
             <div class="feature-list">
-            <div class="feature-item">
-              <span class="icon">📊</span>
-              <span>{{ $t('aiChatbot.intro.bestSellers') }}</span>
+              <div class="feature-item">
+                <span class="icon">📊</span>
+                <span>{{ $t('aiChatbot.intro.bestSellers') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="icon">💰</span>
+                <span>{{ $t('aiChatbot.intro.revenueStats') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="icon">⚠️</span>
+                <span>{{ $t('aiChatbot.intro.lowStockWarning') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="icon">📋</span>
+                <span>{{ $t('aiChatbot.intro.orderStatus') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="icon">👥</span>
+                <span>{{ $t('aiChatbot.intro.topCustomers') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="icon">🎉</span>
+                <span>{{ $t('aiChatbot.intro.activeDiscounts') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="icon">👨‍💼</span>
+                <span>{{ $t('aiChatbot.intro.employeePerformance') }}</span>
+              </div>
+              <div class="feature-item">
+                <span class="icon">🛒</span>
+                <span>{{ $t('aiChatbot.intro.channelDistribution') }}</span>
+              </div>
             </div>
-            <div class="feature-item">
-              <span class="icon">💰</span>
-              <span>{{ $t('aiChatbot.intro.revenueStats') }}</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">⚠️</span>
-              <span>{{ $t('aiChatbot.intro.lowStockWarning') }}</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">📋</span>
-              <span>{{ $t('aiChatbot.intro.orderStatus') }}</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">👥</span>
-              <span>{{ $t('aiChatbot.intro.topCustomers') }}</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">🎉</span>
-              <span>{{ $t('aiChatbot.intro.activeDiscounts') }}</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">👨‍💼</span>
-              <span>{{ $t('aiChatbot.intro.employeePerformance') }}</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">🛒</span>
-              <span>{{ $t('aiChatbot.intro.channelDistribution') }}</span>
-            </div>
-          </div>
-        </a-card>
+          </a-card>
 
-        <!-- Tips Card -->
-        <a-card :title="$t('aiChatbot.tips.title')" :bordered="false">
-          <a-list :bordered="false" size="small">
-            <a-list-item>
-              <a-list-item-meta>
-                <template #description>{{ $t('aiChatbot.tips.useQuickActions') }}</template>
-              </a-list-item-meta>
-            </a-list-item>
-            <a-list-item>
-              <a-list-item-meta>
-                <template #description>{{ $t('aiChatbot.tips.naturalLanguage') }}</template>
-              </a-list-item-meta>
-            </a-list-item>
-            <a-list-item>
-              <a-list-item-meta>
-                <template #description>{{ $t('aiChatbot.tips.realData') }}</template>
-              </a-list-item-meta>
-            </a-list-item>
-            <a-list-item>
-              <a-list-item-meta>
-                <template #description>{{ $t('aiChatbot.tips.caching') }}</template>
-              </a-list-item-meta>
-            </a-list-item>
-          </a-list>
+          <!-- Tips Card -->
+          <a-card :title="$t('aiChatbot.tips.title')" :bordered="false">
+            <a-list :bordered="false" size="small">
+              <a-list-item>
+                <a-list-item-meta>
+                  <template #description>{{ $t('aiChatbot.tips.useQuickActions') }}</template>
+                </a-list-item-meta>
+              </a-list-item>
+              <a-list-item>
+                <a-list-item-meta>
+                  <template #description>{{ $t('aiChatbot.tips.naturalLanguage') }}</template>
+                </a-list-item-meta>
+              </a-list-item>
+              <a-list-item>
+                <a-list-item-meta>
+                  <template #description>{{ $t('aiChatbot.tips.realData') }}</template>
+                </a-list-item-meta>
+              </a-list-item>
+              <a-list-item>
+                <a-list-item-meta>
+                  <template #description>{{ $t('aiChatbot.tips.caching') }}</template>
+                </a-list-item-meta>
+              </a-list-item>
+            </a-list>
 
-          <a-divider />
-        </a-card>
+            <a-divider />
+          </a-card>
         </div>
       </a-col>
     </a-row>
@@ -242,7 +242,7 @@ function clearChatHistory() {
 // Global override to ensure layout-content is full height with no padding
 .layout-content {
   height: 100% !important;
-  
+
   .arco-layout-content {
     padding: 0 !important;
     height: 100% !important;

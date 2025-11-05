@@ -1,6 +1,5 @@
 <template>
   <div class="customer-detail-page">
-
     <!-- Card thông tin khách hàng -->
     <a-card title="Chi tiết khách hàng" class="detail-card" :loading="dangTai">
       <a-descriptions bordered column="2">

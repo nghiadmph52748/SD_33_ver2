@@ -1,6 +1,5 @@
 <template>
   <div class="product-attribute-image-page">
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form :model="filters" layout="vertical">

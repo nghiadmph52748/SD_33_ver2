@@ -50,9 +50,7 @@ export function useThongKeData() {
       // Use official product variant API
       const res = await getBienTheSanPhamList(0)
       const chiTietSanPham = res.data ?? []
-      danhSachChiTietSanPham.value = Array.isArray(chiTietSanPham)
-        ? (chiTietSanPham as unknown as ChiTietSanPham[])
-        : []
+      danhSachChiTietSanPham.value = Array.isArray(chiTietSanPham) ? (chiTietSanPham as unknown as ChiTietSanPham[]) : []
     } catch (error) {
       loi.value = 'Không thể tải chi tiết sản phẩm'
       danhSachChiTietSanPham.value = []

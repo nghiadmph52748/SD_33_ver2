@@ -3,7 +3,11 @@ import { Message } from '@arco-design/web-vue'
 import type { BienTheSanPham } from '@/api/san-pham/bien-the'
 import { deleteInvoice, createInvoice as svcCreateInvoice } from '../services/posService'
 
-interface CartItem { quantity: number; productId: string; productName: string }
+interface CartItem {
+  quantity: number
+  productId: string
+  productName: string
+}
 interface Order {
   id: string
   orderCode: string
@@ -75,7 +79,7 @@ export function useOrdersManager(params: {
             const orderBroadcastChannel = new BroadcastChannel('order-update-channel')
             orderBroadcastChannel.postMessage({
               type: 'ORDER_DELETED',
-              invoiceId: invoiceId,
+              invoiceId,
               orderCode: orderToDelete.orderCode,
               timestamp: new Date().toISOString(),
             })

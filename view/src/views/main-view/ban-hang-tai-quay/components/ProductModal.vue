@@ -1,5 +1,12 @@
 <template>
-  <a-modal :visible="visible" title="Chọn Sản Phẩm" width="90%" :footer="null" @cancel="$emit('cancel')" @update:visible="$emit('update:visible', $event)">
+  <a-modal
+    :visible="visible"
+    title="Chọn Sản Phẩm"
+    width="90%"
+    :footer="null"
+    @cancel="$emit('cancel')"
+    @update:visible="$emit('update:visible', $event)"
+  >
     <div style="margin-bottom: 16px">
       <a-input-search
         :model-value="searchText"
@@ -20,7 +27,14 @@
           />
         </a-col>
         <a-col :xs="24" :sm="12" :md="8" :lg="4">
-          <a-select :model-value="productFilters.tenDeGiay" placeholder="Đế" allow-clear :options="productSoleOptions" size="small" @change="$emit('update-filter', { key: 'tenDeGiay', value: $event })" />
+          <a-select
+            :model-value="productFilters.tenDeGiay"
+            placeholder="Đế"
+            allow-clear
+            :options="productSoleOptions"
+            size="small"
+            @change="$emit('update-filter', { key: 'tenDeGiay', value: $event })"
+          />
         </a-col>
         <a-col :xs="24" :sm="12" :md="8" :lg="4">
           <a-select
@@ -33,10 +47,24 @@
           />
         </a-col>
         <a-col :xs="24" :sm="12" :md="8" :lg="4">
-          <a-select :model-value="productFilters.tenXuatXu" placeholder="Xuất xứ" allow-clear :options="productOriginOptions" size="small" @change="$emit('update-filter', { key: 'tenXuatXu', value: $event })" />
+          <a-select
+            :model-value="productFilters.tenXuatXu"
+            placeholder="Xuất xứ"
+            allow-clear
+            :options="productOriginOptions"
+            size="small"
+            @change="$emit('update-filter', { key: 'tenXuatXu', value: $event })"
+          />
         </a-col>
         <a-col :xs="24" :sm="12" :md="8" :lg="4">
-          <a-select :model-value="productFilters.tenMauSac" placeholder="Màu Sắc" allow-clear :options="productColorOptions" size="small" @change="$emit('update-filter', { key: 'tenMauSac', value: $event })" />
+          <a-select
+            :model-value="productFilters.tenMauSac"
+            placeholder="Màu Sắc"
+            allow-clear
+            :options="productColorOptions"
+            size="small"
+            @change="$emit('update-filter', { key: 'tenMauSac', value: $event })"
+          />
         </a-col>
         <a-col :xs="24" :sm="12" :md="8" :lg="4">
           <a-select
@@ -74,7 +102,12 @@
     >
       <template #product="{ record }">
         <div style="display: flex; gap: 8px; align-items: center">
-          <img v-if="record.anhSanPham?.[0]" :src="record.anhSanPham[0]" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px" :alt="record.tenSanPham" />
+          <img
+            v-if="record.anhSanPham?.[0]"
+            :src="record.anhSanPham[0]"
+            style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px"
+            :alt="record.tenSanPham"
+          />
           <div>
             <div style="font-weight: 600; font-size: 13px">{{ record.tenSanPham }}</div>
             <div style="font-size: 11px; color: #999">Mã: {{ record.maChiTietSanPham }}</div>
@@ -108,7 +141,12 @@
       <template #variant="{ record }">
         <div style="font-size: 12px; display: flex; align-items: center; gap: 12px">
           <div v-if="record.tenMauSac" style="display: flex; align-items: center; gap: 6px">
-            <div v-if="record.maMau" style="width: 20px; height: 20px; border-radius: 3px; border: 1px solid #e5e5e5; background-color: #ffffff; flex-shrink: 0" :style="{ backgroundColor: record.maMau }" :title="record.maMau" />
+            <div
+              v-if="record.maMau"
+              style="width: 20px; height: 20px; border-radius: 3px; border: 1px solid #e5e5e5; background-color: #ffffff; flex-shrink: 0"
+              :style="{ backgroundColor: record.maMau }"
+              :title="record.maMau"
+            />
             <div>
               <div style="font-weight: 600; line-height: 1">{{ record.tenMauSac }}</div>
               <div v-if="record.maMau" style="font-size: 10px; color: #999; line-height: 1">{{ record.maMau }}</div>
@@ -151,7 +189,14 @@ import type { BienTheSanPham } from '@/api/san-pham/bien-the'
 const props = defineProps<{
   visible: boolean
   searchText: string
-  productFilters: { tenChatLieu: string | null; tenDeGiay: string | null; tenNhaSanXuat: string | null; tenXuatXu: string | null; tenMauSac: string | null; tenKichThuoc: string | null }
+  productFilters: {
+    tenChatLieu: string | null
+    tenDeGiay: string | null
+    tenNhaSanXuat: string | null
+    tenXuatXu: string | null
+    tenMauSac: string | null
+    tenKichThuoc: string | null
+  }
   productMaterialOptions: Array<{ label: string; value: any }>
   productSoleOptions: Array<{ label: string; value: any }>
   productManufacturerOptions: Array<{ label: string; value: any }>
@@ -182,6 +227,8 @@ const columns = [
 ]
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0)
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(
+    value || 0
+  )
 }
 </script>

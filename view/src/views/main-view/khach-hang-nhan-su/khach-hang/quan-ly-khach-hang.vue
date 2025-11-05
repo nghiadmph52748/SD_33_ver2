@@ -1,6 +1,5 @@
 <template>
   <div class="customer-management-page">
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form :model="boLoc" layout="vertical">

@@ -1,6 +1,5 @@
 <template>
   <div class="faq-page">
-
     <div class="faq-content">
       <div class="faq-section">
         <h2>Câu hỏi về đăng nhập và tài khoản</h2>

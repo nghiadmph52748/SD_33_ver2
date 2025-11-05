@@ -22,13 +22,33 @@
           {{ eligibleVouchersCount }}/{{ coupons.length }} voucher có thể sử dụng
         </div>
 
-        <div v-for="coupon in coupons" :key="coupon.id" style="border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 12px; overflow: hidden">
+        <div
+          v-for="coupon in coupons"
+          :key="coupon.id"
+          style="border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 12px; overflow: hidden"
+        >
           <div
             :class="{ 'voucher-disabled': !isVoucherEligibleFn(coupon) }"
-            style="display: flex; align-items: center; padding: 16px; background: #fafafa; border-bottom: 1px solid #e5e5e5; cursor: pointer; transition: all 0.3s;"
+            style="
+              display: flex;
+              align-items: center;
+              padding: 16px;
+              background: #fafafa;
+              border-bottom: 1px solid #e5e5e5;
+              cursor: pointer;
+              transition: all 0.3s;
+            "
             @click="isVoucherEligibleFn(coupon) ? $emit('select-voucher', coupon) : null"
-            @mouseenter="(e) => { if (isVoucherEligibleFn(coupon)) (e.currentTarget as HTMLElement).style.background = '#f0f9ff' }"
-            @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.background = '#fafafa' }"
+            @mouseenter="
+              (e) => {
+                if (isVoucherEligibleFn(coupon)) (e.currentTarget as HTMLElement).style.background = '#f0f9ff'
+              }
+            "
+            @mouseleave="
+              (e) => {
+                ;(e.currentTarget as HTMLElement).style.background = '#fafafa'
+              }
+            "
           >
             <div style="flex: 1">
               <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px">
@@ -45,7 +65,9 @@
                 <span v-if="!isVoucherEligibleFn(coupon)" style="color: #ff4d4f">{{ getVoucherStatusFn(coupon) }}</span>
                 <span v-else>
                   <span>💰 {{ getDiscountDisplayFn(coupon) }} giảm giá</span>
-                  <span v-if="coupon.hoaDonToiThieu" style="margin-left: 12px">Min: {{ formatCurrency(Number(coupon.hoaDonToiThieu)) }}</span>
+                  <span v-if="coupon.hoaDonToiThieu" style="margin-left: 12px">
+                    Min: {{ formatCurrency(Number(coupon.hoaDonToiThieu)) }}
+                  </span>
                   <span v-if="coupon.soLuongDung" style="margin-left: 12px">Còn: {{ coupon.soLuongDung }} lượt</span>
                   <span v-if="coupon.ngayKetThuc" style="margin-left: 12px">Hết hạn: {{ coupon.ngayKetThuc }}</span>
                 </span>
@@ -53,13 +75,28 @@
             </div>
 
             <div style="text-align: center; margin-left: 16px">
-              <div style="background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%); color: white; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+              <div
+                style="
+                  background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%);
+                  color: white;
+                  padding: 8px 16px;
+                  border-radius: 6px;
+                  font-size: 14px;
+                  font-weight: 600;
+                "
+              >
                 {{ getDiscountDisplayFn(coupon) }}
               </div>
             </div>
 
             <div style="margin-left: 16px">
-              <a-button type="primary" size="small" :disabled="!isVoucherEligibleFn(coupon)" @click.stop="$emit('select-voucher', coupon)" style="background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%); border: none">
+              <a-button
+                type="primary"
+                size="small"
+                :disabled="!isVoucherEligibleFn(coupon)"
+                @click.stop="$emit('select-voucher', coupon)"
+                style="background: linear-gradient(135deg, #f5222d 0%, #ff4d4f 100%); border: none"
+              >
                 {{ isVoucherEligibleFn(coupon) ? 'Chọn' : 'Không đủ ĐK' }}
               </a-button>
             </div>

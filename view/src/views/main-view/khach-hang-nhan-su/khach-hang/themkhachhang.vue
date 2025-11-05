@@ -1,6 +1,5 @@
 <template>
   <div class="add-customer-page">
-
     <!-- Card 1: Thông tin khách hàng -->
     <a-card title="Thông tin khách hàng" style="margin-bottom: 16px">
       <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">

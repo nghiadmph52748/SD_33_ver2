@@ -4,10 +4,10 @@
       <template #title>
         <div class="chatbot-header">
           <span class="title">
-            <img 
-              src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
-              alt="AI Icon" 
-              style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;"
+            <img
+              src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
+              alt="AI Icon"
+              style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px"
             />
             Trợ Lý AI
           </span>
@@ -28,21 +28,21 @@
           </div>
         </div>
 
-        <div v-for="msg in messages" :key="msg.id" :class="['message', msg.role, { 'suggestions-only': !msg.content && msg.followUpSuggestions }]">
+        <div
+          v-for="msg in messages"
+          :key="msg.id"
+          :class="['message', msg.role, { 'suggestions-only': !msg.content && msg.followUpSuggestions }]"
+        >
           <div class="message-wrapper">
             <div class="avatar">
-              <a-avatar
-                v-if="msg.role === 'user'"
-                :size="40"
-                :style="userAvatarStyle"
-              >
+              <a-avatar v-if="msg.role === 'user'" :size="40" :style="userAvatarStyle">
                 {{ userInitials }}
               </a-avatar>
               <img
                 v-else
                 src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
                 alt="AI"
-                style="width: 28px; height: 28px;"
+                style="width: 28px; height: 28px"
               />
             </div>
             <div class="content">
@@ -51,14 +51,14 @@
                 <!-- Loading indicator - when no thinking content yet -->
                 <div v-if="!msg.thinkingContent" class="processing-indicator">
                   <a-spin :size="16" />
-                  <span style="margin-left: 8px;">Đang suy nghĩ...</span>
+                  <span style="margin-left: 8px">Đang suy nghĩ...</span>
                   <span class="thinking-dots" aria-label="thinking">
                     <span class="dot" />
                     <span class="dot" />
                     <span class="dot" />
                   </span>
                 </div>
-                
+
                 <!-- Thinking Block - when thinking content exists -->
                 <div v-else class="thinking-block">
                   <a-collapse :default-active-key="['1']">
@@ -111,7 +111,16 @@
               </div>
 
               <!-- Follow-up Suggestions (only for messages WITHOUT content AND not processing) -->
-              <div v-if="msg.role === 'assistant' && msg.isSuggestionsOnly === true && msg.followUpSuggestions && msg.followUpSuggestions.length > 0 && !isProcessing" class="follow-up-suggestions">
+              <div
+                v-if="
+                  msg.role === 'assistant' &&
+                  msg.isSuggestionsOnly === true &&
+                  msg.followUpSuggestions &&
+                  msg.followUpSuggestions.length > 0 &&
+                  !isProcessing
+                "
+                class="follow-up-suggestions"
+              >
                 <a-space wrap :size="6" class="suggestions-buttons">
                   <a-button
                     v-for="(suggestion, idx) in msg.followUpSuggestions"
@@ -146,10 +155,10 @@
         <div v-if="loading" class="message assistant">
           <div class="message-wrapper">
             <div class="avatar">
-              <img 
-                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image" 
-                alt="AI" 
-                style="width: 28px; height: 28px;"
+              <img
+                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
+                alt="AI"
+                style="width: 28px; height: 28px"
               />
             </div>
             <div class="content">
@@ -222,7 +231,7 @@ interface SessionState {
 }
 
 // Props
-const props = defineProps<{ 
+const props = defineProps<{
   suppressConnectionNotice?: boolean
   enableHealthCheck?: boolean
   connectionStatus?: boolean
@@ -434,7 +443,7 @@ function loadHistory() {
       messages.value = [...chatSessions.value[currentSessionId.value]]
       normalizeSuggestionMessages(messages.value)
       const hasSuggestionCard = messages.value.some(
-        msg => msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content && Array.isArray(msg.followUpSuggestions)
+        (msg) => msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content && Array.isArray(msg.followUpSuggestions)
       )
 
       // Add separate suggestions message if it's just the welcome message
@@ -462,7 +471,7 @@ function loadHistory() {
           messages.value = parsed
           normalizeSuggestionMessages(messages.value)
           const hasSuggestionCard = messages.value.some(
-            msg => msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content && Array.isArray(msg.followUpSuggestions)
+            (msg) => msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content && Array.isArray(msg.followUpSuggestions)
           )
           // Add separate suggestions message if it's just the welcome message
           if (!hasSuggestionCard && messages.value.length === 1 && messages.value[0].id === 0 && messages.value[0].role === 'assistant') {
@@ -557,12 +566,10 @@ async function sendMessage(text: string = input.value) {
   isProcessing.value = true
 
   // Remove suggestions-only messages before sending new message
-  messages.value = messages.value.filter(
-    msg => !(msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content)
-  )
+  messages.value = messages.value.filter((msg) => !(msg.role === 'assistant' && msg.isSuggestionsOnly === true && !msg.content))
 
   // Clear followUpSuggestions from ALL previous messages to hide old suggestions
-  messages.value.forEach(msg => {
+  messages.value.forEach((msg) => {
     if (msg.role === 'assistant' && msg.followUpSuggestions) {
       msg.followUpSuggestions = undefined
     }
@@ -958,7 +965,7 @@ watch(
     if (currentSessionId.value) {
       saveHistory()
     }
-    
+
     // Auto-scroll after message updates
     nextTick(() => {
       scrollToBottom()
@@ -1063,7 +1070,7 @@ defineExpose({
     }
   }
 
-.message {
+  .message {
     margin-bottom: 16px;
     animation: fadeIn 0.3s ease-in;
 
@@ -1743,9 +1750,15 @@ defineExpose({
       animation: typingDot 1.4s infinite;
     }
 
-    .dot:nth-child(1) { animation-delay: 0s; }
-    .dot:nth-child(2) { animation-delay: 0.2s; }
-    .dot:nth-child(3) { animation-delay: 0.4s; }
+    .dot:nth-child(1) {
+      animation-delay: 0s;
+    }
+    .dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    .dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
   }
 
   .streaming-cursor {

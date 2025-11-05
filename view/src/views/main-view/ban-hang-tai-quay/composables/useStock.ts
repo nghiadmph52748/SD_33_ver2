@@ -12,14 +12,12 @@ interface Order {
   items: CartItem[]
 }
 
-export function useStock(params: {
-  currentOrder: Ref<Order | null>
-  allProductVariants: Ref<BienTheSanPham[]>
-}) {
+export function useStock(params: { currentOrder: Ref<Order | null>; allProductVariants: Ref<BienTheSanPham[]> }) {
   const { currentOrder, allProductVariants } = params
 
   const insufficientStockItems = computed(() => {
-    if (!currentOrder.value) return [] as Array<{ id: string; productName: string; requiredQty: number; currentStock: number; shortageQty: number }>
+    if (!currentOrder.value)
+      return [] as Array<{ id: string; productName: string; requiredQty: number; currentStock: number; shortageQty: number }>
     return currentOrder.value.items
       .map((cartItem) => {
         const product = allProductVariants.value.find((p) => p.id === parseInt(cartItem.productId))
@@ -39,7 +37,8 @@ export function useStock(params: {
   })
 
   const overStockItems = computed(() => {
-    if (!currentOrder.value) return [] as Array<{ id: string; productName: string; requiredQty: number; currentStock: number; shortageQty: number }>
+    if (!currentOrder.value)
+      return [] as Array<{ id: string; productName: string; requiredQty: number; currentStock: number; shortageQty: number }>
     return currentOrder.value.items
       .map((cartItem) => {
         const product = allProductVariants.value.find((p) => p.id === parseInt(cartItem.productId))

@@ -1,6 +1,5 @@
 <template>
   <div class="staff-management-page">
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form :model="boLoc" layout="vertical">
