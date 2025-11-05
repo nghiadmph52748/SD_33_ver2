@@ -1,7 +1,11 @@
 import { ref, type Ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
-import { updatePaymentMethod as svcUpdatePaymentMethod, updateShippingMethod as svcUpdateShippingMethod, updateVoucher as svcUpdateVoucher } from '../services/posService'
+import {
+  updatePaymentMethod as svcUpdatePaymentMethod,
+  updateShippingMethod as svcUpdateShippingMethod,
+  updateVoucher as svcUpdateVoucher,
+} from '../services/posService'
 import { fetchProvinces, fetchDistrictsByProvinceCode, fetchWardsByDistrictCode } from '../services/locationService'
 
 interface Customer {
@@ -10,6 +14,12 @@ interface Customer {
   phone: string
   email?: string
   address?: string
+  addressInfo?: {
+    thanhPho: string
+    quan: string
+    phuong: string
+    diaChiCuThe: string
+  }
 }
 
 interface OrderItem {
@@ -36,7 +46,7 @@ interface WardOption {
   label: string
 }
 
-export function usePayment(params: { currentOrder: Ref<Order | null> }) {
+export default function usePayment(params: { currentOrder: Ref<Order | null> }) {
   const { currentOrder } = params
   const userStore = useUserStore()
 
@@ -96,9 +106,10 @@ export function usePayment(params: { currentOrder: Ref<Order | null> }) {
     const province = provinces.value.find((p) => p.value === value)
     if (province) {
       try {
-        walkInLocation.value.districts = await fetchDistrictsByProvinceCode(province.code)
-      } catch (error) {
-        console.error('Error loading districts:', error)
+        const districts = await fetchDistrictsByProvinceCode(province.code)
+        walkInLocation.value.districts = [...districts]
+      } catch {
+        // District loading failed
       }
     }
   }
@@ -111,10 +122,75 @@ export function usePayment(params: { currentOrder: Ref<Order | null> }) {
     const district = walkInLocation.value.districts.find((d) => d.value === value)
     if (district) {
       try {
-        walkInLocation.value.wards = await fetchWardsByDistrictCode(district.code)
-      } catch (error) {
-        console.error('Error loading wards:', error)
+        const wards = await fetchWardsByDistrictCode(district.code)
+        walkInLocation.value.wards = [...wards]
+      } catch {
+        // Ward loading failed
       }
+    }
+  }
+
+  /**
+   * Fill walk-in location when customer address is selected
+   * Use structured address data (addressInfo) if available, or parse address string
+   */
+  const fillWalkInLocationFromCustomer = (customer: Customer | null) => {
+    if (!customer) {
+      // Reset if no customer
+      walkInLocation.value = {
+        thanhPho: '',
+        quan: '',
+        phuong: '',
+        diaChiCuThe: '',
+        districts: [],
+        wards: [],
+      }
+      return
+    }
+
+    // Prefer structured address data if available
+    if (customer.addressInfo) {
+      walkInLocation.value.thanhPho = customer.addressInfo.thanhPho || ''
+      walkInLocation.value.quan = customer.addressInfo.quan || ''
+      walkInLocation.value.phuong = customer.addressInfo.phuong || ''
+
+      // Extract only specific address (Số nhà, Đường) - remove ward/district if present
+      let specificAddress = customer.addressInfo.diaChiCuThe || ''
+      // If address contains ward/district names, try to remove them
+      if (specificAddress && (customer.addressInfo.phuong || customer.addressInfo.quan)) {
+        const phuongName = customer.addressInfo.phuong
+        const quanName = customer.addressInfo.quan
+        // Remove ward and district from end of address
+        if (phuongName) {
+          specificAddress = specificAddress.replace(`, ${phuongName}`, '').replace(`${phuongName}`, '')
+        }
+        if (quanName) {
+          specificAddress = specificAddress.replace(`, ${quanName}`, '').replace(`${quanName}`, '')
+        }
+        // Clean up extra commas
+        specificAddress = specificAddress.replace(/,\s*$/, '').trim()
+      }
+      walkInLocation.value.diaChiCuThe = specificAddress
+      return
+    }
+
+    // Fallback to parsing address string
+    if (!customer.address) {
+      walkInLocation.value.diaChiCuThe = ''
+      return
+    }
+
+    // Store address in diaChiCuThe (already should be just specific address from loadCustomers)
+    walkInLocation.value.diaChiCuThe = customer.address
+
+    // Try to extract province from address by matching with provinces list
+    const addressParts = customer.address.split(',').map((p) => p.trim())
+    const matchedProvince = addressParts
+      .map((part) => provinces.value.find((p) => p.value.toLowerCase() === part.toLowerCase()))
+      .find((p) => p !== undefined)
+
+    if (matchedProvince) {
+      walkInLocation.value.thanhPho = matchedProvince.value
     }
   }
 
@@ -171,6 +247,7 @@ export function usePayment(params: { currentOrder: Ref<Order | null> }) {
     loadProvinces,
     onWalkInProvinceChange,
     onWalkInDistrictChange,
+    fillWalkInLocationFromCustomer,
 
     handleCashAmountChange,
     handleTransferAmountChange,

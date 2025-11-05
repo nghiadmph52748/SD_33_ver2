@@ -5,12 +5,20 @@ import type { KhachHangResponse } from '@/api/khach-hang'
 import { updateCustomerForInvoice } from '../services/posService'
 import { useUserStore } from '@/store'
 
+interface AddressInfo {
+  thanhPho: string
+  quan: string
+  phuong: string
+  diaChiCuThe: string
+}
+
 interface Customer {
   id: string
   name: string
   phone: string
   email?: string
   address?: string
+  addressInfo?: AddressInfo
 }
 
 interface Order {
@@ -52,13 +60,23 @@ export function useCustomer(params: { currentOrder: Ref<Order | null> }) {
     try {
       const customersResponse = await fetchCustomers()
       if (customersResponse) {
-        customers.value = customersResponse.map((c: KhachHangResponse) => ({
-          id: c.id.toString(),
-          name: c.tenKhachHang,
-          phone: c.soDienThoai,
-          email: c.email,
-          address: c.listDiaChi?.[0]?.diaChiCuThe || '',
-        }))
+        customers.value = customersResponse.map((c: KhachHangResponse) => {
+          const defaultAddress = c.listDiaChi?.[0]
+
+          return {
+            id: c.id.toString(),
+            name: c.tenKhachHang,
+            phone: c.soDienThoai,
+            email: c.email,
+            address: defaultAddress?.diaChiCuThe || '',
+            addressInfo: {
+              thanhPho: defaultAddress?.thanhPho || '',
+              quan: defaultAddress?.quan || '',
+              phuong: defaultAddress?.phuong || '',
+              diaChiCuThe: defaultAddress?.diaChiCuThe || '',
+            },
+          }
+        })
       }
     } catch (error: any) {
       console.error('Không thể tải danh sách khách hàng:', error)

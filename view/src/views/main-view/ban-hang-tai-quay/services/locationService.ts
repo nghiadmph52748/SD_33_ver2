@@ -1,17 +1,72 @@
+// GHN API for Vietnam location data
+const GHN_TOKEN = import.meta.env.VITE_GHN_TOKEN || ''
+
 export async function fetchProvinces() {
-  const res = await fetch('https://provinces.open-api.vn/api/p/')
-  const data = await res.json()
-  return data.map((p: any) => ({ value: p.name, label: p.name, code: p.code }))
+  try {
+    const res = await fetch('https://online-gateway.ghn.vn/shiip/public-api/master-data/province', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Token: GHN_TOKEN,
+      },
+    })
+    if (!res.ok) return []
+    const response = await res.json()
+    if (!response.data) return []
+    return response.data.map((p: any) => ({
+      value: p.ProvinceName,
+      label: p.ProvinceName,
+      code: p.ProvinceID,
+    }))
+  } catch {
+    return []
+  }
 }
 
 export async function fetchDistrictsByProvinceCode(code: number) {
-  const res = await fetch(`https://provinces.open-api.vn/api/p/${code}?depth=2`)
-  const data = await res.json()
-  return data.districts.map((d: any) => ({ value: d.name, label: d.name, code: d.code }))
+  try {
+    const res = await fetch('https://online-gateway.ghn.vn/shiip/public-api/master-data/district', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Token: GHN_TOKEN,
+      },
+    })
+    if (!res.ok) return []
+    const response = await res.json()
+    if (!response.data) return []
+    // Filter by ProvinceID since API doesn't filter client-side
+    const filtered = response.data.filter((d: any) => d.ProvinceID === code)
+    return filtered.map((d: any) => ({
+      value: d.DistrictName,
+      label: d.DistrictName,
+      code: d.DistrictID,
+    }))
+  } catch {
+    return []
+  }
 }
 
 export async function fetchWardsByDistrictCode(code: number) {
-  const res = await fetch(`https://provinces.open-api.vn/api/d/${code}?depth=2`)
-  const data = await res.json()
-  return data.wards.map((w: any) => ({ value: w.name, label: w.name }))
+  try {
+    const res = await fetch('https://online-gateway.ghn.vn/shiip/public-api/master-data/ward', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Token: GHN_TOKEN,
+      },
+      body: JSON.stringify({
+        district_id: code,
+      }),
+    })
+    if (!res.ok) return []
+    const response = await res.json()
+    if (!response.data) return []
+    return response.data.map((w: any) => ({
+      value: w.WardName,
+      label: w.WardName,
+    }))
+  } catch {
+    return []
+  }
 }

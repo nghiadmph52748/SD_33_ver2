@@ -56,84 +56,74 @@
       />
 
       <div v-if="orderType === 'delivery'" style="margin-bottom: 16px">
-        <a-alert v-if="selectedCustomer?.address" type="info" style="margin-bottom: 12px">
-          <template #icon>
-            <icon-info-circle />
-          </template>
-          <div style="font-size: 12px">
-            <strong>Đơn giao hàng</strong>
-            <p style="margin: 4px 0 0 0; color: #666">Địa chỉ nhận hàng: {{ selectedCustomer.address }}</p>
-          </div>
-        </a-alert>
+        <a-divider orientation="left" style="margin: 12px 0">Địa chỉ giao hàng</a-divider>
 
-        <div v-if="isWalkIn">
-          <a-divider orientation="left" style="margin: 12px 0">Địa chỉ giao hàng</a-divider>
-          <a-row :gutter="[12, 12]">
-            <a-col :span="12">
-              <a-form-item label="Tỉnh/Thành phố" required>
-                <a-select
-                  :model-value="walkInLocation.thanhPho"
-                  placeholder="-- Chọn tỉnh/thành phố --"
-                  :options="provinces"
-                  @change="$emit('change:province', $event)"
-                  option-label-prop="label"
-                  allow-search
-                  allow-clear
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
-              <a-form-item label="Quận/Huyện" required>
-                <a-select
-                  :model-value="walkInLocation.quan"
-                  placeholder="-- Chọn quận/huyện --"
-                  :options="walkInLocation.districts"
-                  @change="$emit('change:district', $event)"
-                  option-label-prop="label"
-                  allow-search
-                  allow-clear
-                  :disabled="!walkInLocation.thanhPho"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
-              <a-form-item label="Phường/Xã" required>
-                <a-select
-                  :model-value="walkInLocation.phuong"
-                  placeholder="-- Chọn phường/xã --"
-                  :options="walkInLocation.wards"
-                  option-label-prop="label"
-                  allow-search
-                  allow-clear
-                  :disabled="!walkInLocation.quan"
-                  @change="$emit('update:walkin-ward', $event)"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
-              <a-form-item label="Địa chỉ cụ thể" required>
-                <a-input
-                  :model-value="walkInLocation.diaChiCuThe"
-                  placeholder="Số nhà, đường..."
-                  @update:model-value="$emit('update:walkin-address', $event)"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
+        <!-- Unified address form for both registered and walk-in customers -->
+        <a-row :gutter="[12, 12]">
+          <a-col :span="12">
+            <a-form-item label="Tỉnh/Thành phố" required>
+              <a-select
+                :model-value="walkInLocation.thanhPho"
+                placeholder="-- Chọn tỉnh/thành phố --"
+                :options="provinces"
+                @change="$emit('change:province', $event)"
+                @update:model-value="$emit('change:province', $event)"
+                option-label-prop="label"
+                allow-search
+                allow-clear
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="Quận/Huyện" required>
+              <a-select
+                :model-value="walkInLocation.quan"
+                placeholder="-- Chọn quận/huyện --"
+                :options="walkInLocation.districts"
+                @change="$emit('change:district', $event)"
+                @update:model-value="$emit('change:district', $event)"
+                option-label-prop="label"
+                allow-search
+                allow-clear
+                :disabled="!walkInLocation.thanhPho"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="Phường/Xã" required>
+              <a-select
+                :model-value="walkInLocation.phuong"
+                placeholder="-- Chọn phường/xã --"
+                :options="walkInLocation.wards"
+                option-label-prop="label"
+                allow-search
+                allow-clear
+                :disabled="!walkInLocation.quan"
+                @change="$emit('update:walkin-ward', $event)"
+                @update:model-value="$emit('update:walkin-ward', $event)"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="Địa chỉ cụ thể" required>
+              <a-input
+                :model-value="walkInLocation.diaChiCuThe"
+                placeholder="Số nhà, đường..."
+                @update:model-value="$emit('update:walkin-address', $event)"
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
 
-        <a-form-item label="Phí Vận Chuyển" required>
-          <a-input-number
-            :model-value="shippingFee"
-            :min="0"
-            placeholder="Nhập phí vận chuyển"
-            style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
-            :precision="0"
-            :formatter="(value) => formatCurrency(value || 0)"
-            :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
-            @update:model-value="$emit('update:shippingFee', $event || 0)"
-          />
-        </a-form-item>
+        <!-- Shipping Fee Calculator Component -->
+        <ShippingFeeCalculator
+          :order-type="orderType"
+          :selected-customer="selectedCustomer"
+          :is-walk-in="isWalkIn"
+          :walk-in-location="walkInLocation"
+          :subtotal="subtotal"
+          @update:shipping-fee="$emit('update:shippingFee', $event)"
+        />
       </div>
 
       <a-form-item :model="{}" label="Phương Thức Thanh Toán">
@@ -246,6 +236,7 @@ import type { CouponApiModel } from '@/api/discount-management'
 import BestVoucherSuggestionCard from './BestVoucherSuggestionCard.vue'
 import BetterVoucherWarningCard from './BetterVoucherWarningCard.vue'
 import VoucherAlmostEligible from './VoucherAlmostEligible.vue'
+import ShippingFeeCalculator from './ShippingFeeCalculator.vue'
 import { formatCurrency } from '../utils'
 
 defineProps<{

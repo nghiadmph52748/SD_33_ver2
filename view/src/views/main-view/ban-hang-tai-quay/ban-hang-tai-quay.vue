@@ -227,7 +227,7 @@ import { useQrScanner } from './composables/useQrScanner'
 import { useCart } from './composables/useCart'
 import { useProductModal } from './composables/useProductModal'
 import { useCustomer } from './composables/useCustomer'
-import { usePayment } from './composables/usePayment'
+import usePayment from './composables/usePayment'
 import { useCheckout } from './composables/useCheckout'
 import { useCartActions } from './composables/useCartActions'
 import { useOrdersManager } from './composables/useOrdersManager'
@@ -363,6 +363,7 @@ const {
   loadProvinces,
   onWalkInProvinceChange,
   onWalkInDistrictChange,
+  fillWalkInLocationFromCustomer,
   handleCashAmountChange,
   handleTransferAmountChange,
   clearVoucher,
@@ -459,12 +460,14 @@ const handleCustomerChange = async (customerId: string) => {
     // Wait for Vue to update the DOM and computed properties after updateCustomerId was called
     await nextTick()
 
+    // Fill walk-in location from selected customer address
+    fillWalkInLocationFromCustomer(selectedCustomer.value)
+
     // Call API to update customer - pass walkInLocation for walk-in customers
     await updateInvoiceCustomer(invoiceId, walkInLocation)
 
     Message.success('Khách hàng đã được cập nhật')
   } catch (error) {
-    console.error('Lỗi cập nhật khách hàng:', error)
     Message.error(error.message || 'Có lỗi xảy ra khi cập nhật khách hàng')
   }
 }
