@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue'
 import type { CouponApiModel } from '@/api/discount-management'
 import { Message, Modal } from '@arco-design/web-vue'
+import { findAlmostEligibleVoucher, type VoucherSuggestion } from '../services/voucherSuggestionService'
 
 interface CartItem {
   price: number
@@ -103,6 +104,14 @@ export function useVoucher(params: {
     return true
   }
 
+  const almostEligibleSuggestion = computed<VoucherSuggestion | null>(() => {
+    try {
+      return findAlmostEligibleVoucher(coupons.value, subtotal.value, calculateVoucherDiscount, selectedCoupon.value, 200000)
+    } catch (e) {
+      return null
+    }
+  })
+
   const showVoucherSuggestion = (betterVoucher: CouponApiModel) => {
     const currentDiscount = selectedCoupon.value ? calculateVoucherDiscount(selectedCoupon.value) : 0
     const newDiscount = calculateVoucherDiscount(betterVoucher)
@@ -148,5 +157,6 @@ export function useVoucher(params: {
     getDiscountDisplay,
     isVoucherEligible,
     showVoucherSuggestion,
+    almostEligibleSuggestion,
   }
 }

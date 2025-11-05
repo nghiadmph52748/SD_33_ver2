@@ -17,7 +17,17 @@
           size="large"
           type="secondary"
           :disabled="!hasEligibleVouchers"
-          style="height: 56px; font-size: 15px; border: 1px solid #d9d9d9; background: transparent; color: #000; display: flex; justify-content: space-between; align-items: center; padding: 0 16px;"
+          style="
+            height: 56px;
+            font-size: 15px;
+            border: 1px solid #d9d9d9;
+            background: transparent;
+            color: #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+          "
           @click="$emit('open-voucher')"
         >
           <span style="font-weight: 500; text-align: left">Phiếu Giảm Giá</span>
@@ -27,7 +37,14 @@
         </a-button>
       </a-form-item>
 
-      <BestVoucherSuggestionCard v-if="!selectedCoupon && bestVoucher" :best-voucher="bestVoucher as any" :calculate-voucher-discount="calculateVoucherDiscount as any" @select="$emit('select-best')" />
+      <VoucherAlmostEligible v-if="almostEligibleSuggestion" :suggestion="almostEligibleSuggestion" @open-voucher="$emit('open-voucher')" />
+
+      <BestVoucherSuggestionCard
+        v-if="!selectedCoupon && bestVoucher"
+        :best-voucher="bestVoucher as any"
+        :calculate-voucher-discount="calculateVoucherDiscount as any"
+        @select="$emit('select-best')"
+      />
 
       <BetterVoucherWarningCard
         v-if="hasBetterVoucher && bestVoucher && selectedCoupon"
@@ -95,7 +112,11 @@
             </a-col>
             <a-col :span="12">
               <a-form-item label="Địa chỉ cụ thể" required>
-                <a-input :model-value="walkInLocation.diaChiCuThe" placeholder="Số nhà, đường..." @update:model-value="$emit('update:walkin-address', $event)" />
+                <a-input
+                  :model-value="walkInLocation.diaChiCuThe"
+                  placeholder="Số nhà, đường..."
+                  @update:model-value="$emit('update:walkin-address', $event)"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -123,7 +144,12 @@
         </a-radio-group>
       </a-form-item>
 
-      <a-form-item v-if="paymentForm.method === 'cash' || paymentForm.method === 'both'" label="Tiền Mặt" class="cash-input-container" style="transition: all 0.3s ease">
+      <a-form-item
+        v-if="paymentForm.method === 'cash' || paymentForm.method === 'both'"
+        label="Tiền Mặt"
+        class="cash-input-container"
+        style="transition: all 0.3s ease"
+      >
         <a-input-number
           :model-value="paymentForm.cashReceived"
           :min="0"
@@ -137,7 +163,12 @@
         />
       </a-form-item>
 
-      <a-form-item v-if="paymentForm.method === 'transfer' || paymentForm.method === 'both'" label="Chuyển Khoản" class="transfer-input-container" style="transition: all 0.3s ease">
+      <a-form-item
+        v-if="paymentForm.method === 'transfer' || paymentForm.method === 'both'"
+        label="Chuyển Khoản"
+        class="transfer-input-container"
+        style="transition: all 0.3s ease"
+      >
         <a-input-number
           :model-value="paymentForm.transferReceived"
           :min="0"
@@ -156,7 +187,13 @@
         <p v-if="paymentForm.method === 'both'">Số tiền chuyển khoản: {{ formatCurrency(paymentForm.transferReceived || 0) }}</p>
       </a-alert>
 
-      <a-alert v-if="selectedCoupon" :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`" type="success" closable @close="$emit('clear-voucher')">
+      <a-alert
+        v-if="selectedCoupon"
+        :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`"
+        type="success"
+        closable
+        @close="$emit('clear-voucher')"
+      >
         <div style="display: flex; justify-content: space-between; align-items: center">
           <div>
             <strong>{{ selectedCoupon.maPhieuGiamGia }}</strong>
@@ -208,6 +245,7 @@ import { IconCheck, IconInfoCircle } from '@arco-design/web-vue/es/icon'
 import type { CouponApiModel } from '@/api/discount-management'
 import BestVoucherSuggestionCard from './BestVoucherSuggestionCard.vue'
 import BetterVoucherWarningCard from './BetterVoucherWarningCard.vue'
+import VoucherAlmostEligible from './VoucherAlmostEligible.vue'
 import { formatCurrency } from '../utils'
 
 defineProps<{
@@ -227,6 +265,7 @@ defineProps<{
   isWalkIn: boolean
   bestVoucher: CouponApiModel | null
   hasBetterVoucher: boolean
+  almostEligibleSuggestion?: any
   calculateVoucherDiscount: (c: CouponApiModel | null | undefined) => number
   provinces: Array<{ value: string; label: string; code: number }>
   walkInLocation: {
@@ -257,5 +296,4 @@ defineEmits<{
   (e: 'update:walkin-address', value: string): void
   (e: 'update:walkin-ward', value: string): void
 }>()
-
 </script>

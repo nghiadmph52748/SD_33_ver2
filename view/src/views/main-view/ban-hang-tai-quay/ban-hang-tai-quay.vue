@@ -3,7 +3,14 @@
     <!-- Main Layout -->
     <a-card class="main-pos-card">
       <!-- <template #title> -->
-      <OrdersTabs :orders="(orders as any)" :active-key="currentOrderIndex" :can-add="orders.length < 8" @change="handleOrderChange" @delete="showDeleteConfirm" @add="createNewOrder" />
+      <OrdersTabs
+        :orders="orders as any"
+        :active-key="currentOrderIndex"
+        :can-add="orders.length < 8"
+        @change="handleOrderChange"
+        @delete="showDeleteConfirm"
+        @add="createNewOrder"
+      />
       <!-- </template> -->
       <a-row :gutter="16" class="pos-main">
         <!-- Left: Orders & Cart -->
@@ -72,6 +79,7 @@
             :discount-display="selectedCoupon ? getDiscountDisplay(selectedCoupon as any) : ''"
             :best-voucher="bestVoucher as any"
             :has-better-voucher="hasBetterVoucher"
+            :almost-eligible-suggestion="almostEligibleSuggestion"
             :calculate-voucher-discount="calculateVoucherDiscount as any"
             @change:orderType="handleOrderTypeChange"
             @open-voucher="showVoucherModal = true"
@@ -115,15 +123,15 @@
     />
 
     <!-- QR Scanner Modal -->
-<QrScannerModal :visible="showQRScanner" @update:visible="(v) => (showQRScanner = v)" />
+    <QrScannerModal :visible="showQRScanner" @update:visible="(v) => (showQRScanner = v)" />
 
     <!-- Add Customer Modal -->
     <AddCustomerModal
       :visible="showAddCustomerModal"
-:name="newCustomerForm?.value?.name || ''"
-:phone="newCustomerForm?.value?.phone || ''"
-:email="newCustomerForm?.value?.email || ''"
-:address="newCustomerForm?.value?.address || ''"
+      :name="newCustomerForm?.value?.name || ''"
+      :phone="newCustomerForm?.value?.phone || ''"
+      :email="newCustomerForm?.value?.email || ''"
+      :address="newCustomerForm?.value?.address || ''"
       @update:visible="(v) => (showAddCustomerModal = v)"
       @update:name="(v) => newCustomerForm.value && (newCustomerForm.value.name = v)"
       @update:phone="(v) => newCustomerForm.value && (newCustomerForm.value.phone = v)"
@@ -149,7 +157,12 @@
     />
 
     <!-- Delete Product Confirm Modal -->
-    <DeleteProductModal :visible="showDeleteProductModal" :product="(productToDelete as any)" @update:visible="(v) => (showDeleteProductModal = v)" @ok="confirmDeleteProduct" />
+    <DeleteProductModal
+      :visible="showDeleteProductModal"
+      :product="productToDelete as any"
+      @update:visible="(v) => (showDeleteProductModal = v)"
+      @ok="confirmDeleteProduct"
+    />
 
     <!-- Delete Order Confirm Modal -->
     <DeleteOrderModal :visible="showDeleteConfirmModal" @update:visible="(v) => (showDeleteConfirmModal = v)" @ok="confirmDeleteOrder" />
@@ -157,10 +170,10 @@
     <!-- Add Product Confirm Modal -->
     <AddProductConfirmModal
       :visible="showAddProductConfirmModal"
-      :product="(selectedProductForAdd as any)"
+      :product="selectedProductForAdd as any"
       :quantity="productQuantityInput"
       :is-quantity-valid="isQuantityValid"
-:confirm-loading="addProductConfirmLoading"
+      :confirm-loading="addProductConfirmLoading"
       @update:visible="(v) => (showAddProductConfirmModal = v)"
       @update:quantity="handleQuantityChange"
       @ok="confirmAddProduct"
@@ -193,13 +206,7 @@ import {
   IconSwap,
   IconGift,
 } from '@arco-design/web-vue/es/icon'
-import {
-  type BienTheSanPham,
-  type ChatLieu,
-  type DeGiay,
-  type MauSac,
-  type KichThuoc,
-} from '@/api/san-pham/bien-the'
+import { type BienTheSanPham, type ChatLieu, type DeGiay, type MauSac, type KichThuoc } from '@/api/san-pham/bien-the'
 import { type CouponApiModel } from '@/api/discount-management'
 import {
   createInvoice,
@@ -301,16 +308,11 @@ const loadingData = ref(false)
 // Broadcast channel for real-time sync between tabs/windows
 let stockBroadcastChannel: BroadcastChannel | null = null
 
-
 const voucherPagination = ref({
   current: 1,
   pageSize: 10,
   total: 0,
 })
-
-
-
-
 
 // Force re-render key cho cart table khi có lỗi cập nhật quantity
 
@@ -380,6 +382,7 @@ const {
   getDiscountDisplay,
   isVoucherEligible,
   showVoucherSuggestion,
+  almostEligibleSuggestion,
 } = useVoucher({ coupons, paymentForm, currentOrder, subtotal })
 
 const { cartPagination, cartTableKey, cartColumns, paginatedCartItems } = useCart({ currentOrder })
@@ -410,13 +413,7 @@ const {
   createNewInvoice,
 })
 
-const {
-  showDeleteConfirmModal,
-  showDeleteConfirm,
-  confirmDeleteOrder,
-  createNewOrder,
-  handleOrderChange,
-} = useOrdersManager({
+const { showDeleteConfirmModal, showDeleteConfirm, confirmDeleteOrder, createNewOrder, handleOrderChange } = useOrdersManager({
   orders,
   currentOrderIndex,
   allProductVariants,
@@ -432,8 +429,6 @@ const discountAmount = computed(() => {
   return calculateVoucherDiscount(selectedCoupon.value)
 })
 
-
-
 const totalRevenue = computed(() => {
   return orders.value.reduce((sum, order) => {
     const orderSubtotal = order.items.reduce((subtotal, item) => subtotal + item.price * item.quantity, 0)
@@ -446,15 +441,7 @@ const totalItemsSold = computed(() => {
   return orders.value.reduce((sum, order) => sum + order.items.reduce((subtotal, item) => subtotal + item.quantity, 0), 0)
 })
 
-
-
 // ==================== METHODS ====================
-
-
-
-
-
-
 
 const handleCustomerChange = async (customerId: string) => {
   try {
@@ -482,7 +469,6 @@ const handleCustomerChange = async (customerId: string) => {
   }
 }
 
-
 const addNewCustomer = async () => {
   try {
     if (!newCustomerForm.value?.name || !newCustomerForm.value?.phone) {
@@ -499,7 +485,7 @@ const addNewCustomer = async () => {
     if (currentOrder.value) {
       const invoiceId = parseInt(currentOrder.value.id)
       if (!isNaN(invoiceId)) {
-    await updateInvoiceCustomer(invoiceId, walkInLocation)
+        await updateInvoiceCustomer(invoiceId, walkInLocation)
       }
       currentOrder.value.customerId = customer.id
     }
@@ -554,9 +540,7 @@ const addProductsToInvoice = async (invoiceId: number) => {
   }
 }
 
-
 // checkBetterVouchers moved to useCheckout
-
 
 // cancelConfirmOrder moved to useCheckout
 
@@ -564,7 +548,6 @@ const printOrder = () => {
   if (!currentOrder.value?.items.length) return
   Message.info('In hoá đơn thành công')
 }
-
 
 // ==================== LIFECYCLE ====================
 
@@ -596,7 +579,6 @@ const loadInitialData = async () => {
     loadingData.value = false
   }
 }
-
 
 const selectVoucher = async (coupon: CouponApiModel) => {
   try {
@@ -670,7 +652,6 @@ const selectPaymentMethod = (method: 'cash' | 'transfer' | 'both') => {
   paymentForm.value.method = method
 }
 
-
 // ==================== QR SCANNER METHODS ====================
 
 // Watch for delete product modal visibility
@@ -695,16 +676,19 @@ watch(selectedCustomer, async (newCustomer) => {
 })
 
 // Watch for isWalkIn changes to debug reactivity
-watch(() => [isWalkIn.value, orderType.value, currentOrder.value?.customerId], ([walkIn, type, custId]) => {
-  console.log('🔍 Walk-in state changed:', {
-    isWalkIn: walkIn,
-    orderType: type,
-    customerId: custId,
-    selectedCustomer: selectedCustomer.value,
-    shouldShowAddressFields: walkIn && type === 'delivery'
-  })
-}, { immediate: true })
-
+watch(
+  () => [isWalkIn.value, orderType.value, currentOrder.value?.customerId],
+  ([walkIn, type, custId]) => {
+    console.log('🔍 Walk-in state changed:', {
+      isWalkIn: walkIn,
+      orderType: type,
+      customerId: custId,
+      selectedCustomer: selectedCustomer.value,
+      shouldShowAddressFields: walkIn && type === 'delivery',
+    })
+  },
+  { immediate: true }
+)
 
 // Refresh vouchers periodically
 const refreshVouchers = async () => {
@@ -718,7 +702,9 @@ const refreshVouchers = async () => {
       })
 
       // Compare with cached data - ONLY update if different
-      const newCouponsJson = JSON.stringify(newCoupons.map((c) => ({ id: c.id, maPhieuGiamGia: c.maPhieuGiamGia, soLuongDung: c.soLuongDung, giaTriGiamGia: c.giaTriGiamGia })))
+      const newCouponsJson = JSON.stringify(
+        newCoupons.map((c) => ({ id: c.id, maPhieuGiamGia: c.maPhieuGiamGia, soLuongDung: c.soLuongDung, giaTriGiamGia: c.giaTriGiamGia }))
+      )
       if (newCouponsJson === cachedCoupons.value) {
         // No change, skip update
         return
@@ -796,7 +782,9 @@ const refreshVouchersForCustomer = async (idKhachHang: number) => {
       })
 
       // Compare with cached data - ONLY update if different
-      const newCouponsJson = JSON.stringify(newCoupons.map((c) => ({ id: c.id, maPhieuGiamGia: c.maPhieuGiamGia, soLuongDung: c.soLuongDung, giaTriGiamGia: c.giaTriGiamGia })))
+      const newCouponsJson = JSON.stringify(
+        newCoupons.map((c) => ({ id: c.id, maPhieuGiamGia: c.maPhieuGiamGia, soLuongDung: c.soLuongDung, giaTriGiamGia: c.giaTriGiamGia }))
+      )
       if (newCouponsJson === cachedCoupons.value) {
         // No change, skip update
         return
@@ -852,8 +840,6 @@ async function refreshProductStock() {
 
 // Auto-refresh vouchers every 30 seconds
 let voucherRefreshInterval: number | null = null
-
-
 
 // Derived payment computeds (avoid circular deps)
 const finalPrice = computed(() => {
