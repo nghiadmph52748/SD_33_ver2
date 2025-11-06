@@ -1,20 +1,42 @@
 <template>
   <div class="pdp" v-if="product">
     <section class="pdp-hero">
-      <!-- Left: 2x2 static grid on desktop; scroll-snap carousel on mobile -->
+      <!-- Gallery: left vertical thumbnails, right main image -->
       <div class="gallery" :aria-label="product.name">
-        <img v-for="(imgSrc, i) in galleryImages" :key="i" :src="imgSrc" :alt="`${product.name} view ${i+1}`" />
+        <div class="thumbs" role="list">
+          <button
+            v-for="(imgSrc, i) in galleryImages"
+            :key="i"
+            class="thumb"
+            :class="{ active: activeImageIndex === i }"
+            type="button"
+            @click="activeImageIndex = i"
+            :aria-label="$t('product.viewImage', { n: i + 1 })"
+          >
+            <img :src="imgSrc" :alt="`${product.name} thumbnail ${i+1}`" />
+          </button>
+        </div>
+        <div class="main" @mousemove="onMainImageMove" @mouseenter="onMainImageEnter" @mouseleave="onMainImageLeave">
+          <transition name="pdp-fade-image" mode="out-in">
+            <img
+              ref="mainImgRef"
+              :key="galleryImages[activeImageIndex]"
+              :src="galleryImages[activeImageIndex]"
+              :alt="`${product.name} main view`"
+            />
+          </transition>
+        </div>
       </div>
 
       <!-- Right: sticky purchase column -->
       <aside class="purchase">
-        <p class="product-category" v-if="product.gender">{{ product.gender }} • Sportswear</p>
+        <p class="product-category" v-if="product.gender">{{ product.gender }} • {{ $t('product.sportswear') }}</p>
         <h1 class="product-title">{{ product.name }}</h1>
 
         <div class="price">{{ formatCurrency(product.price) }}</div>
 
         <div class="color-selector" v-if="colorSwatches.length">
-          <label>Color:</label>
+          <label>{{ $t('product.color') }}:</label>
           <ul>
             <li v-for="(swatch, idx) in colorSwatches" :key="swatch">
               <button type="button" :class="['swatch', { active: selectedColorIndex === idx }]" @click="selectedColorIndex = idx">
@@ -26,8 +48,8 @@
 
         <div class="size-selector" v-if="product.sizes?.length">
           <div class="size-row">
-            <label>Sizes:</label>
-            <a class="size-guide" href="#" @click.prevent>Size guide</a>
+            <label>{{ $t('product.sizes') }}:</label>
+            <a class="size-guide" href="#" @click.prevent>{{ $t('product.sizeGuide') }}</a>
           </div>
           <div class="size-grid">
             <button
@@ -55,8 +77,8 @@
               </div>
 
         <div class="cta-block">
-          <button class="add-to-bag" @click="cartAdd">Add To Bag</button>
-          <button class="wishlist" @click="$router.push('/all')">Browse More</button>
+          <button class="add-to-bag" @click="cartAdd">{{ $t('product.addToBag') }}</button>
+          <button class="wishlist" @click="$router.push('/all')">{{ $t('product.browseMore') }}</button>
         </div>
 
         <ul class="product-meta">
@@ -69,7 +91,7 @@
     <section class="accordion" ref="accordionRef">
       <details open class="accordion-item">
         <summary class="accordion-summary">
-          <span>Description</span>
+          <span>{{ $t('product.description') }}</span>
           <span class="icons">
             <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
             <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
@@ -81,7 +103,7 @@
       </details>
       <details class="accordion-item">
         <summary class="accordion-summary">
-          <span>Details</span>
+          <span>{{ $t('product.details') }}</span>
           <span class="icons">
             <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
             <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
@@ -114,23 +136,23 @@
           </div>
           <form class="review-form" @submit.prevent="submitReview">
             <div class="form-row">
-              <label>Name</label>
+              <label>{{ $t('product.name') }}</label>
               <input class="input" v-model.trim="reviewName" placeholder="Optional" />
             </div>
             <div class="form-row">
-              <label>Rating</label>
-              <div class="stars" role="radiogroup" aria-label="Rating">
+              <label>{{ $t('product.rating') }}</label>
+              <div class="stars" role="radiogroup" :aria-label="$t('product.rating')">
                 <button v-for="n in 5" :key="n" type="button" class="star-btn" :class="{ active: reviewRating >= n }" @click="reviewRating = n" aria-label="Rate {{n}} stars">
                   <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :fill="reviewRating >= n ? '#f59e0b' : '#d1d5db'" d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                   </button>
               </div>
             </div>
             <div class="form-row">
-              <label>Comment</label>
+              <label>{{ $t('product.comment') }}</label>
               <textarea class="textarea" v-model.trim="reviewComment" rows="3" placeholder="Share your thoughts..." />
             </div>
             <div class="form-actions">
-              <button class="btn-submit" :disabled="!canSubmitReview">Submit review</button>
+              <button class="btn-submit" :disabled="!canSubmitReview">{{ $t('product.submitReview') }}</button>
           </div>
           </form>
 
@@ -152,7 +174,7 @@
 
     <!-- Recommendations -->
     <section class="recommendations">
-      <h2>YOU MAY ALSO LIKE</h2>
+      <h2>{{ $t('product.youMayAlsoLike') }}</h2>
     <AppRecommendationsCarousel />
     </section>
     <!-- Service cards at the very bottom -->
@@ -180,6 +202,32 @@ const size = ref<string | null>(null);
 const showSizeRequiredMessage = ref(false);
 const loading = ref(false);
 const selectedColorIndex = ref(0);
+const activeImageIndex = ref(0);
+const mainImgRef = ref<HTMLImageElement | null>(null)
+
+function onMainImageEnter() {
+  const el = mainImgRef.value
+  if (!el) return
+  el.style.transition = 'transform .12s ease'
+  el.style.transform = 'scale(1.6)'
+}
+
+function onMainImageLeave() {
+  const el = mainImgRef.value
+  if (!el) return
+  el.style.transition = 'transform .2s ease'
+  el.style.transformOrigin = 'center center'
+  el.style.transform = 'scale(1)'
+}
+
+function onMainImageMove(e: MouseEvent) {
+  const el = mainImgRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const x = ((e.clientX - rect.left) / rect.width) * 100
+  const y = ((e.clientY - rect.top) / rect.height) * 100
+  el.style.transformOrigin = `${x}% ${y}%`
+}
 
 const productId = computed(() => String(route.params.id ?? ""));
 
@@ -317,12 +365,22 @@ const averageRating = computed(() => {
 // Smooth open/close animation for accordion <details>
 const accordionRef = ref<HTMLElement | null>(null)
 
-onMounted(async () => {
+async function initAccordion() {
   await nextTick()
   const root = accordionRef.value
   if (!root) return
   const items = Array.from(root.querySelectorAll<HTMLDetailsElement>('.accordion-item'))
   items.forEach((el) => setupAccordion(el))
+}
+
+onMounted(() => {
+  void initAccordion()
+})
+
+watch(product, (val) => {
+  if (val) {
+    void initAccordion()
+  }
 })
 
 function setupAccordion(el: HTMLDetailsElement) {
@@ -360,14 +418,15 @@ function setupAccordion(el: HTMLDetailsElement) {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   gap: 32px;
-  align-items: start;
+  align-items: stretch;
 }
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-.gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: #f5f5f5; }
+.gallery { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: stretch; }
+.gallery .main { position: relative; overflow: hidden; height: 100%; }
+.gallery .main img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 10px; background: #f5f5f5; cursor: zoom-in; will-change: transform, transform-origin; }
+.thumbs { display: flex; flex-direction: column; gap: 8px; }
+.thumb { padding: 0; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; overflow: hidden; cursor: pointer; }
+.thumb.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
+.thumb img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #f5f5f5; }
 
 .purchase { position: sticky; top: 16px; align-self: start; display: flex; flex-direction: column; gap: 16px; }
 .product-category { margin: 0; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; font-size: 12px; }
@@ -394,8 +453,10 @@ function setupAccordion(el: HTMLDetailsElement) {
 .qty-val { min-width: 18px; text-align: center; font-weight: 600; font-size: 16px; }
 
 .cta-block { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.add-to-bag { width: 100%; padding: 14px 18px; background: #111; color: #fff; border: 1px solid #111; border-radius: 8px; font-weight: 700; }
-.wishlist { width: 100%; padding: 14px 18px; background: #fff; color: #111; border: 1px solid #111; border-radius: 8px; font-weight: 700; }
+.add-to-bag { width: 100%; padding: 14px 18px; background: #111; color: #fff; border: 1px solid #111; border-radius: 8px; font-weight: 700; transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .15s ease; }
+.add-to-bag:hover { background: #000; border-color: #000; transform: translateY(-1px); }
+.wishlist { width: 100%; padding: 14px 18px; background: #fff; color: #111; border: 1px solid #111; border-radius: 8px; font-weight: 700; transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .15s ease; }
+.wishlist:hover { background: #111; color: #fff; border-color: #111; transform: translateY(-1px); }
 
 .product-meta { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
 .product-meta li { font-size: 12px; letter-spacing: .06em; color: #374151; }
@@ -444,9 +505,18 @@ function setupAccordion(el: HTMLDetailsElement) {
 .recommendations h2 { margin: 0 0 12px 0; font-size: 18px; letter-spacing: .08em; }
 
 @media (max-width: 900px) {
-  .pdp-hero { grid-template-columns: 1fr; }
+  .pdp-hero { grid-template-columns: 1fr; align-items: start; }
   .purchase { position: static; }
-  .gallery { display: grid; grid-template-columns: 1fr; gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; white-space: nowrap; }
-  .gallery img { width: 100%; scroll-snap-align: start; border-radius: 0; display: inline-block; }
+  .gallery { grid-template-columns: 1fr; }
+  .thumbs { flex-direction: row; overflow-x: auto; padding-bottom: 6px; }
+  .thumb { min-width: 80px; }
+  .gallery .main img { border-radius: 0; height: auto; aspect-ratio: 4 / 3; }
 }
+
+/* Image crossfade */
+.pdp-fade-image-enter-active, .pdp-fade-image-leave-active { transition: opacity .25s ease, transform .25s ease; }
+.pdp-fade-image-enter-from { opacity: 0; transform: scale(.985); }
+.pdp-fade-image-enter-to { opacity: 1; transform: scale(1); }
+.pdp-fade-image-leave-from { opacity: 1; transform: scale(1); position: absolute; inset: 0; }
+.pdp-fade-image-leave-to { opacity: 0; transform: scale(1.015); }
 </style>

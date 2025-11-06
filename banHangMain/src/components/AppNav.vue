@@ -2,78 +2,111 @@
   <header>
     <div class="topbar" aria-label="User navigation">
       <ul>
-        <li><a href="#" aria-label="Find a Store">Find a Store</a></li>
-        <li><a href="#" aria-label="Help">Help</a></li>
-        <li><a href="#" aria-label="Join Us">Join Us</a></li>
-        <li><a href="#" aria-label="Sign In">Sign In</a></li>
+        <li><a href="#" :aria-label="$t('nav.findStore')">{{ $t('nav.findStore') }}</a></li>
+        <li><a href="#" :aria-label="$t('nav.help')">{{ $t('nav.help') }}</a></li>
+        <li><a href="#" :aria-label="$t('nav.joinUs')">{{ $t('nav.joinUs') }}</a></li>
+        <li><RouterLink to="/login" :aria-label="$t('nav.signIn')">{{ $t('nav.signIn') }}</RouterLink></li>
       </ul>
+      <div class="top-controls">
+        <div class="locale-wrapper" @keydown.escape.prevent="closeLocale">
+          <button class="locale-bar" :class="{ open: localeOpen }" type="button" @click="toggleLocale" :aria-expanded="localeOpen ? 'true' : 'false'" aria-haspopup="listbox">
+            <span class="icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm7.93 9H16.9a15.2 15.2 0 00-.8-4.03A8.03 8.03 0 0119.93 11zM12 4c1.2 1.37 2.08 3.33 2.46 5H9.54C9.92 7.33 10.8 5.37 12 4zM6.9 7a15.2 15.2 0 00-.8 4H4.07A8.03 8.03 0 016.9 7zM4.07 13H6.1c.12 1.4.43 2.77.8 4.03A8.03 8.03 0 014.07 13zM12 20c-1.2-1.37-2.08-3.33-2.46-5h4.92C14.08 16.67 13.2 18.63 12 20zm3-7H9c-.1-1-.1-2 0-3h6c.1 1 .1 2 0 3zm1.9 4a15.2 15.2 0 00.8-4h2.03a8.03 8.03 0 01-2.83 4z"/></svg>
+            </span>
+            <span class="locale-label">{{ currentLocaleLabel }}</span>
+            <span class="caret" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+            </span>
+          </button>
+          <transition name="locale-menu">
+            <div v-if="localeOpen" class="locale-menu" role="listbox" :aria-activedescendant="currentLocale">
+              <button
+                v-for="opt in localeOptions"
+                :key="opt.value"
+                :id="`loc-${opt.value}`"
+                class="locale-chip"
+                :class="{ active: opt.value === currentLocale }"
+                role="option"
+                type="button"
+                @click="selectLocale(opt.value)"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </transition>
+        </div>
+      </div>
     </div>
     <div class="mainbar">
     <div class="logo-section">
-      <a-space :size="12" align="center">
-        <img src="@/assets/logo.svg" alt="logo" class="logo" />
-        <span class="brand-name">GearUp Store</span>
-      </a-space>
+      <RouterLink to="/" class="brand-link" aria-label="Home">
+        <a-space :size="12" align="center">
+          <img src="@/assets/logo.svg" alt="logo" class="logo" />
+          <span class="brand-name">GearUp Store</span>
+        </a-space>
+      </RouterLink>
       </div>
-      <div class="search">
-        <a-input placeholder="Tìm kiếm" allow-clear>
-          <template #prefix>
-            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M10 2a8 8 0 105.293 14.293l3.706 3.707 1.414-1.414-3.707-3.706A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/>
-            </svg>
-          </template>
-        </a-input>
+      <nav v-if="!isLoginPage" class="inline-nav">
+        <ul>
+          <li>
+            <RouterLink to="/">{{ $t('nav.home') }}</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/all">{{ $t('nav.all') }}</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/women">{{ $t('nav.women') }}</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/men">{{ $t('nav.men') }}</RouterLink>
+          </li>
+          <li>
+            <div v-if="cartCount > 0" class="carttotal">{{ cartCount }}</div>
+            <RouterLink to="/cart">{{ $t('nav.cart') }}</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/favorites">{{ $t('nav.favorites') }}</RouterLink>
+          </li>
+          
+        </ul>
+      </nav>
+      <div class="search" role="search">
+        <form class="searchbar" @submit.prevent="handleSearch" :aria-label="$t('nav.search')">
+          <span class="icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M10 2a8 8 0 105.293 14.293l3.706 3.707 1.414-1.414-3.707-3.706A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/></svg>
+          </span>
+          <input
+            v-model.trim="searchQuery"
+            class="search-input"
+            type="text"
+            :placeholder="$t('nav.search')"
+            aria-label="Search"
+          />
+          <button class="search-btn" type="submit">
+            <span class="sr-only">{{$t('nav.search')}}</span>
+            <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 5l7 7-7 7v-4H4v-6h9V5z"/></svg>
+          </button>
+        </form>
       </div>
     </div>
-    <nav>
-      <ul>
-        <li>
-          <RouterLink to="/">{{ $t('nav.home') }}</RouterLink>
-        </li>
-        <li>
-          <RouterLink to="/all">{{ $t('nav.all') }}</RouterLink>
-        </li>
-        <li>
-          <RouterLink to="/women">{{ $t('nav.women') }}</RouterLink>
-        </li>
-        <li>
-          <RouterLink to="/men">{{ $t('nav.men') }}</RouterLink>
-        </li>
-        <li>
-          <div v-if="cartCount > 0" class="carttotal">{{ cartCount }}</div>
-          <RouterLink to="/cart">{{ $t('nav.cart') }}</RouterLink>
-        </li>
-        <li>
-          <RouterLink to="/favorites">Yêu thích</RouterLink>
-        </li>
-        <li class="nav-controls">
-          <a-select
-            v-model="currentLocale"
-            :trigger-props="{ autoFitPopupMinWidth: true }"
-            :options="localeOptions"
-            @change="changeLocale"
-            class="locale-select"
-          >
-            <template #prefix>
-              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm7.93 9H16.9a15.2 15.2 0 00-.8-4.03A8.03 8.03 0 0119.93 11zM12 4c1.2 1.37 2.08 3.33 2.46 5H9.54C9.92 7.33 10.8 5.37 12 4zM6.9 7a15.2 15.2 0 00-.8 4H4.07A8.03 8.03 0 016.9 7zM4.07 13H6.1c.12 1.4.43 2.77.8 4.03A8.03 8.03 0 014.07 13zM12 20c-1.2-1.37-2.08-3.33-2.46-5h4.92C14.08 16.67 13.2 18.63 12 20zm3-7H9c-.1-1-.1-2 0-3h6c.1 1 .1 2 0 3zm1.9 4a15.2 15.2 0 00.8-4h2.03a8.03 8.03 0 01-2.83 4z"/></svg>
-            </template>
-          </a-select>
-        </li>
-      </ul>
-    </nav>
   </header>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
+import { useRoute } from "vue-router";
 import { useCartStore } from "@/stores/cart";
 import { LOCALE_OPTIONS } from "@/locale";
 
 const cartStore = useCartStore();
 const { cartCount } = storeToRefs(cartStore);
 const { t, locale } = useI18n();
+const route = useRoute();
+
+// Check if we're on the login page
+const isLoginPage = computed(() => route.path === '/login');
 
 // removed admin link
 
@@ -87,6 +120,29 @@ const changeLocale = (value: string) => {
   locale.value = value;
   localStorage.setItem('arco-locale', value);
 };
+
+const localeOpen = ref(false)
+const currentLocaleLabel = computed(() => {
+  const found = localeOptions.find(o => o.value === currentLocale.value)
+  return found ? found.label : currentLocale.value
+})
+function toggleLocale() { localeOpen.value = !localeOpen.value }
+function closeLocale() { localeOpen.value = false }
+function selectLocale(val: string) {
+  currentLocale.value = val
+  changeLocale(val)
+  closeLocale()
+}
+ 
+ // Search state and handler
+ const searchQuery = ref('')
+ function handleSearch() {
+   const q = searchQuery.value.trim()
+   if (!q) return
+   // For now, navigate to the All products page with a query param
+   // The products view can read this from the route to filter
+   window.location.href = `/all?search=${encodeURIComponent(q)}`
+ }
 </script>
 
 <style scoped lang="scss">
@@ -102,7 +158,7 @@ header {
   width: 100%;
   max-width: 1016px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   border-bottom: 1px solid #f0f0f0;
   padding: 6px 0;
 
@@ -119,6 +175,8 @@ header {
       font-size: 12px;
     }
   }
+
+  .top-controls { display: flex; align-items: center; gap: 8px; }
 }
 
 .mainbar {
@@ -126,15 +184,22 @@ header {
   max-width: 1016px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 12px 0 0;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 
 .logo-section {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
 }
+
+.brand-link { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 10px; text-decoration: none; color: inherit; border: 1px solid transparent; transition: background-color .15s ease, border-color .15s ease; }
+.brand-link:hover { background: #f9fafb; border-color: #f0f0f0; }
+.brand-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #111 inset; }
 
 .logo {
   width: 33px;
@@ -146,83 +211,78 @@ header {
   font-weight: 700;
   font-size: 18px;
   letter-spacing: .4px;
+  white-space: nowrap;
 }
 
-nav {
-  display: flex;
-  width: 100%;
-  max-width: 1016px;
-  margin-top: 16px;
-  justify-content: center;
-  align-items: center;
-  border-top: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
-  padding: 8px 0;
-
-  ul {
-    padding-left: 0;
-    display: flex;
-    align-items: center;
-    gap: 0;
-
-    li {
-      display: inline-flex;
-      align-items: center;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      font-size: 13px;
-      padding: 0 20px;
-      border-left: 1px solid #ddd;
-      border-right: 1px solid #ddd;
-      position: relative;
-
-      a {
-        color: #111111;
-        text-decoration: none;
-
-        &:hover {
-          color: rgba(17, 17, 17, 1);
-        }
-      }
-
-      &.nav-controls {
-        border-left: none;
-        border-right: none;
-        padding: 0 10px;
-      }
-    }
-  }
-}
+.inline-nav { display: flex; align-items: center; justify-content: center; margin-left: 12px; flex: 1 1 auto; min-width: 0; }
+.inline-nav ul { padding-left: 0; display: flex; align-items: center; gap: 0; list-style: none; margin: 0; }
+.inline-nav ul li { display: inline-flex; align-items: center; text-transform: uppercase; letter-spacing: .1em; font-size: 13px; padding: 0 16px; border-left: 1px solid #ddd; border-right: 1px solid #ddd; position: relative; }
+.inline-nav ul li:first-child { border-left: none; padding-left: 0; }
+.inline-nav ul li:last-child { border-right: none; padding-right: 0; }
+.inline-nav ul li a { color: #111111; text-decoration: none; }
+.inline-nav ul li a:hover { color: rgba(17,17,17,1); }
+/* locale moved to topbar */
 
 .nav-btn {
   border: none;
   background: transparent;
 }
 
-.search {
-  width: 240px;
-}
+.search { width: 220px; margin-left: auto; flex: 0 0 auto; }
 
-.search :deep(.arco-input) { border-radius: 20px; }
-.search :deep(.arco-input-prefix) { color: rgba(17,17,17,.65); }
+/* Custom searchbar (no Arco) */
+.searchbar { position: relative; display: flex; align-items: center; gap: 4px; border: 1px solid #e5e7eb; background: rgba(255,255,255,.85); backdrop-filter: blur(6px); border-radius: 16px; padding: 4px 6px; box-shadow: 0 2px 10px rgba(0,0,0,.04); transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; height: 34px; overflow: hidden; }
+.searchbar:focus-within { border-color: #111; box-shadow: 0 6px 20px rgba(0,0,0,.08); background: rgba(255,255,255,.95); }
+.searchbar .icon { color: rgba(17,17,17,.55); display: inline-flex; }
+.search-input { border: none; outline: none; background: transparent; flex: 1; font: inherit; font-size: 13px; color: #111; padding: 4px 2px; min-width: 0; }
+.search-input::placeholder { color: rgba(17,17,17,.55); }
+.search-btn { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #111; background: linear-gradient(135deg,#111,#000); color: #fff; border-radius: 12px; width: 28px; height: 26px; cursor: pointer; transition: background-color .15s ease, border-color .15s ease, transform .15s ease; flex-shrink: 0; }
+.search-btn .arrow { transition: transform .2s ease; }
+.search-btn:hover { transform: translateY(-1px); }
+.search-btn:hover .arrow { transform: translateX(2px); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 .locale-select {
   width: 120px;
 }
 
+/* Locale bar styled like searchbar */
+.locale-wrapper { position: relative; }
+.locale-bar { display: flex; align-items: center; gap: 6px; border: 1px solid #e5e7eb; background: rgba(255,255,255,.85); backdrop-filter: blur(6px); border-radius: 20px; padding: 6px 12px; height: 36px; box-shadow: 0 2px 10px rgba(0,0,0,.04); transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; cursor: pointer; }
+.locale-bar:hover { box-shadow: 0 6px 20px rgba(0,0,0,.06); }
+.locale-bar:focus-within { border-color: #111; box-shadow: 0 6px 20px rgba(0,0,0,.08); background: rgba(255,255,255,.95); }
+.locale-bar .icon { color: rgba(17,17,17,.55); display: inline-flex; }
+.locale-label { font-size: 13px; color: #111; }
+.caret { display: inline-flex; color: rgba(17,17,17,.55); transition: transform .2s ease; }
+.locale-bar.open .caret { transform: rotate(180deg); }
+
+.locale-menu { position: absolute; left: 0; top: calc(100% + 8px); background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 12px 30px rgba(0,0,0,.12); padding: 8px; z-index: 10; display: flex; gap: 8px; }
+.locale-chip { padding: 10px 14px; border-radius: 14px; font-size: 13px; color: #111; background: #f5f5f5; border: 1px solid #e8e8e8; cursor: pointer; transition: background-color .15s ease, transform .08s ease, border-color .15s ease; }
+.locale-chip:hover { background: #efefef; transform: translateY(-1px); }
+.locale-chip.active { background: #111; color: #fff; border-color: #111; }
+
+/* Menu open/close animation */
+.locale-menu-enter-active, .locale-menu-leave-active { transition: opacity .18s ease, transform .18s ease; transform-origin: top right; }
+.locale-menu-enter-from, .locale-menu-leave-to { opacity: 0; transform: scale(.96) translateY(-4px); }
+.locale-menu-enter-to, .locale-menu-leave-from { opacity: 1; transform: scale(1) translateY(0); }
+
 .carttotal {
   position: absolute;
-  border-radius: 1000px;
-  background: black;
-  color: white;
-  padding: 6px 10px;
-  top: -18px;
-  right: -5px;
-  width: 25px;
-  text-align: center;
-  height: 25px;
+  top: -12px;
+  right: 7px; /* nudge towards the end of the word HÀNG */
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  display: grid;
+  place-items: center;
   font-size: 10px;
-  font-weight: bold;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+  pointer-events: none;
+  z-index: 1;
 }
 
 @media (max-width: 850px) {

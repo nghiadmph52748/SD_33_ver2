@@ -5,7 +5,9 @@
     </h2>
     <div class="featureditems">
       <div class="item" v-for="product in featuredProducts" :key="product.id">
+        <RouterLink class="image-link" :to="`/product/${product.id}`" :aria-label="t('buttons.viewItem')">
         <img :src="product.img" :alt="product.name" />
+        </RouterLink>
         <h3>{{ product.name }}</h3>
         <h4>{{ formatCurrency(product.price) }}</h4>
         <RouterLink :to="`/product/${product.id}`">
@@ -121,4 +123,8 @@ h2 span::after {
 .featureditems .item:hover img {
   transform: scale(1.06);
 }
+
+.image-link { display: block; }
+.image-link:hover { text-decoration: none; }
+.image-link img { cursor: pointer; }
 </style>

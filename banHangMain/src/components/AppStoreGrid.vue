@@ -17,60 +17,32 @@
         role="list"
         aria-label="Product list"
       >
-        <article
+        <RouterLink
           v-for="item in filteredProducts"
           :key="item.id"
+          :to="`/product/${item.id}`"
           class="item"
           role="listitem"
           :aria-labelledby="`product-title-${item.id}`"
-          :aria-describedby="item.description ? `product-description-${item.id}` : undefined"
         >
-          <RouterLink
-            :to="`/product/${item.id}`"
-            class="item__media"
-            :style="{ '--media-bg-color': getMediaBackground(item.id) }"
-            :aria-label="`View details for ${item.name}`"
-          >
+          <div class="item__media">
             <img
               :src="item.img"
               :alt="item.name"
               crossorigin="anonymous"
               @load="event => handleImageLoad(String(item.id), event)"
             />
-          </RouterLink>
-          <div class="item__body">
-            <div class="item__meta">
-              <span v-if="item.color" class="item__chip">{{ item.color }}</span>
-              <div class="item__rating">
-                <a-rate :model-value="item.starrating || 0" readonly :allow-half="false" :size="14" />
-                <span class="item__rating-value">{{ (item.starrating || 0).toFixed(1) }}</span>
-              </div>
-            </div>
-            <h3 class="item__title" :id="`product-title-${item.id}`">{{ item.name }}</h3>
-            <p
-              v-if="item.description"
-              class="item__description"
-              :id="`product-description-${item.id}`"
-            >
-              {{ item.description }}
-            </p>
-            <div class="item__footer">
-              <div class="item__price">
-                <span>{{ formatCurrency(item.price) }}</span>
-                <small v-if="item.sizes?.length">{{ item.sizes.length }} sizes</small>
-              </div>
-              <RouterLink :to="`/product/${item.id}`" class="item__cta">
-                <span>View item</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    fill="currentColor"
-                    d="M13.172 12 8.222 7.05a1 1 0 1 1 1.414-1.414l6.364 6.364a1 1 0 0 1 0 1.414l-6.364 6.364a1 1 0 0 1-1.414-1.414L13.172 12Z"
-                  />
-                </svg>
-              </RouterLink>
-            </div>
           </div>
-        </article>
+          <div class="item__body">
+            <div class="item__price">{{ formatCurrency(item.price) }}</div>
+            <h3 class="item__title" :id="`product-title-${item.id}`">{{ item.name }}</h3>
+            <div class="item__meta">
+              <span v-if="item.gender" class="item__category">{{ formatCategory(item) }}</span>
+              <span class="item__colours">{{ getColourCount(item) }} colours</span>
+            </div>
+            <div v-if="getSpecialTag(item)" class="item__tag">{{ getSpecialTag(item) }}</div>
+          </div>
+        </RouterLink>
       </TransitionGroup>
     </section>
   </div>
@@ -351,6 +323,36 @@ function cropToContent(image: HTMLImageElement): string | null {
 function getMediaBackground(productId: string): string {
   return mediaBackgrounds[productId] || DEFAULT_MEDIA_GLOW;
 }
+
+function formatCategory(item: Product): string {
+  // Format gender to match design: "Male" -> "Men", "Female" -> "Women"
+  // Could be enhanced to add "Running", "Originals", etc. based on product type
+  if (item.gender === 'Male') {
+    return 'Men';
+  }
+  if (item.gender === 'Female') {
+    return 'Women';
+  }
+  return item.gender || '';
+}
+
+function getColourCount(item: Product): number {
+  // Return a default count - this could be enhanced if color variants are available
+  // For now, use a reasonable default based on product type
+  return item.sizes?.length ? Math.min(item.sizes.length, 10) : 3;
+}
+
+function getSpecialTag(item: Product): string | null {
+  // Show "Trending" for highly rated products
+  if (item.starrating && item.starrating >= 4.5) {
+    return 'Trending';
+  }
+  // Show "New" for products with no reviews yet (starrating = 0)
+  if (item.starrating === 0 || !item.starrating) {
+    return 'New';
+  }
+  return null;
+}
 </script>
 
 <style scoped lang="scss">
@@ -409,153 +411,81 @@ function getMediaBackground(productId: string): string {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  background: var(--color-surface);
-  border-radius: 24px;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-card);
-  padding: 18px 20px 24px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease;
   overflow: hidden;
+  aspect-ratio: 1 / 1.2;
 }
 
 .item:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 28px 50px rgba(15, 35, 95, 0.12);
+  transform: translateY(-2px);
 }
 
 .item__media {
   position: relative;
+  flex: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  background: #f5f5f5;
   overflow: hidden;
-  padding: 0;
-  background: transparent; /* remove secondary background */
+  min-height: 0;
 }
 
-/* Remove image-specific hover transform; keep only card hover */
-
-.item__media-bg { display: none; }
-
 .item__media img {
-  position: relative;
-  z-index: 1;
   width: 100%;
-  height: auto;
-  max-width: 320px;
-  max-height: 240px;
+  height: 100%;
   object-fit: contain;
-  border-radius: 12px;
-  border: 1px solid #e8e8e8; /* simple border around product image */
-  box-shadow: none;
-  transition: transform 0.3s ease;
+  object-position: center;
 }
 
 .item__body {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  padding: 16px;
+  gap: 6px;
 }
 
-.item__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.item__chip {
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.item__rating {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.item__rating-value {
-  font-weight: 600;
-  color: var(--color-text-secondary);
+.item__price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.2;
+  margin: 0;
 }
 
 .item__title {
   margin: 0;
-  font-size: var(--font-size-lg);
+  font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: #111;
+  line-height: 1.3;
 }
 
-.item__description {
-  margin: 0;
-  color: var(--color-text-secondary);
-  line-height: var(--line-height-base);
-  font-size: var(--font-size-sm);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.item__footer {
-  margin-top: auto;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.item__price {
+.item__meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  margin-top: 2px;
 }
 
-.item__price span {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--color-primary);
+.item__category,
+.item__colours {
+  font-size: 13px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.4;
 }
 
-.item__price small {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.item__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  padding: 8px 0;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.item__cta svg {
-  transition: transform 0.2s ease;
-}
-
-.item__cta:hover {
-  color: var(--color-primary);
-}
-
-.item__cta:hover svg {
-  transform: translateX(3px);
+.item__tag {
+  font-size: 13px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.4;
+  margin-top: 2px;
 }
 
 /* removed aside filter-card and slider styling */
