@@ -1,167 +1,175 @@
 <template>
-  <a-spin :loading="loading" class="product-page__spinner">
-    <div v-if="product" class="product-page">
-      <section class="product-hero">
-        <div class="product-gallery">
-          <div class="product-gallery__main">
-            <img :src="activeImage" :alt="product.name" />
-          </div>
-          <div v-if="productImages.length > 1" class="product-gallery__thumbs">
-            <button
-              v-for="(image, index) in productImages"
-              :key="image"
-              type="button"
-              :class="['product-gallery__thumb', { active: index === selectedImageIndex }]"
-              @click="selectedImageIndex = index"
-            >
-              <img :src="image" :alt="`${product.name} #${index + 1}`" />
-            </button>
-          </div>
+  <div class="pdp" v-if="product">
+    <section class="pdp-hero">
+      <!-- Left: 2x2 static grid on desktop; scroll-snap carousel on mobile -->
+      <div class="gallery" :aria-label="product.name">
+        <img v-for="(imgSrc, i) in galleryImages" :key="i" :src="imgSrc" :alt="`${product.name} view ${i+1}`" />
+      </div>
+
+      <!-- Right: sticky purchase column -->
+      <aside class="purchase">
+        <p class="product-category" v-if="product.gender">{{ product.gender }} • Sportswear</p>
+        <h1 class="product-title">{{ product.name }}</h1>
+
+        <div class="price">{{ formatCurrency(product.price) }}</div>
+
+        <div class="color-selector" v-if="colorSwatches.length">
+          <label>Color:</label>
+          <ul>
+            <li v-for="(swatch, idx) in colorSwatches" :key="swatch">
+              <button type="button" :class="['swatch', { active: selectedColorIndex === idx }]" @click="selectedColorIndex = idx">
+                <img :src="swatch" :alt="`Color ${idx+1}`" />
+              </button>
+            </li>
+          </ul>
         </div>
 
-        <a-card class="product-summary" :bordered="false" :body-style="{ padding: '28px 32px' }">
-          <div class="product-summary__header">
-            <a-tag v-if="product.gender" color="arcoblue" class="product-summary__tag">
-              {{ product.gender }}
-            </a-tag>
-            <a-typography-title :heading="2" class="product-summary__title">
-              {{ product.name }}
-            </a-typography-title>
-            <div class="product-summary__rating">
-              <a-rate :model-value="product.starrating || 0" readonly :allow-half="false" />
-              <span class="product-summary__rating-count">
-                {{ (product.starrating || 0).toFixed(1) }}
-              </span>
-            </div>
+        <div class="size-selector" v-if="product.sizes?.length">
+          <div class="size-row">
+            <label>Sizes:</label>
+            <a class="size-guide" href="#" @click.prevent>Size guide</a>
           </div>
-
-          <div class="product-summary__price-row">
-            <a-typography-title :heading="3" class="product-summary__price">
-              {{ formatCurrency(product.price) }}
-            </a-typography-title>
-            <span class="product-summary__vat">VAT included</span>
+          <div class="size-grid">
+            <button
+              v-for="productSize in product.sizes"
+              :key="productSize"
+              type="button"
+              class="size-btn"
+              :disabled="isOutOfStock(productSize)"
+              :class="{ active: size === productSize, disabled: isOutOfStock(productSize) }"
+              @click="!isOutOfStock(productSize) && (size = productSize) && (showSizeRequiredMessage = false)"
+            >
+              {{ productSize }}
+            </button>
           </div>
+          <p v-if="showSizeRequiredMessage" class="size-error">{{ $t('product.sizeRequired') }}</p>
+        </div>
 
-          <p class="product-summary__subtitle">{{ product.name }}</p>
-
-          <p class="product-summary__description">
-            {{ product.description }}
-          </p>
-
-          <div class="product-summary__meta">
-            <div v-for="meta in productMeta" :key="meta.label" class="product-summary__meta-item">
-              <span class="label">{{ meta.label }}</span>
-              <span class="value">{{ meta.value }}</span>
-            </div>
-          </div>
-
-          <a-alert
-            v-if="showSizeRequiredMessage"
-            type="error"
-            :content="$t('product.sizeRequired')"
-            class="product-summary__size-alert"
-          />
-
-          <div class="product-summary__actions">
-            <div class="product-summary__controls">
-              <div class="product-summary__control">
-                <span>{{ $t("product.quantity") }}</span>
+        <div class="qty">
+          <label>{{ $t('product.quantity') }}</label>
                 <div class="pill">
                   <button class="pill-btn" @click="quantity = Math.max(1, quantity - 1)">−</button>
                   <span class="qty-val">{{ quantity }}</span>
                   <button class="pill-btn" @click="quantity = Math.min(99, quantity + 1)">+</button>
                 </div>
               </div>
-              <div v-if="product.sizes?.length" class="product-summary__control">
-                <span>{{ $t("product.selectSize") }}</span>
-                <div class="size-grid">
-                  <button
-                    v-for="productSize in product.sizes"
-                    :key="productSize"
-                    type="button"
-                    class="size-btn"
-                    :class="{ active: size === productSize }"
-                    @click="size = productSize; showSizeRequiredMessage = false"
-                  >
-                    {{ productSize }}
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            <div class="product-summary__buttons">
-              <button class="btn btn-large btn-block" @click="cartAdd">
-                {{ $t("product.addToCart") }}
-              </button>
-              <button class="btn btn-outline btn-large btn-block" @click="$router.push('/all')">
-                {{ $t("cart.browse") }}
-              </button>
-            </div>
-          </div>
+        <div class="cta-block">
+          <button class="add-to-bag" @click="cartAdd">Add To Bag</button>
+          <button class="wishlist" @click="$router.push('/all')">Browse More</button>
+        </div>
 
-          <ul class="product-summary__highlights">
-            <li v-for="highlight in serviceHighlights" :key="highlight.title">
-              <span class="title">{{ highlight.title }}</span>
-              <span class="description">{{ highlight.description }}</span>
+        <ul class="product-meta">
+          <li v-for="highlight in serviceHighlights" :key="highlight.title">{{ highlight.title }}</li>
+        </ul>
+      </aside>
+    </section>
+
+    <!-- Accordion -->
+    <section class="accordion" ref="accordionRef">
+      <details open class="accordion-item">
+        <summary class="accordion-summary">
+          <span>Description</span>
+          <span class="icons">
+            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
+            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
+          </span>
+        </summary>
+        <div class="accordion-panel">
+          <p class="muted">{{ product.description }}</p>
+        </div>
+      </details>
+      <details class="accordion-item">
+        <summary class="accordion-summary">
+          <span>Details</span>
+          <span class="icons">
+            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
+            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
+          </span>
+        </summary>
+        <div class="accordion-panel">
+          <ul class="specs">
+            <li v-for="spec in productSpecs" :key="spec.label">
+              <span class="label">{{ spec.label }}</span>
+              <span class="value">{{ spec.value }}</span>
             </li>
           </ul>
-        </a-card>
-      </section>
+        </div>
+      </details>
+      <details class="accordion-item">
+        <summary class="accordion-summary">
+          <span>{{ $t('product.reviews') }}</span>
+          <span class="icons">
+            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
+            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
+          </span>
+        </summary>
+        <div class="accordion-panel">
+          <div class="reviews">
+            <div class="score">
+              <span class="value">{{ averageRating.toFixed(1) }}</span>
+              <span class="outof">/ 5</span>
+            </div>
+            <p class="muted" v-if="allReviews.length === 0">{{ product.review || $t('product.noReviews') || 'No reviews yet' }}</p>
+          </div>
+          <form class="review-form" @submit.prevent="submitReview">
+            <div class="form-row">
+              <label>Name</label>
+              <input class="input" v-model.trim="reviewName" placeholder="Optional" />
+            </div>
+            <div class="form-row">
+              <label>Rating</label>
+              <div class="stars" role="radiogroup" aria-label="Rating">
+                <button v-for="n in 5" :key="n" type="button" class="star-btn" :class="{ active: reviewRating >= n }" @click="reviewRating = n" aria-label="Rate {{n}} stars">
+                  <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :fill="reviewRating >= n ? '#f59e0b' : '#d1d5db'" d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                  </button>
+              </div>
+            </div>
+            <div class="form-row">
+              <label>Comment</label>
+              <textarea class="textarea" v-model.trim="reviewComment" rows="3" placeholder="Share your thoughts..." />
+            </div>
+            <div class="form-actions">
+              <button class="btn-submit" :disabled="!canSubmitReview">Submit review</button>
+          </div>
+          </form>
 
-  <div class="container">
+          <ul v-if="allReviews.length" class="review-list">
+            <li v-for="(r, idx) in allReviews" :key="idx" class="review-item">
+              <div class="review-head">
+                <strong class="review-name">{{ r.name || 'Anonymous' }}</strong>
+                <span class="review-date">{{ r.date }}</span>
+                <span class="review-stars">{{ '★'.repeat(r.rating) }}{{ '☆'.repeat(5 - r.rating) }}</span>
+              </div>
+              <p class="review-text">{{ r.comment }}</p>
+            </li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    
+
+    <!-- Recommendations -->
+    <section class="recommendations">
+      <h2>YOU MAY ALSO LIKE</h2>
     <AppRecommendationsCarousel />
+    </section>
+    <!-- Service cards at the very bottom -->
+    <div class="container"><AppSalesBoxes /></div>
   </div>
 
-      <section class="product-details">
-        <a-card class="product-details__card" :bordered="false">
-          <a-tabs default-active-key="details">
-            <a-tab-pane key="details" title="Product details">
-              <div class="product-details__body">
-                <p>{{ product.description }}</p>
-                <a-descriptions :column="2" :data="productSpecs" class="product-details__specs" />
-              </div>
-            </a-tab-pane>
-            <a-tab-pane key="reviews" :title="$t('product.reviews')">
-              <div class="product-reviews">
-                <div class="product-reviews__summary">
-                  <a-rate :model-value="product.starrating || 0" readonly :allow-half="false" size="24" />
-                  <div class="product-reviews__score">
-                    <span class="score">{{ (product.starrating || 0).toFixed(1) }}</span>
-                    <span class="label">{{ $t("product.reviews") }}</span>
-                  </div>
-                </div>
-                <p class="product-reviews__text">
-                  {{ product.review || $t("product.noReviews") || "No reviews yet" }}
-                </p>
-              </div>
-            </a-tab-pane>
-          </a-tabs>
-        </a-card>
-      </section>
-
-      <AppFeaturedProducts />
+  <div v-else class="pdp-not-found">
+    <p>{{ $t('product.notFoundDesc') }}</p>
+    <button class="btn" @click="$router.push('/all')">{{ $t('cart.browse') }}</button>
     </div>
-
-    <a-result
-      v-else
-      status="404"
-      :title="$t('product.notFound')"
-      :subtitle="$t('product.notFoundDesc')"
-    >
-      <template #extra>
-        <button class="btn" @click="$router.push('/all')">
-          {{ $t("cart.browse") }}
-        </button>
-      </template>
-    </a-result>
-  </a-spin>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onMounted, nextTick } from "vue";
 import { useRoute } from "vue-router";
-import AppFeaturedProducts from "@/components/AppFeaturedProducts.vue";
 import AppRecommendationsCarousel from "@/components/AppRecommendationsCarousel.vue";
+import AppSalesBoxes from "@/components/AppSalesBoxes.vue";
 import { useCartStore, type CartItem } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
 
@@ -171,33 +179,24 @@ const quantity = ref(1);
 const size = ref<string | null>(null);
 const showSizeRequiredMessage = ref(false);
 const loading = ref(false);
-const selectedImageIndex = ref(0);
+const selectedColorIndex = ref(0);
 
 const productId = computed(() => String(route.params.id ?? ""));
 
 const product = computed(() => cartStore.products.find(item => item.id === productId.value));
 
-const productImages = computed(() => {
-  if (!product.value) return [];
-  const images = new Set<string>();
-  const primary = resolveProductImage(product.value.img);
-  if (primary) {
-    images.add(primary);
-  }
-  return images.size > 0 ? Array.from(images) : ["/products/1.jpg"];
+const galleryImages = computed(() => {
+  if (!product.value) return ["/products/1.jpg","/products/1.jpg","/products/1.jpg","/products/1.jpg"];
+  const base = resolveProductImage(product.value.img) || "/products/1.jpg";
+  // Use the same image if we don't have multiple; structure allows future variants
+  return [base, base, base, base];
 });
 
-const activeImage = computed(() => productImages.value[selectedImageIndex.value] ?? "/products/1.jpg");
-
-watch(productImages, (images) => {
-  if (!images.length) {
-    selectedImageIndex.value = 0;
-    return;
-  }
-  if (selectedImageIndex.value >= images.length) {
-    selectedImageIndex.value = 0;
-  }
-}, { immediate: true });
+const colorSwatches = computed(() => {
+  // Fallback to single swatch derived from product image
+  const base = galleryImages.value[0];
+  return [base];
+});
 
 const productSpecs = computed(() => {
   if (!product.value) return [];
@@ -279,365 +278,175 @@ const cartAdd = () => {
   cartStore.updateCartUI("idle");
   showSizeRequiredMessage.value = false;
 };
+
+function isOutOfStock(sizeVal: string | number): boolean {
+  // Placeholder: mark some sizes as unavailable if needed
+  return false;
+}
+
+// Reviews state (local only)
+type LocalReview = { name: string; rating: number; comment: string; date: string }
+const localReviews = ref<LocalReview[]>([])
+const reviewName = ref('')
+const reviewRating = ref(0)
+const reviewComment = ref('')
+
+const canSubmitReview = computed(() => reviewRating.value > 0 && reviewComment.value.length > 0)
+
+function submitReview() {
+  if (!canSubmitReview.value) return
+  const now = new Date()
+  localReviews.value.unshift({
+    name: reviewName.value.trim(),
+    rating: reviewRating.value,
+    comment: reviewComment.value.trim(),
+    date: now.toLocaleDateString()
+  })
+  reviewName.value = ''
+  reviewRating.value = 0
+  reviewComment.value = ''
+}
+
+const allReviews = computed(() => localReviews.value)
+const averageRating = computed(() => {
+  if (allReviews.value.length === 0) return Number(product.value?.starrating || 0)
+  const sum = allReviews.value.reduce((acc, r) => acc + r.rating, 0)
+  return sum / allReviews.value.length
+})
+
+// Smooth open/close animation for accordion <details>
+const accordionRef = ref<HTMLElement | null>(null)
+
+onMounted(async () => {
+  await nextTick()
+  const root = accordionRef.value
+  if (!root) return
+  const items = Array.from(root.querySelectorAll<HTMLDetailsElement>('.accordion-item'))
+  items.forEach((el) => setupAccordion(el))
+})
+
+function setupAccordion(el: HTMLDetailsElement) {
+  const panel = el.querySelector<HTMLElement>('.accordion-panel')
+  if (!panel) return
+  panel.style.overflow = 'hidden'
+  panel.style.height = el.open ? panel.scrollHeight + 'px' : '0px'
+  el.addEventListener('toggle', () => {
+    if (el.open) {
+      // expanding
+      panel.style.height = panel.scrollHeight + 'px'
+      const after = () => {
+        panel.style.height = 'auto'
+        panel.removeEventListener('transitionend', after)
+      }
+      panel.addEventListener('transitionend', after)
+    } else {
+      // collapsing from auto height back to 0
+      const h = panel.scrollHeight
+      panel.style.height = h + 'px'
+      void panel.offsetHeight // force reflow
+      panel.style.height = '0px'
+    }
+  })
+}
 </script>
 
-<style scoped lang="scss">
-.product-page__spinner {
-  width: 100%;
-  display: block;
-}
-
-.product-page {
-  padding: clamp(32px, 6vw, 72px) clamp(16px, 6vw, 96px);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(40px, 5vw, 64px);
-  background: linear-gradient(180deg, #f7f9fc 0%, #ffffff 55%);
-  min-height: 100%;
-  align-items: center;
-}
-
-.product-hero {
-  display: grid;
-  grid-template-columns: minmax(320px, 1.35fr) minmax(320px, 1fr);
-  gap: clamp(32px, 6vw, 80px);
-  align-items: stretch;
-  max-width: 1180px;
-  width: 100%;
+<style scoped>
+.pdp {
+  padding: 32px 24px;
+  max-width: 1240px;
   margin: 0 auto;
 }
-
-.product-gallery {
-  background: #ffffff;
-  border-radius: 24px;
-  padding: clamp(20px, 3vw, 32px);
-  box-shadow: 0 12px 40px rgba(15, 35, 95, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-}
-
-.product-gallery__main {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(22, 119, 255, 0.08), rgba(22, 119, 255, 0) 60%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.product-gallery__main img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transition: transform 0.3s ease;
-}
-
-.product-gallery__main:hover img {
-  transform: scale(1.04);
-}
-
-.product-gallery__thumbs {
+.pdp-hero {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
 }
-
-.product-gallery__thumb {
-  border: 1px solid transparent;
-  border-radius: 16px;
-  padding: 8px;
-  background: #f5f7fb;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.product-gallery__thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.product-gallery__thumb:hover,
-.product-gallery__thumb.active {
-  border-color: var(--color-primary-6, #1677ff);
-  background: rgba(22, 119, 255, 0.08);
-}
-
-.product-summary {
-  border-radius: 28px;
-  box-shadow: 0 16px 50px rgba(15, 35, 95, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  background: #ffffff;
-  width: 100%;
-  position: sticky;
-  top: 24px;
-}
-
-.product-summary__header {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.product-summary__header > *:not(:last-child) {
-  margin-bottom: 4px;
-}
-
-.product-summary__tag {
-  width: fit-content;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.product-summary__title {
-  margin: 0;
-  line-height: 1.15;
-}
-
-.product-summary__rating {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.product-summary__rating-count {
-  font-weight: 600;
-  color: #1d2129;
-  font-size: 16px;
-}
-
-.product-summary__price-row {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.product-summary__price {
-  margin: 0;
-  color: var(--color-primary-6, #1677ff);
-  font-size: clamp(28px, 3vw, 36px);
-}
-
-.product-summary__vat {
-  font-size: 14px;
-  color: #86909c;
-}
-
-.product-summary__subtitle {
-  margin: -6px 0 8px;
-  color: #4e5969;
-}
-
-.product-summary__description {
-  margin: 0;
-  color: #4e5969;
-  line-height: 1.6;
-}
-
-.product-summary__meta {
+.gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 16px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
+.gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: #f5f5f5; }
 
-.product-summary__meta-item {
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: #f5f8ff;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+.purchase { position: sticky; top: 16px; align-self: start; display: flex; flex-direction: column; gap: 16px; }
+.product-category { margin: 0; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; font-size: 12px; }
+.product-title { margin: 0; font-size: 32px; line-height: 1.2; }
+.price { font-weight: 700; font-size: 24px; }
 
-.product-summary__meta-item .label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #86909c;
-}
+.color-selector label { display: block; margin-bottom: 8px; color: #374151; }
+.color-selector ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 8px; }
+.swatch { width: 44px; height: 44px; border-radius: 8px; border: 1px solid #e5e7eb; padding: 2px; background: #fff; }
+.swatch.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
+.swatch img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
 
-.product-summary__meta-item .value {
-  font-weight: 600;
-  color: #1d2129;
-}
+.size-row { display: flex; align-items: baseline; justify-content: space-between; }
+.size-guide { color: #111; text-decoration: underline; font-size: 12px; }
+.size-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.size-btn { padding: 10px 0; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+.size-btn.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
+.size-btn.disabled { color: #9ca3af; text-decoration: line-through; background: #fafafa; }
+.size-error { color: #dc2626; margin: 0; font-size: 13px; }
 
-.product-summary__size-alert {
-  width: 100%;
-}
-
-.product-summary__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-.product-summary__controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.product-summary__control {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: #f7f9fc;
-  color: #1d2129;
-  min-width: 220px;
-}
-
+.qty { display: flex; align-items: center; gap: 12px; }
 .pill { display: inline-flex; align-items: center; gap: 12px; border: 1px solid #e8e8e8; background: #fff; border-radius: 40px; padding: 8px 12px; }
 .pill-btn { width: 36px; height: 36px; border-radius: 999px; border: 1px solid #e8e8e8; background: #fff; display: inline-flex; align-items: center; justify-content: center; }
 .qty-val { min-width: 18px; text-align: center; font-weight: 600; font-size: 16px; }
 
-.size-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(48px, max-content)); gap: 8px; }
-.size-btn { min-width: 48px; padding: 10px 12px; border-radius: 10px; border: 1px solid #e8e8e8; background: #fff; }
-.size-btn.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
+.cta-block { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.add-to-bag { width: 100%; padding: 14px 18px; background: #111; color: #fff; border: 1px solid #111; border-radius: 8px; font-weight: 700; }
+.wishlist { width: 100%; padding: 14px 18px; background: #fff; color: #111; border: 1px solid #111; border-radius: 8px; font-weight: 700; }
 
-.product-summary__buttons {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-}
+.product-meta { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.product-meta li { font-size: 12px; letter-spacing: .06em; color: #374151; }
 
-.product-summary__highlights {
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: clamp(16px, 3vw, 24px);
-}
+.accordion { max-width: 980px; margin: 48px auto; display: grid; gap: 12px; }
+.accordion-item { border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; overflow: hidden; }
+.accordion-summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; font-weight: 700; cursor: pointer; transition: background-color .2s ease; }
+.accordion-summary:hover { background: #f9fafb; }
+.accordion-item summary::-webkit-details-marker { display: none; }
+.icons { display: inline-flex; gap: 8px; }
+.accordion-item[open] .icon--plus { display: none; }
+.accordion-item:not([open]) .icon--minus { display: none; }
+.accordion-panel { padding: 0 18px; color: #4b5563; height: 0; overflow: hidden; transition: height .28s cubic-bezier(.2,.8,.2,1), opacity .28s ease; opacity: 0; }
+.accordion-item[open] .accordion-panel { padding: 4px 18px 18px 18px; opacity: 1; }
+.muted { color: #4b5563; line-height: 1.7; margin: 0; }
+.specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; padding: 0; margin: 0; list-style: none; }
+.specs .label { display: block; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; }
+.specs .value { font-weight: 600; color: #111; }
+.reviews { display: flex; align-items: center; gap: 16px; }
+.reviews .score { display: flex; align-items: baseline; gap: 6px; }
+.reviews .value { font-size: 32px; font-weight: 800; }
+.reviews .outof { color: #9ca3af; }
 
-.product-summary__highlights li {
-  background: #f7f9fc;
-  border-radius: 18px;
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: #1d2129;
-}
+.review-form { display: grid; gap: 12px; margin-top: 8px; }
+.form-row { display: grid; gap: 6px; }
+.input, .textarea { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; font: inherit; }
+.textarea { resize: vertical; }
+.stars { display: inline-flex; gap: 4px; }
+.star-btn { background: transparent; border: none; padding: 0; cursor: pointer; }
+.star-btn.active svg path { fill: #f59e0b; }
+.form-actions { display: flex; justify-content: flex-end; }
+.btn-submit { background: #111; color: #fff; border: 1px solid #111; border-radius: 8px; padding: 10px 14px; font-weight: 700; }
+.btn-submit:disabled { opacity: .5; cursor: not-allowed; }
 
-.product-summary__highlights .title {
-  font-weight: 600;
-}
+.review-list { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
+.review-item { border-top: 1px solid #eee; padding-top: 12px; }
+.review-head { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; }
+.review-name { font-weight: 700; }
+.review-date { color: #9ca3af; font-size: 12px; }
+.review-stars { color: #f59e0b; font-size: 14px; }
+.review-text { margin: 6px 0 0; color: #374151; }
 
-.product-summary__highlights .description {
-  font-size: 13px;
-  color: #86909c;
-  line-height: 1.5;
-}
+ 
 
-.product-details__card {
-  border-radius: 24px;
-  box-shadow: 0 16px 50px rgba(15, 35, 95, 0.08);
-  max-width: 1180px;
-  margin: 0 auto;
-  width: 100%;
-  background: #ffffff;
-}
+.recommendations { max-width: 1240px; margin: 48px auto; padding: 0 16px; }
+.recommendations h2 { margin: 0 0 12px 0; font-size: 18px; letter-spacing: .08em; }
 
-.product-details {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.product-details__card :deep(.arco-card-body) {
-  padding: clamp(24px, 4vw, 36px);
-}
-
-.product-details__body {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  color: #4e5969;
-  line-height: 1.7;
-}
-
-.product-details__specs {
-  background: #f7f9fc;
-  padding: 24px;
-  border-radius: 18px;
-}
-
-.product-reviews {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.product-reviews__summary {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.product-reviews__score .score {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--color-primary-6, #1677ff);
-  line-height: 1;
-}
-
-.product-reviews__score .label {
-  display: block;
-  font-size: 13px;
-  color: #86909c;
-}
-
-.product-reviews__text {
-  margin: 0;
-  color: #4e5969;
-  line-height: 1.6;
-}
-
-@media (max-width: 1024px) {
-  .product-hero {
-    grid-template-columns: 1fr;
-    max-width: 100%;
-  }
-
-  .product-summary {
-    order: -1;
-  }
-}
-
-@media (max-width: 640px) {
-  .product-page {
-    padding: 32px 16px;
-    gap: 32px;
-  }
-
-  .product-summary__controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .product-summary__control {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .product-gallery {
-    padding: 16px;
-  }
-
-  .product-gallery__main {
-    border-radius: 18px;
-  }
+@media (max-width: 900px) {
+  .pdp-hero { grid-template-columns: 1fr; }
+  .purchase { position: static; }
+  .gallery { display: grid; grid-template-columns: 1fr; gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; white-space: nowrap; }
+  .gallery img { width: 100%; scroll-snap-align: start; border-radius: 0; display: inline-block; }
 }
 </style>

@@ -73,6 +73,35 @@
         </article>
       </TransitionGroup>
     </section>
+    <aside class="filter-card">
+      <div class="filter-card__badge">Special Sale</div>
+      <h3>Dial in your price</h3>
+      <p class="filter-card__copy">
+        {{ $t('store.priceFilterHelp') }}
+      </p>
+      <div class="filter-card__range">
+        <span>Max price</span>
+        <strong>{{ formatCurrency(pricerange) }}</strong>
+      </div>
+      <label class="sr-only" for="pricerange">Filter sneakers by maximum price</label>
+      <input
+        class="slider"
+        id="pricerange"
+        v-model.number="pricerange"
+        :min="min"
+        :max="max"
+        type="range"
+        :step="max > 0 ? Math.max(max / 100, 10000) : 10000"
+        aria-label="Filter products by maximum price"
+        :aria-valuemin="min"
+        :aria-valuemax="max"
+        :aria-valuenow="pricerange"
+      />
+      <div class="filter-card__labels">
+        <span>{{ formatCurrency(min) }}</span>
+        <span>{{ formatCurrency(max) }}</span>
+      </div>
+    </aside>
   </div>
 </template>
 
@@ -358,7 +387,7 @@ function getMediaBackground(productId: string): string {
   width: min(1240px, 100%);
   margin: clamp(32px, 6vw, 64px) auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: clamp(28px, 4vw, 48px);
   align-items: start;
   padding-inline: clamp(16px, 4vw, 32px);
@@ -401,7 +430,7 @@ function getMediaBackground(productId: string): string {
 
 .content {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: clamp(24px, 3vw, 32px);
 }
 
@@ -558,11 +587,115 @@ function getMediaBackground(productId: string): string {
   transform: translateX(3px);
 }
 
-/* removed aside filter-card and slider styling */
+.filter-card {
+  position: sticky;
+  top: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(24px, 3vw, 32px);
+  background: linear-gradient(180deg, var(--color-primary-subtle) 0%, rgba(22, 119, 255, 0.02) 100%);
+  border-radius: 24px;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-soft);
+  width: 100%;
+  min-width: 280px;
+}
+
+.filter-card__badge {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.filter-card h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-family: var(--font-family-serif);
+}
+
+.filter-card__copy {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.filter-card__range {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.filter-card__range strong {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+
+.filter-card__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.slider {
+  width: 100%;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-primary) 0%, rgba(22, 119, 255, 0.2) 100%);
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 3px solid #ffffff;
+  box-shadow: 0 8px 16px rgba(22, 119, 255, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.05);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 3px solid #ffffff;
+  box-shadow: 0 8px 16px rgba(22, 119, 255, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  transform: scale(1.05);
+}
 
 @media (max-width: 1024px) {
   .storegrid {
     grid-template-columns: 1fr;
+  }
+
+  .filter-card {
+    position: static;
+    order: -1;
   }
 
   .content {
