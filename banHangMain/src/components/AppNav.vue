@@ -40,36 +40,36 @@
     <div class="mainbar">
     <div class="logo-section">
       <RouterLink to="/" class="brand-link" aria-label="Home">
-        <a-space :size="12" align="center">
-          <img src="@/assets/logo.svg" alt="logo" class="logo" />
-          <span class="brand-name">GearUp Store</span>
-        </a-space>
+      <a-space :size="12" align="center">
+        <img src="@/assets/logo.svg" alt="logo" class="logo" />
+        <span class="brand-name">GearUp Store</span>
+      </a-space>
       </RouterLink>
       </div>
       <nav v-if="!isLoginPage" class="inline-nav">
-        <ul>
-          <li>
-            <RouterLink to="/">{{ $t('nav.home') }}</RouterLink>
-          </li>
-          <li>
-            <RouterLink to="/all">{{ $t('nav.all') }}</RouterLink>
-          </li>
-          <li>
-            <RouterLink to="/women">{{ $t('nav.women') }}</RouterLink>
-          </li>
-          <li>
-            <RouterLink to="/men">{{ $t('nav.men') }}</RouterLink>
-          </li>
-          <li>
+      <ul>
+        <li>
+          <RouterLink to="/">{{ $t('nav.home') }}</RouterLink>
+        </li>
+        <li>
+          <RouterLink to="/all">{{ $t('nav.all') }}</RouterLink>
+        </li>
+        <li>
+          <RouterLink to="/women">{{ $t('nav.women') }}</RouterLink>
+        </li>
+        <li>
+          <RouterLink to="/men">{{ $t('nav.men') }}</RouterLink>
+        </li>
+        <li>
             <div v-if="cartCount > 0" class="carttotal" :class="{ pulse: cartBadgePulse }">{{ cartCount }}</div>
-            <RouterLink to="/cart">{{ $t('nav.cart') }}</RouterLink>
-          </li>
-          <li>
+          <RouterLink to="/cart">{{ $t('nav.cart') }}</RouterLink>
+        </li>
+        <li>
             <RouterLink to="/favorites">{{ $t('nav.favorites') }}</RouterLink>
-          </li>
+        </li>
           
-        </ul>
-      </nav>
+      </ul>
+    </nav>
       <div class="search" role="search">
         <form class="searchbar" @submit.prevent="handleSearch" :aria-label="$t('nav.search')">
           <span class="icon" aria-hidden="true">
@@ -255,13 +255,13 @@ header.scrolled {
 .inline-nav ul li:first-child { border-left: none; padding-left: 0; }
 .inline-nav ul li:last-child { border-right: none; padding-right: 0; }
 .inline-nav ul li a { 
-  color: #111111; 
-  text-decoration: none; 
+        color: #111111;
+        text-decoration: none;
   position: relative;
   transition: color 0.2s ease;
   padding: 4px 0;
   display: inline-block;
-}
+        }
 
 .inline-nav ul li a::after {
   content: '';
@@ -276,7 +276,7 @@ header.scrolled {
 
 .inline-nav ul li a:hover { 
   color: rgba(17,17,17,0.8); 
-}
+      }
 
 .inline-nav ul li a:hover::after {
   width: 100%;

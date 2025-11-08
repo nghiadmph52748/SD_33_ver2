@@ -139,40 +139,40 @@ onBeforeUnmount(stop);
 .hero-cta { border-color: rgba(255,255,255,0.9); color: #ffffff; }
 .hero-cta:hover { border-color: #ffffff; color: #111111; background: #ffffff; }
 
-.hero-dots { 
-  position: absolute; 
-  right: 16px; 
-  bottom: 16px; 
-  display: inline-flex; 
-  gap: 8px; 
+.hero-dots {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: inline-flex;
+  gap: 8px;
   padding: 8px 12px;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   border-radius: 20px;
 }
-.dot { 
-  width: 10px; 
-  height: 10px; 
-  border-radius: 999px; 
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
   border: 2px solid rgba(255,255,255,0.9); 
   background: rgba(255,255,255,0.3); 
   box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-  transition: all 200ms ease; 
+  transition: all 200ms ease;
   cursor: pointer;
 }
-.dot.active { 
-  background: #ffffff; 
-  border-color: #ffffff; 
+.dot.active {
+  background: #ffffff;
+  border-color: #ffffff;
   width: 22px; 
   box-shadow: 0 2px 6px rgba(255,255,255,0.5);
 }
-.dot:hover { 
+.dot:hover {
   background: rgba(255,255,255,0.8); 
   transform: scale(1.1);
 }
-.dot:focus-visible { 
-  outline: none; 
-  box-shadow: 0 0 0 3px rgba(135,206,255,0.8); 
+.dot:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(135,206,255,0.8);
 }
 
 @media (min-width: 960px) { .hero-overlay { left: 50%; } }

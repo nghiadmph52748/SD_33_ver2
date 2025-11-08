@@ -4,7 +4,7 @@
       <!-- Left: Gallery and Accordion -->
       <div class="left-panel">
         <!-- Gallery: left vertical thumbnails, right main image -->
-        <div class="gallery" :aria-label="product.name">
+      <div class="gallery" :aria-label="product.name">
           <div class="thumbs" role="list">
             <button
               v-for="(imgSrc, i) in galleryImages"
@@ -27,91 +27,91 @@
                 :alt="`${product.name} main view`"
               />
             </transition>
-          </div>
+              </div>
         </div>
 
         <!-- Accordion: moved to left panel -->
-        <section class="accordion" ref="accordionRef">
-          <details open class="accordion-item">
-            <summary class="accordion-summary">
+    <section class="accordion" ref="accordionRef">
+      <details open class="accordion-item">
+        <summary class="accordion-summary">
               <span>{{ $t('product.description') }}</span>
-              <span class="icons">
-                <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
-                <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
-              </span>
-            </summary>
-            <div class="accordion-panel">
-              <p class="muted">{{ product.description }}</p>
-            </div>
-          </details>
-          <details class="accordion-item">
-            <summary class="accordion-summary">
+          <span class="icons">
+            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
+            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
+          </span>
+        </summary>
+        <div class="accordion-panel">
+          <p class="muted">{{ product.description }}</p>
+        </div>
+      </details>
+      <details class="accordion-item">
+        <summary class="accordion-summary">
               <span>{{ $t('product.details') }}</span>
-              <span class="icons">
-                <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
-                <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
-              </span>
-            </summary>
-            <div class="accordion-panel">
-              <ul class="specs">
-                <li v-for="spec in productSpecs" :key="spec.label">
-                  <span class="label">{{ spec.label }}</span>
-                  <span class="value">{{ spec.value }}</span>
-                </li>
-              </ul>
+          <span class="icons">
+            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
+            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
+          </span>
+        </summary>
+        <div class="accordion-panel">
+          <ul class="specs">
+            <li v-for="spec in productSpecs" :key="spec.label">
+              <span class="label">{{ spec.label }}</span>
+              <span class="value">{{ spec.value }}</span>
+            </li>
+          </ul>
+        </div>
+      </details>
+      <details class="accordion-item">
+        <summary class="accordion-summary">
+          <span>{{ $t('product.reviews') }}</span>
+          <span class="icons">
+            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
+            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
+          </span>
+        </summary>
+        <div class="accordion-panel">
+          <div class="reviews">
+            <div class="score">
+              <span class="value">{{ averageRating.toFixed(1) }}</span>
+              <span class="outof">/ 5</span>
             </div>
-          </details>
-          <details class="accordion-item">
-            <summary class="accordion-summary">
-              <span>{{ $t('product.reviews') }}</span>
-              <span class="icons">
-                <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
-                <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
-              </span>
-            </summary>
-            <div class="accordion-panel">
-              <div class="reviews">
-                <div class="score">
-                  <span class="value">{{ averageRating.toFixed(1) }}</span>
-                  <span class="outof">/ 5</span>
-                </div>
-                <p class="muted" v-if="allReviews.length === 0">{{ product.review || $t('product.noReviews') || 'No reviews yet' }}</p>
-              </div>
-              <form class="review-form" @submit.prevent="submitReview">
-                <div class="form-row">
+            <p class="muted" v-if="allReviews.length === 0">{{ product.review || $t('product.noReviews') || 'No reviews yet' }}</p>
+          </div>
+          <form class="review-form" @submit.prevent="submitReview">
+            <div class="form-row">
                   <label>{{ $t('product.name') }}</label>
-                  <input class="input" v-model.trim="reviewName" placeholder="Optional" />
-                </div>
-                <div class="form-row">
+              <input class="input" v-model.trim="reviewName" placeholder="Optional" />
+            </div>
+            <div class="form-row">
                   <label>{{ $t('product.rating') }}</label>
                   <div class="stars" role="radiogroup" :aria-label="$t('product.rating')">
-                    <button v-for="n in 5" :key="n" type="button" class="star-btn" :class="{ active: reviewRating >= n }" @click="reviewRating = n" aria-label="Rate {{n}} stars">
-                      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :fill="reviewRating >= n ? '#f59e0b' : '#d1d5db'" d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                      </button>
-                  </div>
-                </div>
-                <div class="form-row">
-                  <label>{{ $t('product.comment') }}</label>
-                  <textarea class="textarea" v-model.trim="reviewComment" rows="3" placeholder="Share your thoughts..." />
-                </div>
-                <div class="form-actions">
-                  <button class="btn-submit" :disabled="!canSubmitReview">{{ $t('product.submitReview') }}</button>
+                <button v-for="n in 5" :key="n" type="button" class="star-btn" :class="{ active: reviewRating >= n }" @click="reviewRating = n" aria-label="Rate {{n}} stars">
+                  <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :fill="reviewRating >= n ? '#f59e0b' : '#d1d5db'" d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                  </button>
               </div>
-              </form>
-
-              <ul v-if="allReviews.length" class="review-list">
-                <li v-for="(r, idx) in allReviews" :key="idx" class="review-item">
-                  <div class="review-head">
-                    <strong class="review-name">{{ r.name || 'Anonymous' }}</strong>
-                    <span class="review-date">{{ r.date }}</span>
-                    <span class="review-stars">{{ '★'.repeat(r.rating) }}{{ '☆'.repeat(5 - r.rating) }}</span>
-                  </div>
-                  <p class="review-text">{{ r.comment }}</p>
-                </li>
-              </ul>
             </div>
-          </details>
-        </section>
+            <div class="form-row">
+                  <label>{{ $t('product.comment') }}</label>
+              <textarea class="textarea" v-model.trim="reviewComment" rows="3" placeholder="Share your thoughts..." />
+            </div>
+            <div class="form-actions">
+                  <button class="btn-submit" :disabled="!canSubmitReview">{{ $t('product.submitReview') }}</button>
+          </div>
+          </form>
+
+          <ul v-if="allReviews.length" class="review-list">
+            <li v-for="(r, idx) in allReviews" :key="idx" class="review-item">
+              <div class="review-head">
+                <strong class="review-name">{{ r.name || 'Anonymous' }}</strong>
+                <span class="review-date">{{ r.date }}</span>
+                <span class="review-stars">{{ '★'.repeat(r.rating) }}{{ '☆'.repeat(5 - r.rating) }}</span>
+              </div>
+              <p class="review-text">{{ r.comment }}</p>
+            </li>
+          </ul>
+        </div>
+      </details>
+    </section>
       </div>
 
       <!-- Right: sticky purchase column -->
@@ -454,7 +454,7 @@ function setupAccordion(el: HTMLDetailsElement) {
       void panel.offsetHeight
       
       requestAnimationFrame(() => {
-        panel.style.height = '0px'
+      panel.style.height = '0px'
       })
     }
   })

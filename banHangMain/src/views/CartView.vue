@@ -45,7 +45,6 @@
       </div>
     </div>
 
-    <div class="container"><AppRecommendationsCarousel /></div>
     <div class="container"><AppSalesBoxes /></div>
   </div>
 </template>
@@ -58,7 +57,6 @@ import AppCartDisplay from "@/components/AppCartDisplay.vue";
 import AppCartSteps from "@/components/AppCartSteps.vue";
 import AppLoader from "@/components/AppLoader.vue";
 import AppSalesBoxes from "@/components/AppSalesBoxes.vue";
-import AppRecommendationsCarousel from "@/components/AppRecommendationsCarousel.vue";
 import { useCartStore } from "@/stores/cart";
 
 const cartStore = useCartStore();

@@ -23,12 +23,12 @@
           <span>Adidas</span>
         </RouterLink>
       </li>
-    </ul>
+      </ul>
     <button class="nav-btn next" type="button" aria-label="Scroll brands right" @click="scroll(240)">
       <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
     </button>
-  </div>
-</section>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">

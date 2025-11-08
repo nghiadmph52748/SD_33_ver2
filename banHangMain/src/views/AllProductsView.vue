@@ -33,8 +33,8 @@
     <div v-if="!error">
       <AppStoreGrid :data="products" :loading="loading" />
       <a-empty v-if="!loading && products.length === 0" :description="$t('store.noProducts')" />
-    </div>
-    <a-empty v-else-if="error" :description="error" />
+      </div>
+      <a-empty v-else-if="error" :description="error" />
     <FilterSortDrawer v-model:visible="filterVisible" :total="products.length" @apply="applyFilters" />
   </div>
 </template>
