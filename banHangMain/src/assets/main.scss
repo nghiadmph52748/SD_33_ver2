@@ -53,7 +53,7 @@ a {
 }
 
 .btn:hover { background: #000000; box-shadow: 0 6px 18px rgba(0,0,0,.18); transform: translateY(-1px); }
-.btn:active { transform: translateY(0); box-shadow: 0 3px 10px rgba(0,0,0,.14); }
+.btn:active { transform: translateY(1px) scale(0.98); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(135,206,255,.8); }
 .btn:disabled { opacity: .6; cursor: not-allowed; }
 
@@ -63,6 +63,7 @@ a {
   border: 1px solid #111111;
 }
 .btn-outline:hover { background: #111111; color: #ffffff; box-shadow: 0 6px 18px rgba(0,0,0,.12); transform: translateY(-1px); }
+.btn-outline:active { transform: translateY(1px) scale(0.98); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
 .btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(17,17,17,.3); }
 
 .btn-outline-light {
@@ -88,7 +89,7 @@ a {
 /* Secondary control pills and icons */
 .pill-btn { transition: background .2s ease, box-shadow .2s ease, transform .06s ease; }
 .pill-btn:hover { background: #f7f7f7; box-shadow: 0 3px 10px rgba(0,0,0,.08); transform: translateY(-1px); }
-.pill-btn:active { transform: translateY(0); }
+.pill-btn:active { transform: translateY(0) scale(0.95); }
 .pill-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(135,206,255,.8); }
 
 .icon { transition: background .2s ease, box-shadow .2s ease, transform .06s ease, border-color .2s ease; }

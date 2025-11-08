@@ -3,38 +3,38 @@
     <div class="container">
       <div class="grid">
         <section class="bag">
-          <h1>Bag</h1>
+          <h1>{{ $t('cart.bag') }}</h1>
           <div v-if="cartCount === 0" class="bag-empty">
-            <p>There are no items in your bag.</p>
+            <p>{{ $t('cart.emptyBag') }}</p>
           </div>
           <div v-else class="bag-items">
         <AppCartDisplay />
           </div>
 
           <section class="favourites" aria-label="Favourites">
-            <h2>Favourites</h2>
+            <h2>{{ $t('cart.favourites') }}</h2>
             <p>
-              Want to view your favourites?
-              <a href="#">Join us</a>
-              or
-              <a href="#">Sign in</a>
+              {{ $t('cart.viewFavourites') }}
+              <a href="#">{{ $t('nav.joinUs') }}</a>
+              {{ $t('auth.or') }}
+              <a href="#">{{ $t('nav.signIn') }}</a>
             </p>
           </section>
       </section>
       
         <aside class="summary" aria-label="Order summary">
-          <h2>Summary</h2>
+          <h2>{{ $t('cart.summary') }}</h2>
           <div class="row">
             <span>{{ $t('cart.subtotal') }}</span>
             <span>{{ cartCount === 0 ? '—' : formatCurrency(cartTotal) }}</span>
           </div>
           <div class="row muted">
-            <span>Estimated Delivery &amp; Handling</span>
+            <span>{{ $t('cart.estimatedDelivery') }}</span>
             <span>{{ cartCount === 0 ? '—' : formatCurrency(shippingFee) }}</span>
           </div>
           <hr />
           <div class="row total">
-            <span>Total</span>
+            <span>{{ $t('cart.total') }}</span>
             <span>{{ cartCount === 0 ? '—' : formatCurrency(orderTotal) }}</span>
           </div>
 

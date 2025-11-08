@@ -28,6 +28,8 @@ export default {
   'product.comment': 'Comment',
   'product.submitReview': 'Submit review',
   'product.youMayAlsoLike': 'You may also like',
+  'product.scrollLeft': 'Scroll left',
+  'product.scrollRight': 'Scroll right',
   'product.viewImage': 'View image {n}',
   'product.sportswear': 'Sportswear',
   'product.notFound': 'Product not found',

@@ -53,6 +53,14 @@ const boxes: SalesBox[] = [
     justify-content: center; /* vertically center content */
     align-items: center;
     height: 100%;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    cursor: default;
+  }
+
+  div:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.1);
+    border-color: #bbb;
   }
 
   .box1 {
@@ -72,6 +80,19 @@ h4 {
   text-transform: uppercase;
   letter-spacing: 0.15em;
   margin: 0 0 10px 0;
+  transition: color .2s ease;
+}
+
+.boxes div:hover h4 {
+  color: #000;
+}
+
+.boxes div img {
+  transition: transform .3s ease;
+}
+
+.boxes div:hover img {
+  transform: scale(1.1);
 }
 
 @media (min-width: 700px) {

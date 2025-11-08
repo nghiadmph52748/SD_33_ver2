@@ -3,26 +3,26 @@
     <div :class="['drawer', isClosing ? 'drawer--leave' : 'drawer--enter']" role="dialog" aria-modal="true">
       <div class="drawer__header">
         <div class="drawer-title">
-          <span>Filter & Sort</span>
+          <span>{{ t('store.filterTitle') }}</span>
           <span class="count" v-if="typeof total === 'number'">[{{ total }}]</span>
         </div>
-        <button class="icon-btn" aria-label="Close" @click="onCancel">×</button>
+        <button class="icon-btn" :aria-label="t('store.close')" @click="onCancel">×</button>
       </div>
 
       <div class="section">
-        <div class="section__title">Sort by</div>
+        <div class="section__title">{{ t('store.sortBy') }}</div>
         <select v-model="localState.sort" class="select">
-          <option value="featured">Featured</option>
-          <option value="price_low_high">Price: Low to High</option>
-          <option value="price_high_low">Price: High to Low</option>
-          <option value="newest">Newest</option>
+          <option value="featured">{{ t('store.sortFeatured') }}</option>
+          <option value="price_low_high">{{ t('store.sortPriceLowHigh') }}</option>
+          <option value="price_high_low">{{ t('store.sortPriceHighLow') }}</option>
+          <option value="newest">{{ t('store.sortNewest') }}</option>
         </select>
       </div>
 
       <hr class="divider" />
 
       <div class="section">
-        <div class="section__title">Price</div>
+        <div class="section__title">{{ t('store.price') }}</div>
         <div class="slider-row">
           <input type="range" min="0" max="50000000" step="10000" v-model.number="localState.price[0]" @input="clampMin" />
           <input type="range" min="0" max="50000000" step="10000" v-model.number="localState.price[1]" @input="clampMax" />
@@ -43,16 +43,16 @@
       <hr class="divider" />
 
       <div class="section">
-        <div class="section__title">Categories</div>
-        <label class="check"><input type="checkbox" value="running" v-model="localState.categories"/> <span>Running</span></label>
-        <label class="check"><input type="checkbox" value="originals" v-model="localState.categories"/> <span>Originals</span></label>
-        <label class="check"><input type="checkbox" value="training" v-model="localState.categories"/> <span>Training</span></label>
-        <label class="check"><input type="checkbox" value="soccer" v-model="localState.categories"/> <span>Soccer</span></label>
+        <div class="section__title">{{ t('store.categories') }}</div>
+        <label class="check"><input type="checkbox" value="running" v-model="localState.categories"/> <span>{{ t('store.categoryRunning') }}</span></label>
+        <label class="check"><input type="checkbox" value="originals" v-model="localState.categories"/> <span>{{ t('store.categoryOriginals') }}</span></label>
+        <label class="check"><input type="checkbox" value="training" v-model="localState.categories"/> <span>{{ t('store.categoryTraining') }}</span></label>
+        <label class="check"><input type="checkbox" value="soccer" v-model="localState.categories"/> <span>{{ t('store.categorySoccer') }}</span></label>
       </div>
 
       <div class="footer-actions">
-        <button class="btn" @click="onReset">Reset</button>
-        <button class="btn btn--primary" @click="onApply">Apply</button>
+        <button class="btn" @click="onReset">{{ t('store.reset') }}</button>
+        <button class="btn btn--primary" @click="onApply">{{ t('store.apply') }}</button>
       </div>
     </div>
   </div>
@@ -60,6 +60,9 @@
 
 <script setup lang="ts">
 import { reactive, toRefs, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{ visible: boolean; total?: number }>()
 const emit = defineEmits<{

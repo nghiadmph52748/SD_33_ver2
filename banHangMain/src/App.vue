@@ -7,7 +7,11 @@
           <div class="spinner" />
         </div>
       </transition>
-      <RouterView />
+      <RouterView v-slot="{ Component, route }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" :key="route.path" />
+        </Transition>
+      </RouterView>
     </main>
     <AppFooter />
   </div>
@@ -91,4 +95,29 @@ onUnmounted(() => {
 
 .fade-enter-active, .fade-leave-active { transition: opacity 180ms ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* Page transitions */
+.page-enter-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.page-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.page-enter-to,
+.page-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
 </style>

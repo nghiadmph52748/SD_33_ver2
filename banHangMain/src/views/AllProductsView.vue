@@ -6,19 +6,18 @@
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" class="back__icon">
           <path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
         </svg>
-        <span>Back</span>
+        <span>{{ $t('store.back') }}</span>
       </router-link>
       <div class="breadcrumbs">
-        <router-link to="/" class="breadcrumbs__link">Home</router-link>
+        <router-link to="/" class="breadcrumbs__link">{{ $t('nav.home') }}</router-link>
         <span class="breadcrumbs__sep">/</span>
-        <span class="breadcrumbs__current">Shoes</span>
+        <span class="breadcrumbs__current">{{ $t('store.shoes') }}</span>
       </div>
       <div class="title-row">
         <div>
-          <h1 class="title">SHOES <span class="count" v-if="!loading">[{{ products.length }}]</span></h1>
+          <h1 class="title">{{ $t('store.shoesTitle') }} <span class="count" v-if="!loading">[{{ products.length }}]</span></h1>
           <p class="subtitle">
-            Walk the walk in a pair of stylish sports shoes. Choose from a huge range of shoes and
-            active footwear in a fantastic choice of colours and designs for everyone.
+            {{ $t('store.shoesSubtitle') }}
           </p>
         </div>
         <button type="button" class="filter-btn" @click="filterVisible = true">
@@ -26,18 +25,16 @@
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path fill="currentColor" d="M10 18h4v-2h-4v2ZM3 6v2h18V6H3Zm3 7h12v-2H6v2Z"/>
           </svg>
-          <span>Filter & Sort</span>
+          <span>{{ $t('store.filterSort') }}</span>
         </button>
       </div>
     </div>
 
-    <a-spin :loading="loading" style="width: 100%">
-      <div v-if="!error && !loading">
-        <AppStoreGrid v-if="products.length > 0" :data="products" />
-        <a-empty v-else description="No products available" />
-      </div>
-      <a-empty v-else-if="error" :description="error" />
-    </a-spin>
+    <div v-if="!error">
+      <AppStoreGrid :data="products" :loading="loading" />
+      <a-empty v-if="!loading && products.length === 0" :description="$t('store.noProducts')" />
+    </div>
+    <a-empty v-else-if="error" :description="error" />
     <FilterSortDrawer v-model:visible="filterVisible" :total="products.length" @apply="applyFilters" />
   </div>
 </template>
@@ -139,11 +136,12 @@ function applyFilters(payload: { sort: string; price: [number, number]; categori
   border-radius: 8px;
   background: #fff;
   font-weight: 600;
-  transition: border-color .15s ease, background-color .15s ease, transform .05s ease;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, transform .08s ease, box-shadow .08s ease;
 }
 
-.filter-btn:hover { border-color: #9ca3af; background: #f9fafb; }
-.filter-btn:active { transform: translateY(1px); }
+.filter-btn:hover { border-color: #9ca3af; background: #f9fafb; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.filter-btn:active { transform: translateY(0) scale(0.98); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
 
 @media (max-width: 768px) {
   .title { font-size: 30px; }

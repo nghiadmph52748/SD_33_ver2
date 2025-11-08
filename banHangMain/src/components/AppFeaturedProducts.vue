@@ -6,7 +6,12 @@
     <div class="featureditems">
       <div class="item" v-for="product in featuredProducts" :key="product.id">
         <RouterLink class="image-link" :to="`/product/${product.id}`" :aria-label="t('buttons.viewItem')">
-        <img :src="product.img" :alt="product.name" />
+        <img 
+          :src="product.img" 
+          :alt="product.name"
+          loading="lazy"
+          @error="handleImageError"
+        />
         </RouterLink>
         <h3>{{ product.name }}</h3>
         <h4>{{ formatCurrency(product.price) }}</h4>
@@ -23,6 +28,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useCartStore } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
+import { handleImageError } from "@/utils/imageFallback";
 
 const cartStore = useCartStore();
 const { featuredProducts } = storeToRefs(cartStore);
@@ -46,7 +52,16 @@ section {
     justify-self: center;
     align-self: center;
     text-align: center;
-    overflow: hidden;
+    overflow: visible;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.08);
+    border-color: #d0d0d0;
   }
 }
 
@@ -120,11 +135,53 @@ h2 span::after {
   }
 }
 
-.featureditems .item:hover img {
-  transform: scale(1.06);
+.featureditems .item:hover .image-link img {
+  transform: scale(1.08);
 }
 
-.image-link { display: block; }
+.featureditems .item .btn {
+  transition: transform .08s ease, box-shadow .15s ease;
+}
+
+.featureditems .item .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+
+.featureditems .item .btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.image-link { 
+  display: block; 
+  overflow: hidden;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
 .image-link:hover { text-decoration: none; }
-.image-link img { cursor: pointer; }
+.image-link img { 
+  cursor: pointer; 
+  display: block;
+  width: 100%;
+}
+
+.featureditems .item img.image-placeholder {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #f8f8f8 50%,
+    #f0f0f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
 </style>

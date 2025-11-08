@@ -3,7 +3,12 @@
     <section v-if="cartCount > 0" class="bag-list">
       <article v-for="item in cart" :key="item.id" class="bag-item">
         <div class="thumb">
-          <img :src="resolveImage(item.img)" :alt="item.name" />
+          <img 
+            :src="resolveImage(item.img)" 
+            :alt="item.name"
+            loading="lazy"
+            @error="handleImageError"
+          />
         </div>
         <div class="info">
           <header class="title-row">
@@ -59,6 +64,7 @@ import { storeToRefs } from "pinia";
 import { useCartStore, type CartItem } from "@/stores/cart";
 import { createOrderFromCart } from "@/api/orders";
 import { formatCurrency } from "@/utils/currency";
+import { handleImageError } from "@/utils/imageFallback";
 
 const cartStore = useCartStore();
 const { cart, cartTotal, cartCount } = storeToRefs(cartStore);
@@ -120,6 +126,25 @@ const startCheckout = async () => {
 .bag-item { display: grid; grid-template-columns: 300px 1fr; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0; }
 .thumb { width: 300px; aspect-ratio: 1 / 1; background: #f7f7f7; border-radius: 12px; display: grid; place-items: center; overflow: hidden; }
 .thumb img { width: 100%; height: 100%; object-fit: contain; }
+.thumb img.image-placeholder {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #f8f8f8 50%,
+    #f0f0f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
 .title-row { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 12px; }
 .name { margin: 0; font-size: 26px; font-weight: 700; }
 .price { font-weight: 700; }

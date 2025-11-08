@@ -17,7 +17,14 @@
         role="list"
         aria-label="Product list"
       >
+        <template v-if="loading">
+          <ProductCardSkeleton
+            v-for="n in skeletonCount"
+            :key="`skeleton-${n}`"
+          />
+        </template>
         <RouterLink
+          v-else
           v-for="item in filteredProducts"
           :key="item.id"
           :to="`/product/${item.id}`"
@@ -26,11 +33,20 @@
           :aria-labelledby="`product-title-${item.id}`"
         >
           <div class="item__media">
+            <div v-if="!imageLoaded[item.id]" class="image-skeleton">
+              <div class="skeleton-shimmer"></div>
+            </div>
             <img
               :src="item.img"
               :alt="item.name"
+              loading="lazy"
               crossorigin="anonymous"
+              :class="{ loaded: imageLoaded[item.id] }"
               @load="event => handleImageLoad(String(item.id), event)"
+              @error="(event) => {
+                handleImageError(event);
+                imageLoaded[item.id] = true;
+              }"
             />
           </div>
           <div class="item__body">
@@ -52,10 +68,15 @@
 import { computed, reactive, ref, watch } from "vue";
 import type { Product } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
+import { FALLBACK_IMAGE, handleImageError } from "@/utils/imageFallback";
+import ProductCardSkeleton from "./ProductCardSkeleton.vue";
 
 const props = defineProps<{
   data: Product[];
+  loading?: boolean;
 }>();
+
+const skeletonCount = 8; // Number of skeleton cards to show
 
 const DEFAULT_MAX_PRICE = 10_000_000;
 const MAX_PRICE_CAP = 50_000_000;
@@ -122,10 +143,14 @@ const totalProducts = computed(() => filteredProducts.value.length);
 const totalAvailable = computed(() => props.data.length);
 
 const mediaBackgrounds = reactive<Record<string, string>>({});
+const imageLoaded = reactive<Record<string, boolean>>({});
 
 function handleImageLoad(productId: string, event: Event) {
   const target = event.target as HTMLImageElement | null;
   if (!target) return;
+
+  // Mark image as loaded
+  imageLoaded[productId] = true;
 
   // Crop surrounding background so the product fills the card better
   if (!target.dataset.cropped) {
@@ -412,15 +437,22 @@ function getSpecialTag(item: Product): string | null {
   display: flex;
   flex-direction: column;
   background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, outline 0.2s ease;
   overflow: hidden;
   aspect-ratio: 1 / 1.2;
 }
 
 .item:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  border-color: #b0b0b0;
+  outline: 1px solid rgba(0,0,0,.12);
+  outline-offset: -1px;
+  z-index: 1;
 }
 
 .item__media {
@@ -434,11 +466,51 @@ function getSpecialTag(item: Product): string | null {
   min-height: 0;
 }
 
+.image-skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+}
+
+.image-skeleton .skeleton-shimmer {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #f8f8f8 50%,
+    #f0f0f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.item__media.image-loading img.image-placeholder,
+.item__media img.image-placeholder {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #f8f8f8 50%,
+    #f0f0f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
 .item__media img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.item__media img.loaded {
+  opacity: 1;
 }
 
 .item__body {
@@ -503,6 +575,15 @@ function getSpecialTag(item: Product): string | null {
 @media (max-width: 680px) {
   .content {
     grid-template-columns: 1fr;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 </style>

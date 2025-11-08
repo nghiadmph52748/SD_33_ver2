@@ -55,13 +55,15 @@ function scroll(delta: number) {
 
 .brand-item { flex: 0 0 auto; scroll-snap-align: center; }
 
-.brand-link { display: inline-flex; align-items: center; gap: 10px; color: #111; text-decoration: none; padding: 10px 14px; border: 1px solid #e8e8e8; border-radius: 999px; background: #fff; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
-.brand-link:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,.06); border-color: #ddd; }
+.brand-link { display: inline-flex; align-items: center; gap: 10px; color: #111; text-decoration: none; padding: 10px 14px; border: 1px solid #e8e8e8; border-radius: 999px; background: #fff; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; cursor: pointer; }
+.brand-link:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,.08); border-color: #ddd; }
+.brand-link:active { transform: translateY(0) scale(0.98); }
 .brand-link span { font-size: 14px; color: #111; font-weight: 600; letter-spacing: .02em; }
 .brand-img { height: 24px; width: auto; display: block; }
 
-.nav-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 999px; border: 1px solid #e8e8e8; background: #fff; display: grid; place-items: center; cursor: pointer; transition: box-shadow .15s ease, transform .15s ease, background .15s ease; z-index: 2; }
-.nav-btn:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+.nav-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 999px; border: 1px solid #e8e8e8; background: #fff; display: grid; place-items: center; cursor: pointer; transition: box-shadow .15s ease, transform .08s ease, background .15s ease, border-color .15s ease; z-index: 2; }
+.nav-btn:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-50%) translateY(-1px); border-color: #d1d5db; }
+.nav-btn:active { transform: translateY(-50%) scale(0.95); box-shadow: 0 2px 8px rgba(0,0,0,.1); }
 .nav-btn.prev { left: 4px; }
 .nav-btn.next { right: 4px; }
 

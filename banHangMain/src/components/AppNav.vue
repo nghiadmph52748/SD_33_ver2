@@ -1,5 +1,5 @@
 <template>
-  <header>
+  <header :class="{ scrolled: isScrolled }">
     <div class="topbar" aria-label="User navigation">
       <ul>
         <li><a href="#" :aria-label="$t('nav.findStore')">{{ $t('nav.findStore') }}</a></li>
@@ -61,7 +61,7 @@
             <RouterLink to="/men">{{ $t('nav.men') }}</RouterLink>
           </li>
           <li>
-            <div v-if="cartCount > 0" class="carttotal">{{ cartCount }}</div>
+            <div v-if="cartCount > 0" class="carttotal" :class="{ pulse: cartBadgePulse }">{{ cartCount }}</div>
             <RouterLink to="/cart">{{ $t('nav.cart') }}</RouterLink>
           </li>
           <li>
@@ -93,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
@@ -104,6 +104,20 @@ const cartStore = useCartStore();
 const { cartCount } = storeToRefs(cartStore);
 const { t, locale } = useI18n();
 const route = useRoute();
+
+// Cart badge pulse animation
+const cartBadgePulse = ref(false);
+let previousCartCount = cartCount.value;
+
+watch(cartCount, (newCount) => {
+  if (newCount > previousCartCount) {
+    cartBadgePulse.value = true;
+    setTimeout(() => {
+      cartBadgePulse.value = false;
+    }, 600);
+  }
+  previousCartCount = newCount;
+});
 
 // Check if we're on the login page
 const isLoginPage = computed(() => route.path === '/login');
@@ -143,6 +157,18 @@ function selectLocale(val: string) {
    // The products view can read this from the route to filter
    window.location.href = `/all?search=${encodeURIComponent(q)}`
  }
+
+// Sticky header on scroll
+const isScrolled = ref(false)
+function handleScroll() {
+  isScrolled.value = window.scrollY > 20
+}
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <style scoped lang="scss">
@@ -152,6 +178,15 @@ header {
   flex-direction: column;
   align-items: center;
   padding: 0 40px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #fff;
+  transition: box-shadow 0.2s ease;
+}
+
+header.scrolled {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
 .topbar {
@@ -219,8 +254,33 @@ header {
 .inline-nav ul li { display: inline-flex; align-items: center; text-transform: uppercase; letter-spacing: .1em; font-size: 13px; padding: 0 16px; border-left: 1px solid #ddd; border-right: 1px solid #ddd; position: relative; }
 .inline-nav ul li:first-child { border-left: none; padding-left: 0; }
 .inline-nav ul li:last-child { border-right: none; padding-right: 0; }
-.inline-nav ul li a { color: #111111; text-decoration: none; }
-.inline-nav ul li a:hover { color: rgba(17,17,17,1); }
+.inline-nav ul li a { 
+  color: #111111; 
+  text-decoration: none; 
+  position: relative;
+  transition: color 0.2s ease;
+  padding: 4px 0;
+  display: inline-block;
+}
+
+.inline-nav ul li a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #111;
+  transition: width 0.3s ease;
+}
+
+.inline-nav ul li a:hover { 
+  color: rgba(17,17,17,0.8); 
+}
+
+.inline-nav ul li a:hover::after {
+  width: 100%;
+}
 /* locale moved to topbar */
 
 .nav-btn {
@@ -236,10 +296,11 @@ header {
 .searchbar .icon { color: rgba(17,17,17,.55); display: inline-flex; }
 .search-input { border: none; outline: none; background: transparent; flex: 1; font: inherit; font-size: 13px; color: #111; padding: 4px 2px; min-width: 0; }
 .search-input::placeholder { color: rgba(17,17,17,.55); }
-.search-btn { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #111; background: linear-gradient(135deg,#111,#000); color: #fff; border-radius: 12px; width: 28px; height: 26px; cursor: pointer; transition: background-color .15s ease, border-color .15s ease, transform .15s ease; flex-shrink: 0; }
+.search-btn { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #111; background: linear-gradient(135deg,#111,#000); color: #fff; border-radius: 12px; width: 28px; height: 26px; cursor: pointer; transition: background-color .15s ease, border-color .15s ease, transform .08s ease, box-shadow .08s ease; flex-shrink: 0; }
 .search-btn .arrow { transition: transform .2s ease; }
-.search-btn:hover { transform: translateY(-1px); }
+.search-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
 .search-btn:hover .arrow { transform: translateX(2px); }
+.search-btn:active { transform: translateY(0) scale(0.95); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 .locale-select {
@@ -257,8 +318,9 @@ header {
 .locale-bar.open .caret { transform: rotate(180deg); }
 
 .locale-menu { position: absolute; left: 0; top: calc(100% + 8px); background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 12px 30px rgba(0,0,0,.12); padding: 8px; z-index: 10; display: flex; gap: 8px; }
-.locale-chip { padding: 10px 14px; border-radius: 14px; font-size: 13px; color: #111; background: #f5f5f5; border: 1px solid #e8e8e8; cursor: pointer; transition: background-color .15s ease, transform .08s ease, border-color .15s ease; }
-.locale-chip:hover { background: #efefef; transform: translateY(-1px); }
+.locale-chip { padding: 10px 14px; border-radius: 14px; font-size: 13px; color: #111; background: #f5f5f5; border: 1px solid #e8e8e8; cursor: pointer; transition: background-color .15s ease, transform .08s ease, border-color .15s ease, box-shadow .08s ease; }
+.locale-chip:hover { background: #efefef; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.locale-chip:active { transform: translateY(0) scale(0.96); }
 .locale-chip.active { background: #111; color: #fff; border-color: #111; }
 
 /* Menu open/close animation */
@@ -283,6 +345,23 @@ header {
   box-shadow: 0 2px 6px rgba(0,0,0,.18);
   pointer-events: none;
   z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.carttotal.pulse {
+  animation: cartPulse 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes cartPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @media (max-width: 850px) {

@@ -15,7 +15,12 @@
       <article v-for="p in trendingProducts" :key="p.id" class="card" role="listitem">
         <RouterLink :to="`/product/${p.id}`" class="card-link">
           <div class="img-wrap">
-            <img :src="resolveImage(p.img)" :alt="p.name" loading="lazy" />
+            <img 
+              :src="resolveImage(p.img)" 
+              :alt="p.name" 
+              loading="lazy"
+              @error="handleImageError"
+            />
           </div>
           <div class="info">
             <h4 class="name">{{ p.name }}</h4>
@@ -34,6 +39,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useCartStore } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
+import { handleImageError } from "@/utils/imageFallback";
 
 const cartStore = useCartStore();
 const { t } = useI18n();
@@ -99,6 +105,20 @@ h2 {
   justify-content: center;
   color: #111111;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .08s ease, box-shadow .15s ease;
+}
+
+.nav:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+}
+
+.nav:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 1px 4px rgba(0,0,0,.1);
 }
 
 .nav svg {
@@ -144,6 +164,14 @@ h2 {
   border: 1px solid #f0f0f0;
   border-radius: 16px;
   background: #ffffff;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.08);
+  border-color: #d0d0d0;
 }
 
 .card-link {
@@ -157,6 +185,7 @@ h2 {
   aspect-ratio: 1 / 1;
   overflow: hidden;
   border-bottom: 1px solid #f5f5f5;
+  position: relative;
 }
 
 .img-wrap img {
@@ -164,6 +193,31 @@ h2 {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform .3s ease;
+}
+
+.img-wrap img.image-placeholder {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #f8f8f8 50%,
+    #f0f0f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.card:hover .img-wrap img {
+  transform: scale(1.05);
 }
 
 .info {
@@ -175,6 +229,11 @@ h2 {
   font-weight: 500;
   color: #111111;
   margin: 0 0 4px 0;
+  transition: color .2s ease;
+}
+
+.card:hover .name {
+  color: #000;
 }
 
 .meta {
