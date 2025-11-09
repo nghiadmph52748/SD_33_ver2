@@ -55,6 +55,7 @@ export interface SanPham {
 
 export interface AnhSanPhamBienThe {
   id: number
+  idChiTietSanPham?: number
   idAnhSanPham: number
   duongDanAnh: string
   tenAnh?: string
@@ -217,8 +218,13 @@ export function uploadAnhBienThe(files: File[], tenAnh: string, mauAnh: string, 
   })
 }
 
+// ==================== LẤY THÔNG TIN ẢNH ====================
 export function getAnhSanPhamByMauAnh(mauAnh: string) {
   return axios.get<AnhSanPham[]>(`/api/anh-san-pham-management/filter?mauAnh=${mauAnh}`)
+}
+
+export function getAnhSanPhamById(id: number) {
+  return axios.get<anhSanPham>(`/api/anh-san-pham-management/detail/${id}`)
 }
 
 export function deleteAnhBienThe(idBienThe: number, idAnh: number) {

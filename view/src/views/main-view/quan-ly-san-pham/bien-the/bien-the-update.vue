@@ -153,14 +153,134 @@
         </a-row>
 
         <!-- Images Gallery -->
-        <a-card v-if="variant.anhSanPham && variant.anhSanPham.length > 0" title="Hình ảnh sản phẩm" class="images-card">
-          <div class="images-gallery">
-            <div v-for="(image, index) in variant.anhSanPham" :key="index" class="image-item">
-              <a-image :src="image" :width="150" :height="150" fit="cover" />
+        <!-- Images Gallery -->
+        <a-card title="Quản lý hình ảnh" class="images-card">
+          <!-- Loading overlay during upload/delete (styled like ThemSanPham) -->
+          <div v-if="uploadingImages || deletingImage" class="image-upload-loading-overlay">
+            <div class="image-upload-loading-content">
+              <a-spin />
+              <div class="image-upload-loading-text">
+                <h3>{{ uploadingImages ? 'Đang upload ảnh...' : 'Đang xoá ảnh...' }}</h3>
+                <p>Vui lòng chờ trong giây lát</p>
+              </div>
             </div>
           </div>
-        </a-card>
 
+          <div
+            class="images-gallery"
+            :style="{
+              opacity: uploadingImages || deletingImage ? 0.6 : 1,
+              pointerEvents: uploadingImages || deletingImage ? 'none' : 'auto',
+            }"
+          >
+            <!-- Existing Images -->
+            <div v-for="(image, index) in managedImages" :key="`image-${managedImageIds[index]}`" class="image-item-container">
+              <div
+                class="image-item"
+                :class="{ 'image-selected': selectedImageId === managedImageIds[index] }"
+                @click="selectImage(managedImageIds[index])"
+              >
+                <a-image :src="image" :width="120" :height="120" fit="cover" />
+                <div class="image-overlay">
+                  <div class="image-actions">
+                    <a-button
+                      type="text"
+                      size="small"
+                      @click.stop="editImage(managedImageIds[index])"
+                      class="icon-button"
+                      :disabled="deletingImage"
+                    >
+                      <template #icon>
+                        <icon-edit />
+                      </template>
+                    </a-button>
+                    <a-button
+                      type="text"
+                      size="small"
+                      @click.stop="deleteImage(managedImageIds[index])"
+                      class="icon-button"
+                      :disabled="deletingImage"
+                    >
+                      <template #icon>
+                        <icon-delete />
+                      </template>
+                    </a-button>
+                  </div>
+                </div>
+              </div>
+              <span class="image-index">{{ index + 1 }}</span>
+            </div>
+
+            <!-- Add Image Button (only show if < 5 images) -->
+            <div v-if="managedImages.length < 5" class="image-item-container">
+              <div
+                class="image-add-item"
+                @click="uploadingImages || deletingImage ? null : triggerImageUpload()"
+                :style="{ cursor: uploadingImages || deletingImage ? 'not-allowed' : 'pointer' }"
+              >
+                <div class="add-icon">
+                  <icon-plus />
+                </div>
+                <span style="font-size: 12px; color: #666; margin-top: 4px">Thêm ảnh</span>
+              </div>
+            </div>
+
+            <!-- Hidden file input -->
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/*"
+              multiple
+              style="display: none"
+              @change="handleImageUpload"
+              :disabled="uploadingImages || deletingImage"
+            />
+          </div>
+
+          <!-- Image limit info -->
+          <div style="margin-top: 12px; font-size: 12px; color: #999">
+            <span v-if="managedImages.length < 5">
+              {{ managedImages.length }}/5 ảnh (có thể thêm {{ 5 - managedImages.length }} ảnh nữa)
+            </span>
+            <span v-else style="color: #f53f3f">Đã đạt giới hạn 5 ảnh</span>
+          </div>
+
+          <!-- Edit Image Modal -->
+          <a-modal
+            v-model:visible="showImageEditModal"
+            title="Chỉnh sửa ảnh"
+            ok-text="Cập nhật"
+            cancel-text="Hủy"
+            @ok="confirmEditImage"
+            width="600px"
+            :ok-button-props="{ disabled: uploadingImages || deletingImage }"
+            :cancel-button-props="{ disabled: uploadingImages || deletingImage }"
+          >
+            <a-spin v-if="uploadingImages" :size="40" tip="Đang xử lý ảnh..." style="margin-bottom: 16px" />
+
+            <div v-show="!uploadingImages" style="text-align: center">
+              <div v-if="editingImageData" style="margin-bottom: 16px">
+                <img :src="editingImageData" :style="{ maxWidth: '100%', maxHeight: '400px' }" />
+              </div>
+              <div style="margin-bottom: 16px">
+                <a-button type="primary" @click="triggerEditImageUpload" :disabled="uploadingImages || deletingImage">
+                  <template #icon>
+                    <icon-plus />
+                  </template>
+                  Chọn ảnh thay thế
+                </a-button>
+              </div>
+              <input
+                ref="editFileInput"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="handleImageEditUpload"
+                :disabled="uploadingImages || deletingImage"
+              />
+            </div>
+          </a-modal>
+        </a-card>
         <!-- Action Buttons -->
         <a-card class="action-card">
           <div class="action-buttons">
@@ -230,7 +350,7 @@ import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
-import { IconArrowLeft, IconEye, IconRefresh, IconSave } from '@arco-design/web-vue/es/icon'
+import { IconArrowLeft, IconEye, IconRefresh, IconSave, IconPlus, IconEdit, IconDelete } from '@arco-design/web-vue/es/icon'
 import {
   getBienTheById,
   updateBienThe,
@@ -240,6 +360,11 @@ import {
   getChatLieu,
   getDeGiay,
   getTrongLuong,
+  uploadAnhBienThe,
+  getAnhSanPhamById,
+  addAnhToBienThe,
+  deleteAnhBienTheLink,
+  getAllAnhBienTheDetails,
   type BienTheSanPham,
   type SanPham,
 } from '@/api/san-pham/bien-the'
@@ -256,12 +381,26 @@ const userStore = useUserStore()
 // State
 const initialLoading = ref(true)
 const updating = ref(false)
+const uploadingImages = ref(false) // Loading state for image upload
+const deletingImage = ref(false) // Loading state for image delete
 const attributesLoading = ref(false)
 const variant = ref<BienTheSanPham | null>(null)
 const formRef = ref()
 
 // Update confirm modal state
 const showUpdateConfirm = ref(false)
+
+// Image management state
+const managedImages = ref<string[]>([])
+const managedImageIds = ref<number[]>([]) // Track image IDs from server (parallel array with managedImages)
+const originalImageIds = ref<number[]>([]) // Track original IDs from DB for cleanup
+const selectedImageId = ref<number | null>(null) // Track selected image by ID, not index
+const showImageEditModal = ref(false)
+const editingImageId = ref<number | null>(null) // Track editing image by ID, not index
+const editingImageData = ref<string | null>(null)
+const newImageData = ref<string | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const editFileInput = ref<HTMLInputElement | null>(null)
 
 // Get variant ID from route
 const variantId = Number(route.params.id)
@@ -360,6 +499,258 @@ const goBack = () => {
 
 const viewDetail = () => {
   router.push(`/quan-ly-san-pham/bien-the/detail/${variantId}`)
+}
+
+// Image Management Methods
+const selectImage = (imageId: number) => {
+  selectedImageId.value = selectedImageId.value === imageId ? null : imageId
+}
+
+const triggerImageUpload = () => {
+  if (managedImages.value.length < 5) {
+    fileInput.value?.click()
+  } else {
+    Message.warning('Đã đạt giới hạn 5 ảnh')
+  }
+}
+
+const triggerEditImageUpload = () => {
+  editFileInput.value?.click()
+}
+
+const handleImageUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const files = input.files
+
+  if (!files || files.length === 0) return
+
+  try {
+    // Check limit
+    if (managedImages.value.length >= 5) {
+      Message.warning('Đã đạt giới hạn 5 ảnh')
+      return
+    }
+
+    // Filter files to not exceed 5 total
+    const filesToUpload = Array.from(files).slice(0, 5 - managedImages.value.length)
+
+    if (filesToUpload.length === 0) {
+      Message.warning('Đã đạt giới hạn 5 ảnh')
+      return
+    }
+
+    uploadingImages.value = true
+    Message.loading(`Đang upload ${filesToUpload.length} ảnh...`)
+
+    // Call backend API to upload all images to Cloudinary
+    const response = await uploadAnhBienThe(filesToUpload, 'product-image', 'product-image', userStore.id || 1)
+
+    if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+      // Get all uploaded image URLs using the returned IDs
+      const uploadedUrls: string[] = []
+      let successCount = 0
+
+      for (const imageId of response.data) {
+        try {
+          const imageDetailRes = await getAnhSanPhamById(imageId)
+          if (imageDetailRes.data?.duongDanAnh) {
+            uploadedUrls.push(imageDetailRes.data.duongDanAnh)
+            managedImageIds.value.push(imageId) // Track the ID
+            successCount++
+          }
+        } catch (err) {
+          console.error(`Failed to get image details for ID ${imageId}:`, err)
+        }
+      }
+
+      if (successCount > 0) {
+        managedImages.value.push(...uploadedUrls)
+        Message.success(`${successCount}/${filesToUpload.length} ảnh đã được upload thành công`)
+      } else {
+        Message.error('Không thể lấy URL ảnh từ server')
+      }
+    } else {
+      Message.error('Lỗi upload ảnh: Server không trả về ID')
+    }
+
+    // Reset file input
+    input.value = ''
+  } catch (error: any) {
+    console.error('Upload error:', error)
+    Message.error(error?.message || 'Lỗi khi upload ảnh')
+    input.value = ''
+  } finally {
+    uploadingImages.value = false
+  }
+}
+
+const editImage = (imageId: number) => {
+  editingImageId.value = imageId
+  // Find the image URL by ID
+  const imageIndex = managedImageIds.value.indexOf(imageId)
+  if (imageIndex !== -1) {
+    editingImageData.value = managedImages.value[imageIndex]
+  }
+  newImageData.value = null
+  showImageEditModal.value = true
+}
+
+const handleImageEditUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const files = input.files
+
+  if (!files || files.length === 0) return
+
+  try {
+    uploadingImages.value = true
+    const file = files[0]
+    Message.loading('Đang upload ảnh...')
+
+    // Call backend API to upload image to Cloudinary
+    const response = await uploadAnhBienThe([file], file.name || 'product-image', 'product-image', userStore.id || 1)
+
+    if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+      // Get the uploaded image URL using the returned ID
+      const newImageId = response.data[0]
+      const imageDetailRes = await getAnhSanPhamById(newImageId)
+
+      if (imageDetailRes.data?.duongDanAnh) {
+        newImageData.value = imageDetailRes.data.duongDanAnh
+        editingImageData.value = newImageData.value
+        // Store the new image ID for confirmEditImage (use image ID, not index)
+        if (editingImageId.value !== null) {
+          if (!window.__editImageMapping) window.__editImageMapping = {}
+          // Map: oldImageId -> newImageId
+          window.__editImageMapping[editingImageId.value] = newImageId
+        }
+        Message.success('Ảnh được chọn thành công')
+      } else {
+        Message.error('Không thể lấy URL ảnh từ server')
+      }
+    } else {
+      Message.error('Lỗi upload ảnh: Server không trả về ID')
+    }
+
+    // Reset file input
+    input.value = ''
+  } catch (error: any) {
+    console.error('Upload error:', error)
+    Message.error(error?.message || 'Lỗi khi upload ảnh')
+    input.value = ''
+  } finally {
+    uploadingImages.value = false
+  }
+}
+
+const confirmEditImage = async () => {
+  if (editingImageId.value !== null && newImageData.value) {
+    try {
+      uploadingImages.value = true
+
+      const oldImageId = editingImageId.value
+      const newImageId = (window as any).__editImageMapping?.[oldImageId]
+      // Find the array index by image ID
+      const arrayIndex = managedImageIds.value.indexOf(oldImageId)
+      if (arrayIndex === -1) {
+        Message.error('Không tìm thấy ảnh được chọn')
+        return
+      }
+
+      // If editing an OLD image (one that was in DB), delete the old one and add new one
+      if (oldImageId && originalImageIds.value.includes(oldImageId)) {
+        const relationshipId = (window as any).__imageRelationshipMap?.[oldImageId]
+
+        // Delete the old relationship from DB
+        if (relationshipId) {
+          try {
+            await deleteAnhBienTheLink(relationshipId)
+          } catch (deleteError) {
+            console.error('Error deleting old image relationship:', deleteError)
+            Message.warning('Lỗi xóa ảnh cũ, nhưng vẫn tiếp tục')
+          }
+        }
+
+        // Remove old image from originalImageIds so it won't be treated as "original"
+        const originalIndex = originalImageIds.value.indexOf(oldImageId)
+        if (originalIndex !== -1) {
+          originalImageIds.value.splice(originalIndex, 1)
+        }
+      }
+
+      // Update URL and Image ID in the arrays (use found index)
+      managedImages.value[arrayIndex] = newImageData.value
+
+      // Update image ID if new image uploaded
+      if (newImageId) {
+        managedImageIds.value[arrayIndex] = newImageId
+      }
+
+      showImageEditModal.value = false
+      newImageData.value = ''
+
+      // Clean up
+      if ((window as any).__editImageMapping) {
+        delete (window as any).__editImageMapping[oldImageId]
+      }
+
+      Message.success('Ảnh đã được cập nhật thành công')
+    } catch (error: any) {
+      console.error('Update image error:', error)
+      Message.error(error?.message || 'Lỗi khi cập nhật ảnh')
+    } finally {
+      uploadingImages.value = false
+    }
+  } else if (!newImageData.value) {
+    Message.warning('Vui lòng chọn ảnh mới')
+  }
+}
+
+const deleteImage = async (imageId: number) => {
+  // Find the array index by image ID
+  const arrayIndex = managedImageIds.value.indexOf(imageId)
+  if (arrayIndex === -1) {
+    Message.error('Không tìm thấy ảnh được chọn')
+    return
+  }
+
+  try {
+    deletingImage.value = true
+    // If this is an old image (from DB), delete the relationship
+    if (imageId && originalImageIds.value.includes(imageId)) {
+      try {
+        // Get the relationship ID from the map
+        const relationshipId = (window as any).__imageRelationshipMap?.[imageId]
+
+        if (relationshipId) {
+          // Gọi API đổi trạng thái relationship
+          await deleteAnhBienTheLink(relationshipId)
+        } else {
+          console.warn('No relationship ID found for imageId:', imageId)
+        }
+      } catch (err) {
+        console.warn('Could not delete relationship from DB:', err)
+        Message.warning('Xoá khỏi database gặp lỗi, nhưng vẫn xoá khỏi danh sách')
+      }
+    }
+
+    // Remove from UI and tracking arrays using found index
+    managedImages.value.splice(arrayIndex, 1)
+    managedImageIds.value.splice(arrayIndex, 1)
+
+    // Remove from originalImageIds if it was there
+    const origIndex = originalImageIds.value.indexOf(imageId)
+    if (origIndex > -1) {
+      originalImageIds.value.splice(origIndex, 1)
+    }
+
+    selectedImageId.value = null
+    Message.success('Ảnh đã được xoá thành công')
+  } catch (error: any) {
+    console.error('Delete error:', error)
+    Message.error(error?.message || 'Lỗi khi xoá ảnh')
+  } finally {
+    deletingImage.value = false
+  }
 }
 
 const handleReset = () => {
@@ -470,6 +861,23 @@ const performUpdate = async () => {
       return
     }
 
+    // Handle image relationships:
+    // Only add NEW images, don't delete old ones
+    // User can only delete images by clicking delete button
+    // That will handle the DB cleanup
+
+    // Add new image relationships (only new ones not already in originalImageIds)
+    const idsToAdd = managedImageIds.value.filter((id: number) => !originalImageIds.value.includes(id))
+    if (idsToAdd.length > 0) {
+      try {
+        await addAnhToBienThe(variantId, idsToAdd)
+        Message.success(`${idsToAdd.length} ảnh mới đã được liên kết`)
+      } catch (imgError) {
+        console.error('Error linking images:', imgError)
+        Message.warning('Cập nhật hình ảnh gặp lỗi, nhưng vẫn tiếp tục cập nhật biến thể')
+      }
+    }
+
     // Map form data to match UpdateBienTheRequest structure
     const updateData = {
       id: variantId,
@@ -490,7 +898,7 @@ const performUpdate = async () => {
       updateAt: new Date().toISOString().split('T')[0],
       updateBy: userStore.id,
     }
-    console.log('Update data:', updateData)
+
     const response = await updateBienThe(updateData)
     if (response.success) {
       Message.success('Cập nhật biến thể thành công!')
@@ -546,6 +954,52 @@ const loadVariantData = async () => {
     const response = await getBienTheById(variantId)
     if (response.data && response.success) {
       variant.value = response.data
+
+      // Try to load image relationship details from DB for tracking
+      try {
+        const allDetailsRes = await getAllAnhBienTheDetails()
+        if (allDetailsRes.data && Array.isArray(allDetailsRes.data)) {
+          // Find relationships for this variant
+          const variantImageDetails = allDetailsRes.data.filter((detail: any) => detail.idChiTietSanPham === variantId)
+
+          // CRITICAL: Get image URLs in the SAME ORDER as the relationship details
+          // This ensures managedImages[i] and managedImageIds[i] are always synchronized
+          const imageUrls: string[] = []
+          const imageIds: number[] = []
+
+          for (const detail of variantImageDetails) {
+            try {
+              const urlRes = await getAnhSanPhamById(detail.idAnhSanPham)
+              if (urlRes.data?.duongDanAnh) {
+                imageUrls.push(urlRes.data.duongDanAnh)
+                imageIds.push(detail.idAnhSanPham)
+              }
+            } catch (err) {
+              console.warn('Could not load image URL for ID:', detail.idAnhSanPham, err)
+            }
+          }
+
+          // Set both arrays in synchronized order
+          managedImages.value = imageUrls
+          managedImageIds.value = imageIds
+
+          // Store ORIGINAL IMAGE IDs for comparison
+          originalImageIds.value = [...managedImageIds.value]
+
+          // Also store relationship mapping for deletion: { imageId: relationshipId }
+          if (!window.__imageRelationshipMap) {
+            window.__imageRelationshipMap = {}
+          }
+          variantImageDetails.forEach((detail: any) => {
+            ;(window as any).__imageRelationshipMap[detail.idAnhSanPham] = detail.id
+          })
+        }
+      } catch (err) {
+        console.warn('Could not load image detail relationships:', err)
+        // Fallback: use images from variant as-is
+        managedImages.value = Array.isArray(variant.value.anhSanPham) ? [...variant.value.anhSanPham] : []
+      }
+
       // Populate form data
       formData.giaBan = variant.value.giaBan || 0
       formData.giaTriGiamGia = variant.value.giaTriGiamGia || 0
@@ -718,13 +1172,157 @@ onMounted(async () => {
 }
 
 .images-gallery {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* Image upload loading overlay - styled like ThemSanPham */
+.image-upload-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.image-upload-loading-content {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+.image-upload-loading-text {
+  margin-top: 20px;
+}
+
+.image-upload-loading-text h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.image-upload-loading-text p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.image-item-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .image-item {
+  position: relative;
   border-radius: 6px;
   overflow: hidden;
+  border: 2px solid #e5e5e5;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 120px;
+  height: 120px;
+}
+
+.image-item:hover {
+  border-color: #1890ff;
+}
+
+.image-item.image-selected {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.2);
+}
+
+.image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-add-item {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px dashed #d9d9d9;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #fafafa;
+}
+
+.image-add-item:hover {
+  border-color: #1890ff;
+  background-color: #f5f5f5;
+}
+
+.add-icon {
+  font-size: 32px;
+  color: #1890ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.image-item:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-button {
+  color: #ffffff;
+  background: transparent;
+  border: none;
+  padding: 4px 8px !important;
+  font-size: 18px;
+  transition: all 0.3s ease;
+}
+
+.icon-button:hover {
+  color: #1890ff;
+  transform: scale(1.15);
+}
+
+.image-index {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
 }
 </style>
