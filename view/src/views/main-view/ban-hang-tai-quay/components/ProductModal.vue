@@ -102,12 +102,31 @@
     >
       <template #product="{ record }">
         <div style="display: flex; gap: 8px; align-items: center">
-          <img
-            v-if="record.anhSanPham?.[0]"
-            :src="record.anhSanPham[0]"
-            style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px"
-            :alt="record.tenSanPham"
-          />
+          <div
+            v-if="record.anhSanPham && record.anhSanPham.length > 0"
+            style="position: relative; flex-shrink: 0; width: 50px; height: 50px"
+          >
+            <MiniCarousel :images="record.anhSanPham" :autoplay-interval="2500" class="product-modal-carousel" />
+            <div
+              v-if="record.anhSanPham.length > 1"
+              style="
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                background: rgba(0, 0, 0, 0.6);
+                color: white;
+                padding: 2px 4px;
+                border-radius: 2px;
+                font-size: 9px;
+                font-weight: bold;
+              "
+            >
+              +{{ record.anhSanPham.length - 1 }}
+            </div>
+          </div>
+          <div v-else style="width: 50px; height: 50px; flex-shrink: 0; border-radius: 4px">
+            <a-image src="" :width="50" :height="50" :preview="false" />
+          </div>
           <div>
             <div style="font-weight: 600; font-size: 13px">{{ record.tenSanPham }}</div>
             <div style="font-size: 11px; color: #999">Mã: {{ record.maChiTietSanPham }}</div>
@@ -185,6 +204,7 @@
 
 <script setup lang="ts">
 import type { BienTheSanPham } from '@/api/san-pham/bien-the'
+import MiniCarousel from '@/components/MiniCarousel.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -232,3 +252,31 @@ function formatCurrency(value: number) {
   )
 }
 </script>
+
+<style scoped>
+:deep(.product-modal-carousel) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:deep(.product-modal-carousel .mini-carousel-container) {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 4px;
+}
+
+:deep(.product-modal-carousel .carousel-slides) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:deep(.product-modal-carousel .carousel-slide) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:deep(.product-modal-carousel .carousel-slide-empty) {
+  width: 100% !important;
+  height: 100% !important;
+}
+</style>

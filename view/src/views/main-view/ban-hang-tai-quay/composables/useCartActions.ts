@@ -12,6 +12,7 @@ interface CartItem {
   discount: number
   quantity: number
   image?: string
+  images?: string[]
   tenChiTietSanPham?: string
   tenMauSac?: string
   maMau?: string
@@ -114,6 +115,7 @@ export function useCartActions(params: {
           discount: selectedProductForAdd.value.giaTriGiamGia || 0,
           quantity,
           image: selectedProductForAdd.value.anhSanPham?.[0] || '',
+          images: selectedProductForAdd.value.anhSanPham || [],
           tenChiTietSanPham: selectedProductForAdd.value.tenChiTietSanPham || '',
           tenMauSac: selectedProductForAdd.value.tenMauSac || '',
           maMau: selectedProductForAdd.value.maMau || '',

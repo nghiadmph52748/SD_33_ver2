@@ -25,12 +25,32 @@
     >
       <template #product="{ record }">
         <div style="display: flex; gap: 8px; align-items: center">
-          <img
-            v-if="record.image"
-            :src="record.image"
-            style="width: 70px; height: 70px; object-fit: cover; border-radius: 4px"
-            :alt="record.productName"
-          />
+          <div v-if="(record.images && record.images.length > 0) || record.image" style="position: relative; flex-shrink: 0; width: 70px; height: 70px;">
+            <MiniCarousel 
+              :images="record.images && record.images.length > 0 ? record.images : (record.image ? [record.image] : [])"
+              :autoplay-interval="2500"
+              class="cart-carousel"
+            />
+            <div
+              v-if="record.images && record.images.length > 1"
+              style="
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                background: rgba(0, 0, 0, 0.6);
+                color: white;
+                padding: 2px 4px;
+                border-radius: 2px;
+                font-size: 9px;
+                font-weight: bold;
+              "
+            >
+              +{{ record.images.length - 1 }}
+            </div>
+          </div>
+          <div v-else style="width: 70px; height: 70px; flex-shrink: 0; border-radius: 4px;">
+            <a-image src="" :width="70" :height="70" :preview="false" />
+          </div>
           <div>
             <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px">
               {{ getProductDisplayName(record) }}
@@ -100,6 +120,7 @@
 
 <script setup lang="ts">
 import { IconDelete } from '@arco-design/web-vue/es/icon'
+import MiniCarousel from '@/components/MiniCarousel.vue'
 import { formatCurrency, getProductDisplayName } from '../utils'
 
 interface CartItem {
@@ -109,6 +130,7 @@ interface CartItem {
   discount: number
   quantity: number
   image?: string
+  images?: string[]
   tenMauSac?: string
   maMau?: string
   tenKichThuoc?: string
@@ -136,3 +158,31 @@ const columns = [
   { title: 'Thao Tác', dataIndex: 'action', key: 'action', slotName: 'action', width: 80, align: 'center' as const },
 ]
 </script>
+
+<style scoped>
+:deep(.cart-carousel) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:deep(.cart-carousel .mini-carousel-container) {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 4px;
+}
+
+:deep(.cart-carousel .carousel-slides) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:deep(.cart-carousel .carousel-slide) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:deep(.cart-carousel .carousel-slide-empty) {
+  width: 100% !important;
+  height: 100% !important;
+}
+</style>
