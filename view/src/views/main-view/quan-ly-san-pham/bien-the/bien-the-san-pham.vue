@@ -195,21 +195,18 @@
 
         <template #product_image="{ record }">
           <div
-            v-if="record.anhSanPham && record.anhSanPham.length > 2"
+            v-if="record.anhSanPham && record.anhSanPham.length > 0"
             @click="openImageSlideshow(record.anhSanPham)"
             style="cursor: pointer; position: relative"
             class="image-slideshow-trigger"
           >
-            <a-carousel :autoplay="true" show-arrow="hover" :loop="true" style="width: 70px; height: 70px">
-              <a-carousel-item v-for="(img, index) in record.anhSanPham" :key="index">
-                <a-avatar :image-url="img" :size="70" shape="square"></a-avatar>
-              </a-carousel-item>
-            </a-carousel>
+            <MiniCarousel :images="record.anhSanPham" :autoplay-interval="2500" />
             <div
+              v-if="record.anhSanPham.length > 1"
               style="
                 position: absolute;
-                bottom: 4px;
-                right: 4px;
+                top: 2px;
+                right: 2px;
                 background: rgba(0, 0, 0, 0.6);
                 color: white;
                 padding: 2px 4px;
@@ -218,21 +215,12 @@
                 font-weight: bold;
               "
             >
-              +{{ record.anhSanPham.length }} ảnh
+              +{{ record.anhSanPham.length - 1 }}
             </div>
           </div>
-          <a-carousel v-else :autoplay="true" show-arrow="hover" :loop="true" style="width: 70px; height: 70px">
-            <a-carousel-item
-              v-if="record.anhSanPham && record.anhSanPham.length > 0"
-              v-for="(img, index) in record.anhSanPham"
-              :key="index"
-            >
-              <a-avatar :image-url="img" :size="70" shape="square"></a-avatar>
-            </a-carousel-item>
-            <a-carousel-item v-else>
-              <a-avatar image-url="null" :size="70" shape="square"></a-avatar>
-            </a-carousel-item>
-          </a-carousel>
+          <div v-else style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 4px">
+            <a-image src="" :width="70" :height="70" :preview="false" />
+          </div>
         </template>
 
         <template #manufacturer="{ record }">
@@ -381,14 +369,18 @@
     </a-modal>
 
     <!-- Image Slideshow Modal -->
-    <a-modal v-model:visible="showImageSlideshow" title="Xem ảnh sản phẩm" width="800px" :footer="false">
+    <a-modal v-model:visible="showImageSlideshow" title="Xem ảnh sản phẩm" width="900px" :footer="false">
       <div style="display: flex; flex-direction: column; align-items: center">
-        <a-carousel :autoplay="true" :autoplay-interval="3000" show-arrow="always" style="width: 100%; max-height: 600px">
+        <a-carousel :autoplay="true" :autoplay-interval="3000" show-arrow="always" style="width: 100%; height: 600px; background: #f5f5f5">
           <a-carousel-item v-for="(img, index) in currentSlideImages" :key="index">
-            <img :src="img" style="width: 100%; height: 100%; object-fit: contain; max-height: 600px" />
+            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f5f5f5">
+              <img :src="img" style="max-width: 100%; max-height: 100%; object-fit: contain" />
+            </div>
           </a-carousel-item>
         </a-carousel>
-        <div style="margin-top: 12px; text-align: center; color: #999">{{ currentSlideIndex + 1 }} / {{ currentSlideImages.length }}</div>
+        <div style="margin-top: 12px; text-align: center; color: #999; font-size: 12px">
+          {{ currentSlideIndex + 1 }} / {{ currentSlideImages.length }}
+        </div>
       </div>
     </a-modal>
 
@@ -412,6 +404,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+import MiniCarousel from '@/components/MiniCarousel.vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
 import { IconEdit, IconCheck, IconClose, IconRefresh, IconDownload, IconEye, IconScan } from '@arco-design/web-vue/es/icon'
 import {
@@ -1855,6 +1848,8 @@ watch(
   display: inline-block;
   border-radius: 4px;
   transition: all 0.3s ease;
+  width: 70px;
+  height: 70px;
 }
 
 .image-slideshow-trigger:hover {
