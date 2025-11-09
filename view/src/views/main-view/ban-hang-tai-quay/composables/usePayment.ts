@@ -134,7 +134,7 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
    * Fill walk-in location when customer address is selected
    * Use structured address data (addressInfo) if available, or parse address string
    */
-  const fillWalkInLocationFromCustomer = (customer: Customer | null) => {
+  const fillWalkInLocationFromCustomer = async (customer: Customer | null) => {
     if (!customer) {
       // Reset if no customer
       walkInLocation.value = {
@@ -171,6 +171,28 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
         specificAddress = specificAddress.replace(/,\s*$/, '').trim()
       }
       walkInLocation.value.diaChiCuThe = specificAddress
+
+      // Load districts and wards for the selected province
+      const province = provinces.value.find((p) => p.value === customer.addressInfo!.thanhPho)
+      if (province) {
+        try {
+          const districts = await fetchDistrictsByProvinceCode(province.code)
+          walkInLocation.value.districts = [...districts]
+
+          // Load wards for the selected district
+          const district = districts.find((d) => d.value === customer.addressInfo!.quan)
+          if (district) {
+            try {
+              const wards = await fetchWardsByDistrictCode(district.code)
+              walkInLocation.value.wards = [...wards]
+            } catch {
+              console.warn('Failed to load wards')
+            }
+          }
+        } catch {
+          console.warn('Failed to load districts')
+        }
+      }
       return
     }
 

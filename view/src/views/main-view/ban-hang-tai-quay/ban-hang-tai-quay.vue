@@ -220,6 +220,7 @@ import {
   type PhieuGiamGiaResponse,
   type ConfirmBanHangRequest,
 } from './services/posService'
+import { calculateShippingFee } from './services/shippingFeeService'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
 import { useVoucher } from './composables/useVoucher'
@@ -460,8 +461,11 @@ const handleCustomerChange = async (customerId: string) => {
     // Wait for Vue to update the DOM and computed properties after updateCustomerId was called
     await nextTick()
 
-    // Fill walk-in location from selected customer address
-    fillWalkInLocationFromCustomer(selectedCustomer.value)
+    // Fill walk-in location from selected customer address (await for async loading of districts/wards)
+    await fillWalkInLocationFromCustomer(selectedCustomer.value)
+
+    // Wait a moment for Vue to process the location updates
+    await nextTick()
 
     // Call API to update customer - pass walkInLocation for walk-in customers
     await updateInvoiceCustomer(invoiceId, walkInLocation)
@@ -915,6 +919,26 @@ const handleOrderTypeChange = async (value: string) => {
     }
     if (value === 'delivery') {
       Message.info('Vui lòng nhập địa chỉ giao hàng')
+      // Trigger shipping fee calculation for registered customer or walk-in customer
+      // Use nextTick to ensure DOM is updated first
+      await nextTick()
+      if (isWalkIn.value) {
+        // For walk-in customers, use structured location
+        if (walkInLocation.value.thanhPho && walkInLocation.value.quan && walkInLocation.value.phuong) {
+          // Force recalculation by triggering a manual watch
+          const fee = calculateShippingFee(walkInLocation.value as any, subtotal.value)
+          shippingFee.value = fee || 0
+        }
+      } else if (selectedCustomer.value?.address) {
+        // For registered customers, address should already be in walkInLocation
+        if (walkInLocation.value.thanhPho && walkInLocation.value.quan && walkInLocation.value.phuong) {
+          const fee = calculateShippingFee(walkInLocation.value as any, subtotal.value)
+          shippingFee.value = fee || 0
+        }
+      }
+    } else {
+      // Reset shipping fee when not in delivery mode
+      shippingFee.value = 0
     }
   } catch (error: any) {
     console.error('Lỗi cập nhật loại đơn:', error)

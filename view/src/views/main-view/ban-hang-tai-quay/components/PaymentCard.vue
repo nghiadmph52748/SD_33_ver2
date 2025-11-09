@@ -122,6 +122,7 @@
           :is-walk-in="isWalkIn"
           :walk-in-location="walkInLocation"
           :subtotal="subtotal"
+          :shipping-fee-from-parent="shippingFee"
           @update:shipping-fee="$emit('update:shippingFee', $event)"
         />
       </div>

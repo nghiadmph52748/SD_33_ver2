@@ -72,6 +72,7 @@ interface Props {
   isWalkIn: boolean
   walkInLocation: ShippingLocation
   subtotal: number
+  shippingFeeFromParent?: number
 }
 
 interface Emits {
@@ -134,9 +135,10 @@ const recalculateShippingFee = async () => {
  * Auto-calculate shipping fee when location changes
  */
 watch(
-  () => [props.walkInLocation.thanhPho, props.walkInLocation.quan, props.walkInLocation.phuong],
+  () => props.walkInLocation,
   async () => {
-    if (props.isWalkIn && isLocationComplete.value) {
+    // Calculate shipping fee whenever location is complete, regardless of walk-in or registered customer
+    if (isLocationComplete.value) {
       await recalculateShippingFee()
     }
   },
@@ -145,17 +147,62 @@ watch(
 
 /**
  * Auto-calculate when switching to delivery mode
+ * This is critical - when user switches from counter to delivery,
+ * we need to recalculate shipping fee even if location was already set
  */
 watch(
   () => props.orderType,
   async (newType) => {
     if (newType === 'delivery') {
-      if (props.isWalkIn && isLocationComplete.value) {
-        await recalculateShippingFee()
-      }
+      // Force recalculate if location is complete
+      // Use setTimeout to ensure DOM is updated first
+      setTimeout(async () => {
+        if (isLocationComplete.value) {
+          await recalculateShippingFee()
+        }
+      }, 0)
+    } else {
+      // Reset shipping fee when switching away from delivery
+      shippingFee.value = 0
+      emit('update:shippingFee', 0)
     }
   }
 )
+
+/**
+ * Auto-calculate when selectedCustomer address changes
+ */
+watch(
+  () => props.selectedCustomer?.address,
+  async () => {
+    if (props.orderType === 'delivery' && isLocationComplete.value) {
+      await recalculateShippingFee()
+    }
+  }
+)
+
+/**
+ * Sync shipping fee from parent when it's updated externally
+ */
+watch(
+  () => props.shippingFeeFromParent,
+  (newFee) => {
+    if (newFee !== undefined && newFee !== null) {
+      shippingFee.value = newFee
+    }
+  }
+)
+
+/**
+ * Export method to allow parent to trigger recalculation
+ */
+const triggerRecalculation = async () => {
+  if (isLocationComplete.value) {
+    await recalculateShippingFee()
+  }
+}
+
+defineExpose({ triggerRecalculation })
 </script>
 
 <style scoped>
