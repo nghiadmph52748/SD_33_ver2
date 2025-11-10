@@ -13,18 +13,19 @@
         </RouterLink>
       </div>
     </Transition>
-    <div class="hero-dots" role="tablist" aria-label="Hero slides">
-      <button
-        v-for="(s, i) in slides"
-        :key="i"
-        class="dot"
-        :class="{ active: i === index }"
-        :aria-selected="i === index"
-        role="tab"
-        :aria-label="`Go to slide ${i + 1}`"
-        :title="`Go to slide ${i + 1}`"
-        @click="goTo(i)"
-      />
+
+    <!-- Navigation arrows -->
+    <div class="hero-nav" aria-label="Hero navigation">
+      <button class="nav-btn nav-prev" aria-label="Previous slide" @click="prev">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+        </svg>
+      </button>
+      <button class="nav-btn nav-next" aria-label="Next slide" @click="next">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
+        </svg>
+      </button>
     </div>
   </section>
 </template>
@@ -73,11 +74,14 @@ function stop() {
 }
 
 function goTo(i: number) {
-  const next = i % slides.value.length;
+  const next = (i + slides.value.length) % slides.value.length;
   direction.value = next > index.value ? 'left' : 'right';
   index.value = next;
   start();
 }
+
+function next() { goTo(index.value + 1); }
+function prev() { goTo(index.value - 1); }
 
 onMounted(start);
 onBeforeUnmount(stop);
@@ -139,41 +143,33 @@ onBeforeUnmount(stop);
 .hero-cta { border-color: rgba(255,255,255,0.9); color: #ffffff; }
 .hero-cta:hover { border-color: #ffffff; color: #111111; background: #ffffff; }
 
-.hero-dots {
+/* Navigation arrows */
+.hero-nav {
   position: absolute;
-  right: 16px;
-  bottom: 16px;
-  display: inline-flex;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  border-radius: 20px;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  pointer-events: none; /* allow clicks only on buttons */
 }
-.dot {
-  width: 10px;
-  height: 10px;
+.nav-btn {
+  pointer-events: auto;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
-  border: 2px solid rgba(255,255,255,0.9); 
-  background: rgba(255,255,255,0.3); 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-  transition: all 200ms ease;
-  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.8);
+  background: rgba(0,0,0,0.35);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  transition: transform .12s ease, background-color .12s ease, border-color .12s ease;
 }
-.dot.active {
-  background: #ffffff;
-  border-color: #ffffff;
-  width: 22px; 
-  box-shadow: 0 2px 6px rgba(255,255,255,0.5);
-}
-.dot:hover {
-  background: rgba(255,255,255,0.8); 
-  transform: scale(1.1);
-}
-.dot:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(135,206,255,0.8);
-}
+.nav-btn:hover { background: rgba(0,0,0,0.55); border-color: #ffffff; transform: translateY(-1px); }
+.nav-btn:active { transform: translateY(0) scale(0.96); }
 
 @media (min-width: 960px) { .hero-overlay { left: 50%; } }
 </style>

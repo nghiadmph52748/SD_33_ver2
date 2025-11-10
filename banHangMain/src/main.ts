@@ -9,6 +9,7 @@ import "@/api/interceptor"; // Initialize axios interceptors
 import "normalize.css";
 import "@arco-design/web-vue/dist/arco.css";
 import "./assets/main.scss";
+import imgFallback from "./directives/imgFallback";
 
 // Initialize theme from localStorage
 const savedTheme = localStorage.getItem('arco-theme');
@@ -25,5 +26,7 @@ app.use(ArcoVueIcon);
 app.use(createPinia());
 app.use(router);
 app.use(i18n);
+
+app.directive('img-fallback', imgFallback);
 
 app.mount("#app");

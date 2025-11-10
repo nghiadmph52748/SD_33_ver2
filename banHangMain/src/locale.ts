@@ -18,6 +18,13 @@ const i18n = createI18n({
     'en-US': en,
     'vi-VN': vi,
   },
+  // Dev-only: loudly report missing translation keys with component context
+  missing: (locale, key) => {
+    if (import.meta.env && import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.warn(`[i18n] Missing key: "${key}" in locale: ${locale}`)
+    }
+  },
 })
 
 export default i18n

@@ -19,7 +19,7 @@
               :src="resolveImage(p.img)" 
               :alt="p.name" 
               loading="lazy"
-              @error="handleImageError"
+              v-img-fallback
             />
           </div>
           <div class="info">
@@ -39,7 +39,6 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useCartStore } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
-import { handleImageError } from "@/utils/imageFallback";
 
 const cartStore = useCartStore();
 const { t } = useI18n();

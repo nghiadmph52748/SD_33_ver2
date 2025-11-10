@@ -39,7 +39,9 @@
           </div>
 
           <div class="summary-actions">
-            <button class="btn btn-block" :disabled="cartCount === 0">{{ $t('cart.checkout') }}</button>
+            <RouterLink to="/checkout" class="btn btn-block" :class="{ disabled: cartCount === 0 }">
+              {{ $t('cart.checkout') }}
+            </RouterLink>
           </div>
         </aside>
       </div>
@@ -118,7 +120,7 @@ const orderTotal = computed(() => cartTotal.value + shippingFee);
 .summary .row.total span:first-child { font-weight: 700; }
 
 .summary-actions { display: grid; gap: 12px; margin-top: 12px; }
-.summary-actions .btn[disabled] { opacity: .35; }
+.summary-actions .btn.disabled { opacity: .35; pointer-events: none; }
 
 hr { border: none; border-top: 1px solid #f0f0f0; margin: 8px 0; }
 

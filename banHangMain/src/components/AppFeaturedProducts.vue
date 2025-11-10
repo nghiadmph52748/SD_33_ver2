@@ -10,7 +10,7 @@
           :src="product.img" 
           :alt="product.name"
           loading="lazy"
-          @error="handleImageError"
+          v-img-fallback
         />
         </RouterLink>
         <h3>{{ product.name }}</h3>
@@ -28,7 +28,6 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useCartStore } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
-import { handleImageError } from "@/utils/imageFallback";
 
 const cartStore = useCartStore();
 const { featuredProducts } = storeToRefs(cartStore);
