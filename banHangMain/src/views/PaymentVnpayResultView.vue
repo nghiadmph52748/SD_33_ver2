@@ -109,7 +109,19 @@ const status = computed<StatusConfig>(() => {
       secondaryRoute: '/cart',
       secondaryLabelKey: 'payment.actions.viewCart',
       variant: 'success',
-      icon: '✅'
+    }
+  }
+
+  if (code.value === '24') {
+    // User cancelled on VNPAY UI
+    return {
+      titleKey: 'payment.cancelTitle',
+      messageKey: 'payment.cancelMessage',
+      primaryRoute: '/checkout',
+      primaryLabelKey: 'payment.actions.retryCheckout',
+      secondaryRoute: '/',
+      secondaryLabelKey: 'payment.actions.continueShopping',
+      variant: 'failure',
     }
   }
 
@@ -122,7 +134,6 @@ const status = computed<StatusConfig>(() => {
       secondaryRoute: '/checkout',
       secondaryLabelKey: 'payment.actions.retryCheckout',
       variant: 'pending',
-      icon: '⏳'
     }
   }
 
@@ -134,7 +145,6 @@ const status = computed<StatusConfig>(() => {
     secondaryRoute: '/',
     secondaryLabelKey: 'payment.actions.continueShopping',
     variant: 'failure',
-    icon: '⚠️'
   }
 })
 

@@ -4,9 +4,13 @@
       <div class="grid">
         <section class="bag">
           <h1>{{ $t('cart.bag') }}</h1>
-          <div v-if="cartCount === 0" class="bag-empty">
-            <p>{{ $t('cart.emptyBag') }}</p>
-          </div>
+          <AppEmptyState
+            v-if="cartCount === 0"
+            :title="$t('cart.empty')"
+            :description="$t('cart.emptyBag')"
+          >
+            <RouterLink to="/" class="btn">{{ $t('page.returnHome') }}</RouterLink>
+          </AppEmptyState>
           <div v-else class="bag-items">
         <AppCartDisplay />
           </div>
@@ -60,6 +64,7 @@ import AppCartSteps from "@/components/AppCartSteps.vue";
 import AppLoader from "@/components/AppLoader.vue";
 import AppSalesBoxes from "@/components/AppSalesBoxes.vue";
 import { useCartStore } from "@/stores/cart";
+import AppEmptyState from "@/components/AppEmptyState.vue";
 
 const cartStore = useCartStore();
 const { cartUIStatus, cartCount, cartTotal } = storeToRefs(cartStore);

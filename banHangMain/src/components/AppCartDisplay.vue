@@ -7,7 +7,7 @@
             :src="resolveImage(item.img)" 
             :alt="item.name"
             loading="lazy"
-            @error="handleImageError"
+            v-img-fallback
           />
         </div>
         <div class="info">
@@ -64,7 +64,6 @@ import { storeToRefs } from "pinia";
 import { useCartStore, type CartItem } from "@/stores/cart";
 import { createOrderFromCart } from "@/api/orders";
 import { formatCurrency } from "@/utils/currency";
-import { handleImageError } from "@/utils/imageFallback";
 
 const cartStore = useCartStore();
 const { cart, cartTotal, cartCount } = storeToRefs(cartStore);

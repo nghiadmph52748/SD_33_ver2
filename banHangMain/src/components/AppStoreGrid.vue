@@ -43,10 +43,7 @@
               crossorigin="anonymous"
               :class="{ loaded: imageLoaded[item.id] }"
               @load="event => handleImageLoad(String(item.id), event)"
-              @error="(event) => {
-                handleImageError(event);
-                imageLoaded[item.id] = true;
-              }"
+              v-img-fallback
             />
           </div>
           <div class="item__body">

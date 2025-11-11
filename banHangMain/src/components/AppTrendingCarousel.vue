@@ -11,7 +11,14 @@
         </button>
       </div>
     </div>
-    <div ref="scroller" class="scroller" role="list">
+    <div
+      ref="scroller"
+      class="scroller"
+      role="list"
+      tabindex="0"
+      aria-label="Trending products"
+      @keydown="onKeydown"
+    >
       <article v-for="p in trendingProducts" :key="p.id" class="card" role="listitem">
         <RouterLink :to="`/product/${p.id}`" class="card-link">
           <div class="img-wrap">
@@ -56,6 +63,15 @@ function scrollByAmount(direction: number) {
   el.scrollBy({ left: direction * amount, behavior: "smooth" });
 }
 
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    scrollByAmount(-1);
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    scrollByAmount(1);
+  }
+}
 function resolveImage(imgPath: string): string {
   if (!imgPath) return "/shoe1.jpg";
   if (imgPath.startsWith("http") || imgPath.startsWith("/")) return imgPath;
@@ -139,6 +155,11 @@ h2 {
   padding-bottom: 8px;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
+}
+
+.scroller:focus-visible {
+  outline: 3px solid rgba(135, 206, 255, .8);
+  outline-offset: 2px;
 }
 
 .scroller::-webkit-scrollbar { /* Chrome/Safari */

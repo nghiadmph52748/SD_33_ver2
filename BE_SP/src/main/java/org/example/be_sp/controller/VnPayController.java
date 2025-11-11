@@ -21,6 +21,8 @@ import org.example.be_sp.model.request.VnpayCreatePaymentRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.model.response.VnpayCreatePaymentResponse;
 import org.springframework.core.env.Environment;
+import org.example.be_sp.entity.OrderPayment;
+import org.example.be_sp.repository.OrderPaymentRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -36,9 +38,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class VnPayController {
 
     private final Environment env;
+    private final OrderPaymentRepository orderRepo;
 
-    public VnPayController(Environment env) {
+    public VnPayController(Environment env, OrderPaymentRepository orderRepo) {
         this.env = env;
+        this.orderRepo = orderRepo;
     }
 
     @PostMapping("/create")
@@ -76,6 +80,13 @@ public class VnPayController {
             cal.add(Calendar.MINUTE, 15);
             String expireDate = new SimpleDateFormat("yyyyMMddHHmmss").format(cal.getTime());
 
+            // Detect current frontend origin (e.g. http://localhost:5174) so we can return to the correct dev port
+            String origin = http.getHeader("Origin");
+            String clientBase = StringUtils.hasText(origin) ? origin : get("app.frontendUrl", "http://localhost:5173");
+            // Attach client base as a passthrough param so /return can redirect accurately
+            String returnUrlWithClient = vnpReturnUrl + (vnpReturnUrl.contains("?") ? "&" : "?")
+                    + "client=" + URLEncoder.encode(clientBase, StandardCharsets.UTF_8);
+
             Map<String, String> vnp = new HashMap<>();
             vnp.put("vnp_Version", "2.1.0");
             vnp.put("vnp_Command", "pay");
@@ -86,7 +97,7 @@ public class VnPayController {
             vnp.put("vnp_OrderInfo", orderInfo);
             vnp.put("vnp_OrderType", "other");
             vnp.put("vnp_Locale", locale);
-            vnp.put("vnp_ReturnUrl", vnpReturnUrl);
+            vnp.put("vnp_ReturnUrl", returnUrlWithClient);
             vnp.put("vnp_IpAddr", ip);
             vnp.put("vnp_CreateDate", createDate);
             vnp.put("vnp_ExpireDate", expireDate);
@@ -97,6 +108,13 @@ public class VnPayController {
             String query = buildQuery(vnp);
             String secureHash = hmacSHA512(vnpHashSecret, query);
             String payUrl = vnpPayUrl + "?" + query + "&vnp_SecureHash=" + secureHash;
+
+            // Persist a pending order for tracking
+            OrderPayment op = new OrderPayment();
+            op.setTxnRef(txnRef);
+            op.setAmount(amount);
+            op.setStatus("PENDING");
+            orderRepo.save(op);
 
             return new ResponseObject<>(new VnpayCreatePaymentResponse(payUrl, txnRef));
         } catch (Exception e) {
@@ -112,7 +130,10 @@ public class VnPayController {
         String hashData = buildQuery(params);
         String calc = hmacSHA512(vnpHashSecret, hashData);
 
-        String frontBase = get("app.frontendUrl", "http://localhost:5173");
+        // Prefer client base passed through from /create; fallback to configured default
+        String frontBase = Optional.ofNullable(req.getParameter("client"))
+                .filter(StringUtils::hasText)
+                .orElse(get("app.frontendUrl", "http://localhost:5173"));
         StringBuilder redirect = new StringBuilder(frontBase);
         if (!frontBase.endsWith("/")) {
             redirect.append('/');
@@ -165,7 +186,30 @@ public class VnPayController {
             resp.put("Message", "Invalid signature");
             return ResponseEntity.ok(resp);
         }
-        // TODO: lookup order, confirm amount and update status/idempotency handling
+        // Lookup order, confirm amount and update status/idempotency handling
+        String txnRef = req.getParameter("vnp_TxnRef");
+        String responseCode = req.getParameter("vnp_ResponseCode");
+        String amountStr = req.getParameter("vnp_Amount");
+        long parsedAmount;
+        try {
+            parsedAmount = Long.parseLong(amountStr) / 100L;
+        } catch (Exception ignore) {
+            parsedAmount = 0L;
+        }
+
+        var orderOpt = orderRepo.findByTxnRef(txnRef);
+        if (orderOpt.isPresent()) {
+            OrderPayment order = orderOpt.get();
+            if (!"PAID".equals(order.getStatus())) {
+                boolean amountOk = (order.getAmount() == null || order.getAmount() <= 0 || order.getAmount().equals(parsedAmount));
+                if ("00".equals(responseCode) && amountOk) {
+                    order.setStatus("PAID");
+                } else {
+                    order.setStatus("FAILED");
+                }
+                orderRepo.save(order);
+            }
+        }
         resp.put("RspCode", "00");
         resp.put("Message", "Confirm Success");
         return ResponseEntity.ok(resp);

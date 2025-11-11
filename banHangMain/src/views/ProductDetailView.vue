@@ -15,7 +15,7 @@
               @click="activeImageIndex = i"
               :aria-label="$t('product.viewImage', { n: i + 1 })"
             >
-              <img :src="imgSrc" :alt="`${product.name} thumbnail ${i+1}`" />
+              <img :src="imgSrc" :alt="`${product.name} thumbnail ${i+1}`" v-img-fallback />
             </button>
           </div>
           <div class="main" @mousemove="onMainImageMove" @mouseenter="onMainImageEnter" @mouseleave="onMainImageLeave">
@@ -25,6 +25,7 @@
                 :key="galleryImages[activeImageIndex]"
                 :src="galleryImages[activeImageIndex]"
                 :alt="`${product.name} main view`"
+                v-img-fallback
               />
             </transition>
               </div>
@@ -126,7 +127,7 @@
           <ul>
             <li v-for="(swatch, idx) in colorSwatches" :key="swatch">
               <button type="button" :class="['swatch', { active: selectedColorIndex === idx }]" @click="selectedColorIndex = idx">
-                <img :src="swatch" :alt="`Color ${idx+1}`" />
+                <img :src="swatch" :alt="`Color ${idx+1}`" v-img-fallback />
               </button>
             </li>
           </ul>

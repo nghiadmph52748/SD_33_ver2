@@ -79,6 +79,20 @@ ALTER DATABASE [GearUp] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_PO
 GO
 USE [GearUp]
 GO
+
+-- Bảng lưu giao dịch VNPAY
+IF OBJECT_ID(N'dbo.thanh_toan_don_hang', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[thanh_toan_don_hang](
+        [id] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [txn_ref] NVARCHAR(64) NOT NULL UNIQUE,
+        [amount] BIGINT NULL,
+        [status] NVARCHAR(20) NULL,
+        [created_at] DATETIMEOFFSET NOT NULL CONSTRAINT DF_thanh_toan_don_hang_created_at DEFAULT SYSDATETIMEOFFSET(),
+        [updated_at] DATETIMEOFFSET NOT NULL CONSTRAINT DF_thanh_toan_don_hang_updated_at DEFAULT SYSDATETIMEOFFSET()
+    );
+END
+GO
 /****** Object:  Table [dbo].[anh_san_pham]    Script Date: 10/13/2025 11:09:19 PM ******/
 SET ANSI_NULLS ON
 GO

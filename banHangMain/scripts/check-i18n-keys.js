@@ -9,6 +9,11 @@ const SRC_DIR = path.join(ROOT, 'src');
 const EN_LOCALE = path.join(SRC_DIR, 'locale', 'en-US.ts');
 const VI_LOCALE = path.join(SRC_DIR, 'locale', 'vi-VN.ts');
 
+// Allowlist for dynamic keys referenced via variables (e.g., i18n.t(status.titleKey))
+const ALLOWLIST_PREFIXES = [
+  'payment.', // dynamic in PaymentVnpayResultView
+];
+
 function readFileSafe(p) {
   try { return fs.readFileSync(p, 'utf8'); } catch { return ''; }
 }
@@ -69,6 +74,13 @@ function main() {
     const found = scanUsage(txt);
     found.forEach(k => usedKeys.add(k));
   }
+
+       // Add allowlisted prefixes so they don't show as unused/missing
+       for (const key of [...enKeys]) {
+         if (ALLOWLIST_PREFIXES.some(prefix => key.startsWith(prefix))) {
+           usedKeys.add(key);
+         }
+       }
 
   const missingInEn = [];
   const missingInVi = [];
