@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.example.be_sp.entity.ChiTietDotGiamGia;
@@ -64,6 +65,24 @@ public class BanHangService {
     @Autowired
     TimelineDonHangRepository timelineRepository;
 
+    /**
+     * Helper method to create timeline entry automatically
+     */
+    private void addTimeline(HoaDon hoaDon, String trangThaiCu, String trangThaiMoi,
+            String hanhDong, String moTa, Integer idNhanVien) {
+        TimelineDonHang timeline = new TimelineDonHang();
+        timeline.setIdHoaDon(hoaDon);
+        timeline.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
+        timeline.setTrangThaiCu(trangThaiCu != null ? trangThaiCu : "");
+        timeline.setTrangThaiMoi(trangThaiMoi != null ? trangThaiMoi : "");
+        timeline.setHanhDong(hanhDong != null ? hanhDong : "");
+        timeline.setMoTa(moTa != null ? moTa : "");
+        timeline.setThoiGian(java.time.Instant.now());
+        timeline.setTrangThai(true);
+        timeline.setDeleted(false);
+        timelineRepository.save(timeline);
+    }
+
     public Integer taoHoaDon(Integer idNhanVien) {
         HoaDon hd = new HoaDon();
         hd.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
@@ -74,28 +93,13 @@ public class BanHangService {
         hd.setTrangThai(true);
         hd.setDeleted(false);
         HoaDon saved = hdRepository.save(hd);
-        TimelineDonHang timeline = new TimelineDonHang();
-        timeline.setIdHoaDon(saved);
-        timeline.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
-        timeline.setTrangThaiCu("");
-        timeline.setTrangThaiMoi("Tạo đơn hàng");
-        timeline.setHanhDong("Tạo");
-        timeline.setThoiGian(java.time.Instant.now());
-        timeline.setMoTa("Tạo hóa đơn bán hàng tại quầy");
-        timeline.setTrangThai(true);
-        timeline.setDeleted(false);
-        timelineRepository.save(timeline);
-        TimelineDonHang timeline1 = new TimelineDonHang();
-        timeline1.setIdHoaDon(saved);
-        timeline1.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
-        timeline1.setTrangThaiCu("Tạo đơn hàng");
-        timeline1.setTrangThaiMoi("Đang xử lý");
-        timeline1.setHanhDong("Cập nhật");
-        timeline1.setThoiGian(java.time.Instant.now());
-        timeline1.setMoTa("Tạo hóa đơn bán hàng tại quầy");
-        timeline1.setTrangThai(true);
-        timeline1.setDeleted(false);
-        timelineRepository.save(timeline1);
+
+        // Create timeline: Tạo đơn hàng
+        addTimeline(saved, "", "Tạo đơn hàng", "Tạo", "Tạo hóa đơn bán hàng tại quầy", idNhanVien);
+
+        // Create timeline: Đang xử lý
+        addTimeline(saved, "Tạo đơn hàng", "Đang xử lý", "Cập nhật", "Tạo hóa đơn bán hàng tại quầy", idNhanVien);
+
         return saved.getId();
     }
 
@@ -135,6 +139,12 @@ public class BanHangService {
 
         // Cập nhật tổng tiền hóa đơn
         updateTongTienHoaDon(hoaDon);
+
+        // Create timeline: Thêm sản phẩm
+        addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Thêm",
+                "Thêm sản phẩm (ID: " + idChiTietSanPham + ", SL: " + soLuong + ")",
+                idNhanVien);
+
         return saved.getId();
     }
 
@@ -162,6 +172,11 @@ public class BanHangService {
         // Update hoaDon tongTien after deleting all items
         if (hoaDon != null) {
             updateTongTienHoaDon(hoaDon);
+
+            // Create timeline: Xóa sản phẩm
+            addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Xóa",
+                    "Xóa " + idChiTietSanPham.length + " sản phẩm khỏi đơn hàng",
+                    idNhanVien);
         }
     }    // Helper method to calculate and update total amount (tongTien) of HoaDon
 
@@ -212,6 +227,11 @@ public class BanHangService {
 
         ctsp.setSoLuong(newStock);
         ctspRepository.save(ctsp);
+
+        // Create timeline: Cập nhật số lượng
+        addTimeline(hdct.getIdHoaDon(), "Đang xử lý", "Đang xử lý", "Cập nhật",
+                "Cập nhật số lượng: " + oldQuantity + " → " + soLuong,
+                idNhanVien);
     }
 
     public Integer updateKhachHang(Integer idHoaDon, Integer idKhachHang, String tenKhachHang, String soDienThoai, String diaChiKhachHang, String emailKhachHang, Integer idNhanVien) {
@@ -254,6 +274,12 @@ public class BanHangService {
             hoaDon.setUpdateAt(LocalDate.now());
             hoaDon.setUpdateBy(idNhanVien);
             hdRepository.save(hoaDon);
+
+            // Create timeline: Cập nhật khách hàng
+            addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
+                    "Cập nhật khách hàng: " + (tenKhachHang != null ? tenKhachHang : khachHang.getTenKhachHang()),
+                    idNhanVien);
+
             return khachHang.getId();
         } else {
             // Switch to walk-in customer (khách lẻ) - clear customer info
@@ -265,12 +291,19 @@ public class BanHangService {
             hoaDon.setUpdateAt(LocalDate.now());
             hoaDon.setUpdateBy(idNhanVien);
             hdRepository.save(hoaDon);
+
+            // Create timeline: Chuyển sang khách lẻ
+            addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
+                    "Chuyển sang khách lẻ",
+                    idNhanVien);
+
             return null;
         }
     }
 
     public void updateGiaoHang(Integer idHoaDon, Integer idNhanVien) {
         HoaDon hoaDon = hdRepository.findById(idHoaDon).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
+        boolean giaohangCu = hoaDon.getGiaoHang();
         hoaDon.setGiaoHang(!hoaDon.getGiaoHang());
         if (hoaDon.getGiaoHang()) {
             hoaDon.setPhiVanChuyen(BigDecimal.valueOf(30000));
@@ -278,20 +311,26 @@ public class BanHangService {
         hoaDon.setUpdateAt(LocalDate.now());
         hoaDon.setUpdateBy(idNhanVien);
         hdRepository.save(hoaDon);
+
+        // Create timeline: Cập nhật hình thức giao hàng
+        addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
+                "Cập nhật hình thức giao hàng: " + (giaohangCu ? "Không giao" : "Giao hàng")
+                + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
+                idNhanVien);
     }
 
     public void updateHTTT(Integer idHoaDon, Integer idPTTT, Integer idNhanVien) {
         HoaDon hoaDon = hdRepository.findById(idHoaDon).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
-        HinhThucThanhToan httt =
-                htttRepository.findByIdHoaDonAndTrangThaiAndDeleted(hdRepository.findById(idHoaDon).orElseThrow(),
-                true,
-                false);
-        
+        HinhThucThanhToan httt
+                = htttRepository.findByIdHoaDonAndTrangThaiAndDeleted(hdRepository.findById(idHoaDon).orElseThrow(),
+                        true,
+                        false);
+
         // Create new HinhThucThanhToan if none exists
         if (httt == null) {
             httt = new HinhThucThanhToan();
         }
-        
+
         httt.setIdHoaDon(hoaDon);
         httt.setIdPhuongThucThanhToan(ptttRepository.findById(idPTTT).orElseThrow());
         httt.setTrangThai(true);
@@ -300,6 +339,12 @@ public class BanHangService {
         hoaDon.setUpdateAt(LocalDate.now());
         hoaDon.setUpdateBy(idNhanVien);
         hdRepository.save(hoaDon);
+
+        // Create timeline: Cập nhật hình thức thanh toán
+        String ptttName = idPTTT == 1 ? "Tiền mặt" : idPTTT == 2 ? "Chuyển khoản" : "Cả hai";
+        addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
+                "Cập nhật hình thức thanh toán: " + ptttName,
+                idNhanVien);
     }
 
     public Integer updatePhieuGiamGia(Integer idHoaDon, Integer idPhieuGiamGia, Integer idNhanVien) {
@@ -321,6 +366,12 @@ public class BanHangService {
         hoaDon.setUpdateAt(LocalDate.now());
         hoaDon.setUpdateBy(idNhanVien);
         hdRepository.save(hoaDon);
+
+        // Create timeline: Áp dụng phiếu giảm giá
+        addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
+                "Áp dụng phiếu giảm giá: " + pgg.getMaPhieuGiamGia(),
+                idNhanVien);
+
         return pgg.getId();
     }
 
@@ -380,6 +431,11 @@ public class BanHangService {
         }
         // Note: idPTTT (1: cash, 2: transfer, 3: both) is just recorded in hoaDon
         // No need to update HinhThucThanhToan entity for POS orders
+
+        // Create timeline: Xác nhận bán hàng
+        addTimeline(hoaDon, "Đang xử lý", "Hoàn thành", "Xác nhận",
+                "Xác nhận bán hàng tại quầy - Tổng tiền: " + hoaDon.getTongTien(),
+                request.getIdNhanVien());
     }
 
     public void kiemTraTonKhoBienThe(Integer idChiTietSanPham, Integer soLuong) {
@@ -452,5 +508,12 @@ public class BanHangService {
         }
         // Note: idPhuongThucThanhToan is actually idPTTT (1:cash, 2:transfer, 3:both) - not a database ID
         // So we don't validate it here
+    }
+
+    public ArrayList<TimelineDonHang> getTimelineByHoaDon(Integer idHoaDon) {
+        // Verify hóa đơn exists before fetching timeline
+        hdRepository.findById(idHoaDon).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
+        List<TimelineDonHang> timeline = timelineRepository.findByHoaDonId(idHoaDon);
+        return timeline != null ? new ArrayList<>(timeline) : new ArrayList<>();
     }
 }

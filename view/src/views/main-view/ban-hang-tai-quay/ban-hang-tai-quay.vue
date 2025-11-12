@@ -229,8 +229,8 @@ import { useCart } from './composables/useCart'
 import { useProductModal } from './composables/useProductModal'
 import { useCustomer } from './composables/useCustomer'
 import usePayment from './composables/usePayment'
-import { useCheckout } from './composables/useCheckout'
-import { useCartActions } from './composables/useCartActions'
+import useCheckout from './composables/useCheckout'
+import useCartActions from './composables/useCartActions'
 import { useOrdersManager } from './composables/useOrdersManager'
 import { useStock } from './composables/useStock'
 import CartTable from './components/CartTable.vue'
@@ -815,7 +815,8 @@ const refreshVouchersForCustomer = async (idKhachHang: number) => {
 // Define as a function declaration to avoid TDZ when passing before its definition
 async function refreshProductStock() {
   try {
-    const availableProducts = await (await import('./services/productService')).then((m) => m.fetchAllAvailableProducts()).catch(() => [])
+    const module = await import('./services/productService')
+    const availableProducts = await module.fetchAllAvailableProducts()
 
     let hasChanged = false
 
@@ -841,7 +842,7 @@ async function refreshProductStock() {
       productPagination.value.current = 1
     }
   } catch (error) {
-    console.error('Error refreshing product stock:', error)
+    console.log('Error refreshing product stock:', error)
   }
 }
 

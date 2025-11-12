@@ -11,10 +11,12 @@ import {
   confirmPosOrder as apiConfirmPosOrder,
   getPosActiveCoupons as apiGetPosActiveCoupons,
   getPosActiveCouponsForCustomer as apiGetPosActiveCouponsForCustomer,
+  getInvoiceTimeline as apiGetInvoiceTimeline,
   type UpdatePaymentMethodRequest,
   type UpdateVoucherRequest,
   type UpdateCustomerRequest,
   type ConfirmBanHangRequest,
+  type TimelineEntry,
 } from '@/api/pos'
 
 // Thin wrappers + convenience helpers for POS-related server operations
@@ -47,6 +49,7 @@ export async function updateShippingMethod(invoiceId: number, userId: number) {
 }
 
 export async function updatePaymentMethod(invoiceId: number, method: 'cash' | 'transfer' | 'both', userId: number) {
+  // eslint-disable-next-line no-nested-ternary
   const idPTTT = method === 'cash' ? 1 : method === 'transfer' ? 2 : 3
   const payload: UpdatePaymentMethodRequest = { idHoaDon: invoiceId, idPTTT, idNhanVien: userId }
   return apiUpdatePaymentMethod(payload)
@@ -67,4 +70,8 @@ export async function getPosActiveCoupons() {
 
 export async function getPosActiveCouponsForCustomer(customerId: number) {
   return apiGetPosActiveCouponsForCustomer(customerId)
+}
+
+export async function getInvoiceTimeline(invoiceId: number) {
+  return apiGetInvoiceTimeline(invoiceId)
 }

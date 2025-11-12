@@ -191,3 +191,19 @@ export const confirmPosOrder = (data: ConfirmBanHangRequest) =>
     method: 'POST',
     data,
   })
+
+/** Get order timeline */
+export interface TimelineEntry {
+  id?: number
+  trangThaiCu?: string
+  trangThaiMoi?: string
+  hanhDong?: string
+  moTa?: string
+  thoiGian?: string
+  idNhanVien?: number
+}
+
+export const getInvoiceTimeline = (idHoaDon: number) =>
+  requestJson<TimelineEntry[]>(`/api/pos/timeline/${idHoaDon}`, {
+    method: 'GET',
+  })

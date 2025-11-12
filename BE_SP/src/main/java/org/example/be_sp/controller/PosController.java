@@ -153,4 +153,13 @@ public class PosController {
             return new ResponseObject<>(false, null, "Lỗi khi bán hàng: " + e.getMessage());
         }
     }
+
+    @GetMapping("/timeline/{idHoaDon}")
+    public ResponseObject<?> getInvoiceTimeline(@PathVariable Integer idHoaDon) {
+        try {
+            return new ResponseObject<>(true, banHangService.getTimelineByHoaDon(idHoaDon), "Lấy timeline đơn hàng thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy timeline: " + e.getMessage());
+        }
+    }
 }
