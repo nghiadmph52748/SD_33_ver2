@@ -17,16 +17,57 @@ export interface CartPayload {
   quantity: number;
 }
 
+const CART_STORAGE_KEY = "gearup-cart-v1";
+const VALID_CART_STATUSES: CartStatus[] = ["idle", "loading", "success", "failure"];
+
+type PersistableCartState = {
+  cart: CartItem[];
+  cartUIStatus: CartStatus;
+  clientSecret: string;
+};
+
+function loadPersistedCartState(): Partial<PersistableCartState> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const cached = window.localStorage.getItem(CART_STORAGE_KEY);
+    if (!cached) return null;
+    const parsed = JSON.parse(cached);
+    const status = typeof parsed.cartUIStatus === "string" && VALID_CART_STATUSES.includes(parsed.cartUIStatus)
+      ? parsed.cartUIStatus as CartStatus
+      : "idle";
+    return {
+      cart: Array.isArray(parsed.cart) ? parsed.cart : [],
+      cartUIStatus: status,
+      clientSecret: typeof parsed.clientSecret === "string" ? parsed.clientSecret : ""
+    };
+  } catch (error) {
+    console.warn("Failed to hydrate cart cache", error);
+    return null;
+  }
+}
+
+function persistCartStateSnapshot(state: PersistableCartState) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.warn("Failed to persist cart cache", error);
+  }
+}
+
 export const useCartStore = defineStore("cart", {
-  state: () => ({
-    cartUIStatus: "idle" as CartStatus,
-    products: [] as Product[],
-    cart: [] as CartItem[],
-    clientSecret: "",
-    loading: false,
-    error: null as string | null,
-    sizeMapping: {} as Record<string, string[]>
-  }),
+  state: () => {
+    const persisted = loadPersistedCartState();
+    return {
+      cartUIStatus: persisted?.cartUIStatus ?? "idle",
+      products: [] as Product[],
+      cart: persisted?.cart ?? [],
+      clientSecret: persisted?.clientSecret ?? "",
+      loading: false,
+      error: null as string | null,
+      sizeMapping: {} as Record<string, string[]>
+    };
+  },
   getters: {
     featuredProducts(state): Product[] {
       const preferredOrder = ["alphafly", "vaporfly", "zoom fly", "zoom-fly"]; // order matters
@@ -111,12 +152,21 @@ export const useCartStore = defineStore("cart", {
     },
     updateCartUI(status: CartStatus) {
       this.cartUIStatus = status;
+      this.persistState();
+    },
+    persistState() {
+      persistCartStateSnapshot({
+        cart: this.cart,
+        cartUIStatus: this.cartUIStatus,
+        clientSecret: this.clientSecret
+      });
     },
     clearCart() {
       this.cart = [];
       this.cartUIStatus = "idle";
       this.clientSecret = "";
       this.sizeMapping = {};
+      this.persistState();
     },
     addToCart(payload: CartItem) {
       const existing = this.cart.find(item => item.id === payload.id
@@ -125,10 +175,12 @@ export const useCartStore = defineStore("cart", {
 
       if (existing) {
         existing.quantity += payload.quantity;
+        this.persistState();
         return;
       }
 
       this.cart.push(payload);
+      this.persistState();
     },
     addOneToCart(payload: CartItem) {
       const existing = this.cart.find(item => item.id === payload.id
@@ -137,10 +189,12 @@ export const useCartStore = defineStore("cart", {
 
       if (existing) {
         existing.quantity += 1;
+        this.persistState();
         return;
       }
 
       this.cart.push({ ...payload, quantity: 1 });
+      this.persistState();
     },
     removeOneFromCart(payload: CartItem) {
       const index = this.cart.findIndex(item => item.id === payload.id);
@@ -153,16 +207,20 @@ export const useCartStore = defineStore("cart", {
 
       if (item.quantity > 1) {
         item.quantity -= 1;
+        this.persistState();
         return;
       }
 
       this.cart.splice(index, 1);
+      this.persistState();
     },
     removeAllFromCart(payload: CartItem) {
       this.cart = this.cart.filter(item => item.id !== payload.id);
+      this.persistState();
     },
     setClientSecret(clientSecret: string) {
       this.clientSecret = clientSecret;
+      this.persistState();
     },
     async createPaymentIntent() {
       try {

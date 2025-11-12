@@ -145,7 +145,7 @@ const startCheckout = async () => {
     background-position: 200% 0;
   }
 }
-.title-row { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 12px; }
+.title-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .name { margin: 0; font-size: 26px; font-weight: 700; }
 .price { font-weight: 700; }
 .meta { color: #4e5969; display: grid; gap: 6px; margin: 8px 0 12px; font-size: 18px; }
