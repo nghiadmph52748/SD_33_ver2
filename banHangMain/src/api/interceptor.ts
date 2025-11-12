@@ -16,6 +16,7 @@ const PUBLIC_ENDPOINTS = [
   '/api/san-pham-management/playlist',
   '/api/san-pham-management/paging',
   '/api/san-pham-management/detail',
+  '/api/anh-san-pham-management', // allow product images without token
   '/api/public',
   '/api/payment/vnpay/create',
   '/api/payment/vnpay/return',

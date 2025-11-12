@@ -140,6 +140,7 @@ export default {
   'checkout.err.district': 'Select a district',
   'checkout.err.ward': 'Select a ward',
   'checkout.err.street': 'Enter your street/house number',
+  'checkout.err.requiredAll': 'Please complete all required information before paying',
   // Page
   'page.notFound': 'Page Not Found',
   'page.notFoundDesc': "The page you're looking for doesn't exist. Head back to the storefront to continue shopping.",

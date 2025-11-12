@@ -1,6 +1,28 @@
 import axios from './interceptor'
 import type { HttpResponse } from './interceptor'
 
+// Fallback images fetched from backend anh_san_pham when product detail lacks images
+let fallbackImageCache: string[] = []
+let fallbackImagesLoaded = false
+
+async function ensureFallbackImages(): Promise<void> {
+  if (fallbackImagesLoaded) return
+  try {
+    const res = await axios.get('/api/anh-san-pham-management/playlist')
+    // ResponseObject: { success, data, message }
+    const list = Array.isArray(res.data) ? res.data : []
+    // Items look like { id, duongDanAnh, ... }
+    fallbackImageCache = list
+      .map((item: any) => item?.duongDanAnh)
+      .filter((u: any) => typeof u === 'string' && u.length > 0)
+    fallbackImagesLoaded = true
+  } catch (e) {
+    // If it fails, keep cache empty; mapping will fallback to local assets
+    fallbackImageCache = []
+    fallbackImagesLoaded = true
+  }
+}
+
 export interface ProductVariant {
   id: number
   idSanPham: number
@@ -99,6 +121,10 @@ function mapImageToLocalPath(productName: string, backendImageUrl: string | null
     }
     // Treat as file name in public /products
     return `/products/${backendImageUrl}`
+  }
+  // If we have fetched fallback images from anh_san_pham, use the first available URL
+  if (fallbackImageCache.length > 0) {
+    return fallbackImageCache[0]
   }
   
   const normalizedName = productName.toLowerCase()
@@ -209,6 +235,7 @@ export async function getProductsByCategory(categoryId: number): Promise<HttpRes
 // Get only sneaker products (filtered)
 export async function getSneakerProducts(): Promise<Product[]> {
   try {
+    await ensureFallbackImages()
     const response = await getProductsList()
     // The interceptor returns the full ResponseObject: { success: true, data: [...], message: "..." }
     // So we need to access response.data to get the actual array
@@ -245,6 +272,7 @@ export async function getSneakerProducts(): Promise<Product[]> {
 // Get all products mapped to frontend format
 export async function getAllProducts(): Promise<Product[]> {
   try {
+    await ensureFallbackImages()
     const response = await getProductsList()
     
     // The interceptor returns the full ResponseObject: { success: true, data: [...], message: "..." }

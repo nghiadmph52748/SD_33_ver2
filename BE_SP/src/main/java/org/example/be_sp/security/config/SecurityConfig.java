@@ -51,6 +51,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/dot-giam-gia-management/**").permitAll() // Allow discount management without auth for testing
                 .requestMatchers("/api/phieu-giam-gia-management/**").permitAll() // Allow coupon management without auth for testing
                 .requestMatchers("/api/chi-tiet-phieu-giam-gia-management/**").permitAll() // Allow coupon detail management without auth for testing
+                .requestMatchers("/api/anh-san-pham-management/**").permitAll() // Allow product images without auth for storefront
                 .requestMatchers("/api/bien-the/**").permitAll() // Allow product variants without auth for testing
                 .requestMatchers("/api/ai/**").permitAll() // Allow AI service endpoints without auth
                 .anyRequest().authenticated())

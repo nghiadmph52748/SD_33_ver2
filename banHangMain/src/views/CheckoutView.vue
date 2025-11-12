@@ -65,6 +65,10 @@
               </select>
             </div>
           </form>
+          <!-- Inline alert inside details to avoid shifting the summary column -->
+          <div v-if="showAllEmptyAlert" class="form-alert">
+            {{ t('checkout.err.requiredAll') || 'Vui lòng điền đầy đủ thông tin trước khi thanh toán.' }}
+          </div>
         </section>
         <section class="summary">
           <h2>{{ $t('cart.summary') }}</h2>
@@ -99,12 +103,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useCartStore } from '@/stores/cart'
 import { formatCurrency } from '@/utils/currency'
 import { createVnPayPayment } from '@/api/payment'
 
+// i18n
+const { t } = useI18n()
 const cartStore = useCartStore()
 const { cartCount, cartTotal } = storeToRefs(cartStore)
 
@@ -134,29 +141,85 @@ const errs = ref<Record<string, string>>({
   street: '',
 })
 
+// Show a global alert when all fields are empty and user clicks pay
+const showAllEmptyAlert = ref(false)
+
 function validateDetails(): boolean {
   errs.value = { fullName: '', email: '', phone: '', province: '', district: '', ward: '', street: '' }
   let ok = true
   if (!contact.value.fullName.trim()) {
-    errs.value.fullName = $t('checkout.err.fullName') as string
+    errs.value.fullName = t('checkout.err.fullName') as string
     ok = false
   }
   const email = contact.value.email.trim()
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    errs.value.email = $t('checkout.err.email') as string
+    errs.value.email = t('checkout.err.email') as string
     ok = false
   }
   const phone = contact.value.phone.trim()
   if (!phone || !/^[0-9+\-\s]{8,15}$/.test(phone)) {
-    errs.value.phone = $t('checkout.err.phone') as string
+    errs.value.phone = t('checkout.err.phone') as string
     ok = false
   }
-  if (!address.value.province) { errs.value.province = $t('checkout.err.province') as string; ok = false }
-  if (!address.value.district) { errs.value.district = $t('checkout.err.district') as string; ok = false }
-  if (!address.value.ward) { errs.value.ward = $t('checkout.err.ward') as string; ok = false }
-  if (!address.value.street.trim()) { errs.value.street = $t('checkout.err.street') as string; ok = false }
+  if (!address.value.province) { errs.value.province = t('checkout.err.province') as string; ok = false }
+  if (!address.value.district) { errs.value.district = t('checkout.err.district') as string; ok = false }
+  if (!address.value.ward) { errs.value.ward = t('checkout.err.ward') as string; ok = false }
+  if (!address.value.street.trim()) { errs.value.street = t('checkout.err.street') as string; ok = false }
   return ok
 }
+
+// Realtime, field-level validation
+function validateField(field: keyof typeof errs.value) {
+  switch (field) {
+    case 'fullName': {
+      errs.value.fullName = contact.value.fullName.trim()
+        ? ''
+        : (t('checkout.err.fullName') as string)
+      break
+    }
+    case 'email': {
+      const email = contact.value.email.trim()
+      errs.value.email = (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+        ? ''
+        : (t('checkout.err.email') as string)
+      break
+    }
+    case 'phone': {
+      const phone = contact.value.phone.trim()
+      errs.value.phone = (phone && /^[0-9+\-\s]{8,15}$/.test(phone))
+        ? ''
+        : (t('checkout.err.phone') as string)
+      break
+    }
+    case 'province': {
+      errs.value.province = address.value.province ? '' : (t('checkout.err.province') as string)
+      break
+    }
+    case 'district': {
+      errs.value.district = address.value.district ? '' : (t('checkout.err.district') as string)
+      break
+    }
+    case 'ward': {
+      errs.value.ward = address.value.ward ? '' : (t('checkout.err.ward') as string)
+      break
+    }
+    case 'street': {
+      errs.value.street = address.value.street.trim()
+        ? ''
+        : (t('checkout.err.street') as string)
+      break
+    }
+  }
+}
+
+// Watchers to update validation in realtime as user edits
+watch(() => contact.value.fullName, () => validateField('fullName'))
+watch(() => contact.value.email, () => validateField('email'))
+watch(() => contact.value.phone, () => validateField('phone'))
+watch(() => address.value.province, () => validateField('province'))
+watch(() => address.value.district, () => validateField('district'))
+watch(() => address.value.ward, () => validateField('ward'))
+watch(() => address.value.street, () => validateField('street'))
 
 async function loadProvinces() {
   try {
@@ -202,10 +265,22 @@ async function onDistrictChange() {
 async function payWithVnpay() {
   if (cartCount.value === 0 || paying.value) return
   if (!validateDetails()) {
+    // Check if all fields are empty to show a global alert
+    const allEmpty =
+      !contact.value.fullName.trim() &&
+      !contact.value.email.trim() &&
+      !contact.value.phone.trim() &&
+      !address.value.province &&
+      !address.value.district &&
+      !address.value.ward &&
+      !address.value.street.trim()
+    showAllEmptyAlert.value = allEmpty
+
     const first = document.querySelector('.details .invalid') as HTMLElement | null
     if (first?.focus) first.focus()
     return
   }
+  showAllEmptyAlert.value = false
   paying.value = true
   error.value = ''
   try {
@@ -239,6 +314,15 @@ async function payWithVnpay() {
   border: 1px solid #f0f0f0;
   border-radius: 16px;
   padding: 20px;
+}
+.form-alert {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff7f7;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 13px;
 }
 .form { display: grid; gap: 12px; }
 .row { display: grid; gap: 6px; }

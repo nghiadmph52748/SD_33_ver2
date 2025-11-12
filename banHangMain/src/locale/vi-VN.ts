@@ -140,6 +140,7 @@ export default {
   'checkout.err.district': 'Chọn quận/huyện',
   'checkout.err.ward': 'Chọn phường/xã',
   'checkout.err.street': 'Nhập số nhà/đường',
+  'checkout.err.requiredAll': 'Vui lòng điền đầy đủ thông tin trước khi thanh toán',
   // Trang
   'page.notFound': 'Không tìm thấy trang',
   'page.notFoundDesc': 'Trang bạn đang tìm kiếm không tồn tại. Quay lại cửa hàng để tiếp tục mua sắm.',
