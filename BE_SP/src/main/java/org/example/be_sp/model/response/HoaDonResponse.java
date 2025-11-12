@@ -17,9 +17,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class HoaDonResponse {
+
     private Integer id;
     private String maKhachHang;
     private String tenKhachHang;
+    private String maHoaDon;
     private String email;
     private String soDienThoai;
     private String maPhieuGiamGia;
@@ -52,8 +54,10 @@ public class HoaDonResponse {
     private Integer idNhanVien;
     private List<String> ghiChus;
     private List<HoaDonChiTietResponse> items;
+
     public HoaDonResponse(HoaDon hd) {
         this.id = hd.getId();
+        this.maHoaDon = hd.getMaHoaDon();
 
         // Khách hàng
         if (hd.getIdKhachHang() != null) {
@@ -70,8 +74,6 @@ public class HoaDonResponse {
             this.loaiPhieuGiamGia = hd.getIdPhieuGiamGia().getLoaiPhieuGiamGia();
             this.giaTriGiamGia = hd.getIdPhieuGiamGia().getGiaTriGiamGia();
         }
-
-
 
         this.tenHoaDon = hd.getTenHoaDon();
         this.loaiDon = hd.getGiaoHang();
@@ -95,7 +97,7 @@ public class HoaDonResponse {
         // Mapping chi tiết sản phẩm
         // Mapping danh sách sản phẩm (items cho frontend)
 //        if (hd.getHoaDonChiTiets() != null) {
-////            this.items = hd.getHoaDonChiTiets()
+        ////            this.items = hd.getHoaDonChiTiets()
 ////                    .stream()
 ////                    .map(HoaDonChiTietResponse::new)  // map sang response chi tiết
 ////                    .toList();
@@ -137,7 +139,7 @@ public class HoaDonResponse {
             this.maNhanVien = hd.getIdNhanVien().getMaNhanVien();
             this.idNhanVien = hd.getIdNhanVien().getId();
         }
-        
+
         // Ưu tiên lấy từ trường trực tiếp nếu có
         if (hd.getTenNhanVien() != null && !hd.getTenNhanVien().trim().isEmpty()) {
             this.tenNhanVien = hd.getTenNhanVien();
@@ -145,7 +147,7 @@ public class HoaDonResponse {
         if (hd.getMaNhanVien() != null && !hd.getMaNhanVien().trim().isEmpty()) {
             this.maNhanVien = hd.getMaNhanVien();
         }
-        
+
         // Ưu tiên lấy từ trường trực tiếp nếu có
         if (hd.getTenPhieuGiamGia() != null && !hd.getTenPhieuGiamGia().trim().isEmpty()) {
             this.tenPhieuGiamGia = hd.getTenPhieuGiamGia();
@@ -155,10 +157,6 @@ public class HoaDonResponse {
         }
         // Mapping chi tiết sản phẩm
 
-
     }
-
-
-
 
 }

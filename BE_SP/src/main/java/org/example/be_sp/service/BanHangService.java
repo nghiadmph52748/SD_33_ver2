@@ -19,6 +19,7 @@ import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
 import org.example.be_sp.entity.TimelineDonHang;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.banHang.ConfirmBanHangRequest;
+import org.example.be_sp.model.response.CreateInvoiceResponse;
 import org.example.be_sp.repository.ChiTietSanPhamRepository;
 import org.example.be_sp.repository.DiaChiKhachHangRepository;
 import org.example.be_sp.repository.HinhThucThanhToanRepository;
@@ -33,6 +34,7 @@ import org.example.be_sp.repository.ThongTinDonHangRepository;
 import org.example.be_sp.repository.TimelineDonHangRepository;
 import org.example.be_sp.repository.TrangThaiDonHangRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -64,6 +66,8 @@ public class BanHangService {
     TrangThaiDonHangRepository ttTdRepository;
     @Autowired
     TimelineDonHangRepository timelineRepository;
+    @Autowired
+    JdbcTemplate jdbcTemplate;
 
     /**
      * Helper method to create timeline entry automatically
@@ -83,7 +87,7 @@ public class BanHangService {
         timelineRepository.save(timeline);
     }
 
-    public Integer taoHoaDon(Integer idNhanVien) {
+    public Object taoHoaDon(Integer idNhanVien) {
         HoaDon hd = new HoaDon();
         hd.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
         hd.setCreateAt(LocalDate.now());
@@ -100,7 +104,25 @@ public class BanHangService {
         // Create timeline: Đang xử lý
         addTimeline(saved, "Tạo đơn hàng", "Đang xử lý", "Cập nhật", "Tạo hóa đơn bán hàng tại quầy", idNhanVien);
 
-        return saved.getId();
+        // Call stored procedure to generate invoice code (procedure will UPDATE ma_hoa_don directly)
+        String maHoaDon = generateInvoiceCode(saved.getId());
+
+        // Refresh entity to get updated ma_hoa_don from database
+        saved = hdRepository.findById(saved.getId()).orElseThrow();
+
+        return new CreateInvoiceResponse(saved.getId(), maHoaDon);
+    }
+
+    private String generateInvoiceCode(Integer idHoaDon) {
+        try {
+            // Call stored procedure with idHoaDon parameter - procedure will UPDATE the column directly
+            String sql = "DECLARE @maHoaDon NVARCHAR(10); EXEC sp_GenerateMaHoaDon @idHoaDon = ?, @maMoiGenerated = @maHoaDon OUTPUT; SELECT @maHoaDon as ma_hoa_don";
+
+            String result = jdbcTemplate.queryForObject(sql, new Object[]{idHoaDon}, String.class);
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating invoice code: " + e.getMessage(), e);
+        }
     }
 
     public void xoaHoaDon(Integer idHoaDon, Integer idNhanVien) {

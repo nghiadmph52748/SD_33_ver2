@@ -6,8 +6,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
 import org.hibernate.annotations.Nationalized;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -30,6 +28,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "hoa_don")
 public class HoaDon {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -47,9 +46,7 @@ public class HoaDon {
     @JoinColumn(name = "id_nhan_vien")
     private NhanVien idNhanVien;
 
-    @Generated(GenerationTime.ALWAYS)
-    @ColumnDefault("'HD'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
-    @Column(name = "ma_hoa_don", length = 7,insertable = false, updatable = false)
+    @Column(name = "ma_hoa_don", length = 10)
     private String maHoaDon;
 
     @Nationalized

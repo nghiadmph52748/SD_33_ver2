@@ -14,7 +14,7 @@
         <a-tab-pane v-for="(order, idx) in orders" :key="idx.toString()">
           <template #title>
             <div class="tab-header">
-              <span class="order-text">Đơn #{{ idx + 1 }} ({{ order.orderCode }})</span>
+              <span class="order-text">Đơn #{{ idx + 1 }} ({{ order.maHoaDon || order.orderCode }})</span>
               <span v-if="order.items && order.items.length > 0" class="item-count-badge">
                 {{ order.items.reduce((sum, item) => sum + item.quantity, 0) }}
               </span>
@@ -47,6 +47,7 @@ interface CartItem {
 }
 interface Order {
   orderCode: string
+  maHoaDon?: string
   items: CartItem[]
 }
 

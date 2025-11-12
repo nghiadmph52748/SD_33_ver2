@@ -48,8 +48,8 @@ public class PosController {
     @PostMapping("/create-invoice")
     public ResponseObject<?> taoHoaDon(@RequestParam("createBy") Integer idNhanVien) {
         try {
-            Integer invoiceId = banHangService.taoHoaDon(idNhanVien);
-            return new ResponseObject<>(true, invoiceId, "Tạo hóa đơn thành công");
+            Object response = banHangService.taoHoaDon(idNhanVien);
+            return new ResponseObject<>(true, response, "Tạo hóa đơn thành công");
         } catch (Exception e) {
             return new ResponseObject<>(false, null, "Lỗi khi tạo hóa đơn: " + e.getMessage());
         }

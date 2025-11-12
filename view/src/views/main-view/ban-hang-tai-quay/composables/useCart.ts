@@ -17,7 +17,7 @@ interface Order {
 export function useCart(params: { currentOrder: Ref<Order | null> }) {
   const { currentOrder } = params
 
-  const cartPagination = ref({
+  const cartPagination = ref<{ current: number; pageSize: number }>({
     current: 1,
     pageSize: 5,
   })

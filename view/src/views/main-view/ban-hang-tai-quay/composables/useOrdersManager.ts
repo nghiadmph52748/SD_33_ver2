@@ -11,6 +11,7 @@ interface CartItem {
 interface Order {
   id: string
   orderCode: string
+  maHoaDon?: string
   items: CartItem[]
   customerId: string | null
   createdAt: Date
@@ -38,11 +39,12 @@ export function useOrdersManager(params: {
 
   const createNewOrder = async () => {
     try {
-      const invoiceId = await svcCreateInvoice(userId)
-      if (!invoiceId) throw new Error('Không thể tạo hóa đơn')
+      const response = await svcCreateInvoice(userId)
+      if (!response || !response.id) throw new Error('Không thể tạo hóa đơn')
       const newOrder: Order = {
-        id: invoiceId.toString(),
+        id: response.id.toString(),
         orderCode: generateOrderCode(),
+        maHoaDon: response.maHoaDon,
         items: [],
         customerId: '',
         createdAt: new Date(),

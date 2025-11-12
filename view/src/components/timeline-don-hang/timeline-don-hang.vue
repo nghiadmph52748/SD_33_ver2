@@ -743,7 +743,7 @@ const handleStatusChange = async (action: any) => {
       idHoaDon: id,
       idNhanVien: currentUser.value?.id || orderInfo.value?.idNhanVien || 0,
       tenNhanVien: currentUser.value?.tenNhanVien || currentUser.value?.name || orderInfo.value?.tenNhanVien || 'Hệ thống',
-      trangThaiCu: lastStatus?.trangThaiMoi || null,
+      trangThaiCu: lastStatus?.trangThaiMoi ?? '',
       trangThaiMoi: action.nextStatus,
       hanhDong: action.action,
       moTa: action.moTa || '',

@@ -19,6 +19,7 @@
           <div v-else>
             <OrderHeaderCard
               :order-code="currentOrder?.orderCode || ''"
+              :ma-hoa-don="currentOrder?.maHoaDon"
               :has-items="!!currentOrder?.items.length"
               @clear-cart="clearCart"
               @open-qr="showQRScanner = true"
@@ -30,14 +31,14 @@
                   :items="paginatedCartItems"
                   :table-key="cartTableKey"
                   :pagination="{
-                    current: cartPagination.value?.current || 1,
-                    pageSize: cartPagination.value?.pageSize || 5,
+                    current: (cartPagination as any).value?.current || 1,
+                    pageSize: (cartPagination as any).value?.pageSize || 5,
                     total: currentOrder?.items.length || 0,
                     showTotal: true,
                     showPageSize: true,
                   }"
                   :over-stock-items="overStockItems"
-                  @paginate="(page) => (cartPagination.value.current = page)"
+                  @paginate="(page) => ((cartPagination as any).value.current = page)"
                   @update-quantity="({ id, value }) => updateQuantity(id, value)"
                   @delete="(record) => showDeleteProductConfirm(record)"
                 />
@@ -128,15 +129,15 @@
     <!-- Add Customer Modal -->
     <AddCustomerModal
       :visible="showAddCustomerModal"
-      :name="newCustomerForm?.value?.name || ''"
-      :phone="newCustomerForm?.value?.phone || ''"
-      :email="newCustomerForm?.value?.email || ''"
-      :address="newCustomerForm?.value?.address || ''"
+      :name="newCustomerForm?.name || ''"
+      :phone="newCustomerForm?.phone || ''"
+      :email="newCustomerForm?.email || ''"
+      :address="newCustomerForm?.address || ''"
       @update:visible="(v) => (showAddCustomerModal = v)"
-      @update:name="(v) => newCustomerForm.value && (newCustomerForm.value.name = v)"
-      @update:phone="(v) => newCustomerForm.value && (newCustomerForm.value.phone = v)"
-      @update:email="(v) => newCustomerForm.value && (newCustomerForm.value.email = v)"
-      @update:address="(v) => newCustomerForm.value && (newCustomerForm.value.address = v)"
+      @update:name="(v) => newCustomerForm && (newCustomerForm.name = v)"
+      @update:phone="(v) => newCustomerForm && (newCustomerForm.phone = v)"
+      @update:email="(v) => newCustomerForm && (newCustomerForm.email = v)"
+      @update:address="(v) => newCustomerForm && (newCustomerForm.address = v)"
       @ok="addNewCustomer"
     />
 
@@ -217,9 +218,8 @@ import {
   confirmPosOrder,
   getPosActiveCoupons,
   getPosActiveCouponsForCustomer,
-  type PhieuGiamGiaResponse,
-  type ConfirmBanHangRequest,
 } from './services/posService'
+import { type PhieuGiamGiaResponse, type ConfirmBanHangRequest } from '@/api/pos'
 import { calculateShippingFee } from './services/shippingFeeService'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
@@ -268,6 +268,7 @@ interface CartItem {
 interface Order {
   id: string
   orderCode: string
+  maHoaDon?: string
   items: CartItem[]
   customerId: string | null
   createdAt: Date
@@ -410,9 +411,8 @@ const {
   currentOrder,
   allProductVariants,
   cartTableKey,
-  userId: userStoreInstance.id,
+  userId: userStoreInstance.id || 0,
   refreshProductStock,
-  createNewInvoice,
 })
 
 const { showDeleteConfirmModal, showDeleteConfirm, confirmDeleteOrder, createNewOrder, handleOrderChange } = useOrdersManager({
@@ -421,7 +421,7 @@ const { showDeleteConfirmModal, showDeleteConfirm, confirmDeleteOrder, createNew
   allProductVariants,
   soldQuantitiesByProductId,
   cartPagination,
-  userId: userStoreInstance.id,
+  userId: userStoreInstance.id || 0,
 })
 
 const { insufficientStockItems, overStockItems } = useStock({ currentOrder, allProductVariants })
@@ -503,47 +503,6 @@ const addNewCustomer = async () => {
   } catch (error) {
     console.error('Lỗi thêm khách hàng:', error)
     Message.error(error.message || 'Có lỗi xảy ra khi thêm khách hàng')
-  }
-}
-
-async function createNewInvoice() {
-  try {
-    // Create invoice on server (no items needed at this point)
-    const invoiceId = await createInvoice(userStoreInstance.id)
-    if (!invoiceId) {
-      throw new Error('Không thể tạo hóa đơn')
-    }
-    // Update currentOrder with the created invoiceId
-    if (currentOrder.value) {
-      currentOrder.value.id = invoiceId.toString()
-    }
-    Message.success(`Hóa đơn #${invoiceId} đã được tạo`)
-    return invoiceId
-  } catch (error) {
-    console.error('Lỗi tạo hóa đơn:', error)
-    Message.error(error.message || 'Có lỗi xảy ra khi tạo hóa đơn')
-    throw error
-  }
-}
-
-const addProductsToInvoice = async (invoiceId: number) => {
-  try {
-    if (!currentOrder.value?.items.length) {
-      throw new Error('Giỏ hàng trống')
-    }
-    for (const item of currentOrder.value.items) {
-      const productId = parseInt(item.productId)
-      if (isNaN(productId)) continue
-      const idHoaDonChiTiet = await addProductToInvoice(invoiceId, productId, item.quantity, userStoreInstance.id)
-      if (idHoaDonChiTiet) {
-        item.idHoaDonChiTiet = idHoaDonChiTiet
-      }
-    }
-    Message.success(`${currentOrder.value.items.length} sản phẩm đã được thêm vào hóa đơn`)
-  } catch (error) {
-    console.error('Lỗi thêm sản phẩm:', error)
-    Message.error(error.message || 'Có lỗi xảy ra khi thêm sản phẩm')
-    throw error
   }
 }
 

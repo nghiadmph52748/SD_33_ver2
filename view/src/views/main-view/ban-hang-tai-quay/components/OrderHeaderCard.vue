@@ -4,7 +4,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center">
         <div style="font-weight: 600; color: #333; font-size: 14px">
           Mã Đơn:
-          <span style="color: #0960bd; font-weight: 700">{{ orderCode }}</span>
+          <span style="color: #0960bd; font-weight: 700">{{ maHoaDon || orderCode }}</span>
         </div>
         <a-space wrap style="margin-top: 8px">
           <a-button v-if="hasItems" type="text" status="danger" @click="$emit('clear-cart')" style="border: 1px solid #d9d9d9">
@@ -35,7 +35,7 @@
 <script setup lang="ts">
 import { IconDelete, IconQrcode, IconPlus } from '@arco-design/web-vue/es/icon'
 
-defineProps<{ orderCode: string; hasItems: boolean }>()
+defineProps<{ orderCode: string; maHoaDon?: string; hasItems: boolean }>()
 
 defineEmits<{ (e: 'clear-cart'): void; (e: 'open-qr'): void; (e: 'open-product'): void }>()
 </script>

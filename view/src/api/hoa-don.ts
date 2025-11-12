@@ -87,6 +87,7 @@ export interface HoaDonApiModel {
   maNhanVien?: string
   tenPhieuGiamGia?: string
   maPhieuGiamGia?: string
+  maHoaDon?: string
 }
 
 export interface BanHangTaiQuayRequest {

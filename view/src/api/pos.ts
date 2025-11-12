@@ -87,9 +87,15 @@ export const getPosActiveCouponsForCustomer = (idKhachHang: number) =>
     method: 'GET',
   })
 
+/** Invoice creation response */
+export interface CreateInvoiceResponse {
+  id: number
+  maHoaDon: string
+}
+
 /** Create a new invoice */
 export const createInvoice = (idNhanVien: number) =>
-  requestJson<number>('/api/pos/create-invoice', {
+  requestJson<CreateInvoiceResponse>('/api/pos/create-invoice', {
     method: 'POST',
     params: { createBy: idNhanVien },
   })

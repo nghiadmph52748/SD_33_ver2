@@ -349,7 +349,7 @@ CREATE TABLE [dbo].[hoa_don](
 	[id_khach_hang] [int] NULL,
 	[id_phieu_giam_gia] [int] NULL,
 	[id_nhan_vien] [int] NULL,
-	[ma_hoa_don]  AS ('HD'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ma_hoa_don] [nvarchar](10) NULL,
 	[ten_hoa_don] [nvarchar](255) NULL,
 	[loai_don] [bit] NULL,
 	[phi_van_chuyen] [decimal](18, 2) NULL,
@@ -378,6 +378,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+
 /****** Object:  Table [dbo].[hoa_don_chi_tiet]    Script Date: 10/13/2025 11:09:19 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -1531,6 +1532,19 @@ GO
 ALTER TABLE [dbo].[chi_tiet_san_pham]  WITH CHECK ADD FOREIGN KEY([id_trong_luong])
 REFERENCES [dbo].[trong_luong] ([id])
 GO
+
+-- Drop existing foreign keys if they exist to avoid conflicts
+-- Drop all FK on tables that reference hoa_don or are referenced by hoa_don
+DECLARE @sql NVARCHAR(MAX) = '';
+SELECT @sql += 'ALTER TABLE ' + QUOTENAME(TABLE_SCHEMA) + '.' + QUOTENAME(TABLE_NAME) + ' DROP CONSTRAINT ' + QUOTENAME(CONSTRAINT_NAME) + ';'
+FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+WHERE CONSTRAINT_TYPE = 'FOREIGN KEY' 
+  AND TABLE_NAME IN ('hinh_thuc_thanh_toan', 'hoa_don_chi_tiet', 'thong_tin_don_hang', 'timeline', 'hoa_don');
+
+EXEC sp_executesql @sql;
+GO
+
+-- Disable foreign key constraint checking during script execution
 ALTER TABLE [dbo].[chi_tiet_san_pham_anh]  WITH CHECK ADD FOREIGN KEY([id_anh_san_pham])
 REFERENCES [dbo].[anh_san_pham] ([id])
 GO
@@ -1731,13 +1745,60 @@ GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD CHECK  (([ngay_het_han]>[ngay_nhan]))
 GO
 
--- =====================================================================
--- LƯU Ý: OPTIMIZATION INDEXES SẼ ĐƯỢC TẠO Ở CUỐI FILE
--- Sau khi tất cả các tables, views, và stored procedures đã được tạo xong
--- =====================================================================
+-- Thêm stored procedure để generate mã hoá đơn ngẫu nhiên 10 ký tự (check trùng với data hiện tại)
+-- Randomize RAND seed each time for better randomness
+CREATE PROCEDURE sp_GenerateMaHoaDon
+    @idHoaDon INT,
+    @maMoiGenerated NVARCHAR(10) OUTPUT
+AS
+BEGIN
+    DECLARE @counter INT = 0;
+    DECLARE @maThoiGian NVARCHAR(10);
+    DECLARE @randomSeed INT;
+    
+    -- Seed RAND with current time for better randomness
+    SELECT @randomSeed = ABS(CHECKSUM(NEWID()));
+    
+    -- Vòng lặp để tìm mã chưa được sử dụng (tối đa 100 lần)
+    WHILE @counter < 100
+    BEGIN
+        -- Generate mã gồm 10 ký tự: HD + 8 ký tự (4 chữ + 4 số)
+        SET @maThoiGian = 'HD' + 
+            CHAR(65 + ABS(CHECKSUM(NEWID())) % 26) +  -- Ký tự A-Z
+            CHAR(65 + ABS(CHECKSUM(NEWID())) % 26) +  -- Ký tự A-Z
+            CHAR(65 + ABS(CHECKSUM(NEWID())) % 26) +  -- Ký tự A-Z
+            CHAR(65 + ABS(CHECKSUM(NEWID())) % 26) +  -- Ký tự A-Z
+            RIGHT('000' + CAST(ABS(CHECKSUM(NEWID())) % 10000 AS NVARCHAR(4)), 4); -- 4 ký tự số
+        
+        -- Kiểm tra xem mã này đã tồn tại trong bảng chưa
+        IF NOT EXISTS(SELECT 1 FROM [dbo].[hoa_don] WHERE [ma_hoa_don] = @maThoiGian)
+        BEGIN
+            -- UPDATE hóa đơn với mã được generate
+            UPDATE [dbo].[hoa_don] 
+            SET [ma_hoa_don] = @maThoiGian 
+            WHERE [id] = @idHoaDon;
+            
+            -- Verify the update was successful by reading back the value
+            SELECT @maMoiGenerated = [ma_hoa_don] FROM [dbo].[hoa_don] WHERE [id] = @idHoaDon;
+            RETURN 0;
+        END
+        
+        SET @counter = @counter + 1;
+    END
+    
+    -- Nếu không tìm được mã trong 100 lần, trả về NULL
+    SET @maMoiGenerated = NULL;
+    RETURN 1;
+END
+GO
 
--- Thêm và cải thiện các trường cho bảng hóa đơn
-USE [GearUp]
+-- Add UNIQUE filtered index on ma_hoa_don (on non-NULL values only)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UQ_hoa_don_ma_hoa_don' AND object_id = OBJECT_ID('[dbo].[hoa_don]'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_hoa_don_ma_hoa_don 
+    ON [dbo].[hoa_don]([ma_hoa_don])
+    WHERE [ma_hoa_don] IS NOT NULL;
+END
 GO
 
 -- Thêm trường SDT nhân viên

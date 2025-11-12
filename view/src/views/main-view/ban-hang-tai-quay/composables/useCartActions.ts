@@ -32,9 +32,8 @@ export default function useCartActions(params: {
   cartTableKey: Ref<number>
   userId: number
   refreshProductStock: () => Promise<void>
-  createNewInvoice: () => Promise<number>
 }) {
-  const { currentOrder, allProductVariants, cartTableKey, userId, refreshProductStock, createNewInvoice } = params
+  const { currentOrder, allProductVariants, cartTableKey, userId, refreshProductStock } = params
 
   const showAddProductConfirmModal = ref(false)
   const selectedProductForAdd = ref<BienTheSanPham | null>(null)
@@ -90,9 +89,7 @@ export default function useCartActions(params: {
       }
 
       if (Number.isNaN(invoiceId)) {
-        invoiceId = await createNewInvoice()
-        if (!invoiceId) throw new Error('Không thể tạo hóa đơn')
-        currentOrder.value.id = invoiceId.toString()
+        throw new Error('Vui lòng tạo đơn hàng trước khi thêm sản phẩm')
       }
 
       const idHoaDonChiTiet = await addProductToInvoice(invoiceId, productId, quantity, userId)
