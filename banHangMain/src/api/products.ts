@@ -1,26 +1,69 @@
 import axios from './interceptor'
 import type { HttpResponse } from './interceptor'
 
-// Fallback images fetched from backend anh_san_pham when product detail lacks images
-let fallbackImageCache: string[] = []
-let fallbackImagesLoaded = false
+// Cached product-image mapping fetched from backend anh_san_pham
+const productImageCache: Record<string, string[]> = {}
+const pendingImageRequests: Record<string, Promise<void>> = {}
+let playlistLoaded = false
 
-async function ensureFallbackImages(): Promise<void> {
-  if (fallbackImagesLoaded) return
+function normalizeKey(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function addImageToCache(name: string, url: string) {
+  if (!name || !url) return
+  const key = normalizeKey(name)
+  if (!productImageCache[key]) {
+    productImageCache[key] = []
+  }
+  if (!productImageCache[key].includes(url)) {
+    productImageCache[key].push(url)
+  }
+}
+
+async function ensurePlaylistImages(): Promise<void> {
+  if (playlistLoaded) return
   try {
     const res = await axios.get('/api/anh-san-pham-management/playlist')
-    // ResponseObject: { success, data, message }
     const list = Array.isArray(res.data) ? res.data : []
-    // Items look like { id, duongDanAnh, ... }
-    fallbackImageCache = list
-      .map((item: any) => item?.duongDanAnh)
-      .filter((u: any) => typeof u === 'string' && u.length > 0)
-    fallbackImagesLoaded = true
+    list.forEach((item: any) => {
+      const rawName = (item?.tenAnh || '').trim()
+      const url = typeof item?.duongDanAnh === 'string' ? item.duongDanAnh : ''
+      if (!rawName || !url) return
+      addImageToCache(rawName, url)
+      // If the name follows pattern "Product - Color", also index the product name only
+      const [productName] = rawName.split(/\s*-\s*/)
+      if (productName && productName !== rawName) {
+        addImageToCache(productName, url)
+      }
+    })
+    playlistLoaded = true
   } catch (e) {
-    // If it fails, keep cache empty; mapping will fallback to local assets
-    fallbackImageCache = []
-    fallbackImagesLoaded = true
+    Object.keys(productImageCache).forEach((key) => delete productImageCache[key])
+    playlistLoaded = true
   }
+}
+
+function findImageInCache(candidates: string[], fallback?: string | null): string | null {
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    const key = normalizeKey(candidate)
+    const list = productImageCache[key]
+    if (list && list.length > 0) {
+      return list[0]
+    }
+  }
+  if (fallback) return fallback
+  const firstKey = Object.keys(productImageCache)[0]
+  if (firstKey) {
+    return productImageCache[firstKey][0]
+  }
+  return null
 }
 
 export interface ProductVariant {
@@ -75,6 +118,23 @@ export interface Product {
 }
 
 // Convert backend product to frontend format
+function buildImageCandidates(productName: string, primaryColor?: string | null): string[] {
+  const candidates = new Set<string>()
+  const trimmedName = productName?.trim() || ''
+  const trimmedColor = primaryColor?.trim() || ''
+  if (trimmedName && trimmedColor) {
+    candidates.add(`${trimmedName} - ${trimmedColor}`)
+    candidates.add(`${trimmedName} ${trimmedColor}`)
+  }
+  if (trimmedName) {
+    candidates.add(trimmedName)
+  }
+  if (trimmedColor) {
+    candidates.add(trimmedColor)
+  }
+  return Array.from(candidates)
+}
+
 function mapBackendToFrontend(backendProduct: BackendProduct): Product {
   // Get price - use giaBan if available, otherwise use giaNhoNhat or giaLonNhat
   const price = backendProduct.giaBan 
@@ -92,10 +152,9 @@ function mapBackendToFrontend(backendProduct: BackendProduct): Product {
     ?.filter((v, i, arr) => arr.indexOf(v) === i) // Remove duplicates
     || []
 
-  // Get primary image (if available from detail endpoint)
-  const primaryImage = backendProduct.hinhAnh?.[0]?.urlAnh || null
-  
-  // Map image URL to local asset path
+  const primaryImage = backendProduct.hinhAnh?.[0]?.urlAnh
+    || findImageInCache(buildImageCandidates(backendProduct.tenSanPham, primaryColor))
+
   const imagePath = mapImageToLocalPath(backendProduct.tenSanPham, primaryImage)
 
   return {
@@ -122,10 +181,8 @@ function mapImageToLocalPath(productName: string, backendImageUrl: string | null
     // Treat as file name in public /products
     return `/products/${backendImageUrl}`
   }
-  // If we have fetched fallback images from anh_san_pham, use the first available URL
-  if (fallbackImageCache.length > 0) {
-    return fallbackImageCache[0]
-  }
+  const cached = findImageInCache(buildImageCandidates(productName))
+  if (cached) return cached
   
   const normalizedName = productName.toLowerCase()
     .replace(/\s+/g, '-')
@@ -233,35 +290,97 @@ export async function getProductsByCategory(categoryId: number): Promise<HttpRes
 }
 
 // Get only sneaker products (filtered)
+async function ensureImagesForCandidates(candidates: string[]): Promise<void> {
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    const key = normalizeKey(candidate)
+    if (productImageCache[key]?.length) {
+      continue
+    }
+    if (!pendingImageRequests[key]) {
+      pendingImageRequests[key] = (async () => {
+        try {
+          const res = await axios.get('/api/anh-san-pham-management/by-product-name', {
+            params: { tenAnh: candidate },
+          })
+          const list = Array.isArray(res.data) ? res.data : []
+          list.forEach((item: any) => {
+            const rawName = (item?.tenAnh || '').trim()
+            const url = typeof item?.duongDanAnh === 'string' ? item.duongDanAnh : ''
+            if (!rawName || !url) return
+            addImageToCache(rawName, url)
+            const [productName] = rawName.split(/\s*-\s*/)
+            if (productName && productName !== rawName) {
+              addImageToCache(productName, url)
+            }
+          })
+        } catch {
+          // swallow errors; fallbacks will handle missing images
+        } finally {
+          delete pendingImageRequests[key]
+        }
+      })()
+    }
+    await pendingImageRequests[key]
+  }
+}
+
+async function resolveProductImage(product: BackendProduct, primaryColor: string): Promise<string | null> {
+  const candidates = buildImageCandidates(product.tenSanPham, primaryColor)
+  const cached = findImageInCache(candidates)
+  if (cached) return cached
+  await ensureImagesForCandidates(candidates)
+  return findImageInCache(candidates)
+}
+
+async function mapBackendToFrontendAsync(backendProduct: BackendProduct): Promise<Product> {
+  const price = backendProduct.giaBan
+    || backendProduct.giaNhoNhat
+    || backendProduct.giaLonNhat
+    || 0
+
+  const primaryColor = backendProduct.bienThe?.[0]?.tenMauSac || 'Black'
+
+  const sizes = backendProduct.bienThe
+    ?.filter(v => v.trangThai && v.soLuong > 0)
+    ?.map(v => v.tenKichThuoc || String(v.idKichThuoc))
+    ?.filter((v, i, arr) => arr.indexOf(v) === i)
+    || []
+
+  await ensurePlaylistImages()
+  const resolvedImage = backendProduct.hinhAnh?.[0]?.urlAnh
+    || await resolveProductImage(backendProduct, primaryColor)
+
+  const imagePath = mapImageToLocalPath(backendProduct.tenSanPham, resolvedImage)
+
+  return {
+    id: String(backendProduct.id),
+    color: primaryColor,
+    description: backendProduct.moTa || backendProduct.tenSanPham,
+    gender: determineGender(backendProduct.tenDanhMuc || ''),
+    name: backendProduct.tenSanPham,
+    review: `Quality product from ${backendProduct.tenNhaSanXuat || 'GearUp'}`,
+    starrating: 4,
+    price,
+    img: imagePath,
+    sizes: sizes.length > 0 ? sizes : undefined,
+  }
+}
+
 export async function getSneakerProducts(): Promise<Product[]> {
   try {
-    await ensureFallbackImages()
+    await ensurePlaylistImages()
     const response = await getProductsList()
-    // The interceptor returns the full ResponseObject: { success: true, data: [...], message: "..." }
-    // So we need to access response.data to get the actual array
-    // This matches how view project does it (see useThongKeData.ts line 34-35)
     const backendProducts: BackendProduct[] = Array.isArray(response.data) ? response.data : []
-    
-    if (!Array.isArray(response.data)) {
+
+    if (!Array.isArray(response.data) || backendProducts.length === 0) {
       return []
     }
-    
-    if (backendProducts.length === 0) {
-      return []
-    }
-    
-    // Filter to only active products first
+
     const activeProducts = backendProducts.filter((p: BackendProduct) => p.trangThai)
-    
-    // Filter to only sneakers
     const sneakers = activeProducts.filter(isSneaker)
-    
-    // If no sneakers found, show all active products (fallback)
     const productsToShow = sneakers.length > 0 ? sneakers : activeProducts
-    
-    // Map to frontend format
-    const mapped = productsToShow.map(mapBackendToFrontend)
-    return mapped
+    return await Promise.all(productsToShow.map(mapBackendToFrontendAsync))
   } catch (error: any) {
     console.error('Error fetching sneaker products:', error)
     console.error('Error details:', error.response?.data || error.message)
@@ -269,19 +388,14 @@ export async function getSneakerProducts(): Promise<Product[]> {
   }
 }
 
-// Get all products mapped to frontend format
 export async function getAllProducts(): Promise<Product[]> {
   try {
-    await ensureFallbackImages()
+    await ensurePlaylistImages()
     const response = await getProductsList()
-    
-    // The interceptor returns the full ResponseObject: { success: true, data: [...], message: "..." }
-    // So we need to access response.data to get the actual array
     const backendProducts: BackendProduct[] = Array.isArray(response.data) ? response.data : []
-    
-    return backendProducts
-      .filter((p: BackendProduct) => p.trangThai)
-      .map(mapBackendToFrontend)
+
+    const activeProducts = backendProducts.filter((p: BackendProduct) => p.trangThai)
+    return await Promise.all(activeProducts.map(mapBackendToFrontendAsync))
   } catch (error: any) {
     console.error('Error fetching products:', error)
     console.error('Error details:', error.response?.data || error.message)

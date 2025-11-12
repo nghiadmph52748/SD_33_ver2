@@ -21,5 +21,7 @@ public interface AnhSanPhamRepository extends JpaRepository<AnhSanPham, Integer>
 
 	List<AnhSanPham> findAllByMauAnh(String mauAnh);
 
+	List<AnhSanPham> findByTenAnhIgnoreCase(String tenAnh);
+
 	Page<AnhSanPham> findAllPageByDeleted(Boolean deleted, org.springframework.data.domain.Pageable pageable);
 }

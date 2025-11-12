@@ -49,6 +49,12 @@ public class AnhSanPhamService extends GenericCrudService<AnhSanPham, Integer, A
 		return anhSanPhamRepository.findAllByMauAnh(mauAnh).stream().map(AnhSanPhamResponse::new).toList();
 	}
 
+	public List<AnhSanPhamResponse> getAllByTenAnh(String tenAnh) {
+		return anhSanPhamRepository.findByTenAnhIgnoreCase(tenAnh).stream()
+				.map(AnhSanPhamResponse::new)
+				.toList();
+	}
+
 	public PagingResponse<AnhSanPhamResponse> pagingAnhSanPham(int page, int size) {
 		return new PagingResponse<>(anhSanPhamRepository.findAllPageByDeleted(false, PageRequest.of(page, size)).map(AnhSanPhamResponse::new ), page);
 	}

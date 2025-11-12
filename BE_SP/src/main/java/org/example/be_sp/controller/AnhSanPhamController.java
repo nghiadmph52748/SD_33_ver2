@@ -48,6 +48,16 @@ public class AnhSanPhamController {
 		}
 	}
 
+	@GetMapping("/by-product-name")
+	public ResponseObject<?> getByProductName(@RequestParam("tenAnh") String tenAnh) {
+		try {
+			List<AnhSanPhamResponse> list = anhSanPhamService.getAllByTenAnh(tenAnh);
+			return new ResponseObject<>(true, list, "Lấy danh sách ảnh sản phẩm theo tên thành công");
+		} catch (Exception e) {
+			return new ResponseObject<>(false, null, "Lỗi khi lấy danh sách ảnh theo tên: " + e.getMessage());
+		}
+	}
+
 	@GetMapping("/paging")
 	public ResponseObject<?> paging(@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {

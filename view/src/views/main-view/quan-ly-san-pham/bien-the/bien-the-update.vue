@@ -518,6 +518,22 @@ const triggerEditImageUpload = () => {
   editFileInput.value?.click()
 }
 
+const buildImageMetadata = (file?: File) => {
+  const productName = variant.value?.tenSanPham?.trim() || ''
+  const colorName = variant.value?.tenMauSac?.trim() || ''
+
+  const parts = [productName, colorName].filter(Boolean)
+  let tenAnh = parts.join(' - ')
+
+  if (!tenAnh) {
+    const original = file?.name?.trim()
+    tenAnh = original ? original.replace(/\.[^/.]+$/, '') : 'product-image'
+  }
+
+  const mauAnh = colorName || 'product-image'
+  return { tenAnh, mauAnh }
+}
+
 const handleImageUpload = async (event: Event) => {
   const input = event.target as HTMLInputElement
   const files = input.files
@@ -543,7 +559,8 @@ const handleImageUpload = async (event: Event) => {
     Message.loading(`Đang upload ${filesToUpload.length} ảnh...`)
 
     // Call backend API to upload all images to Cloudinary
-    const response = await uploadAnhBienThe(filesToUpload, 'product-image', 'product-image', userStore.id || 1)
+    const { tenAnh, mauAnh } = buildImageMetadata(filesToUpload[0])
+    const response = await uploadAnhBienThe(filesToUpload, tenAnh, mauAnh, userStore.id || 1)
 
     if (response.data && Array.isArray(response.data) && response.data.length > 0) {
       // Get all uploaded image URLs using the returned IDs
@@ -607,7 +624,8 @@ const handleImageEditUpload = async (event: Event) => {
     Message.loading('Đang upload ảnh...')
 
     // Call backend API to upload image to Cloudinary
-    const response = await uploadAnhBienThe([file], file.name || 'product-image', 'product-image', userStore.id || 1)
+    const { tenAnh, mauAnh } = buildImageMetadata(file)
+    const response = await uploadAnhBienThe([file], tenAnh, mauAnh, userStore.id || 1)
 
     if (response.data && Array.isArray(response.data) && response.data.length > 0) {
       // Get the uploaded image URL using the returned ID
