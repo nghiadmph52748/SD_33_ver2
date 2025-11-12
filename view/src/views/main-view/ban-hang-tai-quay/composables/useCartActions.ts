@@ -26,7 +26,7 @@ interface Order {
   items: CartItem[]
 }
 
-export function useCartActions(params: {
+export default function useCartActions(params: {
   currentOrder: Ref<Order | null>
   allProductVariants: Ref<BienTheSanPham[]>
   cartTableKey: Ref<number>
@@ -76,7 +76,7 @@ export function useCartActions(params: {
         throw new Error('Dữ liệu sản phẩm hoặc đơn hàng không hợp lệ')
       }
 
-      let invoiceId = parseInt(currentOrder.value.id)
+      let invoiceId = parseInt(currentOrder.value.id, 10)
       const quantity = productQuantityInput.value
       const productId = selectedProductForAdd.value.id
 
@@ -133,13 +133,14 @@ export function useCartActions(params: {
         const bc = new BroadcastChannel('stock-update-channel')
         bc.postMessage({ type: 'STOCK_CHANGE', productId, needsRefresh: true })
         bc.close()
-      } catch {}
+      } catch {
+        /* empty */
+      }
 
       showAddProductConfirmModal.value = false
       selectedProductForAdd.value = null
       productQuantityInput.value = 1
     } catch (error: any) {
-      console.error('Lỗi thêm sản phẩm:', error)
       Message.error(error.message || 'Có lỗi xảy ra khi thêm sản phẩm')
     } finally {
       addProductConfirmLoading.value = false
@@ -159,7 +160,7 @@ export function useCartActions(params: {
       const diff = newQuantity - oldQuantity
       if (diff === 0) return
 
-      const productId = parseInt(item.productId)
+      const productId = parseInt(item.productId, 10)
       if (Number.isNaN(productId)) throw new Error('ID sản phẩm không hợp lệ')
 
       const productInVariants = allProductVariants.value.find((p) => p.id === productId)
@@ -173,16 +174,17 @@ export function useCartActions(params: {
       } catch (stockError: any) {
         Message.error(`❌ ${stockError.message}`)
         item.quantity = oldQuantity
-        cartTableKey.value++
+        cartTableKey.value += 1
         return
       }
 
       if (item.idHoaDonChiTiets && item.idHoaDonChiTiets.length > 0) {
         const quantityPerDetail = Math.max(1, Math.floor(newQuantity / item.idHoaDonChiTiets.length))
         const remainingQuantity = newQuantity % item.idHoaDonChiTiets.length
-        for (let idx = 0; idx < item.idHoaDonChiTiets.length; idx++) {
+        for (let idx = 0; idx < item.idHoaDonChiTiets.length; idx += 1) {
           const detailId = item.idHoaDonChiTiets[idx]
           const detailQuantity = idx === item.idHoaDonChiTiets.length - 1 ? quantityPerDetail + remainingQuantity : quantityPerDetail
+          // eslint-disable-next-line no-await-in-loop
           await updateProductQuantityInInvoice(detailId, detailQuantity, userId)
         }
       }
@@ -194,13 +196,14 @@ export function useCartActions(params: {
         const bc = new BroadcastChannel('stock-update-channel')
         bc.postMessage({ type: 'STOCK_CHANGE', productId, needsRefresh: true })
         bc.close()
-      } catch {}
+      } catch {
+        /* empty */
+      }
     } catch (error: any) {
-      console.error('Lỗi cập nhật số lượng:', error)
       Message.error(error.message || 'Có lỗi xảy ra khi cập nhật số lượng')
       if (item) {
         item.quantity = oldQuantity
-        cartTableKey.value++
+        cartTableKey.value += 1
       }
     }
   }
@@ -217,13 +220,13 @@ export function useCartActions(params: {
         throw new Error('Không tìm thấy sản phẩm trong giỏ hàng')
       }
       const item = currentOrder.value.items[index]
-      const productId = parseInt(item.productId)
+      const productId = parseInt(item.productId, 10)
       if (Number.isNaN(productId)) {
         Message.error('ID sản phẩm không hợp lệ')
         throw new Error('ID sản phẩm không hợp lệ')
       }
 
-      const invoiceId = parseInt(currentOrder.value.id)
+      const invoiceId = parseInt(currentOrder.value.id, 10)
       if (!Number.isNaN(invoiceId) && item.idHoaDonChiTiets && item.idHoaDonChiTiets.length > 0) {
         await deleteProductsFromInvoice(item.idHoaDonChiTiets, userId)
       }
@@ -232,7 +235,6 @@ export function useCartActions(params: {
       await refreshProductStock()
       Message.success('Sản phẩm đã được xóa khỏi giỏ hàng')
     } catch (error: any) {
-      console.error('Lỗi xóa sản phẩm:', error)
       Message.error(error.message || 'Có lỗi xảy ra khi xóa sản phẩm')
     }
   }
@@ -246,7 +248,7 @@ export function useCartActions(params: {
 
       currentOrder.value.items.forEach((item) => {
         try {
-          const productId = parseInt(item.productId)
+          const productId = parseInt(item.productId, 10)
           if (Number.isNaN(productId)) return
           affectedProductIds.push(productId)
           if (item.idHoaDonChiTiets && item.idHoaDonChiTiets.length > 0) {
@@ -256,7 +258,9 @@ export function useCartActions(params: {
           if (productInVariants) {
             productInVariants.soLuong = (productInVariants.soLuong || 0) + item.quantity
           }
-        } catch {}
+        } catch {
+          /* empty */
+        }
       })
 
       if (invoiceDetailIds.length > 0) {
@@ -267,16 +271,17 @@ export function useCartActions(params: {
 
       try {
         const bc = new BroadcastChannel('stock-update-channel')
+        // eslint-disable-next-line no-restricted-syntax
         for (const productId of affectedProductIds) {
           bc.postMessage({ type: 'STOCK_CHANGE', productId, needsRefresh: true })
         }
         bc.close()
-      } catch {}
-
+      } catch {
+        /* empty */
+      }
       await refreshProductStock()
       Message.success('Đã xóa tất cả sản phẩm khỏi giỏ hàng')
     } catch (error: any) {
-      console.error('Lỗi xóa giỏ hàng:', error)
       Message.error(error.message || 'Có lỗi xảy ra khi xóa giỏ hàng')
     }
   }
@@ -294,7 +299,6 @@ export function useCartActions(params: {
         showDeleteProductModal.value = false
         productToDelete.value = null
       } catch (error) {
-        console.error('❌ Lỗi khi xóa sản phẩm:', error)
         Message.error('Có lỗi xảy ra khi xóa sản phẩm')
       }
     }

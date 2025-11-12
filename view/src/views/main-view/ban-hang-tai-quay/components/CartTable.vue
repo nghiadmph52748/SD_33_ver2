@@ -25,9 +25,12 @@
     >
       <template #product="{ record }">
         <div style="display: flex; gap: 8px; align-items: center">
-          <div v-if="(record.images && record.images.length > 0) || record.image" style="position: relative; flex-shrink: 0; width: 70px; height: 70px;">
-            <MiniCarousel 
-              :images="record.images && record.images.length > 0 ? record.images : (record.image ? [record.image] : [])"
+          <div
+            v-if="(record.images && record.images.length > 0) || record.image"
+            style="position: relative; flex-shrink: 0; width: 70px; height: 70px"
+          >
+            <MiniCarousel
+              :images="record.images && record.images.length > 0 ? record.images : record.image ? [record.image] : []"
               :autoplay-interval="2500"
               class="cart-carousel"
             />
@@ -48,7 +51,7 @@
               +{{ record.images.length - 1 }}
             </div>
           </div>
-          <div v-else style="width: 70px; height: 70px; flex-shrink: 0; border-radius: 4px;">
+          <div v-else style="width: 70px; height: 70px; flex-shrink: 0; border-radius: 4px">
             <a-image src="" :width="70" :height="70" :preview="false" />
           </div>
           <div>

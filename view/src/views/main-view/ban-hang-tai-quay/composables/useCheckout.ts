@@ -29,7 +29,7 @@ interface Customer {
   address?: string
 }
 
-export function useCheckout(params: {
+export default function useCheckout(params: {
   currentOrder: Ref<Order | null>
   selectedCustomer: Ref<Customer | null>
   paymentForm: Ref<{ discountCode: string | null; method: 'cash' | 'transfer' | 'both'; cashReceived: number; transferReceived: number }>
@@ -103,12 +103,13 @@ export function useCheckout(params: {
     })
   }
 
+  // eslint-disable-next-line consistent-return
   const confirmOrder = async () => {
     try {
       if (!currentOrder.value?.id) {
         throw new Error('Vui lòng tạo hóa đơn trước')
       }
-      const invoiceId = parseInt(currentOrder.value.id)
+      const invoiceId = parseInt(currentOrder.value.id, 10)
 
       return new Promise<void>((resolve) => {
         Modal.confirm({
@@ -129,7 +130,8 @@ export function useCheckout(params: {
                 walkInAddress = addressParts.join(', ')
               }
 
-              const customerId = selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id) : undefined
+              const customerId = selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id, 10) : undefined
+              // eslint-disable-next-line no-nested-ternary
               const paymentMethodId = paymentForm.value.method === 'cash' ? 1 : paymentForm.value.method === 'transfer' ? 2 : 3
 
               const req: ConfirmBanHangRequest = {
@@ -140,7 +142,7 @@ export function useCheckout(params: {
                 diaChiKhachHang: selectedCustomer.value?.address || walkInAddress || null,
                 emailKhachHang: selectedCustomer.value?.email || null,
                 idPTTT: paymentMethodId,
-                idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id) : null,
+                idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id, 10) : null,
                 idNhanVien: userId,
               }
 
@@ -150,12 +152,12 @@ export function useCheckout(params: {
               if (suggestedBetterVouchers.value.length > 0) {
                 showConfirmOrderModal.value = true
               } else {
+                // eslint-disable-next-line no-use-before-define
                 await doConfirmOrder()
               }
 
               resolve()
             } catch (error: any) {
-              console.error('Lỗi khi xác nhận đơn hàng:', error)
               Message.error(error.message || 'Có lỗi xảy ra khi xác nhận đơn hàng. Vui lòng thử lại.')
               resolve()
             }
@@ -213,7 +215,7 @@ export function useCheckout(params: {
         console.warn('BroadcastChannel broadcast failed:', error)
       }
 
-      const currentOrderIdx = parseInt(currentOrderIndex.value)
+      const currentOrderIdx = parseInt(currentOrderIndex.value, 10)
       if (currentOrderIdx >= 0 && currentOrderIdx < orders.value.length) {
         orders.value.splice(currentOrderIdx, 1)
       }
