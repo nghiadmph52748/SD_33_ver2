@@ -125,22 +125,23 @@
         <div class="color-selector" v-if="colorSwatches.length">
           <label>{{ $t('product.color') }}:</label>
           <ul>
-            <li v-for="(swatch, idx) in colorSwatches" :key="swatch">
+            <li v-for="(swatch, idx) in colorSwatches" :key="swatch.label" class="swatch-item">
               <button type="button" :class="['swatch', { active: selectedColorIndex === idx }]" @click="selectedColorIndex = idx">
-                <img :src="swatch" :alt="`Color ${idx+1}`" v-img-fallback />
+                <img :src="swatch.image" :alt="`Color ${swatch.label}`" v-img-fallback />
               </button>
+              <span class="swatch-name">{{ swatch.label }}</span>
             </li>
           </ul>
         </div>
 
-        <div class="size-selector" v-if="product.sizes?.length">
+        <div class="size-selector" v-if="sizeOptions.length">
           <div class="size-row">
             <label>{{ $t('product.sizes') }}:</label>
             <a class="size-guide" href="#" @click.prevent>{{ $t('product.sizeGuide') }}</a>
           </div>
           <div class="size-grid">
             <button
-              v-for="productSize in product.sizes"
+              v-for="productSize in sizeOptions"
               :key="productSize"
               type="button"
               class="size-btn"
@@ -222,6 +223,8 @@ import AppRecommendationsCarousel from "@/components/AppRecommendationsCarousel.
 import AppSalesBoxes from "@/components/AppSalesBoxes.vue";
 import { useCartStore, type CartItem } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
+import { getProductById, type BackendProduct } from "@/api/products";
+import { fetchVariantsByProduct, type ProductVariantResponse } from "@/api/variants";
 
 const route = useRoute();
 const cartStore = useCartStore();
@@ -233,6 +236,9 @@ const selectedColorIndex = ref(0);
 const activeImageIndex = ref(0);
 const mainImgRef = ref<HTMLImageElement | null>(null)
 const recommendationsCarouselRef = ref<InstanceType<typeof AppRecommendationsCarousel> | null>(null)
+const productDetail = ref<BackendProduct | null>(null)
+const detailLoading = ref(false)
+const variants = ref<ProductVariantResponse[]>([])
 
 function onMainImageEnter() {
   const el = mainImgRef.value
@@ -262,18 +268,167 @@ const productId = computed(() => String(route.params.id ?? ""));
 
 const product = computed(() => cartStore.products.find(item => item.id === productId.value));
 
+async function loadProductDetail() {
+  if (!productId.value) return
+  detailLoading.value = true
+  try {
+    const res = await getProductById(productId.value)
+    if (res?.data) {
+      productDetail.value = res.data
+    }
+    const numericId = Number(productId.value)
+    if (!Number.isNaN(numericId)) {
+      variants.value = await fetchVariantsByProduct(numericId)
+    } else {
+      variants.value = []
+    }
+  } catch (error) {
+    console.error("Failed to load product detail", error)
+    productDetail.value = null
+    variants.value = []
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+watch(productId, () => {
+  void loadProductDetail()
+}, { immediate: true })
+
+const variantsByColor = computed(() => {
+  const map: Record<string, { sizes: Set<string>; image?: string | null }> = {}
+  const variantList = variants.value || []
+
+  variantList.forEach((variant) => {
+    const colorName = (variant.tenMauSac || "").trim() || product.value?.color || "Default"
+    const sizeValue = variant.tenKichThuoc?.trim() || ""
+    if (!map[colorName]) {
+      map[colorName] = { sizes: new Set(), image: undefined }
+    }
+    if (sizeValue) {
+      map[colorName].sizes.add(sizeValue)
+    }
+    if (!map[colorName].image && Array.isArray(variant.anhSanPham) && variant.anhSanPham.length > 0) {
+      const firstImage = variant.anhSanPham[0]
+      const url = typeof firstImage === 'string' ? firstImage : firstImage?.duongDanAnh
+      map[colorName].image = resolveProductImage(url) || undefined
+    }
+  })
+  return map
+})
+
+const colorOptions = computed(() => Object.keys(variantsByColor.value))
+
+watch(colorOptions, (colors) => {
+  if (selectedColorIndex.value >= colors.length) {
+    selectedColorIndex.value = 0
+  }
+})
+
+const selectedColor = computed(() => colorOptions.value[selectedColorIndex.value] || null)
+
+const sizeOptions = computed(() => {
+  const color = selectedColor.value
+  const sizesForColor = color ? variantsByColor.value[color]?.sizes : undefined
+  if (sizesForColor && sizesForColor.size > 0) {
+    const sizes = Array.from(sizesForColor)
+    cartStore.sizeMapping[color!] = sizes
+    return sizes
+  }
+
+  const aggregated = new Set<string>()
+  Object.values(variantsByColor.value).forEach((entry) => {
+    entry.sizes.forEach((sizeVal) => aggregated.add(sizeVal))
+  })
+  if (aggregated.size > 0) {
+    const sizes = Array.from(aggregated)
+    cartStore.sizeMapping.ALL = sizes
+    return sizes
+  }
+  if (product.value?.sizes?.length) {
+    cartStore.sizeMapping.ALL = product.value.sizes
+    return product.value.sizes
+  }
+  return []
+})
+
+watch(sizeOptions, (sizes) => {
+  if (sizes.length === 0) {
+    size.value = null
+    showSizeRequiredMessage.value = false
+    return
+  }
+  if (size.value && !sizes.includes(size.value)) {
+    size.value = null
+  }
+})
+
+const detailImages = computed(() => {
+  const collected = new Set<string>()
+  variants.value.forEach((variant) => {
+    if (Array.isArray(variant.anhSanPham)) {
+      variant.anhSanPham.forEach((item) => {
+        const url = typeof item === 'string' ? item : item?.duongDanAnh
+        const resolved = resolveProductImage(url)
+        if (resolved) collected.add(resolved)
+      })
+    }
+  })
+  const imgs = Array.from(collected)
+  if (imgs && imgs.length > 0) {
+    return imgs
+  }
+  return null
+})
+
 const galleryImages = computed(() => {
-  if (!product.value) return ["/products/1.jpg","/products/1.jpg","/products/1.jpg","/products/1.jpg"];
-  const base = resolveProductImage(product.value.img) || "/products/1.jpg";
-  // Use the same image if we don't have multiple; structure allows future variants
-  return [base, base, base, base];
-});
+  const baseFallback = resolveProductImage(product.value?.img) || "/products/1.jpg"
+  const images = detailImages.value ? [...detailImages.value] : [baseFallback]
+  if (selectedColor.value) {
+    const colorKey = selectedColor.value
+    const candidateName = productDetail.value?.tenSanPham
+      ? `${productDetail.value.tenSanPham} - ${colorKey}`
+      : colorKey
+    // Attempt to prioritize color-specific image if it exists in detailImages
+    const match = images.find((src) => src?.toLowerCase().includes(colorKey.toLowerCase()))
+    if (match) {
+      images.unshift(match)
+    } else if (candidateName && images.length === 1) {
+      images[0] = images[0]
+    }
+  }
+  const unique = Array.from(new Set(images))
+  if (unique.length === 1) {
+    return Array(4).fill(unique[0])
+  }
+  return unique
+})
+
+watch(galleryImages, () => {
+  activeImageIndex.value = 0
+})
+
+watch(selectedColor, () => {
+  size.value = null
+  showSizeRequiredMessage.value = false
+})
 
 const colorSwatches = computed(() => {
-  // Fallback to single swatch derived from product image
-  const base = galleryImages.value[0];
-  return [base];
-});
+  if (colorOptions.value.length === 0) {
+    return [{
+      label: product.value?.color || 'Default',
+      image: galleryImages.value[0],
+    }]
+  }
+  return colorOptions.value.map((color) => {
+    const preferred = variantsByColor.value[color]?.image
+    const match = preferred || galleryImages.value.find((src) => src?.toLowerCase().includes(color.toLowerCase()))
+    return {
+      label: color,
+      image: match || galleryImages.value[0],
+    }
+  })
+})
 
 const productSpecs = computed(() => {
   if (!product.value) return [];
@@ -293,11 +448,14 @@ const productMeta = computed(() => {
   if (product.value.gender) {
     meta.push({ label: "Category", value: product.value.gender });
   }
-  if (product.value.color) {
+  if (selectedColor.value) {
+    meta.push({ label: "Colorway", value: selectedColor.value });
+  } else if (product.value.color) {
     meta.push({ label: "Colorway", value: product.value.color });
   }
-  if (product.value.sizes?.length) {
-    meta.push({ label: "Sizing", value: `${product.value.sizes.length} options` });
+  const sizes = sizeOptions.value
+  if (sizes?.length) {
+    meta.push({ label: "Sizing", value: `${sizes.length} options` });
   }
   return meta;
 });
@@ -340,7 +498,9 @@ const cartAdd = () => {
     return;
   }
 
-  if (selectedProduct.sizes && selectedProduct.sizes.length && !size.value) {
+  const requiresSizeSelection = sizeOptions.value.length > 0
+
+  if (requiresSizeSelection && !size.value) {
     showSizeRequiredMessage.value = true;
     return;
   }
@@ -517,10 +677,12 @@ function setupAccordion(el: HTMLDetailsElement) {
 .price { font-weight: 700; font-size: 24px; }
 
 .color-selector label { display: block; margin-bottom: 8px; color: #374151; }
-.color-selector ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 8px; }
+.color-selector ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.swatch-item { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px; }
 .swatch { width: 44px; height: 44px; border-radius: 8px; border: 1px solid #e5e7eb; padding: 2px; background: #fff; }
 .swatch.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
 .swatch img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+.swatch-name { font-size: 12px; color: #4b5563; text-transform: capitalize; text-align: center; }
 
 .size-row { display: flex; align-items: baseline; justify-content: space-between; }
 .size-guide { color: #111; text-decoration: underline; font-size: 12px; }

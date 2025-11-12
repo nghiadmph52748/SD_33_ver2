@@ -24,7 +24,8 @@ export const useCartStore = defineStore("cart", {
     cart: [] as CartItem[],
     clientSecret: "",
     loading: false,
-    error: null as string | null
+    error: null as string | null,
+    sizeMapping: {} as Record<string, string[]>
   }),
   getters: {
     featuredProducts(state): Product[] {
@@ -115,6 +116,7 @@ export const useCartStore = defineStore("cart", {
       this.cart = [];
       this.cartUIStatus = "idle";
       this.clientSecret = "";
+      this.sizeMapping = {};
     },
     addToCart(payload: CartItem) {
       const existing = this.cart.find(item => item.id === payload.id);
