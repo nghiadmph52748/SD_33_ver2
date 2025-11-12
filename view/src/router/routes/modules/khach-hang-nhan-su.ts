@@ -14,10 +14,11 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
   redirect: { name: 'QuanLyKhachHang' },
   meta: {
     locale: 'menu.quan-ly-tai-khoan',
-    requiresAuth: true,
+    requiresAuth: true, // Bắt buộc xác thực để permission kiểm tra roles
     icon: 'IconUser',
     order: 5,
-    roles: ['*'],
+    roles: ['admin'], // Chỉ admin mới thấy menu này
+    hideInMenu: true, // Ẩn hoàn toàn menu này trên sidebar
   },
   children: [
     {
@@ -27,44 +28,44 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.quan-ly-tai-khoan.khach-hang',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
       },
     },
     {
       path: 'nhan-vien/them',
       name: 'ThemNhanVien',
       component: ThemNhanVien,
-      meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['*'] },
+    meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['admin'] },
     },
     {
       path: 'nhan-vien/update/:id',
       name: 'Updatenhanvien',
       component: Updatenhanvien,
-      meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['*'] },
+    meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['admin'] },
     },
     {
       path: 'nhan-vien/detail/:id',
       name: 'DetailNhanVien',
       component: Detail,
-      meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['*'] },
+    meta: { hideInMenu: true, activeMenu: 'QuanLyNhanVien', requiresAuth: true, roles: ['admin'] },
     },
     {
       path: 'khach-hang/them',
       name: 'ThemKhachHang',
       component: ThemKhachHang,
-      meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['*'] },
+    meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['admin'] },
     },
     {
       path: 'khach-hang/detail/:id',
       name: 'ChiTietKhachHang',
       component: DetailKhachHang,
-      meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['*'] },
+    meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['admin'] },
     },
     {
       path: 'khach-hang/update/:id',
       name: 'UpdateKhachHang',
       component: Updatekhachhang,
-      meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['*'] },
+    meta: { hideInMenu: true, activeMenu: 'QuanLyKhachHang', requiresAuth: true, roles: ['admin'] },
     },
     {
       path: 'nhan-vien',
@@ -73,7 +74,7 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.quan-ly-tai-khoan.nhan-vien',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
       },
     },
   ],

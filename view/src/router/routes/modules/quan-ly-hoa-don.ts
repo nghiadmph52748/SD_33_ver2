@@ -11,7 +11,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
     requiresAuth: true,
     icon: 'IconFolder',
     order: 3,
-    roles: ['*'],
+    roles: ['admin'],
     hideChildrenInMenu: true, // Ẩn submenu trong sidebar
   },
   children: [
@@ -22,7 +22,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.quan-ly-hoa-don',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
         hideInMenu: true, // Ẩn item này trong menu
         activeMenu: 'quan-ly-hoa-don', // Highlight parent in menu
       },
@@ -34,7 +34,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.hoa-don-chi-tiet',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
         hideInMenu: true,
         activeMenu: 'QuanLyHoaDonIndex',
       },
@@ -46,7 +46,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
       meta: {
         locale: 'In hóa đơn',
         requiresAuth: false,
-        roles: ['*'],
+        roles: ['admin'],
         hideInMenu: true,
         activeMenu: 'QuanLyHoaDonIndex',
       },
@@ -58,7 +58,7 @@ const QUAN_LY_HOA_DON: AppRouteRecordRaw = {
       meta: {
         locale: 'Test API',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
         hideInMenu: true,
         activeMenu: 'quan-ly-hoa-don',
       },

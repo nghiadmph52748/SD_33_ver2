@@ -1,11 +1,13 @@
 package org.example.be_sp.security;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.example.be_sp.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -32,13 +34,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain) throws ServletException, IOException {
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
 
+        final String path = request.getServletPath();
+
+        // ✅ Bỏ qua filter cho các endpoint public (không yêu cầu đăng nhập)
+        if (path.startsWith("/api/auth/")
+                || path.startsWith("/api/user/reset-password")
+                || path.startsWith("/api/email-test/")
+                || path.startsWith("/api/test/")
+                || path.startsWith("/api/payment/vnpay/")
+        ) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String username;
 
+        // ✅ Bỏ qua nếu không có header hoặc không bắt đầu bằng "Bearer "
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -53,42 +68,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // ✅ Kiểm tra token có bị thu hồi không
         if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Token has been invalidated");
             return;
         }
 
+        // ✅ Nếu chưa có authentication trong context
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                UserDetails userDetails;
-                
-                // Hardcoded admin bypass - don't load from database
-                if ("admin".equals(username)) {
-                    userDetails = org.springframework.security.core.userdetails.User
-                        .withUsername("admin")
-                        .password("") // Empty password since we don't need it for JWT validation
-                        .authorities("ROLE_ADMIN")
-                        .build();
-                } else {
-                    userDetails = userDetailsService.loadUserByUsername(username);
-                }
+                // Lấy thông tin người dùng
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                // Sử dụng method mới để validate và refresh token nếu cần
+                // Lấy roles từ token
+                List<String> roles = jwtUtils.getRolesFromToken(jwt);
+
+                // Debug: in ra console (có thể xóa sau)
+                System.out.println(">>> Roles from token: " + roles);
+
+                // ✅ Validate và refresh token nếu gần hết hạn
                 String refreshedToken = jwtUtils.validateAndRefreshToken(jwt, userDetails.getUsername());
 
                 if (refreshedToken != null) {
-                    // Nếu token được refresh (khác với token cũ), gửi token mới về client
+                    // Nếu token được refresh, gửi token mới về header
                     if (!refreshedToken.equals(jwt)) {
                         response.setHeader("New-Token", refreshedToken);
                         response.setHeader("Access-Control-Expose-Headers", "New-Token");
                     }
 
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
+                    // ✅ Gán quyền cho user từ token
+                    var authorities = roles.stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .toList();
+
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    authorities
+                            );
+
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
@@ -103,6 +123,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
+        // ✅ Cho phép request đi tiếp nếu hợp lệ
         filterChain.doFilter(request, response);
     }
 }

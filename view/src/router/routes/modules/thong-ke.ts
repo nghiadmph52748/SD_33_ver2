@@ -7,12 +7,12 @@ const THONG_KE: AppRouteRecordRaw = {
   component: DEFAULT_LAYOUT,
   redirect: { name: 'ThongKeChung' },
   meta: {
-    locale: 'menu.thong-ke',
-    requiresAuth: true,
-    icon: 'IconList',
-    order: 0,
-    roles: ['*'],
-    hideChildrenInMenu: true, // Ẩn submenu trong sidebar
+      locale: 'menu.thong-ke',
+      requiresAuth: true,
+      icon: 'IconList',
+      order: 0,
+      roles: ['admin'], // Chỉ admin mới thấy menu này
+      hideChildrenInMenu: true, // Ẩn submenu trong sidebar
   },
   children: [
     {
@@ -22,7 +22,7 @@ const THONG_KE: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.thong-ke',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
         hideInMenu: true, // Ẩn item này trong menu
         activeMenu: 'thong-ke', // Highlight parent in menu
       },

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -16,6 +17,7 @@ import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.NhanVienService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,6 +34,7 @@ public class NhanVienController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/playlist")
     public ResponseObject<?> getAllNhanVien() {
         try {
@@ -41,6 +44,7 @@ public class NhanVienController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/detail/{id}")
     public ResponseObject<?> getNhanVienById(@PathVariable Integer id) {
         try {
@@ -50,6 +54,7 @@ public class NhanVienController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/detail/email/{email}")
     public ResponseObject<?> getNhanVienByEmail(@PathVariable String email) {
         try {
@@ -59,6 +64,7 @@ public class NhanVienController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/detail/nickname/{tenTaiKhoan}")
     public ResponseObject<?> getNhanVienByTenTaiKhoan(@PathVariable String tenTaiKhoan) {
         try {
@@ -68,6 +74,7 @@ public class NhanVienController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/add")
     public ResponseObject<?> createNhanVien(
             @RequestParam("tenNhanVien") String tenNhanVien,
@@ -86,6 +93,7 @@ public class NhanVienController {
             @RequestParam(value = "trangThai", defaultValue = "true") Boolean trangThai,
             @RequestParam(value = "file", required = false) MultipartFile[] file) {
         try {
+
             // Tạo request object từ các tham số
             NhanVienRequest request = new NhanVienRequest();
             request.setTenNhanVien(tenNhanVien);
@@ -116,7 +124,7 @@ public class NhanVienController {
         }
     }
 
-
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/update/{id}")
     public ResponseObject<?> updateNhanVien(
             @PathVariable Integer id,
@@ -165,6 +173,7 @@ public class NhanVienController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> update(@PathVariable Integer id) {
         try {
@@ -174,6 +183,7 @@ public class NhanVienController {
             return new ResponseObject<>(false, null, "Lỗi khi cập nhật trạng thái nhân viên: " + e.getMessage());
         }
     }
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/export-excel")
     public void exportToExcel(HttpServletResponse response) throws IOException {
         response.setContentType("application/octet-stream");
@@ -212,6 +222,7 @@ public class NhanVienController {
         workbook.write(response.getOutputStream());
         workbook.close();
     }
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/import")
     public ResponseObject<?> importNhanVien(@RequestParam("file") MultipartFile file) {
         try {
@@ -221,7 +232,7 @@ public class NhanVienController {
             return new ResponseObject<>(false, null, "Lỗi import: " + e.getMessage());
         }
     }
-
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/template")
     public void downloadTemplate(HttpServletResponse response) throws IOException {
         // Thiết lập content type và header
@@ -238,11 +249,12 @@ public class NhanVienController {
         }
 
         // Gửi file về client
-        templateStream.transferTo(response.getOutputStream());
+        IOUtils.copy(templateStream, response.getOutputStream());
         response.flushBuffer();
         templateStream.close();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @DeleteMapping("/nhan-vien/{id}")
     public ResponseEntity<String> deleteNhanVien(@PathVariable Integer id) {
         try {
@@ -254,6 +266,7 @@ public class NhanVienController {
             return ResponseEntity.status(500).body("Lỗi server: " + e.getMessage());
         }
     }
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/nhan-vien/{id}/status")
     public ResponseObject<?> updateTrangThai(@PathVariable Integer id, @RequestBody TrangThaiRequest request) {
         try {

@@ -9,20 +9,26 @@ import { NOT_FOUND_ROUTE, REDIRECT_MAIN } from './router/routes/base'
 NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
 const router = createRouter({
-  history: createWebHistory('./'),
+ history: createWebHistory(),
+
   routes: [
-    {
-      path: '/',
-      redirect: '/thong-ke/chung',
-    },
-    {
-      path: '/login',
+    { path: '/', redirect: '/ban-hang-tai-quay/index' }, 
+    { 
+      path: '/login', 
       name: 'login',
       component: () => import('@/views/login/login.vue'),
-      meta: {
-        requiresAuth: false,
-      },
+      meta: { requiresAuth: false },
     },
+
+    // ✅ Thêm route cho trang đổi mật khẩu (Reset Password)
+    {
+    path: '/auth/reset-password',
+    name: 'reset-password',
+    component: () => import('@/views/login/components/ResetPassword.vue'),
+    meta: { requiresAuth: false }, // không yêu cầu đăng nhập
+  }
+,
+
     ...appRoutes,
     REDIRECT_MAIN,
     NOT_FOUND_ROUTE,

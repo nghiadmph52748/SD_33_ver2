@@ -1,6 +1,7 @@
 package org.example.be_sp.service;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 
@@ -18,6 +19,7 @@ import org.example.be_sp.model.response.NhanVienResponse;
 import org.example.be_sp.repository.NhanVienRepository;
 import org.example.be_sp.repository.QuyenHanRepository;
 import org.example.be_sp.service.upload.UploadImageToCloudinary;
+import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -50,10 +52,6 @@ public class NhanVienService {
 
     public NhanVien findByTenTaiKhoan(String tenTaiKhoan) {
         return nhanVienRepository.findByTenTaiKhoan(tenTaiKhoan).orElse(null);
-    }
-
-    public NhanVien findByEmail(String email) {
-        return nhanVienRepository.findByEmail(email).orElse(null);
     }
 
     public void saveNhanVien(NhanVienRequest request, PasswordEncoder passwordEncoder) {
@@ -116,6 +114,7 @@ public class NhanVienService {
         } catch (Exception e) {
             System.err.println("❌ Gửi mail thất bại: " + e.getMessage());
         }
+
     }
     private String generateRandomPassword() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%";
@@ -312,5 +311,71 @@ public class NhanVienService {
         nhanVien.setTrangThai(trangThai);
         nhanVienRepository.save(nhanVien);
     }
+
+
+    public void forgotPassword(String email) {
+        NhanVien nhanVien = nhanVienRepository.findByEmail(email)
+                .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên với email: " + email, "404"));
+
+        // Tạo token reset
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiry = LocalDateTime.now().plusHours(1);
+        // token có hiệu lực 1 giờ
+
+        nhanVien.setResetToken(token);
+        nhanVien.setResetTokenExpiry(expiry);
+        nhanVienRepository.save(nhanVien);
+
+        // Gửi email có link reset
+        String resetLink = "http://localhost:5173/auth/reset-password?token=" + token;
+        String subject = "Yêu cầu đặt lại mật khẩu";
+        String body = "Xin chào " + nhanVien.getTenNhanVien() + ",\n\n"
+                + "Bạn đã yêu cầu đặt lại mật khẩu. Hãy nhấp vào liên kết bên dưới để đổi mật khẩu:\n"
+                + resetLink + "\n\n"
+                + "Liên kết này sẽ hết hạn sau 15 phút.\n\n"
+                + "Trân trọng,\nĐội ngũ hỗ trợ.";
+
+        emailService.sendEmail(nhanVien.getEmail(), subject, body);
+    }
+
+    public void resetPassword(String token, String newPassword, PasswordEncoder passwordEncoder) {
+        NhanVien nhanVien = nhanVienRepository.findByResetToken(token)
+                .orElseThrow(() -> new ApiException("Token không hợp lệ hoặc đã hết hạn", "400"));
+
+        if (nhanVien.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new ApiException("Token đã hết hạn. Vui lòng yêu cầu lại.", "400");
+        }
+
+        nhanVien.setMatKhau(passwordEncoder.encode(newPassword));
+        nhanVien.setResetToken(null);
+        nhanVien.setResetTokenExpiry(null);
+        nhanVienRepository.save(nhanVien);
+    }
+
+    public Map<String, Object> verifyToken(String token) {
+        System.out.println(">>> Verify token nhận được: " + token);
+
+        Map<String, Object> result = new HashMap<>();
+        Optional<NhanVien> nhanVienOpt = nhanVienRepository.findByResetToken(token);
+
+        if (nhanVienOpt.isEmpty()) {
+            System.out.println(">>> Không tìm thấy token trong DB");
+            result.put("valid", false);
+            result.put("expired", true);
+            return result;
+        }
+
+        NhanVien nhanVien = nhanVienOpt.get();
+        System.out.println(">>> Token trong DB: " + nhanVien.getResetToken());
+        System.out.println(">>> Expiry: " + nhanVien.getResetTokenExpiry());
+
+        boolean expired = nhanVien.getResetTokenExpiry().isBefore(LocalDateTime.now());
+        result.put("valid", !expired);
+        result.put("expired", expired);
+        return result;
+    }
+
+
+
 
 }

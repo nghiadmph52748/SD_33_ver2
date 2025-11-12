@@ -32,7 +32,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         List<GrantedAuthority> authorities = new ArrayList<>();
         if (nhanVien.getIdQuyenHan() != null) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + nhanVien.getIdQuyenHan().getTenQuyenHan()));
+            authorities.add(new SimpleGrantedAuthority(
+                    "ROLE_" + nhanVien.getIdQuyenHan()
+                            .getTenQuyenHan()
+                            .toUpperCase()
+                            .replaceAll("\\s+", "")       // bỏ khoảng trắng
+                            .replaceAll("[^A-Z0-9]", "")  // bỏ hết ký tự không phải chữ và số (kể cả dấu _)
+            ));
         }
 
         return User.builder()
@@ -42,5 +48,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .authorities(authorities)
                 .build();
     }
+
 }
 

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,7 @@ public class KhachHangController {
     @Autowired
     private KhachHangService khachHangService;
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/playlist")
     public ResponseObject<?> getAll() {
         try {
@@ -35,6 +37,7 @@ public class KhachHangController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/detail/{id}")
     public ResponseObject<?> getById(@PathVariable Integer id) {
         try {
@@ -44,6 +47,7 @@ public class KhachHangController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/add/quick")
     public ResponseObject<?> quickAdd(@RequestBody KhachHangRequest request) {
         try {
@@ -54,6 +58,7 @@ public class KhachHangController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/add")
     public ResponseObject<?> create(@RequestBody KhachHangRequest request) {
         try {
@@ -64,6 +69,7 @@ public class KhachHangController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/update/{id}")
     public ResponseObject<?> update(@PathVariable Integer id, @RequestBody KhachHangRequest request) {
         try {
@@ -74,6 +80,7 @@ public class KhachHangController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/update/status/{id}")
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         try {
@@ -83,6 +90,7 @@ public class KhachHangController {
             return new ResponseObject<>(false, null, "Lỗi khi cập nhật trạng thái khách hàng: " + e.getMessage());
         }
     }
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/export-excel")
     public ResponseEntity<byte[]> exportToExcel() {
         try {

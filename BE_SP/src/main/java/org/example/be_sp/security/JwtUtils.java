@@ -1,180 +1,115 @@
 package org.example.be_sp.security;
 
-import java.security.Key;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
-
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
+import java.security.Key;
+import java.text.Normalizer;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtUtils {
 
-    private static final String SECRET = "mySecretKeymySecretKeymySecretKeymySecretKeymySecretKey"; // Should be from config
-    private static final int JWT_EXPIRATION = 3600000; // 1 hour in milliseconds
-    private static final int JWT_REFRESH_EXPIRATION = 604800000; // 7 days in milliseconds
+    private static final String SECRET_KEY = "your_secret_key_which_should_be_long_enough_to_be_secure_1234567890";
+    private static final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 60; // 1 giờ
+    private static final long REFRESH_TOKEN_EXPIRATION = 1000 * 60 * 60 * 24 * 7; // 7 ngày
 
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private Key getSigningKey() {
+        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    }
 
-    public String generateToken(String username) {
+    // ✅ Hàm chuẩn hoá role (xoá dấu tiếng Việt + thêm tiền tố ROLE_)
+    private String normalizeRole(String role) {
+        if (role == null) return "ROLE_USER";
+
+        // Bỏ dấu tiếng Việt
+        String normalized = Normalizer.normalize(role, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", ""); // xóa dấu
+
+        // Viết hoa và thay khoảng trắng thành gạch dưới
+        normalized = normalized.toUpperCase().replaceAll("\\s+", "_");
+
+        // Thêm tiền tố ROLE_ nếu chưa có
+        if (!normalized.startsWith("ROLE_")) {
+            normalized = "ROLE_" + normalized;
+        }
+        return normalized;
+    }
+
+    // ✅ Sinh Access Token có roles
+    public String generateToken(String username, List<String> roles) {
+        // Chuẩn hoá danh sách roles
+        List<String> normalizedRoles = roles.stream()
+                .map(this::normalizeRole)
+                .collect(Collectors.toList());
+
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username);
-    }
+        claims.put("roles", normalizedRoles);
 
-    public String generateRefreshToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("type", "refresh");
-        return createToken(claims, username, JWT_REFRESH_EXPIRATION);
-    }
-
-    private String createToken(Map<String, Object> claims, String subject) {
-        return createToken(claims, subject, JWT_EXPIRATION);
-    }
-
-    private String createToken(Map<String, Object> claims, String subject, long expiration) {
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(subject)
+                .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    // ✅ Sinh Refresh Token
+    public String generateRefreshToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public String getUsernameFromToken(String token) {
-        return getClaimFromToken(token, Claims::getSubject);
+        return parseToken(token).getBody().getSubject();
     }
 
     public Date getExpirationDateFromToken(String token) {
-        return getClaimFromToken(token, Claims::getExpiration);
+        return parseToken(token).getBody().getExpiration();
     }
 
-    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = getAllClaimsFromToken(token);
-        return claimsResolver.apply(claims);
+    public boolean isTokenExpired(String token) {
+        return getExpirationDateFromToken(token).before(new Date());
     }
 
-    private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-    }
-
-    public Boolean isTokenExpired(String token) {
-        final Date expiration = getExpirationDateFromToken(token);
-        return expiration.before(new Date());
-    }
-
-    public Boolean validateToken(String token, String username) {
+    public boolean validateToken(String token, String username) {
         final String tokenUsername = getUsernameFromToken(token);
-        return (username.equals(tokenUsername) && !isTokenExpired(token));
+        return (tokenUsername.equals(username) && !isTokenExpired(token));
     }
 
-    /**
-     * Reset thời hạn của token về 1 giờ nếu token vẫn còn hạn
-     *
-     * @param token Token hiện tại
-     * @return Token mới với thời hạn 1 giờ hoặc null nếu token đã hết hạn
-     */
-    public String refreshTokenIfValid(String token) {
-        try {
-            if (!isTokenExpired(token)) {
-                String username = getUsernameFromToken(token);
-                // Tạo token mới với thời hạn 1 giờ
-                return generateToken(username);
-            }
-            return null; // Token đã hết hạn
-        } catch (Exception e) {
-            return null; // Token không hợp lệ
+    public List<String> getRolesFromToken(String token) {
+        Object roles = parseToken(token).getBody().get("roles");
+        if (roles instanceof List<?>) {
+            return ((List<?>) roles).stream().map(Object::toString).collect(Collectors.toList());
         }
+        return Collections.emptyList();
     }
 
-    /**
-     * Kiểm tra token và trả về token mới nếu cần refresh
-     *
-     * @param token Token hiện tại
-     * @param username Username để validate
-     * @return Token mới nếu cần refresh, token cũ nếu vẫn còn thời gian, null
-     * nếu hết hạn
-     */
+    private Jws<Claims> parseToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token);
+    }
+
+    // ✅ Tự động refresh token nếu sắp hết hạn (còn < 30 phút)
     public String validateAndRefreshToken(String token, String username) {
-        try {
-            if (validateToken(token, username)) {
-                // Kiểm tra thời gian còn lại của token
-                Date expiration = getExpirationDateFromToken(token);
-                Date now = new Date();
-                long timeLeft = expiration.getTime() - now.getTime();
+        if (!validateToken(token, username)) return null;
 
-                // Nếu token còn ít hơn 30 phút, refresh token
-                if (timeLeft < 1800000) { // 30 minutes in milliseconds
-                    return generateToken(username);
-                }
+        Date expiration = getExpirationDateFromToken(token);
+        long timeLeft = expiration.getTime() - System.currentTimeMillis();
 
-                // Token vẫn còn thời gian, trả về token cũ
-                return token;
-            }
-            return null; // Token không hợp lệ hoặc đã hết hạn
-        } catch (Exception e) {
-            return null;
+        if (timeLeft < 30 * 60 * 1000) { // còn dưới 30 phút
+            List<String> roles = getRolesFromToken(token);
+            return generateToken(username, roles);
         }
-    }
-
-    public boolean isRefreshToken(String token) {
-        try {
-            Claims claims = getAllClaimsFromToken(token);
-            String type = claims.get("type", String.class);
-            return "refresh".equals(type);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
-     * Generate a test token for testing purposes (24 hour expiration)
-     * WARNING: Only use in development/testing!
-     * 
-     * @param username Username for the test token
-     * @return JWT token valid for 24 hours
-     */
-    public String generateTestToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("test", true);
-        return createToken(claims, username, 86400000); // 24 hours
-    }
-
-    /**
-     * Print a test token to console for quick testing
-     * Run this method to get a valid JWT token
-     */
-    public static void main(String[] args) {
-        JwtUtils jwtUtils = new JwtUtils();
-        
-        // Generate test tokens
-        String testToken = jwtUtils.generateTestToken("admin");
-        String testToken2 = jwtUtils.generateTestToken("user1");
-        
-        System.out.println("=".repeat(80));
-        System.out.println("TEST JWT TOKENS (Valid for 24 hours)");
-        System.out.println("=".repeat(80));
-        System.out.println();
-        System.out.println("Username: admin");
-        System.out.println("Token: " + testToken);
-        System.out.println();
-        System.out.println("Copy this for curl command:");
-        System.out.println("-H \"Authorization: Bearer " + testToken + "\"");
-        System.out.println();
-        System.out.println("=".repeat(80));
-        System.out.println();
-        System.out.println("Username: user1");
-        System.out.println("Token: " + testToken2);
-        System.out.println();
-        System.out.println("Copy this for curl command:");
-        System.out.println("-H \"Authorization: Bearer " + testToken2 + "\"");
-        System.out.println();
-        System.out.println("=".repeat(80));
+        return token;
     }
 }

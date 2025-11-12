@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll() // Allow login and logout endpoints
+                        .requestMatchers("/api/ca-lam-viec/**").permitAll()
+                        .requestMatchers("/api/lich-lam-viec/**").permitAll()
+                        .requestMatchers("/api/giao-ca/**").permitAll()
                 .requestMatchers("/api/content-data", "/api/popular/**").permitAll() // Allow dashboard mock data
                 .requestMatchers("/api/payment/vnpay/**").permitAll() // Allow VNPAY redirect/IPN without auth
                 .requestMatchers("/ws-chat/**").permitAll() // Allow WebSocket connection (auth handled by interceptor)

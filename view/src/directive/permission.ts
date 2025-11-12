@@ -1,22 +1,22 @@
+// directives/permission.ts
 import { DirectiveBinding } from 'vue'
 import { useUserStore } from '@/store'
 
 function checkPermission(el: HTMLElement, binding: DirectiveBinding) {
   const { value } = binding
   const userStore = useUserStore()
-  const { role } = userStore
+  const userRoles = userStore.roles || []
 
-  if (Array.isArray(value)) {
-    if (value.length > 0) {
-      const permissionValues = value
+  if (!Array.isArray(value)) {
+    throw new Error(`v-permission expects an array like v-permission="['admin','user']"`)
+  }
 
-      const hasPermission = permissionValues.includes(role)
-      if (!hasPermission && el.parentNode) {
-        el.parentNode.removeChild(el)
-      }
-    }
-  } else {
-    throw new Error(`need roles! Like v-permission="['admin','user']"`)
+  // Nếu route/meta là '*' → luôn hiển thị
+  const hasPermission =
+    value.includes('*') || value.some(role => userRoles.includes(role))
+
+  if (!hasPermission && el.parentNode) {
+    el.parentNode.removeChild(el)
   }
 }
 

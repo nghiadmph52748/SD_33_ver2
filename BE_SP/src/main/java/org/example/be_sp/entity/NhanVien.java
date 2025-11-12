@@ -24,6 +24,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -116,10 +117,14 @@ public class NhanVien {
     @Column(name = "update_by")
     private Integer updateBy;
 
-    @OneToMany(mappedBy = "idNhanVien")
-    private Set<HoaDon> hoaDons = new LinkedHashSet<>();
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
+
 
     @OneToMany(mappedBy = "idNhanVien")
-    private Set<TimelineDonHang> timelineDonHangs = new LinkedHashSet<>();
+    private Set<HoaDon> hoaDons = new LinkedHashSet<>();
 
 }

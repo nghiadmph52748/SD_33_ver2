@@ -79,26 +79,8 @@ const handleSubmit = async ({ errors, values }: { errors: Record<string, Validat
     try {
       await userStore.login(values as LoginData)
 
-      // Lấy thông tin redirect từ sessionStorage thay vì URL
-      const redirectInfo = sessionStorage.getItem('redirectAfterLogin')
-      let redirectRoute = { name: 'ThongKeChung' }
-
-      if (redirectInfo) {
-        try {
-          const parsedRedirect = JSON.parse(redirectInfo)
-          redirectRoute = {
-            name: parsedRedirect.name || 'ThongKeChung',
-            query: parsedRedirect.query,
-            params: parsedRedirect.params,
-          }
-          // Xóa thông tin redirect sau khi sử dụng
-          sessionStorage.removeItem('redirectAfterLogin')
-        } catch {
-          // Nếu parse lỗi thì dùng route mặc định
-        }
-      }
-
-      router.push(redirectRoute)
+      // Chuyển hướng đến trang bán hàng tại quầy
+      router.push('/ban-hang-tai-quay/index')
       Message.success(t('login.form.login.success'))
       const { rememberPassword } = loginConfig.value
       const { username, password } = values

@@ -1,9 +1,9 @@
-import { LoginData, login as userLogin, logout as userLogout, getUserInfo } from '@/api/user'
+import { LoginData, login as userLogin, logout as userLogout } from '@/api/user'
 import { clearToken, setToken } from '@/utils/auth'
 import { removeRouteListener } from '@/utils/route-listener'
 import { defineStore } from 'pinia'
 import useAppStore from './app'
-import { UserState } from './user/types'
+import { UserState, RoleType } from './user/types'
 
 const useUserStore = defineStore('user', {
   state: (): UserState => ({
@@ -16,22 +16,28 @@ const useUserStore = defineStore('user', {
     tenQuyenHan: undefined,
     accessToken: undefined,
     refreshToken: undefined,
-    role: '',
+    roles: [], // 🔹 dùng array cho nhiều quyền
   }),
 
   getters: {
-    userInfo(state: UserState): UserState {
-      return { ...state }
-    },
+  userInfo(state: UserState): UserState {
+    return { ...state }
   },
+  primaryRole(state: UserState): string {
+    return state.roles[0] || ''
+  },
+  normalizedRoles(state): string[] {
+    // Luôn trả về array thuần, lowercase
+    return (state.roles || []).map(r => r.toLowerCase())
+  },
+}
+,
 
   actions: {
-    // Set user's information
     setInfo(partial: Partial<UserState>) {
       this.$patch(partial)
     },
 
-    // Reset user's information
     resetInfo() {
       this.$reset()
     },
@@ -40,85 +46,75 @@ const useUserStore = defineStore('user', {
     async initUserFromToken() {
       try {
         const token = localStorage.getItem('token')
+        const userId = localStorage.getItem('userId')
+        const roles = JSON.parse(localStorage.getItem('roles') || '[]') as RoleType[]
 
-        if (!token) {
-          return false
-        }
+        if (token && userId) {
+          const parsedUserId = parseInt(userId, 10)
 
-        // Fetch full user info from backend using the token
-        const res = await getUserInfo()
-
-        if (res.data) {
-          // Set full user info including role information
-          const userInfo = {
-            id: res.data.id,
-            maNhanVien: res.data.maNhanVien,
-            name: res.data.tenNhanVien,
-            tenTaiKhoan: res.data.tenTaiKhoan,
-            email: res.data.email,
-            idQuyenHan: res.data.idQuyenHan,
-            tenQuyenHan: res.data.tenQuyenHan,
+          this.setInfo({
+            id: parsedUserId,
             accessToken: token,
-            refreshToken: res.data.refreshToken,
-          }
-          this.setInfo(userInfo)
-
-          // Update userId in localStorage in case it changed
-          localStorage.setItem('userId', res.data.id.toString())
-
+            roles,
+          })
           return true
         }
 
         return false
-      } catch (error) {
-        // Token is invalid or expired, clear everything
+      } catch (err) {
         clearToken()
         localStorage.removeItem('userId')
+        localStorage.removeItem('roles')
         this.resetInfo()
         return false
       }
     },
 
     // Login
-    async login(loginForm: LoginData) {
-      try {
-        const res = await userLogin(loginForm)
+    // Trong phần actions của useUserStore
 
-        // Check if we have valid response with data
-        if (!res || !res.data || !res.data.id) {
-          throw new Error('Đăng nhập thất bại - không nhận được thông tin người dùng')
-        }
+async login(loginForm: LoginData) {
+  try {
+    const res = await userLogin(loginForm)
 
-        // Set JWT tokens
-        if (res.data.accessToken) {
-          setToken(res.data.accessToken)
-        }
+    if (res.data.accessToken) {
+      setToken(res.data.accessToken)
+    }
 
-        // Chỉ lấy ID từ database (ID trong bảng nhân viên) - điều này quan trọng nhất
-        const employeeId = res.data.id // ID thực trong bảng nhân viên từ DB
+    const employeeId = res.data.id
+    localStorage.setItem('userId', employeeId.toString())
 
-        // Lưu ID vào localStorage để khôi phục khi refresh
-        localStorage.setItem('userId', employeeId.toString())
+    // 🔹 Mapping idQuyenHan thành RoleType chính xác
+    const roleMap: Record<number, RoleType> = {
+      1: 'admin', // idQuyenHan = 1 là admin
+      2: 'user',  // idQuyenHan = 2 là nhân viên
+    }
 
-        // Lưu thông tin cần thiết vào store (bao gồm các thông tin bổ sung nhưng ID là quan trọng nhất)
-        const userInfo = {
-          id: employeeId, // ID chính từ bảng nhân viên - QUAN TRỌNG NHẤT
-          maNhanVien: res.data.maNhanVien,
-          name: res.data.tenNhanVien,
-          tenTaiKhoan: res.data.tenTaiKhoan,
-          email: res.data.email,
-          idQuyenHan: res.data.idQuyenHan,
-          tenQuyenHan: res.data.tenQuyenHan,
-          accessToken: res.data.accessToken,
-          refreshToken: res.data.refreshToken,
-        }
-        this.setInfo(userInfo)
-      } catch (err) {
-        clearToken()
-        localStorage.removeItem('userId')
-        throw err
-      }
-    },
+    const userRoles: RoleType[] = [roleMap[res.data.idQuyenHan] || 'user']
+    localStorage.setItem('roles', JSON.stringify(userRoles))
+
+    const userInfo = {
+      id: employeeId,
+      maNhanVien: res.data.maNhanVien,
+      name: res.data.tenNhanVien,
+      tenTaiKhoan: res.data.tenTaiKhoan,
+      email: res.data.email,
+      idQuyenHan: res.data.idQuyenHan,
+      tenQuyenHan: res.data.tenQuyenHan,
+      accessToken: res.data.accessToken,
+      refreshToken: res.data.refreshToken,
+      roles: userRoles,
+    }
+
+    this.setInfo(userInfo)
+  } catch (err) {
+    clearToken()
+    localStorage.removeItem('userId')
+    localStorage.removeItem('roles')
+    throw err
+  }
+}
+,
 
     // Logout
     async logout() {
@@ -131,6 +127,7 @@ const useUserStore = defineStore('user', {
         this.resetInfo()
         clearToken()
         localStorage.removeItem('userId')
+        localStorage.removeItem('roles')
         removeRouteListener()
         appStore.clearServerMenu()
       }

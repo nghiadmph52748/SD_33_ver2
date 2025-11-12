@@ -3,6 +3,8 @@ package org.example.be_sp.controller;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.model.request.LoginRequest;
@@ -11,6 +13,7 @@ import org.example.be_sp.security.JwtUtils;
 import org.example.be_sp.service.NhanVienService;
 import org.example.be_sp.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,23 +41,23 @@ public class AuthController {
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
 
-    @PostMapping("/verify-token")
-    public ResponseObject<?> verifyToken(@RequestParam String token) {
-        try {
-            String username = jwtUtils.getUsernameFromToken(token);
-            boolean isValid = jwtUtils.validateToken(token, username);
-            boolean isExpired = jwtUtils.isTokenExpired(token);
-
-            return new ResponseObject<>(true, new Object() {
-                public final String extractedUsername = username;
-                public final boolean valid = isValid;
-                public final boolean expired = isExpired;
-            }, "Token verification result");
-
-        } catch (Exception e) {
-            return new ResponseObject<>(false, null, "Token verification failed: " + e.getMessage());
-        }
-    }
+//    @PostMapping("/verify-token")
+//    public ResponseObject<?> verifyToken(@RequestParam String token) {
+//        try {
+//            String username = jwtUtils.getUsernameFromToken(token);
+//            boolean isValid = jwtUtils.validateToken(token, username);
+//            boolean isExpired = jwtUtils.isTokenExpired(token);
+//
+//            return new ResponseObject<>(true, new Object() {
+//                public final String extractedUsername = username;
+//                public final boolean valid = isValid;
+//                public final boolean expired = isExpired;
+//            }, "Token verification result");
+//
+//        } catch (Exception e) {
+//            return new ResponseObject<>(false, null, "Token verification failed: " + e.getMessage());
+//        }
+//    }
 
     @RequestMapping(value = "/login", method = RequestMethod.OPTIONS)
     public ResponseObject<?> handleOptions() {
@@ -64,70 +67,51 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseObject<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            // Hardcoded admin exception for development/testing
-            if (("admin".equals(loginRequest.getUsername()) || "admin@gearup.com".equals(loginRequest.getUsername())) 
-                && "admin".equals(loginRequest.getPassword())) {
-                String accessToken = jwtUtils.generateToken("admin");
-                String refreshToken = jwtUtils.generateRefreshToken("admin");
-                
-                LoginResponseData adminData = new LoginResponseData();
-                adminData.setId(1); // Default admin ID
-                adminData.setMaNhanVien("ADMIN001");
-                adminData.setTenNhanVien("Administrator");
-                adminData.setTenTaiKhoan("admin");
-                adminData.setEmail("admin@gearup.com");
-                adminData.setIdQuyenHan(1); // Admin role ID
-                adminData.setTenQuyenHan("Admin");
-                adminData.setAccessToken(accessToken);
-                adminData.setRefreshToken(refreshToken);
-                
-                return new ResponseObject<>(true, adminData, "Đăng nhập thành công (Admin)");
-            }
-            
-            // Tìm nhân viên theo tên tài khoản hoặc email
-            String identifier = loginRequest.getUsername();
-            NhanVien nhanVien = null;
-            
-            // Kiểm tra xem identifier có phải email không (chứa @)
-            if (identifier.contains("@")) {
-                nhanVien = nhanVienService.findByEmail(identifier);
-            } else {
-                nhanVien = nhanVienService.findByTenTaiKhoan(identifier);
-            }
+            // Tìm nhân viên
+            NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(loginRequest.getUsername());
 
             if (nhanVien == null) {
-                return new ResponseObject<>(false, null, "Tên tài khoản hoặc email không tồn tại");
+                return new ResponseObject<>(false, null, "Tên tài khoản không tồn tại");
             }
 
-            // Kiểm tra mật khẩu - hỗ trợ cả plain text và BCrypt
-            String storedPassword = nhanVien.getMatKhau();
-            String inputPassword = loginRequest.getPassword();
-            
-            boolean passwordMatches = false;
-            
-            // Kiểm tra xem mật khẩu trong DB có phải BCrypt không
-            if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
-                // Mật khẩu đã được mã hóa BCrypt
-                passwordMatches = passwordEncoder.matches(inputPassword, storedPassword);
-            } else {
-                // Mật khẩu plain text (cho môi trường dev/test)
-                passwordMatches = inputPassword.equals(storedPassword);
-            }
-            
-            if (!passwordMatches) {
+            if (!passwordEncoder.matches(loginRequest.getPassword(), nhanVien.getMatKhau())) {
                 return new ResponseObject<>(false, null, "Mật khẩu không đúng");
             }
 
-            // Kiểm tra trạng thái
             if (!Boolean.TRUE.equals(nhanVien.getTrangThai())) {
                 return new ResponseObject<>(false, null, "Tài khoản đã bị khóa");
             }
 
-            // Tạo JWT tokens
-            String accessToken = jwtUtils.generateToken(nhanVien.getTenTaiKhoan());
+            // ✅ Lấy danh sách quyền của nhân viên (chuyển sang list string)
+            // Nếu chỉ có 1 quyền, vẫn để thành list 1 phần tử
+            // ✅ Lấy danh sách quyền của nhân viên
+            // ✅ Lấy danh sách quyền của nhân viên và chuẩn hoá tên
+            List<String> roles;
+
+            if (nhanVien.getIdQuyenHan() != null) {
+                Integer quyenId = nhanVien.getIdQuyenHan().getId();
+                String normalizedRole;
+
+                if (quyenId == 1) {
+                    normalizedRole = "admin";
+                } else if (quyenId == 2) {
+                    normalizedRole = "nhan_vien";
+                } else {
+                    normalizedRole = "user";
+                }
+
+                roles = List.of(normalizedRole);
+            } else {
+                roles = List.of("user");
+            }
+
+
+
+            // ✅ Sinh tokens
+            String accessToken = jwtUtils.generateToken(nhanVien.getTenTaiKhoan(), roles);
             String refreshToken = jwtUtils.generateRefreshToken(nhanVien.getTenTaiKhoan());
 
-            // Tạo response data
+            // ✅ Chuẩn bị dữ liệu trả về
             LoginResponseData responseData = new LoginResponseData();
             responseData.setId(nhanVien.getId());
             responseData.setMaNhanVien(nhanVien.getMaNhanVien());
@@ -145,6 +129,7 @@ public class AuthController {
             return new ResponseObject<>(false, null, "Lỗi hệ thống: " + e.getMessage());
         }
     }
+
 
     // Inner class cho response data
     public static class LoginResponseData {
@@ -233,67 +218,6 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/me")
-    public ResponseObject<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        try {
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return new ResponseObject<>(false, null, "No token provided");
-            }
-
-            String token = authHeader.substring(7);
-            String username = jwtUtils.getUsernameFromToken(token);
-
-            if (!jwtUtils.validateToken(token, username)) {
-                return new ResponseObject<>(false, null, "Invalid token");
-            }
-
-            // Hardcoded admin bypass for /me endpoint
-            if ("admin".equals(username)) {
-                LoginResponseData adminData = new LoginResponseData();
-                adminData.setId(1);
-                adminData.setMaNhanVien("ADMIN001");
-                adminData.setTenNhanVien("Administrator");
-                adminData.setTenTaiKhoan("admin");
-                adminData.setEmail("admin@gearup.com");
-                adminData.setIdQuyenHan(1);
-                adminData.setTenQuyenHan("Admin");
-                adminData.setAccessToken(token);
-                adminData.setRefreshToken(null);
-                
-                return new ResponseObject<>(true, adminData, "User info retrieved successfully (Admin)");
-            }
-
-            // Tìm nhân viên theo tên tài khoản
-            NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);
-
-            if (nhanVien == null) {
-                return new ResponseObject<>(false, null, "User not found");
-            }
-
-            // Kiểm tra trạng thái
-            if (!Boolean.TRUE.equals(nhanVien.getTrangThai())) {
-                return new ResponseObject<>(false, null, "Account is disabled");
-            }
-
-            // Tạo response data
-            LoginResponseData responseData = new LoginResponseData();
-            responseData.setId(nhanVien.getId());
-            responseData.setMaNhanVien(nhanVien.getMaNhanVien());
-            responseData.setTenNhanVien(nhanVien.getTenNhanVien());
-            responseData.setTenTaiKhoan(nhanVien.getTenTaiKhoan());
-            responseData.setEmail(nhanVien.getEmail());
-            responseData.setIdQuyenHan(nhanVien.getIdQuyenHan().getId());
-            responseData.setTenQuyenHan(nhanVien.getIdQuyenHan().getTenQuyenHan());
-            responseData.setAccessToken(token);
-            responseData.setRefreshToken(null); // Don't send refresh token in /me response
-
-            return new ResponseObject<>(true, responseData, "User info retrieved successfully");
-
-        } catch (Exception e) {
-            return new ResponseObject<>(false, null, "Error retrieving user info: " + e.getMessage());
-        }
-    }
-
     @PostMapping("/logout")
     public ResponseObject<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
@@ -316,4 +240,41 @@ public class AuthController {
             return new ResponseObject<>(true, null, "Logged out successfully");
         }
     }
+    @PostMapping("/forgot-password")
+    public ResponseObject<?> forgotPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        try {
+            nhanVienService.forgotPassword(email);
+            return new ResponseObject<>(true, null, "Đã gửi email đặt lại mật khẩu!");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, e.getMessage());
+        }
+    }
+
+
+    @PostMapping("/verify-token")
+    public ResponseEntity<?> verifyToken(@RequestBody Map<String, String> body) {
+        String token = body.get("token");
+        Map<String, Object> data = nhanVienService.verifyToken(token);
+        boolean valid = (boolean) data.get("valid");
+        boolean expired = (boolean) data.get("expired");
+        return ResponseEntity.ok(Map.of("success", true, "data", Map.of("valid", valid, "expired", expired)));
+    }
+
+
+
+    @PostMapping("/reset-password")
+    public ResponseObject<?> resetPassword(@RequestBody Map<String, String> body) {
+        String token = body.get("token");
+        String newPassword = body.get("newPassword");
+
+        try {
+            nhanVienService.resetPassword(token, newPassword, passwordEncoder);
+            return new ResponseObject<>(true, null, "Đặt lại mật khẩu thành công!");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, e.getMessage());
+        }
+    }
+
+
 }
