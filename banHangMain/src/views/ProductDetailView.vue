@@ -1,6 +1,7 @@
 <template>
-  <div class="pdp" v-if="product">
-    <section class="pdp-hero">
+  <div class="product-detail-view">
+    <div class="pdp" v-if="product">
+      <section class="pdp-hero">
       <!-- Left: Gallery and Accordion -->
       <div class="left-panel">
         <!-- Gallery: left vertical thumbnails, right main image -->
@@ -137,7 +138,7 @@
         <div class="size-selector" v-if="sizeOptions.length">
           <div class="size-row">
             <label>{{ $t('product.sizes') }}:</label>
-            <a class="size-guide" href="#" @click.prevent>{{ $t('product.sizeGuide') }}</a>
+            <button class="size-guide" type="button" @click="toggleSizeGuide(true)">{{ $t('product.sizeGuide') }}</button>
           </div>
           <div class="size-grid">
             <button
@@ -206,14 +207,64 @@
       </div>
       <AppRecommendationsCarousel ref="recommendationsCarouselRef" />
     </section>
-    <!-- Service cards at the very bottom -->
-    <div class="container"><AppSalesBoxes /></div>
-  </div>
-
-  <div v-else class="pdp-not-found">
-    <p>{{ $t('product.notFoundDesc') }}</p>
-    <button class="btn" @click="$router.push('/all')">{{ $t('cart.browse') }}</button>
+      <!-- Service cards at the very bottom -->
+      <div class="container"><AppSalesBoxes /></div>
     </div>
+
+    <div v-else class="pdp-not-found">
+      <p>{{ $t('product.notFoundDesc') }}</p>
+      <button class="btn" @click="$router.push('/all')">{{ $t('cart.browse') }}</button>
+    </div>
+
+    <teleport to="body">
+      <transition name="modal-fade">
+        <div
+          v-if="showSizeGuideModal"
+          class="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="size-guide-title"
+        >
+          <div class="modal">
+            <header class="modal-header">
+              <h2 id="size-guide-title">{{ $t('product.sizeGuide') }}</h2>
+              <button
+                class="modal-close"
+                type="button"
+                @click="toggleSizeGuide(false)"
+                aria-label="Close size guide"
+              >
+                ×
+              </button>
+            </header>
+            <section class="modal-body">
+              <table class="size-guide-table">
+                <thead>
+                  <tr>
+                    <th>US</th>
+                    <th>UK</th>
+                    <th>EU</th>
+                    <th>CM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="entry in sizeGuide" :key="entry.us">
+                    <td>{{ entry.us }}</td>
+                    <td>{{ entry.uk }}</td>
+                    <td>{{ entry.eu }}</td>
+                    <td>{{ entry.cm }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="modal-note">
+                {{ $t('product.sizeGuide') }} {{ $t('product.description').toLowerCase() }}
+              </p>
+            </section>
+          </div>
+        </div>
+      </transition>
+    </teleport>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -239,6 +290,7 @@ const recommendationsCarouselRef = ref<InstanceType<typeof AppRecommendationsCar
 const productDetail = ref<BackendProduct | null>(null)
 const detailLoading = ref(false)
 const variants = ref<ProductVariantResponse[]>([])
+const showSizeGuideModal = ref(false)
 
 function onMainImageEnter() {
   const el = mainImgRef.value
@@ -411,6 +463,25 @@ watch(galleryImages, () => {
 watch(selectedColor, () => {
   size.value = null
   showSizeRequiredMessage.value = false
+  const color = selectedColor.value
+  if (!color) return
+
+  const normalizedColor = color.toLowerCase()
+
+  const matchIndex = galleryImages.value.findIndex((src) =>
+    src?.toLowerCase().includes(normalizedColor)
+  )
+  if (matchIndex >= 0) {
+    activeImageIndex.value = matchIndex
+  } else if (variantsByColor.value[color]?.image) {
+    const target = resolveProductImage(variantsByColor.value[color]?.image)
+    const index = galleryImages.value.findIndex((src) => src === target)
+    if (index >= 0) {
+      activeImageIndex.value = index
+    }
+  } else {
+    activeImageIndex.value = 0
+  }
 })
 
 const colorSwatches = computed(() => {
@@ -475,6 +546,31 @@ const serviceHighlights = [
   }
 ];
 
+const sizeGuide = [
+  { us: '7', uk: '6', eu: '40', cm: '25' },
+  { us: '7.5', uk: '6.5', eu: '40.5', cm: '25.5' },
+  { us: '8', uk: '7', eu: '41', cm: '26' },
+  { us: '8.5', uk: '7.5', eu: '42', cm: '26.5' },
+  { us: '9', uk: '8', eu: '42.5', cm: '27' },
+  { us: '9.5', uk: '8.5', eu: '43', cm: '27.5' },
+  { us: '10', uk: '9', eu: '44', cm: '28' }
+]
+
+function toggleSizeGuide(visible: boolean) {
+  showSizeGuideModal.value = visible
+  if (visible) {
+    document.body.classList.add('no-scroll')
+  } else {
+    document.body.classList.remove('no-scroll')
+  }
+}
+
+watch(showSizeGuideModal, (visible) => {
+  if (!visible) {
+    document.body.classList.remove('no-scroll')
+  }
+})
+
 function resolveProductImage(imagePath: string | undefined | null): string | null {
   if (!imagePath) return null;
   const trimmed = imagePath.trim();
@@ -507,6 +603,8 @@ const cartAdd = () => {
 
   const cartItem: CartItem = {
     ...selectedProduct,
+    color: selectedColor.value || selectedProduct.color,
+    img: galleryImages.value[activeImageIndex.value] || selectedProduct.img,
     quantity: quantity.value,
     size: size.value ?? undefined
   };
@@ -684,8 +782,98 @@ function setupAccordion(el: HTMLDetailsElement) {
 .swatch img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
 .swatch-name { font-size: 12px; color: #4b5563; text-transform: capitalize; text-align: center; }
 
+.no-scroll {
+  overflow: hidden;
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+  padding: 24px;
+}
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+  max-width: 640px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.05em;
+}
+.modal-close {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+.size-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+.size-guide-table th,
+.size-guide-table td {
+  padding: 10px 12px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+.size-guide-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.modal-note {
+  color: #475569;
+  font-size: 13px;
+  margin: 0;
+}
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
 .size-row { display: flex; align-items: baseline; justify-content: space-between; }
-.size-guide { color: #111; text-decoration: underline; font-size: 12px; }
+.size-guide {
+  color: #111;
+  text-decoration: underline;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+.size-guide:hover {
+  color: #000;
+}
 .size-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
 .size-btn { padding: 10px 0; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
 .size-btn.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }

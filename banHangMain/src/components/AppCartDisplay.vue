@@ -17,7 +17,8 @@
           </header>
           <div class="meta">
             <div class="line">{{ (item.gender || 'Unisex') + "'s Shoes" }}</div>
-            <div class="line color">{{ item.description }}</div>
+            <div class="line color"><strong>Color:</strong> {{ item.color || 'Default' }}</div>
+            <div class="line muted">{{ item.description }}</div>
             <div v-if="item.size" class="line size">Size {{ item.size }}</div>
           </div>
           <div class="controls">

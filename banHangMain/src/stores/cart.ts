@@ -119,7 +119,9 @@ export const useCartStore = defineStore("cart", {
       this.sizeMapping = {};
     },
     addToCart(payload: CartItem) {
-      const existing = this.cart.find(item => item.id === payload.id);
+      const existing = this.cart.find(item => item.id === payload.id
+        && item.size === payload.size
+        && item.color === payload.color);
 
       if (existing) {
         existing.quantity += payload.quantity;
@@ -129,7 +131,9 @@ export const useCartStore = defineStore("cart", {
       this.cart.push(payload);
     },
     addOneToCart(payload: CartItem) {
-      const existing = this.cart.find(item => item.id === payload.id);
+      const existing = this.cart.find(item => item.id === payload.id
+        && item.size === payload.size
+        && item.color === payload.color);
 
       if (existing) {
         existing.quantity += 1;
