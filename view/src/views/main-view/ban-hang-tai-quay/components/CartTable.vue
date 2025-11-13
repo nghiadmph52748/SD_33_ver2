@@ -77,13 +77,59 @@
       </template>
 
       <template #quantity="{ record }">
-        <a-input-number
-          :model-value="record.quantity"
-          :min="1"
-          :max="999"
-          size="small"
-          @change="(val) => $emit('update-quantity', { id: record.id, value: val })"
-        />
+        <div style="display: flex; align-items: center; gap: 8px; justify-content: center">
+          <a-button
+            type="text"
+            size="small"
+            @click="handleQuantityChange(record.id, record.quantity - 1)"
+            style="
+              width: 28px;
+              height: 28px;
+              padding: 0;
+              border: 1px solid #d9d9d9;
+              border-radius: 50%;
+              background-color: #ffffff;
+              color: #666;
+              font-weight: bold;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              line-height: 1;
+            "
+          >
+            −
+          </a-button>
+          <a-input-number
+            :model-value="record.quantity"
+            :min="1"
+            :max="999"
+            size="small"
+            hide-button
+            style="width: 60px"
+            @change="(val) => handleQuantityChange(record.id, val)"
+          />
+          <a-button
+            type="text"
+            size="small"
+            @click="handleQuantityChange(record.id, record.quantity + 1)"
+            style="
+              width: 28px;
+              height: 28px;
+              padding: 0;
+              border: 1px solid #d9d9d9;
+              border-radius: 50%;
+              background-color: #ffffff;
+              color: #666;
+              font-weight: bold;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              line-height: 1;
+            "
+          >
+            +
+          </a-button>
+        </div>
       </template>
 
       <template #price="{ record }">
@@ -146,18 +192,25 @@ const props = defineProps<{
   overStockItems: Array<{ id: string; productName: string; requiredQty: number; currentStock: number; shortageQty: number }>
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'paginate', page: number): void
   (e: 'update-quantity', payload: { id: string; value: number }): void
   (e: 'delete', record: CartItem): void
 }>()
 
+const handleQuantityChange = (id: string, newQty: number | null) => {
+  // Validate quantity is between 1 and 999
+  if (newQty !== null && newQty !== undefined && newQty >= 1 && newQty <= 999) {
+    emit('update-quantity', { id, value: newQty })
+  }
+}
+
 const columns = [
   { title: 'STT', dataIndex: 'stt', key: 'stt', width: 50, align: 'center' as const },
   { title: 'Sản Phẩm', dataIndex: 'product', key: 'product', width: 300, slotName: 'product' },
-  { title: 'Số Lượng', dataIndex: 'quantity', key: 'quantity', slotName: 'quantity', width: 100, align: 'center' as const },
-  { title: 'Giá Bán', dataIndex: 'price', key: 'price', slotName: 'price', width: 120, align: 'right' as const },
-  { title: 'Thành Tiền', dataIndex: 'subtotal', key: 'subtotal', slotName: 'subtotal', width: 130, align: 'right' as const },
+  { title: 'Số Lượng', dataIndex: 'quantity', key: 'quantity', slotName: 'quantity', width: 140, align: 'center' as const },
+  { title: 'Giá Bán', dataIndex: 'price', key: 'price', slotName: 'price', width: 110, align: 'right' as const },
+  { title: 'Thành Tiền', dataIndex: 'subtotal', key: 'subtotal', slotName: 'subtotal', width: 120, align: 'right' as const },
   { title: 'Thao Tác', dataIndex: 'action', key: 'action', slotName: 'action', width: 80, align: 'center' as const },
 ]
 </script>
