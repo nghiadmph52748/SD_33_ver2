@@ -119,9 +119,9 @@ const filteredConversations = computed(() => {
 /**
  * Lấy avatar người dùng còn lại
  */
-function getOtherUserAvatar(_conversation: Conversation): string | null {
+function getOtherUserAvatar(_conversation: Conversation): string | undefined {
   // TODO: Implement avatar from user data
-  return null
+  return undefined
 }
 
 /**
@@ -132,10 +132,25 @@ function getLastMessagePreview(conversation: Conversation): string {
     return 'Chưa có tin nhắn'
   }
   const maxLength = 40
-  if (conversation.lastMessageContent.length > maxLength) {
-    return `${conversation.lastMessageContent.substring(0, maxLength)}...`
+  const currentUserId = userStore.id
+  // Prefer backend flag; fall back to locally cached last message sender
+  let isMine = conversation.lastSenderId === currentUserId
+  if (!isMine) {
+    const cached = chatStore.messages?.[conversation.id]
+    if (Array.isArray(cached) && cached.length > 0) {
+      const last = cached[cached.length - 1]
+      if (last && last.senderId === currentUserId) {
+        isMine = true
+      }
+    }
   }
-  return conversation.lastMessageContent
+  const preview = conversation.lastMessageContent || ''
+  const prefix = isMine ? '' : ''
+  const content = preview.length > maxLength ? `${preview.substring(0, maxLength)}...` : preview
+  if (isMine) {
+    return `Bạn: ${content}`
+  }
+  return `${prefix}${content}`
 }
 
 /**
@@ -213,7 +228,7 @@ function isUserOnline(conversation: Conversation): boolean {
  * Xử lý khi click vào conversation
  */
 async function handleSelectConversation(conversation: Conversation) {
-  chatStore.setActiveConversation(conversation.id)
+  chatStore.setActiveConversation(conversation.id, { userInitiated: true })
 
   // Nếu có tin nhắn chưa đọc, tự động mark as read
   if (hasUnread(conversation)) {
@@ -246,18 +261,18 @@ async function handleNewChat(userId: number) {
 
     if (existingConv) {
       // Nếu đã có, chỉ mở conversation
-      console.log('✅ Existing conversation found:', existingConv.id)
-      chatStore.setActiveConversation(existingConv.id)
+      console.log('Existing conversation found:', existingConv.id)
+      chatStore.setActiveConversation(existingConv.id, { userInitiated: true })
     } else {
       // Nếu chưa có, tạo mới bằng cách gọi tin nhắn đầu tiên
-      console.log('📤 Sending first message to create conversation...')
+      console.log('Sending first message to create conversation...')
       await chatStore.sendMessageViaAPI({
         receiverId: userId,
         content: 'Xin chào! 👋',
         messageType: 'TEXT',
       })
 
-      console.log('🔄 Fetching conversation...')
+      console.log('Fetching conversation...')
       // Lấy conversation vừa tạo qua API
       await chatStore.fetchConversations()
 
@@ -267,17 +282,17 @@ async function handleNewChat(userId: number) {
       )
 
       if (newConv) {
-        console.log('✅ Conversation found, opening:', newConv)
-        chatStore.setActiveConversation(newConv.id)
+        console.log('Conversation found, opening:', newConv)
+        chatStore.setActiveConversation(newConv.id, { userInitiated: true })
         // Lấy tin nhắn của conversation
         await chatStore.fetchMessages(userId)
       } else {
-        console.warn('⚠️ Could not find conversation after sending message')
+        console.warn('Could not find conversation after sending message')
         Message.warning('Vui lòng reload trang để xem cuộc trò chuyện mới')
       }
     }
   } catch (error: any) {
-    console.error('❌ Error creating new chat:', error)
+    console.error('Error creating new chat:', error)
     Message.error(`Không thể tạo cuộc trò chuyện: ${error.message || error}`)
   }
 }

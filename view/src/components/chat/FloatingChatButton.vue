@@ -54,8 +54,8 @@
                     <span class="conv-name">{{ getOtherUserName(conv) }}</span>
                     <span class="conv-time">{{ formatTime(conv.lastMessageTime) }}</span>
                   </div>
-                  <div class="conv-preview">
-                    <span class="last-message">{{ conv.lastMessageContent }}</span>
+              <div class="conv-preview">
+                <span class="last-message">{{ getLastMessagePreview(conv) }}</span>
                     <a-badge v-if="getUnreadCount(conv) > 0" :count="getUnreadCount(conv)" class="unread-badge" />
                   </div>
                 </div>
@@ -85,7 +85,7 @@
           <div ref="messagesContainer" class="mini-messages" @scroll="handleScroll">
             <div
               v-for="msg in activeMessages"
-              :key="msg.id"
+              :key="msg.maTinNhan || msg.id"
               :class="['message-bubble', msg.senderId === userStore.id ? 'sent' : 'received']"
             >
               <div class="bubble-content">{{ msg.content }}</div>
@@ -103,7 +103,8 @@
               v-model="messageInput"
               :auto-size="{ minRows: 1, maxRows: 3 }"
               placeholder="Nhập tin nhắn..."
-              @keydown.enter.exact="sendMessage"
+              @keydown.enter.exact="onEnterKey"
+              @keydown.shift.enter="handleNewLine"
             />
             <a-button type="primary" :loading="chatStore.sendingMessage" @click="sendMessage">
               <template #icon>
@@ -130,7 +131,7 @@
         :class="{ connecting: chatStore.wsConnecting }"
         :title="chatStore.wsConnecting ? 'Đang kết nối...' : 'Mất kết nối'"
       />
-      <a-badge v-if="chatStore.totalUnreadCount > 0" :count="chatStore.totalUnreadCount" :offset="[-8, 8]" />
+      <a-badge v-if="totalUnreadBadge > 0" :count="totalUnreadBadge" :offset="[-8, 8]" />
     </a-button>
     <!-- Single floating button used for both Chat and AI -->
   </div>
@@ -165,6 +166,16 @@ const headerMode = ref<'human' | 'ai'>('human')
 const activeConversation = computed(() => chatStore.activeConversation)
 const activeMessages = computed(() => chatStore.activeMessages)
 
+// Derive total unread from conversations to ensure real-time correctness
+const totalUnreadBadge = computed(() => {
+  const convs = chatStore.conversations || []
+  if (convs.length === 0) return 0
+  return convs.reduce((sum: number, c: any) => {
+    const count = Number(chatStore.getUnreadCount(c.id) || 0)
+    return sum + (Number.isFinite(count) ? count : 0)
+  }, 0)
+})
+
 function getOtherUserName(conv: any) {
   return userStore.id === conv.nhanVien1Id ? conv.nhanVien2Name : conv.nhanVien1Name
 }
@@ -194,6 +205,24 @@ const filteredConversations = computed(() => {
   })
 })
 
+function getLastMessagePreview(conv: any): string {
+  const text: string = conv.lastMessageContent || ''
+  if (!text) return 'Chưa có tin nhắn'
+  const currentUserId = userStore.id
+  // Prefer backend's lastSenderId; fallback to cached last message
+  let isMine = conv.lastSenderId === currentUserId
+  if (!isMine) {
+    const cached = chatStore.messages?.[conv.id]
+    if (Array.isArray(cached) && cached.length > 0) {
+      const last = cached[cached.length - 1]
+      if (last && last.senderId === currentUserId) isMine = true
+    }
+  }
+  const maxLength = 40
+  const content = text.length > maxLength ? `${text.substring(0, maxLength)}...` : text
+  return isMine ? `Bạn: ${content}` : content
+}
+
 function toggleDrawer() {
   drawerVisible.value = !drawerVisible.value
 
@@ -221,7 +250,7 @@ async function checkAIConnection() {
 }
 
 async function selectConversation(id: number) {
-  chatStore.setActiveConversation(id)
+  chatStore.setActiveConversation(id, { userInitiated: true })
   const conv = chatStore.conversations.find((c) => c.id === id)
   if (conv) {
     const otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
@@ -243,7 +272,7 @@ async function selectConversation(id: number) {
 }
 
 function backToList() {
-  chatStore.setActiveConversation(null)
+  chatStore.setActiveConversation(null, { userInitiated: false })
 }
 
 function formatTime(time: string | null | undefined) {
@@ -284,6 +313,19 @@ function handleScroll() {
   // Reserved for future features
 }
 
+function onEnterKey(event: KeyboardEvent) {
+  // Prevent newline on Enter
+  event.preventDefault()
+  if (messageInput.value.trim()) {
+    // Only send when there's content
+    sendMessage()
+  }
+}
+
+function handleNewLine(_event: KeyboardEvent) {
+  // Allow default newline on Shift+Enter
+}
+
 function handleSessionState(state: any) {
   // Forward-looking hook for session state if needed
   // eslint-disable-next-line no-console
@@ -321,7 +363,7 @@ watch(
       // Find new unread messages from the other user
       const newUnreadMessages = messages.filter((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
-      if (newUnreadMessages.length > 0) {
+      if (newUnreadMessages.length > 0 && chatStore.activeConversationUserInitiated) {
         console.log(`📖 Auto-marking ${newUnreadMessages.length} new message(s) as read`)
         try {
           await chatStore.markAsRead(otherUserId, activeConversation.value.id)
@@ -396,6 +438,11 @@ watch(drawerVisible, async (visible) => {
         scrollToBottom()
       }
     }
+  } else {
+    if (chatStore.activeConversationId !== null) {
+      chatStore.setActiveConversation(null, { userInitiated: false })
+    }
+    messageInput.value = ''
   }
 })
 
@@ -434,7 +481,7 @@ watch(
       // Check if there are unread messages from the other user
       const hasUnreadMessages = messages.some((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
-      if (hasUnreadMessages) {
+      if (hasUnreadMessages && chatStore.activeConversationUserInitiated) {
         console.log('📖 Auto-marking messages as read (drawer open, viewing conversation)')
         try {
           await chatStore.markAsRead(otherUserId, currentConv.id)
@@ -756,6 +803,13 @@ if (typeof window !== 'undefined') {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Hide scrollbars */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.mini-messages::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .message-bubble {

@@ -5,6 +5,11 @@ import { defineStore } from 'pinia'
 import useAppStore from './app'
 import { UserState, RoleType } from './user/types'
 
+const USER_INFO_STORAGE_KEY = 'userInfo'
+const USER_ID_STORAGE_KEY = 'userId'
+const ROLES_STORAGE_KEY = 'roles'
+const TOKEN_STORAGE_KEY = 'token'
+
 const useUserStore = defineStore('user', {
   state: (): UserState => ({
     id: undefined,
@@ -45,26 +50,30 @@ const useUserStore = defineStore('user', {
     // Khôi phục thông tin user từ token khi refresh trang
     async initUserFromToken() {
       try {
-        const token = localStorage.getItem('token')
-        const userId = localStorage.getItem('userId')
-        const roles = JSON.parse(localStorage.getItem('roles') || '[]') as RoleType[]
+        const token = localStorage.getItem(TOKEN_STORAGE_KEY)
+        const userId = localStorage.getItem(USER_ID_STORAGE_KEY)
+        const roles = JSON.parse(localStorage.getItem(ROLES_STORAGE_KEY) || '[]') as RoleType[]
+        const storedInfoRaw = localStorage.getItem(USER_INFO_STORAGE_KEY)
+        const storedInfo = storedInfoRaw ? (JSON.parse(storedInfoRaw) as Partial<UserState>) : {}
 
         if (token && userId) {
-          const parsedUserId = parseInt(userId, 10)
-
-          this.setInfo({
+          const parsedUserId = Number.parseInt(userId, 10)
+          const mergedInfo: Partial<UserState> = {
             id: parsedUserId,
             accessToken: token,
             roles,
-          })
+            ...storedInfo,
+          }
+          this.setInfo(mergedInfo)
           return true
         }
 
         return false
       } catch (err) {
         clearToken()
-        localStorage.removeItem('userId')
-        localStorage.removeItem('roles')
+        localStorage.removeItem(USER_ID_STORAGE_KEY)
+        localStorage.removeItem(ROLES_STORAGE_KEY)
+        localStorage.removeItem(USER_INFO_STORAGE_KEY)
         this.resetInfo()
         return false
       }
@@ -82,7 +91,7 @@ async login(loginForm: LoginData) {
     }
 
     const employeeId = res.data.id
-    localStorage.setItem('userId', employeeId.toString())
+    localStorage.setItem(USER_ID_STORAGE_KEY, employeeId.toString())
 
     // 🔹 Mapping idQuyenHan thành RoleType chính xác
     const roleMap: Record<number, RoleType> = {
@@ -91,7 +100,7 @@ async login(loginForm: LoginData) {
     }
 
     const userRoles: RoleType[] = [roleMap[res.data.idQuyenHan] || 'user']
-    localStorage.setItem('roles', JSON.stringify(userRoles))
+    localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(userRoles))
 
     const userInfo = {
       id: employeeId,
@@ -106,11 +115,24 @@ async login(loginForm: LoginData) {
       roles: userRoles,
     }
 
+    const storedProfile = {
+      id: employeeId,
+      maNhanVien: res.data.maNhanVien,
+      name: res.data.tenNhanVien,
+      tenTaiKhoan: res.data.tenTaiKhoan,
+      email: res.data.email,
+      idQuyenHan: res.data.idQuyenHan,
+      tenQuyenHan: res.data.tenQuyenHan,
+    }
+
+    localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify(storedProfile))
+
     this.setInfo(userInfo)
   } catch (err) {
     clearToken()
-    localStorage.removeItem('userId')
-    localStorage.removeItem('roles')
+    localStorage.removeItem(USER_ID_STORAGE_KEY)
+    localStorage.removeItem(ROLES_STORAGE_KEY)
+    localStorage.removeItem(USER_INFO_STORAGE_KEY)
     throw err
   }
 }
@@ -126,8 +148,9 @@ async login(loginForm: LoginData) {
         const appStore = useAppStore()
         this.resetInfo()
         clearToken()
-        localStorage.removeItem('userId')
-        localStorage.removeItem('roles')
+        localStorage.removeItem(USER_ID_STORAGE_KEY)
+        localStorage.removeItem(ROLES_STORAGE_KEY)
+        localStorage.removeItem(USER_INFO_STORAGE_KEY)
         removeRouteListener()
         appStore.clearServerMenu()
       }

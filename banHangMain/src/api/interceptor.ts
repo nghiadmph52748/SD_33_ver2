@@ -8,8 +8,9 @@ export interface HttpResponse<T = unknown> {
   data: T
 }
 
-// Set API base URL for backend
-axios.defaults.baseURL = 'http://localhost:8080'
+// Set API base URL for backend from environment variable
+const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+axios.defaults.baseURL = apiBaseURL
 
 // List of public endpoints that don't require authentication
 const PUBLIC_ENDPOINTS = [

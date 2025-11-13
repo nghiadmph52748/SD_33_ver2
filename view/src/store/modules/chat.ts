@@ -29,6 +29,7 @@ interface ChatState {
 
   // Cuộc trò chuyện đang active
   activeConversationId: number | null
+  activeConversationUserInitiated: boolean
 
   // Tổng số tin nhắn chưa đọc
   totalUnreadCount: number
@@ -54,6 +55,7 @@ const useChatStore = defineStore('chat', {
     conversations: [],
     messages: {},
     activeConversationId: null,
+    activeConversationUserInitiated: false,
     totalUnreadCount: 0,
     onlineUsers: new Set<number>(),
     wsConnected: false,
@@ -213,9 +215,11 @@ const useChatStore = defineStore('chat', {
       try {
         // Tạo optimistic message để hiển thị ngay trên UI
         const userStore = useUserStore()
+        const tempSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        const tempId = Number(`${Date.now()}${Math.floor(Math.random() * 1000)}`)
         const optimisticMessage: ChatMessage = {
-          id: Date.now(), // Temporary ID
-          maTinNhan: `temp-${Date.now()}`,
+          id: Number.isFinite(tempId) ? tempId : Date.now(),
+          maTinNhan: `temp-${tempSuffix}`,
           senderId: userStore.id!,
           senderName: userStore.name || '',
           receiverId: message.receiverId,
@@ -229,6 +233,8 @@ const useChatStore = defineStore('chat', {
 
         // Thêm optimistic message vào UI ngay lập tức
         this.addMessageToState(optimisticMessage)
+        // Cập nhật conversation list ngay (preview, time, last sender)
+        this.updateConversationWithNewMessage(optimisticMessage)
 
         // Gửi qua WebSocket
         this.stompClient.publish({
@@ -358,8 +364,9 @@ const useChatStore = defineStore('chat', {
     /**
      * Set active conversation
      */
-    setActiveConversation(conversationId: number | null) {
+    setActiveConversation(conversationId: number | null, options: { userInitiated?: boolean } = {}) {
       this.activeConversationId = conversationId
+      this.activeConversationUserInitiated = !!options.userInitiated
     },
 
     /**
@@ -553,10 +560,10 @@ const useChatStore = defineStore('chat', {
       console.log('Current user ID:', userStore.id)
       console.log('Current user username:', userStore.tenTaiKhoan)
 
-      // Nếu không phải tin nhắn gửi cho mình, bỏ qua
-      if (message.receiverId !== userStore.id) {
-        console.log('Message not for current user, ignoring')
-        console.log(`Expected receiver: ${userStore.id}, Got: ${message.receiverId}`)
+      // Chỉ xử lý nếu liên quan đến mình (mình là người nhận hoặc người gửi)
+      if (message.receiverId !== userStore.id && message.senderId !== userStore.id) {
+        console.log('Message not related to current user, ignoring')
+        console.log(`Current user: ${userStore.id}, sender: ${message.senderId}, receiver: ${message.receiverId}`)
         return
       }
 
@@ -587,16 +594,16 @@ const useChatStore = defineStore('chat', {
         console.log(`📊 New total unread count: ${this.totalUnreadCount}`)
       }
 
-      // Auto-mark as read if user is currently viewing this conversation
+      // Auto-mark as read if user is currently viewing this conversation (chỉ khi mình là người nhận)
       // Check if there's an active conversation with the sender
-      if (this.activeConversationId) {
+      if (this.activeConversationId && this.activeConversationUserInitiated) {
         const activeConv = this.conversations.find((c) => c.id === this.activeConversationId)
         if (activeConv) {
           const matchesSender =
             (activeConv.nhanVien1Id === message.senderId && activeConv.nhanVien2Id === userStore.id) ||
             (activeConv.nhanVien2Id === message.senderId && activeConv.nhanVien1Id === userStore.id)
 
-          if (matchesSender) {
+          if (matchesSender && message.receiverId === userStore.id) {
             console.log('📖 Auto-marking message as read (user is viewing this conversation)')
             // Mark as read immediately without waiting for API
             try {
@@ -651,22 +658,43 @@ const useChatStore = defineStore('chat', {
         this.messages[conversation.id] = []
       }
 
-      // Kiểm tra duplicate - thay thế optimistic message (temp ID) bằng message thật từ server
-      const existingIndex = this.messages[conversation.id].findIndex(
-        (m) =>
-          m.id === message.id || // Exact ID match
-          (m.maTinNhan && m.maTinNhan.startsWith('temp-') && m.content === message.content && m.senderId === message.senderId) // Optimistic message match
-      )
-
-      if (existingIndex >= 0) {
-        // Replace optimistic message with real one from server
-        this.messages[conversation.id][existingIndex] = message
-      } else {
-        // Add new message
-        this.messages[conversation.id].push(message)
-        // Sort messages by sentAt to maintain order
-        this.messages[conversation.id].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())
+      // Kiểm tra duplicate - thay thế optimistic message (temp ID) bằng message thật từ server.
+      // Quan trọng: nếu có nhiều optimistic messages có cùng content, chỉ thay thế cái MỚI NHẤT.
+      let existingIndex = this.messages[conversation.id].findIndex((m) => m.id === message.id)
+      if (existingIndex < 0) {
+        // Tìm optimistic có cùng content/sender gần nhất theo thời gian gửi (gần với server sentAt)
+        const serverTs = message.sentAt ? new Date(message.sentAt as any).getTime() : Number.MAX_SAFE_INTEGER
+        let bestIndex = -1
+        let bestDelta = Number.MAX_SAFE_INTEGER
+        for (let i = 0; i < this.messages[conversation.id].length; i++) {
+          const m = this.messages[conversation.id][i]
+          if (
+            m?.maTinNhan &&
+            typeof m.maTinNhan === 'string' &&
+            m.maTinNhan.startsWith('temp-') &&
+            m.content === message.content &&
+            m.senderId === message.senderId
+          ) {
+            const mTs = m.sentAt ? new Date(m.sentAt as any).getTime() : 0
+            const delta = Math.abs(serverTs - mTs)
+            if (delta < bestDelta) {
+              bestDelta = delta
+              bestIndex = i
+            }
+          }
+        }
+        existingIndex = bestIndex
       }
+
+      // Always append the real message, then remove exactly one matched optimistic (if any).
+      this.messages[conversation.id].push(message)
+      if (existingIndex >= 0) {
+        this.messages[conversation.id].splice(existingIndex, 1)
+      }
+      // Sort messages by sentAt to maintain order
+      this.messages[conversation.id].sort(
+        (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+      )
     },
 
     /**
@@ -798,6 +826,7 @@ const useChatStore = defineStore('chat', {
       this.conversations = []
       this.messages = {}
       this.activeConversationId = null
+      this.activeConversationUserInitiated = false
       this.totalUnreadCount = 0
       this.disconnectWebSocket()
     },

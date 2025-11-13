@@ -58,11 +58,11 @@ onMounted(async () => {
   if (conversationId) {
     const id = Number(conversationId)
     if (!Number.isNaN(id)) {
-      chatStore.setActiveConversation(id)
+      chatStore.setActiveConversation(id, { userInitiated: true })
     }
   } else if (route.name === 'ChatIndex' && chatStore.conversations.length > 0) {
     // Auto-select first conversation when accessing /chat/index without conversationId
-    chatStore.setActiveConversation(chatStore.conversations[0].id)
+    chatStore.setActiveConversation(chatStore.conversations[0].id, { userInitiated: false })
   }
 })
 

@@ -125,6 +125,7 @@ const bankCode = ref<string>('')
 const contact = ref({ fullName: '', email: '', phone: '', address: '' })
 
 // Address picker (provinces.open-api.vn)
+const provincesApiUrl = import.meta.env.VITE_PROVINCES_API_URL || 'https://provinces.open-api.vn/api'
 const provinces = ref<{ value: string; label: string; code: number }[]>([])
 const districts = ref<{ value: string; label: string; code: number }[]>([])
 const wards = ref<{ value: string; label: string }[]>([])
@@ -223,7 +224,7 @@ watch(() => address.value.street, () => validateField('street'))
 
 async function loadProvinces() {
   try {
-    const res = await fetch('https://provinces.open-api.vn/api/p/')
+    const res = await fetch(`${provincesApiUrl}/p/`)
     const data = await res.json()
     provinces.value = data.map((p: any) => ({ value: p.name, label: p.name, code: p.code }))
   } catch {
@@ -240,7 +241,7 @@ async function onProvinceChange() {
   const p = provinces.value.find((x) => x.value === address.value.province)
   if (!p) return
   try {
-    const res = await fetch(`https://provinces.open-api.vn/api/p/${p.code}?depth=2`)
+    const res = await fetch(`${provincesApiUrl}/p/${p.code}?depth=2`)
     const data = await res.json()
     districts.value = (data.districts || []).map((d: any) => ({ value: d.name, label: d.name, code: d.code }))
   } catch {
@@ -254,7 +255,7 @@ async function onDistrictChange() {
   const d = districts.value.find((x) => x.value === address.value.district)
   if (!d) return
   try {
-    const res = await fetch(`https://provinces.open-api.vn/api/d/${d.code}?depth=2`)
+    const res = await fetch(`${provincesApiUrl}/d/${d.code}?depth=2`)
     const data = await res.json()
     wards.value = (data.wards || []).map((w: any) => ({ value: w.name, label: w.name }))
   } catch {

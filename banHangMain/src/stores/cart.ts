@@ -1,4 +1,3 @@
-import axios from "axios";
 import { defineStore } from "pinia";
 import { getSneakerProducts, getAllProducts, type Product } from "@/api/products";
 
@@ -23,7 +22,6 @@ const VALID_CART_STATUSES: CartStatus[] = ["idle", "loading", "success", "failur
 type PersistableCartState = {
   cart: CartItem[];
   cartUIStatus: CartStatus;
-  clientSecret: string;
 };
 
 function loadPersistedCartState(): Partial<PersistableCartState> | null {
@@ -37,8 +35,7 @@ function loadPersistedCartState(): Partial<PersistableCartState> | null {
       : "idle";
     return {
       cart: Array.isArray(parsed.cart) ? parsed.cart : [],
-      cartUIStatus: status,
-      clientSecret: typeof parsed.clientSecret === "string" ? parsed.clientSecret : ""
+      cartUIStatus: status
     };
   } catch (error) {
     console.warn("Failed to hydrate cart cache", error);
@@ -62,7 +59,6 @@ export const useCartStore = defineStore("cart", {
       cartUIStatus: persisted?.cartUIStatus ?? "idle",
       products: [] as Product[],
       cart: persisted?.cart ?? [],
-      clientSecret: persisted?.clientSecret ?? "",
       loading: false,
       error: null as string | null,
       sizeMapping: {} as Record<string, string[]>
@@ -126,9 +122,6 @@ export const useCartStore = defineStore("cart", {
         id: item.id,
         quantity: item.quantity
       }));
-    },
-    clientSecret(state): string {
-      return state.clientSecret;
     }
   },
   actions: {
@@ -157,14 +150,12 @@ export const useCartStore = defineStore("cart", {
     persistState() {
       persistCartStateSnapshot({
         cart: this.cart,
-        cartUIStatus: this.cartUIStatus,
-        clientSecret: this.clientSecret
+        cartUIStatus: this.cartUIStatus
       });
     },
     clearCart() {
       this.cart = [];
       this.cartUIStatus = "idle";
-      this.clientSecret = "";
       this.sizeMapping = {};
       this.persistState();
     },
@@ -217,31 +208,6 @@ export const useCartStore = defineStore("cart", {
     removeAllFromCart(payload: CartItem) {
       this.cart = this.cart.filter(item => item.id !== payload.id);
       this.persistState();
-    },
-    setClientSecret(clientSecret: string) {
-      this.clientSecret = clientSecret;
-      this.persistState();
-    },
-    async createPaymentIntent() {
-      try {
-        const result = await axios.post(
-          "https://ecommerce-netlify.netlify.app/.netlify/functions/create-payment-intent",
-          {
-            items: this.cartItems
-          },
-          {
-            headers: {
-              "Content-Type": "application/json"
-            }
-          }
-        );
-
-        if (result.data.clientSecret) {
-          this.setClientSecret(result.data.clientSecret);
-        }
-      } catch (error) {
-        console.error("Failed to create payment intent", error);
-      }
     }
   }
 });

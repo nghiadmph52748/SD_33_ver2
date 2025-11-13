@@ -18,14 +18,22 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtUtils jwtUtils;
+    private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
+    private final org.example.be_sp.service.TokenBlacklistService tokenBlacklistService;
 
-    public WebSocketConfig(JwtUtils jwtUtils) {
+    public WebSocketConfig(
+            JwtUtils jwtUtils,
+            org.springframework.security.core.userdetails.UserDetailsService userDetailsService,
+            org.example.be_sp.service.TokenBlacklistService tokenBlacklistService
+    ) {
         this.jwtUtils = jwtUtils;
+        this.userDetailsService = userDetailsService;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @Bean
     public WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor() {
-        return new WebSocketAuthChannelInterceptor(jwtUtils);
+        return new WebSocketAuthChannelInterceptor(jwtUtils, userDetailsService, tokenBlacklistService);
     }
 
     @Override

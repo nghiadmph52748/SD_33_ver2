@@ -25,7 +25,7 @@
       <div ref="messagesContainer" class="messages-container">
         <a-spin :loading="chatStore.loadingMessages" class="messages-spin">
           <div class="messages-list">
-            <MessageItem v-for="message in messages" :key="message.id" :message="message" :show-sender-name="false" />
+            <MessageItem v-for="message in messages" :key="message.maTinNhan || message.id" :message="message" :show-sender-name="false" />
           </div>
         </a-spin>
       </div>
@@ -146,7 +146,9 @@ watch(
       scrollToBottom()
 
       // Mark as read
-      await chatStore.markAsRead(otherUserId.value)
+      if (chatStore.activeConversationUserInitiated) {
+        await chatStore.markAsRead(otherUserId.value)
+      }
     }
   },
   { immediate: true }
@@ -274,14 +276,13 @@ function handleNewLine(_event: KeyboardEvent) {
   overflow-x: hidden;
   padding: 16px;
   position: relative;
+  /* Hide scrollbars */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 
   &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-border-3);
-    border-radius: 3px;
+    width: 0;
+    height: 0;
   }
 }
 
