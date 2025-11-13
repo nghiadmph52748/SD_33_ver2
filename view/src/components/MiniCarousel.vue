@@ -3,11 +3,17 @@
     <div class="mini-carousel-container">
       <div v-if="images && images.length > 0" class="carousel-slides" :style="{ transform: `translateX(${-currentIndex * 100}%)` }">
         <div v-for="(img, index) in images" :key="index" class="carousel-slide">
-          <a-avatar :image-url="img" :size="70" shape="square"></a-avatar>
+          <img :src="img" :alt="`Image ${index}`" class="carousel-image" @error="handleImageError" />
         </div>
       </div>
       <div v-else class="carousel-slide-empty">
-        <a-avatar :image-url="null" :size="70" shape="square"></a-avatar>
+        <div class="placeholder-image">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="#ccc">
+            <path
+              d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54h2.63l2.96-3.83c.37-.48 1.45-2.18 2.96-3.83.35-.41.56-.99.15-1.38.44.15.85.43 1.12.82l-4.07 5.21z"
+            ></path>
+          </svg>
+        </div>
       </div>
 
       <!-- Arrow buttons -->
@@ -57,6 +63,13 @@ const next = () => {
 
 const prev = () => {
   currentIndex.value = (currentIndex.value - 1 + props.images.length) % props.images.length
+}
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  console.warn(`Failed to load image: ${img.src}`)
+  img.style.opacity = '0.5'
+  img.style.backgroundImage = 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0)'
 }
 
 const startAutoplay = () => {
@@ -110,6 +123,15 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.carousel-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .carousel-slide-empty {
@@ -119,6 +141,17 @@ onUnmounted(() => {
   justify-content: center;
   height: 100%;
   width: 100%;
+  background: #f5f5f5;
+}
+
+.placeholder-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #ccc;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
 }
 
 /* Arrow buttons */

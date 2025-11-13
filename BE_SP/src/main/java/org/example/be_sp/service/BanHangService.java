@@ -134,6 +134,9 @@ public class BanHangService {
         ArrayList<HoaDonChiTiet> lst = hdctRepository.findAllByIdHoaDonAndTrangThai(hd, true);
         Integer[] lstIdHdct = lst.stream().map(HoaDonChiTiet::getId).toArray(Integer[]::new);
         xoaSanPham(lstIdHdct, idNhanVien);
+
+        // Create timeline: Hủy đơn hàng
+        addTimeline(hd, "Đang xử lý", "Đã hủy", "Hủy", "Hủy đơn hàng", idNhanVien);
     }
 
     public Integer themSanPham(Integer idHoaDon, Integer idChiTietSanPham, Integer soLuong, Integer idNhanVien) {
