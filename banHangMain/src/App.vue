@@ -13,6 +13,7 @@
         </Transition>
       </RouterView>
     </main>
+    <FloatingChatButton />
     <AppFooter />
   </div>
 </template>
@@ -22,15 +23,19 @@ import { onMounted, onUnmounted, ref } from "vue";
 import { RouterView, useRouter } from "vue-router";
 import AppFooter from "@/components/AppFooter.vue";
 import AppNav from "@/components/AppNav.vue";
+import FloatingChatButton from "@/components/chat/FloatingChatButton.vue";
 import { useCartStore } from "@/stores/cart";
+import { useUserStore } from '@/stores/user'
 
 const cartStore = useCartStore();
+const userStore = useUserStore();
 const router = useRouter();
 const isRouting = ref(false);
 let removeBefore: any;
 let removeAfter: any;
 
 onMounted(async () => {
+  await userStore.initFromStorage()
   // Fetch sneaker products on app mount
   if (cartStore.products.length === 0) {
     await cartStore.fetchProducts(true);

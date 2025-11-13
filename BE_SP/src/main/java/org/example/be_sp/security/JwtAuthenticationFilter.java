@@ -41,6 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // ✅ Bỏ qua filter cho các endpoint public (không yêu cầu đăng nhập)
         if (path.startsWith("/api/auth/")
+                || path.startsWith("/api/khach-hang/auth/")
+                || path.startsWith("/api/khach-hang/me")
                 || path.startsWith("/api/user/reset-password")
                 || path.startsWith("/api/email-test/")
                 || path.startsWith("/api/test/")

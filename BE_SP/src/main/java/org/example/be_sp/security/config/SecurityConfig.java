@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll() // Allow login and logout endpoints
+                .requestMatchers("/api/khach-hang/auth/**").permitAll() // Allow storefront customer auth
                         .requestMatchers("/api/ca-lam-viec/**").permitAll()
                         .requestMatchers("/api/lich-lam-viec/**").permitAll()
                         .requestMatchers("/api/giao-ca/**").permitAll()

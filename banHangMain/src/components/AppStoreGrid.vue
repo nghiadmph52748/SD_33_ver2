@@ -7,7 +7,7 @@
           <h2>{{ $t('store.browseCollection') }}</h2>
         </div>
         <p class="content-meta">
-          Showing <strong>{{ totalProducts }}</strong> of <strong>{{ totalAvailable }}</strong> styles
+          {{ contentMeta }}
         </p>
       </header>
       <TransitionGroup
@@ -15,7 +15,7 @@
         tag="div"
         class="content"
         role="list"
-        aria-label="Product list"
+        :aria-label="t('store.productListAria')"
       >
         <template v-if="loading">
           <ProductCardSkeleton
@@ -51,7 +51,7 @@
             <h3 class="item__title" :id="`product-title-${item.id}`">{{ item.name }}</h3>
             <div class="item__meta">
               <span v-if="item.gender" class="item__category">{{ formatCategory(item) }}</span>
-              <span class="item__colours">{{ getColourCount(item) }} colours</span>
+              <span class="item__colours">{{ t('store.coloursCount', { count: getColourCount(item) }) }}</span>
             </div>
             <div v-if="getSpecialTag(item)" class="item__tag">{{ getSpecialTag(item) }}</div>
           </div>
@@ -67,6 +67,7 @@ import type { Product } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
 import { FALLBACK_IMAGE, handleImageError } from "@/utils/imageFallback";
 import ProductCardSkeleton from "./ProductCardSkeleton.vue";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps<{
   data: Product[];
@@ -78,6 +79,9 @@ const skeletonCount = 8; // Number of skeleton cards to show
 const DEFAULT_MAX_PRICE = 10_000_000;
 const MAX_PRICE_CAP = 50_000_000;
 const min = 0;
+
+const { t } = useI18n();
+
 // Calculate max from products, but cap at reasonable maximum
 const max = computed(() => {
   if (props.data.length === 0) return DEFAULT_MAX_PRICE;
@@ -138,6 +142,13 @@ const filteredProducts = computed(() => {
 
 const totalProducts = computed(() => filteredProducts.value.length);
 const totalAvailable = computed(() => props.data.length);
+
+const contentMeta = computed(() =>
+  t('store.showingStyles', {
+    count: totalProducts.value,
+    total: totalAvailable.value,
+  })
+);
 
 const mediaBackgrounds = reactive<Record<string, string>>({});
 const imageLoaded = reactive<Record<string, boolean>>({});
@@ -350,10 +361,10 @@ function formatCategory(item: Product): string {
   // Format gender to match design: "Male" -> "Men", "Female" -> "Women"
   // Could be enhanced to add "Running", "Originals", etc. based on product type
   if (item.gender === 'Male') {
-    return 'Men';
+    return t('store.genderMen');
   }
   if (item.gender === 'Female') {
-    return 'Women';
+    return t('store.genderWomen');
   }
   return item.gender || '';
 }
@@ -367,11 +378,11 @@ function getColourCount(item: Product): number {
 function getSpecialTag(item: Product): string | null {
   // Show "Trending" for highly rated products
   if (item.starrating && item.starrating >= 4.5) {
-    return 'Trending';
+    return t('store.tagTrending');
   }
   // Show "New" for products with no reviews yet (starrating = 0)
   if (item.starrating === 0 || !item.starrating) {
-    return 'New';
+    return t('store.tagNew');
   }
   return null;
 }

@@ -4,8 +4,14 @@
       <ul>
         <li><a href="#" :aria-label="$t('nav.findStore')">{{ $t('nav.findStore') }}</a></li>
         <li><a href="#" :aria-label="$t('nav.help')">{{ $t('nav.help') }}</a></li>
-        <li><a href="#" :aria-label="$t('nav.joinUs')">{{ $t('nav.joinUs') }}</a></li>
-        <li><RouterLink to="/login" :aria-label="$t('nav.signIn')">{{ $t('nav.signIn') }}</RouterLink></li>
+        <template v-if="!isAuthenticated">
+          <li><a href="#" :aria-label="$t('nav.joinUs')">{{ $t('nav.joinUs') }}</a></li>
+          <li><RouterLink to="/login" :aria-label="$t('nav.signIn')">{{ $t('nav.signIn') }}</RouterLink></li>
+        </template>
+        <template v-else>
+          <li aria-label="customer-name">{{ customerName }}</li>
+          <li><a href="#" @click.prevent="openLogoutConfirm">{{ $t('nav.logout') }}</a></li>
+        </template>
       </ul>
       <div class="top-controls">
         <div class="locale-wrapper" @keydown.escape.prevent="closeLocale">
@@ -90,20 +96,43 @@
       </div>
     </div>
   </header>
+  <teleport to="body">
+    <transition name="logout-fade">
+      <div v-if="showLogoutConfirm" class="logout-confirm-backdrop">
+        <div class="logout-confirm-dialog">
+        <h3>{{ $t('nav.logoutConfirmTitle') }}</h3>
+        <p>{{ $t('nav.logoutConfirmMessage') }}</p>
+          <div class="dialog-actions">
+            <button type="button" class="dialog-btn ghost" @click="cancelLogout">
+              {{ $t('nav.logoutConfirmCancel') }}
+            </button>
+            <button type="button" class="dialog-btn primary" @click="confirmLogout">
+              {{ $t('nav.logoutConfirmOk') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </teleport>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useCartStore } from "@/stores/cart";
+import { useUserStore } from "@/stores/user";
+import useChatStore from "@/stores/chat"
 import { LOCALE_OPTIONS } from "@/locale";
 
 const cartStore = useCartStore();
 const { cartCount } = storeToRefs(cartStore);
+const userStore = useUserStore(); // Initialize user store
+const chatStore = useChatStore()
 const { t, locale } = useI18n();
 const route = useRoute();
+const router = useRouter();
 
 // Cart badge pulse animation
 const cartBadgePulse = ref(false);
@@ -122,6 +151,23 @@ watch(cartCount, (newCount) => {
 // Check if we're on the login page
 const isLoginPage = computed(() => route.path === '/login');
 
+// Auth computed
+const isAuthenticated = computed(() => userStore.isAuthenticated);
+const customerName = computed(() => userStore.profile?.tenKhachHang || userStore.profile?.tenTaiKhoan || 'User');
+
+const showLogoutConfirm = ref(false);
+function openLogoutConfirm() {
+  showLogoutConfirm.value = true;
+}
+function cancelLogout() {
+  showLogoutConfirm.value = false;
+}
+function confirmLogout() {
+  userStore.logout();
+  chatStore.resetState()
+  router.push('/login');
+  showLogoutConfirm.value = false;
+}
 // removed admin link
 
 // Theme toggle removed
@@ -164,6 +210,7 @@ function handleScroll() {
   isScrolled.value = window.scrollY > 20
 }
 onMounted(() => {
+  userStore.initFromStorage()
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 onBeforeUnmount(() => {
@@ -327,6 +374,95 @@ header.scrolled {
 .locale-menu-enter-active, .locale-menu-leave-active { transition: opacity .18s ease, transform .18s ease; transform-origin: top right; }
 .locale-menu-enter-from, .locale-menu-leave-to { opacity: 0; transform: scale(.96) translateY(-4px); }
 .locale-menu-enter-to, .locale-menu-leave-from { opacity: 1; transform: scale(1) translateY(0); }
+
+.logout-fade-enter-active,
+.logout-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.logout-fade-enter-from,
+.logout-fade-leave-to {
+  opacity: 0;
+}
+
+.logout-fade-enter-active .logout-confirm-dialog,
+.logout-fade-leave-active .logout-confirm-dialog {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
+}
+
+.logout-fade-enter-from .logout-confirm-dialog,
+.logout-fade-leave-to .logout-confirm-dialog {
+  transform: translateY(16px) scale(0.94);
+  opacity: 0;
+}
+
+.logout-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 16px;
+}
+
+.logout-confirm-dialog {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 360px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.18);
+  text-align: center;
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #111;
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    color: #4e5969;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.dialog-btn {
+  min-width: 120px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  &.ghost {
+    background: #fff;
+    border-color: #d0d0d0;
+    color: #111;
+  }
+
+  &.primary {
+    background: #111;
+    color: #fff;
+  }
+}
 
 .carttotal {
   position: absolute;

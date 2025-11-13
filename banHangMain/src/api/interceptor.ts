@@ -1,6 +1,6 @@
 import { getToken, setToken, clearToken } from '@/utils/auth'
-import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
+import { showMessageError } from '@/utils/message'
 
 export interface HttpResponse<T = unknown> {
   success: boolean
@@ -63,10 +63,7 @@ axios.interceptors.response.use(
 
     // Check if request was successful
     if (res.success === false) {
-      Message.error({
-        content: res.message || 'Request failed',
-        duration: 5 * 1000,
-      })
+      showMessageError(res.message || 'Request failed')
       return Promise.reject(new Error(res.message || 'Request failed'))
     }
 
@@ -100,22 +97,13 @@ axios.interceptors.response.use(
       
       // Server responded with error status
       const errorMessage = error.response.data?.message || `Request failed with status ${status}`
-      Message.error({
-        content: errorMessage,
-        duration: 5 * 1000,
-      })
+      showMessageError(errorMessage)
     } else if (error.request) {
       // Network error
-      Message.error({
-        content: 'Network error - unable to connect to server',
-        duration: 5 * 1000,
-      })
+      showMessageError('Network error - unable to connect to server')
     } else {
       // Other error
-      Message.error({
-        content: error.message || 'Request Error',
-        duration: 5 * 1000,
-      })
+      showMessageError(error.message || 'Request Error')
     }
     return Promise.reject(error)
   }

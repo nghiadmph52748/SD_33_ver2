@@ -17,11 +17,11 @@
               {{ $t(status.primaryLabelKey) }}
             </RouterLink>
             <RouterLink
-              v-if="status.secondaryRoute"
-              :to="status.secondaryRoute"
+              v-if="status.secondaryRoute && status.secondaryLabelKey"
+              :to="status.secondaryRoute!"
               class="btn btn-outline btn-block"
             >
-              {{ $t(status.secondaryLabelKey) }}
+              {{ $t(status.secondaryLabelKey!) }}
             </RouterLink>
           </div>
 
@@ -109,6 +109,7 @@ const status = computed<StatusConfig>(() => {
       secondaryRoute: '/cart',
       secondaryLabelKey: 'payment.actions.viewCart',
       variant: 'success',
+      icon: '✅',
     }
   }
 
@@ -122,6 +123,7 @@ const status = computed<StatusConfig>(() => {
       secondaryRoute: '/',
       secondaryLabelKey: 'payment.actions.continueShopping',
       variant: 'failure',
+      icon: '⚠️',
     }
   }
 
@@ -134,6 +136,7 @@ const status = computed<StatusConfig>(() => {
       secondaryRoute: '/checkout',
       secondaryLabelKey: 'payment.actions.retryCheckout',
       variant: 'pending',
+      icon: '⏳',
     }
   }
 
@@ -145,6 +148,7 @@ const status = computed<StatusConfig>(() => {
     secondaryRoute: '/',
     secondaryLabelKey: 'payment.actions.continueShopping',
     variant: 'failure',
+    icon: '❌',
   }
 })
 

@@ -90,6 +90,12 @@
             </svg>
             {{ $t('auth.continueWithGoogle') }}
           </button>
+          <button type="button" class="btn btn-social" @click="handleSocialLogin('facebook')">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#1877F2" d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.41c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94z"/>
+            </svg>
+            {{ $t('auth.continueWithFacebook') }}
+          </button>
         </div>
       </div>
     </div>
@@ -97,12 +103,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useUserStore } from '@/stores/user'
+import { Message } from '@arco-design/web-vue'
 
 const { t } = useI18n()
 const router = useRouter()
+const userStore = useUserStore()
 
 const isLogin = ref(true)
 const loading = ref(false)
@@ -115,20 +124,29 @@ const formData = ref({
   confirmPassword: ''
 })
 
-function handleSubmit() {
+onMounted(() => {
+  userStore.initFromStorage()
+})
+
+async function handleSubmit() {
   if (loading.value) return
 
   if (isLogin.value) {
-    // Login logic
-    if (!formData.value.email || !formData.value.password) {
-      return
-    }
+    if (!formData.value.email || !formData.value.password) return
     loading.value = true
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await userStore.login(formData.value.email, formData.value.password)
+      const redirect = (router.currentRoute.value.query.redirect as string) || '/'
+      router.push(redirect)
+      const name = userStore.profile?.tenKhachHang || userStore.profile?.tenTaiKhoan || formData.value.email
+      Message.success(t('auth.loginSuccess', { name }))
+    } catch (error) {
+      // Global interceptor already displays error message
+      // eslint-disable-next-line no-console
+      console.error('Login failed', error)
+    } finally {
       loading.value = false
-      router.push('/')
-    }, 1000)
+    }
   } else {
     // Register logic
     if (!formData.value.fullName || !formData.value.email || !formData.value.password) {

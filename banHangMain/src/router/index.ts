@@ -34,7 +34,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/checkout",
     name: "checkout",
-    component: () => import("@/views/CheckoutView.vue")
+    component: () => import("@/views/CheckoutView.vue"),
+    meta: { requiresAuth: true }
   },
   {
     path: "/payment/vnpay/result",
@@ -65,6 +66,16 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 };
   }
+});
+
+// Auth guard for routes with meta.requiresAuth
+router.beforeEach(async (to, _from, next) => {
+  if (!to.meta?.requiresAuth) return next();
+  const { useUserStore } = await import('@/stores/user');
+  const userStore = useUserStore();
+  await userStore.initFromStorage();
+  if (userStore.isAuthenticated) return next();
+  next({ path: '/login', query: { redirect: to.fullPath } });
 });
 
 export default router;

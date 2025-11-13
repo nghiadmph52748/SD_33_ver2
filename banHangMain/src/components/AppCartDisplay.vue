@@ -16,37 +16,45 @@
             <div class="price">{{ formatCurrency(item.price) }}</div>
           </header>
           <div class="meta">
-            <div class="line">{{ (item.gender || 'Unisex') + "'s Shoes" }}</div>
-            <div class="line color"><strong>Color:</strong> {{ item.color || 'Default' }}</div>
+            <div class="line" v-if="item.gender">
+              <span class="line__label">{{ t('cart.itemGender') }}:</span>
+              <span>{{ formatGender(item.gender) }}</span>
+            </div>
+            <div class="line">
+              <span class="line__label">{{ t('cart.itemColor') }}:</span>
+              <span>{{ item.color || t('cart.valueUnknown') }}</span>
+            </div>
             <div class="line muted">{{ item.description }}</div>
-            <div v-if="item.size" class="line size">Size {{ item.size }}</div>
+            <div class="line" v-if="item.size">
+              <span>{{ t('cart.itemSize', { size: item.size }) }}</span>
+            </div>
           </div>
           <div class="controls">
             <div class="pill">
-              <button class="pill-btn" @click="remove(item)" aria-label="Remove">
+              <button class="pill-btn" @click="remove(item)" :aria-label="t('cart.removeItem')">
                 <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zm3-9h2v8H9V10zm4 0h2v8h-2V10zM15.5 4l-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg>
               </button>
               <span class="divider"></span>
-              <button class="pill-btn" @click="decrement(item)" aria-label="Decrease">−</button>
+              <button class="pill-btn" @click="decrement(item)" :aria-label="t('cart.decreaseQuantity')">−</button>
               <span class="qty-val">{{ item.quantity }}</span>
-              <button class="pill-btn" @click="increment(item)" aria-label="Increase">+</button>
+              <button class="pill-btn" @click="increment(item)" :aria-label="t('cart.increaseQuantity')">+</button>
             </div>
-            <button class="icon wish" aria-label="Save for later">
+            <button class="icon wish" :aria-label="t('cart.saveForLater')">
               <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4 8.04 4 9.54 4.81 10.35 6.09 11.16 4.81 12.66 4 14.2 4 16.7 4 18.7 6 18.7 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             </button>
           </div>
         </div>
       </article>
 
-      <div class="member-returns" role="note" aria-label="Member returns policy">
+      <div class="member-returns" role="note" :aria-label="$t('cart.memberReturnsAria')">
         <div class="mr-icon">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path fill="currentColor" d="M20 8h-3V4H4a2 2 0 00-2 2v11a3 3 0 003 3h12a3 3 0 003-3V10a2 2 0 00-2-2zm-5 0H4V6h11v2zm4 9a1 1 0 01-1 1H6a1 1 0 01-1-1v-5h14v5zM7 18a2 2 0 104 0H7z"/>
           </svg>
         </div>
         <div class="mr-text">
-          <strong>Free returns</strong> for Members within 30 days. 
-          <a href="#" class="mr-link">Learn more</a>
+          {{ $t('cart.memberReturns') }}
+          <a href="#" class="mr-link">{{ $t('cart.learnMore') }}</a>
         </div>
       </div>
     </section>
@@ -65,10 +73,12 @@ import { storeToRefs } from "pinia";
 import { useCartStore, type CartItem } from "@/stores/cart";
 import { createOrderFromCart } from "@/api/orders";
 import { formatCurrency } from "@/utils/currency";
+import { useI18n } from 'vue-i18n'
 
 const cartStore = useCartStore();
 const { cart, cartTotal, cartCount } = storeToRefs(cartStore);
 const isProcessing = ref(false);
+const { t } = useI18n()
 
 function resolveImage(imgPath: string | undefined | null): string {
   if (!imgPath) return "/products/1.jpg";
@@ -119,6 +129,14 @@ const startCheckout = async () => {
     isProcessing.value = false;
   }
 };
+
+const formatGender = (gender: string | undefined | null) => {
+  if (!gender) return t('cart.valueUnknown')
+  const normalized = String(gender).toLowerCase()
+  if (normalized.includes('male')) return t('cart.genderMenShoes')
+  if (normalized.includes('female')) return t('cart.genderWomenShoes')
+  return gender
+}
 </script>
 
 <style scoped lang="scss">

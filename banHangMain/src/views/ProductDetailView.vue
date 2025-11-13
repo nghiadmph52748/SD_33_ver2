@@ -82,19 +82,19 @@
           <form class="review-form" @submit.prevent="submitReview">
             <div class="form-row">
                   <label>{{ $t('product.name') }}</label>
-              <input class="input" v-model.trim="reviewName" placeholder="Optional" />
+              <input class="input" v-model.trim="reviewName" :placeholder="$t('product.reviewNamePlaceholder')" />
             </div>
             <div class="form-row">
                   <label>{{ $t('product.rating') }}</label>
                   <div class="stars" role="radiogroup" :aria-label="$t('product.rating')">
-                <button v-for="n in 5" :key="n" type="button" class="star-btn" :class="{ active: reviewRating >= n }" @click="reviewRating = n" aria-label="Rate {{n}} stars">
+                <button v-for="n in 5" :key="n" type="button" class="star-btn" :class="{ active: reviewRating >= n }" @click="reviewRating = n" :aria-label="$t('product.rateStars', { n })">
                   <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :fill="reviewRating >= n ? '#f59e0b' : '#d1d5db'" d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                   </button>
               </div>
             </div>
             <div class="form-row">
                   <label>{{ $t('product.comment') }}</label>
-              <textarea class="textarea" v-model.trim="reviewComment" rows="3" placeholder="Share your thoughts..." />
+              <textarea class="textarea" v-model.trim="reviewComment" rows="3" :placeholder="$t('product.reviewCommentPlaceholder')" />
             </div>
             <div class="form-actions">
                   <button class="btn-submit" :disabled="!canSubmitReview">{{ $t('product.submitReview') }}</button>
@@ -104,7 +104,7 @@
           <ul v-if="allReviews.length" class="review-list">
             <li v-for="(r, idx) in allReviews" :key="idx" class="review-item">
               <div class="review-head">
-                <strong class="review-name">{{ r.name || 'Anonymous' }}</strong>
+                <strong class="review-name">{{ r.name || $t('product.reviewAnonymous') }}</strong>
                 <span class="review-date">{{ r.date }}</span>
                 <span class="review-stars">{{ '★'.repeat(r.rating) }}{{ '☆'.repeat(5 - r.rating) }}</span>
               </div>
@@ -118,7 +118,7 @@
 
       <!-- Right: sticky purchase column -->
       <aside class="purchase">
-        <p class="product-category" v-if="product.gender">{{ product.gender }} • {{ $t('product.sportswear') }}</p>
+        <p class="product-category" v-if="product.gender">{{ formatGender(product.gender) }} • {{ $t('product.sportswear') }}</p>
         <h1 class="product-title">{{ product.name }}</h1>
 
         <div class="price">{{ formatCurrency(product.price) }}</div>
@@ -171,7 +171,7 @@
         </div>
 
         <ul class="product-meta">
-          <li v-for="highlight in serviceHighlights" :key="highlight.title">{{ highlight.title }}</li>
+          <li v-for="highlight in serviceHighlights" :key="highlight.titleKey">{{ $t(highlight.titleKey) }}</li>
         </ul>
       </aside>
     </section>
@@ -276,6 +276,7 @@ import { useCartStore, type CartItem } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
 import { getProductById, type BackendProduct } from "@/api/products";
 import { fetchVariantsByProduct, type ProductVariantResponse } from "@/api/variants";
+import { useI18n } from "vue-i18n";
 
 const route = useRoute();
 const cartStore = useCartStore();
@@ -291,6 +292,7 @@ const productDetail = ref<BackendProduct | null>(null)
 const detailLoading = ref(false)
 const variants = ref<ProductVariantResponse[]>([])
 const showSizeGuideModal = ref(false)
+const { t } = useI18n()
 
 function onMainImageEnter() {
   const el = mainImgRef.value
@@ -314,6 +316,17 @@ function onMainImageMove(e: MouseEvent) {
   const x = ((e.clientX - rect.left) / rect.width) * 100
   const y = ((e.clientY - rect.top) / rect.height) * 100
   el.style.transformOrigin = `${x}% ${y}%`
+}
+
+function formatGender(gender: string): string {
+  const normalized = gender?.trim().toLowerCase()
+  if (normalized === 'male' || normalized === 'men') {
+    return t('product.genderMen')
+  }
+  if (normalized === 'female' || normalized === 'women') {
+    return t('product.genderWomen')
+  }
+  return gender
 }
 
 const productId = computed(() => String(route.params.id ?? ""));
@@ -505,10 +518,10 @@ const productSpecs = computed(() => {
   if (!product.value) return [];
   const specs: any[] = [];
   if (product.value.color) {
-    specs.push({ label: 'Color', value: product.value.color });
+    specs.push({ label: t('product.specColor'), value: product.value.color });
   }
   if (product.value.sizes?.length) {
-    specs.push({ label: 'Available Sizes', value: product.value.sizes.join(', ') });
+    specs.push({ label: t('product.specSizes'), value: product.value.sizes.join(', ') });
   }
   return specs;
 });
@@ -517,33 +530,24 @@ const productMeta = computed(() => {
   if (!product.value) return [];
   const meta: { label: string; value: string }[] = [];
   if (product.value.gender) {
-    meta.push({ label: "Category", value: product.value.gender });
+    meta.push({ label: t('product.metaCategory'), value: formatGender(product.value.gender) });
   }
   if (selectedColor.value) {
-    meta.push({ label: "Colorway", value: selectedColor.value });
+    meta.push({ label: t('product.metaColorway'), value: selectedColor.value });
   } else if (product.value.color) {
-    meta.push({ label: "Colorway", value: product.value.color });
+    meta.push({ label: t('product.metaColorway'), value: product.value.color });
   }
   const sizes = sizeOptions.value
   if (sizes?.length) {
-    meta.push({ label: "Sizing", value: `${sizes.length} options` });
+    meta.push({ label: t('product.metaSizing'), value: t('product.metaSizingOptions', { count: sizes.length }) });
   }
   return meta;
 });
 
 const serviceHighlights = [
-  {
-    title: "Free nationwide shipping",
-    description: "Complimentary delivery for orders over ₫2.000.000 within 2-4 working days."
-  },
-  {
-    title: "30-day returns",
-    description: "Exchange or refund unused items with the original receipt."
-  },
-  {
-    title: "Member exclusive perks",
-    description: "Earn points on every purchase and unlock early access to new drops."
-  }
+  { titleKey: 'product.highlightShipping' },
+  { titleKey: 'product.highlightReturns' },
+  { titleKey: 'product.highlightPerks' },
 ];
 
 const sizeGuide = [

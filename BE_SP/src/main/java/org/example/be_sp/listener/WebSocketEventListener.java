@@ -69,14 +69,14 @@ public class WebSocketEventListener {
                     userSessionsMap.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet())
                         .add(sessionId);
                     
-                    logger.info("✅ User {} (ID: {}) connected. Session: {}", 
+                    logger.info("User {} (ID: {}) connected. Session: {}", 
                         username, userId, sessionId);
                     
                     // Broadcast presence update
                     broadcastPresenceUpdate(userId, "ONLINE");
                 }
             } catch (Exception e) {
-                logger.error("❌ Error handling connect event: {}", e.getMessage());
+                logger.error("Error handling connect event: {}", e.getMessage());
             }
         }
     }
@@ -103,7 +103,7 @@ public class WebSocketEventListener {
                     if (userSessions.isEmpty()) {
                         userSessionsMap.remove(userId);
                         
-                        logger.info("🔴 User {} disconnected completely. Session: {}", 
+                        logger.info("User {} disconnected completely. Session: {}", 
                             userId, sessionId);
                         
                         // Broadcast offline status
@@ -134,15 +134,13 @@ public class WebSocketEventListener {
                 update
             );
             
-            logger.info("📢 Broadcast presence: User {} is {}", userId, status);
+            logger.info("Broadcast presence: User {} is {}", userId, status);
         } catch (Exception e) {
-            logger.error("❌ Error broadcasting presence: {}", e.getMessage());
+            logger.error("Error broadcasting presence: {}", e.getMessage());
         }
     }
 
-    /**
-     * API để check user có online không
-     */
+    /* Check xem user có online không */
     public boolean isUserOnline(Integer userId) {
         Set<String> sessions = userSessionsMap.get(userId);
         return sessions != null && !sessions.isEmpty();

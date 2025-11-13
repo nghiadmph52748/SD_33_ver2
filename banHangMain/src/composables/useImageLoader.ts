@@ -11,8 +11,8 @@ export function useImageLoader() {
     const target = event.target as HTMLImageElement
     if (!target) return
 
-    imageError[productId] = true
-    imageLoading[productId] = false
+    imageError.value[productId] = true
+    imageLoading.value[productId] = false
 
     // Try fallback image
     if (target.src !== FALLBACK_IMAGE && target.src !== DEFAULT_PLACEHOLDER) {
@@ -25,20 +25,20 @@ export function useImageLoader() {
   }
 
   function handleImageLoad(productId: string) {
-    imageLoading[productId] = false
-    imageError[productId] = false
+    imageLoading.value[productId] = false
+    imageError.value[productId] = false
   }
 
   function handleImageStart(productId: string) {
-    imageLoading[productId] = true
+    imageLoading.value[productId] = true
   }
 
   function isImageError(productId: string): boolean {
-    return imageError[productId] === true
+    return imageError.value[productId] === true
   }
 
   function isLoading(productId: string): boolean {
-    return imageLoading[productId] === true
+    return imageLoading.value[productId] === true
   }
 
   return {
