@@ -25,7 +25,7 @@ interface Order {
   customerId: string | null
 }
 
-export function useCustomer(params: { currentOrder: Ref<Order | null> }) {
+export default function useCustomer(params: { currentOrder: Ref<Order | null> }) {
   const { currentOrder } = params
   const userStore = useUserStore()
 

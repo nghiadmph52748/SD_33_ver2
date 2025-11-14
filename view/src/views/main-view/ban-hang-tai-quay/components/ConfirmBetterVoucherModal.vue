@@ -8,7 +8,7 @@
         </div>
       </div>
 
-      <div v-if="suggestedBetterVouchers.length > 0" style="margin-bottom: 24px">
+      <div v-if="suggestedBetterVouchers && suggestedBetterVouchers.length > 0" style="margin-bottom: 24px">
         <div style="font-weight: 600; margin-bottom: 12px; color: #262626">Phiếu giảm giá tốt hơn:</div>
         <div
           v-for="(voucher, idx) in suggestedBetterVouchers"
@@ -58,7 +58,7 @@ import type { CouponApiModel } from '@/api/discount-management'
 
 defineProps<{
   visible: boolean
-  suggestedBetterVouchers: CouponApiModel[]
+  suggestedBetterVouchers?: CouponApiModel[]
   selectedCoupon: CouponApiModel | null
   calculateVoucherDiscount: (coupon: CouponApiModel | null | undefined) => number
   confirmLoading: boolean

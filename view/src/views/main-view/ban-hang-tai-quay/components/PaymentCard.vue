@@ -46,15 +46,6 @@
         @select="$emit('select-best')"
       />
 
-      <BetterVoucherWarningCard
-        v-if="hasBetterVoucher && bestVoucher && selectedCoupon"
-        :has-better="hasBetterVoucher"
-        :best-voucher="bestVoucher as any"
-        :selected-coupon="selectedCoupon as any"
-        :calculate-voucher-discount="calculateVoucherDiscount as any"
-        @select="$emit('select-best')"
-      />
-
       <div v-if="orderType === 'delivery'" style="margin-bottom: 16px">
         <a-divider orientation="left" style="margin: 12px 0">Địa chỉ giao hàng</a-divider>
 
@@ -235,7 +226,6 @@
 import { IconCheck, IconInfoCircle } from '@arco-design/web-vue/es/icon'
 import type { CouponApiModel } from '@/api/discount-management'
 import BestVoucherSuggestionCard from './BestVoucherSuggestionCard.vue'
-import BetterVoucherWarningCard from './BetterVoucherWarningCard.vue'
 import VoucherAlmostEligible from './VoucherAlmostEligible.vue'
 import ShippingFeeCalculator from './ShippingFeeCalculator.vue'
 import { formatCurrency } from '../utils'
@@ -256,7 +246,6 @@ defineProps<{
   selectedCustomer: { address?: string } | null
   isWalkIn: boolean
   bestVoucher: CouponApiModel | null
-  hasBetterVoucher: boolean
   almostEligibleSuggestion?: any
   calculateVoucherDiscount: (c: CouponApiModel | null | undefined) => number
   provinces: Array<{ value: string; label: string; code: number }>

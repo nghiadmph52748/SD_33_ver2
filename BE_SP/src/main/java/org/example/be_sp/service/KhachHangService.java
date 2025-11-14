@@ -47,7 +47,6 @@ public class KhachHangService {
         return new KhachHangResponse(kh);
     }
 
-
     public void save(KhachHangRequest request) {
         if (request.getEmail() != null && khachHangRepository.findByEmail(request.getEmail()) != null) {
             throw new ApiException("Email đã tồn tại: " + request.getEmail(), "404");
@@ -63,34 +62,13 @@ public class KhachHangService {
         List<DiaChi> listDiaChi = request.getListDiaChi();
         if (listDiaChi != null) {
             for (DiaChi data : listDiaChi) {
-                if (data == null) continue;
+                if (data == null) {
+                    continue;
+                }
                 // Skip creating address if all fields are empty/blank as per requirement
-                if (isEmptyAddress(data)) continue;
-                DiaChiKhachHang diaChi = new DiaChiKhachHang();
-                diaChi.setThanhPho(data.getThanhPho());
-                diaChi.setTenDiaChi(data.getTenDiaChi());
-                diaChi.setQuan(data.getQuan());
-                diaChi.setPhuong(data.getPhuong());
-                diaChi.setDiaChiCuThe(data.getDiaChiCuThe());
-                diaChi.setIdKhachHang(saved);
-					 diaChi.setDeleted(false);
-					 diaChi.setMacDinh(data.getMacDinh());
-                repository.save(diaChi);
-            }
-        }
-    }
-
-    public void quickAdd(KhachHangRequest request){
-        KhachHang khachHang = MapperUtils.map(request, KhachHang.class);
-        khachHang.setSoDienThoai(request.getSoDienThoai());
-        khachHang.setEmail(request.getEmail());
-        KhachHang saved = khachHangRepository.save(khachHang);
-        List<DiaChi> listDiaChi = request.getListDiaChi();
-        if (listDiaChi != null) {
-            for (DiaChi data : listDiaChi) {
-                if (data == null) continue;
-                // Skip creating address if all fields are empty/blank as per requirement
-                if (isEmptyAddress(data)) continue;
+                if (isEmptyAddress(data)) {
+                    continue;
+                }
                 DiaChiKhachHang diaChi = new DiaChiKhachHang();
                 diaChi.setThanhPho(data.getThanhPho());
                 diaChi.setTenDiaChi(data.getTenDiaChi());
@@ -101,6 +79,43 @@ public class KhachHangService {
                 diaChi.setDeleted(false);
                 diaChi.setMacDinh(data.getMacDinh());
                 repository.save(diaChi);
+            }
+        }
+    }
+
+    public void quickAdd(KhachHangRequest request) {
+        try {
+            KhachHang khachHang = MapperUtils.map(request, KhachHang.class);
+            khachHang.setSoDienThoai(request.getSoDienThoai());
+            khachHang.setEmail(request.getEmail());
+            KhachHang saved = khachHangRepository.save(khachHang);
+            List<DiaChi> listDiaChi = request.getListDiaChi();
+            if (listDiaChi != null) {
+                for (DiaChi data : listDiaChi) {
+                    if (data == null) {
+                        continue;
+                    }
+                    // Skip creating address if all fields are empty/blank as per requirement
+                    if (isEmptyAddress(data)) {
+                        continue;
+                    }
+                    DiaChiKhachHang diaChi = new DiaChiKhachHang();
+                    diaChi.setThanhPho(data.getThanhPho());
+                    diaChi.setTenDiaChi(data.getTenDiaChi());
+                    diaChi.setQuan(data.getQuan());
+                    diaChi.setPhuong(data.getPhuong());
+                    diaChi.setDiaChiCuThe(data.getDiaChiCuThe());
+                    diaChi.setIdKhachHang(saved);
+                    diaChi.setDeleted(false);
+                    diaChi.setMacDinh(data.getMacDinh());
+                    repository.save(diaChi);
+                }
+            }
+        } catch (Exception e) {
+            if (e.getMessage().contains("could not execute statement")) {
+                throw new ApiException("Số điện thoại hoặc email đã tồn tại: " + request.getSoDienThoai() + " / " + request.getEmail(), "404");
+            } else {
+                throw e;
             }
         }
     }
@@ -135,11 +150,11 @@ public class KhachHangService {
                 if (data == null || isEmptyAddress(data)) {
                     continue;
                 }
-                boolean exists = existingAddrs.stream().anyMatch(dckh ->
-                        Objects.equals(dckh.getDiaChiCuThe(), data.getDiaChiCuThe())
-                                && Objects.equals(dckh.getThanhPho(), data.getThanhPho())
-                                && Objects.equals(dckh.getQuan(), data.getQuan())
-                                && Objects.equals(dckh.getPhuong(), data.getPhuong())
+                boolean exists = existingAddrs.stream().anyMatch(dckh
+                        -> Objects.equals(dckh.getDiaChiCuThe(), data.getDiaChiCuThe())
+                        && Objects.equals(dckh.getThanhPho(), data.getThanhPho())
+                        && Objects.equals(dckh.getQuan(), data.getQuan())
+                        && Objects.equals(dckh.getPhuong(), data.getPhuong())
                 );
                 if (!exists) {
                     DiaChiKhachHang diaChi = new DiaChiKhachHang();
@@ -165,7 +180,6 @@ public class KhachHangService {
         khachHangRepository.save(kh);
     }
 
-
     // Helpers: determine whether address data is empty (all fields blank or null)
     private boolean isNullOrBlank(String s) {
         return s == null || s.trim().isEmpty();
@@ -179,6 +193,7 @@ public class KhachHangService {
                 && isNullOrBlank(d.getPhuong())
                 && isNullOrBlank(d.getDiaChiCuThe()));
     }
+
     public ByteArrayInputStream exportKhachHangToExcel() throws IOException {
         String[] columns = {"ID", "Mã KH", "Tên KH", "Email", "SĐT", "Giới tính"};
 

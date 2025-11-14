@@ -79,8 +79,6 @@
             :selected-coupon="selectedCoupon as any"
             :discount-display="selectedCoupon ? getDiscountDisplay(selectedCoupon as any) : ''"
             :best-voucher="bestVoucher as any"
-            :has-better-voucher="hasBetterVoucher"
-            :almost-eligible-suggestion="almostEligibleSuggestion"
             :calculate-voucher-discount="calculateVoucherDiscount as any"
             @change:orderType="handleOrderTypeChange"
             @open-voucher="showVoucherModal = true"
@@ -132,12 +130,10 @@
       :name="newCustomerForm?.name || ''"
       :phone="newCustomerForm?.phone || ''"
       :email="newCustomerForm?.email || ''"
-      :address="newCustomerForm?.address || ''"
       @update:visible="(v) => (showAddCustomerModal = v)"
       @update:name="(v) => newCustomerForm && (newCustomerForm.name = v)"
       @update:phone="(v) => newCustomerForm && (newCustomerForm.phone = v)"
       @update:email="(v) => newCustomerForm && (newCustomerForm.email = v)"
-      @update:address="(v) => newCustomerForm && (newCustomerForm.address = v)"
       @ok="addNewCustomer"
     />
 
@@ -193,7 +189,6 @@
     <!-- Confirm Order - Better Voucher Modal -->
     <ConfirmBetterVoucherModal
       :visible="showConfirmOrderModal"
-      :suggested-better-vouchers="suggestedBetterVouchers as any"
       :selected-coupon="selectedCoupon as any"
       :calculate-voucher-discount="calculateVoucherDiscount as any"
       :confirm-loading="confirmLoading"
@@ -219,6 +214,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import { type BienTheSanPham, type ChatLieu, type DeGiay, type MauSac, type KichThuoc } from '@/api/san-pham/bien-the'
 import { type CouponApiModel } from '@/api/discount-management'
+import { themKhachHangNhanh, type KhachHangResponse } from '@/api/khach-hang'
 import {
   createInvoice,
   deleteInvoice,
@@ -233,11 +229,11 @@ import { type PhieuGiamGiaResponse, type ConfirmBanHangRequest } from '@/api/pos
 import { calculateShippingFee } from './services/shippingFeeService'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
-import { useVoucher } from './composables/useVoucher'
+import useVoucher from './composables/useVoucher'
 import { useQrScanner } from './composables/useQrScanner'
 import { useCart } from './composables/useCart'
 import { useProductModal } from './composables/useProductModal'
-import { useCustomer } from './composables/useCustomer'
+import useCustomer from './composables/useCustomer'
 import usePayment from './composables/usePayment'
 import useCheckout from './composables/useCheckout'
 import useCartActions from './composables/useCartActions'
@@ -391,13 +387,10 @@ const {
   eligibleVouchersCount,
   hasEligibleVouchers,
   bestVoucher,
-  hasBetterVoucher,
   calculateVoucherDiscount,
   getVoucherStatus,
   getDiscountDisplay,
   isVoucherEligible,
-  showVoucherSuggestion,
-  almostEligibleSuggestion,
 } = useVoucher({ coupons, paymentForm, currentOrder, subtotal })
 
 const { cartPagination, cartTableKey, increaseCartTableKey, cartColumns, paginatedCartItems } = useCart({ currentOrder })
@@ -505,27 +498,38 @@ const handleCustomerChange = async (customerId: string) => {
 
 const addNewCustomer = async () => {
   try {
-    if (!newCustomerForm.value?.name || !newCustomerForm.value?.phone) {
-      Message.error('Vui lòng nhập tên và số điện thoại khách hàng')
+    if (!newCustomerForm.value?.name || !newCustomerForm.value?.phone || !newCustomerForm.value?.email) {
+      Message.error('Vui lòng nhập tên, số điện thoại và email khách hàng')
       return
     }
 
-    const customer = {
-      id: `CUSTOMER_${Date.now()}`,
-      ...newCustomerForm.value,
-    }
-    customers.value.push(customer as any)
+    const phoneNumber = newCustomerForm.value.phone
 
-    if (currentOrder.value) {
+    // Gọi API để thêm khách hàng mới
+    const response = await themKhachHangNhanh({
+      tenKhachHang: newCustomerForm.value.name,
+      soDienThoai: newCustomerForm.value.phone,
+      email: newCustomerForm.value.email || '',
+      tenTaiKhoan: newCustomerForm.value.email.split('@')[0],
+      trangThai: true,
+      deleted: false,
+    })
+
+    // Reload danh sách khách hàng
+    await loadCustomers()
+
+    // Tìm và chọn khách hàng vừa thêm theo số điện thoại
+    const newCustomer = customers.value.find((c) => c.phone === phoneNumber)
+    if (newCustomer && currentOrder.value) {
+      currentOrder.value.customerId = newCustomer.id
       const invoiceId = parseInt(currentOrder.value.id)
       if (!isNaN(invoiceId)) {
         await updateInvoiceCustomer(invoiceId, walkInLocation)
       }
-      currentOrder.value.customerId = customer.id
     }
 
     showAddCustomerModal.value = false
-    newCustomerForm.value = { name: '', phone: '', email: '', address: '' }
+    newCustomerForm.value = { name: '', phone: '', email: '' }
     Message.success('Thêm khách hàng thành công')
   } catch (error) {
     console.error('Lỗi thêm khách hàng:', error)
@@ -671,15 +675,7 @@ watch(selectedCustomer, async (newCustomer) => {
 // Watch for isWalkIn changes to debug reactivity
 watch(
   () => [isWalkIn.value, orderType.value, currentOrder.value?.customerId],
-  ([walkIn, type, custId]) => {
-    console.log('🔍 Walk-in state changed:', {
-      isWalkIn: walkIn,
-      orderType: type,
-      customerId: custId,
-      selectedCustomer: selectedCustomer.value,
-      shouldShowAddressFields: walkIn && type === 'delivery',
-    })
-  },
+  ([walkIn, type, custId]) => {},
   { immediate: true }
 )
 
@@ -699,7 +695,6 @@ const refreshVouchers = async () => {
         newCoupons.map((c) => ({ id: c.id, maPhieuGiamGia: c.maPhieuGiamGia, soLuongDung: c.soLuongDung, giaTriGiamGia: c.giaTriGiamGia }))
       )
       if (newCouponsJson === cachedCoupons.value) {
-        // No change, skip update
         return
       }
       cachedCoupons.value = newCouponsJson
@@ -731,18 +726,33 @@ const refreshVouchers = async () => {
         paymentForm.value.discountCode = null
       }
 
-      const bestDiscount = calculateVoucherDiscount(bestVoucher)
-      const selectedDiscount = calculateVoucherDiscount(selectedCoupon.value)
-      const discountDifference = bestDiscount - selectedDiscount
+      // Compare current selected voucher discount with best voucher discount
+      const currentDiscount = selectedCoupon.value ? calculateVoucherDiscount(selectedCoupon.value) : 0
+      const bestDiscount = bestVoucher ? calculateVoucherDiscount(bestVoucher) : 0
+      const isBestVoucherBetter = bestDiscount > currentDiscount
 
-      if (
-        bestVoucher &&
-        selectedCoupon.value &&
-        isSelectedEligible &&
-        bestVoucher.maPhieuGiamGia !== selectedCoupon.value.maPhieuGiamGia &&
-        discountDifference > 1000
-      ) {
-        showVoucherSuggestion(bestVoucher)
+      // Auto-select the best eligible voucher if:
+      // 1. No voucher selected, OR
+      // 2. Current voucher is not eligible, OR
+      // 3. Best voucher gives more discount than current one
+      if (bestVoucher && (!selectedCoupon.value || !isSelectedEligible || isBestVoucherBetter)) {
+        // Auto-select without validation checks - just update discount code
+        paymentForm.value.discountCode = bestVoucher.maPhieuGiamGia || bestVoucher.id.toString()
+        // Show message only when upgrading to a better voucher
+        if (isBestVoucherBetter && selectedCoupon.value) {
+          const savingDifference = bestDiscount - currentDiscount
+          Message.success(
+            `Đã áp dụng voucher: ${bestVoucher.tenPhieuGiamGia} (tiết kiệm thêm ${savingDifference.toLocaleString('vi-VN')}đ)`
+          )
+        }
+
+        // If cart has items, also update payment and send API call
+        if (currentOrder.value?.items?.length && currentOrder.value.items.some((item) => item.quantity > 0)) {
+          const invoiceId = parseInt(currentOrder.value.id)
+          await updateInvoiceVoucher(invoiceId, bestVoucher.id).catch((error) => {
+            console.warn('Failed to update invoice voucher:', error)
+          })
+        }
       }
 
       coupons.value = newCoupons
@@ -789,6 +799,57 @@ const refreshVouchersForCustomer = async (idKhachHang: number) => {
         paymentForm.value.discountCode = null
       }
 
+      // Find the BEST eligible voucher (highest discount)
+      const eligibleVouchers = newCoupons.filter((coupon) => isVoucherEligible(coupon))
+      let bestVoucher: CouponApiModel | null = null
+      let maxDiscount = 0
+
+      for (const coupon of eligibleVouchers) {
+        const discount = calculateVoucherDiscount(coupon)
+        if (discount > maxDiscount) {
+          maxDiscount = discount
+          bestVoucher = coupon
+        }
+      }
+
+      // Check if selected voucher is still eligible
+      const isSelectedEligible =
+        selectedCoupon.value && eligibleVouchers.some((c) => c.maPhieuGiamGia === selectedCoupon.value?.maPhieuGiamGia)
+
+      // If selected voucher is no longer eligible, clear it automatically
+      if (selectedCoupon.value && !isSelectedEligible) {
+        paymentForm.value.discountCode = null
+      }
+
+      // Compare current selected voucher discount with best voucher discount
+      const currentDiscount = selectedCoupon.value ? calculateVoucherDiscount(selectedCoupon.value) : 0
+      const bestDiscount = bestVoucher ? calculateVoucherDiscount(bestVoucher) : 0
+      const isBestVoucherBetter = bestDiscount > currentDiscount
+
+      // Auto-select the best eligible voucher if:
+      // 1. No voucher selected, OR
+      // 2. Current voucher is not eligible, OR
+      // 3. Best voucher gives more discount than current one
+      if (bestVoucher && (!selectedCoupon.value || !isSelectedEligible || isBestVoucherBetter)) {
+        // Auto-select without validation checks - just update discount code
+        paymentForm.value.discountCode = bestVoucher.maPhieuGiamGia || bestVoucher.id.toString()
+        // Show message only when upgrading to a better voucher
+        if (isBestVoucherBetter && selectedCoupon.value) {
+          const savingDifference = bestDiscount - currentDiscount
+          Message.success(
+            `Đã nâng cấp voucher: ${bestVoucher.tenPhieuGiamGia} (tiết kiệm thêm ${savingDifference.toLocaleString('vi-VN')}đ)`
+          )
+        }
+
+        // If cart has items, also update payment and send API call
+        if (currentOrder.value?.items?.length && currentOrder.value.items.some((item) => item.quantity > 0)) {
+          const invoiceId = parseInt(currentOrder.value.id)
+          await updateInvoiceVoucher(invoiceId, bestVoucher.id).catch((error) => {
+            console.warn('Failed to update invoice voucher:', error)
+          })
+        }
+      }
+
       coupons.value = newCoupons
       voucherPagination.value.total = newCoupons.length
     }
@@ -828,7 +889,7 @@ async function refreshProductStock() {
       productPagination.value.current = 1
     }
   } catch (error) {
-    console.log('Error refreshing product stock:', error)
+    console.error('Error refreshing product stock:', error)
   }
 }
 
@@ -956,7 +1017,6 @@ const {
 
 const {
   showConfirmOrderModal,
-  suggestedBetterVouchers,
   confirmOrderRequest,
   confirmLoading,
   checkBetterVouchers,
@@ -1072,6 +1132,26 @@ onMounted(() => {
   const productModalRefreshInterval = window.setInterval(() => {
     loadAllProducts()
   }, 2500) // Same interval as stock refresh for consistency
+
+  // Watch for cart items changes to refresh voucher eligibility
+  watch(
+    () => currentOrder.value?.items?.length,
+    async (newLength, oldLength) => {
+      if (newLength !== oldLength) {
+        // Clear cache to force re-evaluation of voucher eligibility
+        cachedCoupons.value = ''
+        // Small delay to ensure cart state is fully updated
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        if (selectedCustomer.value && selectedCustomer.value.id) {
+          const idKhachHang = parseInt(selectedCustomer.value.id)
+          cachedCustomerCoupons.value = ''
+          refreshVouchersForCustomer(idKhachHang)
+        } else {
+          refreshVouchers()
+        }
+      }
+    }
+  )
 
   // Store interval IDs for cleanup
   // @ts-ignore

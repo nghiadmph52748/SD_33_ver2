@@ -13,7 +13,7 @@ interface Order {
   items: CartItem[]
 }
 
-export function useVoucher(params: {
+export default function useVoucher(params: {
   coupons: Ref<CouponApiModel[]>
   paymentForm: Ref<{ discountCode: string | null } & Record<string, any>>
   currentOrder: Ref<Order | null>
@@ -22,8 +22,11 @@ export function useVoucher(params: {
   const { coupons, paymentForm, currentOrder, subtotal } = params
 
   const selectedCoupon = computed(() => {
-    if (!paymentForm.value?.discountCode) return null
-    return coupons.value.find((c) => c.maPhieuGiamGia === paymentForm.value?.discountCode) || null
+    if (!paymentForm.value?.discountCode) {
+      return null
+    }
+    const found = coupons.value.find((c) => c.maPhieuGiamGia === paymentForm.value?.discountCode) || null
+    return found
   })
 
   const calculateVoucherDiscount = (coupon: CouponApiModel | null | undefined): number => {
@@ -41,6 +44,7 @@ export function useVoucher(params: {
     if (!currentOrder.value || currentOrder.value.items.length === 0) return 'Chưa có sản phẩm'
     if (coupon.hoaDonToiThieu && subtotal.value < Number(coupon.hoaDonToiThieu)) {
       const discountText = !coupon.loaiPhieuGiamGia ? `${Number(coupon.giaTriGiamGia)}%` : formatCurrency(Number(coupon.giaTriGiamGia))
+      // eslint-disable-next-line no-use-before-define
       return `Cần ${formatCurrency(Number(coupon.hoaDonToiThieu))} cho ${discountText}`
     }
     if (coupon.soLuongDung !== undefined && coupon.soLuongDung <= 0) return 'Hết lượt'
@@ -55,13 +59,16 @@ export function useVoucher(params: {
   const getDiscountDisplay = (coupon: CouponApiModel) => {
     const discountValue = Number(coupon.giaTriGiamGia) || 0
     if (!coupon.loaiPhieuGiamGia) return `${discountValue}%`
+    // eslint-disable-next-line no-use-before-define
     return formatCurrency(discountValue)
   }
 
+  // eslint-disable-next-line no-use-before-define
   const eligibleVouchersCount = computed(() => coupons.value.filter((c) => isVoucherEligible(c)).length)
   const hasEligibleVouchers = computed(() => eligibleVouchersCount.value > 0)
 
   const bestVoucher = computed(() => {
+    // eslint-disable-next-line no-use-before-define
     const eligible = coupons.value.filter((c) => isVoucherEligible(c))
     if (eligible.length === 0) return null
     if (selectedCoupon.value && eligible.length > 1) {
@@ -92,14 +99,24 @@ export function useVoucher(params: {
   })
 
   const isVoucherEligible = (coupon: CouponApiModel) => {
-    if (coupon.trangThai !== true) return false
-    if (!currentOrder.value || currentOrder.value.items.length === 0) return false
-    if (coupon.hoaDonToiThieu && subtotal.value < Number(coupon.hoaDonToiThieu)) return false
-    if (coupon.soLuongDung !== undefined && coupon.soLuongDung <= 0) return false
+    if (coupon.trangThai !== true) {
+      return false
+    }
+    if (!currentOrder.value || currentOrder.value.items.length === 0) {
+      return false
+    }
+    if (coupon.hoaDonToiThieu && subtotal.value < Number(coupon.hoaDonToiThieu)) {
+      return false
+    }
+    if (coupon.soLuongDung !== undefined && coupon.soLuongDung <= 0) {
+      return false
+    }
     if (coupon.ngayKetThuc) {
       const expiryDate = new Date(coupon.ngayKetThuc)
       const now = new Date()
-      if (expiryDate < now) return false
+      if (expiryDate < now) {
+        return false
+      }
     }
     return true
   }
@@ -111,32 +128,6 @@ export function useVoucher(params: {
       return null
     }
   })
-
-  const showVoucherSuggestion = (betterVoucher: CouponApiModel) => {
-    const currentDiscount = selectedCoupon.value ? calculateVoucherDiscount(selectedCoupon.value) : 0
-    const newDiscount = calculateVoucherDiscount(betterVoucher)
-    const savingsAmount = newDiscount - currentDiscount
-    Modal.confirm({
-      title: '💡 Có phiếu giảm giá tốt hơn!',
-      content: `
-        <div style="text-align: left; line-height: 1.8;">
-          <p><strong>Phiếu hiện tại:</strong> ${selectedCoupon.value?.tenPhieuGiamGia}</p>
-          <p style="color: #666; margin-bottom: 16px;">Tiết kiệm: <span style="color: #52c41a; font-weight: 600;">${formatCurrency(currentDiscount)}</span></p>
-          <p><strong style="color: #0960bd;">Phiếu tốt hơn:</strong> ${betterVoucher.tenPhieuGiamGia}</p>
-          <p style="color: #666; margin-bottom: 16px;">Tiết kiệm: <span style="color: #52c41a; font-weight: 600;">${formatCurrency(newDiscount)}</span></p>
-          <p style="background: #fafafa; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #52c41a;">
-            <span style="color: #52c41a; font-weight: 600;">Tiết kiệm thêm: ${formatCurrency(savingsAmount)}</span>
-          </p>
-        </div>
-      `,
-      okText: 'Áp dụng phiếu tốt hơn',
-      cancelText: 'Giữ phiếu cũ',
-      onOk() {
-        paymentForm.value.discountCode = betterVoucher.maPhieuGiamGia
-        Message.success(`Đã áp dụng phiếu "${betterVoucher.tenPhieuGiamGia}"`)
-      },
-    })
-  }
 
   function formatCurrency(value: number) {
     try {
@@ -156,7 +147,6 @@ export function useVoucher(params: {
     getVoucherStatus,
     getDiscountDisplay,
     isVoucherEligible,
-    showVoucherSuggestion,
     almostEligibleSuggestion,
   }
 }

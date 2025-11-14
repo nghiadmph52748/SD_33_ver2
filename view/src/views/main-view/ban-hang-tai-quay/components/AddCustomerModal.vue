@@ -15,30 +15,21 @@
       <a-form-item label="Số Điện Thoại" required>
         <a-input :model-value="phone" placeholder="Nhập số điện thoại" @update:model-value="$emit('update:phone', $event)" />
       </a-form-item>
-      <a-form-item label="Email">
+      <a-form-item label="Email" required>
         <a-input :model-value="email" placeholder="Nhập email" type="email" @update:model-value="$emit('update:email', $event)" />
-      </a-form-item>
-      <a-form-item label="Địa Chỉ">
-        <a-textarea
-          :model-value="address"
-          placeholder="Nhập địa chỉ"
-          :auto-size="{ minRows: 2, maxRows: 4 }"
-          @update:model-value="$emit('update:address', $event)"
-        />
       </a-form-item>
     </a-form>
   </a-modal>
 </template>
 
 <script setup lang="ts">
-defineProps<{ visible: boolean; name: string; phone: string; email: string; address: string }>()
+defineProps<{ visible: boolean; name: string; phone: string; email: string }>()
 
 defineEmits<{
   (e: 'update:visible', value: boolean): void
   (e: 'update:name', value: string): void
   (e: 'update:phone', value: string): void
   (e: 'update:email', value: string): void
-  (e: 'update:address', value: string): void
   (e: 'ok'): void
 }>()
 </script>
