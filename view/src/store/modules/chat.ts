@@ -95,12 +95,22 @@ const useChatStore = defineStore('chat', {
       const userStore = useUserStore()
       const currentUserId = userStore.id
 
-      // Xác định unread count dựa trên user nào đang đăng nhập
-      if (currentUserId === conversation.nhanVien1Id) {
-        return conversation.unreadCountNv1
-      }
-      if (currentUserId === conversation.nhanVien2Id) {
-        return conversation.unreadCountNv2
+      // Handle customer-staff conversations
+      if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+        if (currentUserId === conversation.khachHangId) {
+          return conversation.unreadCountNv1 || 0
+        }
+        if (currentUserId === conversation.nhanVienId) {
+          return conversation.unreadCountNv2 || 0
+        }
+      } else {
+        // Handle staff-staff conversations
+        if (currentUserId === conversation.nhanVien1Id) {
+          return conversation.unreadCountNv1 || 0
+        }
+        if (currentUserId === conversation.nhanVien2Id) {
+          return conversation.unreadCountNv2 || 0
+        }
       }
       return 0
     },
@@ -117,10 +127,89 @@ const useChatStore = defineStore('chat', {
 
         // Handle different response structures
         const data = response.data?.data || response.data || []
-        this.conversations = Array.isArray(data) ? data : []
+        const fetchedConversations = Array.isArray(data) ? data : []
+        
+        console.log('📋 Fetched conversations from backend:', fetchedConversations.length)
+        fetchedConversations.forEach((conv: Conversation) => {
+          console.log('  - Conversation:', {
+            id: conv.id,
+            loaiCuocTraoDoi: conv.loaiCuocTraoDoi,
+            khachHangId: conv.khachHangId,
+            nhanVienId: conv.nhanVienId,
+            nhanVien1Id: conv.nhanVien1Id,
+            nhanVien2Id: conv.nhanVien2Id,
+            unreadCountNv1: conv.unreadCountNv1,
+            unreadCountNv2: conv.unreadCountNv2,
+          })
+        })
+
+        // Merge with existing conversations: replace temporary ones with real ones from backend
+        // Keep messages that were added to temporary conversations
+        const existingMessages = { ...this.messages }
+        const oldConversations = [...this.conversations]
+        const tempConversations = oldConversations.filter((c) => c.maCuocTraoDoi?.startsWith('temp-'))
+
+        // Replace conversations with fetched ones
+        this.conversations = fetchedConversations
+
+        // Migrate messages from temporary conversations to real conversations
+        // Find matching conversations by participant IDs
+        tempConversations.forEach((tempConv) => {
+          const tempId = tempConv.id
+          if (existingMessages[tempId]) {
+            // Try to find the real conversation that matches this temporary one
+            const realConv = fetchedConversations.find((fc) => {
+              // For customer-staff conversations, match by customer and staff IDs
+              if (fc.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+                const userStore = useUserStore()
+                const currentUserId = userStore.id
+                // Check if temp conversation matches this customer-staff conversation
+                // Temp conv has nhanVien1Id = current user (staff), nhanVien2Id = other user (customer)
+                return (
+                  (fc.nhanVienId === currentUserId && fc.khachHangId === tempConv.nhanVien2Id) ||
+                  (fc.khachHangId === currentUserId && fc.nhanVienId === tempConv.nhanVien2Id)
+                )
+              }
+              // For staff-staff conversations, match by staff IDs
+              return (
+                (fc.nhanVien1Id === tempConv.nhanVien1Id &&
+                  fc.nhanVien2Id === tempConv.nhanVien2Id) ||
+                (fc.nhanVien1Id === tempConv.nhanVien2Id &&
+                  fc.nhanVien2Id === tempConv.nhanVien1Id)
+              )
+            })
+
+            if (realConv && realConv.id !== tempId) {
+              console.log(`🔄 Migrating messages from temp conversation ${tempId} to real conversation ${realConv.id}`)
+              // Merge messages
+              if (!this.messages[realConv.id]) {
+                this.messages[realConv.id] = []
+              }
+              this.messages[realConv.id] = [
+                ...(this.messages[realConv.id] || []),
+                ...existingMessages[tempId],
+              ]
+              // Remove duplicate messages
+              const seen = new Set()
+              this.messages[realConv.id] = this.messages[realConv.id].filter((msg) => {
+                const key = `${msg.id}-${msg.sentAt}`
+                if (seen.has(key)) return false
+                seen.add(key)
+                return true
+              })
+              // Sort by sentAt
+              this.messages[realConv.id].sort(
+                (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+              )
+              // Clean up temp conversation messages
+              delete this.messages[tempId]
+            }
+          }
+        })
 
         // Cập nhật total unread count
         this.updateTotalUnreadCount()
+        console.log(`✅ Total unread count: ${this.totalUnreadCount}`)
       } catch (error: any) {
         console.error('❌ Fetch conversations error:', error)
         Message.error(`Không thể tải danh sách cuộc trò chuyện: ${error.message}`)
@@ -263,11 +352,20 @@ const useChatStore = defineStore('chat', {
         let conversation = conversationId ? this.conversations.find((c) => c.id === conversationId) : null
 
         if (!conversation) {
-          conversation = this.conversations.find(
-            (c) =>
+          conversation = this.conversations.find((c) => {
+            // Handle customer-staff conversations
+            if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+              return (
+                (c.khachHangId === senderId && c.nhanVienId === userStore.id) ||
+                (c.nhanVienId === senderId && c.khachHangId === userStore.id)
+              )
+            }
+            // Handle staff-staff conversations
+            return (
               (c.nhanVien1Id === senderId && c.nhanVien2Id === userStore.id) ||
               (c.nhanVien2Id === senderId && c.nhanVien1Id === userStore.id)
-          )
+            )
+          })
         }
 
         if (conversation) {
@@ -277,12 +375,24 @@ const useChatStore = defineStore('chat', {
           // Reset unread count - directly mutate to ensure reactivity
           const conversationIndex = this.conversations.findIndex((c) => c.id === conversationId)
           if (conversationIndex >= 0) {
-            if (userStore.id === conversation.nhanVien1Id) {
-              this.conversations[conversationIndex].unreadCountNv1 = 0
-              console.log('Reset unreadCountNv1 to 0')
-            } else if (userStore.id === conversation.nhanVien2Id) {
-              this.conversations[conversationIndex].unreadCountNv2 = 0
-              console.log('Reset unreadCountNv2 to 0')
+            if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+              // Customer-staff conversation
+              if (userStore.id === conversation.khachHangId) {
+                this.conversations[conversationIndex].unreadCountNv1 = 0
+                console.log('Reset unreadCountNv1 to 0 (customer)')
+              } else if (userStore.id === conversation.nhanVienId) {
+                this.conversations[conversationIndex].unreadCountNv2 = 0
+                console.log('Reset unreadCountNv2 to 0 (staff)')
+              }
+            } else {
+              // Staff-staff conversation
+              if (userStore.id === conversation.nhanVien1Id) {
+                this.conversations[conversationIndex].unreadCountNv1 = 0
+                console.log('Reset unreadCountNv1 to 0')
+              } else if (userStore.id === conversation.nhanVien2Id) {
+                this.conversations[conversationIndex].unreadCountNv2 = 0
+                console.log('Reset unreadCountNv2 to 0')
+              }
             }
 
             // Also update the conversation reference we have
@@ -573,35 +683,31 @@ const useChatStore = defineStore('chat', {
       console.log('Step 1: Adding message to state...')
       this.addMessageToState(message)
 
-      // Cập nhật conversation list (sẽ tự động cập nhật unread count)
+      // Cập nhật conversation list (chỉ metadata, không tăng unread count)
       console.log('Step 2: Updating conversation with new message...')
       this.updateConversationWithNewMessage(message)
 
-      // Nếu conversation chưa tồn tại, fetch lại danh sách
-      const conversationExists = this.conversations.some(
-        (c) =>
-          (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
-          (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId)
-      )
-
-      if (!conversationExists) {
-        console.log('🔄 Conversation not found, fetching conversations...')
-        this.fetchConversations()
-      } else {
-        // Update total unread count immediately (không cần gọi API)
-        console.log('Step 3: Updating total unread count...')
-        this.updateTotalUnreadCount()
-        console.log(`📊 New total unread count: ${this.totalUnreadCount}`)
-      }
+      // Luôn fetch conversations để lấy unread count chính xác từ backend
+      // Backend đã cập nhật unread count khi lưu message, nên cần sync lại
+      console.log('Fetching conversations to sync accurate unread count from backend...')
+      await this.fetchConversations()
+      console.log(`New total unread count: ${this.totalUnreadCount}`)
 
       // Auto-mark as read if user is currently viewing this conversation (chỉ khi mình là người nhận)
       // Check if there's an active conversation with the sender
       if (this.activeConversationId && this.activeConversationUserInitiated) {
         const activeConv = this.conversations.find((c) => c.id === this.activeConversationId)
         if (activeConv) {
-          const matchesSender =
-            (activeConv.nhanVien1Id === message.senderId && activeConv.nhanVien2Id === userStore.id) ||
-            (activeConv.nhanVien2Id === message.senderId && activeConv.nhanVien1Id === userStore.id)
+          let matchesSender = false
+          if (activeConv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+            matchesSender =
+              (activeConv.khachHangId === message.senderId && activeConv.nhanVienId === userStore.id) ||
+              (activeConv.nhanVienId === message.senderId && activeConv.khachHangId === userStore.id)
+          } else {
+            matchesSender =
+              (activeConv.nhanVien1Id === message.senderId && activeConv.nhanVien2Id === userStore.id) ||
+              (activeConv.nhanVien2Id === message.senderId && activeConv.nhanVien1Id === userStore.id)
+          }
 
           if (matchesSender && message.receiverId === userStore.id) {
             console.log('📖 Auto-marking message as read (user is viewing this conversation)')
@@ -615,7 +721,7 @@ const useChatStore = defineStore('chat', {
         }
       }
 
-      console.log('✅ ========== MESSAGE HANDLING COMPLETE ==========')
+      console.log('========== MESSAGE HANDLING COMPLETE ==========')
     },
 
     /**
@@ -624,33 +730,66 @@ const useChatStore = defineStore('chat', {
     addMessageToState(message: ChatMessage) {
       // Tìm conversation chứa tin nhắn này
       const userStore = useUserStore()
-      let conversation = this.conversations.find(
-        (c) =>
+      let conversation = this.conversations.find((c) => {
+        // Handle customer-staff conversations
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return (
+            (c.khachHangId === message.senderId && c.nhanVienId === message.receiverId) ||
+            (c.nhanVienId === message.senderId && c.khachHangId === message.receiverId) ||
+            (c.khachHangId === message.receiverId && c.nhanVienId === message.senderId) ||
+            (c.nhanVienId === message.receiverId && c.khachHangId === message.senderId)
+          )
+        }
+        // Handle staff-staff conversations
+        return (
           (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
           (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId) ||
           (c.nhanVien1Id === message.receiverId && c.nhanVien2Id === message.senderId) ||
           (c.nhanVien2Id === message.receiverId && c.nhanVien1Id === message.senderId)
-      )
+        )
+      })
 
       // Nếu không tìm thấy conversation, tạo tạm thời (sẽ được update sau khi fetch)
       if (!conversation) {
         console.log('Conversation not found for message, creating temporary one')
+        console.log('Message details:', {
+          senderId: message.senderId,
+          receiverId: message.receiverId,
+          senderName: message.senderName,
+          receiverName: message.receiverName,
+          currentUserId: userStore.id,
+        })
+        
         // Tạo conversation tạm với ID timestamp
         const tempId = Date.now()
+        const otherUserId = message.senderId === userStore.id ? message.receiverId : message.senderId
+        const otherUserName = message.senderId === userStore.id ? message.receiverName : message.senderName
+        
+        // Try to determine conversation type based on message metadata
+        // If message has loaiTinNhanType, use it to determine conversation type
+        // Otherwise, we'll need to check if the other user is a customer
+        // For now, we'll create a temporary conversation and let the backend correct it
+        // The backend will return the correct type when we fetch conversations
+        
+        // Check if this might be a customer-staff conversation
+        // We can't definitively know without checking the backend, so we'll create a generic one
+        // The backend will correct the type when we fetch conversations
         conversation = {
           id: tempId,
           maCuocTraoDoi: `temp-${tempId}`,
+          loaiCuocTraoDoi: 'STAFF_STAFF', // Default, will be corrected by backend when fetchConversations is called
           nhanVien1Id: userStore.id!,
           nhanVien1Name: userStore.name || '',
-          nhanVien2Id: message.senderId === userStore.id ? message.receiverId : message.senderId,
-          nhanVien2Name: message.senderId === userStore.id ? message.receiverName : message.senderName,
+          nhanVien2Id: otherUserId,
+          nhanVien2Name: otherUserName || '',
           lastMessageContent: message.content,
           lastMessageTime: message.sentAt,
           lastSenderId: message.senderId,
-          unreadCountNv1: 0,
-          unreadCountNv2: 0,
-        }
+          unreadCountNv1: message.receiverId === userStore.id ? 1 : 0,
+          unreadCountNv2: message.senderId === userStore.id ? 0 : 1,
+        } as Conversation
         this.conversations.unshift(conversation)
+        console.log('Created temporary conversation:', conversation)
       }
 
       // Thêm tin nhắn vào conversation đó
@@ -699,57 +838,75 @@ const useChatStore = defineStore('chat', {
 
     /**
      * Cập nhật conversation khi có tin nhắn mới
+     * Note: Không tăng unread count ở đây vì backend đã xử lý rồi
+     * Chỉ cập nhật metadata (lastMessageContent, lastMessageTime, etc.)
      */
     updateConversationWithNewMessage(message: ChatMessage) {
       const userStore = useUserStore()
-      let conversation = this.conversations.find(
-        (c) =>
+      let conversation = this.conversations.find((c) => {
+        // Handle customer-staff conversations
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return (
+            (c.khachHangId === message.senderId && c.nhanVienId === message.receiverId) ||
+            (c.nhanVienId === message.senderId && c.khachHangId === message.receiverId)
+          )
+        }
+        // Handle staff-staff conversations
+        return (
           (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
           (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId)
-      )
+        )
+      })
 
       // Nếu conversation chưa tồn tại, tạo một conversation tạm thời
       if (!conversation) {
         console.log('🆕 Creating temporary conversation for new message')
+        console.log('Message:', {
+          senderId: message.senderId,
+          receiverId: message.receiverId,
+          senderName: message.senderName,
+          receiverName: message.receiverName,
+          currentUserId: userStore.id,
+        })
+        
+        // Tính unread count ban đầu: nếu mình là người nhận và tin nhắn chưa đọc, thì = 1
+        const initialUnreadCount = message.receiverId === userStore.id && !message.isRead ? 1 : 0
+        const otherUserId = message.senderId === userStore.id ? message.receiverId : message.senderId
+        const otherUserName = message.senderId === userStore.id ? message.receiverName : message.senderName
+        
+        // Create temporary conversation - backend will correct the type when we fetch
         conversation = {
           id: Date.now(), // Temporary ID
           maCuocTraoDoi: `temp-${Date.now()}`,
+          loaiCuocTraoDoi: 'STAFF_STAFF', // Default, will be corrected by backend when fetchConversations is called
           nhanVien1Id: userStore.id!,
           nhanVien1Name: userStore.name || '',
-          nhanVien2Id: message.senderId === userStore.id ? message.receiverId : message.senderId,
-          nhanVien2Name: message.senderId === userStore.id ? message.receiverName : message.senderName,
+          nhanVien2Id: otherUserId,
+          nhanVien2Name: otherUserName || '',
           lastMessageContent: message.content,
           lastMessageTime: message.sentAt,
           lastSenderId: message.senderId,
-          unreadCountNv1: 0,
-          unreadCountNv2: 0,
-        }
+          unreadCountNv1: message.receiverId === userStore.id ? initialUnreadCount : 0,
+          unreadCountNv2: message.senderId === userStore.id ? 0 : initialUnreadCount,
+        } as Conversation
         this.conversations.unshift(conversation) // Add to beginning
-      }
-
-      // Cập nhật conversation
-      conversation.lastMessageContent = message.content
-      conversation.lastMessageTime = message.sentAt
-      conversation.lastSenderId = message.senderId
-
-      // Tăng unread count nếu không phải tin nhắn của mình
-      if (message.senderId !== userStore.id) {
-        if (userStore.id === conversation.nhanVien1Id) {
-          conversation.unreadCountNv1 = (conversation.unreadCountNv1 || 0) + 1
-        } else if (userStore.id === conversation.nhanVien2Id) {
-          conversation.unreadCountNv2 = (conversation.unreadCountNv2 || 0) + 1
+        console.log('Created temporary conversation:', conversation)
+      } else {
+        // Conversation đã tồn tại - chỉ cập nhật metadata
+        // KHÔNG tăng unread count vì backend đã xử lý rồi
+        // Chỉ cập nhật nếu tin nhắn này mới hơn tin nhắn cuối cùng
+        const currentLastTime = conversation.lastMessageTime ? new Date(conversation.lastMessageTime).getTime() : 0
+        const newMessageTime = message.sentAt ? new Date(message.sentAt).getTime() : 0
+        
+        if (newMessageTime >= currentLastTime) {
+          conversation.lastMessageContent = message.content
+          conversation.lastMessageTime = message.sentAt
+          conversation.lastSenderId = message.senderId
         }
       }
 
-      // Update total unread count immediately
-      this.updateTotalUnreadCount()
-
-      // Nếu là conversation tạm, fetch lại để lấy ID thật
-      if (conversation.id > 1000000000000) {
-        // Temporary ID (timestamp)
-        console.log('🔄 Fetching conversations to get real conversation ID...')
-        this.fetchConversations()
-      }
+      // Không cập nhật total unread count ở đây
+      // Sẽ được cập nhật chính xác từ backend khi fetchConversations được gọi
     },
 
     /**
@@ -765,11 +922,20 @@ const useChatStore = defineStore('chat', {
       }
 
       // Tìm conversation với receiver
-      const conversation = this.conversations.find(
-        (c) =>
+      const conversation = this.conversations.find((c) => {
+        // Handle customer-staff conversations
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return (
+            (c.khachHangId === notification.senderId && c.nhanVienId === notification.receiverId) ||
+            (c.nhanVienId === notification.senderId && c.khachHangId === notification.receiverId)
+          )
+        }
+        // Handle staff-staff conversations
+        return (
           (c.nhanVien1Id === notification.senderId && c.nhanVien2Id === notification.receiverId) ||
           (c.nhanVien2Id === notification.senderId && c.nhanVien1Id === notification.receiverId)
-      )
+        )
+      })
 
       if (!conversation) {
         return
@@ -789,10 +955,18 @@ const useChatStore = defineStore('chat', {
       }
 
       // Cập nhật unread count trong conversation (cho người kia)
-      if (currentUserId === conversation.nhanVien1Id) {
-        conversation.unreadCountNv2 = 0
-      } else if (currentUserId === conversation.nhanVien2Id) {
-        conversation.unreadCountNv1 = 0
+      if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+        if (currentUserId === conversation.khachHangId) {
+          conversation.unreadCountNv2 = 0
+        } else if (currentUserId === conversation.nhanVienId) {
+          conversation.unreadCountNv1 = 0
+        }
+      } else {
+        if (currentUserId === conversation.nhanVien1Id) {
+          conversation.unreadCountNv2 = 0
+        } else if (currentUserId === conversation.nhanVien2Id) {
+          conversation.unreadCountNv1 = 0
+        }
       }
     },
 
@@ -809,11 +983,22 @@ const useChatStore = defineStore('chat', {
       }
 
       this.totalUnreadCount = this.conversations.reduce((total, conv) => {
-        if (userId === conv.nhanVien1Id) {
-          return total + (conv.unreadCountNv1 || 0)
-        }
-        if (userId === conv.nhanVien2Id) {
-          return total + (conv.unreadCountNv2 || 0)
+        // Handle customer-staff conversations
+        if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          if (userId === conv.khachHangId) {
+            return total + (conv.unreadCountNv1 || 0)
+          }
+          if (userId === conv.nhanVienId) {
+            return total + (conv.unreadCountNv2 || 0)
+          }
+        } else {
+          // Handle staff-staff conversations
+          if (userId === conv.nhanVien1Id) {
+            return total + (conv.unreadCountNv1 || 0)
+          }
+          if (userId === conv.nhanVien2Id) {
+            return total + (conv.unreadCountNv2 || 0)
+          }
         }
         return total
       }, 0)

@@ -173,9 +173,9 @@
       <div class="input-container">
         <a-input-search
           v-model="input"
-          :placeholder="isConnected ? 'Hỏi AI bất cứ điều gì về sản phẩm...' : 'AI đang offline...'"
+          :placeholder="staffChatMode ? 'Nhập tin nhắn cho nhân viên...' : (isConnected ? 'Hỏi AI bất cứ điều gì về sản phẩm...' : 'AI đang offline...')"
           :loading="loading || isProcessing"
-          :disabled="!isConnected || isProcessing"
+          :disabled="staffChatMode ? (!chatStore.wsConnected || chatStore.sendingMessage) : (!isConnected || isProcessing)"
           allow-clear
           search-button
           @search="handleSearch"
@@ -184,7 +184,7 @@
           <template #button-icon>
             <icon-send />
           </template>
-          <template #button-default>{{ isProcessing ? 'Đang xử lý...' : 'Gửi' }}</template>
+          <template #button-default>{{ staffChatMode ? (chatStore.sendingMessage ? 'Đang gửi...' : 'Gửi') : (isProcessing ? 'Đang xử lý...' : 'Gửi') }}</template>
         </a-input-search>
       </div>
     </a-card>
@@ -200,6 +200,8 @@ import { chatWithAI, chatWithAIStream, checkAIHealth } from '@/api/ai'
 import { Message } from '@arco-design/web-vue'
 import { IconSend } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/stores/user'
+import useChatStore from '@/stores/chat'
+import { luuLichSuAiChat } from '@/api/chat'
 
 interface ChatMessage {
   id: number
@@ -226,12 +228,17 @@ const props = defineProps<{
   suppressConnectionNotice?: boolean
   enableHealthCheck?: boolean
   connectionStatus?: boolean
+  staffChatMode?: boolean
+  staffConversationId?: number | null
+  staffReceiverId?: number | null
 }>()
 const shouldNotifyConnection = props.suppressConnectionNotice !== true
 const shouldHealthCheck = props.enableHealthCheck === true
 
 const emit = defineEmits<{
   'session-state': [state: SessionState]
+  'redirect-to-staff': []
+  'staff-message-sent': [message: string]
 }>()
 
 const messages = ref<ChatMessage[]>([
@@ -258,10 +265,12 @@ const messages = ref<ChatMessage[]>([
 ])
 
 const userStore = useUserStore()
+const chatStore = useChatStore()
 const input = ref('')
 const loading = ref(false)
 const isProcessing = ref(false)
 const isConnected = ref(props.connectionStatus ?? !shouldHealthCheck)
+const staffChatMode = computed(() => props.staffChatMode ?? false)
 
 watch(
   () => props.connectionStatus,
@@ -372,6 +381,38 @@ function saveHistory() {
     })
   } catch {
     // ignore storage errors
+  }
+}
+
+/**
+ * Save AI chat message to database
+ * Only saves if not in staff chat mode and user is authenticated
+ */
+async function saveAiChatToDatabase(role: 'user' | 'assistant', content: string) {
+  // Don't save if in staff chat mode
+  if (props.staffChatMode) return
+  
+  // Don't save if user is not authenticated or not a customer
+  if (!userStore.isAuthenticated || !userStore.id) return
+  
+  // Don't save empty content
+  if (!content || !content.trim()) return
+  
+  // Ensure we have a session ID
+  if (!currentSessionId.value) {
+    currentSessionId.value = generateSessionId()
+  }
+  
+  try {
+    await luuLichSuAiChat({
+      customerId: userStore.id,
+      sessionId: currentSessionId.value,
+      role,
+      content: content.trim(),
+    })
+  } catch (error: any) {
+    // Silently fail - don't interrupt user experience
+    console.error('Failed to save AI chat history:', error)
   }
 }
 
@@ -505,6 +546,45 @@ async function checkConnection() {
 
 async function sendMessage(text: string = input.value) {
   if (!text.trim()) return
+
+  // If in staff chat mode, send to staff instead of AI
+  if (props.staffChatMode && props.staffReceiverId) {
+    // Add user message to chat immediately
+    const userMessage: ChatMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: text.trim(),
+      timestamp: new Date().toLocaleTimeString('vi-VN'),
+    }
+    messages.value.push(userMessage)
+    const messageText = text.trim()
+    input.value = ''
+    await nextTick()
+    scrollToBottom()
+    saveHistory()
+    
+    try {
+      // Send to staff via WebSocket
+      await chatStore.sendMessageViaWebSocket({
+        receiverId: props.staffReceiverId,
+        content: messageText,
+        messageType: 'TEXT',
+      })
+      emit('staff-message-sent', messageText)
+      return
+    } catch (error: any) {
+      Message.error('Không thể gửi tin nhắn đến nhân viên. Vui lòng thử lại.')
+      // Remove the message if sending failed
+      const index = messages.value.findIndex((m) => m.id === userMessage.id)
+      if (index >= 0) {
+        messages.value.splice(index, 1)
+      }
+      input.value = messageText // Restore input
+      return
+    }
+  }
+
+  // Normal AI chat flow
   if (!isConnected.value) {
     Message.error('AI service chưa kết nối. Vui lòng thử lại sau.')
     return
@@ -533,6 +613,9 @@ async function sendMessage(text: string = input.value) {
     timestamp: new Date().toLocaleTimeString('vi-VN'),
   }
   messages.value.push(userMessage)
+
+  // Save user message to database
+  await saveAiChatToDatabase('user', text.trim())
 
   const aiMessageId = Date.now() + 1
   const aiMessage: ChatMessage = {
@@ -564,10 +647,17 @@ async function sendMessage(text: string = input.value) {
     let thinkingContentLive = ''
     let contentAfterThinking = ''
 
+    let shouldRedirectToStaff = false
+
     await chatWithAIStream(
       text,
       (chunk: string, metadata?: any) => {
         fullContent += chunk
+
+        // Check for redirect_to_staff flag in metadata
+        if (metadata && metadata.redirect_to_staff === true) {
+          shouldRedirectToStaff = true
+        }
 
         if (fullContent.includes('<think>') && !insideThinkTag && !thinkingTagClosed) {
           insideThinkTag = true
@@ -627,7 +717,7 @@ async function sendMessage(text: string = input.value) {
           nextTick(() => scrollToBottom())
         }
       },
-      () => {
+      async () => {
         loading.value = false
         isProcessing.value = false
 
@@ -659,7 +749,20 @@ async function sendMessage(text: string = input.value) {
 
         saveHistory()
 
+        // Save AI response to database
         const aiMsg = messages.value.find((m) => m.id === aiMessageId)
+        if (aiMsg && aiMsg.content && aiMsg.content.trim()) {
+          await saveAiChatToDatabase('assistant', aiMsg.content)
+        }
+
+        // Check if we should redirect to staff chat
+        if (shouldRedirectToStaff) {
+          // Wait a bit for the message to be displayed, then redirect
+          setTimeout(() => {
+            emit('redirect-to-staff')
+          }, 1500)
+          return
+        }
         if (aiMsg && aiMsg.followUpSuggestions && aiMsg.followUpSuggestions.length > 0) {
           const suggestions = [...aiMsg.followUpSuggestions]
           aiMsg.followUpSuggestions = undefined
@@ -708,6 +811,164 @@ function handleSearch(value?: string) {
 function askQuestion(question: string) {
   sendMessage(question)
 }
+
+// Watch for staff chat mode activation and load existing messages
+watch(
+  () => [props.staffChatMode, props.staffConversationId],
+  async ([isStaffMode, convId]) => {
+    if (!isStaffMode || !convId) return
+    
+    // Load existing messages from the conversation
+    if (chatStore.activeMessages && Array.isArray(chatStore.activeMessages)) {
+      // Keep the initial AI greeting and AI conversation history
+      // Just add staff messages after the redirect message
+      
+      // Add all messages from the conversation
+      chatStore.activeMessages.forEach((staffMsg: any) => {
+        // Check if message already exists
+        const msgId = staffMsg.id || staffMsg.maTinNhan
+        const exists = messages.value.some((msg) => {
+          if (msgId && typeof msg.id === 'number') {
+            return msg.id === msgId
+          }
+          return false
+        })
+        
+        if (!exists) {
+          if (staffMsg.senderId === userStore.id) {
+            // User message
+            const chatMsg: ChatMessage = {
+              id: msgId || Date.now(),
+              role: 'user',
+              content: staffMsg.content || '',
+              timestamp: staffMsg.sentAt ? new Date(staffMsg.sentAt).toLocaleTimeString('vi-VN') : new Date().toLocaleTimeString('vi-VN'),
+            }
+            messages.value.push(chatMsg)
+          } else {
+            // Staff message (displayed as assistant)
+            const chatMsg: ChatMessage = {
+              id: msgId || Date.now(),
+              role: 'assistant',
+              content: staffMsg.content || '',
+              timestamp: staffMsg.sentAt ? new Date(staffMsg.sentAt).toLocaleTimeString('vi-VN') : new Date().toLocaleTimeString('vi-VN'),
+            }
+            messages.value.push(chatMsg)
+          }
+        }
+      })
+      
+      await nextTick()
+      scrollToBottom()
+      saveHistory()
+    }
+  },
+  { immediate: true }
+)
+
+// Watch for new incoming staff messages
+watch(
+  () => [chatStore.activeMessages, chatStore.messages, props.staffChatMode, props.staffConversationId, props.staffReceiverId, chatStore.activeConversationId],
+  ([activeMessages, allMessages, isStaffMode, convId, receiverId, activeConvId]) => {
+    if (!isStaffMode) return
+    
+    // Get messages from active conversation, or find messages for the staff receiver if no active conversation yet
+    let messagesToProcess: any[] = []
+    
+    if (convId && activeConvId === convId && Array.isArray(activeMessages)) {
+      // We have an active conversation matching the staff conversation
+      messagesToProcess = activeMessages
+    } else if (receiverId !== null) {
+      // No active conversation yet, but we have a receiver ID
+      // Find the conversation that matches this receiver
+      const matchingConv = chatStore.conversations.find((c: any) => {
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return c.nhanVienId === receiverId || c.khachHangId === userStore.id
+        }
+        return false
+      })
+      
+      if (matchingConv && allMessages && allMessages[matchingConv.id]) {
+        messagesToProcess = allMessages[matchingConv.id]
+      } else if (!convId) {
+        // No conversation yet, but we can still check all messages for ones from/to this receiver
+        // This handles the case where a message arrives before the conversation is created
+        Object.values(allMessages || {}).forEach((msgs: any) => {
+          if (Array.isArray(msgs)) {
+            msgs.forEach((msg: any) => {
+              if ((msg.senderId === receiverId && msg.receiverId === userStore.id) ||
+                  (msg.receiverId === receiverId && msg.senderId === userStore.id)) {
+                messagesToProcess.push(msg)
+              }
+            })
+          }
+        })
+      }
+    }
+    
+    if (messagesToProcess.length === 0) return
+    
+    console.log('📬 Processing staff messages in AI chat:', {
+      isStaffMode,
+      convId,
+      receiverId,
+      activeConvId,
+      messagesToProcessCount: messagesToProcess.length,
+    })
+    
+    messagesToProcess.forEach((staffMsg: any) => {
+      // Check if this message is relevant to the current staff chat
+      const isRelevant = convId
+        ? true // If we have convId, we already filtered by conversation
+        : receiverId !== null && (staffMsg.senderId === receiverId || staffMsg.receiverId === receiverId)
+      
+      if (!isRelevant) return
+      
+      // Check if message already exists
+      const msgId = staffMsg.id || staffMsg.maTinNhan
+      const exists = messages.value.some((msg) => {
+        if (msgId && typeof msg.id === 'number') {
+          return msg.id === msgId
+        }
+        // Also check by content and timestamp for duplicate detection
+        if (staffMsg.content && msg.content === staffMsg.content) {
+          const msgTime = staffMsg.sentAt ? new Date(staffMsg.sentAt).getTime() : 0
+          const existingTime = msg.timestamp ? new Date(msg.timestamp).getTime() : 0
+          if (Math.abs(msgTime - existingTime) < 5000) { // Within 5 seconds
+            return true
+          }
+        }
+        return false
+      })
+      
+      if (!exists) {
+        if (staffMsg.senderId === userStore.id) {
+          // User message (customer sent this)
+          const chatMsg: ChatMessage = {
+            id: msgId || Date.now(),
+            role: 'user',
+            content: staffMsg.content || '',
+            timestamp: staffMsg.sentAt ? new Date(staffMsg.sentAt).toLocaleTimeString('vi-VN') : new Date().toLocaleTimeString('vi-VN'),
+          }
+          messages.value.push(chatMsg)
+          console.log('✅ Added user message to AI chat:', chatMsg.content.substring(0, 50))
+        } else if (staffMsg.receiverId === userStore.id) {
+          // Staff message (staff sent this to customer, displayed as assistant)
+          const chatMsg: ChatMessage = {
+            id: msgId || Date.now(),
+            role: 'assistant',
+            content: staffMsg.content || '',
+            timestamp: staffMsg.sentAt ? new Date(staffMsg.sentAt).toLocaleTimeString('vi-VN') : new Date().toLocaleTimeString('vi-VN'),
+          }
+          messages.value.push(chatMsg)
+          console.log('✅ Added staff message to AI chat:', chatMsg.content.substring(0, 50))
+        }
+        nextTick(() => scrollToBottom())
+        saveHistory()
+      }
+    })
+  },
+  { deep: true }
+)
 
 function switchToSession(sessionId: string) {
   if (chatSessions.value[sessionId]) {

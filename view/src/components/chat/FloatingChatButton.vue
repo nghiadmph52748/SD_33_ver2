@@ -45,13 +45,22 @@
 
           <a-spin :loading="chatStore.loadingConversations" class="conversations-spin">
             <div class="conversations">
+              <!-- Debug info (remove in production) -->
+              <div v-if="chatStore.conversations.length > 0" style="padding: 8px; font-size: 11px; color: #999; border-bottom: 1px solid #eee;">
+                Tổng: {{ chatStore.conversations.length }} cuộc trò chuyện
+                ({{ chatStore.conversations.filter(c => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length }} với khách hàng)
+              </div>
+              
               <div v-for="conv in filteredConversations" :key="conv.id" class="conversation-item" @click="selectConversation(conv.id)">
                 <a-avatar :size="40">
                   <icon-user />
                 </a-avatar>
                 <div class="conv-details">
                   <div class="conv-header">
-                    <span class="conv-name">{{ getOtherUserName(conv) }}</span>
+                    <span class="conv-name">
+                      {{ getOtherUserName(conv) }}
+                      <span v-if="conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF'" style="font-size: 10px; color: #52c41a; margin-left: 4px;">(KH)</span>
+                    </span>
                     <span class="conv-time">{{ formatTime(conv.lastMessageTime) }}</span>
                   </div>
               <div class="conv-preview">
@@ -166,21 +175,32 @@ const headerMode = ref<'human' | 'ai'>('human')
 const activeConversation = computed(() => chatStore.activeConversation)
 const activeMessages = computed(() => chatStore.activeMessages)
 
-// Derive total unread from conversations to ensure real-time correctness
-const totalUnreadBadge = computed(() => {
-  const convs = chatStore.conversations || []
-  if (convs.length === 0) return 0
-  return convs.reduce((sum: number, c: any) => {
-    const count = Number(chatStore.getUnreadCount(c.id) || 0)
-    return sum + (Number.isFinite(count) ? count : 0)
-  }, 0)
-})
+// Sử dụng tổng unread được quản lý ở store để tránh double-count
+const totalUnreadBadge = computed(() => chatStore.totalUnreadCount || 0)
 
 function getOtherUserName(conv: any) {
+  // Handle customer-staff conversations
+  if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (userStore.id === conv.nhanVienId) {
+      return conv.khachHangName || 'Khách hàng'
+    } else if (userStore.id === conv.khachHangId) {
+      return conv.nhanVienName || 'Nhân viên'
+    }
+  }
+  // Handle staff-staff conversations
   return userStore.id === conv.nhanVien1Id ? conv.nhanVien2Name : conv.nhanVien1Name
 }
 
 function getUnreadCount(conv: any) {
+  // Handle customer-staff conversations
+  if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (userStore.id === conv.nhanVienId) {
+      return conv.unreadCountNv2 || 0
+    } else if (userStore.id === conv.khachHangId) {
+      return conv.unreadCountNv1 || 0
+    }
+  }
+  // Handle staff-staff conversations
   return userStore.id === conv.nhanVien1Id ? conv.unreadCountNv1 : conv.unreadCountNv2
 }
 
@@ -197,12 +217,28 @@ const activeConversationName = computed(() => {
 
 const filteredConversations = computed(() => {
   // Force reactivity by accessing the conversations array
-  const conversations = chatStore.conversations
-  if (!searchKeyword.value) return conversations
-  return conversations.filter((conv) => {
+  const conversations = chatStore.conversations || []
+  
+  // Debug logging
+  console.log('📋 Filtering conversations:', {
+    total: conversations.length,
+    customerStaff: conversations.filter(c => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length,
+    staffStaff: conversations.filter(c => c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi).length,
+    searchKeyword: searchKeyword.value,
+  })
+  
+  if (!searchKeyword.value) {
+    console.log('✅ Returning all conversations:', conversations.length)
+    return conversations
+  }
+  
+  const filtered = conversations.filter((conv) => {
     const name = getOtherUserName(conv).toLowerCase()
     return name.includes(searchKeyword.value.toLowerCase())
   })
+  
+  console.log('🔍 Filtered conversations:', filtered.length)
+  return filtered
 })
 
 function getLastMessagePreview(conv: any): string {
@@ -226,8 +262,14 @@ function getLastMessagePreview(conv: any): string {
 function toggleDrawer() {
   drawerVisible.value = !drawerVisible.value
 
-  if (drawerVisible.value && chatStore.conversations.length === 0) {
-    chatStore.fetchConversations()
+  if (drawerVisible.value) {
+    // Always refresh conversations when opening drawer to get latest data
+    console.log('🔄 Opening drawer, fetching conversations...')
+    chatStore.fetchConversations().then(() => {
+      console.log('✅ Conversations fetched:', chatStore.conversations.length)
+      console.log('   Customer-staff:', chatStore.conversations.filter(c => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length)
+      console.log('   Staff-staff:', chatStore.conversations.filter(c => c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi).length)
+    })
     chatStore.fetchUnreadCount()
   }
 }
@@ -253,20 +295,29 @@ async function selectConversation(id: number) {
   chatStore.setActiveConversation(id, { userInitiated: true })
   const conv = chatStore.conversations.find((c) => c.id === id)
   if (conv) {
-    const otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
-    await chatStore.fetchMessages(otherUserId)
+    // Get other user ID based on conversation type
+    let otherUserId: number | undefined
+    if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+      otherUserId = userStore.id === conv.khachHangId ? conv.nhanVienId : conv.khachHangId
+    } else {
+      otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
+    }
+    
+    if (otherUserId !== undefined) {
+      await chatStore.fetchMessages(otherUserId)
 
-    // Scroll to bottom to show latest messages
-    await nextTick()
-    scrollToBottom()
+      // Scroll to bottom to show latest messages
+      await nextTick()
+      scrollToBottom()
 
-    // Auto mark as read if has unread messages
-    const unreadCount = getUnreadCount(conv)
-    console.log('Selecting conversation:', id, 'unread count:', unreadCount)
-    if (unreadCount > 0) {
-      // Pass conversation ID to ensure correct conversation is updated
-      await chatStore.markAsRead(otherUserId, id)
-      console.log('Marked conversation as read')
+      // Auto mark as read if has unread messages
+      const unreadCount = getUnreadCount(conv)
+      console.log('Selecting conversation:', id, 'unread count:', unreadCount)
+      if (unreadCount > 0) {
+        // Pass conversation ID to ensure correct conversation is updated
+        await chatStore.markAsRead(otherUserId, id)
+        console.log('Marked conversation as read')
+      }
     }
   }
 }
@@ -293,7 +344,15 @@ async function sendMessage() {
   if (!messageInput.value.trim() || !activeConversation.value) return
 
   const conv = activeConversation.value
-  const otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
+  // Get other user ID based on conversation type
+  let otherUserId: number | undefined
+  if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    otherUserId = userStore.id === conv.khachHangId ? conv.nhanVienId : conv.khachHangId
+  } else {
+    otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
+  }
+  
+  if (!otherUserId) return
 
   try {
     await chatStore.sendMessageViaWebSocket({
@@ -355,23 +414,31 @@ watch(
     // Only process if drawer is open and we have an active conversation
     if (!drawerVisible.value || !activeConversation.value) return
 
-    // Check if there's a new unread message
-    if (Array.isArray(messages) && messages.length > 0) {
-      const otherUserId =
-        userStore.id === activeConversation.value.nhanVien1Id ? activeConversation.value.nhanVien2Id : activeConversation.value.nhanVien1Id
+      // Check if there's a new unread message
+      if (Array.isArray(messages) && messages.length > 0) {
+        const conv = activeConversation.value
+        // Get other user ID based on conversation type
+        let otherUserId: number | undefined
+        if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          otherUserId = userStore.id === conv.khachHangId ? conv.nhanVienId : conv.khachHangId
+        } else {
+          otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
+        }
 
-      // Find new unread messages from the other user
-      const newUnreadMessages = messages.filter((msg: any) => msg.senderId === otherUserId && !msg.isRead)
+        if (otherUserId !== undefined) {
+          // Find new unread messages from the other user
+          const newUnreadMessages = messages.filter((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
-      if (newUnreadMessages.length > 0 && chatStore.activeConversationUserInitiated) {
-        console.log(`📖 Auto-marking ${newUnreadMessages.length} new message(s) as read`)
-        try {
-          await chatStore.markAsRead(otherUserId, activeConversation.value.id)
-        } catch (error) {
-          console.error('Error auto-marking new messages as read:', error)
+          if (newUnreadMessages.length > 0 && chatStore.activeConversationUserInitiated) {
+            console.log(`📖 Auto-marking ${newUnreadMessages.length} new message(s) as read`)
+            try {
+              await chatStore.markAsRead(otherUserId, activeConversation.value.id)
+            } catch (error) {
+              console.error('Error auto-marking new messages as read:', error)
+            }
+          }
         }
       }
-    }
   },
   { deep: true, immediate: false }
 )
@@ -472,21 +539,28 @@ watch(
       currentConv &&
       currentConv !== null &&
       typeof currentConv === 'object' &&
-      'nhanVien1Id' in currentConv &&
       Array.isArray(messages) &&
       messages.length > 0
     ) {
-      const otherUserId = userStore.id === currentConv.nhanVien1Id ? currentConv.nhanVien2Id : currentConv.nhanVien1Id
+      // Get other user ID based on conversation type
+      let otherUserId: number | undefined
+      if (currentConv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+        otherUserId = userStore.id === currentConv.khachHangId ? currentConv.nhanVienId : currentConv.khachHangId
+      } else if ('nhanVien1Id' in currentConv) {
+        otherUserId = userStore.id === currentConv.nhanVien1Id ? currentConv.nhanVien2Id : currentConv.nhanVien1Id
+      }
 
-      // Check if there are unread messages from the other user
-      const hasUnreadMessages = messages.some((msg: any) => msg.senderId === otherUserId && !msg.isRead)
+      if (otherUserId !== undefined) {
+        // Check if there are unread messages from the other user
+        const hasUnreadMessages = messages.some((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
-      if (hasUnreadMessages && chatStore.activeConversationUserInitiated) {
-        console.log('📖 Auto-marking messages as read (drawer open, viewing conversation)')
-        try {
-          await chatStore.markAsRead(otherUserId, currentConv.id)
-        } catch (error) {
-          console.error('Error auto-marking messages as read:', error)
+        if (hasUnreadMessages && chatStore.activeConversationUserInitiated) {
+          console.log('📖 Auto-marking messages as read (drawer open, viewing conversation)')
+          try {
+            await chatStore.markAsRead(otherUserId, currentConv.id)
+          } catch (error) {
+            console.error('Error auto-marking messages as read:', error)
+          }
         }
       }
     }

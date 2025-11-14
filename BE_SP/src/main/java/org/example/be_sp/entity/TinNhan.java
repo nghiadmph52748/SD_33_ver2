@@ -19,7 +19,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -39,15 +38,26 @@ public class TinNhan {
     @Column(name = "ma_tin_nhan", length = 7, insertable = false, updatable = false)
     private String maTinNhan;
 
-    @NotNull(message = "Người gửi không được để trống")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_nguoi_gui", nullable = false)
+    // Staff-to-staff message fields (existing)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_nguoi_gui")
     private NhanVien nguoiGui;
 
-    @NotNull(message = "Người nhận không được để trống")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_nguoi_nhan", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_nguoi_nhan")
     private NhanVien nguoiNhan;
+
+    // Customer-to-staff message fields (new)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_khach_hang_gui")
+    private KhachHang khachHangGui;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_khach_hang_nhan")
+    private KhachHang khachHangNhan;
+
+    @Column(name = "loai_tin_nhan_type", length = 20)
+    private String loaiTinNhanType; // STAFF_STAFF, CUSTOMER_STAFF
 
     @NotBlank(message = "Nội dung tin nhắn không được để trống")
     @Nationalized

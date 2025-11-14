@@ -1,175 +1,60 @@
 <template>
   <div class="floating-chat">
-    <!-- Staff chat drawer -->
-    <a-drawer
-      v-model:visible="staffDrawerVisible"
-      :width="400"
-      :footer="false"
-      placement="right"
-      :mask-closable="true"
-      unmount-on-close
-      class="chat-drawer"
-    >
-      <template #title>
-        <div class="drawer-title">
-          <div class="title-actions">
-            <span class="drawer-title-text">{{ t('chat.staffTab') }}</span>
-          </div>
-        </div>
-      </template>
-
-      <div class="drawer-content">
-        <div v-if="!activeConversation" class="conversation-list-mini">
-          <a-input-search v-model="searchKeyword" :placeholder="t('chat.searchPlaceholder')" class="search-box" />
-
-          <a-spin :loading="chatStore.loadingConversations" class="conversations-spin">
-            <div class="conversations">
-              <div v-for="conv in filteredConversations" :key="conv.id" class="conversation-item" @click="selectConversation(conv.id)">
-                <a-avatar :size="40">
-                  <icon-user />
-                </a-avatar>
-                <div class="conv-details">
-                  <div class="conv-header">
-                    <span class="conv-name">{{ getOtherUserName(conv) }}</span>
-                    <span class="conv-time">{{ formatTime(conv.lastMessageTime) }}</span>
-                  </div>
-                  <div class="conv-preview">
-                    <span class="last-message">{{ getLastMessagePreview(conv) }}</span>
-                    <a-badge v-if="getUnreadCount(conv) > 0" :count="getUnreadCount(conv)" class="unread-badge" />
-                  </div>
-                </div>
-              </div>
-
-              <a-empty v-if="filteredConversations.length === 0" :description="t('chat.emptyConversations')" />
-            </div>
-          </a-spin>
-        </div>
-
-        <div v-else class="chat-window-mini">
-          <div class="mini-header">
-            <a-button type="text" size="small" @click="backToList">
-              <template #icon>
-                <icon-left />
-              </template>
-            </a-button>
-            <div class="mini-user-info">
-              <a-avatar :size="32">
-                <icon-user />
-              </a-avatar>
-              <span>{{ activeConversationName }}</span>
-            </div>
-          </div>
-
-          <div ref="messagesContainer" class="mini-messages" @scroll="handleScroll">
-            <div
-              v-for="msg in activeMessages"
-              :key="msg.maTinNhan || msg.id"
-              :class="['message-bubble', msg.senderId === userStore.id ? 'sent' : 'received']"
-            >
-              <div class="bubble-content">{{ msg.content }}</div>
-              <div class="bubble-time">
-                {{ formatMessageTime(msg.sentAt) }}
-                <icon-check-circle-fill v-if="msg.senderId === userStore.id && msg.isRead" class="seen-icon" />
-                <icon-check-circle v-else-if="msg.senderId === userStore.id" class="sent-icon" />
-              </div>
-            </div>
-          </div>
-
-          <div class="mini-input">
-            <a-textarea
-              v-model="messageInput"
-              :auto-size="{ minRows: 1, maxRows: 3 }"
-              :placeholder="t('chat.inputPlaceholder')"
-              @keydown.enter.exact="onEnterKey"
-              @keydown.shift.enter="handleNewLine"
-            />
-            <a-button type="primary" :loading="chatStore.sendingMessage" @click="sendMessage">
-              <template #icon>
-                <icon-send />
-              </template>
-            </a-button>
-          </div>
+    <!-- AI/Staff chat popup -->
+    <div v-if="aiDrawerVisible" class="chat-popup ai-popup" :class="{ minimized: isAIMinimized }">
+      <div class="popup-header">
+        <span class="popup-title">{{ isStaffChatMode ? t('chat.staffTab') : t('chat.aiTab') }}</span>
+        <div class="popup-header-actions">
+          <button class="popup-btn maximize-btn" @click="toggleAIMinimize" :aria-label="isAIMinimized ? 'Maximize' : 'Minimize'">
+            <svg v-if="isAIMinimized" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+            <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+            </svg>
+          </button>
+          <button class="popup-btn close-btn" @click="closeAIPopup" aria-label="Close">
+            <icon-close />
+          </button>
         </div>
       </div>
-    </a-drawer>
 
-    <!-- AI chat drawer -->
-    <a-drawer
-      v-model:visible="aiDrawerVisible"
-      :width="360"
-      :footer="false"
-      placement="right"
-      :mask-closable="true"
-      unmount-on-close
-      class="chat-drawer ai"
-    >
-      <template #title>
-        <div class="drawer-title">
-          <div class="title-actions">
-            <span class="drawer-title-text">{{ t('chat.aiTab') }}</span>
-          </div>
-        </div>
-      </template>
-
-      <div class="drawer-content ai">
+      <div v-if="!isAIMinimized" class="popup-content ai">
         <div class="ai-chat-container">
-          <a-card class="chatbot-card" :bordered="false">
-            <AIChatbot
-              ref="chatbotRef"
-              :suppress-connection-notice="true"
-              :enable-health-check="false"
-              :connection-status="aiConnected"
-              @session-state="handleSessionState"
-            />
-          </a-card>
+          <AIChatbot
+            ref="chatbotRef"
+            :suppress-connection-notice="true"
+            :enable-health-check="false"
+            :connection-status="aiConnected"
+            :staff-chat-mode="isStaffChatMode"
+            :staff-conversation-id="staffChatConversationId"
+            :staff-receiver-id="staffChatReceiverId"
+            @session-state="handleSessionState"
+            @redirect-to-staff="handleRedirectToStaff"
+            @staff-message-sent="handleStaffMessageSent"
+          />
         </div>
       </div>
-    </a-drawer>
 
-    <!-- Staff floating chat button -->
+    </div>
+
+    <!-- AI floating chat button -->
     <div class="floating-buttons">
-      <a-button
-        v-if="showStaffButton"
-        type="primary"
-        shape="circle"
-        size="large"
-        class="floating-btn staff-btn"
-        @click="toggleStaffDrawer"
-      >
-        <template #icon>
-          <span class="dual-icon">
-            <icon-message :size="28" />
-          </span>
-        </template>
-        <div
-          v-if="!chatStore.wsConnected"
-          class="connection-indicator"
-          :class="{ connecting: chatStore.wsConnecting }"
-          :title="chatStore.wsConnecting ? 'Đang kết nối...' : 'Mất kết nối'"
-        />
-        <a-badge v-if="totalUnreadBadge > 0" :count="totalUnreadBadge" :offset="[-6, -6]" />
-      </a-button>
-
-      <a-button
-        type="primary"
-        shape="circle"
-        size="large"
+      <button
         class="floating-btn ai-btn"
         @click="toggleAIDrawer"
+        aria-label="AI Chat"
       >
-        <template #icon>
-          <span class="dual-icon">
-            <icon-robot :size="28" />
-          </span>
-        </template>
-      </a-button>
+        <icon-robot :size="32" />
+        <a-badge v-if="isStaffChatMode && totalUnreadBadge > 0" :count="totalUnreadBadge" :offset="[-8, -8]" />
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { IconMessage, IconUser, IconSend, IconLeft, IconCheckCircle, IconCheckCircleFill, IconRobot } from '@arco-design/web-vue/es/icon'
+import { IconMessage, IconUser, IconSend, IconLeft, IconCheckCircle, IconCheckCircleFill, IconRobot, IconClose } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import dayjs from 'dayjs'
 import useChatStore from '@/stores/chat'
@@ -182,11 +67,11 @@ const chatStore = useChatStore()
 const userStore = useUserStore()
 const { t } = useI18n()
 
-const staffDrawerVisible = ref(false)
 const aiDrawerVisible = ref(false)
-const searchKeyword = ref('')
-const messageInput = ref('')
-const messagesContainer = ref<HTMLElement | null>(null)
+const isAIMinimized = ref(false)
+const isStaffChatMode = ref(false)
+const staffChatConversationId = ref<number | null>(null)
+const staffChatReceiverId = ref<number | null>(null)
 
 const aiConnected = ref(false)
 const chatbotRef = ref<InstanceType<typeof AIChatbot> | null>(null)
@@ -197,7 +82,7 @@ const activeConversation = computed(() => chatStore.activeConversation)
 const activeMessages = computed(() => chatStore.activeMessages)
 
 const totalUnreadBadge = computed(() => {
-  if (!isAuthenticated.value || isCustomer.value) return 0
+  if (!isAuthenticated.value) return 0
   const convs = chatStore.conversations || []
   if (convs.length === 0) return 0
   return convs.reduce((sum: number, c: any) => {
@@ -206,35 +91,33 @@ const totalUnreadBadge = computed(() => {
   }, 0)
 })
 
-const showStaffButton = computed(() => true)
-
 function getOtherUserName(conv: any) {
+  // Handle customer-staff conversations
+  if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (userStore.id === conv.khachHangId) {
+      return conv.nhanVienName || ''
+    } else if (userStore.id === conv.nhanVienId) {
+      return conv.khachHangName || ''
+    }
+  }
+  // Handle staff-staff conversations
   return userStore.id === conv.nhanVien1Id ? conv.nhanVien2Name : conv.nhanVien1Name
 }
 
 function getUnreadCount(conv: any) {
+  // Handle customer-staff conversations
+  if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (userStore.id === conv.khachHangId) {
+      return conv.unreadCountNv1 || 0
+    } else if (userStore.id === conv.nhanVienId) {
+      return conv.unreadCountNv2 || 0
+    }
+  }
+  // Handle staff-staff conversations
   return userStore.id === conv.nhanVien1Id ? conv.unreadCountNv1 : conv.unreadCountNv2
 }
 
-function scrollToBottom() {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-  }
-}
-
-const activeConversationName = computed(() => {
-  if (!activeConversation.value) return ''
-  return getOtherUserName(activeConversation.value)
-})
-
-const filteredConversations = computed(() => {
-  const conversations = chatStore.conversations
-  if (!searchKeyword.value) return conversations
-  return conversations.filter((conv) => {
-    const name = getOtherUserName(conv).toLowerCase()
-    return name.includes(searchKeyword.value.toLowerCase())
-  })
-})
+// Helper functions for staff chat (used in findAvailableStaff)
 
 function getLastMessagePreview(conv: any): string {
   const text: string = conv.lastMessageContent || ''
@@ -253,29 +136,36 @@ function getLastMessagePreview(conv: any): string {
   return isMine ? t('chat.previewYou', { text: content }) : content
 }
 
-function toggleStaffDrawer() {
-  if (!isAuthenticated.value) {
-    Message.info(t('chat.loginRequired'))
-    return
+function toggleAIDrawer() {
+  aiDrawerVisible.value = !aiDrawerVisible.value
+  if (aiDrawerVisible.value && !aiConnected.value && !isStaffChatMode.value) {
+    checkAIConnection()
   }
-
-  if (isCustomer.value) {
-    Message.info(t('chat.staffLoginRequired'))
-    return
-  }
-
-  staffDrawerVisible.value = !staffDrawerVisible.value
-
-  if (staffDrawerVisible.value && chatStore.conversations.length === 0) {
-    chatStore.fetchConversations()
-    chatStore.fetchUnreadCount()
+  if (aiDrawerVisible.value && isStaffChatMode.value) {
+    // Ensure WebSocket is connected for staff chat
+    if (!chatStore.wsConnected && !chatStore.wsConnecting) {
+      chatStore.connectWebSocket()
+    }
+    if (chatStore.conversations.length === 0) {
+      chatStore.fetchConversations()
+      chatStore.fetchUnreadCount()
+    }
   }
 }
 
-function toggleAIDrawer() {
-  aiDrawerVisible.value = !aiDrawerVisible.value
-  if (aiDrawerVisible.value && !aiConnected.value) {
-    checkAIConnection()
+function toggleAIMinimize() {
+  isAIMinimized.value = !isAIMinimized.value
+}
+
+function closeAIPopup() {
+  aiDrawerVisible.value = false
+  isAIMinimized.value = false
+  isStaffChatMode.value = false
+  staffChatConversationId.value = null
+  staffChatReceiverId.value = null
+  // Reset active conversation when closing
+  if (chatStore.activeConversationId !== null) {
+    chatStore.setActiveConversation(null, { userInitiated: false })
   }
 }
 
@@ -288,169 +178,189 @@ async function checkAIConnection() {
   }
 }
 
-async function selectConversation(id: number) {
-  if (!isAuthenticated.value || isCustomer.value) return
-  chatStore.setActiveConversation(id, { userInitiated: true })
-  const conv = chatStore.conversations.find((c) => c.id === id)
-  if (conv) {
-    const otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
-    await chatStore.fetchMessages(otherUserId)
-
-    await nextTick()
-    scrollToBottom()
-
-    const unreadCount = getUnreadCount(conv)
-    if (unreadCount > 0) {
-      await chatStore.markAsRead(otherUserId, id)
-    }
-  }
-}
-
-function backToList() {
-  chatStore.setActiveConversation(null, { userInitiated: false })
-}
-
-function formatTime(time: string | null | undefined) {
-  if (!time) return ''
-  const now = dayjs()
-  const msgTime = dayjs(time)
-  if (now.diff(msgTime, 'day') === 0) return msgTime.format('HH:mm')
-  if (now.diff(msgTime, 'day') === 1) return t('chat.yesterday')
-  return msgTime.format('DD/MM')
-}
-
-function formatMessageTime(time: string | null | undefined) {
-  if (!time) return ''
-  return dayjs(time).format('HH:mm')
-}
-
-async function sendMessage() {
-  if (!messageInput.value.trim() || !activeConversation.value || !isAuthenticated.value || isCustomer.value) return
-
-  const conv = activeConversation.value
-  const otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
-
-  try {
-    await chatStore.sendMessageViaWebSocket({
-      receiverId: otherUserId,
-      content: messageInput.value.trim(),
-      messageType: 'TEXT',
-    })
-    messageInput.value = ''
-    await nextTick()
-    scrollToBottom()
-  } catch (error: any) {
-    Message.error(t('chat.sendError', { message: error.message }))
-  }
-}
-
-function handleScroll() {
-  // Placeholder for future infinite scroll/pagination
-}
-
-function onEnterKey(event: KeyboardEvent) {
-  event.preventDefault()
-  if (messageInput.value.trim()) {
-    sendMessage()
-  }
-}
-
-function handleNewLine(_event: KeyboardEvent) {
-  // Allow default newline on Shift+Enter
-}
+// Helper functions for staff chat mode
 
 function handleSessionState(state: any) {
   // eslint-disable-next-line no-console
   console.log('Session state updated:', state)
 }
 
-watch(
-  () => activeMessages.value.length,
-  async () => {
-    if (isCustomer.value || !staffDrawerVisible.value) return
-    await nextTick()
-    scrollToBottom()
+async function handleRedirectToStaff() {
+  // Switch to staff chat mode in the same window
+  isStaffChatMode.value = true
+  
+  // Ensure WebSocket is connected
+  if (!chatStore.wsConnected && !chatStore.wsConnecting) {
+    await chatStore.connectWebSocket()
   }
-)
-
-watch(
-  () => activeMessages.value,
-  async (messages) => {
-    if (!isAuthenticated.value || isCustomer.value) return
-    if (!staffDrawerVisible.value || !activeConversation.value) return
-
-    if (Array.isArray(messages) && messages.length > 0) {
-      const otherUserId =
-        userStore.id === activeConversation.value.nhanVien1Id ? activeConversation.value.nhanVien2Id : activeConversation.value.nhanVien1Id
-
-      const newUnreadMessages = messages.filter((msg: any) => msg.senderId === otherUserId && !msg.isRead)
-
-      if (newUnreadMessages.length > 0 && chatStore.activeConversationUserInitiated) {
-        try {
-          await chatStore.markAsRead(otherUserId, activeConversation.value.id)
-        } catch (error) {
-          console.error('Error auto-marking new messages as read:', error)
-        }
+  
+  // Fetch conversations and online users
+  await chatStore.fetchConversations()
+  await chatStore.fetchOnlineUsers()
+  
+  // Find an available online staff member
+  const availableStaff = findAvailableStaff()
+  
+  if (availableStaff) {
+    await nextTick()
+    
+    // Set staff chat receiver ID
+    if (availableStaff.id) {
+      // Existing conversation
+      staffChatConversationId.value = availableStaff.id
+      staffChatReceiverId.value = availableStaff.nhanVienId || null
+      
+      // Set as active conversation and load messages
+      chatStore.setActiveConversation(availableStaff.id, { userInitiated: true })
+      if (availableStaff.nhanVienId) {
+        await chatStore.fetchMessages(availableStaff.nhanVienId)
       }
-    }
-  },
-  { deep: true, immediate: false }
-)
-
-watch(activeConversation, async (newConv) => {
-  if (isCustomer.value || !staffDrawerVisible.value) return
-  if (newConv) {
-    await nextTick()
-    scrollToBottom()
-  }
-})
-
-watch(staffDrawerVisible, async (visible) => {
-  if (visible) {
-    if (!chatStore.wsConnected && !chatStore.wsConnecting) {
-      await chatStore.connectWebSocket()
-    }
-
-    if (chatStore.conversations.length === 0) {
-      await chatStore.fetchConversations()
-    }
-    await chatStore.fetchUnreadCount()
-
-    if (activeConversation.value) {
-      await nextTick()
-      scrollToBottom()
+    } else if (availableStaff.nhanVienId) {
+      // New conversation - will be created when first message is sent
+      staffChatReceiverId.value = availableStaff.nhanVienId
+      staffChatConversationId.value = null
     }
   } else {
-    if (chatStore.activeConversationId !== null) {
-      chatStore.setActiveConversation(null, { userInitiated: false })
-    }
-    messageInput.value = ''
+    // Show a message that no staff is available
+    Message.info('Hiện tại không có nhân viên trực tuyến. Vui lòng thử lại sau hoặc để lại tin nhắn.')
+    isStaffChatMode.value = false
   }
-})
+}
+
+function handleStaffMessageSent(message: string) {
+  // Message was sent, refresh conversations to get the new one if needed
+  if (staffChatConversationId.value === null && staffChatReceiverId.value) {
+    setTimeout(async () => {
+      await chatStore.fetchConversations()
+      // Find the new conversation
+      const newConv = chatStore.conversations.find((conv) => {
+        if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return conv.nhanVienId === staffChatReceiverId.value
+        }
+        return false
+      })
+      if (newConv) {
+        staffChatConversationId.value = newConv.id
+      }
+    }, 500)
+  }
+}
+
+function findAvailableStaff(): any {
+  // First, try to find an existing conversation with an online staff member
+  const onlineStaffIds = Array.from(chatStore.onlineUsers)
+  
+  if (onlineStaffIds.length === 0) {
+    return null
+  }
+  
+  // Find conversations with online staff (customer-staff conversations)
+  const staffConversations = chatStore.conversations.filter((conv) => {
+    if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+      return onlineStaffIds.includes(conv.nhanVienId || 0)
+    }
+    return false
+  })
+  
+  // If we have an existing conversation with an online staff, use it
+  if (staffConversations.length > 0) {
+    // Prefer staff with fewer unread messages (less busy)
+    staffConversations.sort((a, b) => {
+      const aUnread = getUnreadCount(a)
+      const bUnread = getUnreadCount(b)
+      return aUnread - bUnread
+    })
+    return staffConversations[0]
+  }
+  
+  // No existing conversation, we'll need to create one
+  // For now, return the first online staff ID
+  // The conversation will be created when the first message is sent
+  return { id: null, nhanVienId: onlineStaffIds[0] }
+}
+
+// Watch functions removed - AI chatbot handles its own message display
 
 watch(aiDrawerVisible, async (visible) => {
-  if (visible && !aiConnected.value) {
-    await checkAIConnection()
+  if (visible) {
+    if (isStaffChatMode.value) {
+      // Staff chat mode
+      if (!chatStore.wsConnected && !chatStore.wsConnecting) {
+        await chatStore.connectWebSocket()
+      }
+      if (chatStore.conversations.length === 0) {
+        await chatStore.fetchConversations()
+      }
+      await chatStore.fetchUnreadCount()
+    } else {
+      // AI chat mode
+      if (!aiConnected.value) {
+        await checkAIConnection()
+      }
+    }
+  } else {
+    // When closing, reset if in staff mode
+    if (isStaffChatMode.value && chatStore.activeConversationId !== null) {
+      chatStore.setActiveConversation(null, { userInitiated: false })
+    }
   }
 })
 
 watch(
   () => chatStore.totalUnreadCount,
   (newCount, oldCount) => {
-    if (isCustomer.value) return
     if (newCount > oldCount && newCount > 0) {
       console.log(`📬 New message! Unread count: ${newCount}`)
     }
   }
 )
 
+// Watch for new messages when in staff chat mode to ensure active conversation is set
 watch(
-  () => [staffDrawerVisible.value, activeConversation.value, activeMessages.value],
-  async ([isDrawerOpen, currentConv, messages]) => {
-    if (!isDrawerOpen || isCustomer.value) return
-    if (!currentConv || !Array.isArray(messages) || messages.length === 0) return
+  () => [chatStore.messages, isStaffChatMode.value, staffChatReceiverId.value, staffChatConversationId.value],
+  ([, isStaffMode, receiverId, convId]) => {
+    if (!isStaffMode || !receiverId || typeof receiverId !== 'number') return
+    
+    // If we have a conversation ID but it's not active, set it as active
+    if (convId && typeof convId === 'number' && chatStore.activeConversationId !== convId) {
+      chatStore.setActiveConversation(convId, { userInitiated: true })
+      chatStore.fetchMessages(receiverId)
+    } else if (!convId && receiverId) {
+      // No conversation ID yet, but we have a receiver ID
+      // Check if a conversation exists for this receiver
+      const matchingConv = chatStore.conversations.find((c: any) => {
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return c.nhanVienId === receiverId && c.khachHangId === userStore.id
+        }
+        return false
+      })
+      
+      if (matchingConv && matchingConv.id) {
+        // Found the conversation, update our state
+        staffChatConversationId.value = matchingConv.id
+        chatStore.setActiveConversation(matchingConv.id, { userInitiated: true })
+        chatStore.fetchMessages(receiverId)
+      }
+    }
+  },
+  { deep: true }
+)
 
-    const otherUserId = userStore.id === currentConv.nhanVien1Id ? currentConv.nhanVien2Id : currentConv.nhanVien1Id
+watch(
+  () => [isStaffChatMode.value, aiDrawerVisible.value, activeConversation.value, activeMessages.value] as const,
+  async ([isStaffMode, isAIVisible, currentConv, messages]) => {
+    if (!isStaffMode || !isAIVisible) return
+    if (!currentConv || !Array.isArray(messages) || messages.length === 0) return
+    // Type guard: ensure currentConv is a Conversation
+    if (typeof currentConv !== 'object' || !('id' in currentConv)) return
+
+    let otherUserId: number | undefined
+    if (currentConv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+      otherUserId = userStore.id === currentConv.khachHangId ? currentConv.nhanVienId : currentConv.khachHangId
+    } else {
+      otherUserId = userStore.id === currentConv.nhanVien1Id ? currentConv.nhanVien2Id : currentConv.nhanVien1Id
+    }
+    if (!otherUserId) return
     const hasUnreadMessages = messages.some((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
     if (hasUnreadMessages && chatStore.activeConversationUserInitiated) {
@@ -464,25 +374,15 @@ watch(
   { deep: true, immediate: false }
 )
 
-watch(isCustomer, (value) => {
-  if (value) {
-    staffDrawerVisible.value = false
-    chatStore.resetState()
-  }
-})
+// Removed customer watch - customers can now use chat
 
 watch(
   () => isAuthenticated.value,
   async (loggedIn) => {
     if (!loggedIn) {
-      staffDrawerVisible.value = false
       aiDrawerVisible.value = false
+      isStaffChatMode.value = false
       chatStore.resetState()
-      return
-    }
-
-    if (isCustomer.value) {
-      await checkAIConnection()
       return
     }
 
@@ -496,7 +396,7 @@ watch(
 )
 
 onMounted(async () => {
-  if (isAuthenticated.value && !isCustomer.value) {
+  if (isAuthenticated.value) {
     await chatStore.fetchConversations()
     await chatStore.fetchUnreadCount()
     if (!chatStore.wsConnected && !chatStore.wsConnecting) {
@@ -515,6 +415,102 @@ onMounted(async () => {
   position: relative;
 }
 
+.chat-popup {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  width: 380px;
+  max-height: 600px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.minimized {
+    max-height: 60px;
+    overflow: hidden;
+  }
+
+  &.staff-popup {
+    width: 500px;
+  }
+
+  &.ai-popup {
+    width: 500px;
+  }
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.popup-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.popup-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #111;
+}
+
+.popup-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: color 0.2s ease;
+  border-radius: 4px;
+
+  &:hover {
+    color: #111;
+    background: #f5f5f5;
+  }
+
+  svg {
+    display: block;
+  }
+}
+
+.popup-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  background: #fafafa;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+
+  &.ai {
+    padding: 0;
+    background: #fff;
+  }
+}
+
+.popup-btn.close-btn {
+  :deep(.arco-icon) {
+    font-size: 16px;
+  }
+}
+
 .floating-buttons {
   position: fixed;
   bottom: 24px;
@@ -525,46 +521,37 @@ onMounted(async () => {
   z-index: 999;
 }
 
-.dual-icon {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  :deep(.arco-icon) {
-    display: block;
-  }
-}
 
 .floating-btn {
   position: relative;
-  width: 72px;
-  height: 72px;
-  border-radius: 50% !important;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: #111;
+  border: none;
+  color: #fff;
+  cursor: pointer;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  line-height: 1 !important;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+    background: #1a1a1a;
   }
 
-  :deep(.arco-btn-icon) {
-    margin: 0 !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  &:active {
+    transform: translateY(0);
   }
 
   :deep(.arco-icon) {
-    margin: 0 !important;
+    color: #fff;
+    margin: 0;
     display: block;
   }
 
@@ -576,13 +563,13 @@ onMounted(async () => {
 
   .connection-indicator {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 10px;
-    height: 10px;
+    top: 10px;
+    left: 10px;
+    width: 12px;
+    height: 12px;
     background-color: #f5222d;
     border-radius: 50%;
-    border: 1px solid #fff;
+    border: 2px solid #111;
     z-index: 1;
 
     &.connecting {
@@ -592,71 +579,14 @@ onMounted(async () => {
   }
 }
 
-.drawer-title {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-}
-
-.drawer-title-text {
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.title-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chat-drawer :deep(.arco-drawer-header) {
-  position: relative;
-  display: block;
-  text-align: center;
-}
-
-.chat-drawer :deep(.arco-drawer-header-title) {
-  display: inline-block;
-}
-
-.chat-drawer :deep(.arco-drawer-close-btn) {
-  position: absolute;
-  right: 16px;
-}
-
-.drawer-content {
-  height: calc(100vh - 120px);
-  display: flex;
-  flex-direction: column;
-}
-
-.drawer-content.ai {
-  height: calc(100vh - 120px);
-}
 
 .ai-chat-container {
   height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-
-  .chatbot-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    box-shadow: none;
-    border: none;
-
-    :deep(.arco-card-body) {
-      flex: 1;
-      display: flex !important;
-      flex-direction: column !important;
-      padding: 0 !important;
-      overflow: hidden !important;
-      min-height: 0 !important;
-    }
-  }
+  min-height: 0;
 
   :deep(.ai-chatbot) {
     height: 100%;
@@ -664,28 +594,6 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     min-height: 0;
-
-    .chatbot-card {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      box-shadow: none;
-      border: none;
-      min-height: 0;
-
-      :deep(.arco-card-header) {
-        flex-shrink: 0;
-      }
-
-      :deep(.arco-card-body) {
-        flex: 1;
-        display: flex !important;
-        flex-direction: column !important;
-        padding: 0 !important;
-        overflow: hidden !important;
-        min-height: 0 !important;
-      }
-    }
 
     .messages-container {
       overflow-y: auto;
@@ -878,3 +786,5 @@ onMounted(async () => {
   }
 }
 </style>
+
+

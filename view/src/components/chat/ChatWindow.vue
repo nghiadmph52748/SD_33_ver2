@@ -8,7 +8,10 @@
             <icon-user />
           </a-avatar>
           <div class="user-details">
-            <h4>{{ otherUserName }}</h4>
+            <h4>
+              {{ otherUserName }}
+              <span v-if="isCustomerConversation" class="customer-badge">(KH)</span>
+            </h4>
             <span v-if="isOtherUserOnline" class="status-online">
               <icon-check-circle-fill />
               {{ $t('chat.status.active') }}
@@ -17,7 +20,36 @@
           </div>
         </div>
         <div class="header-actions">
-          <!-- Có thể thêm actions như call, video call, info -->
+          <!-- AI history is now auto-loaded, button removed for cleaner UI -->
+        </div>
+      </div>
+
+      <!-- AI Chat History Section - Auto-loaded for customer conversations -->
+      <div v-if="isCustomerConversation && aiHistory.length > 0" class="ai-history-section">
+        <div class="ai-history-header">
+          <span class="ai-history-title">
+            <icon-robot :size="16" style="margin-right: 6px; vertical-align: middle;" />
+            Lịch sử AI Chat trước khi nhân viên tham gia
+          </span>
+          <a-button type="text" size="small" @click="loadAiHistory">
+            <template #icon>
+              <icon-refresh />
+            </template>
+            Tải lại
+          </a-button>
+        </div>
+        <div class="ai-history-content">
+          <div class="ai-history-messages">
+            <div
+              v-for="(msg, index) in aiHistory"
+              :key="index"
+              :class="['ai-history-message', msg.role]"
+            >
+              <div class="ai-message-role">{{ msg.role === 'user' ? 'Khách hàng' : 'AI' }}</div>
+              <div class="ai-message-content" v-html="formatAiMessage(msg.content)"></div>
+              <div class="ai-message-time">{{ formatTime(msg.timestamp) }}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -65,17 +97,21 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
-import { IconUser, IconCheckCircleFill, IconSend, IconMessage } from '@arco-design/web-vue/es/icon'
+import { IconUser, IconCheckCircleFill, IconSend, IconMessage, IconRobot, IconRefresh } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import useChatStore from '@/store/modules/chat'
 import useUserStore from '@/store/modules/user'
 import MessageItem from './MessageItem.vue'
+import { getCustomerAiChatHistory } from '@/api/chat'
+import dayjs from 'dayjs'
 
 const chatStore = useChatStore()
 const userStore = useUserStore()
 
 const messageInput = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
+const loadingAiHistory = ref(false)
+const aiHistory = ref<any[]>([])
 
 /**
  * Cuộc trò chuyện đang active
@@ -92,11 +128,23 @@ const messages = computed(() => chatStore.activeMessages)
  */
 const otherUserName = computed(() => {
   if (!activeConversation.value) return ''
+  const conv = activeConversation.value
   const currentUserId = userStore.id
-  if (currentUserId === activeConversation.value.nhanVien1Id) {
-    return activeConversation.value.nhanVien2Name
+  
+  // Handle customer-staff conversations
+  if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (currentUserId === conv.nhanVienId) {
+      return conv.khachHangName || 'Khách hàng'
+    } else if (currentUserId === conv.khachHangId) {
+      return conv.nhanVienName || 'Nhân viên'
+    }
   }
-  return activeConversation.value.nhanVien1Name
+  
+  // Handle staff-staff conversations
+  if (currentUserId === conv.nhanVien1Id) {
+    return conv.nhanVien2Name || ''
+  }
+  return conv.nhanVien1Name || ''
 })
 
 /**
@@ -104,11 +152,23 @@ const otherUserName = computed(() => {
  */
 const otherUserId = computed(() => {
   if (!activeConversation.value) return null
+  const conv = activeConversation.value
   const currentUserId = userStore.id
-  if (currentUserId === activeConversation.value.nhanVien1Id) {
-    return activeConversation.value.nhanVien2Id
+  
+  // Handle customer-staff conversations
+  if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (currentUserId === conv.khachHangId) {
+      return conv.nhanVienId || null
+    } else if (currentUserId === conv.nhanVienId) {
+      return conv.khachHangId || null
+    }
   }
-  return activeConversation.value.nhanVien1Id
+  
+  // Handle staff-staff conversations
+  if (currentUserId === conv.nhanVien1Id) {
+    return conv.nhanVien2Id || null
+  }
+  return conv.nhanVien1Id || null
 })
 
 /**
@@ -117,6 +177,15 @@ const otherUserId = computed(() => {
 const isOtherUserOnline = computed(() => {
   if (!otherUserId.value) return false
   return chatStore.onlineUsers.has(otherUserId.value)
+})
+
+/**
+ * Check if current conversation is with a customer
+ */
+const isCustomerConversation = computed(() => {
+  if (!activeConversation.value) return false
+  return activeConversation.value.loaiCuocTraoDoi === 'CUSTOMER_STAFF' && 
+         activeConversation.value.khachHangId !== null
 })
 
 /**
@@ -141,6 +210,14 @@ watch(
       // Load messages
       await chatStore.fetchMessages(otherUserId.value)
 
+      // Load AI chat history if this is a customer conversation
+      if (isCustomerConversation.value && activeConversation.value?.khachHangId) {
+        await loadAiHistory()
+      } else {
+        // Clear AI history if not a customer conversation
+        aiHistory.value = []
+      }
+
       // Scroll to bottom
       await nextTick()
       scrollToBottom()
@@ -149,6 +226,9 @@ watch(
       if (chatStore.activeConversationUserInitiated) {
         await chatStore.markAsRead(otherUserId.value)
       }
+    } else {
+      // Clear AI history when no conversation is active
+      aiHistory.value = []
     }
   },
   { immediate: true }
@@ -217,6 +297,55 @@ async function handleSendMessage(event: KeyboardEvent | MouseEvent) {
 function handleNewLine(_event: KeyboardEvent) {
   // Allow default behavior (newline)
 }
+
+/**
+ * Load AI chat history for the customer
+ */
+async function loadAiHistory() {
+  if (!isCustomerConversation.value || !activeConversation.value?.khachHangId) {
+    aiHistory.value = []
+    return
+  }
+  
+  loadingAiHistory.value = true
+  try {
+    const customerId = activeConversation.value.khachHangId
+    console.log('📥 Loading AI chat history for customer:', customerId)
+    const response = await getCustomerAiChatHistory(customerId)
+    aiHistory.value = response.data?.data || []
+    console.log('✅ Loaded AI chat history:', aiHistory.value.length, 'messages')
+    if (aiHistory.value.length > 0) {
+      console.log('📋 Session ID:', aiHistory.value[0]?.sessionId)
+    }
+  } catch (error: any) {
+    // Silently fail - don't show error if AI history doesn't exist
+    console.error('❌ Failed to load AI chat history:', error)
+    aiHistory.value = []
+  } finally {
+    loadingAiHistory.value = false
+  }
+}
+
+/**
+ * Format AI message content (support markdown)
+ */
+function formatAiMessage(content: string): string {
+  if (!content) return ''
+  // Simple markdown to HTML conversion
+  let formatted = content
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>')
+  return formatted
+}
+
+/**
+ * Format timestamp
+ */
+function formatTime(timestamp: string | Date): string {
+  if (!timestamp) return ''
+  return dayjs(timestamp).format('DD/MM/YYYY HH:mm')
+}
 </script>
 
 <style scoped lang="less">
@@ -250,6 +379,15 @@ function handleNewLine(_event: KeyboardEvent) {
         font-size: 16px;
         font-weight: 500;
         color: var(--color-text-1);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .customer-badge {
+          font-size: 10px;
+          color: #52c41a;
+          font-weight: 400;
+        }
       }
 
       .status-online {
@@ -335,6 +473,92 @@ function handleNewLine(_event: KeyboardEvent) {
 
   :deep(.arco-empty-image) {
     margin-bottom: 16px;
+  }
+}
+
+.ai-history-section {
+  border-bottom: 1px solid var(--color-border-2);
+  background: linear-gradient(to bottom, rgba(var(--primary-6), 0.05) 0%, var(--color-bg-2) 100%);
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  border-top: 2px solid rgb(var(--primary-6));
+}
+
+.ai-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-2);
+  background: rgba(var(--primary-6), 0.05);
+
+  .ai-history-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: rgb(var(--primary-6));
+    display: flex;
+    align-items: center;
+  }
+}
+
+.ai-history-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  max-height: 350px;
+}
+
+.ai-history-empty {
+  padding: 20px;
+  text-align: center;
+}
+
+.ai-history-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-history-message {
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--color-bg-1);
+  border: 1px solid var(--color-border-2);
+
+  &.user {
+    border-left: 3px solid rgb(var(--primary-6));
+  }
+
+  &.assistant {
+    border-left: 3px solid rgb(var(--success-6));
+  }
+
+  .ai-message-role {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-2);
+    margin-bottom: 6px;
+  }
+
+  .ai-message-content {
+    font-size: 14px;
+    color: var(--color-text-1);
+    line-height: 1.6;
+    margin-bottom: 6px;
+
+    :deep(strong) {
+      font-weight: 600;
+    }
+
+    :deep(em) {
+      font-style: italic;
+    }
+  }
+
+  .ai-message-time {
+    font-size: 11px;
+    color: var(--color-text-3);
   }
 }
 </style>

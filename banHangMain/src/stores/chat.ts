@@ -70,33 +70,31 @@ const useChatStore = defineStore('chat', {
       const currentUserId = userStore.id
       if (!currentUserId) return 0
 
-      if (currentUserId === conversation.nhanVien1Id) {
-        return conversation.unreadCountNv1
-      }
-      if (currentUserId === conversation.nhanVien2Id) {
-        return conversation.unreadCountNv2
+      // Handle customer-staff conversations
+      if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+        if (currentUserId === conversation.khachHangId) {
+          return conversation.unreadCountNv1 || 0
+        }
+        if (currentUserId === conversation.nhanVienId) {
+          return conversation.unreadCountNv2 || 0
+        }
+      } else {
+        // Handle staff-staff conversations
+        if (currentUserId === conversation.nhanVien1Id) {
+          return conversation.unreadCountNv1 || 0
+        }
+        if (currentUserId === conversation.nhanVien2Id) {
+          return conversation.unreadCountNv2 || 0
+        }
       }
       return 0
     },
   },
 
   actions: {
-    ensureStaffChatAvailable(): boolean {
-      const userStore = useUserStore()
-      const profile = userStore.profile as Record<string, any> | null
-      const isStaffAccount = !!profile && !profile.maKhachHang
-      if (isStaffAccount) {
-        return true
-      }
-      if (!this.staffChatUnavailableNotified) {
-        Message.info(i18n.global.t('chat.staffLoginRequired'))
-        this.staffChatUnavailableNotified = true
-      }
-      return false
-    },
+    // Removed ensureStaffChatAvailable - customers can now use chat
 
     async fetchConversations() {
-      if (!this.ensureStaffChatAvailable()) return
       this.loadingConversations = true
       try {
         const response = await layDanhSachCuocTroChuyen()
@@ -112,7 +110,6 @@ const useChatStore = defineStore('chat', {
     },
 
     async fetchMessages(otherUserId: number, page = 0, size = 50) {
-      if (!this.ensureStaffChatAvailable()) return
       this.loadingMessages = true
       try {
         const response = await layDanhSachTinNhan(otherUserId, page, size)
@@ -144,7 +141,6 @@ const useChatStore = defineStore('chat', {
     },
 
     async sendMessageViaAPI(request: SendMessageRequest) {
-      if (!this.ensureStaffChatAvailable()) return null
       this.sendingMessage = true
       try {
         const response = await guiTinNhan(request)
@@ -160,7 +156,6 @@ const useChatStore = defineStore('chat', {
     },
 
     async sendMessageViaWebSocket(message: WebSocketSendMessage) {
-      if (!this.ensureStaffChatAvailable()) return null
       if (!this.stompClient || !this.wsConnected) {
         Message.warning('WebSocket chưa kết nối. Đang gửi qua API...')
         return this.sendMessageViaAPI(message)
@@ -204,7 +199,6 @@ const useChatStore = defineStore('chat', {
     },
 
     async markAsRead(senderId: number, conversationId?: number) {
-      if (!this.ensureStaffChatAvailable()) return
       try {
         await danhDauDaDoc(senderId)
 
@@ -214,20 +208,39 @@ const useChatStore = defineStore('chat', {
 
         let conversation = conversationId ? this.conversations.find((c) => c.id === conversationId) : null
         if (!conversation) {
-          conversation = this.conversations.find(
-            (c) =>
+          conversation = this.conversations.find((c) => {
+            // Handle customer-staff conversations
+            if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+              return (
+                (c.khachHangId === senderId && c.nhanVienId === currentUserId) ||
+                (c.nhanVienId === senderId && c.khachHangId === currentUserId)
+              )
+            }
+            // Handle staff-staff conversations
+            return (
               (c.nhanVien1Id === senderId && c.nhanVien2Id === currentUserId) ||
               (c.nhanVien2Id === senderId && c.nhanVien1Id === currentUserId)
-          )
+            )
+          })
         }
 
         if (conversation) {
           const idx = this.conversations.findIndex((c) => c.id === conversation.id)
           if (idx >= 0) {
-            if (currentUserId === conversation.nhanVien1Id) {
-              this.conversations[idx].unreadCountNv1 = 0
-            } else if (currentUserId === conversation.nhanVien2Id) {
-              this.conversations[idx].unreadCountNv2 = 0
+            if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+              // Customer-staff conversation
+              if (currentUserId === conversation.khachHangId) {
+                this.conversations[idx].unreadCountNv1 = 0
+              } else if (currentUserId === conversation.nhanVienId) {
+                this.conversations[idx].unreadCountNv2 = 0
+              }
+            } else {
+              // Staff-staff conversation
+              if (currentUserId === conversation.nhanVien1Id) {
+                this.conversations[idx].unreadCountNv1 = 0
+              } else if (currentUserId === conversation.nhanVien2Id) {
+                this.conversations[idx].unreadCountNv2 = 0
+              }
             }
             conversation.unreadCountNv1 = this.conversations[idx].unreadCountNv1
             conversation.unreadCountNv2 = this.conversations[idx].unreadCountNv2
@@ -251,10 +264,6 @@ const useChatStore = defineStore('chat', {
     },
 
     async fetchUnreadCount() {
-      if (!this.ensureStaffChatAvailable()) {
-        this.totalUnreadCount = 0
-        return
-      }
       try {
         const response = await laySoTinNhanChuaDoc()
         const count = response.data?.data ?? response.data ?? 0
@@ -266,7 +275,6 @@ const useChatStore = defineStore('chat', {
     },
 
     async fetchOnlineUsers() {
-      if (!this.ensureStaffChatAvailable()) return
       try {
         const token = getToken()
         const baseUrl = axios.defaults.baseURL || 'http://localhost:8080'
@@ -297,9 +305,6 @@ const useChatStore = defineStore('chat', {
     },
 
     connectWebSocket() {
-      if (!this.ensureStaffChatAvailable()) {
-        return
-      }
 
       if (this.wsConnected || this.wsConnecting) {
         return
@@ -435,11 +440,20 @@ const useChatStore = defineStore('chat', {
       this.addMessageToState(message)
       this.updateConversationWithNewMessage(message)
 
-      const conversationExists = this.conversations.some(
-        (c) =>
+      const conversationExists = this.conversations.some((c) => {
+        // Handle customer-staff conversations
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return (
+            (c.khachHangId === message.senderId && c.nhanVienId === message.receiverId) ||
+            (c.nhanVienId === message.senderId && c.khachHangId === message.receiverId)
+          )
+        }
+        // Handle staff-staff conversations
+        return (
           (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
           (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId)
-      )
+        )
+      })
 
       if (!conversationExists) {
         this.fetchConversations()
@@ -450,9 +464,16 @@ const useChatStore = defineStore('chat', {
       if (this.activeConversationId && this.activeConversationUserInitiated) {
         const activeConv = this.conversations.find((c) => c.id === this.activeConversationId)
         if (activeConv) {
-          const matchesSender =
-            (activeConv.nhanVien1Id === message.senderId && activeConv.nhanVien2Id === currentUserId) ||
-            (activeConv.nhanVien2Id === message.senderId && activeConv.nhanVien1Id === currentUserId)
+          let matchesSender = false
+          if (activeConv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+            matchesSender =
+              (activeConv.khachHangId === message.senderId && activeConv.nhanVienId === currentUserId) ||
+              (activeConv.nhanVienId === message.senderId && activeConv.khachHangId === currentUserId)
+          } else {
+            matchesSender =
+              (activeConv.nhanVien1Id === message.senderId && activeConv.nhanVien2Id === currentUserId) ||
+              (activeConv.nhanVien2Id === message.senderId && activeConv.nhanVien1Id === currentUserId)
+          }
 
           if (matchesSender && message.receiverId === currentUserId) {
             try {
@@ -469,19 +490,31 @@ const useChatStore = defineStore('chat', {
       const userStore = useUserStore()
       const currentUserId = userStore.id
 
-      let conversation = this.conversations.find(
-        (c) =>
+      let conversation = this.conversations.find((c) => {
+        // Handle customer-staff conversations
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return (
+            (c.khachHangId === message.senderId && c.nhanVienId === message.receiverId) ||
+            (c.nhanVienId === message.senderId && c.khachHangId === message.receiverId) ||
+            (c.khachHangId === message.receiverId && c.nhanVienId === message.senderId) ||
+            (c.nhanVienId === message.receiverId && c.khachHangId === message.senderId)
+          )
+        }
+        // Handle staff-staff conversations
+        return (
           (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
           (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId) ||
           (c.nhanVien1Id === message.receiverId && c.nhanVien2Id === message.senderId) ||
           (c.nhanVien2Id === message.receiverId && c.nhanVien1Id === message.senderId)
-      )
+        )
+      })
 
       if (!conversation && currentUserId) {
         const tempId = Date.now()
         conversation = {
           id: tempId,
           maCuocTraoDoi: `temp-${tempId}`,
+          loaiCuocTraoDoi: 'STAFF_STAFF', // Default, will be corrected by backend
           nhanVien1Id: currentUserId,
           nhanVien1Name: userStore.name || '',
           nhanVien2Id: message.senderId === currentUserId ? message.receiverId : message.senderId,
@@ -491,7 +524,7 @@ const useChatStore = defineStore('chat', {
           lastSenderId: message.senderId,
           unreadCountNv1: 0,
           unreadCountNv2: 0,
-        }
+        } as Conversation
         this.conversations.unshift(conversation)
       }
 
@@ -538,16 +571,26 @@ const useChatStore = defineStore('chat', {
       const currentUserId = userStore.id
       if (!currentUserId) return
 
-      let conversation = this.conversations.find(
-        (c) =>
+      let conversation = this.conversations.find((c) => {
+        // Handle customer-staff conversations
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return (
+            (c.khachHangId === message.senderId && c.nhanVienId === message.receiverId) ||
+            (c.nhanVienId === message.senderId && c.khachHangId === message.receiverId)
+          )
+        }
+        // Handle staff-staff conversations
+        return (
           (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
           (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId)
-      )
+        )
+      })
 
       if (!conversation) {
         conversation = {
           id: Date.now(),
           maCuocTraoDoi: `temp-${Date.now()}`,
+          loaiCuocTraoDoi: 'STAFF_STAFF', // Default, will be corrected by backend
           nhanVien1Id: currentUserId,
           nhanVien1Name: userStore.name || '',
           nhanVien2Id: message.senderId === currentUserId ? message.receiverId : message.senderId,
@@ -557,7 +600,7 @@ const useChatStore = defineStore('chat', {
           lastSenderId: message.senderId,
           unreadCountNv1: 0,
           unreadCountNv2: 0,
-        }
+        } as Conversation
         this.conversations.unshift(conversation)
       }
 
@@ -565,13 +608,8 @@ const useChatStore = defineStore('chat', {
       conversation.lastMessageTime = message.sentAt
       conversation.lastSenderId = message.senderId
 
-      if (message.senderId !== currentUserId) {
-        if (currentUserId === conversation.nhanVien1Id) {
-          conversation.unreadCountNv1 = (conversation.unreadCountNv1 || 0) + 1
-        } else if (currentUserId === conversation.nhanVien2Id) {
-          conversation.unreadCountNv2 = (conversation.unreadCountNv2 || 0) + 1
-        }
-      }
+      // Note: Backend handles unread count, so we don't increment here
+      // This is just for temporary conversations
 
       this.updateTotalUnreadCount()
 
@@ -587,11 +625,20 @@ const useChatStore = defineStore('chat', {
         return
       }
 
-      const conversation = this.conversations.find(
-        (c) =>
+      const conversation = this.conversations.find((c) => {
+        // Handle customer-staff conversations
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return (
+            (c.khachHangId === notification.senderId && c.nhanVienId === notification.receiverId) ||
+            (c.nhanVienId === notification.senderId && c.khachHangId === notification.receiverId)
+          )
+        }
+        // Handle staff-staff conversations
+        return (
           (c.nhanVien1Id === notification.senderId && c.nhanVien2Id === notification.receiverId) ||
           (c.nhanVien2Id === notification.senderId && c.nhanVien1Id === notification.receiverId)
-      )
+        )
+      })
 
       if (!conversation) {
         return
@@ -607,10 +654,18 @@ const useChatStore = defineStore('chat', {
         })
       }
 
-      if (currentUserId === conversation.nhanVien1Id) {
-        conversation.unreadCountNv2 = 0
-      } else if (currentUserId === conversation.nhanVien2Id) {
-        conversation.unreadCountNv1 = 0
+      if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+        if (currentUserId === conversation.khachHangId) {
+          conversation.unreadCountNv2 = 0
+        } else if (currentUserId === conversation.nhanVienId) {
+          conversation.unreadCountNv1 = 0
+        }
+      } else {
+        if (currentUserId === conversation.nhanVien1Id) {
+          conversation.unreadCountNv2 = 0
+        } else if (currentUserId === conversation.nhanVien2Id) {
+          conversation.unreadCountNv1 = 0
+        }
       }
     },
 
@@ -623,11 +678,22 @@ const useChatStore = defineStore('chat', {
       }
 
       this.totalUnreadCount = this.conversations.reduce((total, conv) => {
-        if (userId === conv.nhanVien1Id) {
-          return total + (conv.unreadCountNv1 || 0)
-        }
-        if (userId === conv.nhanVien2Id) {
-          return total + (conv.unreadCountNv2 || 0)
+        // Handle customer-staff conversations
+        if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          if (userId === conv.khachHangId) {
+            return total + (conv.unreadCountNv1 || 0)
+          }
+          if (userId === conv.nhanVienId) {
+            return total + (conv.unreadCountNv2 || 0)
+          }
+        } else {
+          // Handle staff-staff conversations
+          if (userId === conv.nhanVien1Id) {
+            return total + (conv.unreadCountNv1 || 0)
+          }
+          if (userId === conv.nhanVien2Id) {
+            return total + (conv.unreadCountNv2 || 0)
+          }
         }
         return total
       }, 0)

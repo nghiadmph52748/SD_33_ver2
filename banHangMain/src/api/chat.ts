@@ -18,10 +18,18 @@ export interface ChatMessage {
 export interface Conversation {
   id: number
   maCuocTraoDoi: string
-  nhanVien1Id: number
-  nhanVien1Name: string
-  nhanVien2Id: number
-  nhanVien2Name: string
+  loaiCuocTraoDoi?: string // STAFF_STAFF, CUSTOMER_STAFF
+  // Staff-staff conversation fields
+  nhanVien1Id?: number
+  nhanVien1Name?: string
+  nhanVien2Id?: number
+  nhanVien2Name?: string
+  // Customer-staff conversation fields
+  khachHangId?: number
+  khachHangName?: string
+  nhanVienId?: number
+  nhanVienName?: string
+  // Common fields
   lastMessageContent: string | null
   lastMessageTime: string | null
   lastSenderId: number | null
@@ -90,4 +98,18 @@ export interface TypingNotification {
   senderId: number
   receiverId: number
   isTyping: boolean
+}
+
+export interface SaveAiChatHistoryRequest {
+  customerId: number
+  sessionId: string
+  role: 'user' | 'assistant'
+  content: string
+}
+
+/**
+ * Lưu lịch sử AI chat
+ */
+export const luuLichSuAiChat = (request: SaveAiChatHistoryRequest) => {
+  return axios.post<ChatResponse<any>>('/api/chat/ai-history', request)
 }

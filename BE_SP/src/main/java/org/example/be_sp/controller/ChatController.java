@@ -1,11 +1,16 @@
 package org.example.be_sp.controller;
 
+import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.NhanVien;
+import org.example.be_sp.model.request.SaveAiChatHistoryRequest;
 import org.example.be_sp.model.request.SendMessageRequest;
 import org.example.be_sp.model.response.ResponseObject;
+import org.example.be_sp.repository.KhachHangRepository;
 import org.example.be_sp.service.ChatService;
 import org.example.be_sp.service.NhanVienService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,7 +34,10 @@ public class ChatController {
 
     private final ChatService chatService;
     private final NhanVienService nhanVienService;
-
+    
+    @Autowired
+    private KhachHangRepository khachHangRepository;
+    
     public ChatController(ChatService chatService, NhanVienService nhanVienService) {
         this.chatService = chatService;
         this.nhanVienService = nhanVienService;
@@ -137,19 +145,104 @@ public class ChatController {
     }
 
     /**
+     * Lấy lịch sử chat AI của khách hàng (chỉ staff mới có quyền)
+     */
+    @GetMapping("/ai-history/{customerId}")
+    public ResponseObject<?> getCustomerAiChatHistory(@PathVariable Integer customerId) {
+        try {
+            // Verify current user is staff (not customer)
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            boolean isCustomer = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equalsIgnoreCase("ROLE_CUSTOMER"));
+            
+            if (isCustomer) {
+                return new ResponseObject<>(false, null, "Chỉ nhân viên mới có quyền xem lịch sử AI chat");
+            }
+            
+            var history = chatService.getCustomerAiChatHistory(customerId);
+            System.out.println("✅ Loaded AI chat history for customer " + customerId + ": " + history.size() + " messages");
+            return new ResponseObject<>(true, 
+                history, 
+                "Lấy lịch sử AI chat thành công");
+        } catch (Exception e) {
+            System.err.println("❌ Error loading AI chat history for customer " + customerId + ": " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseObject<>(false, null, 
+                "Lỗi khi lấy lịch sử AI chat: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Lưu lịch sử chat AI (customer có thể tự lưu, staff cũng có thể lưu cho customer)
+     */
+    @PostMapping("/ai-history")
+    public ResponseObject<?> saveAiChatHistory(@Valid @RequestBody SaveAiChatHistoryRequest request) {
+        try {
+            Integer currentUserId = getCurrentUserId();
+            
+            // Verify that the customer ID matches the current user (if customer) or allow staff to save for any customer
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            boolean isCustomer = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equalsIgnoreCase("ROLE_CUSTOMER"));
+            
+            // If current user is customer, they can only save their own history
+            if (isCustomer && !currentUserId.equals(request.getCustomerId())) {
+                return new ResponseObject<>(false, null, "Bạn chỉ có thể lưu lịch sử AI chat của chính mình");
+            }
+            
+            var saved = chatService.saveAiChatHistory(
+                request.getCustomerId(),
+                request.getSessionId(),
+                request.getRole(),
+                request.getContent()
+            );
+            
+            return new ResponseObject<>(true, 
+                saved, 
+                "Lưu lịch sử AI chat thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, 
+                "Lỗi khi lưu lịch sử AI chat: " + e.getMessage());
+        }
+    }
+
+    /**
      * Lấy ID của người dùng hiện tại từ Security Context
+     * Hỗ trợ cả customer và staff
      */
     private Integer getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("Đạng nhập lại");
+            throw new RuntimeException("Đăng nhập lại");
         }
         
         String username = authentication.getName();
-        NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);
         
+        // Kiểm tra role từ authentication authorities để xác định user type
+        boolean isCustomer = authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(authority -> authority.equalsIgnoreCase("ROLE_CUSTOMER"));
+        
+        // Nếu là customer, tìm trong KhachHang
+        if (isCustomer) {
+            KhachHang khachHang = khachHangRepository.findByTenTaiKhoan(username);
+            if (khachHang != null) {
+                return khachHang.getId();
+            }
+            // Fallback: thử tìm theo email
+            khachHang = khachHangRepository.findByEmail(username);
+            if (khachHang != null) {
+                return khachHang.getId();
+            }
+            throw new RuntimeException("Không tìm thấy khách hàng: " + username);
+        }
+        
+        // Nếu là staff, tìm trong NhanVien
+        NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);
         if (nhanVien == null) {
-            throw new RuntimeException("Không tìm thấy người dùng: " + username);
+            throw new RuntimeException("Không tìm thấy nhân viên: " + username);
         }
         
         return nhanVien.getId();

@@ -18,7 +18,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -38,15 +37,26 @@ public class CuocTraoDoi {
     @Column(name = "ma_cuoc_trao_doi", length = 8, insertable = false, updatable = false)
     private String maCuocTraoDoi;
 
-    @NotNull(message = "Nhân viên 1 không được để trống")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_nhan_vien_1", nullable = false)
+    // Staff-to-staff conversation fields (existing)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_nhan_vien_1")
     private NhanVien nhanVien1;
 
-    @NotNull(message = "Nhân viên 2 không được để trống")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_nhan_vien_2", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_nhan_vien_2")
     private NhanVien nhanVien2;
+
+    // Customer-to-staff conversation fields (new)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_khach_hang")
+    private KhachHang khachHang;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_nhan_vien")
+    private NhanVien nhanVien;
+
+    @Column(name = "loai_cuoc_trao_doi", length = 20)
+    private String loaiCuocTraoDoi; // STAFF_STAFF, CUSTOMER_STAFF
 
     @Nationalized
     @Column(name = "tin_nhan_cuoi_cung", length = 500)
@@ -58,6 +68,10 @@ public class CuocTraoDoi {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_nguoi_gui_cuoi")
     private NhanVien nguoiGuiCuoi;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_khach_hang_gui_cuoi")
+    private KhachHang khachHangGuiCuoi;
 
     @ColumnDefault("0")
     @Column(name = "so_tin_nhan_chua_doc_nv1")

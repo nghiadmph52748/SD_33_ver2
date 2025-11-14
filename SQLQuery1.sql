@@ -781,8 +781,11 @@ GO
 CREATE TABLE [dbo].[tin_nhan](
 	[id] [int] IDENTITY(1,1) NOT NULL,
 	[ma_tin_nhan] AS ('TN'+RIGHT('00000'+CONVERT([nvarchar](5),[id]),(5))) PERSISTED,
-	[id_nguoi_gui] [int] NOT NULL,
-	[id_nguoi_nhan] [int] NOT NULL,
+	[id_nguoi_gui] [int] NULL,
+	[id_nguoi_nhan] [int] NULL,
+	[id_khach_hang_gui] [int] NULL,
+	[id_khach_hang_nhan] [int] NULL,
+	[loai_tin_nhan_type] [nvarchar](20) NULL DEFAULT 'STAFF_STAFF',
 	[noi_dung] [nvarchar](max) NOT NULL,
 	[loai_tin_nhan] [varchar](20) NULL,
 	[da_doc] [bit] NULL,
@@ -808,8 +811,12 @@ GO
 CREATE TABLE [dbo].[cuoc_trao_doi](
 	[id] [int] IDENTITY(1,1) NOT NULL,
 	[ma_cuoc_trao_doi] AS ('CTD'+RIGHT('00000'+CONVERT([nvarchar](5),[id]),(5))) PERSISTED,
-	[id_nhan_vien_1] [int] NOT NULL,
-	[id_nhan_vien_2] [int] NOT NULL,
+	[id_nhan_vien_1] [int] NULL,
+	[id_nhan_vien_2] [int] NULL,
+	[id_khach_hang] [int] NULL,
+	[id_nhan_vien] [int] NULL,
+	[id_khach_hang_gui_cuoi] [int] NULL,
+	[loai_cuoc_trao_doi] [nvarchar](20) NULL DEFAULT 'STAFF_STAFF',
 	[tin_nhan_cuoi_cung] [nvarchar](500) NULL,
 	[thoi_gian_tin_nhan_cuoi] [datetime2](7) NULL,
 	[id_nguoi_gui_cuoi] [int] NULL,
@@ -826,6 +833,26 @@ PRIMARY KEY CLUSTERED
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ai_chat_history]    Script Date: 11/14/2025 08:00:00 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ai_chat_history](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_khach_hang] [int] NOT NULL,
+	[session_id] [nvarchar](255) NOT NULL,
+	[role] [nvarchar](50) NOT NULL,
+	[content] [nvarchar](max) NOT NULL,
+	[timestamp] [datetime2](7) NULL DEFAULT GETDATE(),
+	[created_at] [datetime2](7) NULL DEFAULT GETDATE(),
+	[created_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 /****** Object:  Table [dbo].[thong_bao]    Script Date: 10/30/2025 03:24:00 PM ******/
 SET ANSI_NULLS ON
@@ -1610,6 +1637,14 @@ ALTER TABLE [dbo].[tin_nhan] WITH CHECK
 ADD CONSTRAINT FK_tin_nhan_nguoi_nhan 
 FOREIGN KEY([id_nguoi_nhan]) REFERENCES [dbo].[nhan_vien]([id])
 GO
+ALTER TABLE [dbo].[tin_nhan] WITH CHECK 
+ADD CONSTRAINT FK_tin_nhan_khach_hang_gui 
+FOREIGN KEY([id_khach_hang_gui]) REFERENCES [dbo].[khach_hang]([id])
+GO
+ALTER TABLE [dbo].[tin_nhan] WITH CHECK 
+ADD CONSTRAINT FK_tin_nhan_khach_hang_nhan 
+FOREIGN KEY([id_khach_hang_nhan]) REFERENCES [dbo].[khach_hang]([id])
+GO
 ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK
 ADD CONSTRAINT FK_cuoc_trao_doi_nhan_vien_1 
 FOREIGN KEY([id_nhan_vien_1]) REFERENCES [dbo].[nhan_vien]([id])
@@ -1621,6 +1656,22 @@ GO
 ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
 ADD CONSTRAINT FK_cuoc_trao_doi_nguoi_gui_cuoi 
 FOREIGN KEY([id_nguoi_gui_cuoi]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
+ADD CONSTRAINT FK_cuoc_trao_doi_khach_hang 
+FOREIGN KEY([id_khach_hang]) REFERENCES [dbo].[khach_hang]([id])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
+ADD CONSTRAINT FK_cuoc_trao_doi_nhan_vien_single 
+FOREIGN KEY([id_nhan_vien]) REFERENCES [dbo].[nhan_vien]([id])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
+ADD CONSTRAINT FK_cuoc_trao_doi_khach_hang_gui_cuoi 
+FOREIGN KEY([id_khach_hang_gui_cuoi]) REFERENCES [dbo].[khach_hang]([id])
+GO
+ALTER TABLE [dbo].[ai_chat_history] WITH CHECK 
+ADD CONSTRAINT FK_ai_chat_history_khach_hang 
+FOREIGN KEY([id_khach_hang]) REFERENCES [dbo].[khach_hang]([id]) ON DELETE CASCADE
 GO
 ALTER TABLE [dbo].[thong_bao] WITH CHECK
 ADD CONSTRAINT FK_thong_bao_nhan_vien 
@@ -1663,9 +1714,15 @@ CREATE NONCLUSTERED INDEX IX_tin_nhan_thoi_gian
 ON [dbo].[tin_nhan] ([thoi_gian_gui] DESC)
 INCLUDE ([id_nguoi_gui], [id_nguoi_nhan], [noi_dung])
 GO
-CREATE UNIQUE NONCLUSTERED INDEX UQ_cuoc_trao_doi_unique
+-- Unique index for staff-staff conversations
+CREATE UNIQUE NONCLUSTERED INDEX UQ_cuoc_trao_doi_staff_staff
 ON [dbo].[cuoc_trao_doi] ([id_nhan_vien_1], [id_nhan_vien_2])
-WHERE [deleted] = 0
+WHERE [deleted] = 0 AND [loai_cuoc_trao_doi] = 'STAFF_STAFF' AND [id_nhan_vien_1] IS NOT NULL AND [id_nhan_vien_2] IS NOT NULL
+GO
+-- Unique index for customer-staff conversations
+CREATE UNIQUE NONCLUSTERED INDEX UQ_cuoc_trao_doi_customer_staff
+ON [dbo].[cuoc_trao_doi] ([id_khach_hang], [id_nhan_vien])
+WHERE [deleted] = 0 AND [loai_cuoc_trao_doi] = 'CUSTOMER_STAFF' AND [id_khach_hang] IS NOT NULL AND [id_nhan_vien] IS NOT NULL
 GO
 CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_nhan_vien
 ON [dbo].[cuoc_trao_doi] ([id_nhan_vien_1], [id_nhan_vien_2], [thoi_gian_tin_nhan_cuoi] DESC)
@@ -1673,7 +1730,12 @@ WHERE [deleted] = 0
 GO
 ALTER TABLE [dbo].[tin_nhan] WITH CHECK
 ADD CONSTRAINT CHK_tin_nhan_khac_nguoi 
-CHECK ([id_nguoi_gui] <> [id_nguoi_nhan])
+CHECK (
+    ([id_nguoi_gui] IS NOT NULL AND [id_nguoi_nhan] IS NOT NULL AND [id_nguoi_gui] <> [id_nguoi_nhan])
+    OR ([id_khach_hang_gui] IS NOT NULL AND [id_khach_hang_nhan] IS NOT NULL AND [id_khach_hang_gui] <> [id_khach_hang_nhan])
+    OR ([id_nguoi_gui] IS NOT NULL AND [id_khach_hang_nhan] IS NOT NULL)
+    OR ([id_khach_hang_gui] IS NOT NULL AND [id_nguoi_nhan] IS NOT NULL)
+)
 GO
 ALTER TABLE [dbo].[tin_nhan] WITH CHECK
 ADD CONSTRAINT CHK_tin_nhan_noi_dung 
@@ -1685,7 +1747,10 @@ CHECK ([loai_tin_nhan] IN ('TEXT', 'IMAGE', 'FILE'))
 GO
 ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK
 ADD CONSTRAINT CHK_cuoc_trao_doi_khac_nguoi 
-CHECK ([id_nhan_vien_1] <> [id_nhan_vien_2])
+CHECK (
+    ([id_nhan_vien_1] IS NOT NULL AND [id_nhan_vien_2] IS NOT NULL AND [id_nhan_vien_1] <> [id_nhan_vien_2])
+    OR ([id_khach_hang] IS NOT NULL AND [id_nhan_vien] IS NOT NULL)
+)
 GO
 ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK
 ADD CONSTRAINT CHK_cuoc_trao_doi_so_tin_chua_doc_nv1 
@@ -2412,6 +2477,33 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_da_doc' AND object_id = OBJECT_ID('tin_nhan'))
     CREATE NONCLUSTERED INDEX IX_tin_nhan_da_doc ON [dbo].[tin_nhan]([da_doc], [id_nguoi_nhan]) INCLUDE ([thoi_gian_gui], [id_nguoi_gui]) WHERE [deleted] = 0
 GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_khach_hang_gui' AND object_id = OBJECT_ID('tin_nhan'))
+    CREATE NONCLUSTERED INDEX IX_tin_nhan_khach_hang_gui ON [dbo].[tin_nhan]([id_khach_hang_gui]) WHERE [deleted] = 0
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_khach_hang_nhan' AND object_id = OBJECT_ID('tin_nhan'))
+    CREATE NONCLUSTERED INDEX IX_tin_nhan_khach_hang_nhan ON [dbo].[tin_nhan]([id_khach_hang_nhan]) WHERE [deleted] = 0
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_loai_type' AND object_id = OBJECT_ID('tin_nhan'))
+    CREATE NONCLUSTERED INDEX IX_tin_nhan_loai_type ON [dbo].[tin_nhan]([loai_tin_nhan_type]) WHERE [deleted] = 0
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_cuoc_trao_doi_khach_hang' AND object_id = OBJECT_ID('cuoc_trao_doi'))
+    CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_khach_hang ON [dbo].[cuoc_trao_doi]([id_khach_hang]) WHERE [deleted] = 0
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_cuoc_trao_doi_nhan_vien_single' AND object_id = OBJECT_ID('cuoc_trao_doi'))
+    CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_nhan_vien_single ON [dbo].[cuoc_trao_doi]([id_nhan_vien]) WHERE [deleted] = 0
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_cuoc_trao_doi_loai' AND object_id = OBJECT_ID('cuoc_trao_doi'))
+    CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_loai ON [dbo].[cuoc_trao_doi]([loai_cuoc_trao_doi]) WHERE [deleted] = 0
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_chat_customer' AND object_id = OBJECT_ID('ai_chat_history'))
+    CREATE NONCLUSTERED INDEX idx_ai_chat_customer ON [dbo].[ai_chat_history]([id_khach_hang])
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_chat_session' AND object_id = OBJECT_ID('ai_chat_history'))
+    CREATE NONCLUSTERED INDEX idx_ai_chat_session ON [dbo].[ai_chat_history]([session_id])
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_chat_timestamp' AND object_id = OBJECT_ID('ai_chat_history'))
+    CREATE NONCLUSTERED INDEX idx_ai_chat_timestamp ON [dbo].[ai_chat_history]([timestamp] DESC)
+GO
 
 -- Indexes cho Tìm kiếm (Cho tìm kiếm văn bản)
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_san_pham_ten_search' AND object_id = OBJECT_ID('san_pham'))
@@ -2439,7 +2531,7 @@ GO
 EXEC sp_updatestats
 GO
 
-PRINT '✓ Đã tạo 36 optimization indexes thành công!'
+PRINT '✓ Đã tạo optimization indexes thành công! (bao gồm indexes cho customer-staff chat và AI chat history)'
 GO
 
 -- =====================================================================

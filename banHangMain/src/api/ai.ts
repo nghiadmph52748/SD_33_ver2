@@ -26,6 +26,7 @@ export interface ChatResponse {
   message: string
   sources: string
   queryType: string
+  redirect_to_staff?: boolean
 }
 
 export interface HealthResponse {

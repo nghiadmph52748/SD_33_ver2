@@ -3,12 +3,15 @@ package org.example.be_sp.security;
 import java.io.IOException;
 import java.util.List;
 
+import org.example.be_sp.entity.KhachHang;
+import org.example.be_sp.repository.KhachHangRepository;
 import org.example.be_sp.service.TokenBlacklistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -31,6 +34,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
+    private KhachHangRepository khachHangRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -72,27 +78,59 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ✅ Kiểm tra token có bị thu hồi không
+        // Kiểm tra token có bị thu hồi không
         if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Token has been invalidated");
             return;
         }
 
-        // ✅ Nếu chưa có authentication trong context
+        // Nếu chưa có authentication trong context
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                // Lấy thông tin người dùng
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-                // Lấy roles từ token
+                // Lấy roles từ token trước
                 List<String> roles = jwtUtils.getRolesFromToken(jwt);
 
                 // Debug: in ra console (có thể xóa sau)
                 System.out.println(">>> Roles from token: " + roles);
 
-                // ✅ Validate và refresh token nếu gần hết hạn
-                String refreshedToken = jwtUtils.validateAndRefreshToken(jwt, userDetails.getUsername());
+                // Kiểm tra xem có phải customer không
+                boolean isCustomer = roles.stream()
+                        .anyMatch(role -> role.equalsIgnoreCase("ROLE_CUSTOMER"));
+
+                UserDetails userDetails;
+                String usernameForValidation;
+                
+                if (isCustomer) {
+                    // Load customer từ KhachHangRepository
+                    KhachHang khachHang = khachHangRepository.findByTenTaiKhoan(username);
+                    if (khachHang == null) {
+                        // Fallback: thử tìm theo email
+                        khachHang = khachHangRepository.findByEmail(username);
+                    }
+                    if (khachHang == null) {
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.getWriter().write("Customer not found");
+                        return;
+                    }
+                    // Tạo UserDetails cho customer
+                    usernameForValidation = khachHang.getTenTaiKhoan() != null ? khachHang.getTenTaiKhoan() : khachHang.getEmail();
+                    userDetails = User.builder()
+                            .username(usernameForValidation)
+                            .password(khachHang.getMatKhau() != null ? khachHang.getMatKhau() : "")
+                            .disabled(!Boolean.TRUE.equals(khachHang.getTrangThai()))
+                            .authorities(roles.stream()
+                                    .map(SimpleGrantedAuthority::new)
+                                    .toList())
+                            .build();
+                } else {
+                    // Load staff từ UserDetailsService
+                    userDetails = userDetailsService.loadUserByUsername(username);
+                    usernameForValidation = userDetails.getUsername();
+                }
+
+                // Validate và refresh token nếu gần hết hạn
+                String refreshedToken = jwtUtils.validateAndRefreshToken(jwt, usernameForValidation);
 
                 if (refreshedToken != null) {
                     // Nếu token được refresh, gửi token mới về header
@@ -101,7 +139,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         response.setHeader("Access-Control-Expose-Headers", "New-Token");
                     }
 
-                    // ✅ Gán quyền cho user từ token
+                    // Gán quyền cho user từ token
                     var authorities = roles.stream()
                             .map(SimpleGrantedAuthority::new)
                             .toList();
@@ -127,7 +165,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // ✅ Cho phép request đi tiếp nếu hợp lệ
+        // Cho phép request đi tiếp nếu hợp lệ
         filterChain.doFilter(request, response);
     }
 }

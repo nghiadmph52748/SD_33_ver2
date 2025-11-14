@@ -26,10 +26,18 @@ export interface ChatMessage {
 export interface Conversation {
   id: number
   maCuocTraoDoi: string
-  nhanVien1Id: number
-  nhanVien1Name: string
-  nhanVien2Id: number
-  nhanVien2Name: string
+  loaiCuocTraoDoi?: string // STAFF_STAFF, CUSTOMER_STAFF
+  // Staff-staff conversation fields
+  nhanVien1Id?: number
+  nhanVien1Name?: string
+  nhanVien2Id?: number
+  nhanVien2Name?: string
+  // Customer-staff conversation fields
+  khachHangId?: number
+  khachHangName?: string
+  nhanVienId?: number
+  nhanVienName?: string
+  // Common fields
   lastMessageContent: string | null
   lastMessageTime: string | null
   lastSenderId: number | null
@@ -120,6 +128,25 @@ export const laySoTinNhanChuaDoc = () => {
  */
 export const layHoacTaoCuocTroChuyen = (otherUserId: number) => {
   return axios.get<ChatResponse<Conversation>>(`/api/chat/conversation/${otherUserId}`)
+}
+
+/**
+ * AI Chat History interface
+ */
+export interface AiChatHistory {
+  id: number
+  sessionId: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+}
+
+/**
+ * Lấy lịch sử AI chat của khách hàng (chỉ staff có quyền)
+ * @param customerId - ID khách hàng
+ */
+export const getCustomerAiChatHistory = (customerId: number) => {
+  return axios.get<ChatResponse<AiChatHistory[]>>(`/api/chat/ai-history/${customerId}`)
 }
 
 // ==================== WebSocket Message Types ====================

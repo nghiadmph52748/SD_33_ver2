@@ -15,13 +15,18 @@ import java.util.List;
 public interface TinNhanRepository extends JpaRepository<TinNhan, Integer> {
 
     /**
-     * Lấy tất cả tin nhắn giữa 2 nhân viên (cả 2 chiều)
-     * Sắp xếp theo thời gian gửi tăng dần (cũ nhất trước)
+     * Lấy tất cả tin nhắn giữa 2 người dùng (cả 2 chiều, hỗ trợ cả customer và staff)
+     * Sắp xếp theo thời gian gửi giảm dần (mới nhất trước)
      */
     @Query("SELECT t FROM TinNhan t WHERE " +
-           "((t.nguoiGui.id = :userId1 AND t.nguoiNhan.id = :userId2) OR " +
-           "(t.nguoiGui.id = :userId2 AND t.nguoiNhan.id = :userId1)) AND " +
-           "t.deleted = false " +
+           "(" +
+           "  ((t.nguoiGui.id = :userId1 AND t.nguoiNhan.id = :userId2) OR " +
+           "   (t.nguoiGui.id = :userId2 AND t.nguoiNhan.id = :userId1)) OR " +
+           "  ((t.khachHangGui.id = :userId1 AND t.nguoiNhan.id = :userId2) OR " +
+           "   (t.nguoiGui.id = :userId1 AND t.khachHangNhan.id = :userId2) OR " +
+           "   (t.khachHangGui.id = :userId2 AND t.nguoiNhan.id = :userId1) OR " +
+           "   (t.nguoiGui.id = :userId2 AND t.khachHangNhan.id = :userId1))" +
+           ") AND t.deleted = false " +
            "ORDER BY t.thoiGianGui DESC")
     Page<TinNhan> findMessagesBetweenUsers(
         @Param("userId1") Integer userId1,
@@ -76,11 +81,17 @@ public interface TinNhanRepository extends JpaRepository<TinNhan, Integer> {
     );
 
     /**
-     * Đánh dấu tất cả tin nhắn chưa đọc từ senderId tới receiverId là đã đọc
+     * Đánh dấu tất cả tin nhắn chưa đọc từ senderId tới receiverId là đã đọc (hỗ trợ cả customer và staff)
      */
     @Modifying
     @Query("UPDATE TinNhan t SET t.daDoc = true, t.thoiGianDoc = CURRENT_TIMESTAMP " +
-           "WHERE t.nguoiGui.id = :senderId AND t.nguoiNhan.id = :receiverId AND t.daDoc = false")
+           "WHERE " +
+           "(" +
+           "  (t.nguoiGui.id = :senderId AND t.nguoiNhan.id = :receiverId) OR " +
+           "  (t.khachHangGui.id = :senderId AND t.nguoiNhan.id = :receiverId) OR " +
+           "  (t.nguoiGui.id = :senderId AND t.khachHangNhan.id = :receiverId) OR " +
+           "  (t.khachHangGui.id = :senderId AND t.khachHangNhan.id = :receiverId)" +
+           ") AND t.daDoc = false")
     int markMessagesAsRead(
         @Param("senderId") Integer senderId,
         @Param("receiverId") Integer receiverId

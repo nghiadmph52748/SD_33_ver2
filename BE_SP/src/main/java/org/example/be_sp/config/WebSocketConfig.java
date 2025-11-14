@@ -1,5 +1,6 @@
 package org.example.be_sp.config;
 
+import org.example.be_sp.repository.KhachHangRepository;
 import org.example.be_sp.security.JwtUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,20 +21,23 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final JwtUtils jwtUtils;
     private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
     private final org.example.be_sp.service.TokenBlacklistService tokenBlacklistService;
+    private final KhachHangRepository khachHangRepository;
 
     public WebSocketConfig(
             JwtUtils jwtUtils,
             org.springframework.security.core.userdetails.UserDetailsService userDetailsService,
-            org.example.be_sp.service.TokenBlacklistService tokenBlacklistService
+            org.example.be_sp.service.TokenBlacklistService tokenBlacklistService,
+            KhachHangRepository khachHangRepository
     ) {
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
         this.tokenBlacklistService = tokenBlacklistService;
+        this.khachHangRepository = khachHangRepository;
     }
 
     @Bean
     public WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor() {
-        return new WebSocketAuthChannelInterceptor(jwtUtils, userDetailsService, tokenBlacklistService);
+        return new WebSocketAuthChannelInterceptor(jwtUtils, userDetailsService, tokenBlacklistService, khachHangRepository);
     }
 
     @Override

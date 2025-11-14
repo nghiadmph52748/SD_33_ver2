@@ -1,10 +1,13 @@
 package org.example.be_sp.controller;
 
 import java.security.Principal;
+import java.util.Optional;
 
+import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.model.request.SendMessageRequest;
 import org.example.be_sp.model.response.TinNhanResponse;
+import org.example.be_sp.repository.KhachHangRepository;
 import org.example.be_sp.repository.NhanVienRepository;
 import org.example.be_sp.service.ChatService;
 import org.example.be_sp.service.NhanVienService;
@@ -23,16 +26,19 @@ public class ChatWebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final NhanVienService nhanVienService;
     private final NhanVienRepository nhanVienRepository;
+    private final KhachHangRepository khachHangRepository;
 
     public ChatWebSocketController(
             ChatService chatService,
             SimpMessagingTemplate messagingTemplate,
             NhanVienService nhanVienService,
-            NhanVienRepository nhanVienRepository) {
+            NhanVienRepository nhanVienRepository,
+            KhachHangRepository khachHangRepository) {
         this.chatService = chatService;
         this.messagingTemplate = messagingTemplate;
         this.nhanVienService = nhanVienService;
         this.nhanVienRepository = nhanVienRepository;
+        this.khachHangRepository = khachHangRepository;
     }
 
     /**
@@ -50,10 +56,8 @@ public class ChatWebSocketController {
             // Lưu tin nhắn vào database
             TinNhanResponse savedMessage = chatService.sendMessage(senderId, request);
             
-            // Lấy username của receiver từ userId
-            NhanVien receiver = nhanVienRepository.findById(request.getReceiverId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người nhận: " + request.getReceiverId()));
-            String receiverUsername = receiver.getTenTaiKhoan();
+            // Lấy username của receiver từ userId (có thể là customer hoặc staff)
+            String receiverUsername = getUsernameFromUserId(request.getReceiverId());
             
             // Gửi tin nhắn real-time tới receiver qua WebSocket (dùng username)
             messagingTemplate.convertAndSendToUser(
@@ -69,8 +73,18 @@ public class ChatWebSocketController {
                 savedMessage
             );
             
+            System.out.println("✅ WebSocket message sent successfully:");
+            System.out.println("   From: " + senderUsername + " (ID: " + senderId + ")");
+            System.out.println("   To: " + receiverUsername + " (ID: " + request.getReceiverId() + ")");
+            System.out.println("   Content: " + savedMessage.getContent().substring(0, Math.min(50, savedMessage.getContent().length())));
+            
         } catch (Exception e) {
-            // Silently handle error
+            // Log error for debugging
+            System.err.println("❌ Error in ChatWebSocketController.sendMessage:");
+            System.err.println("   Sender: " + (principal != null ? principal.getName() : "null"));
+            System.err.println("   Receiver ID: " + request.getReceiverId());
+            System.err.println("   Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -93,21 +107,54 @@ public class ChatWebSocketController {
     }
 
     /**
-     * Lấy userId từ Principal
+     * Lấy userId từ Principal (hỗ trợ cả customer và staff)
      */
     private Integer getUserIdFromPrincipal(Principal principal) {
         if (principal == null) {
-            throw new RuntimeException("Đạng nhập lại");
+            throw new RuntimeException("Đăng nhập lại");
         }
         
         String username = principal.getName();
-        NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);
         
-        if (nhanVien == null) {
-            throw new RuntimeException("Không tìm thấy người dùng: " + username);
+        // Thử tìm trong NhanVien trước
+        NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);
+        if (nhanVien != null) {
+            return nhanVien.getId();
         }
         
-        return nhanVien.getId();
+        // Nếu không tìm thấy, thử tìm trong KhachHang
+        KhachHang khachHang = khachHangRepository.findByTenTaiKhoan(username);
+        if (khachHang != null) {
+            return khachHang.getId();
+        }
+        
+        // Fallback: thử tìm theo email
+        khachHang = khachHangRepository.findByEmail(username);
+        if (khachHang != null) {
+            return khachHang.getId();
+        }
+        
+        throw new RuntimeException("Không tìm thấy người dùng: " + username);
+    }
+    
+    /**
+     * Lấy username từ userId (hỗ trợ cả customer và staff)
+     */
+    private String getUsernameFromUserId(Integer userId) {
+        // Thử tìm trong NhanVien trước
+        Optional<NhanVien> nhanVien = nhanVienRepository.findById(userId);
+        if (nhanVien.isPresent()) {
+            return nhanVien.get().getTenTaiKhoan();
+        }
+        
+        // Nếu không tìm thấy, thử tìm trong KhachHang
+        Optional<KhachHang> khachHang = khachHangRepository.findById(userId);
+        if (khachHang.isPresent()) {
+            KhachHang kh = khachHang.get();
+            return kh.getTenTaiKhoan() != null ? kh.getTenTaiKhoan() : kh.getEmail();
+        }
+        
+        throw new RuntimeException("Không tìm thấy người dùng với ID: " + userId);
     }
 
     /**

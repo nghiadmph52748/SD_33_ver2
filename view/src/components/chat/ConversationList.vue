@@ -39,7 +39,10 @@
           <!-- Content -->
           <div class="conversation-content">
             <div class="conversation-top">
-              <span class="conversation-name">{{ getOtherUserName(conversation) }}</span>
+              <span class="conversation-name">
+                {{ getOtherUserName(conversation) }}
+                <span v-if="conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF'" class="customer-badge">(KH)</span>
+              </span>
               <span v-if="conversation.lastMessageTime" class="conversation-time">
                 {{ formatTime(conversation.lastMessageTime) }}
               </span>
@@ -98,10 +101,21 @@ const activeConversationId = computed(() => chatStore.activeConversationId)
  */
 function getOtherUserName(conversation: Conversation): string {
   const currentUserId = userStore.id
-  if (currentUserId === conversation.nhanVien1Id) {
-    return conversation.nhanVien2Name
+  
+  // Handle customer-staff conversations
+  if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (currentUserId === conversation.nhanVienId) {
+      return conversation.khachHangName || 'Khách hàng'
+    } else if (currentUserId === conversation.khachHangId) {
+      return conversation.nhanVienName || 'Nhân viên'
+    }
   }
-  return conversation.nhanVien1Name
+  
+  // Handle staff-staff conversations
+  if (currentUserId === conversation.nhanVien1Id) {
+    return conversation.nhanVien2Name || ''
+  }
+  return conversation.nhanVien1Name || ''
 }
 
 const filteredConversations = computed(() => {
@@ -197,9 +211,16 @@ function isLastMessageSeenByOther(conversation: Conversation): boolean {
     return false
   }
 
-  // Kiểm tra người kia có unread count = 0 không
-  // Nếu currentUserId = nhanVien1, kiểm tra unreadCountNv2
-  // Nếu currentUserId = nhanVien2, kiểm tra unreadCountNv1
+  // Handle customer-staff conversations
+  if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (currentUserId === conversation.khachHangId) {
+      return conversation.unreadCountNv2 === 0
+    } else if (currentUserId === conversation.nhanVienId) {
+      return conversation.unreadCountNv1 === 0
+    }
+  }
+  
+  // Handle staff-staff conversations
   if (currentUserId === conversation.nhanVien1Id) {
     return conversation.unreadCountNv2 === 0
   }
@@ -218,10 +239,22 @@ function isUserOnline(conversation: Conversation): boolean {
   const currentUserId = userStore.id
 
   // Xác định user còn lại (không phải mình)
-  const otherUserId = currentUserId === conversation.nhanVien1Id ? conversation.nhanVien2Id : conversation.nhanVien1Id
+  let otherUserId: number | undefined
+  
+  // Handle customer-staff conversations
+  if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+    if (currentUserId === conversation.khachHangId) {
+      otherUserId = conversation.nhanVienId
+    } else if (currentUserId === conversation.nhanVienId) {
+      otherUserId = conversation.khachHangId
+    }
+  } else {
+    // Handle staff-staff conversations
+    otherUserId = currentUserId === conversation.nhanVien1Id ? conversation.nhanVien2Id : conversation.nhanVien1Id
+  }
 
   // Check từ online users set (WebSocket presence tracking)
-  return chatStore.onlineUsers.has(otherUserId)
+  return otherUserId !== undefined && chatStore.onlineUsers.has(otherUserId)
 }
 
 /**
@@ -235,15 +268,25 @@ async function handleSelectConversation(conversation: Conversation) {
     const currentUserId = userStore.id
     let otherUserId: number | null = null
 
-    if (currentUserId === conversation.nhanVien1Id) {
-      otherUserId = conversation.nhanVien2Id
-    } else if (currentUserId === conversation.nhanVien2Id) {
-      otherUserId = conversation.nhanVien1Id
+    // Handle customer-staff conversations
+    if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+      if (currentUserId === conversation.khachHangId) {
+        otherUserId = conversation.nhanVienId || null
+      } else if (currentUserId === conversation.nhanVienId) {
+        otherUserId = conversation.khachHangId || null
+      }
+    } else {
+      // Handle staff-staff conversations
+      if (currentUserId === conversation.nhanVien1Id) {
+        otherUserId = conversation.nhanVien2Id || null
+      } else if (currentUserId === conversation.nhanVien2Id) {
+        otherUserId = conversation.nhanVien1Id || null
+      }
     }
 
     if (otherUserId) {
       // Gọi mark as read ngay lập tức
-      await chatStore.markAsRead(otherUserId)
+      await chatStore.markAsRead(otherUserId, conversation.id)
     }
   }
 }
@@ -416,6 +459,16 @@ async function handleNewChat(userId: number) {
         text-overflow: ellipsis;
         white-space: nowrap;
         color: var(--color-text-1);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .customer-badge {
+          font-size: 10px;
+          color: #52c41a;
+          font-weight: 400;
+          flex-shrink: 0;
+        }
       }
 
       .conversation-time {

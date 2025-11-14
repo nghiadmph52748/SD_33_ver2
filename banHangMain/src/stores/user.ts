@@ -38,6 +38,12 @@ export const useUserStore = defineStore('user', {
       const profile = state.profile as Record<string, any> | null
       return !!profile?.maKhachHang
     },
+    id: (state): number | undefined => {
+      return state.profile?.id
+    },
+    name: (state): string => {
+      return state.profile?.tenKhachHang || ''
+    },
   },
   actions: {
     async initFromStorage() {
@@ -93,6 +99,12 @@ export const useUserStore = defineStore('user', {
       clearToken()
       localStorage.removeItem(REFRESH_KEY)
       localStorage.removeItem(PROFILE_KEY)
+      
+      // Clear AI chat sessions from localStorage (preserve in database)
+      localStorage.removeItem('gearup_storefront_ai_sessions_v1')
+      localStorage.removeItem('gearup_storefront_ai_session_names_v1')
+      localStorage.removeItem('gearup_storefront_ai_chat_v1')
+      
       this.isAuthenticated = false
       this.profile = null
       this.accessToken = null

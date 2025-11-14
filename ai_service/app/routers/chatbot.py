@@ -22,6 +22,7 @@ class ChatResponse(BaseModel):
     data_source: str = ""  # Nguồn dữ liệu
     follow_up_suggestions: list[str] = []  # Gợi ý câu hỏi tiếp theo
     data_context: dict = {}  # Ngữ cảnh: time_range, channel, etc.
+    redirect_to_staff: bool = False  # Flag to redirect customer to staff chat
 
 # Prompt-tuned system prompt (Admin Manager persona)
 SYSTEM_PROMPT = """
@@ -71,6 +72,21 @@ Bạn là Trợ lý Quản trị (Admin Manager) của GearUp – nền tảng q
 def detect_intent(message: str) -> str:
     """Detect user intent from message"""
     message_lower = message.lower()
+    
+    # Check for staff chat request first (highest priority for customer support)
+    staff_keywords = [
+        "tôi muốn nói chuyện với nhân viên", "tôi muốn nói chuyện với nhân viên của cửa hàng",
+        "tôi muốn nói chuyện với nhân viên cửa hàng", "tôi muốn nói chuyện với nhân viên",
+        "i want to talk with the staff", "i want to talk with staff", "i want to talk to staff",
+        "talk to staff", "talk with staff", "chat with staff", "speak with staff",
+        "nói chuyện với nhân viên", "nói chuyện với nhân viên cửa hàng",
+        "tôi muốn chat với nhân viên", "chat với nhân viên",
+        "tôi cần nói chuyện với nhân viên", "cần nói chuyện với nhân viên",
+        "chuyển sang nhân viên", "chuyển cho nhân viên", "kết nối với nhân viên",
+        "connect to staff", "transfer to staff", "hand off to staff"
+    ]
+    if any(keyword in message_lower for keyword in staff_keywords):
+        return "redirect_to_staff"
     
     # Check low_stock first (higher priority)
     if any(word in message_lower for word in ["hết hàng", "sắp hết", "tồn kho thấp", "tồn kho", "stock", "còn lại", "số lượng còn"]):
@@ -434,6 +450,18 @@ async def chat(request: ChatRequest):
         intent = detect_intent(request.message)
         logger.info(f"Detected intent: {intent}")
         
+        # Handle redirect to staff
+        if intent == "redirect_to_staff":
+            return ChatResponse(
+                message="Tôi hiểu bạn muốn nói chuyện với nhân viên của cửa hàng. Đang chuyển bạn đến nhân viên hỗ trợ...",
+                sources="",
+                query_type=intent,
+                data_source="",
+                follow_up_suggestions=[],
+                data_context={},
+                redirect_to_staff=True
+            )
+        
         # 2. Query database
         db_context = query_database(intent, request.message)
         
@@ -462,7 +490,8 @@ async def chat(request: ChatRequest):
                 "time_range": "30_days",
                 "channel": "all",
                 "timestamp": datetime.now().isoformat()
-            }
+            },
+            redirect_to_staff=False
         )
     
     except Exception as e:
@@ -476,6 +505,33 @@ async def chat_stream(request: ChatRequest):
         # 1. Detect intent
         intent = detect_intent(request.message)
         logger.info(f"Streaming request: {request.message[:50]}... (intent: {intent})")
+        
+        # Handle redirect to staff
+        if intent == "redirect_to_staff":
+            async def generate_redirect():
+                metadata = {
+                    'type': 'start',
+                    'intent': intent,
+                    'data_source': '',
+                    'follow_up_suggestions': [],
+                    'data_context': {},
+                    'redirect_to_staff': True
+                }
+                yield f"data: {json.dumps(metadata)}\n\n"
+                
+                redirect_message = "Tôi hiểu bạn muốn nói chuyện với nhân viên của cửa hàng. Đang chuyển bạn đến nhân viên hỗ trợ..."
+                yield f"data: {json.dumps({'type': 'content', 'content': redirect_message})}\n\n"
+                yield f"data: {json.dumps({'type': 'end'})}\n\n"
+            
+            return StreamingResponse(
+                generate_redirect(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no"
+                }
+            )
         
         # 2. Query database
         db_context = query_database(intent, request.message)
@@ -498,7 +554,8 @@ async def chat_stream(request: ChatRequest):
                     'data_context': {
                         'time_range': '30_days',
                         'channel': 'all'
-                    }
+                    },
+                    'redirect_to_staff': False
                 }
                 yield f"data: {json.dumps(metadata)}\n\n"
                 

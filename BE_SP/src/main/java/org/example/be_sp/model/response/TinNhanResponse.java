@@ -18,6 +18,7 @@ public class TinNhanResponse {
     
     private Integer id;
     private String maTinNhan;
+    private String loaiTinNhanType; // STAFF_STAFF, CUSTOMER_STAFF
     private Integer senderId;
     private String senderName;
     private Integer receiverId;
@@ -31,14 +32,43 @@ public class TinNhanResponse {
     public TinNhanResponse(TinNhan tinNhan) {
         this.id = tinNhan.getId();
         this.maTinNhan = tinNhan.getMaTinNhan();
-        this.senderId = tinNhan.getNguoiGui().getId();
-        this.senderName = tinNhan.getNguoiGui().getTenNhanVien();
-        this.receiverId = tinNhan.getNguoiNhan().getId();
-        this.receiverName = tinNhan.getNguoiNhan().getTenNhanVien();
+        this.loaiTinNhanType = tinNhan.getLoaiTinNhanType();
         this.content = tinNhan.getNoiDung();
         this.messageType = tinNhan.getLoaiTinNhan();
         this.isRead = tinNhan.getDaDoc();
         this.sentAt = tinNhan.getThoiGianGui();
         this.readAt = tinNhan.getThoiGianDoc();
+        
+        // Set sender and receiver based on message type
+        if (tinNhan.getLoaiTinNhanType() != null && tinNhan.getLoaiTinNhanType().equals("CUSTOMER_STAFF")) {
+            // Customer-staff message
+            if (tinNhan.getKhachHangGui() != null) {
+                // Customer is sender, staff is receiver
+                this.senderId = tinNhan.getKhachHangGui().getId();
+                this.senderName = tinNhan.getKhachHangGui().getTenKhachHang();
+                if (tinNhan.getNguoiNhan() != null) {
+                    this.receiverId = tinNhan.getNguoiNhan().getId();
+                    this.receiverName = tinNhan.getNguoiNhan().getTenNhanVien();
+                }
+            } else if (tinNhan.getNguoiGui() != null) {
+                // Staff is sender, customer is receiver
+                this.senderId = tinNhan.getNguoiGui().getId();
+                this.senderName = tinNhan.getNguoiGui().getTenNhanVien();
+                if (tinNhan.getKhachHangNhan() != null) {
+                    this.receiverId = tinNhan.getKhachHangNhan().getId();
+                    this.receiverName = tinNhan.getKhachHangNhan().getTenKhachHang();
+                }
+            }
+        } else {
+            // Staff-staff message
+            if (tinNhan.getNguoiGui() != null) {
+                this.senderId = tinNhan.getNguoiGui().getId();
+                this.senderName = tinNhan.getNguoiGui().getTenNhanVien();
+            }
+            if (tinNhan.getNguoiNhan() != null) {
+                this.receiverId = tinNhan.getNguoiNhan().getId();
+                this.receiverName = tinNhan.getNguoiNhan().getTenNhanVien();
+            }
+        }
     }
 }

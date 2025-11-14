@@ -1,6 +1,33 @@
 <template>
   <header :class="{ scrolled: isScrolled }">
     <div class="topbar" aria-label="User navigation">
+      <div class="locale-wrapper" @keydown.escape.prevent="closeLocale">
+        <button class="locale-bar" :class="{ open: localeOpen }" type="button" @click="toggleLocale" :aria-expanded="localeOpen ? 'true' : 'false'" aria-haspopup="listbox">
+          <span class="icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm7.93 9H16.9a15.2 15.2 0 00-.8-4.03A8.03 8.03 0 0119.93 11zM12 4c1.2 1.37 2.08 3.33 2.46 5H9.54C9.92 7.33 10.8 5.37 12 4zM6.9 7a15.2 15.2 0 00-.8 4H4.07A8.03 8.03 0 016.9 7zM4.07 13H6.1c.12 1.4.43 2.77.8 4.03A8.03 8.03 0 014.07 13zM12 20c-1.2-1.37-2.08-3.33-2.46-5h4.92C14.08 16.67 13.2 18.63 12 20zm3-7H9c-.1-1-.1-2 0-3h6c.1 1 .1 2 0 3zm1.9 4a15.2 15.2 0 00.8-4h2.03a8.03 8.03 0 01-2.83 4z"/></svg>
+          </span>
+          <span class="locale-label">{{ currentLocaleLabel }}</span>
+          <span class="caret" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+          </span>
+        </button>
+        <transition name="locale-menu">
+          <div v-if="localeOpen" class="locale-menu" role="listbox" :aria-activedescendant="currentLocale">
+            <button
+              v-for="opt in localeOptions"
+              :key="opt.value"
+              :id="`loc-${opt.value}`"
+              class="locale-chip"
+              :class="{ active: opt.value === currentLocale }"
+              role="option"
+              type="button"
+              @click="selectLocale(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </transition>
+      </div>
       <ul>
         <li><a href="#" :aria-label="$t('nav.findStore')">{{ $t('nav.findStore') }}</a></li>
         <li><a href="#" :aria-label="$t('nav.help')">{{ $t('nav.help') }}</a></li>
@@ -9,39 +36,10 @@
           <li><RouterLink to="/login" :aria-label="$t('nav.signIn')">{{ $t('nav.signIn') }}</RouterLink></li>
         </template>
         <template v-else>
-          <li aria-label="customer-name">{{ customerName }}</li>
+          <li class="customer-name" aria-label="customer-name">{{ customerName }}</li>
           <li><a href="#" @click.prevent="openLogoutConfirm">{{ $t('nav.logout') }}</a></li>
         </template>
       </ul>
-      <div class="top-controls">
-        <div class="locale-wrapper" @keydown.escape.prevent="closeLocale">
-          <button class="locale-bar" :class="{ open: localeOpen }" type="button" @click="toggleLocale" :aria-expanded="localeOpen ? 'true' : 'false'" aria-haspopup="listbox">
-            <span class="icon" aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm7.93 9H16.9a15.2 15.2 0 00-.8-4.03A8.03 8.03 0 0119.93 11zM12 4c1.2 1.37 2.08 3.33 2.46 5H9.54C9.92 7.33 10.8 5.37 12 4zM6.9 7a15.2 15.2 0 00-.8 4H4.07A8.03 8.03 0 016.9 7zM4.07 13H6.1c.12 1.4.43 2.77.8 4.03A8.03 8.03 0 014.07 13zM12 20c-1.2-1.37-2.08-3.33-2.46-5h4.92C14.08 16.67 13.2 18.63 12 20zm3-7H9c-.1-1-.1-2 0-3h6c.1 1 .1 2 0 3zm1.9 4a15.2 15.2 0 00.8-4h2.03a8.03 8.03 0 01-2.83 4z"/></svg>
-            </span>
-            <span class="locale-label">{{ currentLocaleLabel }}</span>
-            <span class="caret" aria-hidden="true">
-              <svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
-            </span>
-          </button>
-          <transition name="locale-menu">
-            <div v-if="localeOpen" class="locale-menu" role="listbox" :aria-activedescendant="currentLocale">
-              <button
-                v-for="opt in localeOptions"
-                :key="opt.value"
-                :id="`loc-${opt.value}`"
-                class="locale-chip"
-                :class="{ active: opt.value === currentLocale }"
-                role="option"
-                type="button"
-                @click="selectLocale(opt.value)"
-              >
-                {{ opt.label }}
-              </button>
-            </div>
-          </transition>
-        </div>
-      </div>
     </div>
     <div class="mainbar">
     <div class="logo-section">
@@ -250,15 +248,29 @@ header.scrolled {
     list-style: none;
     margin: 0;
     padding: 0;
+    align-items: center;
+
+    li {
+      display: flex;
+      align-items: center;
+    }
 
     li a {
       color: rgba(17, 17, 17, 0.8);
       text-decoration: none;
       font-size: 12px;
+      line-height: 1;
     }
   }
+}
 
-  .top-controls { display: flex; align-items: center; gap: 8px; }
+.customer-name {
+  color: rgba(17, 17, 17, 0.8);
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .mainbar {
