@@ -34,7 +34,7 @@
             </a-form-item>
           </a-col>
 
-          <a-col :span="8">
+          <!-- <a-col :span="8">
             <a-form-item label="Trạng thái">
               <a-radio-group v-model="filterForm.trangThai" type="button">
                 <a-radio value="all">Tất cả</a-radio>
@@ -42,7 +42,7 @@
                 <a-radio value="Đã kết thúc">Hoàn tất</a-radio>
               </a-radio-group>
             </a-form-item>
-          </a-col>
+          </a-col> -->
         </a-row>
       </a-form>
 
@@ -86,7 +86,7 @@
         <template #action="{ record }">
           <a-space>
             <a-button type="text" @click="viewDetail(record)">
-              <template #icon><icon-eye /></template>
+              <template #icon><icon-edit /></template>
             </a-button>
 
             <a-button type="text" status="danger" @click="deleteGiaoCa(record.id)">
@@ -102,7 +102,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Message } from '@arco-design/web-vue'
+import { Message,Modal } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import { getGiaoCa, xoaGiaoCa } from '@/api/giao-ca'
 import useBreadcrumb from '@/hooks/breadcrumb'
@@ -124,28 +124,36 @@ const giaoCaList = ref([])
 // 🧮 Table columns
 const columns = [
   { title: '#', dataIndex: 'id', width: 60 },
-  { title: 'Ngày giao ca', dataIndex: 'thoiGianGiaoCa', width: 150 },
   { title: 'Ca làm việc', dataIndex: 'caLamViec.tenCa', width: 120 },
   { title: 'Người giao', dataIndex: 'nguoiGiao.tenNhanVien', width: 160 },
   { title: 'Người nhận', dataIndex: 'nguoiNhan.tenNhanVien', width: 160 },
+   { title: 'Ngày giao ca', dataIndex: 'thoiGianGiaoCa', width: 150 },
   { title: 'Tiền đầu ca', dataIndex: 'tongTienBanDau', width: 120 },
   { title: 'Tiền cuối ca', dataIndex: 'tongTienCuoiCa', width: 120 },
   { title: 'Ghi chú', dataIndex: 'ghiChu', width: 200 },
-  { title: 'Trạng thái', dataIndex: 'trangThai', slotName: 'trangThai', width: 120 },
+  // { title: 'Trạng thái', dataIndex: 'trangThai', slotName: 'trangThai', width: 120 },
   { title: 'Hành động', slotName: 'action', width: 120 }
 ]
 
 // 🔄 Lọc dữ liệu
 const filteredList = computed(() =>
-  giaoCaList.value.filter(
-    (g) =>
-      (!search.value ||
-        g.nguoiGiao?.tenNhanVien.toLowerCase().includes(search.value.toLowerCase()) ||
-        g.nguoiNhan.tenNhanVien.toLowerCase().includes(search.value.toLowerCase())) &&
-      (filterForm.value.caLam === '' || g.caLamViec.tenCa === filterForm.value.caLam) &&
-      (filterForm.value.trangThai === 'all' || g.trangThai === filterForm.value.trangThai)
+  giaoCaList.value.filter(g =>
+    // Tìm kiếm
+    (!search.value ||
+      g.nguoiGiao?.tenNhanVien.toLowerCase().includes(search.value.toLowerCase()) ||
+      g.nguoiNhan?.tenNhanVien.toLowerCase().includes(search.value.toLowerCase()) ||
+      g.caLamViec?.tenCa.toLowerCase().includes(search.value.toLowerCase())
+    ) &&
+    // Lọc theo ca
+    (!filterForm.value.caLam || g.caLamViec?.tenCa === filterForm.value.caLam) &&
+    // Lọc theo trạng thái
+    (filterForm.value.trangThai === 'all' || g.trangThai === filterForm.value.trangThai) &&
+    // Lọc theo ngày
+    (!filterForm.value.ngayGiaoCa || 
+      new Date(g.thoiGianGiaoCa).toISOString().slice(0,10) === filterForm.value.ngayGiaoCa)
   )
 )
+
 
 // 🔁 Lấy danh sách
 const fetchData = async () => {
@@ -172,17 +180,29 @@ const themGiaoCa = () => {
 }
 
 const viewDetail = (record: any) => {
-  Message.info(`Xem chi tiết giao ca #${record.id}`)
+  router.push({
+    name: 'updategiaoca',
+    params: { id: record.id },
+  })
 }
 
+
 const deleteGiaoCa = async (id: number) => {
-  try {
-    await xoaGiaoCa(id)
-    Message.success('Xóa giao ca thành công')
-    fetchData()
-  } catch (_error) {
-    Message.error('Không thể xóa giao ca')
-  }
+  Modal.confirm({
+    title: 'Xác nhận xóa',
+    content: 'Bạn có chắc chắn muốn xóa giao ca này không?',
+    okText: 'Xóa',
+    cancelText: 'Hủy',
+    async onOk() {
+      try {
+        await xoaGiaoCa(id)
+        Message.success('Xóa giao ca thành công')
+        fetchData()
+      } catch (_error) {
+        Message.error('Không thể xóa giao ca')
+      }
+    }
+  })
 }
 
 onMounted(() => fetchData())

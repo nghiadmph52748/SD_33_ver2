@@ -83,7 +83,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import dayjs from 'dayjs'
-import { Message } from '@arco-design/web-vue'
+import { Message,Modal } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
 
 import { layDanhSachNhanVien } from '@/api/nhan-vien'
@@ -184,65 +184,46 @@ const fetchCaLamViecs = async () => {
 // ===========================
 // 🧩 Submit form thêm lịch làm việc
 // ===========================
+
 const handleSubmit = async () => {
-  // Kiểm tra các trường bắt buộc
   if (!form.value.nhanVien || !form.value.caLamViec || !form.value.ngayLamViec) {
     Message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
     return;
   }
 
-  // Kiểm tra và ép kiểu dữ liệu
-  const nhanVienId = Number(form.value.nhanVien);
-  const caLamViecId = Number(form.value.caLamViec);
-  const ngayLamViec = dayjs(form.value.ngayLamViec).format('YYYY-MM-DD'); // Đảm bảo định dạng đúng
+  Modal.confirm({
+    title: 'Xác nhận thêm lịch làm việc',
+    content: 'Bạn có chắc chắn muốn lưu lịch làm việc này không?',
+    okText: 'Lưu',
+    cancelText: 'Hủy',
+    async onOk() {
+      // ✅ Đặt toàn bộ code build payload + gọi API + thông báo thành công ở đây
+      const nhanVienId = Number(form.value.nhanVien);
+      const caLamViecId = Number(form.value.caLamViec);
+      const ngayLamViec = dayjs(form.value.ngayLamViec).format('YYYY-MM-DD');
 
-  // Kiểm tra nếu nhanVienId hợp lệ (không phải NaN)
-  if (Number.isNaN(nhanVienId) || nhanVienId <= 0) {
-    Message.warning('Thông tin nhân viên không hợp lệ');
-    return;
-  }
+      const payload = {
+        nhanVienId,
+        caLamViecId,
+        ngayLamViec,
+        trangThai: true,
+        ghiChu: form.value.ghiChu || null
+      };
 
-  // Kiểm tra nếu caLamViecId hợp lệ (không phải NaN)
-  if (Number.isNaN(caLamViecId) || caLamViecId <= 0) {
-    Message.warning('Thông tin ca làm việc không hợp lệ');
-    return;
-  }
-
-  // Cập nhật payload với cấu trúc yêu cầu của backend
-  const payload = {
-    nhanVienId,       // Truyền đúng tên tham số như backend yêu cầu
-    caLamViecId,      // Truyền đúng tên tham số như backend yêu cầu
-    ngayLamViec,
-    trangThai: true,   // Hoặc false nếu backend mặc định
-    ghiChu: form.value.ghiChu || null // Nếu không có ghi chú thì để null
-  };
-
-  console.log('📤 Payload gửi đi:', payload); // Kiểm tra payload
-
-  try {
-    loadingSubmit.value = true;
-
-    // Gửi yêu cầu lên API để thêm lịch làm việc
-    await themLichLamViec(payload);
-
-    // Thông báo thành công và chuyển hướng
-    Message.success('Thêm lịch làm việc thành công!');
-    router.push('/lich-lam-viec/danh-sach');
-  } catch (err: any) {
-    console.error('❌ Lỗi khi thêm lịch làm việc:', err);
-
-    // Hiển thị thông báo lỗi chi tiết nếu có
-    if (err.response && err.response.data) {
-      console.error('Chi tiết lỗi:', err.response.data);
-      Message.error(`Lỗi: ${err.response.data.message || 'Không thể thêm lịch làm việc!'}`);
-    } else {
-      Message.error('Không thể thêm lịch làm việc!');
+      try {
+        loadingSubmit.value = true;
+        await themLichLamViec(payload);
+        Message.success('Thêm lịch làm việc thành công!');
+        router.push('/lich-lam-viec/danh-sach');
+      } catch (err: any) {
+        console.error('❌ Lỗi khi thêm lịch làm việc:', err);
+        Message.error('Không thể thêm lịch làm việc!');
+      } finally {
+        loadingSubmit.value = false;
+      }
     }
-  } finally {
-    loadingSubmit.value = false;
-  }
-};
-
+  })
+}
 
 
 // ===========================

@@ -74,7 +74,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { Message } from '@arco-design/web-vue'
+import { Message,Modal  } from '@arco-design/web-vue'
 
 import { layDanhSachNhanVien } from '@/api/nhan-vien'
 import { getCaLamViec } from '@/api/ca-lam-viec'
@@ -197,28 +197,42 @@ const loadData = async () => {
 // ===========================
 // 🔹 Hàm cập nhật lịch
 // ===========================
+
 const handleUpdate = async () => {
   try {
     await updateFormRef.value.validate()
-    loading.value = true
 
-    const id = Number(route.params.id)
-    const payload = {
-      nhanVienId: form.value.nhanVien,
-      caLamViecId: form.value.caLamViec,
-      ngayLamViec: dayjs(form.value.ngayLamViec).format('YYYY-MM-DD'),
-      ghiChu: form.value.ghiChu || null,
-      trangThai: true
-    }
+    Modal.confirm({
+      title: 'Xác nhận cập nhật',
+      content: 'Bạn có chắc chắn muốn cập nhật lịch làm việc này không?',
+      okText: 'Cập nhật',
+      cancelText: 'Hủy',
+      async onOk() {
+        loading.value = true
+        const id = Number(route.params.id)
+        const payload = {
+          nhanVienId: form.value.nhanVien,
+          caLamViecId: form.value.caLamViec,
+          ngayLamViec: dayjs(form.value.ngayLamViec).format('YYYY-MM-DD'),
+          ghiChu: form.value.ghiChu || null,
+          trangThai: true
+        }
 
-    await suaLichLamViec(id, payload)
-    Message.success('Cập nhật lịch làm việc thành công')
-    router.push('/lich-lam-viec/danh-sach')
+        try {
+          await suaLichLamViec(id, payload)
+          Message.success('Cập nhật lịch làm việc thành công')
+          router.push('/lich-lam-viec/danh-sach')
+        } catch (err) {
+          console.error('❌ Lỗi khi cập nhật:', err)
+          Message.error('Không thể cập nhật lịch làm việc')
+        } finally {
+          loading.value = false
+        }
+      }
+    })
+
   } catch (err) {
-    console.error('❌ Lỗi khi cập nhật:', err)
-    Message.error('Không thể cập nhật lịch làm việc')
-  } finally {
-    loading.value = false
+    console.error('❌ Lỗi validate form:', err)
   }
 }
 

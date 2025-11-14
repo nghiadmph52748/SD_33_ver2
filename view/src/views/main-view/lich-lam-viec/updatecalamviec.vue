@@ -13,13 +13,15 @@
 
           <a-col :span="6">
             <a-form-item label="Thời gian bắt đầu" required>
-              <a-time-picker v-model="form.gioBatDau" format="HH:mm" style="width: 100%" />
+              <!-- value-format được thêm để v-model sử dụng định dạng chuỗi HH:mm:ss -->
+              <a-time-picker v-model="form.gioBatDau" format="HH:mm" value-format="HH:mm:ss" style="width: 100%" />
             </a-form-item>
           </a-col>
 
           <a-col :span="6">
             <a-form-item label="Thời gian kết thúc" required>
-              <a-time-picker v-model="form.gioKetThuc" format="HH:mm" style="width: 100%" />
+              <!-- value-format được thêm để v-model sử dụng định dạng chuỗi HH:mm:ss -->
+              <a-time-picker v-model="form.gioKetThuc" format="HH:mm" value-format="HH:mm:ss" style="width: 100%" />
             </a-form-item>
           </a-col>
 
@@ -46,7 +48,7 @@
 import { ref, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { useRouter, useRoute } from 'vue-router'
-import { Message } from '@arco-design/web-vue'
+import { Message,Modal  } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { getCaLamViecById, suaCaLamViec } from '@/api/ca-lam-viec'
@@ -57,8 +59,9 @@ const route = useRoute()
 
 const form = ref({
   tenCa: '',
-  gioBatDau: null as any,
-  gioKetThuc: null as any,
+  // chuyển sang chuỗi để khớp với value-format="HH:mm:ss"
+  gioBatDau: '' as string | null,
+  gioKetThuc: '' as string | null,
   ghiChu: '',
 })
 
@@ -79,17 +82,25 @@ onMounted(async () => {
 
   try {
     const res = await getCaLamViecById(id)
-    const ca = res.data.data
-    form.value.tenCa = ca.tenCa
-    form.value.gioBatDau = dayjs(ca.thoiGianBatDau, 'HH:mm:ss')
-    form.value.gioKetThuc = dayjs(ca.thoiGianKetThuc, 'HH:mm:ss')
-    form.value.ghiChu = ca.ghiChu || ''
+    console.log('getCaLamViecById result:', res) // <-- kiểm tra ở console xem shape
+
+    // Hỗ trợ nhiều shape trả về: res.data.data, res.data, hoặc trực tiếp res
+    const ca = res?.data?.data ?? res?.data ?? res
+
+    if (!ca) {
+      Message.error('Không nhận được dữ liệu ca làm việc từ API')
+      return
+    }
+
+    form.value.tenCa = ca.tenCa ?? ''
+    form.value.gioBatDau = ca.thoiGianBatDau ? dayjs(ca.thoiGianBatDau, 'HH:mm:ss') : null
+    form.value.gioKetThuc = ca.thoiGianKetThuc ? dayjs(ca.thoiGianKetThuc, 'HH:mm:ss') : null
+    form.value.ghiChu = ca.ghiChu ?? ''
   } catch (err) {
     console.error(err)
     Message.error('Không thể tải thông tin ca làm việc')
   }
 })
-
 
 // Validate form
 const validateForm = () => {
@@ -108,24 +119,33 @@ const validateForm = () => {
   return true
 }
 
-// Submit update
+
 const onSubmit = async () => {
   if (!validateForm()) return
-  const id = Number(route.params.id)
 
-  try {
-    const payload = {
-      tenCa: form.value.tenCa,
-      gioBatDau: formatToLocalTime(form.value.gioBatDau),
-      gioKetThuc: formatToLocalTime(form.value.gioKetThuc),
+  Modal.confirm({
+    title: 'Xác nhận',
+    content: 'Bạn có chắc chắn muốn cập nhật ca làm việc này?',
+    okText: 'Đồng ý',
+    cancelText: 'Hủy',
+    onOk: async () => {
+      const id = Number(route.params.id)
+      try {
+        const payload = {
+          tenCa: form.value.tenCa,
+          gioBatDau: formatToLocalTime(form.value.gioBatDau),
+          gioKetThuc: formatToLocalTime(form.value.gioKetThuc),
+          ghiChu: form.value.ghiChu
+        }
+        await suaCaLamViec(id, payload)
+        Message.success('Cập nhật ca thành công')
+        router.push({ name: 'CaLamViec', query: { refresh: String(Date.now()) } })
+      } catch (err) {
+        console.error(err)
+        Message.error('Cập nhật thất bại')
+      }
     }
-    await suaCaLamViec(id, payload)
-    Message.success('Cập nhật ca thành công')
-    router.push({ name: 'CaLamViec', query: { refresh: String(Date.now()) } })
-  } catch (err) {
-    console.error(err)
-    Message.error('Cập nhật thất bại')
-  }
+  })
 }
 
 const onCancel = () => {

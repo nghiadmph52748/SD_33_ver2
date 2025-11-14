@@ -73,6 +73,7 @@
             <a-button type="outline" size="small" @click="handleEdit(record)">
               <template #icon><icon-edit /></template>
             </a-button>
+            
 
             <!-- Nút tắt/bật trạng thái -->
             <a-switch
@@ -212,7 +213,6 @@ const toggleTrangThai = async (record: CaLamViec) => {
 // ✏️ Hàm sửa ca làm việc
 const handleEdit = (record: CaLamViec) => {
  router.push({ name: 'updatecalamviec', params: { id: record.id } })
-
 }
 
 // Tính toán danh sách sau khi lọc

@@ -47,7 +47,7 @@
 import { ref } from 'vue'
 import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
-import { Message } from '@arco-design/web-vue'
+import { Message , Modal  } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { getCaLamViec, themCaLamViec } from '@/api/ca-lam-viec'
@@ -94,33 +94,32 @@ const validateForm = () => {
 const onSubmit = async () => {
   if (!validateForm()) return
 
-  // build payload exactly matching backend DTO field names
-  const payload = {
-    tenCa: form.value.tenCa,
-    gioBatDau: formatToLocalTime(form.value.gioBatDau),   // "HH:mm:ss"
-    gioKetThuc: formatToLocalTime(form.value.gioKetThuc), // "HH:mm:ss"
-    trangThai: true, // default active
-    // ghiChu is not in DTO; if backend accepts it, uncomment below or adapt backend
-    // ghiChu: form.value.ghiChu || null
-  }
+  // ⚠️ Xác nhận trước khi lưu
+  Modal.confirm({
+    title: 'Xác nhận lưu ca làm việc',
+    content: 'Bạn có chắc chắn muốn lưu ca làm việc này không?',
+    okText: 'Lưu',
+    cancelText: 'Hủy',
+    async onOk() {
+      const payload = {
+        tenCa: form.value.tenCa,
+        gioBatDau: formatToLocalTime(form.value.gioBatDau),
+        gioKetThuc: formatToLocalTime(form.value.gioKetThuc),
+        trangThai: true,
+      }
 
-  console.log('POST payload:', payload)
-
-  try {
-   const res = await themCaLamViec(payload)
-console.log('Created object:', res.data)
-Message.success('Thêm ca thành công')
-
-// Quay lại danh sách và reload
-router.push({ name: 'CaLamViec', query: { refresh: String(Date.now()) } })
-
-
-    // Go back to list and force reload (watch route.query.refresh on list page)
-    router.push({ name: 'CaLamViec', query: { refresh: String(Date.now()) } })
-  } catch (err) {
-    console.error('Lỗi tạo ca:', err)
-    Message.error('Thêm ca thất bại')
-  }
+      try {
+        const res = await themCaLamViec(payload)
+        console.log('Created object:', res.data)
+        Message.success('✅ Thêm ca thành công')
+        // Quay lại danh sách
+        router.push({ name: 'CaLamViec', query: { refresh: String(Date.now()) } })
+      } catch (err) {
+        console.error('Lỗi tạo ca:', err)
+        Message.error('❌ Thêm ca thất bại')
+      }
+    },
+  })
 }
 
 const onCancel = () => {
