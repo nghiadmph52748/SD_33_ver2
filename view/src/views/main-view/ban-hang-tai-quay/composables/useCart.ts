@@ -25,6 +25,10 @@ export function useCart(params: { currentOrder: Ref<Order | null> }) {
   // Force re-render key cho cart table khi có lỗi cập nhật quantity
   const cartTableKey = ref(0)
 
+  const increaseCartTableKey = () => {
+    cartTableKey.value += 1
+  }
+
   const cartColumns = [
     {
       title: 'STT',
@@ -90,6 +94,7 @@ export function useCart(params: { currentOrder: Ref<Order | null> }) {
   return {
     cartPagination,
     cartTableKey,
+    increaseCartTableKey,
     cartColumns,
     paginatedCartItems,
   }

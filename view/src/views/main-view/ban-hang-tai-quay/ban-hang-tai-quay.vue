@@ -168,6 +168,16 @@
     <!-- Delete Order Confirm Modal -->
     <DeleteOrderModal :visible="showDeleteConfirmModal" @update:visible="(v) => (showDeleteConfirmModal = v)" @ok="confirmDeleteOrder" />
 
+    <!-- Price Change Notification Modal -->
+    <PriceChangeNotificationModal
+      :visible="showPriceChangeModal"
+      :price-changes="priceChanges"
+      :confirm-loading="priceChangeConfirmLoading"
+      @update:visible="(v) => (showPriceChangeModal = v)"
+      @confirm="confirmPriceChangeModal"
+      @cancel="() => (showPriceChangeModal = false)"
+    />
+
     <!-- Add Product Confirm Modal -->
     <AddProductConfirmModal
       :visible="showAddProductConfirmModal"
@@ -233,6 +243,7 @@ import useCheckout from './composables/useCheckout'
 import useCartActions from './composables/useCartActions'
 import { useOrdersManager } from './composables/useOrdersManager'
 import { useStock } from './composables/useStock'
+import useRealTimePriceSync from './composables/useRealTimePriceSync'
 import CartTable from './components/CartTable.vue'
 import CustomerCard from './components/CustomerCard.vue'
 import PaymentCard from './components/PaymentCard.vue'
@@ -244,6 +255,7 @@ import DeleteProductModal from './components/DeleteProductModal.vue'
 import DeleteOrderModal from './components/DeleteOrderModal.vue'
 import ConfirmBetterVoucherModal from './components/ConfirmBetterVoucherModal.vue'
 import AddProductConfirmModal from './components/AddProductConfirmModal.vue'
+import PriceChangeNotificationModal from './components/PriceChangeNotificationModal.vue'
 import OrdersTabs from './components/OrdersTabs.vue'
 import OrderHeaderCard from './components/OrderHeaderCard.vue'
 // ==================== TYPES ====================
@@ -388,7 +400,7 @@ const {
   almostEligibleSuggestion,
 } = useVoucher({ coupons, paymentForm, currentOrder, subtotal })
 
-const { cartPagination, cartTableKey, cartColumns, paginatedCartItems } = useCart({ currentOrder })
+const { cartPagination, cartTableKey, increaseCartTableKey, cartColumns, paginatedCartItems } = useCart({ currentOrder })
 
 const {
   showAddProductConfirmModal,
@@ -425,6 +437,21 @@ const { showDeleteConfirmModal, showDeleteConfirm, confirmDeleteOrder, createNew
 })
 
 const { insufficientStockItems, overStockItems } = useStock({ currentOrder, allProductVariants })
+
+const { showPriceChangeModal, priceChanges, priceChangeConfirmLoading, updateCartPricesFromServer, confirmPriceChangeModal } =
+  useRealTimePriceSync({
+    currentOrder,
+    allProductVariants,
+    increaseCartTableKey,
+  })
+
+// Watch for product price changes and update cart prices in real-time
+watch(
+  () => allProductVariants.value.map((p) => `${p.id}_${p.giaBan}_${p.giaTriGiamGia}`),
+  () => {
+    updateCartPricesFromServer()
+  }
+)
 
 const discountAmount = computed(() => {
   if (!selectedCoupon.value || !currentOrder.value) return 0
@@ -1041,9 +1068,16 @@ onMounted(() => {
     refreshProductStock()
   }, 2500) // 2.5 seconds (faster for real-time stock updates)
 
-  // Store interval ID for cleanup
+  // Set up auto-refresh for product modal data (realtime even when modal is closed)
+  const productModalRefreshInterval = window.setInterval(() => {
+    loadAllProducts()
+  }, 2500) // Same interval as stock refresh for consistency
+
+  // Store interval IDs for cleanup
   // @ts-ignore
   window.__stockRefreshInterval = stockRefreshInterval
+  // @ts-ignore
+  window.__productModalRefreshInterval = productModalRefreshInterval
 })
 
 // Cleanup intervals on unmount
@@ -1054,6 +1088,10 @@ onBeforeUnmount(() => {
   // @ts-ignore
   if (window.__stockRefreshInterval) {
     clearInterval(window.__stockRefreshInterval)
+  }
+  // @ts-ignore
+  if (window.__productModalRefreshInterval) {
+    clearInterval(window.__productModalRefreshInterval)
   }
 
   // Close BroadcastChannels
