@@ -45,4 +45,18 @@ public class GiaoCaController {
             return ResponseEntity.badRequest().body(ex.getMessage());
         }
     }
+    // Xác nhận giao ca
+    @PutMapping("/xac-nhan/{giaoCaId}")
+    public ResponseEntity<?> xacNhanCa(
+            @PathVariable Long giaoCaId,
+            @RequestBody GiaoCaRequest req) {
+        try {
+            GiaoCa giaoCa = giaoCaService.xacNhanCa(giaoCaId, req);
+            return ResponseEntity.ok(giaoCa);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
+
 }

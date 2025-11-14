@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "GiaoCa")
+@Table(name = "giao_ca")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -65,6 +65,20 @@ public class GiaoCa {
     @Column(name = "tien_mat_nop_lai")
     private Double tienMatNopLai;
 
+    @Column(name = "so_tien_nhan_thuc_te")
+    private Double soTienNhanThucTe;
+
+    @Column(name = "trang_thai_xac_nhan")
+    private String trangThaiXacNhan; // 'Chưa xác nhận', 'Đã xác nhận', 'Chênh lệch', 'Từ chối'
+
+    @Column(name = "thoi_gian_xac_nhan")
+    private LocalDateTime thoiGianXacNhan;
+
+    @Column(name = "ghi_chu_xac_nhan")
+    private String ghiChuXacNhan;
+
+    @Column(name = "trang_thai_ca")
+    private String trangThaiCa; // 'Đang làm', 'Chờ xác nhận', 'Hoàn tất'
 
     @Column(name = "ghi_chu")
     private String ghiChu;

@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
@@ -125,6 +126,8 @@ public class NhanVien {
 
 
     @OneToMany(mappedBy = "idNhanVien")
+    @JsonIgnore
     private Set<HoaDon> hoaDons = new LinkedHashSet<>();
+
 
 }
