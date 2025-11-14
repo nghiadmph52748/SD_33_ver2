@@ -58,11 +58,10 @@
                 <a-input-number
                   v-model="formData.giaBan"
                   :min="0"
+                  :max="9999999999"
                   :precision="0"
                   placeholder="Nhập giá bán"
                   style="width: 100%"
-                  :formatter="(value) => formatCurrencyInput(value)"
-                  :parser="(value) => parseCurrencyInput(value)"
                 />
               </a-form-item>
 
@@ -476,21 +475,12 @@ const findProductIdByName = (productName: string) => {
 }
 
 // Methods
-const formatCurrencyInput = (value: number) => {
-  if (!value) return ''
-  return new Intl.NumberFormat('vi-VN').format(value)
-}
-
 const formatCurrency = (amount: number) => {
   if (!amount) return '0 ₫'
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
-}
-
-const parseCurrencyInput = (value: string) => {
-  return value.replace(/\$\s?|(,*)/g, '')
 }
 
 const goBack = () => {
