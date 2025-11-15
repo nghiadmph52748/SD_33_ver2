@@ -102,8 +102,10 @@ public class GiaoCaService {
                 .chenhLech(req.getChenhlech())
                 .tienMatNopLai(req.getTienMatNopLai())
                 .ghiChu(req.getGhiChu())
+                .trangThaiCa("Đang làm") // set mặc định
+                .trangThaiXacNhan("Chưa xác nhận") // set mặc định
                 .build();
-
+        
         return giaoCaRepository.save(giaoCa);
     }
 

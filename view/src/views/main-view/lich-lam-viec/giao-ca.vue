@@ -34,7 +34,7 @@
             </a-form-item>
           </a-col>
 
-          <!-- <a-col :span="8">
+          <a-col :span="8">
             <a-form-item label="Trạng thái">
               <a-radio-group v-model="filterForm.trangThai" type="button">
                 <a-radio value="all">Tất cả</a-radio>
@@ -42,7 +42,7 @@
                 <a-radio value="Đã kết thúc">Hoàn tất</a-radio>
               </a-radio-group>
             </a-form-item>
-          </a-col> -->
+          </a-col>
         </a-row>
       </a-form>
 
@@ -131,7 +131,7 @@ const columns = [
   { title: 'Tiền đầu ca', dataIndex: 'tongTienBanDau', width: 120 },
   { title: 'Tiền cuối ca', dataIndex: 'tongTienCuoiCa', width: 120 },
   { title: 'Ghi chú', dataIndex: 'ghiChu', width: 200 },
-  // { title: 'Trạng thái', dataIndex: 'trangThai', slotName: 'trangThai', width: 120 },
+  { title: 'Trạng thái', dataIndex: 'trangThai', slotName: 'trangThai', width: 120 },
   { title: 'Hành động', slotName: 'action', width: 120 }
 ]
 

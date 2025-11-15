@@ -1100,31 +1100,31 @@ CREATE TABLE dbo.lich_lam_viec (
 );
 
 
-CREATE TABLE dbo.giao_ca (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    nguoi_giao_id INT NOT NULL,
-    nguoi_nhan_id INT NOT NULL,
-    ca_lam_viec_id INT NOT NULL,
-    thoi_gian_giao_ca DATETIME2 NOT NULL,
-    tong_tien_ban_dau DECIMAL(18,2) NULL, 
-    tong_tien_cuoi_ca DECIMAL(18,2) NULL, 
-    tong_tien_mat DECIMAL(18,2) NULL,
-    tong_tien_chuyen_khoan DECIMAL(18,2) NULL,
-    tong_tien_khac DECIMAL(18,2) NULL,
-    tong_doanh_thu DECIMAL(18,2) NULL,
-    tien_phat_sinh DECIMAL(18,2) NULL,
-    tong_tien_thuc_te DECIMAL(18,2) NULL,
-    chenh_lech DECIMAL(18,2) NULL,
-    tien_mat_nop_lai DECIMAL(18,2) NULL,
-    ghi_chu NVARCHAR(255) NULL,
-    so_tien_nhan_thuc_te DECIMAL(18,2) NULL, 
-    trang_thai_xac_nhan NVARCHAR(50) NOT NULL DEFAULT (N'Chưa xác nhận'), 
-    ghi_chu_xac_nhan NVARCHAR(255) NULL, 
-    trang_thai_ca NVARCHAR(50) NOT NULL DEFAULT (N'Đang làm'),
-    CONSTRAINT FK_giao_ca_nguoi_giao FOREIGN KEY (nguoi_giao_id) REFERENCES dbo.nhan_vien(id),
-    CONSTRAINT FK_giao_ca_nguoi_nhan FOREIGN KEY (nguoi_nhan_id) REFERENCES dbo.nhan_vien(id),
-    CONSTRAINT FK_giao_ca_ca_lam_viec FOREIGN KEY (ca_lam_viec_id) REFERENCES dbo.ca_lam_viec(id)
-);
+	CREATE TABLE dbo.giao_ca (
+		id INT IDENTITY(1,1) PRIMARY KEY,
+		nguoi_giao_id INT NOT NULL,
+		nguoi_nhan_id INT NOT NULL,
+		ca_lam_viec_id INT NOT NULL,
+		thoi_gian_giao_ca DATETIME2 NOT NULL,
+		tong_tien_ban_dau DECIMAL(18,2) NULL, 
+		tong_tien_cuoi_ca DECIMAL(18,2) NULL, 
+		tong_tien_mat DECIMAL(18,2) NULL,
+		tong_tien_chuyen_khoan DECIMAL(18,2) NULL,
+		tong_tien_khac DECIMAL(18,2) NULL,
+		tong_doanh_thu DECIMAL(18,2) NULL,
+		tien_phat_sinh DECIMAL(18,2) NULL,
+		tong_tien_thuc_te DECIMAL(18,2) NULL,
+		chenh_lech DECIMAL(18,2) NULL,
+		tien_mat_nop_lai DECIMAL(18,2) NULL,
+		ghi_chu NVARCHAR(255) NULL,
+		so_tien_nhan_thuc_te DECIMAL(18,2) NULL, 
+		trang_thai_xac_nhan NVARCHAR(50) NOT NULL DEFAULT (N'Chưa xác nhận'), 
+		ghi_chu_xac_nhan NVARCHAR(255) NULL, 
+		trang_thai_ca NVARCHAR(50) NULL DEFAULT (N'Đang làm'),
+		CONSTRAINT FK_giao_ca_nguoi_giao FOREIGN KEY (nguoi_giao_id) REFERENCES dbo.nhan_vien(id),
+		CONSTRAINT FK_giao_ca_nguoi_nhan FOREIGN KEY (nguoi_nhan_id) REFERENCES dbo.nhan_vien(id),
+		CONSTRAINT FK_giao_ca_ca_lam_viec FOREIGN KEY (ca_lam_viec_id) REFERENCES dbo.ca_lam_viec(id)
+	);
 GO
 SET IDENTITY_INSERT [dbo].[anh_san_pham] ON 
 GO
