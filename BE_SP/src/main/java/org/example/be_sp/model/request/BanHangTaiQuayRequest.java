@@ -3,6 +3,7 @@ package org.example.be_sp.model.request;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class BanHangTaiQuayRequest {
     private Integer idPhuongThucThanhToan;
     private Integer idTrangThaiDonHang;
     private HashMap<Integer, Integer> danhSachSanPham; // key: idSanPham, value: soLuong
+    private List<HoaDonChiTietRequest> hoaDonChiTiet; // For orders from banHangMain
     private BigDecimal phiVanChuyen;
     private BigDecimal tongTien;
     private BigDecimal tongTienSauGiam;

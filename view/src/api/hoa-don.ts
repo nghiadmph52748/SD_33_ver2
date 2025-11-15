@@ -88,6 +88,13 @@ export interface HoaDonApiModel {
   tenPhieuGiamGia?: string
   maPhieuGiamGia?: string
   maHoaDon?: string
+  // Additional fields from response
+  tenKhachHang?: string
+  soDienThoaiKhachHang?: string
+  soDienThoai?: string // From idKhachHang
+  moTaLoaiDon?: string
+  items?: any[]
+  chiTietSanPham?: any[]
 }
 
 export interface BanHangTaiQuayRequest {

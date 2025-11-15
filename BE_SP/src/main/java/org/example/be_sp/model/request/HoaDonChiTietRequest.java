@@ -11,10 +11,11 @@ import java.time.LocalDate;
 public class HoaDonChiTietRequest {
     private Integer idHoaDon;
 
-    // Backend expects idChiTietSanPham, but FE may send idBienTheSanPham
-    // Support both to avoid breaking changes in FE
+    // Backend expects idChiTietSanPham, but FE may send idBienThe or idBienTheSanPham
+    // Support all to avoid breaking changes in FE
     private Integer idChiTietSanPham;      // preferred backend name
     private Integer idBienTheSanPham;      // alias from FE
+    private Integer idBienThe;             // from banHangMain (OrderItem.idBienThe)
 
     private Integer soLuong;
 
