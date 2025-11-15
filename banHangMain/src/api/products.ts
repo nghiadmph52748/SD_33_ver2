@@ -74,7 +74,10 @@ export interface ProductVariant {
   idMauSac: number
   tenMauSac?: string
   soLuong: number
-  giaBan: number
+  giaBan: number // Original price
+  giaTriGiamGia?: number // Discount percentage (0-100)
+  idDotGiamGia?: number
+  tenDotGiamGia?: string
   trangThai: boolean
 }
 
@@ -112,7 +115,8 @@ export interface Product {
   name: string
   review: string
   starrating: number
-  price: number
+  price: number // Discounted price (after admin discount)
+  originalPrice?: number // Original price before discount
   img: string
   sizes?: string[]
 }
@@ -136,11 +140,48 @@ function buildImageCandidates(productName: string, primaryColor?: string | null)
 }
 
 function mapBackendToFrontend(backendProduct: BackendProduct): Product {
-  // Get price - use giaBan if available, otherwise use giaNhoNhat or giaLonNhat
-  const price = backendProduct.giaBan 
-    || backendProduct.giaNhoNhat 
-    || backendProduct.giaLonNhat 
-    || 0
+  // Get the primary variant (first variant) to calculate prices
+  const primaryVariant = backendProduct.bienThe?.[0]
+  
+  // Calculate prices from variant if available
+  let originalPrice: number | undefined = undefined
+  let discountedPrice: number = 0
+  
+  if (primaryVariant && primaryVariant.giaBan != null) {
+    originalPrice = primaryVariant.giaBan
+    
+    // Calculate discounted price if there's a discount
+    if (primaryVariant.giaTriGiamGia != null && primaryVariant.giaTriGiamGia > 0) {
+      // giaTriGiamGia is percentage (e.g., 20 means 20% off)
+      discountedPrice = originalPrice * (100 - primaryVariant.giaTriGiamGia) / 100
+    } else {
+      // No discount, discounted price equals original price
+      discountedPrice = originalPrice
+    }
+  } else {
+    // Fallback to product-level prices
+    discountedPrice = backendProduct.giaBan 
+      || backendProduct.giaNhoNhat 
+      || backendProduct.giaLonNhat 
+      || 0
+    
+    // Try to find original price from variants
+    if (backendProduct.bienThe && backendProduct.bienThe.length > 0) {
+      const variantPrices = backendProduct.bienThe
+        .filter(v => v.giaBan != null && v.giaBan > 0)
+        .map(v => v.giaBan!)
+      if (variantPrices.length > 0) {
+        const maxVariantPrice = Math.max(...variantPrices)
+        if (maxVariantPrice > discountedPrice) {
+          originalPrice = maxVariantPrice
+        } else {
+          originalPrice = maxVariantPrice
+        }
+      }
+    } else if (backendProduct.giaLonNhat && backendProduct.giaLonNhat > discountedPrice) {
+      originalPrice = backendProduct.giaLonNhat
+    }
+  }
   
   // Get primary color from variants (if available)
   const primaryColor = backendProduct.bienThe?.[0]?.tenMauSac || 'Black'
@@ -165,7 +206,8 @@ function mapBackendToFrontend(backendProduct: BackendProduct): Product {
     name: backendProduct.tenSanPham,
     review: `Quality product from ${backendProduct.tenNhaSanXuat || 'GearUp'}`,
     starrating: 4, // Default rating, could be from backend
-    price: price,
+    price: discountedPrice,
+    originalPrice: originalPrice,
     img: imagePath,
     sizes: sizes.length > 0 ? sizes : undefined
   }
@@ -334,10 +376,48 @@ async function resolveProductImage(product: BackendProduct, primaryColor: string
 }
 
 async function mapBackendToFrontendAsync(backendProduct: BackendProduct): Promise<Product> {
-  const price = backendProduct.giaBan
-    || backendProduct.giaNhoNhat
-    || backendProduct.giaLonNhat
-    || 0
+  // Get the primary variant (first variant) to calculate prices
+  const primaryVariant = backendProduct.bienThe?.[0]
+  
+  // Calculate prices from variant if available
+  let originalPrice: number | undefined = undefined
+  let discountedPrice: number = 0
+  
+  if (primaryVariant && primaryVariant.giaBan != null) {
+    originalPrice = primaryVariant.giaBan
+    
+    // Calculate discounted price if there's a discount
+    if (primaryVariant.giaTriGiamGia != null && primaryVariant.giaTriGiamGia > 0) {
+      // giaTriGiamGia is percentage (e.g., 20 means 20% off)
+      discountedPrice = originalPrice * (100 - primaryVariant.giaTriGiamGia) / 100
+    } else {
+      // No discount, discounted price equals original price
+      discountedPrice = originalPrice
+    }
+  } else {
+    // Fallback to product-level prices
+    discountedPrice = backendProduct.giaBan
+      || backendProduct.giaNhoNhat
+      || backendProduct.giaLonNhat
+      || 0
+    
+    // Try to find original price from variants
+    if (backendProduct.bienThe && backendProduct.bienThe.length > 0) {
+      const variantPrices = backendProduct.bienThe
+        .filter(v => v.giaBan != null && v.giaBan > 0)
+        .map(v => v.giaBan!)
+      if (variantPrices.length > 0) {
+        const maxVariantPrice = Math.max(...variantPrices)
+        if (maxVariantPrice > discountedPrice) {
+          originalPrice = maxVariantPrice
+        } else {
+          originalPrice = maxVariantPrice
+        }
+      }
+    } else if (backendProduct.giaLonNhat && backendProduct.giaLonNhat > discountedPrice) {
+      originalPrice = backendProduct.giaLonNhat
+    }
+  }
 
   const primaryColor = backendProduct.bienThe?.[0]?.tenMauSac || 'Black'
 
@@ -361,7 +441,8 @@ async function mapBackendToFrontendAsync(backendProduct: BackendProduct): Promis
     name: backendProduct.tenSanPham,
     review: `Quality product from ${backendProduct.tenNhaSanXuat || 'GearUp'}`,
     starrating: 4,
-    price,
+    price: discountedPrice,
+    originalPrice: originalPrice,
     img: imagePath,
     sizes: sizes.length > 0 ? sizes : undefined,
   }

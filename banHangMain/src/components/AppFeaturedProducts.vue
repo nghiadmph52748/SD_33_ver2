@@ -14,7 +14,10 @@
         />
         </RouterLink>
         <h3>{{ product.name }}</h3>
-        <h4>{{ formatCurrency(product.price) }}</h4>
+        <h4>
+          <span v-if="product.originalPrice && product.originalPrice > product.price" class="price-original">{{ formatCurrency(product.originalPrice) }}</span>
+          <span class="price-current">{{ formatCurrency(product.price) }}</span>
+        </h4>
         <RouterLink :to="`/product/${product.id}`">
           <button class="btn btn-outline">{{ t('buttons.viewItem') }} ></button>
         </RouterLink>
@@ -67,6 +70,22 @@ section {
 h4 {
   color: #111111;
   margin: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-original {
+  font-size: 14px;
+  font-weight: 400;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.price-current {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
 }
 
 h2 {

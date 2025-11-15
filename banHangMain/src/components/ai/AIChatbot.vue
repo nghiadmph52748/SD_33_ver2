@@ -46,68 +46,18 @@
               />
             </div>
             <div class="content">
-              <!-- Show EITHER loading indicator OR thinking block when isThinking -->
-              <template v-if="msg.role === 'assistant' && msg.isThinking">
-                <!-- Loading indicator - when no thinking content yet -->
-                <div v-if="!msg.thinkingContent" class="processing-indicator">
-                  <a-spin :size="16" />
-                  <span style="margin-left: 8px">Đang suy nghĩ...</span>
-                  <span class="thinking-dots" aria-label="thinking">
-                    <span class="dot" />
-                    <span class="dot" />
-                    <span class="dot" />
-                  </span>
-                </div>
-
-                <!-- Thinking Block - when thinking content exists -->
-                <div v-else class="thinking-block">
-                  <a-collapse :default-active-key="['1']">
-                    <a-collapse-item key="1">
-                      <template #header>
-                        <div class="thinking-header-wrapper">
-                          <span class="thinking-label">Đang suy nghĩ...</span>
-                          <span class="thinking-dots" aria-label="thinking">
-                            <span class="dot" />
-                            <span class="dot" />
-                            <span class="dot" />
-                          </span>
-                        </div>
-                      </template>
-                      <div class="thinking-content" :ref="(el) => setThinkingRef(el, msg.id)">
-                        {{ msg.thinkingContent }}
-                        <span class="streaming-cursor">▋</span>
-                      </div>
-                    </a-collapse-item>
-                  </a-collapse>
-                </div>
-              </template>
-
-              <!-- Thinking Block when done (not actively thinking) -->
-              <div v-if="msg.role === 'assistant' && !msg.isThinking && msg.thinkingContent" class="thinking-block">
-                <a-collapse :default-active-key="[]">
-                  <a-collapse-item key="1">
-                    <template #header>
-                      <div class="thinking-header-wrapper">
-                        <span class="thinking-label">Đã xong</span>
-                      </div>
-                    </template>
-                    <div class="thinking-content">
-                      {{ msg.thinkingContent }}
-                    </div>
-                  </a-collapse-item>
-                </a-collapse>
+              <!-- Spinning animation - show FIRST when processing but no content yet -->
+              <div
+                v-if="msg.role === 'assistant' && (msg.processingStatus === 'querying' || msg.processingStatus === 'analyzing') && (!msg.content || msg.content.trim().length === 0)"
+                class="processing-indicator"
+              >
+                <a-spin :size="16" />
+                <span style="margin-left: 8px">Đang trả lời...</span>
               </div>
 
-              <!-- Content display - ALWAYS show if has content -->
-              <div v-if="msg.content" class="text" v-html="renderMarkdown(msg.content)"></div>
-
-              <!-- Data Source (only for messages with content) -->
-              <div v-if="msg.role === 'assistant' && msg.content && msg.dataSource" class="message-metadata">
-                <div class="data-source">
-                  <span class="metadata-icon">📊</span>
-                  <span class="metadata-label">Nguồn:</span>
-                  <span class="metadata-value">{{ msg.dataSource }}</span>
-                </div>
+              <!-- Content display with streaming animation -->
+              <div v-if="msg.content && msg.content.trim().length > 0" class="text">
+                <span v-html="renderMarkdown(msg.content)"></span><span v-if="msg.processingStatus === 'analyzing' || (isProcessing && msg.id === messages[messages.length - 1]?.id)" class="streaming-cursor">▋</span>
               </div>
 
               <!-- Follow-up Suggestions (only for messages WITHOUT content AND not processing) -->
@@ -134,16 +84,6 @@
                     {{ suggestion }}
                   </a-button>
                 </a-space>
-              </div>
-
-              <!-- Typing indicator - fallback -->
-              <div
-                v-if="msg.role === 'assistant' && !msg.isThinking && !msg.processingStatus && !msg.content && !msg.followUpSuggestions"
-                class="text typing-indicator"
-              >
-                <span class="dot"></span>
-                <span class="dot"></span>
-                <span class="dot"></span>
               </div>
 
               <div v-if="msg.timestamp" class="timestamp">{{ msg.timestamp }}</div>
@@ -209,8 +149,6 @@ interface ChatMessage {
   content: string
   sources?: string
   timestamp: string
-  isThinking?: boolean
-  thinkingContent?: string
   dataSource?: string
   followUpSuggestions?: string[]
   queryType?: string
@@ -330,7 +268,7 @@ function normalizeSuggestionMessages(msgs: ChatMessage[]): void {
       Array.isArray(msg.followUpSuggestions) &&
       msg.followUpSuggestions.length > 0 &&
       !msg.processingStatus &&
-      !msg.isThinking
+      true
     ) {
       msg.isSuggestionsOnly = true
     }
@@ -358,6 +296,74 @@ function generateSessionName(msgs: ChatMessage[]): string {
   const words = firstUserMessage.split(' ').slice(0, 3)
   const truncated = words.join(' ')
   return truncated.length > 20 ? `${truncated.substring(0, 17)}...` : truncated
+}
+
+/**
+ * Generate default follow-up suggestions based on AI response and conversation context
+ */
+function generateDefaultSuggestions(aiResponse: string, allMessages: ChatMessage[]): string[] {
+  const responseLower = aiResponse.toLowerCase()
+  const lastUserMessage = allMessages.filter((m) => m.role === 'user').pop()?.content.toLowerCase() || ''
+  
+  // Default suggestions that are always relevant
+  const defaultSuggestions = [
+    'Sản phẩm nào đang giảm giá?',
+    'Tôi muốn biết kích cỡ phù hợp',
+    'Chính sách đổi trả là gì?',
+    'Gợi ý cho tôi giày chạy bộ',
+  ]
+  
+  // Context-aware suggestions based on AI response
+  const contextSuggestions: string[] = []
+  
+  // If AI mentioned products, suggest related questions
+  if (responseLower.includes('sản phẩm') || responseLower.includes('giày') || responseLower.includes('nike') || responseLower.includes('adidas')) {
+    contextSuggestions.push('Sản phẩm này có size nào?')
+    contextSuggestions.push('Giá của sản phẩm này là bao nhiêu?')
+    contextSuggestions.push('Sản phẩm này còn hàng không?')
+  }
+  
+  // If AI mentioned promotions/discounts
+  if (responseLower.includes('giảm giá') || responseLower.includes('khuyến mãi') || responseLower.includes('voucher')) {
+    contextSuggestions.push('Có mã giảm giá nào khác không?')
+    contextSuggestions.push('Chương trình khuyến mãi kéo dài đến khi nào?')
+    contextSuggestions.push('Làm sao để sử dụng voucher?')
+  }
+  
+  // If AI mentioned orders
+  if (responseLower.includes('đơn hàng') || responseLower.includes('order') || lastUserMessage.includes('đơn')) {
+    contextSuggestions.push('Tôi muốn kiểm tra trạng thái đơn hàng')
+    contextSuggestions.push('Thời gian giao hàng là bao lâu?')
+    contextSuggestions.push('Có thể hủy đơn hàng không?')
+  }
+  
+  // If AI mentioned shipping/delivery
+  if (responseLower.includes('vận chuyển') || responseLower.includes('giao hàng') || responseLower.includes('shipping')) {
+    contextSuggestions.push('Phí vận chuyển là bao nhiêu?')
+    contextSuggestions.push('Có giao hàng nhanh không?')
+    contextSuggestions.push('Tôi có thể đổi địa chỉ giao hàng không?')
+  }
+  
+  // If AI mentioned size/fit
+  if (responseLower.includes('size') || responseLower.includes('kích cỡ') || responseLower.includes('fit')) {
+    contextSuggestions.push('Làm sao để chọn size đúng?')
+    contextSuggestions.push('Size này có phù hợp với chân tôi không?')
+    contextSuggestions.push('Có bảng size không?')
+  }
+  
+  // If AI mentioned return/refund
+  if (responseLower.includes('đổi trả') || responseLower.includes('hoàn hàng') || responseLower.includes('refund')) {
+    contextSuggestions.push('Thời gian đổi trả là bao lâu?')
+    contextSuggestions.push('Có thể đổi sang sản phẩm khác không?')
+    contextSuggestions.push('Phí đổi trả là bao nhiêu?')
+  }
+  
+  // Combine context suggestions with defaults, remove duplicates, limit to 4
+  const allSuggestions = [...contextSuggestions, ...defaultSuggestions]
+  const uniqueSuggestions = Array.from(new Set(allSuggestions))
+  
+  // Return top 4 suggestions (prioritize context-aware ones)
+  return uniqueSuggestions.slice(0, 4)
 }
 
 function saveHistory() {
@@ -524,13 +530,6 @@ function scrollToBottom() {
   }
 }
 
-function setThinkingRef(el: any, msgId: number) {
-  if (el) {
-    nextTick(() => {
-      el.scrollTop = el.scrollHeight
-    })
-  }
-}
 
 async function checkConnection() {
   try {
@@ -617,36 +616,33 @@ async function sendMessage(text: string = input.value) {
   // Save user message to database
   await saveAiChatToDatabase('user', text.trim())
 
+  // Create AI message placeholder for streaming - MUST have processingStatus to show spinner
   const aiMessageId = Date.now() + 1
   const aiMessage: ChatMessage = {
     id: aiMessageId,
     role: 'assistant',
-    content: '',
+    content: '', // Empty content to show spinner
     timestamp: new Date().toLocaleTimeString('vi-VN'),
-    processingStatus: 'querying',
-    isThinking: true,
-    thinkingContent: '',
+    processingStatus: 'querying', // This triggers spinner display
     dataSource: '',
     queryType: '',
   }
+  
+  // Push message immediately - Vue will reactively update
   messages.value.push(aiMessage)
-
   input.value = ''
-
-  await nextTick()
+  
+  // Force immediate DOM update to show spinner
   await nextTick()
   scrollToBottom()
-
+  
+  // Additional tick to ensure spinner renders
+  await nextTick()
+  
   saveHistory()
 
   try {
-    let insideThinkTag = false
-    let thinkingTagClosed = false
     let fullContent = ''
-    let thinkingContent = ''
-    let thinkingContentLive = ''
-    let contentAfterThinking = ''
-
     let shouldRedirectToStaff = false
 
     await chatWithAIStream(
@@ -659,31 +655,6 @@ async function sendMessage(text: string = input.value) {
           shouldRedirectToStaff = true
         }
 
-        if (fullContent.includes('<think>') && !insideThinkTag && !thinkingTagClosed) {
-          insideThinkTag = true
-        }
-
-        if (fullContent.includes('</think>') && insideThinkTag) {
-          insideThinkTag = false
-          thinkingTagClosed = true
-
-          const thinkMatch = fullContent.match(/<think>([\s\S]*?)<\/think>/)
-          if (thinkMatch) {
-            thinkingContent = thinkMatch[1].trim()
-          }
-
-          contentAfterThinking = fullContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
-        } else if (thinkingTagClosed) {
-          contentAfterThinking = fullContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
-        }
-
-        if (insideThinkTag) {
-          const liveMatch = fullContent.match(/<think>([\s\S]*?)$/)
-          if (liveMatch) {
-            thinkingContentLive = liveMatch[1]
-          }
-        }
-
         const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
           if (metadata) {
@@ -693,27 +664,15 @@ async function sendMessage(text: string = input.value) {
             messages.value[msgIndex].processingStatus = 'analyzing'
           }
 
-          if (insideThinkTag) {
-            messages.value[msgIndex].isThinking = true
-            messages.value[msgIndex].thinkingContent = thinkingContentLive
-            messages.value[msgIndex].content = ''
+          // Update content as it streams - only set if there's actual content
+          if (fullContent.trim().length > 0) {
+            messages.value[msgIndex].content = fullContent
             messages.value[msgIndex].processingStatus = 'analyzing'
           } else {
-            const hasRenderableContent =
-              (contentAfterThinking && contentAfterThinking.length > 0) ||
-              (!fullContent.includes('<think>') && fullContent.trim().length > 0)
-
-            if (!hasRenderableContent) {
-              messages.value[msgIndex].isThinking = true
-              messages.value[msgIndex].processingStatus = 'analyzing'
-              messages.value[msgIndex].content = ''
-            } else {
-              messages.value[msgIndex].isThinking = false
-              messages.value[msgIndex].thinkingContent = thinkingContent
-              messages.value[msgIndex].content = contentAfterThinking || fullContent
-              messages.value[msgIndex].processingStatus = 'ready'
-            }
+            // Keep content empty to show spinner until real content arrives
+            messages.value[msgIndex].content = ''
           }
+          
           nextTick(() => scrollToBottom())
         }
       },
@@ -724,20 +683,8 @@ async function sendMessage(text: string = input.value) {
         const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
           const msg = messages.value[msgIndex]
-
-          if (msg.isThinking || insideThinkTag) {
-            msg.isThinking = false
-
-            if (fullContent.includes('<think>')) {
-              const thinkMatch = fullContent.match(/<think>([\s\S]*?)(?:<\/think>|$)/)
-              if (thinkMatch) {
-                msg.thinkingContent = thinkMatch[1].trim()
-              }
-            }
-
-            msg.content = fullContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()
-            msg.processingStatus = 'ready'
-          }
+          msg.content = fullContent.trim()
+          msg.processingStatus = 'ready'
         }
 
         const userMessages = messages.value.filter((msg) => msg.role === 'user' && msg.id !== 0)
@@ -763,10 +710,25 @@ async function sendMessage(text: string = input.value) {
           }, 1500)
           return
         }
-        if (aiMsg && aiMsg.followUpSuggestions && aiMsg.followUpSuggestions.length > 0) {
-          const suggestions = [...aiMsg.followUpSuggestions]
+        
+        // Always show suggestions card after AI response (unless redirecting to staff)
+        if (aiMsg && aiMsg.content && aiMsg.content.trim()) {
+          // Get suggestions from metadata or use default suggestions
+          let suggestions: string[] = []
+          
+          if (aiMsg.followUpSuggestions && aiMsg.followUpSuggestions.length > 0) {
+            // Use suggestions from backend
+            suggestions = [...aiMsg.followUpSuggestions]
+          } else {
+            // Generate default suggestions based on conversation context
+            suggestions = generateDefaultSuggestions(aiMsg.content, messages.value)
+          }
+          
+          // Remove suggestions from the AI message
           aiMsg.followUpSuggestions = undefined
           aiMsg.isSuggestionsOnly = false
+          
+          // Create a separate suggestions card message
           const suggestionsMessage: ChatMessage = {
             id: Date.now() + 2,
             role: 'assistant',
@@ -1195,16 +1157,16 @@ defineExpose({
     }
 
     &::-webkit-scrollbar-track {
-      background: #f5f5f5;
+      background: var(--color-fill-2);
       border-radius: 3px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #d9d9d9;
+      background: var(--color-fill-4);
       border-radius: 3px;
 
       &:hover {
-        background: #bfbfbf;
+        background: var(--color-fill-3);
       }
     }
   }
@@ -1222,11 +1184,20 @@ defineExpose({
         }
 
         .content {
-          background: #165dff;
+          background: var(--color-primary, #111111);
           color: #fff;
           margin-right: 8px;
           margin-left: 0;
-          box-shadow: 0 4px 10px rgba(22, 93, 255, 0.25);
+          box-shadow: 0 4px 10px rgba(17, 17, 17, 0.25);
+
+          /* Ensure text inside user message is white */
+          .text,
+          :deep(.text),
+          :deep(p),
+          :deep(span),
+          :deep(div) {
+            color: #fff !important;
+          }
         }
       }
     }
@@ -1318,35 +1289,202 @@ defineExpose({
     .text {
       line-height: 1.7;
       white-space: normal;
+      font-size: 14px;
+      color: var(--color-text-1);
 
-      h1,
-      h2,
-      h3 {
-        margin: 0 0 8px 0;
+      /* Paragraphs - better spacing */
+      :deep(p) {
+        margin: 0 0 12px 0;
+        line-height: 1.7;
+        color: var(--color-text-1);
+      }
+
+      :deep(p:last-child) {
+        margin-bottom: 0;
+        display: inline;
+      }
+
+      /* Headings - highlighted with colors */
+      :deep(h1),
+      :deep(h2),
+      :deep(h3),
+      :deep(h4),
+      :deep(h5),
+      :deep(h6) {
+        margin: 16px 0 12px 0;
+        font-weight: 700;
+        line-height: 1.4;
+        color: var(--color-text-1);
+      }
+
+      :deep(h1) {
+        font-size: 20px;
+        border-bottom: 2px solid var(--color-border-2);
+        padding-bottom: 8px;
+      }
+
+      :deep(h2) {
+        font-size: 18px;
+        color: var(--color-primary, #111111);
+      }
+
+      :deep(h3) {
+        font-size: 16px;
+        color: var(--color-primary, #111111);
+      }
+
+      :deep(h4),
+      :deep(h5),
+      :deep(h6) {
+        font-size: 14px;
         font-weight: 600;
       }
 
-      table {
+      /* Lists - better styling */
+      :deep(ul),
+      :deep(ol) {
+        margin: 12px 0;
+        padding-left: 24px;
+        line-height: 1.8;
+      }
+
+      :deep(ul) {
+        list-style-type: disc;
+      }
+
+      :deep(ol) {
+        list-style-type: decimal;
+      }
+
+      :deep(li) {
+        margin: 6px 0;
+        padding-left: 4px;
+        color: var(--color-text-1);
+      }
+
+      :deep(li::marker) {
+        color: var(--color-primary, #111111);
+      }
+
+      /* Nested lists */
+      :deep(ul ul),
+      :deep(ol ol),
+      :deep(ul ol),
+      :deep(ol ul) {
+        margin: 6px 0;
+        padding-left: 20px;
+      }
+
+      /* Strong/Bold text - highlighted */
+      :deep(strong),
+      :deep(b) {
+        font-weight: 700;
+        color: var(--color-text-1);
+        background: linear-gradient(120deg, rgba(17, 17, 17, 0.1) 0%, rgba(17, 17, 17, 0.05) 100%);
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+
+      /* Emphasis/Italic */
+      :deep(em),
+      :deep(i) {
+        font-style: italic;
+        color: var(--color-text-2);
+      }
+
+      /* Tables - improved styling */
+      :deep(table) {
         width: 100%;
         border-collapse: collapse;
-        margin: 8px 0 4px 0;
+        margin: 16px 0;
         border: 1px solid var(--color-border-2);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       }
 
-      th,
-      td {
+      :deep(th),
+      :deep(td) {
         border: 1px solid var(--color-border-2);
-        padding: 8px 10px;
+        padding: 12px 14px;
         text-align: left;
+        font-size: 13px;
       }
 
-      th {
-        background: var(--color-fill-2);
-        font-weight: 600;
+      :deep(th) {
+        background: linear-gradient(135deg, rgba(17, 17, 17, 0.1), rgba(17, 17, 17, 0.05));
+        font-weight: 700;
+        color: var(--color-primary, #111111);
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
       }
-      code,
-      pre code {
+
+      :deep(tr:nth-child(even) td) {
+        background: var(--color-fill-1);
+      }
+
+      :deep(tr:hover td) {
+        background: var(--color-fill-2);
+      }
+
+      /* Code blocks */
+      :deep(code) {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+        background: var(--color-fill-2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+        color: var(--color-primary, #111111);
+        border: 1px solid var(--color-border-2);
+      }
+
+      :deep(pre) {
+        background: var(--color-fill-2);
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 12px 0;
+        border: 1px solid var(--color-border-2);
+      }
+
+      :deep(pre code) {
+        background: transparent;
+        padding: 0;
+        border: none;
+        color: var(--color-text-1);
+        font-size: 13px;
+      }
+
+      /* Blockquotes */
+      :deep(blockquote) {
+        border-left: 4px solid var(--color-primary, #111111);
+        padding-left: 16px;
+        margin: 12px 0;
+        color: var(--color-text-2);
+        font-style: italic;
+        background: var(--color-fill-1);
+        padding: 12px 16px;
+        border-radius: 4px;
+      }
+
+      /* Horizontal rules */
+      :deep(hr) {
+        border: none;
+        border-top: 2px solid var(--color-border-2);
+        margin: 16px 0;
+      }
+
+      /* Links */
+      :deep(a) {
+        color: var(--color-primary, #111111);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: all 0.2s;
+      }
+
+      :deep(a:hover) {
+        border-bottom-color: var(--color-primary, #111111);
       }
     }
 
@@ -1361,10 +1499,10 @@ defineExpose({
       }
 
       .sources-content {
-        background: #fafbfc;
+        background: var(--color-fill-1);
         padding: 8px;
         border-radius: 6px;
-        border: 1px solid #eef0f2;
+        border: 1px solid var(--color-border-2);
         font-size: 12px;
         line-height: 1.5;
       }
@@ -1399,6 +1537,19 @@ defineExpose({
       .arco-btn {
         border-radius: 0 20px 20px 0;
         height: 100%;
+        background: var(--color-primary, #111111) !important;
+        border-color: var(--color-primary, #111111) !important;
+        color: #ffffff !important;
+
+        &:hover {
+          background: #000000 !important;
+          border-color: #000000 !important;
+        }
+
+        &:active {
+          background: #1a1a1a !important;
+          border-color: #1a1a1a !important;
+        }
       }
     }
   }
@@ -1408,6 +1559,24 @@ defineExpose({
   .input-container {
     background: rgba(18, 20, 26, 0.95);
     border-top-color: #272b36;
+
+    :deep(.arco-input-search) {
+      .arco-btn {
+        background: #1a1a1a !important;
+        border-color: #1a1a1a !important;
+        color: #ffffff !important;
+
+        &:hover {
+          background: #2a2a2a !important;
+          border-color: #2a2a2a !important;
+        }
+
+        &:active {
+          background: #0f0f0f !important;
+          border-color: #0f0f0f !important;
+        }
+      }
+    }
   }
 
   .messages-container {
@@ -1429,7 +1598,7 @@ defineExpose({
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
   }
   .message.user .message-wrapper .content {
-    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
+    box-shadow: 0 6px 16px rgba(17, 17, 17, 0.35);
   }
   .content .text table {
     border-color: #2b3040;
@@ -1505,22 +1674,22 @@ defineExpose({
 .empty-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--color-text-1);
   margin-bottom: 8px;
 }
 
 .empty-description {
   font-size: 14px;
-  color: #86909c;
+  color: var(--color-text-3);
   line-height: 1.5;
 }
 
 .is-dark .empty-title {
-  color: #e6e9ef;
+  color: var(--color-text-1);
 }
 
 .is-dark .empty-description {
-  color: #9aa4b2;
+  color: var(--color-text-3);
 }
 
 .typing-indicator {
@@ -1538,155 +1707,17 @@ defineExpose({
   animation: typingDot 1.4s infinite;
 }
 
-.thinking-block {
-  margin-bottom: 12px;
-
-  :deep(.arco-collapse) {
-    background: transparent;
-    border: none;
-  }
-
-  :deep(.arco-collapse-item) {
-    background: linear-gradient(135deg, rgba(123, 97, 255, 0.06), rgba(22, 93, 255, 0.06));
-    border: 1px solid rgba(123, 97, 255, 0.2);
-    border-radius: 8px;
-  }
-
-  :deep(.arco-collapse-item-header) {
-    padding: 10px 14px !important;
-    background: transparent;
-    display: flex !important;
-    align-items: center !important;
-
-    &:hover {
-      background: rgba(123, 97, 255, 0.05);
-    }
-  }
-
-  .thinking-header-wrapper {
-    display: flex !important;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-    margin-left: 20px;
-
-    .thinking-label {
-      font-weight: 600;
-      color: var(--color-text-1);
-      font-size: 14px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .thinking-status {
-      font-size: 11px;
-      color: rgb(var(--primary-6));
-      font-weight: 600;
-      animation: pulse 1.5s ease-in-out infinite;
-      white-space: nowrap;
-      flex-shrink: 0;
-      padding: 2px 8px;
-      background: rgba(var(--primary-6), 0.1);
-      border-radius: 12px;
-    }
-  }
-
-  :deep(.arco-collapse-item-content) {
-    padding: 0;
-    background: var(--color-bg-2);
-    border-top: 1px solid rgba(123, 97, 255, 0.15);
-  }
-
-  .thinking-content {
-    padding: 12px 14px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--color-text-2);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Text', system-ui, sans-serif;
-    white-space: pre-wrap;
-    max-height: 300px;
-    overflow-y: auto;
-
-    p,
-    div,
-    span,
-    ul,
-    ol,
-    li {
-      margin: 0;
-      padding: 0;
-      line-height: 1.5;
-    }
-
-    p + p,
-    div + div {
-      margin-top: 8px;
-    }
-
-    ul,
-    ol {
-      padding-left: 20px;
-      margin: 4px 0;
-    }
-
-    li {
-      margin: 2px 0;
-    }
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: var(--color-fill-2);
-      border-radius: 2px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--color-fill-4);
-      border-radius: 2px;
-
-      &:hover {
-        background: var(--color-fill-3);
-      }
-    }
-  }
-
-  .thinking-dots {
-    display: inline-flex;
-    gap: 4px;
-    margin-left: 6px;
-    vertical-align: middle;
-
-    .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background-color: rgb(var(--primary-6));
-      animation: typingDot 1.4s infinite;
-    }
-
-    .dot:nth-child(1) {
-      animation-delay: 0s;
-    }
-    .dot:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-    .dot:nth-child(3) {
-      animation-delay: 0.4s;
-    }
-  }
-
-  .streaming-cursor {
-    display: inline-block;
-    font-family: monospace;
-    color: rgb(var(--primary-6));
-    font-size: 14px;
-    font-weight: bold;
-    animation: blink 0.8s step-end infinite;
-    margin-left: 2px;
-  }
+/* Streaming cursor animation */
+.streaming-cursor {
+  display: inline;
+  font-family: monospace;
+  color: var(--color-primary, #111111);
+  font-size: 14px;
+  font-weight: bold;
+  animation: blink 0.8s step-end infinite;
+  margin-left: 2px;
+  vertical-align: baseline;
+  line-height: inherit;
 }
 
 @keyframes typingDot {
@@ -1737,36 +1768,85 @@ defineExpose({
     padding: 4px 10px;
     height: auto;
     min-height: 24px;
-    border: 1px solid var(--color-border-2);
-    background: var(--color-bg-1);
+    border: 1px solid var(--color-border-2) !important;
+    background: var(--color-bg-1) !important;
+    color: var(--color-text-1) !important;
     border-radius: 12px;
     transition: all 0.2s ease;
 
     &:hover {
-      background: rgb(var(--primary-1));
-      border-color: rgb(var(--primary-6));
-      color: rgb(var(--primary-6));
+      background: rgba(17, 17, 17, 0.05) !important;
+      border-color: var(--color-primary, #111111) !important;
+      color: var(--color-primary, #111111) !important;
       transform: translateY(-1px);
-      box-shadow: 0 2px 6px rgba(var(--primary-6), 0.15);
+      box-shadow: 0 2px 6px rgba(17, 17, 17, 0.15);
+    }
+
+    &:active {
+      background: rgba(17, 17, 17, 0.1) !important;
+    }
+
+    &:focus {
+      border-color: var(--color-primary, #111111) !important;
+      color: var(--color-primary, #111111) !important;
+    }
+  }
+
+  :deep(.suggestion-btn) {
+    border-color: var(--color-border-2) !important;
+    background: var(--color-bg-1) !important;
+    color: var(--color-text-1) !important;
+
+    &:hover {
+      background: rgba(17, 17, 17, 0.05) !important;
+      border-color: var(--color-primary, #111111) !important;
+      color: var(--color-primary, #111111) !important;
+    }
+  }
+
+  :deep(.suggestions-buttons .arco-btn) {
+    border-color: var(--color-border-2) !important;
+    background: var(--color-bg-1) !important;
+    color: var(--color-text-1) !important;
+
+    &:hover {
+      background: rgba(17, 17, 17, 0.05) !important;
+      border-color: var(--color-primary, #111111) !important;
+      color: var(--color-primary, #111111) !important;
+    }
+
+    &:active {
+      background: rgba(17, 17, 17, 0.1) !important;
     }
   }
 }
 
 .ai-chatbot.is-dark {
-  .data-source {
-    background: #1a1f2e;
-    border: 1px solid #272b36;
-  }
-
   .suggestion-btn {
-    background: #151823;
-    border-color: #272b36;
-    color: #9aa4b2;
+    background: #151823 !important;
+    border-color: #272b36 !important;
+    color: #9aa4b2 !important;
 
     &:hover {
-      background: rgba(22, 93, 255, 0.15);
-      border-color: rgb(var(--primary-5));
-      color: rgb(var(--primary-5));
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 255, 255, 0.3) !important;
+      color: #ffffff !important;
+    }
+  }
+
+  :deep(.suggestions-buttons .arco-btn) {
+    background: #151823 !important;
+    border-color: #272b36 !important;
+    color: #9aa4b2 !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 255, 255, 0.3) !important;
+      color: #ffffff !important;
+    }
+
+    &:active {
+      background: rgba(255, 255, 255, 0.15) !important;
     }
   }
 }

@@ -13,7 +13,10 @@
         <div class="info">
           <header class="title-row">
             <h3 class="name">{{ item.name }}</h3>
-            <div class="price">{{ formatCurrency(item.price) }}</div>
+            <div class="price">
+              <span v-if="item.originalPrice && item.originalPrice > item.price" class="price-original">{{ formatCurrency(item.originalPrice) }}</span>
+              <span class="price-current">{{ formatCurrency(item.price) }}</span>
+            </div>
           </header>
           <div class="meta">
             <div class="line" v-if="item.gender">
@@ -165,7 +168,25 @@ const formatGender = (gender: string | undefined | null) => {
 }
 .title-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .name { margin: 0; font-size: 26px; font-weight: 700; }
-.price { font-weight: 700; }
+.price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.price-original {
+  font-size: 14px;
+  font-weight: 400;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.price-current {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111;
+}
 .meta { color: #4e5969; display: grid; gap: 6px; margin: 8px 0 12px; font-size: 18px; }
 .size { border-bottom: 4px solid #1d1d1d; width: fit-content; padding-bottom: 4px; }
 .controls { display: inline-flex; align-items: center; gap: 12px; }

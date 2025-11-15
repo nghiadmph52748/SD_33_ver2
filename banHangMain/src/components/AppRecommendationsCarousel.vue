@@ -14,7 +14,10 @@
           <div class="info">
             <h4 class="name">{{ p.name }}</h4>
             <p class="meta">{{ p.gender }}'s Shoes</p>
-            <p class="price">{{ formatCurrency(p.price) }}</p>
+            <p class="price">
+              <span v-if="p.originalPrice && p.originalPrice > p.price" class="price-original">{{ formatCurrency(p.originalPrice) }}</span>
+              <span class="price-current">{{ formatCurrency(p.price) }}</span>
+            </p>
           </div>
         </RouterLink>
       </article>
@@ -144,9 +147,25 @@ function resolveImage(imgPath: string | undefined | null): string {
 }
 
 .price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #111111;
   font-weight: 500;
   margin: 0;
+}
+
+.price-original {
+  font-size: 12px;
+  font-weight: 400;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.price-current {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111111;
 }
 
 @keyframes shimmer {

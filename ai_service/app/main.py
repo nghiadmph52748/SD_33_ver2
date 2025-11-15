@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import chatbot
+from app.routers import customer_chatbot, admin_chatbot
 from app.config import get_settings
 import logging
 
@@ -16,8 +16,8 @@ settings = get_settings()
 # Create FastAPI app
 app = FastAPI(
     title="GearUp AI Service",
-    description="AI microservice for GearUp e-commerce admin system",
-    version="1.0.0"
+    description="AI microservice for GearUp e-commerce - Customer Support & Admin Analytics",
+    version="2.0.0"
 )
 
 # CORS middleware
@@ -29,18 +29,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(chatbot.router, prefix="/api/ai")
+# Include routers - separated by user type
+# Customer chatbot for banHangMain (customer frontend)
+app.include_router(customer_chatbot.router, prefix="/api/ai/chatbot")
+# Admin chatbot for view (admin frontend)
+app.include_router(admin_chatbot.router, prefix="/api/ai/chatbot")
 
 @app.get("/")
 async def root():
     return {
         "service": "GearUp AI Service",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "status": "running",
         "endpoints": {
-            "chat": "/api/ai/chatbot/chat",
-            "health": "/api/ai/chatbot/health",
+            "customer_chat": "/api/ai/chatbot/customer/chat",
+            "customer_chat_stream": "/api/ai/chatbot/customer/chat-stream",
+            "admin_chat": "/api/ai/chatbot/admin/chat",
+            "admin_chat_stream": "/api/ai/chatbot/admin/chat-stream",
+            "health": "/health",
             "docs": "/docs"
         }
     }

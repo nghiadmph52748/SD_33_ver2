@@ -46,63 +46,22 @@
               />
             </div>
             <div class="content">
-              <!-- Show EITHER loading indicator OR thinking block when isThinking -->
-              <template v-if="msg.role === 'assistant' && msg.isThinking">
-                <!-- Loading indicator - when no thinking content yet -->
-                <div v-if="!msg.thinkingContent" class="processing-indicator">
-                  <a-spin :size="16" />
-                  <span style="margin-left: 8px">Đang suy nghĩ...</span>
-                  <span class="thinking-dots" aria-label="thinking">
-                    <span class="dot" />
-                    <span class="dot" />
-                    <span class="dot" />
-                  </span>
-                </div>
-
-                <!-- Thinking Block - when thinking content exists -->
-                <div v-else class="thinking-block">
-                  <a-collapse :default-active-key="['1']">
-                    <a-collapse-item key="1">
-                      <template #header>
-                        <div class="thinking-header-wrapper">
-                          <span class="thinking-label">Đang suy nghĩ...</span>
-                          <span class="thinking-dots" aria-label="thinking">
-                            <span class="dot" />
-                            <span class="dot" />
-                            <span class="dot" />
-                          </span>
-                        </div>
-                      </template>
-                      <div class="thinking-content" :ref="(el) => setThinkingRef(el, msg.id)">
-                        {{ msg.thinkingContent }}
-                        <span class="streaming-cursor">▋</span>
-                      </div>
-                    </a-collapse-item>
-                  </a-collapse>
-                </div>
-              </template>
-
-              <!-- Thinking Block when done (not actively thinking) -->
-              <div v-if="msg.role === 'assistant' && !msg.isThinking && msg.thinkingContent" class="thinking-block">
-                <a-collapse :default-active-key="[]">
-                  <a-collapse-item key="1">
-                    <template #header>
-                      <div class="thinking-header-wrapper">
-                        <span class="thinking-label">Đã xong</span>
-                      </div>
-                    </template>
-                    <div class="thinking-content">
-                      {{ msg.thinkingContent }}
-                    </div>
-                  </a-collapse-item>
-                </a-collapse>
+              <!-- Spinning animation - show FIRST when processing but no content yet -->
+              <div
+                v-if="msg.role === 'assistant' && (msg.processingStatus === 'querying' || msg.processingStatus === 'analyzing') && (!msg.content || msg.content.trim().length === 0)"
+                class="processing-indicator"
+              >
+                <a-spin :size="16" />
+                <span style="margin-left: 8px">Đang trả lời...</span>
               </div>
 
-              <!-- Content display - ALWAYS show if has content -->
-              <div v-if="msg.content" class="text" v-html="renderMarkdown(msg.content)"></div>
+              <!-- Content display with streaming animation -->
+              <div v-if="msg.content && msg.content.trim().length > 0" class="text">
+                <span v-html="renderMarkdown(msg.content)"></span><span v-if="msg.processingStatus === 'analyzing' || (isProcessing && msg.id === messages[messages.length - 1]?.id)" class="streaming-cursor">▋</span>
+              </div>
 
-              <!-- Data Source (only for messages with content) -->
-              <div v-if="msg.role === 'assistant' && msg.content && msg.dataSource" class="message-metadata">
+              <!-- Data Source (only when AI response is complete) -->
+              <div v-if="msg.role === 'assistant' && msg.content && msg.dataSource && msg.processingStatus === 'ready'" class="message-metadata">
                 <div class="data-source">
                   <span class="metadata-icon">📊</span>
                   <span class="metadata-label">Nguồn:</span>
@@ -134,16 +93,6 @@
                     {{ suggestion }}
                   </a-button>
                 </a-space>
-              </div>
-
-              <!-- Typing indicator - fallback -->
-              <div
-                v-if="msg.role === 'assistant' && !msg.isThinking && !msg.processingStatus && !msg.content && !msg.followUpSuggestions"
-                class="text typing-indicator"
-              >
-                <span class="dot"></span>
-                <span class="dot"></span>
-                <span class="dot"></span>
               </div>
 
               <div v-if="msg.timestamp" class="timestamp">{{ msg.timestamp }}</div>
@@ -208,8 +157,6 @@ interface ChatMessage {
   content: string
   sources?: string
   timestamp: string
-  isThinking?: boolean
-  thinkingContent?: string // Nội dung reasoning bên trong <think> tags
   dataSource?: string // Nguồn dữ liệu
   followUpSuggestions?: string[] // Gợi ý câu hỏi tiếp theo
   queryType?: string // Loại truy vấn
@@ -334,7 +281,7 @@ function normalizeSuggestionMessages(msgs: ChatMessage[]): void {
       Array.isArray(msg.followUpSuggestions) &&
       msg.followUpSuggestions.length > 0 &&
       !msg.processingStatus &&
-      !msg.isThinking
+      true
     ) {
       msg.isSuggestionsOnly = true
     }
@@ -527,14 +474,6 @@ function scrollToBottom() {
   }
 }
 
-// Auto-scroll thinking content to bottom when streaming
-function setThinkingRef(el: any, msgId: number) {
-  if (el) {
-    nextTick(() => {
-      el.scrollTop = el.scrollHeight
-    })
-  }
-}
 
 // Expanded view removed
 
@@ -587,82 +526,41 @@ async function sendMessage(text: string = input.value) {
   }
   messages.value.push(userMessage)
 
-  // Create AI message placeholder immediately with thinking mode
+  // Create AI message placeholder for streaming - MUST have processingStatus to show spinner
   const aiMessageId = Date.now() + 1
   const aiMessage: ChatMessage = {
     id: aiMessageId,
     role: 'assistant',
-    content: '',
+    content: '', // Empty content to show spinner
     timestamp: new Date().toLocaleTimeString('vi-VN'),
-    processingStatus: 'querying',
-    isThinking: true,
-    thinkingContent: '',
+    processingStatus: 'querying', // This triggers spinner display
     dataSource: '',
     queryType: '',
   }
+  
+  // Push message immediately - Vue will reactively update
   messages.value.push(aiMessage)
-
-  // Clear input first
   input.value = ''
-
-  // Force multiple UI update cycles to ensure loading indicator renders
-  await nextTick()
+  
+  // Force immediate DOM update to show spinner
   await nextTick()
   scrollToBottom()
-
-  // Persist after UI updates
+  
+  // Additional tick to ensure spinner renders
+  await nextTick()
+  
   saveHistory()
-
-  // Turn off loading immediately after creating placeholder
-  // The placeholder itself shows typing/thinking indicator
   loading.value = false
 
   try {
-    let insideThinkTag = false
-    let thinkingTagClosed = false
     let fullContent = ''
-    let thinkingContent = ''
-    let thinkingContentLive = '' // Live thinking content while streaming
-    let contentAfterThinking = ''
 
     // Use streaming API
     await chatWithAIStream(
       text,
       // onChunk - Append text as it arrives
       (chunk: string, metadata?: any) => {
-        // Accumulate full content to detect <think> tags
         fullContent += chunk
-
-        // Check for <think> tag opening
-        if (fullContent.includes('<think>') && !insideThinkTag && !thinkingTagClosed) {
-          insideThinkTag = true
-        }
-
-        // Check for <think> tag closing
-        if (fullContent.includes('</think>') && insideThinkTag) {
-          insideThinkTag = false
-          thinkingTagClosed = true
-
-          // Extract final thinking content
-          const thinkMatch = fullContent.match(/<think>([\s\S]*?)<\/think>/)
-          if (thinkMatch) {
-            thinkingContent = thinkMatch[1].trim()
-          }
-
-          // Remove thinking tags from content
-          contentAfterThinking = fullContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
-        } else if (thinkingTagClosed) {
-          // Continue accumulating content after thinking tags closed
-          contentAfterThinking = fullContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
-        }
-
-        // Extract live thinking content while inside <think> tags
-        if (insideThinkTag) {
-          const liveMatch = fullContent.match(/<think>([\s\S]*?)$/)
-          if (liveMatch) {
-            thinkingContentLive = liveMatch[1]
-          }
-        }
 
         const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
@@ -674,30 +572,15 @@ async function sendMessage(text: string = input.value) {
             messages.value[msgIndex].processingStatus = 'analyzing'
           }
 
-          // Show thinking content while inside think tags (live update)
-          if (insideThinkTag) {
-            messages.value[msgIndex].isThinking = true
-            messages.value[msgIndex].thinkingContent = thinkingContentLive // Update live
-            messages.value[msgIndex].content = ''
+          // Update content as it streams - only set if there's actual content
+          if (fullContent.trim().length > 0) {
+            messages.value[msgIndex].content = fullContent
             messages.value[msgIndex].processingStatus = 'analyzing'
           } else {
-            // If there is no renderable content yet (e.g., metadata-only or empty chunk), keep thinking indicator
-            const hasRenderableContent =
-              (contentAfterThinking && contentAfterThinking.length > 0) ||
-              (!fullContent.includes('<think>') && fullContent.trim().length > 0)
-
-            if (!hasRenderableContent) {
-              messages.value[msgIndex].isThinking = true
-              messages.value[msgIndex].processingStatus = 'analyzing'
-              messages.value[msgIndex].content = ''
-            } else {
-              // Show actual content when outside think tags
-              messages.value[msgIndex].isThinking = false
-              messages.value[msgIndex].thinkingContent = thinkingContent // Final content
-              messages.value[msgIndex].content = contentAfterThinking || fullContent
-              messages.value[msgIndex].processingStatus = 'ready'
-            }
+            // Keep content empty to show spinner until real content arrives
+            messages.value[msgIndex].content = ''
           }
+          
           // Scroll while streaming
           nextTick(() => scrollToBottom())
         }
@@ -707,27 +590,11 @@ async function sendMessage(text: string = input.value) {
         loading.value = false
         isProcessing.value = false
 
-        // Force close thinking mode if stream ended while still thinking
         const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
           const msg = messages.value[msgIndex]
-
-          // If still in thinking mode when stream ends, force finalize
-          if (msg.isThinking || insideThinkTag) {
-            msg.isThinking = false
-
-            // Extract whatever thinking content we have
-            if (fullContent.includes('<think>')) {
-              const thinkMatch = fullContent.match(/<think>([\s\S]*?)(?:<\/think>|$)/)
-              if (thinkMatch) {
-                msg.thinkingContent = thinkMatch[1].trim()
-              }
-            }
-
-            // Set content to whatever we have after removing think tags
-            msg.content = fullContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()
-            msg.processingStatus = 'ready'
-          }
+          msg.content = fullContent.trim()
+          msg.processingStatus = 'ready'
         }
 
         // Auto-generate session name after first user message
@@ -1088,6 +955,15 @@ defineExpose({
           margin-right: 8px;
           margin-left: 0;
           box-shadow: 0 4px 10px rgba(22, 93, 255, 0.25);
+
+          /* Ensure text inside user message is white */
+          .text,
+          :deep(.text),
+          :deep(p),
+          :deep(span),
+          :deep(div) {
+            color: #fff !important;
+          }
         }
       }
     }
@@ -1179,35 +1055,202 @@ defineExpose({
     .text {
       line-height: 1.7;
       white-space: normal;
+      font-size: 14px;
+      color: var(--color-text-1);
 
-      h1,
-      h2,
-      h3 {
-        margin: 0 0 8px 0;
+      /* Paragraphs - better spacing */
+      :deep(p) {
+        margin: 0 0 12px 0;
+        line-height: 1.7;
+        color: var(--color-text-1);
+      }
+
+      :deep(p:last-child) {
+        margin-bottom: 0;
+        display: inline;
+      }
+
+      /* Headings - highlighted with colors */
+      :deep(h1),
+      :deep(h2),
+      :deep(h3),
+      :deep(h4),
+      :deep(h5),
+      :deep(h6) {
+        margin: 16px 0 12px 0;
+        font-weight: 700;
+        line-height: 1.4;
+        color: var(--color-text-1);
+      }
+
+      :deep(h1) {
+        font-size: 20px;
+        border-bottom: 2px solid var(--color-border-2);
+        padding-bottom: 8px;
+      }
+
+      :deep(h2) {
+        font-size: 18px;
+        color: rgb(var(--primary-6));
+      }
+
+      :deep(h3) {
+        font-size: 16px;
+        color: rgb(var(--primary-6));
+      }
+
+      :deep(h4),
+      :deep(h5),
+      :deep(h6) {
+        font-size: 14px;
         font-weight: 600;
       }
 
-      table {
+      /* Lists - better styling */
+      :deep(ul),
+      :deep(ol) {
+        margin: 12px 0;
+        padding-left: 24px;
+        line-height: 1.8;
+      }
+
+      :deep(ul) {
+        list-style-type: disc;
+      }
+
+      :deep(ol) {
+        list-style-type: decimal;
+      }
+
+      :deep(li) {
+        margin: 6px 0;
+        padding-left: 4px;
+        color: var(--color-text-1);
+      }
+
+      :deep(li::marker) {
+        color: rgb(var(--primary-6));
+      }
+
+      /* Nested lists */
+      :deep(ul ul),
+      :deep(ol ol),
+      :deep(ul ol),
+      :deep(ol ul) {
+        margin: 6px 0;
+        padding-left: 20px;
+      }
+
+      /* Strong/Bold text - highlighted */
+      :deep(strong),
+      :deep(b) {
+        font-weight: 700;
+        color: var(--color-text-1);
+        background: linear-gradient(120deg, rgba(var(--primary-1), 0.3) 0%, rgba(var(--primary-1), 0.1) 100%);
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+
+      /* Emphasis/Italic */
+      :deep(em),
+      :deep(i) {
+        font-style: italic;
+        color: var(--color-text-2);
+      }
+
+      /* Tables - improved styling */
+      :deep(table) {
         width: 100%;
         border-collapse: collapse;
-        margin: 8px 0 4px 0;
+        margin: 16px 0;
         border: 1px solid var(--color-border-2);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       }
 
-      th,
-      td {
+      :deep(th),
+      :deep(td) {
         border: 1px solid var(--color-border-2);
-        padding: 8px 10px;
+        padding: 12px 14px;
         text-align: left;
+        font-size: 13px;
       }
 
-      th {
-        background: var(--color-fill-2);
-        font-weight: 600;
+      :deep(th) {
+        background: linear-gradient(135deg, rgba(var(--primary-6), 0.1), rgba(var(--primary-6), 0.05));
+        font-weight: 700;
+        color: rgb(var(--primary-6));
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
       }
-      code,
-      pre code {
+
+      :deep(tr:nth-child(even) td) {
+        background: var(--color-fill-1);
+      }
+
+      :deep(tr:hover td) {
+        background: var(--color-fill-2);
+      }
+
+      /* Code blocks */
+      :deep(code) {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+        background: var(--color-fill-2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+        color: rgb(var(--primary-6));
+        border: 1px solid var(--color-border-2);
+      }
+
+      :deep(pre) {
+        background: var(--color-fill-2);
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 12px 0;
+        border: 1px solid var(--color-border-2);
+      }
+
+      :deep(pre code) {
+        background: transparent;
+        padding: 0;
+        border: none;
+        color: var(--color-text-1);
+        font-size: 13px;
+      }
+
+      /* Blockquotes */
+      :deep(blockquote) {
+        border-left: 4px solid rgb(var(--primary-6));
+        padding-left: 16px;
+        margin: 12px 0;
+        color: var(--color-text-2);
+        font-style: italic;
+        background: var(--color-fill-1);
+        padding: 12px 16px;
+        border-radius: 4px;
+      }
+
+      /* Horizontal rules */
+      :deep(hr) {
+        border: none;
+        border-top: 2px solid var(--color-border-2);
+        margin: 16px 0;
+      }
+
+      /* Links */
+      :deep(a) {
+        color: rgb(var(--primary-6));
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: all 0.2s;
+      }
+
+      :deep(a:hover) {
+        border-bottom-color: rgb(var(--primary-6));
       }
     }
 
@@ -1307,21 +1350,55 @@ defineExpose({
   .message.user .message-wrapper .content {
     box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
   }
-  .content .text table {
-    border-color: #2b3040;
-  }
-  .content .text th,
-  .content .text td {
-    border-color: #2b3040;
-  }
-  .content .text th {
-    background: #1b2030;
-    color: #e6e9ef;
-  }
-  .content .text code,
-  .content .text pre code {
-    background: #0f1420;
-    color: #e6e9ef;
+  .content .text {
+    :deep(table) {
+      border-color: #2b3040;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    :deep(th),
+    :deep(td) {
+      border-color: #2b3040;
+    }
+    :deep(th) {
+      background: linear-gradient(135deg, rgba(22, 93, 255, 0.2), rgba(22, 93, 255, 0.1));
+      color: #7b9cff;
+    }
+    :deep(tr:nth-child(even) td) {
+      background: #1a1f2e;
+    }
+    :deep(tr:hover td) {
+      background: #222836;
+    }
+    :deep(code) {
+      background: #0f1420;
+      color: #7b9cff;
+      border-color: #2b3040;
+    }
+    :deep(pre) {
+      background: #0f1420;
+      border-color: #2b3040;
+    }
+    :deep(pre code) {
+      background: transparent;
+      color: #e6e9ef;
+    }
+    :deep(blockquote) {
+      background: #1a1f2e;
+      border-left-color: #7b9cff;
+      color: #cfd6e4;
+    }
+    :deep(strong),
+    :deep(b) {
+      background: linear-gradient(120deg, rgba(22, 93, 255, 0.2), rgba(22, 93, 255, 0.1));
+      color: #e6e9ef;
+    }
+    :deep(h2),
+    :deep(h3) {
+      color: #7b9cff;
+    }
+    :deep(li::marker) {
+      color: #7b9cff;
+    }
   }
   .content .sources .sources-content {
     background: #141926;
@@ -1509,27 +1586,6 @@ defineExpose({
   animation: typingDot 1.4s infinite;
 }
 
-/* Thinking mode indicator */
-.thinking-mode {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, rgba(22, 93, 255, 0.1), rgba(123, 97, 255, 0.1));
-  border-radius: 8px;
-  font-weight: 500;
-  color: var(--color-text-1);
-}
-
-.thinking-mode .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: rgb(var(--primary-6));
-  animation: typingDot 1.4s infinite;
-  margin-left: 2px;
-}
-
 .typing-indicator .dot:nth-child(1) {
   animation-delay: 0s;
 }
@@ -1539,18 +1595,6 @@ defineExpose({
 }
 
 .typing-indicator .dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-.thinking-mode .dot:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.thinking-mode .dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.thinking-mode .dot:nth-child(3) {
   animation-delay: 0.4s;
 }
 
@@ -1567,209 +1611,17 @@ defineExpose({
   }
 }
 
-/* Thinking Block Styles - Collapsible Clean Design */
-.thinking-block {
-  margin-bottom: 12px;
-
-  :deep(.arco-collapse) {
-    background: transparent;
-    border: none;
-  }
-
-  :deep(.arco-collapse-item) {
-    background: linear-gradient(135deg, rgba(123, 97, 255, 0.06), rgba(22, 93, 255, 0.06));
-    border: 1px solid rgba(123, 97, 255, 0.2);
-    border-radius: 8px;
-  }
-
-  :deep(.arco-collapse-item-header) {
-    padding: 10px 14px !important;
-    background: transparent;
-    display: flex !important;
-    align-items: center !important;
-
-    &:hover {
-      background: rgba(123, 97, 255, 0.05);
-    }
-  }
-
-  // Header wrapper - clean flex layout
-  .thinking-header-wrapper {
-    display: flex !important;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-    margin-left: 20px; // Space from dropdown icon
-
-    .thinking-label {
-      font-weight: 600;
-      color: var(--color-text-1);
-      font-size: 14px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .thinking-status {
-      font-size: 11px;
-      color: rgb(var(--primary-6));
-      font-weight: 600;
-      animation: pulse 1.5s ease-in-out infinite;
-      white-space: nowrap;
-      flex-shrink: 0;
-      padding: 2px 8px;
-      background: rgba(var(--primary-6), 0.1);
-      border-radius: 12px;
-    }
-  }
-
-  :deep(.arco-collapse-item-content) {
-    padding: 0;
-    background: var(--color-bg-2);
-    border-top: 1px solid rgba(123, 97, 255, 0.15);
-  }
-
-  .thinking-content {
-    padding: 12px 14px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--color-text-2);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Text', system-ui, sans-serif;
-    white-space: pre-wrap;
-    max-height: 300px;
-    overflow-y: auto;
-
-    // Tight spacing for all elements
-    p,
-    div,
-    span,
-    ul,
-    ol,
-    li {
-      margin: 0;
-      padding: 0;
-      line-height: 1.5;
-    }
-
-    // Small gap between paragraphs only
-    p + p,
-    div + div {
-      margin-top: 8px;
-    }
-
-    // Lists spacing
-    ul,
-    ol {
-      padding-left: 20px;
-      margin: 4px 0;
-    }
-
-    li {
-      margin: 2px 0;
-    }
-
-    /* Custom scrollbar */
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: var(--color-fill-2);
-      border-radius: 2px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--color-fill-4);
-      border-radius: 2px;
-
-      &:hover {
-        background: var(--color-fill-3);
-      }
-    }
-  }
-
-  // Loading state for thinking block
-  .thinking-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-
-    .loading-dots {
-      display: flex;
-      gap: 6px;
-
-      .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: rgb(var(--primary-6));
-        opacity: 0.3;
-        animation: dotPulse 1.4s ease-in-out infinite;
-
-        &:nth-child(1) {
-          animation-delay: 0s;
-        }
-
-        &:nth-child(2) {
-          animation-delay: 0.2s;
-        }
-
-        &:nth-child(3) {
-          animation-delay: 0.4s;
-        }
-      }
-    }
-  }
-
-  @keyframes dotPulse {
-    0%,
-    60%,
-    100% {
-      opacity: 0.3;
-      transform: scale(1);
-    }
-    30% {
-      opacity: 1;
-      transform: scale(1.2);
-    }
-  }
-
-  /* Reusable thinking dots */
-  .thinking-dots {
-    display: inline-flex;
-    gap: 4px;
-    margin-left: 6px;
-    vertical-align: middle;
-
-    .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background-color: rgb(var(--primary-6));
-      animation: typingDot 1.4s infinite;
-    }
-
-    .dot:nth-child(1) {
-      animation-delay: 0s;
-    }
-    .dot:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-    .dot:nth-child(3) {
-      animation-delay: 0.4s;
-    }
-  }
-
-  .streaming-cursor {
-    display: inline-block;
-    font-family: monospace;
-    color: rgb(var(--primary-6));
-    font-size: 14px;
-    font-weight: bold;
-    animation: blink 0.8s step-end infinite;
-    margin-left: 2px;
-  }
+/* Streaming cursor animation */
+.streaming-cursor {
+  display: inline;
+  font-family: monospace;
+  color: rgb(var(--primary-6));
+  font-size: 14px;
+  font-weight: bold;
+  animation: blink 0.8s step-end infinite;
+  margin-left: 2px;
+  vertical-align: baseline;
+  line-height: inherit;
 }
 
 @keyframes pulse {
@@ -1793,25 +1645,6 @@ defineExpose({
   }
 }
 
-.ai-chatbot.is-dark .thinking-block {
-  :deep(.arco-collapse-item) {
-    background: linear-gradient(135deg, rgba(123, 97, 255, 0.1), rgba(22, 93, 255, 0.1));
-    border-color: rgba(123, 97, 255, 0.3);
-  }
-
-  :deep(.arco-collapse-item-header:hover) {
-    background: rgba(123, 97, 255, 0.08);
-  }
-
-  :deep(.arco-collapse-item-content) {
-    background: #1a1f2e;
-    border-top-color: rgba(123, 97, 255, 0.2);
-  }
-
-  .thinking-content {
-    color: #9aa4b2;
-  }
-}
 
 /* Processing Status Styles */
 .processing-status {

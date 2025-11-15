@@ -121,7 +121,10 @@
         <p class="product-category" v-if="product.gender">{{ formatGender(product.gender) }} • {{ $t('product.sportswear') }}</p>
         <h1 class="product-title">{{ product.name }}</h1>
 
-        <div class="price">{{ formatCurrency(product.price) }}</div>
+        <div class="price">
+          <span v-if="product.originalPrice && product.originalPrice > product.price" class="price-original">{{ formatCurrency(product.originalPrice) }}</span>
+          <span class="price-current">{{ formatCurrency(product.price) }}</span>
+        </div>
 
         <div class="color-selector" v-if="colorSwatches.length">
           <label>{{ $t('product.color') }}:</label>
@@ -331,7 +334,63 @@ function formatGender(gender: string): string {
 
 const productId = computed(() => String(route.params.id ?? ""));
 
-const product = computed(() => cartStore.products.find(item => item.id === productId.value));
+const baseProduct = computed(() => cartStore.products.find(item => item.id === productId.value));
+
+// Find variant by color and size
+const selectedVariant = computed(() => {
+  const color = selectedColor.value
+  const sizeValue = size.value
+  
+  if (!color || !sizeValue || variants.value.length === 0) {
+    // If no color/size selected, return first variant
+    return variants.value[0] || null
+  }
+  
+  // Find variant matching both color and size
+  const matched = variants.value.find(v => {
+    const variantColor = (v.tenMauSac || "").trim()
+    const variantSize = (v.tenKichThuoc || "").trim()
+    return variantColor === color && variantSize === sizeValue
+  })
+  
+  // If no exact match, try to find by color only
+  if (!matched) {
+    const colorMatch = variants.value.find(v => {
+      const variantColor = (v.tenMauSac || "").trim()
+      return variantColor === color
+    })
+    return colorMatch || variants.value[0] || null
+  }
+  
+  return matched
+})
+
+// Calculate product with prices from selected variant
+const product = computed(() => {
+  const base = baseProduct.value
+  if (!base) return null
+  
+  // Get price from selected variant
+  const variant = selectedVariant.value
+  if (variant && variant.giaBan != null) {
+    const originalPrice = variant.giaBan
+    let discountedPrice = originalPrice
+    
+    // Calculate discounted price if there's a discount
+    if (variant.giaTriGiamGia != null && variant.giaTriGiamGia > 0) {
+      discountedPrice = originalPrice * (100 - variant.giaTriGiamGia) / 100
+    }
+    
+    return {
+      ...base,
+      price: discountedPrice,
+      originalPrice: discountedPrice < originalPrice ? originalPrice : undefined
+    }
+  }
+  
+  // Fallback to base product price
+  return base
+});
 
 async function loadProductDetail() {
   if (!productId.value) return
@@ -776,7 +835,26 @@ function setupAccordion(el: HTMLDetailsElement) {
 }
 .product-category { margin: 0; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; font-size: 12px; }
 .product-title { margin: 0; font-size: 32px; line-height: 1.2; }
-.price { font-weight: 700; font-size: 24px; }
+.price {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.price-original {
+  font-size: 18px;
+  font-weight: 400;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.price-current {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111;
+}
 
 .color-selector label { display: block; margin-bottom: 8px; color: #374151; }
 .color-selector ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 12px; flex-wrap: wrap; }

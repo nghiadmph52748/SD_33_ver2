@@ -47,7 +47,10 @@
             />
           </div>
           <div class="item__body">
-            <div class="item__price">{{ formatCurrency(item.price) }}</div>
+            <div class="item__price">
+              <span v-if="item.originalPrice && item.originalPrice > item.price" class="item__price-original">{{ formatCurrency(item.originalPrice) }}</span>
+              <span class="item__price-current">{{ formatCurrency(item.price) }}</span>
+            </div>
             <h3 class="item__title" :id="`product-title-${item.id}`">{{ item.name }}</h3>
             <div class="item__meta">
               <span v-if="item.gender" class="item__category">{{ formatCategory(item) }}</span>
@@ -530,11 +533,27 @@ function getSpecialTag(item: Product): string | null {
 }
 
 .item__price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 18px;
   font-weight: 700;
   color: #111;
   line-height: 1.2;
   margin: 0;
+}
+
+.item__price-original {
+  font-size: 14px;
+  font-weight: 400;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.item__price-current {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
 }
 
 .item__title {

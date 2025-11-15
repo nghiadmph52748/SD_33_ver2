@@ -37,7 +37,7 @@ export interface HealthResponse {
 }
 
 export async function chatWithAI(message: string): Promise<ChatResponse> {
-  const response = await aiAxios.post<ChatResponse>('/chat', {
+  const response = await aiAxios.post<ChatResponse>('/chatbot/customer/chat', {
     message,
     context: '',
   })
@@ -52,7 +52,7 @@ export async function chatWithAIStream(
 ): Promise<void> {
   try {
     const token = getToken()
-    const response = await fetch(`${apiBase}/api/ai/chat-stream`, {
+    const response = await fetch(`${apiBase}/api/ai/chatbot/customer/chat-stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ export async function chatWithAIStream(
 }
 
 export async function checkAIHealth(): Promise<HealthResponse> {
-  const response = await aiAxios.get<HealthResponse>('/health')
+  const response = await aiAxios.get<HealthResponse>('/chatbot/customer/health')
   return response.data
 }
 

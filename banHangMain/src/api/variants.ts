@@ -10,7 +10,10 @@ export interface ProductVariantResponse {
   tenSanPham?: string
   tenMauSac?: string
   tenKichThuoc?: string
-  giaBan?: number
+  giaBan?: number // Original price
+  giaTriGiamGia?: number // Discount percentage (0-100)
+  idDotGiamGia?: number
+  tenDotGiamGia?: string
   soLuong?: number
   trangThai?: boolean
   anhSanPham?: string[] | VariantImage[]

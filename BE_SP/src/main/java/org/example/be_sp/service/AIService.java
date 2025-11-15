@@ -34,11 +34,29 @@ public class AIService {
     }
 
     /**
-     * Send chat message to AI service
+     * Send chat message to AI service (customer)
+     */
+    public ChatResponse chatCustomer(String message) {
+        String url = aiServiceUrl + "/api/ai/chatbot/customer/chat";
+        return chatInternal(url, message);
+    }
+
+    /**
+     * Send chat message to AI service (admin)
+     */
+    public ChatResponse chatAdmin(String message) {
+        String url = aiServiceUrl + "/api/ai/chatbot/admin/chat";
+        return chatInternal(url, message);
+    }
+
+    /**
+     * Send chat message to AI service (legacy - defaults to admin)
      */
     public ChatResponse chat(String message) {
-        String url = aiServiceUrl + "/api/ai/chatbot/chat";
+        return chatAdmin(message);
+    }
 
+    private ChatResponse chatInternal(String url, String message) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -61,12 +79,33 @@ public class AIService {
     }
 
     /**
-     * Check AI service health
+     * Check AI service health (customer)
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> checkHealthCustomer() {
+        String url = aiServiceUrl + "/api/ai/chatbot/customer/health";
+        return checkHealthInternal(url);
+    }
+
+    /**
+     * Check AI service health (admin)
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> checkHealthAdmin() {
+        String url = aiServiceUrl + "/api/ai/chatbot/admin/health";
+        return checkHealthInternal(url);
+    }
+
+    /**
+     * Check AI service health (legacy - defaults to admin)
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> checkHealth() {
-        String url = aiServiceUrl + "/api/ai/chatbot/health";
+        return checkHealthAdmin();
+    }
 
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> checkHealthInternal(String url) {
         try {
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             return response.getBody();
@@ -76,11 +115,30 @@ public class AIService {
     }
 
     /**
-     * Send chat message to AI service with streaming response
+     * Send chat message to AI service with streaming response (customer)
+     */
+    public SseEmitter chatStreamCustomer(String message) {
+        String url = aiServiceUrl + "/api/ai/chatbot/customer/chat-stream";
+        return chatStreamInternal(url, message);
+    }
+
+    /**
+     * Send chat message to AI service with streaming response (admin)
+     */
+    public SseEmitter chatStreamAdmin(String message) {
+        String url = aiServiceUrl + "/api/ai/chatbot/admin/chat-stream";
+        return chatStreamInternal(url, message);
+    }
+
+    /**
+     * Send chat message to AI service with streaming response (legacy - defaults to admin)
      */
     public SseEmitter chatStream(String message) {
+        return chatStreamAdmin(message);
+    }
+
+    private SseEmitter chatStreamInternal(String url, String message) {
         SseEmitter emitter = new SseEmitter(300000L); // 5 minutes timeout
-        String url = aiServiceUrl + "/api/ai/chatbot/chat-stream";
 
         executorService.execute(() -> {
             BufferedReader reader = null;

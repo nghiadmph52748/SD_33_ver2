@@ -21,15 +21,25 @@ class LMStudioClient:
         max_tokens: int = 200,
         stream: bool = False
     ):
-        """Send chat completion request to LM Studio"""
+        """
+        Send chat completion request to LM Studio
+        
+        Args:
+            messages: List of message dicts
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            stream: Whether to stream the response
+        """
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=stream
-            )
+            base_params = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": stream
+            }
+            
+            response = self.client.chat.completions.create(**base_params)
             return response
         except Exception as e:
             logger.error(f"LM Studio error: {e}")

@@ -148,8 +148,18 @@ function getLastMessagePreview(conversation: Conversation): string {
   const maxLength = 40
   const currentUserId = userStore.id
   // Prefer backend flag; fall back to locally cached last message sender
+  // Handle null/undefined lastSenderId (can happen when conversation is newly created)
   let isMine = conversation.lastSenderId === currentUserId
-  if (!isMine) {
+  if (!isMine && conversation.lastSenderId === null) {
+    // If lastSenderId is null, check cached messages to determine if last message is ours
+    const cached = chatStore.messages?.[conversation.id]
+    if (Array.isArray(cached) && cached.length > 0) {
+      const last = cached[cached.length - 1]
+      if (last && last.senderId === currentUserId) {
+        isMine = true
+      }
+    }
+  } else if (!isMine) {
     const cached = chatStore.messages?.[conversation.id]
     if (Array.isArray(cached) && cached.length > 0) {
       const last = cached[cached.length - 1]
@@ -207,7 +217,8 @@ function isLastMessageSeenByOther(conversation: Conversation): boolean {
   const currentUserId = userStore.id
 
   // Chỉ hiển thị "seen" nếu tin nhắn cuối là của mình
-  if (conversation.lastSenderId !== currentUserId) {
+  // Handle null/undefined lastSenderId (can happen when conversation is newly created)
+  if (!conversation.lastSenderId || conversation.lastSenderId !== currentUserId) {
     return false
   }
 
@@ -297,15 +308,31 @@ async function handleSelectConversation(conversation: Conversation) {
 async function handleNewChat(userId: number) {
   console.log('🆕 Starting new chat with user:', userId)
   try {
-    // Kiểm tra xem đã có conversation chưa
-    const existingConv = (chatStore.conversations || []).find(
-      (c) => (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) || (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
-    )
+    // Kiểm tra xem đã có conversation chưa (check both staff-staff and customer-staff)
+    const existingConv = (chatStore.conversations || []).find((c) => {
+      // Check staff-staff conversations
+      if (c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi) {
+        return (
+          (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
+          (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+        )
+      }
+      // Check customer-staff conversations
+      if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+        return (
+          (c.nhanVienId === userStore.id && c.khachHangId === userId) ||
+          (c.khachHangId === userStore.id && c.nhanVienId === userId)
+        )
+      }
+      return false
+    })
 
     if (existingConv) {
       // Nếu đã có, chỉ mở conversation
       console.log('Existing conversation found:', existingConv.id)
       chatStore.setActiveConversation(existingConv.id, { userInitiated: true })
+      // Fetch messages to ensure we have the latest
+      await chatStore.fetchMessages(userId)
     } else {
       // Nếu chưa có, tạo mới bằng cách gọi tin nhắn đầu tiên
       console.log('Sending first message to create conversation...')
@@ -315,14 +342,31 @@ async function handleNewChat(userId: number) {
         messageType: 'TEXT',
       })
 
+      // Wait a bit for the backend to process the message and create the conversation
+      await new Promise((resolve) => setTimeout(resolve, 300))
+
       console.log('Fetching conversation...')
       // Lấy conversation vừa tạo qua API
       await chatStore.fetchConversations()
 
-      // Mở conversation
-      const newConv = (chatStore.conversations || []).find(
-        (c) => (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) || (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
-      )
+      // Mở conversation (check both staff-staff and customer-staff)
+      const newConv = (chatStore.conversations || []).find((c) => {
+        // Check staff-staff conversations
+        if (c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi) {
+          return (
+            (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
+            (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+          )
+        }
+        // Check customer-staff conversations
+        if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          return (
+            (c.nhanVienId === userStore.id && c.khachHangId === userId) ||
+            (c.khachHangId === userStore.id && c.nhanVienId === userId)
+          )
+        }
+        return false
+      })
 
       if (newConv) {
         console.log('Conversation found, opening:', newConv)
@@ -331,7 +375,32 @@ async function handleNewChat(userId: number) {
         await chatStore.fetchMessages(userId)
       } else {
         console.warn('Could not find conversation after sending message')
-        Message.warning('Vui lòng reload trang để xem cuộc trò chuyện mới')
+        // Try one more time after a longer delay
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        await chatStore.fetchConversations()
+        
+        const retryConv = (chatStore.conversations || []).find((c) => {
+          if (c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi) {
+            return (
+              (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
+              (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+            )
+          }
+          if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+            return (
+              (c.nhanVienId === userStore.id && c.khachHangId === userId) ||
+              (c.khachHangId === userStore.id && c.nhanVienId === userId)
+            )
+          }
+          return false
+        })
+        
+        if (retryConv) {
+          chatStore.setActiveConversation(retryConv.id, { userInitiated: true })
+          await chatStore.fetchMessages(userId)
+        } else {
+          Message.warning('Vui lòng reload trang để xem cuộc trò chuyện mới')
+        }
       }
     }
   } catch (error: any) {
