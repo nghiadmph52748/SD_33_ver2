@@ -34,8 +34,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/checkout",
     name: "checkout",
-    component: () => import("@/views/CheckoutView.vue"),
-    meta: { requiresAuth: true }
+    component: () => import("@/views/CheckoutView.vue")
   },
   {
     path: "/payment/cod/result",
