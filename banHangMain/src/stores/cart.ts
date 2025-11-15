@@ -1,5 +1,9 @@
 import { defineStore } from "pinia";
-import { getSneakerProducts, getAllProducts, type Product } from "@/api/products";
+import {
+  getSneakerProducts,
+  getAllProducts,
+  type Product,
+} from "@/api/products";
 import { useUserStore } from "./user";
 
 // Re-export Product for components that import from store
@@ -10,6 +14,7 @@ type CartStatus = "idle" | "loading" | "success" | "failure";
 export interface CartItem extends Product {
   quantity: number;
   size?: string;
+  idBienThe?: number; // Variant ID for backend
 }
 
 export interface CartPayload {
@@ -18,7 +23,12 @@ export interface CartPayload {
 }
 
 const CART_STORAGE_PREFIX = "gearup-cart-";
-const VALID_CART_STATUSES: CartStatus[] = ["idle", "loading", "success", "failure"];
+const VALID_CART_STATUSES: CartStatus[] = [
+  "idle",
+  "loading",
+  "success",
+  "failure",
+];
 
 type PersistableCartState = {
   cart: CartItem[];
@@ -32,19 +42,23 @@ function getCartStorageKey(userId?: number | null): string {
   return `${CART_STORAGE_PREFIX}guest`;
 }
 
-function loadPersistedCartState(userId?: number | null): Partial<PersistableCartState> | null {
+function loadPersistedCartState(
+  userId?: number | null
+): Partial<PersistableCartState> | null {
   if (typeof window === "undefined") return null;
   try {
     const key = getCartStorageKey(userId);
     const cached = window.localStorage.getItem(key);
     if (!cached) return null;
     const parsed = JSON.parse(cached);
-    const status = typeof parsed.cartUIStatus === "string" && VALID_CART_STATUSES.includes(parsed.cartUIStatus)
-      ? parsed.cartUIStatus as CartStatus
-      : "idle";
+    const status =
+      typeof parsed.cartUIStatus === "string" &&
+      VALID_CART_STATUSES.includes(parsed.cartUIStatus)
+        ? (parsed.cartUIStatus as CartStatus)
+        : "idle";
     return {
       cart: Array.isArray(parsed.cart) ? parsed.cart : [],
-      cartUIStatus: status
+      cartUIStatus: status,
     };
   } catch (error) {
     console.warn("Failed to hydrate cart cache", error);
@@ -52,7 +66,10 @@ function loadPersistedCartState(userId?: number | null): Partial<PersistableCart
   }
 }
 
-function persistCartStateSnapshot(state: PersistableCartState, userId?: number | null) {
+function persistCartStateSnapshot(
+  state: PersistableCartState,
+  userId?: number | null
+) {
   if (typeof window === "undefined") return;
   try {
     const key = getCartStorageKey(userId);
@@ -74,21 +91,22 @@ export const useCartStore = defineStore("cart", {
       cart: persisted?.cart ?? [],
       loading: false,
       error: null as string | null,
-      sizeMapping: {} as Record<string, string[]>
+      sizeMapping: {} as Record<string, string[]>,
     };
   },
   getters: {
     featuredProducts(state): Product[] {
       const preferredOrder = ["alphafly", "vaporfly", "zoom fly", "zoom-fly"]; // order matters
-      const hasImage = (product: Product) => typeof product.img === "string" && product.img.trim() !== "";
+      const hasImage = (product: Product) =>
+        typeof product.img === "string" && product.img.trim() !== "";
       const toKey = (name: string): string | null => {
         const lower = name.toLowerCase();
-        return preferredOrder.find(key => lower.includes(key)) || null;
+        return preferredOrder.find((key) => lower.includes(key)) || null;
       };
 
       const matched = state.products
         .filter(hasImage)
-        .filter(p => toKey(p.name) !== null)
+        .filter((p) => toKey(p.name) !== null)
         .sort((a, b) => {
           const ak = toKey(a.name);
           const bk = toKey(b.name);
@@ -104,10 +122,10 @@ export const useCartStore = defineStore("cart", {
       return state.products.filter(hasImage).slice(0, 3);
     },
     womenProducts(state): Product[] {
-      return state.products.filter(product => product.gender === "Female");
+      return state.products.filter((product) => product.gender === "Female");
     },
     menProducts(state): Product[] {
-      return state.products.filter(product => product.gender === "Male");
+      return state.products.filter((product) => product.gender === "Male");
     },
     cartCount(state): number {
       if (!state.cart.length) {
@@ -131,11 +149,11 @@ export const useCartStore = defineStore("cart", {
         return [];
       }
 
-      return state.cart.map(item => ({
+      return state.cart.map((item) => ({
         id: item.id,
-        quantity: item.quantity
+        quantity: item.quantity,
       }));
-    }
+    },
   },
   actions: {
     async fetchProducts(sneakersOnly: boolean = true) {
@@ -162,10 +180,13 @@ export const useCartStore = defineStore("cart", {
     },
     persistState() {
       const userStore = useUserStore();
-      persistCartStateSnapshot({
-        cart: this.cart,
-        cartUIStatus: this.cartUIStatus
-      }, userStore.id);
+      persistCartStateSnapshot(
+        {
+          cart: this.cart,
+          cartUIStatus: this.cartUIStatus,
+        },
+        userStore.id
+      );
     },
     loadCartForUser(userId?: number | null) {
       const persisted = loadPersistedCartState(userId);
@@ -185,9 +206,12 @@ export const useCartStore = defineStore("cart", {
       this.persistState();
     },
     addToCart(payload: CartItem) {
-      const existing = this.cart.find(item => item.id === payload.id
-        && item.size === payload.size
-        && item.color === payload.color);
+      const existing = this.cart.find(
+        (item) =>
+          item.id === payload.id &&
+          item.size === payload.size &&
+          item.color === payload.color
+      );
 
       if (existing) {
         existing.quantity += payload.quantity;
@@ -199,9 +223,12 @@ export const useCartStore = defineStore("cart", {
       this.persistState();
     },
     addOneToCart(payload: CartItem) {
-      const existing = this.cart.find(item => item.id === payload.id
-        && item.size === payload.size
-        && item.color === payload.color);
+      const existing = this.cart.find(
+        (item) =>
+          item.id === payload.id &&
+          item.size === payload.size &&
+          item.color === payload.color
+      );
 
       if (existing) {
         existing.quantity += 1;
@@ -213,7 +240,7 @@ export const useCartStore = defineStore("cart", {
       this.persistState();
     },
     removeOneFromCart(payload: CartItem) {
-      const index = this.cart.findIndex(item => item.id === payload.id);
+      const index = this.cart.findIndex((item) => item.id === payload.id);
 
       if (index === -1) {
         return;
@@ -231,8 +258,8 @@ export const useCartStore = defineStore("cart", {
       this.persistState();
     },
     removeAllFromCart(payload: CartItem) {
-      this.cart = this.cart.filter(item => item.id !== payload.id);
+      this.cart = this.cart.filter((item) => item.id !== payload.id);
       this.persistState();
-    }
-  }
+    },
+  },
 });

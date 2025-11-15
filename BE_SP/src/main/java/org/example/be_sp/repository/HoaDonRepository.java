@@ -15,4 +15,3 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Integer> {
     Optional<HoaDon> findHoaDonWithPayments(@Param("id") Integer id);
 
 }
-

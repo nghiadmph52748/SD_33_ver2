@@ -35,13 +35,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll() // Allow login and logout endpoints
                 .requestMatchers("/api/khach-hang/auth/**").permitAll() // Allow storefront customer auth
-                        .requestMatchers("/api/ca-lam-viec/**").permitAll()
-                        .requestMatchers("/api/lich-lam-viec/**").permitAll()
-                        .requestMatchers("/api/giao-ca/**").permitAll()
+                .requestMatchers("/api/ca-lam-viec/**").permitAll()
+                .requestMatchers("/api/lich-lam-viec/**").permitAll()
+                .requestMatchers("/api/giao-ca/**").permitAll()
                 .requestMatchers("/api/content-data", "/api/popular/**").permitAll() // Allow dashboard mock data
                 .requestMatchers("/api/payment/vnpay/**").permitAll() // Allow VNPAY redirect/IPN without auth
                 .requestMatchers("/ws-chat/**").permitAll() // Allow WebSocket connection (auth handled by interceptor)
                 .requestMatchers("/api/hoa-don-management/**").permitAll() // Allow invoice management without auth for testing
+                .requestMatchers("/api/hoa-don-chi-tiet-management/**").permitAll() // Allow invoice detail management without auth for testing
                 .requestMatchers("/api/thong-tin-hoa-don-management/**").permitAll() // Allow order info management without auth for testing
                 .requestMatchers("/api/san-pham-management/**").permitAll() // Allow product management without auth for testing
                 .requestMatchers("/api/chi-tiet-san-pham-management/**").permitAll() // Allow product detail management without auth for testing

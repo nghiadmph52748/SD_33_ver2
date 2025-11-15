@@ -67,7 +67,7 @@ onUnmounted(() => {
 .app-main {
   flex: 1;
   padding: 8px 20px 20px;
-  width: 100vw;
+  width: 98vw;
   margin-left: 0;
 }
 

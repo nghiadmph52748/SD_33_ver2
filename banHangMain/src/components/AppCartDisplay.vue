@@ -3,8 +3,8 @@
     <section v-if="cartCount > 0" class="bag-list">
       <article v-for="item in cart" :key="item.id" class="bag-item">
         <div class="thumb">
-          <img 
-            :src="resolveImage(item.img)" 
+          <img
+            :src="resolveImage(item.img)"
             :alt="item.name"
             loading="lazy"
             v-img-fallback
@@ -14,56 +14,97 @@
           <header class="title-row">
             <h3 class="name">{{ item.name }}</h3>
             <div class="price">
-              <span v-if="item.originalPrice && item.originalPrice > item.price" class="price-original">{{ formatCurrency(item.originalPrice) }}</span>
-              <span class="price-current">{{ formatCurrency(item.price) }}</span>
+              <span
+                v-if="item.originalPrice && item.originalPrice > item.price"
+                class="price-original"
+                >{{ formatCurrency(item.originalPrice) }}</span
+              >
+              <span class="price-current">{{
+                formatCurrency(item.price)
+              }}</span>
             </div>
           </header>
           <div class="meta">
             <div class="line" v-if="item.gender">
-              <span class="line__label">{{ t('cart.itemGender') }}:</span>
+              <span class="line__label">{{ t("cart.itemGender") }}:</span>
               <span>{{ formatGender(item.gender) }}</span>
             </div>
             <div class="line">
-              <span class="line__label">{{ t('cart.itemColor') }}:</span>
-              <span>{{ item.color || t('cart.valueUnknown') }}</span>
+              <span class="line__label">{{ t("cart.itemColor") }}:</span>
+              <span>{{ item.color || t("cart.valueUnknown") }}</span>
             </div>
             <div class="line" v-if="item.size">
-              <span>{{ t('cart.itemSize', { size: item.size }) }}</span>
+              <span>{{ t("cart.itemSize", { size: item.size }) }}</span>
             </div>
           </div>
           <div class="controls">
             <div class="pill">
-              <button class="pill-btn" @click="remove(item)" :aria-label="t('cart.removeItem')">
-                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zm3-9h2v8H9V10zm4 0h2v8h-2V10zM15.5 4l-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg>
+              <button
+                class="pill-btn"
+                @click="remove(item)"
+                :aria-label="t('cart.removeItem')"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path
+                    fill="currentColor"
+                    d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zm3-9h2v8H9V10zm4 0h2v8h-2V10zM15.5 4l-1-1h-5l-1 1H5v2h14V4h-3.5z"
+                  />
+                </svg>
               </button>
               <span class="divider"></span>
-              <button class="pill-btn" @click="decrement(item)" :aria-label="t('cart.decreaseQuantity')">−</button>
+              <button
+                class="pill-btn"
+                @click="decrement(item)"
+                :aria-label="t('cart.decreaseQuantity')"
+              >
+                −
+              </button>
               <span class="qty-val">{{ item.quantity }}</span>
-              <button class="pill-btn" @click="increment(item)" :aria-label="t('cart.increaseQuantity')">+</button>
+              <button
+                class="pill-btn"
+                @click="increment(item)"
+                :aria-label="t('cart.increaseQuantity')"
+              >
+                +
+              </button>
             </div>
             <button class="icon wish" :aria-label="t('cart.saveForLater')">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4 8.04 4 9.54 4.81 10.35 6.09 11.16 4.81 12.66 4 14.2 4 16.7 4 18.7 6 18.7 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              <svg viewBox="0 0 24 24" width="16" height="16">
+                <path
+                  fill="currentColor"
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4 8.04 4 9.54 4.81 10.35 6.09 11.16 4.81 12.66 4 14.2 4 16.7 4 18.7 6 18.7 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                />
+              </svg>
             </button>
           </div>
         </div>
       </article>
 
-      <div class="member-returns" role="note" :aria-label="$t('cart.memberReturnsAria')">
+      <div
+        class="member-returns"
+        role="note"
+        :aria-label="$t('cart.memberReturnsAria')"
+      >
         <div class="mr-icon">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path fill="currentColor" d="M20 8h-3V4H4a2 2 0 00-2 2v11a3 3 0 003 3h12a3 3 0 003-3V10a2 2 0 00-2-2zm-5 0H4V6h11v2zm4 9a1 1 0 01-1 1H6a1 1 0 01-1-1v-5h14v5zM7 18a2 2 0 104 0H7z"/>
+            <path
+              fill="currentColor"
+              d="M20 8h-3V4H4a2 2 0 00-2 2v11a3 3 0 003 3h12a3 3 0 003-3V10a2 2 0 00-2-2zm-5 0H4V6h11v2zm4 9a1 1 0 01-1 1H6a1 1 0 01-1-1v-5h14v5zM7 18a2 2 0 104 0H7z"
+            />
           </svg>
         </div>
         <div class="mr-text">
-          {{ $t('cart.memberReturns') }}
-          <a href="#" class="mr-link">{{ $t('cart.learnMore') }}</a>
+          {{ $t("cart.memberReturns") }}
+          <a href="#" class="mr-link">{{ $t("cart.learnMore") }}</a>
         </div>
       </div>
     </section>
 
     <a-empty v-else description="Your cart is empty, fill it up!">
       <button class="btn">
-        <RouterLink to="/" style="color: inherit; text-decoration: none">Back Home</RouterLink>
+        <RouterLink to="/" style="color: inherit; text-decoration: none"
+          >Back Home</RouterLink
+        >
       </button>
     </a-empty>
   </div>
@@ -75,12 +116,14 @@ import { storeToRefs } from "pinia";
 import { useCartStore, type CartItem } from "@/stores/cart";
 import { createOrderFromCart } from "@/api/orders";
 import { formatCurrency } from "@/utils/currency";
-import { useI18n } from 'vue-i18n'
+import { useI18n } from "vue-i18n";
+import { useUserStore } from "@/stores/user";
 
 const cartStore = useCartStore();
 const { cart, cartTotal, cartCount } = storeToRefs(cartStore);
 const isProcessing = ref(false);
-const { t } = useI18n()
+const { t } = useI18n();
+const userStore = useUserStore();
 
 function resolveImage(imgPath: string | undefined | null): string {
   if (!imgPath) return "/products/1.jpg";
@@ -108,13 +151,18 @@ const startCheckout = async () => {
 
   try {
     // Create order using backend API
-    const order = await createOrderFromCart(
-      cart.value,
-      undefined, // No customer ID for guest checkout
-      undefined, // Payment method ID (could be passed from UI)
-      undefined, // Voucher ID (could be passed from UI)
-      undefined // Notes
-    );
+    const order = await createOrderFromCart(cart.value, {
+      customerId: userStore.id || undefined,
+      shippingFee: 0,
+      subtotal: cartTotal.value,
+      totalAmount: cartTotal.value,
+      recipient: {
+        fullName: userStore.profile?.tenKhachHang || "Khách lẻ",
+        phone: userStore.profile?.soDienThoai || "0000000000",
+        email: userStore.profile?.email || "guest@example.com",
+        address: userStore.profile?.diaChi || "Chưa cập nhật",
+      },
+    });
 
     if (order) {
       cartStore.updateCartUI("success");
@@ -133,26 +181,42 @@ const startCheckout = async () => {
 };
 
 const formatGender = (gender: string | undefined | null) => {
-  if (!gender) return t('cart.valueUnknown')
-  const normalized = String(gender).toLowerCase()
-  if (normalized.includes('male')) return t('cart.genderMenShoes')
-  if (normalized.includes('female')) return t('cart.genderWomenShoes')
-  return gender
-}
+  if (!gender) return t("cart.valueUnknown");
+  const normalized = String(gender).toLowerCase();
+  if (normalized.includes("male")) return t("cart.genderMenShoes");
+  if (normalized.includes("female")) return t("cart.genderWomenShoes");
+  return gender;
+};
 </script>
 
 <style scoped lang="scss">
-.bag-list { display: grid; gap: 24px; }
-.bag-item { display: grid; grid-template-columns: 300px 1fr; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0; }
-.thumb { width: 300px; aspect-ratio: 1 / 1; background: #f7f7f7; border-radius: 12px; display: grid; place-items: center; overflow: hidden; }
-.thumb img { width: 100%; height: 100%; object-fit: contain; }
+.bag-list {
+  display: grid;
+  gap: 24px;
+}
+.bag-item {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.thumb {
+  width: 300px;
+  aspect-ratio: 1 / 1;
+  background: #f7f7f7;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .thumb img.image-placeholder {
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #f8f8f8 50%,
-    #f0f0f0 100%
-  );
+  background: linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
@@ -165,8 +229,17 @@ const formatGender = (gender: string | undefined | null) => {
     background-position: 200% 0;
   }
 }
-.title-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.name { margin: 0; font-size: 26px; font-weight: 700; }
+.title-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.name {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+}
 .price {
   display: flex;
   align-items: center;
@@ -186,22 +259,102 @@ const formatGender = (gender: string | undefined | null) => {
   font-weight: 700;
   color: #111;
 }
-.meta { color: #4e5969; display: grid; gap: 6px; margin: 8px 0 12px; font-size: 18px; }
-.size { border-bottom: 4px solid #1d1d1d; width: fit-content; padding-bottom: 4px; }
-.controls { display: inline-flex; align-items: center; gap: 12px; }
-.icon { width: 56px; height: 56px; border-radius: 999px; border: 1px solid #e8e8e8; background: #fff; display: inline-flex; align-items: center; justify-content: center; }
-.wish { width: 64px; height: 64px; }
-.pill { display: inline-flex; align-items: center; gap: 12px; border: 1px solid #e8e8e8; background: #fff; border-radius: 40px; padding: 8px 12px; }
-.pill-btn { width: 36px; height: 36px; border-radius: 999px; border: 1px solid #e8e8e8; background: #fff; display: inline-flex; align-items: center; justify-content: center; }
-.divider { width: 1px; height: 24px; background: #e8e8e8; }
-.qty-val { min-width: 18px; text-align: center; font-weight: 600; font-size: 16px; }
-.member-returns { display: grid; grid-template-columns: 36px 1fr; align-items: center; gap: 12px; color: #4e5969; border: 1px solid #e8e8e8; border-radius: 14px; padding: 12px 14px; background: #fafafa; }
-.mr-icon { width: 36px; height: 36px; border-radius: 999px; background: #ffffff; display: grid; place-items: center; border: 1px solid #e8e8e8; color: #1d2129; }
-.mr-text { font-size: 14px; }
-.mr-link { color: #111111; text-decoration: underline; }
+.meta {
+  color: #4e5969;
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 12px;
+  font-size: 18px;
+}
+.size {
+  border-bottom: 4px solid #1d1d1d;
+  width: fit-content;
+  padding-bottom: 4px;
+}
+.controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.wish {
+  width: 64px;
+  height: 64px;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  border-radius: 40px;
+  padding: 8px 12px;
+}
+.pill-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #e8e8e8;
+}
+.qty-val {
+  min-width: 18px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+}
+.member-returns {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  gap: 12px;
+  color: #4e5969;
+  border: 1px solid #e8e8e8;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fafafa;
+}
+.mr-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e8e8e8;
+  color: #1d2129;
+}
+.mr-text {
+  font-size: 14px;
+}
+.mr-link {
+  color: #111111;
+  text-decoration: underline;
+}
 
 @media (max-width: 720px) {
-  .bag-item { grid-template-columns: 1fr; }
-  .thumb { width: 100%; }
+  .bag-item {
+    grid-template-columns: 1fr;
+  }
+  .thumb {
+    width: 100%;
+  }
 }
 </style>

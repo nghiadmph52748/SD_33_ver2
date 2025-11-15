@@ -1,11 +1,14 @@
 package org.example.be_sp.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.example.be_sp.entity.ChiTietSanPham;
 import org.example.be_sp.entity.HoaDonChiTiet;
 import org.example.be_sp.exception.ApiException;
+import org.example.be_sp.model.request.AddProductToCartRequest;
 import org.example.be_sp.model.request.HoaDonChiTietRequest;
+import org.example.be_sp.model.response.AddProductToCartResponse;
 import org.example.be_sp.model.response.HoaDonChiTietResponse;
 import org.example.be_sp.model.response.PagingResponse;
 import org.example.be_sp.repository.ChiTietSanPhamRepository;
@@ -18,7 +21,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class HoaDonChiTietService {
 
     @Autowired
@@ -27,8 +33,6 @@ public class HoaDonChiTietService {
     private HoaDonRepository hoaDonService;
     @Autowired
     private ChiTietSanPhamRepository chiTietSanPhamRepository;
-    @Autowired
-    private ChiTietSanPhamService chiTietSanPhamService;
 
     public List<HoaDonChiTietResponse> getAll() {
         return hoaDonChiTietRepository.findAll().stream().map(HoaDonChiTietResponse::new).toList();
@@ -67,7 +71,8 @@ public class HoaDonChiTietService {
         if (qty == null || qty <= 0) {
             throw new ApiException("Số lượng phải lớn hơn 0", "400");
         }
-        Integer currentStock = ctsp.getSoLuong() == null ? 0 : ctsp.getSoLuong();
+        Integer stockValue = ctsp.getSoLuong();
+        int currentStock = stockValue != null ? stockValue : 0;
         if (currentStock < qty) {
             throw new ApiException("Số lượng tồn kho không đủ", "400");
         }
@@ -77,9 +82,6 @@ public class HoaDonChiTietService {
             ctsp.setTrangThai(false); // hết hàng
         }
         chiTietSanPhamRepository.save(ctsp);
-
-        // 🔄 Auto-update variant status immediately when quantity changes
-        chiTietSanPhamService.updateVariantStatusByQuantity(ctsp);
 
         // Tự động điền tên sản phẩm chi tiết và mã sản phẩm chi tiết
         if (hdct.getIdChiTietSanPham() != null) {
@@ -157,6 +159,80 @@ public class HoaDonChiTietService {
         }
 
         return tenSanPhamChiTiet.toString();
+    }
+
+    /**
+     * Add product to cart - creates invoice detail with cart invoice ID
+     */
+    @Transactional
+    public AddProductToCartResponse addProductToCart(AddProductToCartRequest request) {
+        log.info("[CartItem] Add request - invoiceId={}, variantId={}, quantity={}, price={}",
+                request.getIdHoaDon(), request.getIdBienThe(), request.getSoLuong(), request.getGiaBan());
+
+        // Validate inputs
+        if (request.getIdHoaDon() == null) {
+            throw new ApiException("Thiếu id hoá đơn", "400");
+        }
+        if (request.getIdBienThe() == null) {
+            throw new ApiException("Thiếu id chi tiết sản phẩm", "400");
+        }
+        if (request.getSoLuong() == null || request.getSoLuong() <= 0) {
+            throw new ApiException("Số lượng phải lớn hơn 0", "400");
+        }
+        if (request.getGiaBan() == null) {
+            throw new ApiException("Thiếu giá bán", "400");
+        }
+
+        // Get invoice
+        var hoaDon = hoaDonService.findById(request.getIdHoaDon())
+                .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + request.getIdHoaDon(), "404"));
+
+        // Get variant
+        var ctsp = chiTietSanPhamRepository.findChiTietSanPhamById(request.getIdBienThe());
+        if (ctsp == null) {
+            throw new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + request.getIdBienThe(), "404");
+        }
+
+        // Check stock (do not deduct for online carts yet)
+        Integer stockValue = ctsp.getSoLuong();
+        int currentStock = stockValue != null ? stockValue : 0;
+        if (currentStock < request.getSoLuong()) {
+            throw new ApiException("Số lượng tồn kho không đủ", "400");
+        }
+
+        // Create invoice detail
+        HoaDonChiTiet hdct = new HoaDonChiTiet();
+        hdct.setIdHoaDon(hoaDon);
+        hdct.setIdChiTietSanPham(ctsp);
+        hdct.setSoLuong(request.getSoLuong());
+        hdct.setGiaBan(request.getGiaBan());
+        hdct.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : Boolean.TRUE);
+        hdct.setDeleted(request.getDeleted() != null ? request.getDeleted() : Boolean.FALSE);
+        LocalDate createdAt = request.getCreateAt() != null ? request.getCreateAt() : LocalDate.now();
+        hdct.setCreateAt(createdAt);
+
+        // Calculate thanhTien
+        hdct.setThanhTien(request.getGiaBan().multiply(new java.math.BigDecimal(request.getSoLuong())));
+
+        // Set product detail name and code
+        String tenSanPhamChiTiet = buildTenSanPhamChiTiet(ctsp);
+        hdct.setTenSanPhamChiTiet(tenSanPhamChiTiet);
+        hdct.setMaSanPhamChiTiet(ctsp.getMaChiTietSanPham());
+
+        var savedDetail = hoaDonChiTietRepository.save(hdct);
+
+        // Return response
+        AddProductToCartResponse response = new AddProductToCartResponse();
+        response.setIdHoaDon(hoaDon.getId());
+        response.setIdChiTietHoaDon(savedDetail.getId());
+        response.setSoLuong(request.getSoLuong());
+        response.setGiaBan(request.getGiaBan());
+        response.setThanhTien(savedDetail.getThanhTien());
+
+        log.info("[CartItem] Added detail id={} to invoice id={}, thanhTien={}",
+                response.getIdChiTietHoaDon(), response.getIdHoaDon(), response.getThanhTien());
+
+        return response;
     }
 
 }
