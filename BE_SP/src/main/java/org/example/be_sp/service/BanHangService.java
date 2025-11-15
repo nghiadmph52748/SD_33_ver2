@@ -67,6 +67,8 @@ public class BanHangService {
     @Autowired
     TimelineDonHangRepository timelineRepository;
     @Autowired
+    ChiTietSanPhamService ctspService;
+    @Autowired
     JdbcTemplate jdbcTemplate;
 
     /**
@@ -162,6 +164,9 @@ public class BanHangService {
         ctsp.setSoLuong(ctsp.getSoLuong() - soLuong);
         ctspRepository.save(ctsp);
 
+        // 🔄 Auto-update variant status immediately when quantity changes
+        ctspService.updateVariantStatusByQuantity(ctsp);
+
         // Cập nhật tổng tiền hóa đơn
         updateTongTienHoaDon(hoaDon);
 
@@ -187,6 +192,9 @@ public class BanHangService {
 
             ctsp.setSoLuong(ctsp.getSoLuong() + hdct.getSoLuong());
             ctspRepository.save(ctsp);
+
+            // 🔄 Auto-update variant status immediately when quantity changes
+            ctspService.updateVariantStatusByQuantity(ctsp);
 
             // Keep track of hoaDon to update tongTien later
             if (hoaDon == null) {
@@ -252,6 +260,9 @@ public class BanHangService {
 
         ctsp.setSoLuong(newStock);
         ctspRepository.save(ctsp);
+
+        // 🔄 Auto-update variant status immediately when quantity changes
+        ctspService.updateVariantStatusByQuantity(ctsp);
 
         // Create timeline: Cập nhật số lượng
         addTimeline(hdct.getIdHoaDon(), "Đang xử lý", "Đang xử lý", "Cập nhật",

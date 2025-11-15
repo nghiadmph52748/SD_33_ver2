@@ -25,51 +25,67 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     Page<ChiTietSanPham> findAllByDeleted(Boolean deleted, Pageable pageable);
 
     // Custom queries with JOIN FETCH to eagerly load associations including discount details
-    @Query("SELECT DISTINCT ctsp FROM ChiTietSanPham ctsp " +
-           "LEFT JOIN FETCH ctsp.idSanPham sp " +
-           "LEFT JOIN FETCH sp.idNhaSanXuat " +
-           "LEFT JOIN FETCH sp.idXuatXu " +
-           "LEFT JOIN FETCH ctsp.idMauSac " +
-           "LEFT JOIN FETCH ctsp.idKichThuoc " +
-           "LEFT JOIN FETCH ctsp.idDeGiay " +
-           "LEFT JOIN FETCH ctsp.idChatLieu " +
-           "LEFT JOIN FETCH ctsp.idTrongLuong " +
-           "LEFT JOIN FETCH ctsp.chiTietSanPhamAnhs ctspa " +
-           "LEFT JOIN FETCH ctspa.idAnhSanPham " +
-           "LEFT JOIN FETCH ctsp.chiTietDotGiamGias ctdgg " +
-           "LEFT JOIN FETCH ctdgg.idDotGiamGia " +
-           "WHERE ctsp.deleted = :deleted")
+    @Query("SELECT DISTINCT ctsp FROM ChiTietSanPham ctsp "
+            + "LEFT JOIN FETCH ctsp.idSanPham sp "
+            + "LEFT JOIN FETCH sp.idNhaSanXuat "
+            + "LEFT JOIN FETCH sp.idXuatXu "
+            + "LEFT JOIN FETCH ctsp.idMauSac "
+            + "LEFT JOIN FETCH ctsp.idKichThuoc "
+            + "LEFT JOIN FETCH ctsp.idDeGiay "
+            + "LEFT JOIN FETCH ctsp.idChatLieu "
+            + "LEFT JOIN FETCH ctsp.idTrongLuong "
+            + "LEFT JOIN FETCH ctsp.chiTietSanPhamAnhs ctspa "
+            + "LEFT JOIN FETCH ctspa.idAnhSanPham "
+            + "LEFT JOIN FETCH ctsp.chiTietDotGiamGias ctdgg "
+            + "LEFT JOIN FETCH ctdgg.idDotGiamGia "
+            + "WHERE ctsp.deleted = :deleted")
     List<ChiTietSanPham> findAllByDeletedWithDetails(@Param("deleted") Boolean deleted);
 
-    @Query("SELECT DISTINCT ctsp FROM ChiTietSanPham ctsp " +
-           "LEFT JOIN FETCH ctsp.idSanPham sp " +
-           "LEFT JOIN FETCH sp.idNhaSanXuat " +
-           "LEFT JOIN FETCH sp.idXuatXu " +
-           "LEFT JOIN FETCH ctsp.idMauSac " +
-           "LEFT JOIN FETCH ctsp.idKichThuoc " +
-           "LEFT JOIN FETCH ctsp.idDeGiay " +
-           "LEFT JOIN FETCH ctsp.idChatLieu " +
-           "LEFT JOIN FETCH ctsp.idTrongLuong " +
-           "LEFT JOIN FETCH ctsp.chiTietSanPhamAnhs ctspa " +
-           "LEFT JOIN FETCH ctspa.idAnhSanPham " +
-           "LEFT JOIN FETCH ctsp.chiTietDotGiamGias ctdgg " +
-           "LEFT JOIN FETCH ctdgg.idDotGiamGia " +
-           "WHERE ctsp.deleted = :deleted AND ctsp.idSanPham.id = :idSanPham")
+    @Query("SELECT DISTINCT ctsp FROM ChiTietSanPham ctsp "
+            + "LEFT JOIN FETCH ctsp.idSanPham sp "
+            + "LEFT JOIN FETCH sp.idNhaSanXuat "
+            + "LEFT JOIN FETCH sp.idXuatXu "
+            + "LEFT JOIN FETCH ctsp.idMauSac "
+            + "LEFT JOIN FETCH ctsp.idKichThuoc "
+            + "LEFT JOIN FETCH ctsp.idDeGiay "
+            + "LEFT JOIN FETCH ctsp.idChatLieu "
+            + "LEFT JOIN FETCH ctsp.idTrongLuong "
+            + "LEFT JOIN FETCH ctsp.chiTietSanPhamAnhs ctspa "
+            + "LEFT JOIN FETCH ctspa.idAnhSanPham "
+            + "LEFT JOIN FETCH ctsp.chiTietDotGiamGias ctdgg "
+            + "LEFT JOIN FETCH ctdgg.idDotGiamGia "
+            + "WHERE ctsp.deleted = :deleted AND ctsp.idSanPham.id = :idSanPham")
     List<ChiTietSanPham> findAllByDeletedAndIdSanPhamIdWithDetails(@Param("deleted") Boolean deleted, @Param("idSanPham") Integer idSanPham);
 
-    @Query("SELECT DISTINCT ctsp FROM ChiTietSanPham ctsp " +
-           "LEFT JOIN FETCH ctsp.idSanPham sp " +
-           "LEFT JOIN FETCH sp.idNhaSanXuat " +
-           "LEFT JOIN FETCH sp.idXuatXu " +
-           "LEFT JOIN FETCH ctsp.idMauSac " +
-           "LEFT JOIN FETCH ctsp.idKichThuoc " +
-           "LEFT JOIN FETCH ctsp.idDeGiay " +
-           "LEFT JOIN FETCH ctsp.idChatLieu " +
-           "LEFT JOIN FETCH ctsp.idTrongLuong " +
-           "LEFT JOIN FETCH ctsp.chiTietSanPhamAnhs ctspa " +
-           "LEFT JOIN FETCH ctspa.idAnhSanPham " +
-           "LEFT JOIN FETCH ctsp.chiTietDotGiamGias ctdgg " +
-           "LEFT JOIN FETCH ctdgg.idDotGiamGia " +
-           "WHERE ctsp.id = :id")
+    @Query("SELECT DISTINCT ctsp FROM ChiTietSanPham ctsp "
+            + "LEFT JOIN FETCH ctsp.idSanPham sp "
+            + "LEFT JOIN FETCH sp.idNhaSanXuat "
+            + "LEFT JOIN FETCH sp.idXuatXu "
+            + "LEFT JOIN FETCH ctsp.idMauSac "
+            + "LEFT JOIN FETCH ctsp.idKichThuoc "
+            + "LEFT JOIN FETCH ctsp.idDeGiay "
+            + "LEFT JOIN FETCH ctsp.idChatLieu "
+            + "LEFT JOIN FETCH ctsp.idTrongLuong "
+            + "LEFT JOIN FETCH ctsp.chiTietSanPhamAnhs ctspa "
+            + "LEFT JOIN FETCH ctspa.idAnhSanPham "
+            + "LEFT JOIN FETCH ctsp.chiTietDotGiamGias ctdgg "
+            + "LEFT JOIN FETCH ctdgg.idDotGiamGia "
+            + "WHERE ctsp.id = :id")
     Optional<ChiTietSanPham> findByIdWithDetails(@Param("id") Integer id);
+
+    /**
+     * Find all disabled variants with quantity > 0 (should be enabled)
+     * Optimized query: only fetches id, trangThai, soLuong
+     */
+    @Query("SELECT ctsp FROM ChiTietSanPham ctsp "
+            + "WHERE ctsp.trangThai = false AND ctsp.soLuong > 0 AND ctsp.deleted = false")
+    List<ChiTietSanPham> findAllDisabledWithPositiveQuantity();
+
+    /**
+     * Find all enabled variants with quantity <= 0 (should be disabled)
+     * Optimized query: only fetches id, trangThai, soLuong
+     */
+    @Query("SELECT ctsp FROM ChiTietSanPham ctsp "
+            + "WHERE ctsp.trangThai = true AND (ctsp.soLuong IS NULL OR ctsp.soLuong <= 0) AND ctsp.deleted = false")
+    List<ChiTietSanPham> findAllEnabledWithZeroOrNegativeQuantity();
 }
