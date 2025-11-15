@@ -57,7 +57,10 @@ public class HoaDonResponse {
 
     public HoaDonResponse(HoaDon hd) {
         this.id = hd.getId();
-        this.maHoaDon = hd.getMaHoaDon();
+        // Ensure maHoaDon is never null - fallback to temporary code if needed
+        this.maHoaDon = (hd.getMaHoaDon() != null && !hd.getMaHoaDon().trim().isEmpty()) 
+            ? hd.getMaHoaDon() 
+            : ("HD" + String.format("%010d", hd.getId()));
 
         // Khách hàng
         if (hd.getIdKhachHang() != null) {

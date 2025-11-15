@@ -377,14 +377,19 @@ async function handleCODCheckout() {
     // COD payment method ID is usually 1 or 2, VNPAY might be 2 or 3
     const codPaymentMethodId = 1 // Adjust this based on your backend
     
-    const orderNotes = `Giao hàng đến: ${deliveryAddress}\nNgười nhận: ${contact.value.fullName}\nSĐT: ${contact.value.phone}\nEmail: ${contact.value.email}`
-    
+    // Pass customer information separately instead of in notes
     const order = await createOrderFromCart(
       cartItemsWithVariants,
       userStore.id || undefined,
       codPaymentMethodId,
       undefined, // voucherId
-      orderNotes
+      undefined, // notes - keep empty or use for additional notes only
+      {
+        fullName: contact.value.fullName,
+        phone: contact.value.phone,
+        email: contact.value.email,
+        address: deliveryAddress
+      }
     )
     
     if (!order) {

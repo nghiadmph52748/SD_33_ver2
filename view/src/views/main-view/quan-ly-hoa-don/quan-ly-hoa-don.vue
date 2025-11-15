@@ -1,67 +1,32 @@
 <template>
   <div class="invoice-page">
-    <!-- Status Tabs -->
-    <a-card class="tabs-card" :bordered="false">
-      <a-tabs v-model:active-key="activeTab" type="line" @change="handleTabChange">
-        <a-tab-pane key="all">
-          <template #title>
-            <span class="tab-title">
-              Tất cả
-              <a-badge :count="totalInvoices" :number-style="{ backgroundColor: '#165dff' }" />
-            </span>
-          </template>
-        </a-tab-pane>
-        <a-tab-pane key="paid">
-          <template #title>
-            <span class="tab-title">
-              Đã thanh toán
-              <a-badge :count="paidInvoices" :number-style="{ backgroundColor: '#00b42a' }" />
-            </span>
-          </template>
-        </a-tab-pane>
-        <a-tab-pane key="pending">
-          <template #title>
-            <span class="tab-title">
-              Chờ thanh toán
-              <a-badge :count="pendingInvoices" :number-style="{ backgroundColor: '#ff7d00' }" />
-            </span>
-          </template>
-        </a-tab-pane>
-        <a-tab-pane key="cancelled">
-          <template #title>
-            <span class="tab-title">
-              Đã hủy
-              <a-badge :count="cancelledInvoices" :number-style="{ backgroundColor: '#f53f3f' }" />
-            </span>
-          </template>
-        </a-tab-pane>
-      </a-tabs>
-    </a-card>
-
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form layout="inline" :model="filters">
-        <a-form-item label="Tìm kiếm">
-          <a-input v-model="filters.search" placeholder="Mã hóa đơn, tên khách hàng..." style="width: 250px" allow-clear />
+        <a-form-item :label="t('invoice.common.search')">
+          <a-input v-model="filters.search" :placeholder="t('invoice.common.searchPlaceholder')" style="width: 250px" allow-clear />
         </a-form-item>
 
-        <a-form-item label="Trạng thái">
-          <a-select v-model="filters.status" placeholder="Chọn trạng thái" style="width: 150px" allow-clear>
-            <a-option value="all">Tất cả</a-option>
-            <a-option value="paid">Đã thanh toán</a-option>
-            <a-option value="pending">Chờ thanh toán</a-option>
-            <a-option value="cancelled">Đã hủy</a-option>
+        <a-form-item :label="t('invoice.common.status')">
+          <a-select v-model="filters.status" :placeholder="t('invoice.common.selectStatus')" style="width: 150px" allow-clear>
+            <a-option value="all">{{ t('invoice.common.all') }}</a-option>
+            <a-option value="paid">{{ t('invoice.common.paid') }}</a-option>
+            <a-option value="pending">{{ t('invoice.common.pending') }}</a-option>
+            <a-option value="waiting_confirmation">{{ t('invoice.common.waitingConfirmation') }}</a-option>
+            <a-option value="waiting_delivery">{{ t('invoice.common.waitingDelivery') }}</a-option>
+            <a-option value="shipping">{{ t('invoice.common.shipping') }}</a-option>
+            <a-option value="cancelled">{{ t('invoice.common.cancelled') }}</a-option>
           </a-select>
         </a-form-item>
 
-        <a-form-item label="Thời gian">
+        <a-form-item :label="t('invoice.common.time')">
           <a-space>
             <a-range-picker v-model="filters.dateRange" style="width: 280px" @change="handleDateChange" />
             <a-button @click="filterToday" type="outline" size="small">
-              Hôm nay
+              {{ t('invoice.common.today') }}
             </a-button>
             <a-button @click="clearDateFilter" type="text" size="small" v-if="filters.dateRange && filters.dateRange.length > 0">
-              Xóa
+              {{ t('invoice.common.clear') }}
             </a-button>
           </a-space>
         </a-form-item>
@@ -72,13 +37,13 @@
               <template #icon>
                 <icon-search />
               </template>
-              Tìm kiếm
+              {{ t('invoice.common.search') }}
             </a-button>
             <a-button @click="resetFilters">
               <template #icon>
                 <icon-refresh />
               </template>
-              Đặt lại
+              {{ t('invoice.common.reset') }}
             </a-button>
           </a-space>
         </a-form-item>
@@ -87,38 +52,69 @@
 
     <!-- Invoices Table -->
     <a-card title="Danh sách hóa đơn" class="table-card">
-      <template #extra>
-        <a-space>
-          <a-button @click="testAPI" type="primary">
-            <template #icon>
-              <icon-refresh />
-            </template>
-            Test API
-          </a-button>
-          <a-button @click="exportExcel">
-            <template #icon>
-              <icon-download />
-            </template>
-            Xuất Excel
-          </a-button>
-          <a-dropdown>
-            <a-button>
-              <template #icon>
-                <icon-more />
+      <!-- Status Tabs -->
+      <div class="tabs-container">
+        <div class="tabs-wrapper">
+          <a-tabs v-model:active-key="activeTab" type="line" @change="handleTabChange">
+            <a-tab-pane key="all">
+              <template #title>
+                <span class="tab-title">
+                  {{ t('invoice.common.all') }}
+                  <a-badge :count="totalInvoices" :number-style="{ backgroundColor: '#165dff' }" />
+                </span>
               </template>
-              Thao tác
+            </a-tab-pane>
+            <a-tab-pane key="waiting_confirmation">
+              <template #title>
+                <span class="tab-title">
+                  {{ t('invoice.common.waitingConfirmation') }}
+                  <a-badge :count="waitingConfirmationInvoices" :number-style="{ backgroundColor: '#ff7d00' }" />
+                </span>
+              </template>
+            </a-tab-pane>
+            <a-tab-pane key="waiting_delivery">
+              <template #title>
+                <span class="tab-title">
+                  {{ t('invoice.common.waitingDelivery') }}
+                  <a-badge :count="waitingDeliveryInvoices" :number-style="{ backgroundColor: '#ff7d00' }" />
+                </span>
+              </template>
+            </a-tab-pane>
+            <a-tab-pane key="shipping">
+              <template #title>
+                <span class="tab-title">
+                  {{ t('invoice.common.shipping') }}
+                  <a-badge :count="shippingInvoices" :number-style="{ backgroundColor: '#165dff' }" />
+                </span>
+              </template>
+            </a-tab-pane>
+            <a-tab-pane key="paid">
+              <template #title>
+                <span class="tab-title">
+                  {{ t('invoice.common.paid') }}
+                  <a-badge :count="paidInvoices" :number-style="{ backgroundColor: '#00b42a' }" />
+                </span>
+              </template>
+            </a-tab-pane>
+            <a-tab-pane key="cancelled">
+              <template #title>
+                <span class="tab-title">
+                  {{ t('invoice.common.cancelled') }}
+                  <a-badge :count="cancelledInvoices" :number-style="{ backgroundColor: '#f53f3f' }" />
+                </span>
+              </template>
+            </a-tab-pane>
+          </a-tabs>
+          <div class="tabs-actions">
+            <a-button @click="exportExcel" type="primary">
+              <template #icon>
+                <icon-download />
+              </template>
+              {{ t('invoice.common.export') }}
             </a-button>
-            <template #overlay>
-              <a-menu>
-                <a-menu-item @click="cancelSelected">
-                  <icon-close />
-                  Hủy hóa đơn đã chọn
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
-        </a-space>
-      </template>
+          </div>
+        </div>
+      </div>
 
       <a-table
         :columns="invoiceColumns"
@@ -251,6 +247,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { fetchHoaDonList, type HoaDonApiModel } from '@/api/hoa-don'
 import {
@@ -261,14 +258,13 @@ import {
   IconSearch,
   IconRefresh,
   IconDownload,
-  IconMore,
   IconEye,
   IconEdit,
-  IconClose,
 } from '@arco-design/web-vue/es/icon'
 
 // Router setup
 const router = useRouter()
+const { t } = useI18n()
 
 // Breadcrumb setup
 
@@ -306,6 +302,9 @@ const todayInvoices = ref(0)
 const paidInvoices = ref(0)
 const pendingInvoices = ref(0)
 const cancelledInvoices = ref(0)
+const waitingConfirmationInvoices = ref(0)
+const waitingDeliveryInvoices = ref(0)
+const shippingInvoices = ref(0)
 const totalRevenue = ref(0)
 
 const loading = ref(false)
@@ -417,21 +416,37 @@ const itemColumns = [
   },
 ]
 
-// Computed invoices data - filter theo tab và filters
+  // Computed invoices data - filter theo tab và filters
 const invoices = computed(() => {
   let filtered = [...invoicesList.value]
 
   // Filter theo tab (trạng thái)
   if (activeTab.value !== 'all') {
     if (activeTab.value === 'paid') {
+      // Đã thanh toán: trangThai = true hoặc có ngayThanhToan
       filtered = filtered.filter((invoice) => invoice.trangThai === true || invoice.ngayThanhToan)
+    } else if (activeTab.value === 'waiting_confirmation') {
+      // Chờ xác nhận: trangThai = false, không có ngayThanhToan, và không có trạng thái giao hàng
+      filtered = filtered.filter((invoice) => {
+        return invoice.trangThai === false && !invoice.ngayThanhToan && !invoice.trangThaiGiaoHang
+      })
+    } else if (activeTab.value === 'waiting_delivery') {
+      // Chờ giao hàng: đã xác nhận nhưng chưa giao
+      filtered = filtered.filter((invoice) => {
+        return invoice.trangThai === true && !invoice.ngayThanhToan && invoice.trangThaiGiaoHang === 'waiting_delivery'
+      })
+    } else if (activeTab.value === 'shipping') {
+      // Đang giao: trạng thái đang giao hàng
+      filtered = filtered.filter((invoice) => {
+        return invoice.trangThaiGiaoHang === 'shipping' || invoice.trangThaiGiaoHang === 'Đang giao'
+      })
     } else if (activeTab.value === 'pending') {
+      // Chờ thanh toán (giữ lại cho tương thích)
       filtered = filtered.filter((invoice) => invoice.trangThai === false && !invoice.ngayThanhToan)
     } else if (activeTab.value === 'cancelled') {
-      // Giả sử có field cancelled hoặc trangThai === false và không có ngayThanhToan sau một thời gian
+      // Đã hủy
       filtered = filtered.filter((invoice) => {
-        // Logic hủy: có thể là invoice có flag hủy hoặc không có ngayThanhToan sau 7 ngày
-        return invoice.trangThai === false && !invoice.ngayThanhToan
+        return invoice.trangThai === false && !invoice.ngayThanhToan && invoice.trangThaiGiaoHang === 'cancelled'
       })
     }
   }
@@ -470,6 +485,19 @@ const invoices = computed(() => {
       return invoiceDate >= today && invoiceDate < tomorrow
     })
   }
+
+  // Sort theo ngày tạo giảm dần (mới nhất trước)
+  filtered.sort((a, b) => {
+    const dateA = new Date(a.thoiGianTao || a.ngayTao || 0).getTime()
+    const dateB = new Date(b.thoiGianTao || b.ngayTao || 0).getTime()
+    // Nếu không có ngày, sắp xếp theo ID giảm dần
+    if (isNaN(dateA) && isNaN(dateB)) {
+      return (b.id || 0) - (a.id || 0)
+    }
+    if (isNaN(dateA)) return 1 // a không có ngày -> đưa xuống dưới
+    if (isNaN(dateB)) return -1 // b không có ngày -> đưa xuống dưới
+    return dateB - dateA // Giảm dần: mới nhất trước
+  })
 
   return filtered
 })
@@ -541,8 +569,22 @@ const calculateStatistics = () => {
 
   // Đếm hóa đơn đã hủy
   cancelledInvoices.value = invoicesList.value.filter((invoice) => {
-    // Logic hủy: có thể là invoice có flag hủy hoặc không có ngayThanhToan sau một thời gian
-    return invoice.trangThai === false && !invoice.ngayThanhToan
+    return invoice.trangThai === false && !invoice.ngayThanhToan && invoice.trangThaiGiaoHang === 'cancelled'
+  }).length
+
+  // Đếm hóa đơn chờ xác nhận
+  waitingConfirmationInvoices.value = invoicesList.value.filter((invoice) => {
+    return invoice.trangThai === false && !invoice.ngayThanhToan && !invoice.trangThaiGiaoHang
+  }).length
+
+  // Đếm hóa đơn chờ giao hàng
+  waitingDeliveryInvoices.value = invoicesList.value.filter((invoice) => {
+    return invoice.trangThai === true && !invoice.ngayThanhToan && invoice.trangThaiGiaoHang === 'waiting_delivery'
+  }).length
+
+  // Đếm hóa đơn đang giao
+  shippingInvoices.value = invoicesList.value.filter((invoice) => {
+    return invoice.trangThaiGiaoHang === 'shipping' || invoice.trangThaiGiaoHang === 'Đang giao'
   }).length
 
   // Tính tổng doanh thu từ tất cả hóa đơn đã thanh toán
@@ -583,19 +625,50 @@ const fetchInvoices = async () => {
     console.log('Dữ liệu từ API:', apiData)
 
     // Map dữ liệu để đảm bảo có đầy đủ các trường cần thiết
-    invoicesList.value = apiData.map((invoice: HoaDonApiModel) => ({
-      id: invoice.id,
-      maHoaDon: invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}`,
-      tenNhanVien: invoice.tenNhanVien || 'Chưa xác định',
-      soDienThoaiKhachHang: invoice.soDienThoaiKhachHang || 'Chưa có',
-      tenKhachHang: invoice.tenKhachHang || 'Khách lẻ',
-      moTaLoaiDon: invoice.moTaLoaiDon || (invoice.loaiDon ? 'Bán hàng online' : 'Bán hàng tại quầy'),
-      thoiGianTao: invoice.thoiGianTao || invoice.ngayTao || new Date().toISOString(),
-      tongTienSauGiam: invoice.tongTienSauGiam || invoice.tongTien || 0,
-      trangThai: invoice.trangThai,
-      ngayThanhToan: invoice.ngayThanhToan,
-      hoaDonChiTiets: [], // Sẽ được load riêng nếu cần
-    }))
+    invoicesList.value = apiData.map((invoice: HoaDonApiModel) => {
+      // Calculate tongTien from items if not provided
+      let calculatedTongTien = invoice.tongTienSauGiam || invoice.tongTien || 0
+      if (calculatedTongTien === 0 && invoice.items && invoice.items.length > 0) {
+        calculatedTongTien = invoice.items.reduce((sum: number, item: any) => {
+          return sum + (item.thanhTien || (item.giaBan || 0) * (item.soLuong || 0))
+        }, 0)
+      }
+      if (calculatedTongTien === 0 && invoice.chiTietSanPham && invoice.chiTietSanPham.length > 0) {
+        calculatedTongTien = invoice.chiTietSanPham.reduce((sum: number, item: any) => {
+          return sum + (item.thanhTien || (item.giaBan || 0) * (item.soLuong || 0))
+        }, 0)
+      }
+      
+      // Format ngayTao - use createAt if ngayTao is not available
+      let ngayTaoValue = invoice.ngayTao || invoice.createAt
+      if (ngayTaoValue && typeof ngayTaoValue === 'string') {
+        // If it's a date string, ensure it's in ISO format
+        if (!ngayTaoValue.includes('T')) {
+          // If it's just a date (YYYY-MM-DD), add time
+          ngayTaoValue = `${ngayTaoValue}T00:00:00`
+        }
+      } else if (!ngayTaoValue) {
+        ngayTaoValue = new Date().toISOString()
+      }
+      
+      return {
+        id: invoice.id,
+        maHoaDon: invoice.maHoaDon || `HD${String(invoice.id || 0).padStart(6, '0')}`,
+        tenNhanVien: invoice.tenNhanVien || 'Chưa xác định',
+        soDienThoaiKhachHang: invoice.soDienThoaiKhachHang || invoice.soDienThoai || invoice.soDienThoaiNguoiNhan || 'Chưa có',
+        tenKhachHang: invoice.tenKhachHang || invoice.tenNguoiNhan || 'Khách lẻ',
+        moTaLoaiDon: invoice.moTaLoaiDon || (invoice.loaiDon ? 'Bán hàng online' : 'Bán hàng tại quầy'),
+        thoiGianTao: ngayTaoValue,
+        ngayTao: ngayTaoValue,
+        // Use tongTienSauGiam from API if available, otherwise use calculated value
+        tongTienSauGiam: invoice.tongTienSauGiam && invoice.tongTienSauGiam > 0 ? invoice.tongTienSauGiam : calculatedTongTien,
+        tongTien: invoice.tongTien && invoice.tongTien > 0 ? invoice.tongTien : calculatedTongTien,
+        trangThai: invoice.trangThai,
+        ngayThanhToan: invoice.ngayThanhToan,
+        hoaDonChiTiets: invoice.items || invoice.chiTietSanPham || [],
+        trangThaiGiaoHang: invoice.trangThaiGiaoHang, // For filtering
+      }
+    })
 
     console.log('Dữ liệu hóa đơn đã xử lý:', invoicesList.value)
     calculateStatistics()
@@ -685,6 +758,12 @@ const handleTabChange = (key: string) => {
     filters.value.status = 'all'
   } else if (key === 'paid') {
     filters.value.status = 'paid'
+  } else if (key === 'waiting_confirmation') {
+    filters.value.status = 'waiting_confirmation'
+  } else if (key === 'waiting_delivery') {
+    filters.value.status = 'waiting_delivery'
+  } else if (key === 'shipping') {
+    filters.value.status = 'shipping'
   } else if (key === 'pending') {
     filters.value.status = 'pending'
   } else if (key === 'cancelled') {
@@ -717,51 +796,8 @@ const cancelInvoice = () => {
   // Implement cancel logic
 }
 
-const testAPI = async () => {
-  try {
-    console.log('Testing API connection...')
-
-    // Test health check
-    const healthResponse = await fetch('http://localhost:8080/api/public/health')
-    const healthData = await healthResponse.json()
-    console.log('Health check:', healthData)
-
-    // Test database connection
-    const dbResponse = await fetch('http://localhost:8080/api/test/database')
-    const dbData = await dbResponse.json()
-    console.log('Database test:', dbData)
-
-    // Test invoice API
-    const invoiceResponse = await fetch('http://localhost:8080/api/test/invoices')
-    const invoiceData = await invoiceResponse.json()
-    console.log('Invoice API:', invoiceData)
-
-    // Test product API
-    const productResponse = await fetch('http://localhost:8080/api/test/products')
-    const productData = await productResponse.json()
-    console.log('Product API:', productData)
-
-    // Test customer API
-    const customerResponse = await fetch('http://localhost:8080/api/test/customers')
-    const customerData = await customerResponse.json()
-    console.log('Customer API:', customerData)
-
-    // Refresh data
-    await fetchInvoices()
-
-    alert('API test completed! Check console for details.')
-  } catch (error) {
-    console.error('API Test Error:', error)
-    alert('API test failed! Check console for details.')
-  }
-}
-
 const exportExcel = () => {
   // Implement export logic
-}
-
-const cancelSelected = () => {
-  // Implement batch cancel logic
 }
 
 // BroadcastChannel for real-time sync with other pages
@@ -861,8 +897,27 @@ onBeforeUnmount(() => {
   color: #52c41a;
 }
 
-.tabs-card {
+.tabs-container {
   margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tabs-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.tabs-wrapper :deep(.arco-tabs) {
+  flex: 1;
+}
+
+.tabs-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .tab-title {

@@ -44,197 +44,102 @@
 
     <!-- Invoice Content -->
     <div v-else-if="invoice" class="invoice-content">
-      <!-- Trạng thái hóa đơn -->
-      <a-card class="status-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
-            <span>Trạng thái hóa đơn</span>
-          </div>
-        </template>
-        <div class="status-content">
-          <div class="status-main">
-            <a-tag :color="getStatusColor(invoice.trangThai)" class="status-tag-large">
-              {{ getStatusText(invoice.trangThai) }}
-            </a-tag>
-            <div class="status-info">
-              <p>
-                <strong>Mã hóa đơn:</strong>
-                {{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}
-              </p>
-              <p>
-                <strong>Ngày tạo:</strong>
-                {{ formatDate(invoice.ngayTao) }}
-              </p>
-              <p>
-                <strong>Loại đơn:</strong>
-                <a-tag :color="invoice.loaiDon ? 'blue' : 'green'">
-                  {{ invoice.loaiDon ? 'Online' : 'Tại quầy' }}
-                </a-tag>
-              </p>
+      <!-- Horizontal Timeline Status -->
+      <a-card class="timeline-status-card" :bordered="false">
+        <div class="horizontal-timeline">
+          <div
+            v-for="(stage, index) in statusStages"
+            :key="stage.key"
+            class="timeline-stage"
+            :class="{ active: stage.active, completed: stage.completed }"
+          >
+            <div class="stage-connector" v-if="index > 0" :class="{ active: stage.active || stage.completed }"></div>
+            <div class="stage-icon" :class="{ active: stage.active, completed: stage.completed }">
+              <component :is="stage.icon" v-if="stage.icon" />
             </div>
+            <div class="stage-label">{{ stage.label }}</div>
+            <div class="stage-time">{{ stage.time }}</div>
           </div>
         </div>
       </a-card>
 
-      <!-- Thông tin đơn hàng -->
-      <a-card class="order-info-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
-            <span>Thông tin đơn hàng</span>
-          </div>
-        </template>
-        <a-row :gutter="24">
-          <a-col :span="12">
-            <div class="info-block">
-              <h3 class="block-title">Thông tin cơ bản</h3>
-              <div class="info-list">
-                <div class="info-item">
-                  <span class="label">Mã hóa đơn:</span>
-                  <span class="value">{{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Ngày tạo:</span>
-                  <span class="value">{{ formatDate(invoice.ngayTao) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Ngày thanh toán:</span>
-                  <span class="value">{{ formatDate(invoice.ngayThanhToan) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Nhân viên:</span>
-                  <span class="value">{{ invoice.tenNhanVien || 'Chưa xác định' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Ghi chú:</span>
-                  <span class="value">{{ invoice.ghiChu || 'Không có' }}</span>
-                </div>
+      <!-- Order Info and Customer Info - 2 Columns -->
+      <a-row :gutter="24" class="info-row">
+        <!-- Thông tin đơn hàng - Left Column -->
+        <a-col :span="12">
+          <a-card class="order-info-card" :bordered="false">
+            <template #title>
+              <div class="card-header">
+                <icon-file />
+                <span>Thông tin đơn hàng</span>
               </div>
-            </div>
-          </a-col>
-          <a-col :span="12">
-            <div class="info-block">
-              <h3 class="block-title">Thông tin thanh toán</h3>
-              <div class="info-list">
-                <div class="info-item">
-                  <span class="label">Tổng tiền hàng:</span>
-                  <span class="value">{{ formatCurrency(invoice.tongTienHang || invoice.tongTien || 0) }}</span>
-                </div>
-                <div class="info-item" v-if="invoice.phiVanChuyen && invoice.phiVanChuyen > 0">
-                  <span class="label">Phí vận chuyển:</span>
-                  <span class="value">{{ formatCurrency(invoice.phiVanChuyen) }}</span>
-                </div>
-                <div class="info-item" v-if="invoice.giaTriGiamGia && invoice.giaTriGiamGia > 0">
-                  <span class="label">Giảm giá:</span>
-                  <span class="value discount">-{{ formatCurrency(invoice.giaTriGiamGia) }}</span>
-                </div>
-                <div class="info-item total-item">
-                  <span class="label">Thành tiền:</span>
-                  <span class="value total">{{ formatCurrency(invoice.tongTienSauGiam) }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Trạng thái:</span>
-                  <span class="value">
-                    <a-tag :color="getStatusColor(invoice.trangThai)" class="status-tag">
-                      {{ getStatusText(invoice.trangThai) }}
-                    </a-tag>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </a-col>
-        </a-row>
-      </a-card>
-
-      <!-- Thông tin khách hàng -->
-      <a-card class="customer-info-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-user />
-            <span>Thông tin khách hàng</span>
-          </div>
-        </template>
-        <a-row :gutter="24">
-          <a-col :span="12">
-            <div class="info-block">
-              <h3 class="block-title">Thông tin liên hệ</h3>
-              <div class="info-list">
-                <div class="info-item">
-                  <span class="label">Tên khách hàng:</span>
-                  <span class="value">{{ invoice.tenKhachHang || 'Khách lẻ' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Số điện thoại:</span>
-                  <span class="value">{{ invoice.soDienThoai || 'Chưa có' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Email:</span>
-                  <span class="value">{{ invoice.email || 'Chưa có' }}</span>
-                </div>
-              </div>
-            </div>
-          </a-col>
-          <a-col :span="12">
-            <div class="info-block">
-              <h3 class="block-title">Địa chỉ giao hàng</h3>
-              <div class="info-list">
-                <div class="info-item">
-                  <span class="label">Người nhận:</span>
-                  <span class="value">{{ invoice.tenNguoiNhan || invoice.tenKhachHang || 'Chưa có' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">SĐT người nhận:</span>
-                  <span class="value">{{ invoice.soDienThoaiNguoiNhan || invoice.soDienThoai || 'Chưa có' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Email người nhận:</span>
-                  <span class="value">{{ invoice.emailNguoiNhan || invoice.email || 'Chưa có' }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="label">Địa chỉ:</span>
-                  <span class="value">{{ invoice.diaChiNguoiNhan || 'Chưa có' }}</span>
-                </div>
-              </div>
-            </div>
-          </a-col>
-        </a-row>
-      </a-card>
-
-      <!-- Lịch sử thanh toán -->
-      <a-card class="payment-history-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
-            <span>Lịch sử thanh toán</span>
-          </div>
-        </template>
-        <div class="payment-history">
-          <div v-if="invoice" class="payment-list">
-            <div class="payment-item">
-              <div class="payment-info">
-                <div class="payment-method">
-                  <strong>Tiền mặt</strong>
-                </div>
-                <div class="payment-amount">
-                  {{ formatCurrency(invoice.tongTienSauGiam || invoice.tongTien || 0) }}
-                </div>
-                <div class="payment-date">
-                  {{ getTrangThaiDonText(invoice.trangThai) }}
-                </div>
-              </div>
-              <div class="payment-status">
-                <a-tag :color="getTrangThaiDonColor(invoice.trangThai)">
-                  {{ getTrangThaiDonText(invoice.trangThai) }}
+            </template>
+            <div class="info-list-compact">
+              <div class="info-item-compact">
+                <span class="label">Mã đơn hàng:</span>
+                <a-tag color="blue" class="value-tag">
+                  {{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}
                 </a-tag>
               </div>
+              <div class="info-item-compact">
+                <span class="label">Loại đơn:</span>
+                <a-tag :color="invoice.loaiDon ? 'blue' : 'green'" class="value-tag">
+                  {{ invoice.loaiDon ? 'online' : 'tại quầy' }}
+                </a-tag>
+              </div>
+              <div class="info-item-compact">
+                <span class="label">Trạng thái:</span>
+                <a-tag :color="getStatusColor(invoice.trangThai)" class="value-tag">
+                  {{ getStatusText(invoice.trangThai) }}
+                </a-tag>
+              </div>
+              <div class="info-item-compact">
+                <span class="label">Phiếu giảm giá:</span>
+                <span class="value">{{ invoice.maPhieuGiamGia || 'Không có' }}</span>
+              </div>
+              <div class="info-item-compact">
+                <span class="label">Ngày đặt:</span>
+                <span class="value">{{ formatDateTime(invoice.ngayTao) }}</span>
+              </div>
             </div>
-          </div>
-          <div v-else class="no-payment">
-            <p>Chưa có lịch sử thanh toán</p>
-          </div>
-        </div>
-      </a-card>
+          </a-card>
+        </a-col>
+
+        <!-- Thông tin khách hàng - Right Column -->
+        <a-col :span="12">
+          <a-card class="customer-info-card" :bordered="false">
+            <template #title>
+              <div class="card-header">
+                <icon-user />
+                <span>Thông tin khách hàng</span>
+              </div>
+            </template>
+            <div class="info-list-compact">
+              <div class="info-item-compact">
+                <span class="label">Tên khách hàng:</span>
+                <span class="value">{{ invoice.tenNguoiNhan || invoice.tenKhachHang || 'Khách lẻ' }}</span>
+              </div>
+              <div class="info-item-compact">
+                <span class="label">Số điện thoại:</span>
+                <span class="value">{{ invoice.soDienThoaiNguoiNhan || invoice.soDienThoai || 'Chưa có' }}</span>
+              </div>
+              <div class="info-item-compact">
+                <span class="label">Địa chỉ:</span>
+                <span class="value">{{ invoice.diaChiNhanHang || invoice.diaChiNguoiNhan || invoice.diaChi || 'Chưa có' }}</span>
+              </div>
+              <div class="info-item-compact">
+                <span class="label">Email:</span>
+                <span class="value">{{ invoice.emailNguoiNhan || invoice.email || 'N/A' }}</span>
+              </div>
+              <div class="info-item-compact">
+                <span class="label">Ghi chú:</span>
+                <span class="value">{{ invoice.ghiChu || 'Không có' }}</span>
+              </div>
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
+
 
       <!-- Danh sách sản phẩm đã bán -->
       <a-card class="product-list-card" :bordered="false">
@@ -259,45 +164,118 @@
         </div>
       </a-card>
 
-      <!-- Timeline đơn hàng -->
-      <a-card class="timeline-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
-            <span>Timeline Đơn Hàng</span>
-          </div>
-        </template>
-        <TimelineDonHang v-if="invoiceId" :hoa-don-id="Number(invoiceId)" />
-      </a-card>
+      <!-- History and Summary - 2 Columns -->
+      <a-row :gutter="24" class="history-summary-row">
+        <!-- Left Column: History -->
+        <a-col :span="12">
+          <!-- Lịch sử thanh toán -->
+          <a-card class="payment-history-card" :bordered="false">
+            <template #title>
+              <div class="card-header">
+                <icon-file />
+                <span>Lịch sử thanh toán</span>
+              </div>
+            </template>
+            <div class="history-list">
+              <div v-if="paymentHistory.length > 0">
+                <div v-for="(payment, index) in paymentHistory" :key="index" class="history-item">
+                  <div class="history-dot"></div>
+                  <div class="history-content">
+                    <div class="history-main">
+                      <span class="history-title">{{ payment.method }} - {{ formatCurrency(payment.amount) }}</span>
+                    </div>
+                    <div class="history-meta">
+                      <a-tag color="green" size="small">{{ payment.code }}</a-tag>
+                      <span class="history-user">({{ payment.userCode }})</span>
+                    </div>
+                  </div>
+                  <div class="history-date">{{ formatDateShort(payment.date) }}</div>
+                </div>
+              </div>
+              <div v-else class="no-history">
+                <p>Chưa có lịch sử thanh toán</p>
+              </div>
+            </div>
+          </a-card>
 
-      <!-- Tổng kết đơn hàng -->
-      <a-card class="summary-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
-            <span>Tổng kết đơn hàng</span>
-          </div>
-        </template>
+          <!-- Lịch sử hóa đơn -->
+          <a-card class="invoice-history-card" :bordered="false" style="margin-top: 16px">
+            <template #title>
+              <div class="card-header">
+                <icon-file />
+                <span>Lịch sử hóa đơn</span>
+              </div>
+            </template>
+            <div class="history-list">
+              <div v-if="invoiceHistory.length > 0">
+                <div v-for="(item, index) in invoiceHistory" :key="index" class="history-item">
+                  <div class="history-dot"></div>
+                  <div class="history-content">
+                    <div class="history-main">
+                      <span class="history-title">{{ item.action }}</span>
+                    </div>
+                    <div class="history-meta">
+                      <span class="history-user">{{ item.userCode }}</span>
+                    </div>
+                  </div>
+                  <div class="history-date">{{ formatDateTime(item.date) }}</div>
+                </div>
+              </div>
+              <div v-else class="no-history">
+                <p>Chưa có lịch sử hóa đơn</p>
+              </div>
+            </div>
+          </a-card>
+        </a-col>
 
-        <div class="summary-content">
-          <div class="summary-row">
-            <span class="summary-label">Tổng tiền hàng:</span>
-            <span class="summary-value">{{ formatCurrency(invoice.tongTienHang || invoice.tongTien || 0) }}</span>
-          </div>
-          <div class="summary-row" v-if="invoice.phiVanChuyen && invoice.phiVanChuyen > 0">
-            <span class="summary-label">Phí vận chuyển:</span>
-            <span class="summary-value">{{ formatCurrency(invoice.phiVanChuyen) }}</span>
-          </div>
-          <div class="summary-row" v-if="invoice.giaTriGiamGia && invoice.giaTriGiamGia > 0">
-            <span class="summary-label">Giảm giá:</span>
-            <span class="summary-value discount">-{{ formatCurrency(invoice.giaTriGiamGia) }}</span>
-          </div>
-          <div class="summary-row total-row">
-            <span class="summary-label">Thành tiền:</span>
-            <span class="summary-value total">{{ formatCurrency(invoice.tongTienSauGiam) }}</span>
-          </div>
-        </div>
-      </a-card>
+        <!-- Right Column: Summary -->
+        <a-col :span="12">
+          <a-card class="summary-card" :bordered="false">
+            <template #title>
+              <div class="card-header">
+                <icon-file />
+                <span>Tổng kết đơn hàng</span>
+              </div>
+            </template>
+            <div class="summary-content">
+              <div class="summary-section">
+                <div class="summary-row">
+                  <div class="summary-label-wrapper">
+                    <icon-file class="summary-icon" />
+                    <span class="summary-label">Tổng tiền hàng:</span>
+                  </div>
+                  <span class="summary-value">{{ formatCurrency(calculatedTongTien) }}</span>
+                </div>
+                <div class="summary-row" v-if="invoice.giaTriGiamGia && invoice.giaTriGiamGia > 0">
+                  <div class="summary-label-wrapper">
+                    <icon-check-circle class="summary-icon" />
+                    <span class="summary-label">Giảm giá:</span>
+                  </div>
+                  <span class="summary-value discount">-{{ formatCurrency(invoice.giaTriGiamGia) }}</span>
+                </div>
+                <div class="summary-row total-row">
+                  <div class="summary-label-wrapper">
+                    <icon-check-circle class="summary-icon" />
+                    <span class="summary-label">Thành tiền:</span>
+                  </div>
+                  <span class="summary-value total">{{ formatCurrency(calculatedTongTienSauGiam) }}</span>
+                </div>
+                <div class="summary-status" v-if="invoice.trangThai">
+                  <icon-check-circle class="status-icon" />
+                  <span>Đã xác nhận</span>
+                </div>
+              </div>
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <a-button @click="goBack" class="action-btn back-btn">Quay lại</a-button>
+        <a-button type="primary" @click="showUpdateModal" class="action-btn update-btn">Cập nhật</a-button>
+        <a-button type="primary" @click="goToPrintPage" class="action-btn print-btn">In hóa đơn</a-button>
+      </div>
     </div>
 
     <!-- Error State -->
@@ -308,15 +286,104 @@
         </template>
       </a-result>
     </div>
+
+    <!-- Update Invoice Modal -->
+    <a-modal
+      v-model:visible="updateModalVisible"
+      title="Cập Nhật Thông Tin"
+      :width="600"
+      :mask-closable="false"
+      class="update-modal"
+    >
+      <template #title>
+        <div class="modal-title">
+          <icon-edit class="title-icon" />
+          <span>Cập Nhật Thông Tin</span>
+        </div>
+      </template>
+      <template #close-icon>
+        <icon-close class="close-icon" />
+      </template>
+
+      <a-tabs v-model:active-key="activeUpdateTab" type="line" class="update-tabs">
+        <a-tab-pane key="order" title="Thông Tin Đơn Hàng">
+          <a-form :model="updateForm" layout="vertical" class="update-form">
+            <a-form-item label="Mã đơn hàng">
+              <a-input v-model="updateForm.maHoaDon" disabled />
+            </a-form-item>
+            <a-form-item label="Loại đơn">
+              <a-select v-model="updateForm.loaiDon" placeholder="Chọn loại đơn">
+                <a-option :value="true">online</a-option>
+                <a-option :value="false">tại quầy</a-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="Trạng thái">
+              <a-select v-model="updateForm.trangThaiText" placeholder="Chọn trạng thái">
+                <a-option value="Chờ xác nhận">Chờ xác nhận</a-option>
+                <a-option value="Chờ giao hàng">Chờ giao hàng</a-option>
+                <a-option value="Đang giao">Đang giao</a-option>
+                <a-option value="Hoàn thành">Hoàn thành</a-option>
+                <a-option value="Đã hủy">Đã hủy</a-option>
+              </a-select>
+            </a-form-item>
+          </a-form>
+        </a-tab-pane>
+        <a-tab-pane key="customer" title="Thông Tin Khách Hàng">
+          <a-form :model="updateForm" layout="vertical" class="update-form">
+            <a-form-item label="Tên khách hàng">
+              <a-input v-model="updateForm.tenNguoiNhan" placeholder="Nhập tên khách hàng" />
+            </a-form-item>
+            <a-form-item label="Số điện thoại">
+              <a-input v-model="updateForm.soDienThoaiNguoiNhan" placeholder="Nhập số điện thoại" />
+            </a-form-item>
+            <a-form-item label="Địa chỉ">
+              <a-textarea
+                v-model="updateForm.diaChiNhanHang"
+                placeholder="Nhập địa chỉ"
+                :auto-size="{ minRows: 2, maxRows: 4 }"
+              />
+            </a-form-item>
+            <a-form-item label="Email">
+              <a-input v-model="updateForm.emailNguoiNhan" placeholder="Nhập email" type="email" />
+            </a-form-item>
+            <a-form-item label="Ghi chú">
+              <a-textarea
+                v-model="updateForm.ghiChu"
+                placeholder="Nhập ghi chú (nếu có)"
+                :auto-size="{ minRows: 2, maxRows: 4 }"
+              />
+            </a-form-item>
+          </a-form>
+        </a-tab-pane>
+      </a-tabs>
+
+      <template #footer>
+        <div class="modal-footer">
+          <a-button @click="closeUpdateModal" class="cancel-btn">Hủy</a-button>
+          <a-button type="primary" @click="handleSaveUpdate" :loading="saving" class="save-btn">Lưu</a-button>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { IconArrowLeft, IconPrinter, IconFile, IconUser } from '@arco-design/web-vue/es/icon'
-import TimelineDonHang from '@/components/timeline-don-hang/timeline-don-hang.vue'
+import { fetchTimelineByHoaDonId, type TimelineItem } from '@/api/timeline'
+import {
+  IconArrowLeft,
+  IconPrinter,
+  IconFile,
+  IconUser,
+  IconClockCircle,
+  IconCheckCircle,
+  IconSend,
+  IconCheck,
+  IconEdit,
+  IconClose,
+} from '@arco-design/web-vue/es/icon'
 
 const route = useRoute()
 const router = useRouter()
@@ -325,12 +392,411 @@ const router = useRouter()
 const invoice = ref<any>(null)
 const loading = ref(true)
 const invoiceId = ref(route.params.id as string)
+const timelineData = ref<TimelineItem[]>([])
+
+// Update Modal
+const updateModalVisible = ref(false)
+const activeUpdateTab = ref('order')
+const saving = ref(false)
+const updateForm = ref({
+  maHoaDon: '',
+  loaiDon: false,
+  trangThai: false,
+  trangThaiText: '',
+  tenNguoiNhan: '',
+  soDienThoaiNguoiNhan: '',
+  diaChiNhanHang: '',
+  emailNguoiNhan: '',
+  ghiChu: '',
+})
+
+// Helper functions
+const formatDateTime = (dateString?: string | Date) => {
+  if (!dateString) return 'N/A'
+  
+  let date: Date
+  if (dateString instanceof Date) {
+    date = dateString
+  } else {
+    date = new Date(dateString)
+  }
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return 'N/A'
+  }
+  
+  const time = date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+  const dateStr = date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+  return `${time} ${dateStr}`
+}
+
+const formatDateShort = (dateString?: string) => {
+  if (!dateString) return 'N/A'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+const getStatusText = (status: any) => {
+  // Xử lý cả boolean và string
+  if (typeof status === 'boolean') {
+    return status ? 'Hoàn thành' : 'Chờ xác nhận'
+  }
+
+  if (typeof status === 'string') {
+    const statusTexts: { [key: string]: string } = {
+      'Chờ xác nhận': 'Chờ xác nhận',
+      'Chờ giao hàng': 'Chờ giao hàng',
+      'Đang giao': 'Đang giao',
+      'Hoàn thành': 'Hoàn thành',
+      'Đã hủy': 'Đã hủy',
+      'Đã thanh toán': 'Hoàn thành',
+      'Chờ thanh toán': 'Chờ xác nhận',
+      true: 'Hoàn thành',
+      false: 'Chờ xác nhận',
+    }
+    return statusTexts[status] || status || 'Chưa xác định'
+  }
+
+  return 'Chưa xác định'
+}
+
+// Helper: Get time from timeline by status/action
+const getTimeFromTimeline = (statusKey: string): string => {
+  try {
+    if (!timelineData.value || timelineData.value.length === 0) {
+      // Fallback to invoice dates if no timeline
+      if (statusKey === 'completed') {
+        return formatDateTime(invoice.value?.ngayThanhToan || invoice.value?.ngayTao)
+      }
+      return formatDateTime(invoice.value?.ngayTao || invoice.value?.createAt)
+    }
+
+    // Sort timeline by time (oldest first) to ensure correct order
+    const sortedTimeline = [...timelineData.value].sort((a, b) => {
+      try {
+        const timeA = new Date(a.thoiGian).getTime()
+        const timeB = new Date(b.thoiGian).getTime()
+        if (isNaN(timeA) || isNaN(timeB)) return 0
+        return timeA - timeB
+      } catch {
+        return 0
+      }
+    })
+
+    // Map status keys to timeline actions/statuses (based on actual database values)
+    const statusMap: { [key: string]: string[] } = {
+      pending: ['Tạo đơn hàng', 'Tạo mới', 'Chờ xác nhận', 'Chờ thanh toán'],
+      waiting: ['Xác nhận đơn hàng', 'Xác nhận', 'Đang chuẩn bị hàng', 'Chuẩn bị', 'Chờ giao hàng'],
+      shipping: ['Đang giao hàng', 'Đang giao', 'Giao hàng'],
+      completed: ['Đã giao hàng', 'Hoàn thành', 'Đã thanh toán', 'Thanh toán'],
+    }
+
+    const searchTerms = statusMap[statusKey] || []
+    
+    // Find timeline entry matching the status (search from beginning for earlier stages, end for later stages)
+    const searchOrder = statusKey === 'completed' ? [...sortedTimeline].reverse() : sortedTimeline
+    
+    for (const term of searchTerms) {
+      const entry = searchOrder.find(
+        (item) =>
+          item.trangThaiMoi?.toLowerCase().includes(term.toLowerCase()) ||
+          item.hanhDong?.toLowerCase().includes(term.toLowerCase())
+      )
+      if (entry && entry.thoiGian) {
+        return formatDateTime(entry.thoiGian)
+      }
+    }
+
+    // Fallback: use first timeline entry for pending, last for completed
+    if (statusKey === 'pending' && sortedTimeline.length > 0) {
+      return formatDateTime(sortedTimeline[0].thoiGian)
+    }
+    if (statusKey === 'completed' && sortedTimeline.length > 0) {
+      return formatDateTime(sortedTimeline[sortedTimeline.length - 1].thoiGian)
+    }
+    if (statusKey === 'waiting' && sortedTimeline.length > 1) {
+      // Use second entry for waiting (after creation)
+      return formatDateTime(sortedTimeline[1].thoiGian)
+    }
+    if (statusKey === 'shipping' && sortedTimeline.length > 2) {
+      // Use entry before last for shipping
+      return formatDateTime(sortedTimeline[sortedTimeline.length - 2].thoiGian)
+    }
+
+    // Final fallback
+    return formatDateTime(invoice.value?.ngayTao || invoice.value?.createAt)
+  } catch (error) {
+    console.error('Error in getTimeFromTimeline:', error)
+    // Safe fallback
+    if (statusKey === 'completed') {
+      return formatDateTime(invoice.value?.ngayThanhToan || invoice.value?.ngayTao)
+    }
+    return formatDateTime(invoice.value?.ngayTao || invoice.value?.createAt)
+  }
+}
+
+// Computed: Status stages for horizontal timeline
+const statusStages = computed(() => {
+  // Always return default stages even if invoice is not loaded yet
+  const defaultStages = [
+    {
+      key: 'pending',
+      label: 'Chờ xác nhận',
+      icon: IconClockCircle,
+      active: false,
+      completed: false,
+      time: 'N/A',
+    },
+    {
+      key: 'waiting',
+      label: 'Chờ giao hàng',
+      icon: IconCheckCircle,
+      active: false,
+      completed: false,
+      time: 'N/A',
+    },
+    {
+      key: 'shipping',
+      label: 'Đang giao',
+      icon: IconSend,
+      active: false,
+      completed: false,
+      time: 'N/A',
+    },
+    {
+      key: 'completed',
+      label: 'Hoàn thành',
+      icon: IconCheck,
+      active: false,
+      completed: false,
+      time: 'N/A',
+    },
+  ]
+
+  if (!invoice.value) {
+    return defaultStages
+  }
+  
+  try {
+    const currentStatus = getStatusText(invoice.value.trangThai)
+    const stages = [
+      {
+        key: 'pending',
+        label: 'Chờ xác nhận',
+        icon: IconClockCircle,
+        active: false,
+        completed: false,
+        time: getTimeFromTimeline('pending'),
+      },
+      {
+        key: 'waiting',
+        label: 'Chờ giao hàng',
+        icon: IconCheckCircle,
+        active: false,
+        completed: false,
+        time: getTimeFromTimeline('waiting'),
+      },
+      {
+        key: 'shipping',
+        label: 'Đang giao',
+        icon: IconSend,
+        active: false,
+        completed: false,
+        time: getTimeFromTimeline('shipping'),
+      },
+      {
+        key: 'completed',
+        label: 'Hoàn thành',
+        icon: IconCheck,
+        active: false,
+        completed: false,
+        time: getTimeFromTimeline('completed'),
+      },
+    ]
+
+    // Xác định stage hiện tại dựa trên trạng thái
+    if (currentStatus === 'Chờ xác nhận' || currentStatus === 'Chờ thanh toán') {
+      stages[0].active = true
+      stages[0].completed = true
+      // Only show time for completed stages
+      stages[1].time = 'N/A'
+      stages[2].time = 'N/A'
+      stages[3].time = 'N/A'
+    } else if (currentStatus === 'Chờ giao hàng') {
+      stages[0].completed = true
+      stages[1].active = true
+      stages[1].completed = true
+      // Only show time for completed stages
+      stages[2].time = 'N/A'
+      stages[3].time = 'N/A'
+    } else if (currentStatus === 'Đang giao') {
+      stages[0].completed = true
+      stages[1].completed = true
+      stages[2].active = true
+      stages[2].completed = true
+      // Only show time for completed stages
+      stages[3].time = 'N/A'
+    } else if (currentStatus === 'Hoàn thành' || currentStatus === 'Đã thanh toán') {
+      stages.forEach((stage) => {
+        stage.completed = true
+      })
+      stages[3].active = true
+    } else {
+      // Default: only pending is completed, others show N/A
+      stages[0].completed = true
+      stages[0].active = true
+      stages[1].time = 'N/A'
+      stages[2].time = 'N/A'
+      stages[3].time = 'N/A'
+    }
+
+    return stages
+  } catch (error) {
+    console.error('Error computing status stages:', error)
+    // Return default stages on error
+    return [
+      {
+        key: 'pending',
+        label: 'Chờ xác nhận',
+        icon: IconClockCircle,
+        active: true,
+        completed: true,
+        time: formatDateTime(invoice.value?.ngayTao),
+      },
+      {
+        key: 'waiting',
+        label: 'Chờ giao hàng',
+        icon: IconCheckCircle,
+        active: false,
+        completed: false,
+        time: formatDateTime(invoice.value?.ngayTao),
+      },
+      {
+        key: 'shipping',
+        label: 'Đang giao',
+        icon: IconSend,
+        active: false,
+        completed: false,
+        time: formatDateTime(invoice.value?.ngayTao),
+      },
+      {
+        key: 'completed',
+        label: 'Hoàn thành',
+        icon: IconCheck,
+        active: false,
+        completed: false,
+        time: formatDateTime(invoice.value?.ngayThanhToan || invoice.value?.ngayTao),
+      },
+    ]
+  }
+})
+
+// Payment history
+const paymentHistory = computed(() => {
+  if (!invoice.value) return []
+  const history = []
+  if (invoice.value.ngayThanhToan) {
+    history.push({
+      method: 'Chuyển khoản',
+      amount: invoice.value.tongTienSauGiam || invoice.value.tongTien || 0,
+      code: `PTT${String(invoice.value.id || 0).padStart(5, '0')}`,
+      userCode: invoice.value.maNhanVien || 'NV000001',
+      date: invoice.value.ngayThanhToan,
+    })
+  }
+  return history
+})
+
+// Invoice history
+const invoiceHistory = computed(() => {
+  if (!invoice.value) return []
+  const history = []
+  if (invoice.value.ngayTao) {
+    history.push({
+      action: 'Thanh toán hóa đơn',
+      userCode: invoice.value.maNhanVien || 'NV000001',
+      date: invoice.value.ngayTao,
+    })
+  }
+  return history
+})
+
+// Calculate total from hoaDonChiTiets if tongTien is missing
+const calculatedTongTien = computed(() => {
+  if (!invoice.value) return 0
+  
+  // Use tongTienHang or tongTien if available
+  if (invoice.value.tongTienHang && invoice.value.tongTienHang > 0) {
+    return invoice.value.tongTienHang
+  }
+  if (invoice.value.tongTien && invoice.value.tongTien > 0) {
+    return invoice.value.tongTien
+  }
+  
+  // Calculate from hoaDonChiTiets
+  if (invoice.value.hoaDonChiTiets && invoice.value.hoaDonChiTiets.length > 0) {
+    const total = invoice.value.hoaDonChiTiets.reduce((sum: number, item: any) => {
+      const thanhTien = item.thanhTien || (item.giaBan || 0) * (item.soLuong || 0)
+      return sum + (thanhTien || 0)
+    }, 0)
+    return total
+  }
+  
+  // Fallback: try items array
+  if (invoice.value.items && invoice.value.items.length > 0) {
+    const total = invoice.value.items.reduce((sum: number, item: any) => {
+      const thanhTien = item.thanhTien || (item.giaBan || 0) * (item.soLuong || 0)
+      return sum + (thanhTien || 0)
+    }, 0)
+    return total
+  }
+  
+  return 0
+})
+
+// Calculate tongTienSauGiam
+const calculatedTongTienSauGiam = computed(() => {
+  if (!invoice.value) return 0
+  
+  // Use tongTienSauGiam if available
+  if (invoice.value.tongTienSauGiam && invoice.value.tongTienSauGiam > 0) {
+    return invoice.value.tongTienSauGiam
+  }
+  
+  // Calculate: tongTien - giamGia
+  const tongTien = calculatedTongTien.value
+  const giamGia = invoice.value.giaTriGiamGia || invoice.value.giamGia || 0
+  return Math.max(0, tongTien - giamGia)
+})
 
 // Methods
 
 const fetchInvoiceDetail = async () => {
   try {
     loading.value = true
+
+    // Fetch timeline data in parallel
+    try {
+      const timelineResponse = await fetchTimelineByHoaDonId(Number(invoiceId.value))
+      timelineData.value = timelineResponse || []
+      console.log('✅ Timeline loaded:', timelineData.value.length, 'entries')
+    } catch (timelineError) {
+      console.warn('⚠️ Failed to load timeline:', timelineError)
+      timelineData.value = []
+    }
 
     // Ưu tiên lấy từ API thông tin đơn hàng mới nhất (có đầy đủ hoaDonChiTiets)
     try {
@@ -489,6 +955,7 @@ const formatDate = (dateString: string) => {
   })
 }
 
+
 const formatCurrency = (amount: number) => {
   if (!amount) return '0 ₫'
   return new Intl.NumberFormat('vi-VN', {
@@ -521,30 +988,6 @@ const getStatusColor = (status: any) => {
   return 'gray'
 }
 
-const getStatusText = (status: any) => {
-  // Xử lý cả boolean và string
-  if (typeof status === 'boolean') {
-    return status ? 'Hoàn thành' : 'Chờ xác nhận'
-  }
-
-  if (typeof status === 'string') {
-    const statusTexts: { [key: string]: string } = {
-      'Chờ xác nhận': 'Chờ xác nhận',
-      'Chờ giao hàng': 'Chờ giao hàng',
-      'Đang giao': 'Đang giao',
-      'Hoàn thành': 'Hoàn thành',
-      'Đã hủy': 'Đã hủy',
-      'Đã thanh toán': 'Hoàn thành',
-      'Chờ thanh toán': 'Chờ xác nhận',
-      true: 'Hoàn thành',
-      false: 'Chờ xác nhận',
-    }
-    return statusTexts[status] || status || 'Chưa xác định'
-  }
-
-  return 'Chưa xác định'
-}
-
 const goBack = () => {
   router.back()
 }
@@ -569,6 +1012,105 @@ const goToPrintPage = () => {
 const handleViewProductDetail = (product: any) => {
   console.log('Viewing product detail:', product)
   // Có thể mở modal hoặc chuyển trang chi tiết sản phẩm
+}
+
+const showUpdateModal = () => {
+  if (!invoice.value) return
+  
+  // Get current status text
+  const currentStatusText = getStatusText(invoice.value.trangThai)
+  
+  // Populate form with current invoice data
+  updateForm.value = {
+    maHoaDon: invoice.value.maHoaDon || `HD${String(invoice.value.id).padStart(6, '0')}`,
+    loaiDon: invoice.value.loaiDon || false,
+    trangThai: invoice.value.trangThai || false,
+    trangThaiText: currentStatusText,
+    tenNguoiNhan: invoice.value.tenNguoiNhan || invoice.value.tenKhachHang || '',
+    soDienThoaiNguoiNhan: invoice.value.soDienThoaiNguoiNhan || invoice.value.soDienThoai || '',
+    diaChiNhanHang: invoice.value.diaChiNhanHang || invoice.value.diaChiNguoiNhan || invoice.value.diaChi || '',
+    emailNguoiNhan: invoice.value.emailNguoiNhan || invoice.value.email || '',
+    ghiChu: invoice.value.ghiChu || '',
+  }
+  activeUpdateTab.value = 'order'
+  updateModalVisible.value = true
+}
+
+const closeUpdateModal = () => {
+  updateModalVisible.value = false
+  // Reset form
+  updateForm.value = {
+    maHoaDon: '',
+    loaiDon: false,
+    trangThai: false,
+    trangThaiText: '',
+    tenNguoiNhan: '',
+    soDienThoaiNguoiNhan: '',
+    diaChiNhanHang: '',
+    emailNguoiNhan: '',
+    ghiChu: '',
+  }
+}
+
+const handleSaveUpdate = async () => {
+  if (!invoice.value) return
+  
+  saving.value = true
+  try {
+    // Map status text to boolean
+    // true = Hoàn thành/Đã thanh toán, false = Chờ xác nhận/Chờ giao hàng/Đang giao
+    let trangThai = false
+    if (updateForm.value.trangThaiText === 'Hoàn thành' || updateForm.value.trangThaiText === 'Đã thanh toán') {
+      trangThai = true
+    } else if (updateForm.value.trangThaiText === 'Đã hủy') {
+      trangThai = false // Hủy = false
+    } else {
+      // Chờ xác nhận, Chờ giao hàng, Đang giao = false
+      trangThai = false
+    }
+    
+    const updateData: any = {
+      loaiDon: updateForm.value.loaiDon,
+      trangThai: trangThai,
+    }
+    
+    // Only include fields that have values to avoid overwriting with empty strings
+    if (updateForm.value.tenNguoiNhan) {
+      updateData.tenNguoiNhan = updateForm.value.tenNguoiNhan
+    }
+    if (updateForm.value.diaChiNhanHang) {
+      updateData.diaChiNhanHang = updateForm.value.diaChiNhanHang
+    }
+    if (updateForm.value.soDienThoaiNguoiNhan) {
+      updateData.soDienThoaiNguoiNhan = updateForm.value.soDienThoaiNguoiNhan
+    }
+    if (updateForm.value.emailNguoiNhan) {
+      updateData.emailNguoiNhan = updateForm.value.emailNguoiNhan
+    }
+    if (updateForm.value.ghiChu !== undefined && updateForm.value.ghiChu !== null) {
+      updateData.ghiChu = updateForm.value.ghiChu
+    }
+    
+    // Call API to update invoice
+    const response = await axios.put(`/api/hoa-don-management/update/${invoice.value.id}`, updateData)
+    
+    // ResponseObject has isSuccess field (not success)
+    if (response.data && (response.data.isSuccess || response.data.data)) {
+      // Refresh invoice data
+      await fetchInvoiceDetail()
+      closeUpdateModal()
+      // Show success message (you can use a notification component)
+      console.log('Cập nhật thành công')
+    } else {
+      throw new Error(response.data?.message || 'Cập nhật thất bại')
+    }
+  } catch (error: any) {
+    console.error('Error updating invoice:', error)
+    // Show error message (you can use a notification component)
+    alert(error?.response?.data?.message || error?.message || 'Có lỗi xảy ra khi cập nhật')
+  } finally {
+    saving.value = false
+  }
 }
 
 // Lấy text trạng thái đơn
@@ -701,6 +1243,383 @@ onMounted(() => {
 .debug-content p {
   margin: 0;
   font-size: 14px;
+}
+
+/* Horizontal Timeline */
+.timeline-status-card {
+  margin-bottom: 24px;
+}
+
+.horizontal-timeline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px 0;
+  position: relative;
+}
+
+.timeline-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  min-width: 0;
+}
+
+.stage-connector {
+  position: absolute;
+  left: calc(-50% + 20px);
+  right: calc(50% - 20px);
+  top: 20px;
+  height: 2px;
+  background-color: #e5e6eb;
+  z-index: 0;
+}
+
+.stage-connector.active {
+  background-color: #165dff;
+}
+
+.stage-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e5e6eb;
+  color: #86909c;
+  font-size: 20px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.stage-icon.active {
+  background-color: #165dff;
+  color: white;
+}
+
+.stage-icon.completed {
+  background-color: #165dff;
+  color: white;
+}
+
+.stage-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2129;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.stage-time {
+  font-size: 12px;
+  color: #86909c;
+  text-align: center;
+}
+
+/* Info Row */
+.info-row {
+  margin-bottom: 24px;
+}
+
+.info-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.info-item-compact .label {
+  font-weight: 500;
+  color: #4e5969;
+  font-size: 14px;
+}
+
+.info-item-compact .value {
+  font-weight: 400;
+  color: #1d2129;
+  font-size: 14px;
+  text-align: right;
+}
+
+.value-tag {
+  font-size: 12px;
+}
+
+/* History List */
+.history-summary-row {
+  margin-bottom: 24px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.history-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  padding-left: 8px;
+}
+
+.history-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #00b42a;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.history-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2129;
+}
+
+.history-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-user {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.history-date {
+  font-size: 12px;
+  color: #86909c;
+  white-space: nowrap;
+}
+
+.no-history {
+  text-align: center;
+  padding: 20px;
+  color: #86909c;
+}
+
+/* Summary Section */
+.summary-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summary-label-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-icon {
+  font-size: 16px;
+  color: #4e5969;
+}
+
+.summary-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f2f3f5;
+  color: #00b42a;
+  font-weight: 500;
+}
+
+.status-icon {
+  color: #00b42a;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #f2f3f5;
+}
+
+.action-btn {
+  min-width: 120px;
+}
+
+.back-btn {
+  background-color: #f2f3f5;
+  color: #1d2129;
+  border-color: #e5e6eb;
+}
+
+.back-btn:hover {
+  background-color: #e5e6eb;
+  border-color: #c9cdd4;
+  color: #1d2129;
+}
+
+.update-btn {
+  background-color: #165dff;
+  border-color: #165dff;
+  color: white;
+}
+
+.update-btn:hover {
+  background-color: #0e42d2;
+  border-color: #0e42d2;
+}
+
+.print-btn {
+  background-color: #165dff;
+  border-color: #165dff;
+  color: white;
+}
+
+.print-btn:hover {
+  background-color: #0e42d2;
+  border-color: #0e42d2;
+}
+
+/* Update Modal */
+.update-modal :deep(.arco-modal-header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e6eb;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+}
+
+.title-icon {
+  font-size: 20px;
+  color: #165dff;
+}
+
+.close-icon {
+  font-size: 18px;
+  color: #f53f3f;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-icon:hover {
+  color: #cb2634;
+}
+
+.update-tabs {
+  margin-top: 0;
+}
+
+.update-tabs :deep(.arco-tabs-nav) {
+  padding: 0 24px;
+  border-bottom: 1px solid #e5e6eb;
+}
+
+.update-tabs :deep(.arco-tabs-tab) {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4e5969;
+}
+
+.update-tabs :deep(.arco-tabs-tab-active) {
+  color: #165dff;
+}
+
+.update-tabs :deep(.arco-tabs-tab-active .arco-tabs-tab-title) {
+  color: #165dff;
+  font-weight: 600;
+}
+
+.update-tabs :deep(.arco-tabs-content) {
+  padding: 24px;
+}
+
+.update-form {
+  margin-top: 0;
+}
+
+.update-form :deep(.arco-form-item) {
+  margin-bottom: 20px;
+}
+
+.update-form :deep(.arco-form-item-label) {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2129;
+  margin-bottom: 8px;
+}
+
+.update-form :deep(.arco-input),
+.update-form :deep(.arco-select),
+.update-form :deep(.arco-textarea) {
+  border-radius: 6px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e6eb;
+  background-color: #ffffff;
+}
+
+.cancel-btn {
+  min-width: 100px;
+  background-color: #ffffff;
+  color: #1d2129;
+  border-color: #d9d9d9;
+}
+
+.cancel-btn:hover {
+  background-color: #f7f8fa;
+  border-color: #165dff;
+  color: #165dff;
+}
+
+.save-btn {
+  min-width: 100px;
+  background-color: #165dff;
+  border-color: #165dff;
+  color: #ffffff;
+}
+
+.save-btn:hover {
+  background-color: #0e42d2;
+  border-color: #0e42d2;
 }
 
 /* Cards */

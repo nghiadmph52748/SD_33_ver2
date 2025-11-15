@@ -26,6 +26,7 @@ import localeDiscount from '@/views/main-view/quan-ly-giam-gia/locale/vi-VN'
 import localeThongKe from '@/views/main-view/thong-ke/locale/vi-VN'
 import localeChat from '@/views/chat/locale/vi-VN'
 import localeAIChatbot from '@/views/ai-chatbot/locale/vi-VN'
+import localeInvoice from '@/views/main-view/quan-ly-hoa-don/locale/vi-VN'
 
 // Dashboard components don't use localization
 /** simple end */
@@ -115,5 +116,6 @@ export default {
   ...localeThongKe,
   ...localeChat,
   ...localeAIChatbot,
+  ...localeInvoice,
   /** simple end */
 }

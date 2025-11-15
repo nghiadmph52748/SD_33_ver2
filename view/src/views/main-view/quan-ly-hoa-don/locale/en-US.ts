@@ -1,0 +1,22 @@
+export default {
+  // Common
+  'invoice.common.search': 'Search',
+  'invoice.common.reset': 'Reset',
+  'invoice.common.export': 'Export Excel',
+  'invoice.common.status': 'Status',
+  'invoice.common.time': 'Time',
+  'invoice.common.today': 'Today',
+  'invoice.common.clear': 'Clear',
+  'invoice.common.selectStatus': 'Select status',
+  'invoice.common.all': 'All',
+  'invoice.common.paid': 'Paid',
+  'invoice.common.pending': 'Pending',
+  'invoice.common.cancelled': 'Cancelled',
+  'invoice.common.waitingConfirmation': 'Waiting Confirmation',
+  'invoice.common.waitingDelivery': 'Waiting Delivery',
+  'invoice.common.shipping': 'Shipping',
+  'invoice.common.view': 'View',
+  'invoice.common.invoiceCode': 'Invoice Code',
+  'invoice.common.customerName': 'Customer Name',
+  'invoice.common.searchPlaceholder': 'Invoice code, customer name...',
+}

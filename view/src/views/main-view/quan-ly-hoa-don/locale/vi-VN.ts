@@ -1,0 +1,22 @@
+export default {
+  // Common
+  'invoice.common.search': 'Tìm kiếm',
+  'invoice.common.reset': 'Đặt lại',
+  'invoice.common.export': 'Xuất Excel',
+  'invoice.common.status': 'Trạng thái',
+  'invoice.common.time': 'Thời gian',
+  'invoice.common.today': 'Hôm nay',
+  'invoice.common.clear': 'Xóa',
+  'invoice.common.selectStatus': 'Chọn trạng thái',
+  'invoice.common.all': 'Tất cả',
+  'invoice.common.paid': 'Đã thanh toán',
+  'invoice.common.pending': 'Chờ thanh toán',
+  'invoice.common.cancelled': 'Đã hủy',
+  'invoice.common.waitingConfirmation': 'Chờ xác nhận',
+  'invoice.common.waitingDelivery': 'Chờ giao hàng',
+  'invoice.common.shipping': 'Đang giao',
+  'invoice.common.view': 'Xem',
+  'invoice.common.invoiceCode': 'Mã hóa đơn',
+  'invoice.common.customerName': 'Tên khách hàng',
+  'invoice.common.searchPlaceholder': 'Mã hóa đơn, tên khách hàng...',
+}

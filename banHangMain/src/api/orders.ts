@@ -14,6 +14,11 @@ export interface CreateOrderRequest {
   idPhuongThucThanhToan?: number
   idPhieuGiamGia?: number
   ghiChu?: string
+  // Customer information fields
+  tenNguoiNhan?: string
+  diaChiNhanHang?: string
+  soDienThoaiNguoiNhan?: string
+  emailNguoiNhan?: string
 }
 
 export interface OrderResponse {
@@ -47,7 +52,13 @@ export async function createOrderFromCart(
   customerId?: number,
   paymentMethodId?: number,
   voucherId?: number,
-  notes?: string
+  notes?: string,
+  customerInfo?: {
+    fullName?: string
+    phone?: string
+    email?: string
+    address?: string
+  }
 ): Promise<OrderResponse | null> {
   try {
     const orderItems = convertCartToOrderItems(cartItems)
@@ -57,7 +68,12 @@ export async function createOrderFromCart(
       hoaDonChiTiet: orderItems,
       idPhuongThucThanhToan: paymentMethodId,
       idPhieuGiamGia: voucherId,
-      ghiChu: notes
+      ghiChu: notes,
+      // Map customer info to request fields
+      tenNguoiNhan: customerInfo?.fullName,
+      diaChiNhanHang: customerInfo?.address,
+      soDienThoaiNguoiNhan: customerInfo?.phone,
+      emailNguoiNhan: customerInfo?.email
     }
     
     const response = await createOrder(orderRequest)
