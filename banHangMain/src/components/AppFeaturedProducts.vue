@@ -1,25 +1,42 @@
 <template>
   <section>
     <h2>
-      <span>{{ t('home.sections.featured') }}</span>
+      <span>{{ t("home.sections.featured") }}</span>
     </h2>
     <div class="featureditems">
       <div class="item" v-for="product in featuredProducts" :key="product.id">
-        <RouterLink class="image-link" :to="`/product/${product.id}`" :aria-label="t('buttons.viewItem')">
-        <img 
-          :src="product.img" 
-          :alt="product.name"
-          loading="lazy"
-          v-img-fallback
-        />
+        <RouterLink
+          class="image-link"
+          :to="`/product/${product.id}`"
+          :aria-label="t('buttons.viewItem')"
+        >
+          <img
+            :src="product.img"
+            :alt="product.name"
+            loading="lazy"
+            v-img-fallback
+          />
         </RouterLink>
         <h3>{{ product.name }}</h3>
         <h4>
-          <span v-if="product.originalPrice && product.originalPrice > product.price" class="price-original">{{ formatCurrency(product.originalPrice) }}</span>
-          <span class="price-current">{{ formatCurrency(product.price) }}</span>
+          <span
+            v-if="
+              product.originalPrice && product.originalPrice > product.price
+            "
+            class="price-original"
+            >{{ formatCurrency(product.originalPrice) }}</span
+          >
+          <span class="price-current">
+            {{ formatCurrency(product.price)
+            }}<span
+              v-if="product.priceMax && product.priceMax !== product.price"
+            >
+              - {{ formatCurrency(product.priceMax) }}</span
+            >
+          </span>
         </h4>
         <RouterLink :to="`/product/${product.id}`">
-          <button class="btn btn-outline">{{ t('buttons.viewItem') }} ></button>
+          <button class="btn btn-outline">{{ t("buttons.viewItem") }} ></button>
         </RouterLink>
       </div>
     </div>
@@ -55,14 +72,15 @@ section {
     align-self: center;
     text-align: center;
     overflow: visible;
-    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease,
+      border-color 0.2s ease;
     display: flex;
     flex-direction: column;
   }
 
   .item:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08);
     border-color: #d0d0d0;
   }
 }
@@ -158,38 +176,35 @@ h2 span::after {
 }
 
 .featureditems .item .btn {
-  transition: transform .08s ease, box-shadow .15s ease;
+  transition: transform 0.08s ease, box-shadow 0.15s ease;
 }
 
 .featureditems .item .btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .featureditems .item .btn:active {
   transform: translateY(0) scale(0.98);
 }
 
-.image-link { 
-  display: block; 
+.image-link {
+  display: block;
   overflow: hidden;
   margin-bottom: 12px;
   flex-shrink: 0;
 }
-.image-link:hover { text-decoration: none; }
-.image-link img { 
-  cursor: pointer; 
+.image-link:hover {
+  text-decoration: none;
+}
+.image-link img {
+  cursor: pointer;
   display: block;
   width: 100%;
 }
 
 .featureditems .item img.image-placeholder {
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #f8f8f8 50%,
-    #f0f0f0 100%
-  );
+  background: linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }

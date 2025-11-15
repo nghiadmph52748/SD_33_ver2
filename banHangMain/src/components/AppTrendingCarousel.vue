@@ -1,13 +1,23 @@
 <template>
-<section class="trending">
+  <section class="trending">
     <div class="header">
-      <h2>{{ t('home.sections.trending') }}</h2>
+      <h2>{{ t("home.sections.trending") }}</h2>
       <div class="controls">
         <button class="nav" aria-label="Previous" @click="scrollByAmount(-1)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#111111" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="#111111"
+              d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"
+            />
+          </svg>
         </button>
         <button class="nav" aria-label="Next" @click="scrollByAmount(1)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#111111" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="#111111"
+              d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"
+            />
+          </svg>
         </button>
       </div>
     </div>
@@ -19,12 +29,17 @@
       aria-label="Trending products"
       @keydown="onKeydown"
     >
-      <article v-for="p in trendingProducts" :key="p.id" class="card" role="listitem">
+      <article
+        v-for="p in trendingProducts"
+        :key="p.id"
+        class="card"
+        role="listitem"
+      >
         <RouterLink :to="`/product/${p.id}`" class="card-link">
           <div class="img-wrap">
-            <img 
-              :src="resolveImage(p.img)" 
-              :alt="p.name" 
+            <img
+              :src="resolveImage(p.img)"
+              :alt="p.name"
               loading="lazy"
               v-img-fallback
             />
@@ -33,8 +48,17 @@
             <h4 class="name">{{ p.name }}</h4>
             <p class="meta">{{ p.gender }}'s Shoes</p>
             <p class="price">
-              <span v-if="p.originalPrice && p.originalPrice > p.price" class="price-original">{{ formatCurrency(p.originalPrice) }}</span>
-              <span class="price-current">{{ formatCurrency(p.price) }}</span>
+              <span
+                v-if="p.originalPrice && p.originalPrice > p.price"
+                class="price-original"
+                >{{ formatCurrency(p.originalPrice) }}</span
+              >
+              <span class="price-current">
+                {{ formatCurrency(p.price)
+                }}<span v-if="p.priceMax && p.priceMax !== p.price">
+                  - {{ formatCurrency(p.priceMax) }}</span
+                >
+              </span>
             </p>
           </div>
         </RouterLink>
@@ -67,10 +91,10 @@ function scrollByAmount(direction: number) {
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'ArrowLeft') {
+  if (e.key === "ArrowLeft") {
     e.preventDefault();
     scrollByAmount(-1);
-  } else if (e.key === 'ArrowRight') {
+  } else if (e.key === "ArrowRight") {
     e.preventDefault();
     scrollByAmount(1);
   }
@@ -78,7 +102,11 @@ function onKeydown(e: KeyboardEvent) {
 function resolveImage(imgPath: string): string {
   if (!imgPath) return "/shoe1.jpg";
   if (imgPath.startsWith("http") || imgPath.startsWith("/")) return imgPath;
-  if (imgPath.endsWith('.png') || imgPath.endsWith('.jpg') || imgPath.endsWith('.jpeg')) {
+  if (
+    imgPath.endsWith(".png") ||
+    imgPath.endsWith(".jpg") ||
+    imgPath.endsWith(".jpeg")
+  ) {
     return `/products/${imgPath}`;
   }
   return `/products/${imgPath}.jpg`;
@@ -122,21 +150,22 @@ h2 {
   align-items: center;
   justify-content: center;
   color: #111111;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: background-color .15s ease, border-color .15s ease, transform .08s ease, box-shadow .15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    transform 0.08s ease, box-shadow 0.15s ease;
 }
 
 .nav:hover {
   background: #f5f5f5;
   border-color: #bbb;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .nav:active {
   transform: translateY(0) scale(0.95);
-  box-shadow: 0 1px 4px rgba(0,0,0,.1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .nav svg {
@@ -145,7 +174,9 @@ h2 {
   height: 18px;
 }
 
-.nav svg path { fill: currentColor; }
+.nav svg path {
+  fill: currentColor;
+}
 
 .scroller {
   display: grid;
@@ -161,11 +192,12 @@ h2 {
 }
 
 .scroller:focus-visible {
-  outline: 3px solid rgba(135, 206, 255, .8);
+  outline: 3px solid rgba(135, 206, 255, 0.8);
   outline-offset: 2px;
 }
 
-.scroller::-webkit-scrollbar { /* Chrome/Safari */
+.scroller::-webkit-scrollbar {
+  /* Chrome/Safari */
   display: none;
 }
 
@@ -187,13 +219,13 @@ h2 {
   border: 1px solid #f0f0f0;
   border-radius: 16px;
   background: #ffffff;
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   overflow: hidden;
 }
 
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08);
   border-color: #d0d0d0;
 }
 
@@ -216,16 +248,11 @@ h2 {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform .3s ease;
+  transition: transform 0.3s ease;
 }
 
 .img-wrap img.image-placeholder {
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #f8f8f8 50%,
-    #f0f0f0 100%
-  );
+  background: linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
@@ -252,7 +279,7 @@ h2 {
   font-weight: 500;
   color: #111111;
   margin: 0 0 4px 0;
-  transition: color .2s ease;
+  transition: color 0.2s ease;
 }
 
 .card:hover .name {
@@ -287,4 +314,3 @@ h2 {
   color: #111111;
 }
 </style>
-

@@ -18,6 +18,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "san_pham")
 public class SanPham {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -60,7 +61,7 @@ public class SanPham {
     @Column(name = "update_by")
     private Integer updateBy;
 
-    @OneToMany(mappedBy = "idSanPham")
+    @OneToMany(mappedBy = "idSanPham", fetch = FetchType.EAGER)
     private Set<ChiTietSanPham> chiTietSanPhams = new LinkedHashSet<>();
 
 }

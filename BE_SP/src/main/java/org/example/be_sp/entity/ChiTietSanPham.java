@@ -110,11 +110,11 @@ public class ChiTietSanPham {
     @Column(name = "update_by")
     private Integer updateBy;
 
-    @OneToMany(mappedBy = "idChiTietSanPham", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "idChiTietSanPham", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonIgnore
     private Set<ChiTietDotGiamGia> chiTietDotGiamGias = new LinkedHashSet<>();
 
-    @OneToMany(mappedBy = "idChiTietSanPham", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "idChiTietSanPham", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonIgnore
     private Set<ChiTietSanPhamAnh> chiTietSanPhamAnhs = new LinkedHashSet<>();
 

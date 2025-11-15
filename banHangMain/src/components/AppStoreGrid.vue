@@ -3,8 +3,8 @@
     <section class="content-wrapper">
       <header class="content-header">
         <div>
-          <p class="eyebrow">{{ $t('store.allSneakers') }}</p>
-          <h2>{{ $t('store.browseCollection') }}</h2>
+          <p class="eyebrow">{{ $t("store.allSneakers") }}</p>
+          <h2>{{ $t("store.browseCollection") }}</h2>
         </div>
         <p class="content-meta">
           {{ contentMeta }}
@@ -42,21 +42,38 @@
               loading="lazy"
               crossorigin="anonymous"
               :class="{ loaded: imageLoaded[item.id] }"
-              @load="event => handleImageLoad(String(item.id), event)"
+              @load="(event) => handleImageLoad(String(item.id), event)"
               v-img-fallback
             />
           </div>
           <div class="item__body">
             <div class="item__price">
-              <span v-if="item.originalPrice && item.originalPrice > item.price" class="item__price-original">{{ formatCurrency(item.originalPrice) }}</span>
-              <span class="item__price-current">{{ formatCurrency(item.price) }}</span>
+              <span
+                v-if="item.originalPrice && item.originalPrice > item.price"
+                class="item__price-original"
+                >{{ formatCurrency(item.originalPrice) }}</span
+              >
+              <span class="item__price-current">
+                {{ formatCurrency(item.price)
+                }}<span v-if="item.priceMax && item.priceMax !== item.price">
+                  - {{ formatCurrency(item.priceMax) }}</span
+                >
+              </span>
             </div>
-            <h3 class="item__title" :id="`product-title-${item.id}`">{{ item.name }}</h3>
+            <h3 class="item__title" :id="`product-title-${item.id}`">
+              {{ item.name }}
+            </h3>
             <div class="item__meta">
-              <span v-if="item.gender" class="item__category">{{ formatCategory(item) }}</span>
-              <span class="item__colours">{{ t('store.coloursCount', { count: getColourCount(item) }) }}</span>
+              <span v-if="item.gender" class="item__category">{{
+                formatCategory(item)
+              }}</span>
+              <span class="item__colours">{{
+                t("store.coloursCount", { count: getColourCount(item) })
+              }}</span>
             </div>
-            <div v-if="getSpecialTag(item)" class="item__tag">{{ getSpecialTag(item) }}</div>
+            <div v-if="getSpecialTag(item)" class="item__tag">
+              {{ getSpecialTag(item) }}
+            </div>
           </div>
         </RouterLink>
       </TransitionGroup>
@@ -90,7 +107,7 @@ const max = computed(() => {
   if (props.data.length === 0) return DEFAULT_MAX_PRICE;
 
   const prices = props.data
-    .map(product => {
+    .map((product) => {
       if (typeof product.price === "number" && Number.isFinite(product.price)) {
         return product.price;
       }
@@ -100,13 +117,19 @@ const max = computed(() => {
       }
       return 0;
     })
-    .filter(price => price >= 0);
+    .filter((price) => price >= 0);
 
   if (prices.length === 0) return DEFAULT_MAX_PRICE;
 
-  const positivePrices = prices.filter(price => price > 0);
-  const candidateMax = positivePrices.length > 0 ? Math.max(...positivePrices) : Math.max(...prices);
-  const sanitizedMax = candidateMax > 0 && Number.isFinite(candidateMax) ? candidateMax : DEFAULT_MAX_PRICE;
+  const positivePrices = prices.filter((price) => price > 0);
+  const candidateMax =
+    positivePrices.length > 0
+      ? Math.max(...positivePrices)
+      : Math.max(...prices);
+  const sanitizedMax =
+    candidateMax > 0 && Number.isFinite(candidateMax)
+      ? candidateMax
+      : DEFAULT_MAX_PRICE;
 
   // Cap at 50M VND for reasonable filter range
   return Math.min(sanitizedMax, MAX_PRICE_CAP);
@@ -114,13 +137,17 @@ const max = computed(() => {
 const pricerange = ref(max.value);
 
 // Update pricerange when max changes
-watch(max, (newMax) => {
-  if (Number.isFinite(newMax) && newMax > 0) {
-    pricerange.value = newMax;
-  }
-}, { immediate: true });
+watch(
+  max,
+  (newMax) => {
+    if (Number.isFinite(newMax) && newMax > 0) {
+      pricerange.value = newMax;
+    }
+  },
+  { immediate: true }
+);
 
-watch(pricerange, newValue => {
+watch(pricerange, (newValue) => {
   if (!Number.isFinite(newValue)) {
     pricerange.value = max.value;
     return;
@@ -136,8 +163,11 @@ watch(pricerange, newValue => {
 const DEFAULT_MEDIA_GLOW = "var(--glow-primary)";
 
 const filteredProducts = computed(() => {
-  return props.data.filter(item => {
-    const price = typeof item.price === "number" ? item.price : Number.parseFloat(String(item.price));
+  return props.data.filter((item) => {
+    const price =
+      typeof item.price === "number"
+        ? item.price
+        : Number.parseFloat(String(item.price));
     const normalizedPrice = Number.isNaN(price) || price < 0 ? 0 : price;
     return normalizedPrice <= pricerange.value;
   });
@@ -147,7 +177,7 @@ const totalProducts = computed(() => filteredProducts.value.length);
 const totalAvailable = computed(() => props.data.length);
 
 const contentMeta = computed(() =>
-  t('store.showingStyles', {
+  t("store.showingStyles", {
     count: totalProducts.value,
     total: totalAvailable.value,
   })
@@ -168,7 +198,7 @@ function handleImageLoad(productId: string, event: Event) {
     const cropped = cropToContent(target);
     if (cropped) {
       target.src = cropped;
-      target.dataset.cropped = 'true';
+      target.dataset.cropped = "true";
     }
   }
 
@@ -228,7 +258,8 @@ function extractAverageColor(image: HTMLImageElement): string | null {
   b = Math.round(b / count);
 
   // Lighten the sampled color slightly for a glow effect
-  const glow = (channel: number) => Math.min(255, Math.round(channel * 1.1 + 20));
+  const glow = (channel: number) =>
+    Math.min(255, Math.round(channel * 1.1 + 20));
 
   return `rgba(${glow(r)}, ${glow(g)}, ${glow(b)}, 0.24)`;
 }
@@ -237,8 +268,8 @@ function extractAverageColor(image: HTMLImageElement): string | null {
 // Heuristic: detect the dominant edge color and trim pixels that are within
 // a small distance of that color (likely background) while preserving the core.
 function cropToContent(image: HTMLImageElement): string | null {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
   const width = image.naturalWidth;
@@ -258,7 +289,10 @@ function cropToContent(image: HTMLImageElement): string | null {
 
   // Sample edge colors (top, bottom, left, right) to estimate background color
   function sampleEdgeAverage(): [number, number, number] {
-    let r = 0, g = 0, b = 0, count = 0;
+    let r = 0,
+      g = 0,
+      b = 0,
+      count = 0;
     const step = Math.max(1, Math.floor(Math.min(width, height) / 200));
     for (let x = 0; x < width; x += step) {
       const ti = (0 * width + x) * 4; // top
@@ -276,29 +310,44 @@ function cropToContent(image: HTMLImageElement): string | null {
       b += data[li + 2] + data[ri + 2];
       count += 2;
     }
-    return [Math.round(r / count), Math.round(g / count), Math.round(b / count)];
+    return [
+      Math.round(r / count),
+      Math.round(g / count),
+      Math.round(b / count),
+    ];
   }
 
   const [br, bg, bb] = sampleEdgeAverage();
   const tol = 22; // tolerance for color distance to treat as background
   const isBg = (ri: number) => {
-    const r = data[ri], g = data[ri + 1], b = data[ri + 2], a = data[ri + 3];
+    const r = data[ri],
+      g = data[ri + 1],
+      b = data[ri + 2],
+      a = data[ri + 3];
     if (a < 10) return true;
     // near edge background color or near pure white
-    const dr = r - br, dg = g - bg, db = b - bb;
+    const dr = r - br,
+      dg = g - bg,
+      db = b - bb;
     const dist = Math.sqrt(dr * dr + dg * dg + db * db);
     const nearWhite = r > 245 && g > 245 && b > 245;
     return dist <= tol || nearWhite;
   };
 
-  let top = 0, bottom = height - 1, left = 0, right = width - 1;
+  let top = 0,
+    bottom = height - 1,
+    left = 0,
+    right = width - 1;
 
   // find top
   while (top < bottom) {
     let found = false;
     for (let x = 0; x < width; x += 2) {
       const i = (top * width + x) * 4;
-      if (!isBg(i)) { found = true; break; }
+      if (!isBg(i)) {
+        found = true;
+        break;
+      }
     }
     if (found) break;
     top++;
@@ -309,7 +358,10 @@ function cropToContent(image: HTMLImageElement): string | null {
     let found = false;
     for (let x = 0; x < width; x += 2) {
       const i = (bottom * width + x) * 4;
-      if (!isBg(i)) { found = true; break; }
+      if (!isBg(i)) {
+        found = true;
+        break;
+      }
     }
     if (found) break;
     bottom--;
@@ -320,7 +372,10 @@ function cropToContent(image: HTMLImageElement): string | null {
     let found = false;
     for (let y = top; y <= bottom; y += 2) {
       const i = (y * width + left) * 4;
-      if (!isBg(i)) { found = true; break; }
+      if (!isBg(i)) {
+        found = true;
+        break;
+      }
     }
     if (found) break;
     left++;
@@ -331,7 +386,10 @@ function cropToContent(image: HTMLImageElement): string | null {
     let found = false;
     for (let y = top; y <= bottom; y += 2) {
       const i = (y * width + right) * 4;
-      if (!isBg(i)) { found = true; break; }
+      if (!isBg(i)) {
+        found = true;
+        break;
+      }
     }
     if (found) break;
     right--;
@@ -343,14 +401,14 @@ function cropToContent(image: HTMLImageElement): string | null {
   // If cropping would remove less than 2% in both dimensions, skip
   if (cropW >= width * 0.98 && cropH >= height * 0.98) return null;
 
-  const out = document.createElement('canvas');
-  const octx = out.getContext('2d');
+  const out = document.createElement("canvas");
+  const octx = out.getContext("2d");
   if (!octx) return null;
   out.width = cropW;
   out.height = cropH;
   octx.drawImage(canvas, left, top, cropW, cropH, 0, 0, cropW, cropH);
   try {
-    return out.toDataURL('image/png');
+    return out.toDataURL("image/png");
   } catch {
     return null;
   }
@@ -363,13 +421,13 @@ function getMediaBackground(productId: string): string {
 function formatCategory(item: Product): string {
   // Format gender to match design: "Male" -> "Men", "Female" -> "Women"
   // Could be enhanced to add "Running", "Originals", etc. based on product type
-  if (item.gender === 'Male') {
-    return t('store.genderMen');
+  if (item.gender === "Male") {
+    return t("store.genderMen");
   }
-  if (item.gender === 'Female') {
-    return t('store.genderWomen');
+  if (item.gender === "Female") {
+    return t("store.genderWomen");
   }
-  return item.gender || '';
+  return item.gender || "";
 }
 
 function getColourCount(item: Product): number {
@@ -381,11 +439,11 @@ function getColourCount(item: Product): number {
 function getSpecialTag(item: Product): string | null {
   // Show "Trending" for highly rated products
   if (item.starrating && item.starrating >= 4.5) {
-    return t('store.tagTrending');
+    return t("store.tagTrending");
   }
   // Show "New" for products with no reviews yet (starrating = 0)
   if (item.starrating === 0 || !item.starrating) {
-    return t('store.tagNew');
+    return t("store.tagNew");
   }
   return null;
 }
@@ -452,16 +510,17 @@ function getSpecialTag(item: Product): string | null {
   border-radius: 16px;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, outline 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
+    outline 0.2s ease;
   overflow: hidden;
   aspect-ratio: 1 / 1.2;
 }
 
 .item:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border-color: #b0b0b0;
-  outline: 1px solid rgba(0,0,0,.12);
+  outline: 1px solid rgba(0, 0, 0, 0.12);
   outline-offset: -1px;
   z-index: 1;
 }
@@ -489,24 +548,14 @@ function getSpecialTag(item: Product): string | null {
 .image-skeleton .skeleton-shimmer {
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #f8f8f8 50%,
-    #f0f0f0 100%
-  );
+  background: linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
 .item__media.image-loading img.image-placeholder,
 .item__media img.image-placeholder {
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #f8f8f8 50%,
-    #f0f0f0 100%
-  );
+  background: linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
