@@ -56,6 +56,12 @@ export const useUserStore = defineStore('user', {
         try {
           const parsed = JSON.parse(profileRaw)
           this.profile = normalizeProfile(parsed)
+          // Load cart for the user
+          if (typeof window !== 'undefined' && this.profile?.id) {
+            const { useCartStore } = await import('./cart')
+            const cartStore = useCartStore()
+            cartStore.loadCartForUser(this.profile.id)
+          }
         } catch {
           this.profile = null
         }
@@ -67,10 +73,23 @@ export const useUserStore = defineStore('user', {
           }
           this.profile = normalizeProfile(me.data)
           localStorage.setItem(PROFILE_KEY, JSON.stringify(this.profile))
+          // Load cart for the user
+          if (typeof window !== 'undefined' && this.profile?.id) {
+            const { useCartStore } = await import('./cart')
+            const cartStore = useCartStore()
+            cartStore.loadCartForUser(this.profile.id)
+          }
         } catch (error: any) {
           // token invalid
           showMessageError(error.message || 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.')
           this.logout()
+        }
+      } else {
+        // No user logged in, load guest cart
+        if (typeof window !== 'undefined') {
+          const { useCartStore } = await import('./cart')
+          const cartStore = useCartStore()
+          cartStore.loadCartForUser(null)
         }
       }
     },
@@ -90,6 +109,14 @@ export const useUserStore = defineStore('user', {
         this.accessToken = accessToken
         this.refreshToken = rt || null
         this.profile = normalizedProfile
+        
+        // Load cart for the logged-in user
+        if (typeof window !== 'undefined') {
+          const { useCartStore } = await import('./cart')
+          const cartStore = useCartStore()
+          cartStore.loadCartForUser(normalizedProfile?.id)
+        }
+        
         return true
       } finally {
         this.loading = false
@@ -104,6 +131,14 @@ export const useUserStore = defineStore('user', {
       localStorage.removeItem('gearup_storefront_ai_sessions_v1')
       localStorage.removeItem('gearup_storefront_ai_session_names_v1')
       localStorage.removeItem('gearup_storefront_ai_chat_v1')
+      
+      // Load guest cart when logging out
+      if (typeof window !== 'undefined') {
+        import('./cart').then(({ useCartStore }) => {
+          const cartStore = useCartStore()
+          cartStore.loadCartForUser(null)
+        })
+      }
       
       this.isAuthenticated = false
       this.profile = null

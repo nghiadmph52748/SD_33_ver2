@@ -60,6 +60,11 @@
                 <span v-html="renderMarkdown(msg.content)"></span><span v-if="msg.processingStatus === 'analyzing' || (isProcessing && msg.id === messages[messages.length - 1]?.id)" class="streaming-cursor">▋</span>
               </div>
 
+              <!-- Product Cards -->
+              <div v-if="msg.role === 'assistant' && msg.products && msg.products.length > 0 && msg.processingStatus === 'ready'" class="product-cards">
+                <ProductCard v-for="product in msg.products" :key="product.id" :product="product" />
+              </div>
+
               <!-- Follow-up Suggestions (only for messages WITHOUT content AND not processing) -->
               <div
                 v-if="
@@ -142,6 +147,16 @@ import { IconSend } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/stores/user'
 import useChatStore from '@/stores/chat'
 import { luuLichSuAiChat } from '@/api/chat'
+import ProductCard from './ProductCard.vue'
+
+interface Product {
+  id: number
+  name: string
+  min_price: number
+  max_price: number
+  image_url?: string
+  stock: number
+}
 
 interface ChatMessage {
   id: number
@@ -154,6 +169,7 @@ interface ChatMessage {
   queryType?: string
   processingStatus?: string
   isSuggestionsOnly?: boolean
+  products?: Product[]
 }
 
 interface SessionState {
@@ -661,6 +677,9 @@ async function sendMessage(text: string = input.value) {
             if (metadata.data_source) messages.value[msgIndex].dataSource = metadata.data_source
             if (metadata.follow_up_suggestions) messages.value[msgIndex].followUpSuggestions = metadata.follow_up_suggestions
             if (metadata.intent) messages.value[msgIndex].queryType = metadata.intent
+            if (metadata.products && Array.isArray(metadata.products)) {
+              messages.value[msgIndex].products = metadata.products
+            }
             messages.value[msgIndex].processingStatus = 'analyzing'
           }
 
@@ -1849,5 +1868,14 @@ defineExpose({
       background: rgba(255, 255, 255, 0.15) !important;
     }
   }
+}
+
+.product-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-2);
 }
 </style>

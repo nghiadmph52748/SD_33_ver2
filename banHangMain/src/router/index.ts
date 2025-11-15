@@ -38,8 +38,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }
   },
   {
+    path: "/payment/cod/result",
+    name: "payment-cod-result",
+    component: () => import("@/views/PaymentCodResultView.vue")
+  },
+  {
     path: "/payment/vnpay/result",
     name: "payment-vnpay-result",
+    component: () => import("@/views/PaymentVnpayResultView.vue")
+  },
+  {
+    path: "/payment/result",
+    name: "payment-result",
     component: () => import("@/views/PaymentVnpayResultView.vue")
   },
   {

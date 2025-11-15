@@ -25,6 +25,7 @@ import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,8 @@ public class HoaDonService {
     private EmailService emailService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
 
 
@@ -99,7 +102,18 @@ public class HoaDonService {
         
         HoaDon savedHoaDon = hoaDonRepository.save(hd);
         
-        // Send order confirmation email
+        // Generate invoice code using stored procedure
+        try {
+            String maHoaDon = generateInvoiceCode(savedHoaDon.getId());
+            // Refresh entity to get updated ma_hoa_don from database
+            savedHoaDon = hoaDonRepository.findById(savedHoaDon.getId()).orElseThrow();
+            log.info("Generated invoice code: {} for order ID: {}", maHoaDon, savedHoaDon.getId());
+        } catch (Exception e) {
+            log.error("Failed to generate invoice code for order ID: {}", savedHoaDon.getId(), e);
+            // Continue even if code generation fails - order is still created
+        }
+        
+        // Send order confirmation email (after generating code)
         sendOrderConfirmationEmail(savedHoaDon);
         
         // 🔔 NOTIFICATION: New order created
@@ -239,6 +253,22 @@ public class HoaDonService {
         HoaDon hd = hoaDonRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn","404"));
         hd.setDeleted(true);
         hoaDonRepository.save(hd);
+    }
+    
+    /**
+     * Generate invoice code using stored procedure
+     */
+    private String generateInvoiceCode(Integer idHoaDon) {
+        try {
+            // Call stored procedure with idHoaDon parameter - procedure will UPDATE the column directly
+            // Updated to support 12 characters: HD + 10 digits
+            String sql = "DECLARE @maHoaDon NVARCHAR(12); EXEC sp_GenerateMaHoaDon @idHoaDon = ?, @maMoiGenerated = @maHoaDon OUTPUT; SELECT @maMoiGenerated as ma_hoa_don";
+            
+            String result = jdbcTemplate.queryForObject(sql, String.class, idHoaDon);
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating invoice code: " + e.getMessage(), e);
+        }
     }
     
     /**

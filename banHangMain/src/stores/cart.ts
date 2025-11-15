@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { getSneakerProducts, getAllProducts, type Product } from "@/api/products";
+import { useUserStore } from "./user";
 
 // Re-export Product for components that import from store
 export type { Product } from "@/api/products";
@@ -16,7 +17,7 @@ export interface CartPayload {
   quantity: number;
 }
 
-const CART_STORAGE_KEY = "gearup-cart-v1";
+const CART_STORAGE_PREFIX = "gearup-cart-";
 const VALID_CART_STATUSES: CartStatus[] = ["idle", "loading", "success", "failure"];
 
 type PersistableCartState = {
@@ -24,10 +25,18 @@ type PersistableCartState = {
   cartUIStatus: CartStatus;
 };
 
-function loadPersistedCartState(): Partial<PersistableCartState> | null {
+function getCartStorageKey(userId?: number | null): string {
+  if (userId) {
+    return `${CART_STORAGE_PREFIX}user-${userId}`;
+  }
+  return `${CART_STORAGE_PREFIX}guest`;
+}
+
+function loadPersistedCartState(userId?: number | null): Partial<PersistableCartState> | null {
   if (typeof window === "undefined") return null;
   try {
-    const cached = window.localStorage.getItem(CART_STORAGE_KEY);
+    const key = getCartStorageKey(userId);
+    const cached = window.localStorage.getItem(key);
     if (!cached) return null;
     const parsed = JSON.parse(cached);
     const status = typeof parsed.cartUIStatus === "string" && VALID_CART_STATUSES.includes(parsed.cartUIStatus)
@@ -43,10 +52,11 @@ function loadPersistedCartState(): Partial<PersistableCartState> | null {
   }
 }
 
-function persistCartStateSnapshot(state: PersistableCartState) {
+function persistCartStateSnapshot(state: PersistableCartState, userId?: number | null) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
+    const key = getCartStorageKey(userId);
+    window.localStorage.setItem(key, JSON.stringify(state));
   } catch (error) {
     console.warn("Failed to persist cart cache", error);
   }
@@ -54,7 +64,10 @@ function persistCartStateSnapshot(state: PersistableCartState) {
 
 export const useCartStore = defineStore("cart", {
   state: () => {
-    const persisted = loadPersistedCartState();
+    // Get user ID from user store if available
+    const userStore = useUserStore();
+    const userId = userStore.id;
+    const persisted = loadPersistedCartState(userId);
     return {
       cartUIStatus: persisted?.cartUIStatus ?? "idle",
       products: [] as Product[],
@@ -148,10 +161,22 @@ export const useCartStore = defineStore("cart", {
       this.persistState();
     },
     persistState() {
+      const userStore = useUserStore();
       persistCartStateSnapshot({
         cart: this.cart,
         cartUIStatus: this.cartUIStatus
-      });
+      }, userStore.id);
+    },
+    loadCartForUser(userId?: number | null) {
+      const persisted = loadPersistedCartState(userId);
+      if (persisted) {
+        this.cart = persisted.cart ?? [];
+        this.cartUIStatus = persisted.cartUIStatus ?? "idle";
+      } else {
+        this.cart = [];
+        this.cartUIStatus = "idle";
+      }
+      this.sizeMapping = {};
     },
     clearCart() {
       this.cart = [];

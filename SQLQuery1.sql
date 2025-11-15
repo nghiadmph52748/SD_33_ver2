@@ -1827,13 +1827,10 @@ BEGIN
     -- Vòng lặp để tìm mã chưa được sử dụng (tối đa 100 lần)
     WHILE @counter < 100
     BEGIN
-        -- Generate mã gồm 10 ký tự: HD + 8 ký tự (4 chữ + 4 số)
+        -- Generate mã gồm 12 ký tự: HD + 10 số ngẫu nhiên (0-9)
+        -- Format: HD3828528184 (HD + 10 digits)
         SET @maThoiGian = 'HD' + 
-            CHAR(65 + ABS(CHECKSUM(NEWID())) % 26) +  -- Ký tự A-Z
-            CHAR(65 + ABS(CHECKSUM(NEWID())) % 26) +  -- Ký tự A-Z
-            CHAR(65 + ABS(CHECKSUM(NEWID())) % 26) +  -- Ký tự A-Z
-            CHAR(65 + ABS(CHECKSUM(NEWID())) % 26) +  -- Ký tự A-Z
-            RIGHT('000' + CAST(ABS(CHECKSUM(NEWID())) % 10000 AS NVARCHAR(4)), 4); -- 4 ký tự số
+            RIGHT('0000000000' + CAST(ABS(CHECKSUM(NEWID())) % 10000000000 AS NVARCHAR(10)), 10); -- 10 ký tự số (0-9999999999)
         
         -- Kiểm tra xem mã này đã tồn tại trong bảng chưa
         IF NOT EXISTS(SELECT 1 FROM [dbo].[hoa_don] WHERE [ma_hoa_don] = @maThoiGian)

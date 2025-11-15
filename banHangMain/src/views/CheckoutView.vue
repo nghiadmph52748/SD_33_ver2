@@ -56,6 +56,25 @@
               </div>
             </div>
             <div class="row">
+              <label>{{ $t('checkout.paymentMethod') }}</label>
+              <div class="payment-methods">
+                <label class="payment-option">
+                  <input type="radio" v-model="paymentMethod" value="cod" />
+                  <span class="payment-label">
+                    <strong>{{ $t('checkout.cod') }}</strong>
+                    <small>{{ $t('checkout.codDesc') }}</small>
+                  </span>
+                </label>
+                <label class="payment-option">
+                  <input type="radio" v-model="paymentMethod" value="vnpay" />
+                  <span class="payment-label">
+                    <strong>VNPAY</strong>
+                    <small>{{ $t('checkout.vnpayDesc') }}</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <div class="row" v-if="paymentMethod === 'vnpay'">
               <label for="bank">{{ $t('checkout.bankOptional') }}</label>
               <select id="bank" v-model="bankCode">
                 <option value="">{{ '—' }}</option>
@@ -90,8 +109,12 @@
             <span>{{ cartCount === 0 ? '—' : formatCurrency(orderTotal) }}</span>
           </div>
           <div class="actions">
-            <button class="btn btn-block" :disabled="cartCount === 0 || paying" @click="payWithVnpay">
-              <span v-if="!paying">{{ $t('cart.checkout') }} — VNPAY</span>
+            <button class="btn btn-block" :disabled="cartCount === 0 || paying || !paymentMethod" @click="handleCheckout">
+              <span v-if="!paying">
+                <span v-if="paymentMethod === 'cod'">{{ $t('checkout.placeOrder') }} — COD</span>
+                <span v-else-if="paymentMethod === 'vnpay'">{{ $t('cart.checkout') }} — VNPAY</span>
+                <span v-else>{{ $t('cart.checkout') }}</span>
+              </span>
               <span v-else>{{ $t('cart.processing') }}</span>
             </button>
           </div>
@@ -104,16 +127,22 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useCartStore } from '@/stores/cart'
+import { useUserStore } from '@/stores/user'
 import { formatCurrency } from '@/utils/currency'
 import { createVnPayPayment } from '@/api/payment'
+import { createOrderFromCart } from '@/api/orders'
+import { fetchVariantsByProduct } from '@/api/variants'
 
 // i18n
 const { t } = useI18n()
+const router = useRouter()
 const cartStore = useCartStore()
-const { cartCount, cartTotal } = storeToRefs(cartStore)
+const userStore = useUserStore()
+const { cartCount, cartTotal, cart } = storeToRefs(cartStore)
 
 const shippingFee = 250000
 const vat = computed(() => Math.round((cartTotal.value + shippingFee) * 0.1))
@@ -121,6 +150,7 @@ const orderTotal = computed(() => cartTotal.value + shippingFee + vat.value)
 
 const paying = ref(false)
 const error = ref('')
+const paymentMethod = ref<'cod' | 'vnpay' | ''>('cod') // Default to COD
 const bankCode = ref<string>('')
 const contact = ref({ fullName: '', email: '', phone: '', address: '' })
 
@@ -263,8 +293,8 @@ async function onDistrictChange() {
   }
 }
 
-async function payWithVnpay() {
-  if (cartCount.value === 0 || paying.value) return
+async function handleCheckout() {
+  if (cartCount.value === 0 || paying.value || !paymentMethod.value) return
   if (!validateDetails()) {
     // Check if all fields are empty to show a global alert
     const allEmpty =
@@ -284,6 +314,100 @@ async function payWithVnpay() {
   showAllEmptyAlert.value = false
   paying.value = true
   error.value = ''
+  
+  try {
+    if (paymentMethod.value === 'cod') {
+      await handleCODCheckout()
+    } else if (paymentMethod.value === 'vnpay') {
+      await handleVnpayCheckout()
+    }
+  } catch (e: any) {
+    error.value = e?.message || 'Checkout failed'
+    paying.value = false
+  }
+}
+
+async function handleCODCheckout() {
+  try {
+    // Build delivery address
+    const deliveryAddress = [
+      address.value.street,
+      address.value.ward,
+      address.value.district,
+      address.value.province
+    ].filter(Boolean).join(', ')
+    
+    // Ensure cart items have variant IDs
+    const cartItemsWithVariants = await Promise.all(
+      cart.value.map(async (item) => {
+        // If variant ID already exists, use it
+        if ((item as any).idBienThe) {
+          return item
+        }
+        
+        // Otherwise, try to find variant ID from backend
+        try {
+          const productId = Number(item.id)
+          if (!Number.isNaN(productId)) {
+            const variants = await fetchVariantsByProduct(productId)
+            // Find matching variant by color and size
+            const matchingVariant = variants.find(v => {
+              const variantColor = (v.tenMauSac || '').trim().toLowerCase()
+              const variantSize = (v.tenKichThuoc || '').trim()
+              const itemColor = (item.color || '').trim().toLowerCase()
+              const itemSize = item.size?.trim()
+              
+              return variantColor === itemColor && variantSize === itemSize
+            })
+            
+            if (matchingVariant?.id) {
+              return { ...item, idBienThe: matchingVariant.id }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to fetch variant for item:', item.id, error)
+        }
+        
+        // Return item as-is if variant not found (backend may handle it)
+        return item
+      })
+    )
+    
+    // Create order with COD payment method (typically ID 1 or 2, adjust based on your backend)
+    // COD payment method ID is usually 1 or 2, VNPAY might be 2 or 3
+    const codPaymentMethodId = 1 // Adjust this based on your backend
+    
+    const orderNotes = `Giao hàng đến: ${deliveryAddress}\nNgười nhận: ${contact.value.fullName}\nSĐT: ${contact.value.phone}\nEmail: ${contact.value.email}`
+    
+    const order = await createOrderFromCart(
+      cartItemsWithVariants,
+      userStore.id || undefined,
+      codPaymentMethodId,
+      undefined, // voucherId
+      orderNotes
+    )
+    
+    if (!order) {
+      throw new Error('Không thể tạo đơn hàng')
+    }
+    
+    // Clear cart after successful order
+    cartStore.clearCart()
+    
+    // Redirect to COD success page
+    router.push({
+      path: '/payment/cod/result',
+      query: {
+        status: 'success',
+        orderId: order.maHoaDon || order.id.toString()
+      }
+    })
+  } catch (e: any) {
+    throw new Error(e?.message || 'Không thể tạo đơn hàng COD')
+  }
+}
+
+async function handleVnpayCheckout() {
   try {
     const res = await createVnPayPayment({
       amount: Math.round(orderTotal.value),
@@ -297,8 +421,7 @@ async function payWithVnpay() {
     }
     window.location.href = url
   } catch (e: any) {
-    error.value = e?.message || 'Payment init failed'
-    paying.value = false
+    throw new Error(e?.message || 'Payment init failed')
   }
 }
 </script>
@@ -333,6 +456,51 @@ async function payWithVnpay() {
 .row input, .row select { width: 100%; border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px 12px; font: inherit; }
 .row .invalid { border-color: #dc2626; outline: 0; box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
 .error-text { color: #dc2626; font-size: 12px; }
+.payment-methods {
+  display: grid;
+  gap: 12px;
+}
+.payment-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid #e5e5e5;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.payment-option:hover {
+  border-color: #d1d5db;
+  background-color: #f9fafb;
+}
+.payment-option input[type="radio"] {
+  width: auto;
+  margin-top: 2px;
+  cursor: pointer;
+}
+.payment-option input[type="radio"]:checked + .payment-label {
+  color: #111;
+}
+.payment-option:has(input[type="radio"]:checked) {
+  border-color: #111;
+  background-color: #f9fafb;
+}
+.payment-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.payment-label strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+}
+.payment-label small {
+  font-size: 12px;
+  color: #6b7280;
+}
 .summary {
   background: #ffffff;
   border: 1px solid #f0f0f0;

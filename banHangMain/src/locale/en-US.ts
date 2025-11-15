@@ -157,6 +157,12 @@ export default {
   'payment.details.payDate': 'Paid at',
   'payment.details.copyRef': 'Copy reference',
   'payment.details.copied': 'Reference copied!',
+  'payment.details.orderId': 'Order ID',
+  'payment.details.method': 'Payment method',
+  'payment.cod': 'Cash on Delivery (COD)',
+  'payment.codTitle': 'Cash on Delivery (COD)',
+  'payment.codSuccessTitle': 'Order placed successfully',
+  'payment.codSuccessMessage': 'Thank you! Your order has been created successfully. We will contact you to confirm and deliver your order.',
   // Checkout form
   'checkout.fullName': 'Full name',
   'checkout.email': 'Email',
@@ -167,6 +173,11 @@ export default {
   'checkout.ward': 'Ward',
   'checkout.street': 'Street',
   'checkout.bankOptional': 'Bank (optional)',
+  'checkout.paymentMethod': 'Payment method',
+  'checkout.cod': 'Cash on Delivery (COD)',
+  'checkout.codDesc': 'Pay when you receive',
+  'checkout.vnpayDesc': 'Pay online via VNPAY',
+  'checkout.placeOrder': 'Place order',
   // Validation
   'checkout.err.fullName': 'Please enter your full name',
   'checkout.err.email': 'Please enter a valid email',
@@ -268,5 +279,8 @@ export default {
   'product.highlightShipping': 'Free nationwide shipping',
   'product.highlightReturns': '30-day returns',
   'product.highlightPerks': 'Member exclusive perks',
+  'product.stockAvailable': '{count} pairs available',
+  'product.outOfStock': 'Out of stock',
+  'product.stockForSize': '{count} pairs available',
 }
 

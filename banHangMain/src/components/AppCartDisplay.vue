@@ -27,7 +27,6 @@
               <span class="line__label">{{ t('cart.itemColor') }}:</span>
               <span>{{ item.color || t('cart.valueUnknown') }}</span>
             </div>
-            <div class="line muted">{{ item.description }}</div>
             <div class="line" v-if="item.size">
               <span>{{ t('cart.itemSize', { size: item.size }) }}</span>
             </div>

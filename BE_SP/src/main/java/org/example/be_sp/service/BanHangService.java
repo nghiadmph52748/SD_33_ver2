@@ -118,9 +118,10 @@ public class BanHangService {
     private String generateInvoiceCode(Integer idHoaDon) {
         try {
             // Call stored procedure with idHoaDon parameter - procedure will UPDATE the column directly
-            String sql = "DECLARE @maHoaDon NVARCHAR(10); EXEC sp_GenerateMaHoaDon @idHoaDon = ?, @maMoiGenerated = @maHoaDon OUTPUT; SELECT @maHoaDon as ma_hoa_don";
+            // Updated to support 12 characters: HD + 10 digits
+            String sql = "DECLARE @maHoaDon NVARCHAR(12); EXEC sp_GenerateMaHoaDon @idHoaDon = ?, @maMoiGenerated = @maHoaDon OUTPUT; SELECT @maMoiGenerated as ma_hoa_don";
 
-            String result = jdbcTemplate.queryForObject(sql, new Object[]{idHoaDon}, String.class);
+            String result = jdbcTemplate.queryForObject(sql, String.class, idHoaDon);
             return result;
         } catch (Exception e) {
             throw new RuntimeException("Error generating invoice code: " + e.getMessage(), e);

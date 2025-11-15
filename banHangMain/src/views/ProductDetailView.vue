@@ -153,7 +153,10 @@
               :class="{ active: size === productSize, disabled: isOutOfStock(productSize) }"
               @click="!isOutOfStock(productSize) && (size = productSize) && (showSizeRequiredMessage = false)"
             >
-              {{ productSize }}
+              <span class="size-label">{{ productSize }}</span>
+              <span v-if="getStockForSize(productSize) !== null" class="size-stock">
+                ({{ getStockForSize(productSize) }})
+              </span>
             </button>
           </div>
           <p v-if="showSizeRequiredMessage" class="size-error">{{ $t('product.sizeRequired') }}</p>
@@ -164,9 +167,18 @@
                 <div class="pill">
                   <button class="pill-btn" @click="quantity = Math.max(1, quantity - 1)">−</button>
                   <span class="qty-val">{{ quantity }}</span>
-                  <button class="pill-btn" @click="quantity = Math.min(99, quantity + 1)">+</button>
+                  <button class="pill-btn" @click="quantity = Math.min(availableStock !== null ? availableStock : 99, quantity + 1)">+</button>
                 </div>
               </div>
+
+        <div v-if="availableStock !== null" class="stock-info">
+          <span v-if="availableStock > 0" class="stock-available">
+            {{ $t('product.stockAvailable', { count: availableStock }) }}
+          </span>
+          <span v-else class="stock-out">
+            {{ $t('product.outOfStock') }}
+          </span>
+        </div>
 
         <div class="cta-block">
           <button class="add-to-bag" @click="cartAdd">{{ $t('product.addToBag') }}</button>
@@ -664,23 +676,98 @@ const cartAdd = () => {
     return;
   }
 
+  // Find variant ID from selected variant
+  const variantId = selectedVariant.value?.id
+  
+  // Check stock availability
+  const stock = availableStock.value
+  if (stock !== null && stock < quantity.value) {
+    showSizeRequiredMessage.value = false
+    // You can add a toast/notification here if needed
+    return
+  }
+
   const cartItem: CartItem = {
     ...selectedProduct,
     color: selectedColor.value || selectedProduct.color,
     img: galleryImages.value[activeImageIndex.value] || selectedProduct.img,
     quantity: quantity.value,
-    size: size.value ?? undefined
-  };
+    size: size.value ?? undefined,
+    // Store variant ID for order creation
+    ...(variantId ? { idBienThe: variantId } : {})
+  } as CartItem & { idBienThe?: number };
 
   cartStore.addToCart(cartItem);
   cartStore.updateCartUI("idle");
   showSizeRequiredMessage.value = false;
 };
 
-function isOutOfStock(sizeVal: string | number): boolean {
-  // Placeholder: mark some sizes as unavailable if needed
-  return false;
+// Get stock for a specific size (considering selected color)
+function getStockForSize(sizeVal: string | number): number | null {
+  const color = selectedColor.value
+  const sizeStr = String(sizeVal).trim()
+  
+  // Find variant matching color and size
+  const variant = variants.value.find(v => {
+    const variantColor = (v.tenMauSac || "").trim()
+    const variantSize = (v.tenKichThuoc || "").trim()
+    const colorMatch = color ? variantColor === color : true
+    return colorMatch && variantSize === sizeStr
+  })
+  
+  if (variant && variant.soLuong !== undefined) {
+    return variant.soLuong
+  }
+  
+  // If no exact match, try to find by size only (aggregate all colors)
+  if (!color) {
+    const sizeVariants = variants.value.filter(v => {
+      const variantSize = (v.tenKichThuoc || "").trim()
+      return variantSize === sizeStr
+    })
+    if (sizeVariants.length > 0) {
+      const totalStock = sizeVariants.reduce((sum, v) => sum + (v.soLuong || 0), 0)
+      return totalStock > 0 ? totalStock : 0
+    }
+  }
+  
+  return null
 }
+
+function isOutOfStock(sizeVal: string | number): boolean {
+  const stock = getStockForSize(sizeVal)
+  return stock !== null && stock <= 0
+}
+
+// Get available stock for selected variant
+const availableStock = computed(() => {
+  // If size is selected, get stock for that specific size
+  if (size.value) {
+    const stock = getStockForSize(size.value)
+    return stock
+  }
+  
+  // If only color is selected, sum stock for all sizes of that color
+  if (selectedColor.value) {
+    const colorVariants = variants.value.filter(v => {
+      const variantColor = (v.tenMauSac || "").trim()
+      return variantColor === selectedColor.value
+    })
+    if (colorVariants.length > 0) {
+      const totalStock = colorVariants.reduce((sum, v) => sum + (v.soLuong || 0), 0)
+      return totalStock > 0 ? totalStock : 0
+    }
+  }
+  
+  // If no selection, calculate total stock from all variants
+  if (variants.value.length > 0) {
+    const totalStock = variants.value.reduce((sum, v) => {
+      return sum + (v.soLuong || 0)
+    }, 0)
+    return totalStock > 0 ? totalStock : null
+  }
+  return null
+})
 
 // Reviews state (local only)
 type LocalReview = { name: string; rating: number; comment: string; date: string }
@@ -957,9 +1044,21 @@ function setupAccordion(el: HTMLDetailsElement) {
   color: #000;
 }
 .size-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.size-btn { padding: 10px 0; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+.size-btn { 
+  padding: 8px 0; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 8px; 
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
 .size-btn.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
 .size-btn.disabled { color: #9ca3af; text-decoration: line-through; background: #fafafa; }
+.size-label { font-weight: 600; font-size: 14px; }
+.size-stock { font-size: 10px; color: #6b7280; font-weight: 400; line-height: 1; }
+.size-btn.disabled .size-stock { color: #9ca3af; }
 .size-error { color: #dc2626; margin: 0; font-size: 13px; }
 
 .qty { display: flex; align-items: center; gap: 12px; }

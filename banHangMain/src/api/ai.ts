@@ -22,11 +22,21 @@ export interface ChatRequest {
   context?: string
 }
 
+export interface Product {
+  id: number
+  name: string
+  min_price: number
+  max_price: number
+  image_url?: string
+  stock: number
+}
+
 export interface ChatResponse {
   message: string
   sources: string
   queryType: string
   redirect_to_staff?: boolean
+  products?: Product[]
 }
 
 export interface HealthResponse {

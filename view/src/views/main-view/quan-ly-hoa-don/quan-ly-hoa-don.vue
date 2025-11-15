@@ -1,5 +1,43 @@
 <template>
   <div class="invoice-page">
+    <!-- Status Tabs -->
+    <a-card class="tabs-card" :bordered="false">
+      <a-tabs v-model:active-key="activeTab" type="line" @change="handleTabChange">
+        <a-tab-pane key="all">
+          <template #title>
+            <span class="tab-title">
+              Tất cả
+              <a-badge :count="totalInvoices" :number-style="{ backgroundColor: '#165dff' }" />
+            </span>
+          </template>
+        </a-tab-pane>
+        <a-tab-pane key="paid">
+          <template #title>
+            <span class="tab-title">
+              Đã thanh toán
+              <a-badge :count="paidInvoices" :number-style="{ backgroundColor: '#00b42a' }" />
+            </span>
+          </template>
+        </a-tab-pane>
+        <a-tab-pane key="pending">
+          <template #title>
+            <span class="tab-title">
+              Chờ thanh toán
+              <a-badge :count="pendingInvoices" :number-style="{ backgroundColor: '#ff7d00' }" />
+            </span>
+          </template>
+        </a-tab-pane>
+        <a-tab-pane key="cancelled">
+          <template #title>
+            <span class="tab-title">
+              Đã hủy
+              <a-badge :count="cancelledInvoices" :number-style="{ backgroundColor: '#f53f3f' }" />
+            </span>
+          </template>
+        </a-tab-pane>
+      </a-tabs>
+    </a-card>
+
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form layout="inline" :model="filters">
@@ -17,7 +55,15 @@
         </a-form-item>
 
         <a-form-item label="Thời gian">
-          <a-range-picker v-model="filters.dateRange" style="width: 280px" @change="handleDateChange" />
+          <a-space>
+            <a-range-picker v-model="filters.dateRange" style="width: 280px" @change="handleDateChange" />
+            <a-button @click="filterToday" type="outline" size="small">
+              Hôm nay
+            </a-button>
+            <a-button @click="clearDateFilter" type="text" size="small" v-if="filters.dateRange && filters.dateRange.length > 0">
+              Xóa
+            </a-button>
+          </a-space>
         </a-form-item>
 
         <a-form-item>
@@ -77,7 +123,7 @@
       <a-table
         :columns="invoiceColumns"
         :data="invoices"
-        :pagination="pagination"
+        :pagination="{ ...pagination, total: invoices.length }"
         :loading="loading"
         :scroll="{ x: 1200 }"
         @change="handleTableChange"
@@ -259,18 +305,21 @@ const totalInvoices = ref(0)
 const todayInvoices = ref(0)
 const paidInvoices = ref(0)
 const pendingInvoices = ref(0)
+const cancelledInvoices = ref(0)
 const totalRevenue = ref(0)
 
 const loading = ref(false)
 const selectedRowKeys = ref([])
 const detailModalVisible = ref(false)
 const selectedInvoice = ref(null)
+const activeTab = ref('all')
 
 // Filters
 const filters = ref({
   search: '',
   status: 'all',
-  dateRange: [],
+  dateRange: [] as any[],
+  filterToday: false,
 })
 
 // Pagination
@@ -368,10 +417,61 @@ const itemColumns = [
   },
 ]
 
-// Computed invoices data
+// Computed invoices data - filter theo tab và filters
 const invoices = computed(() => {
-  console.log('invoices computed - invoicesList.value:', invoicesList.value)
-  return invoicesList.value
+  let filtered = [...invoicesList.value]
+
+  // Filter theo tab (trạng thái)
+  if (activeTab.value !== 'all') {
+    if (activeTab.value === 'paid') {
+      filtered = filtered.filter((invoice) => invoice.trangThai === true || invoice.ngayThanhToan)
+    } else if (activeTab.value === 'pending') {
+      filtered = filtered.filter((invoice) => invoice.trangThai === false && !invoice.ngayThanhToan)
+    } else if (activeTab.value === 'cancelled') {
+      // Giả sử có field cancelled hoặc trangThai === false và không có ngayThanhToan sau một thời gian
+      filtered = filtered.filter((invoice) => {
+        // Logic hủy: có thể là invoice có flag hủy hoặc không có ngayThanhToan sau 7 ngày
+        return invoice.trangThai === false && !invoice.ngayThanhToan
+      })
+    }
+  }
+
+  // Filter theo search
+  if (filters.value.search) {
+    const searchLower = filters.value.search.toLowerCase()
+    filtered = filtered.filter((invoice) => {
+      const maHoaDon = (invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}`).toLowerCase()
+      const tenKhachHang = (invoice.tenKhachHang || '').toLowerCase()
+      return maHoaDon.includes(searchLower) || tenKhachHang.includes(searchLower)
+    })
+  }
+
+  // Filter theo date range
+  if (filters.value.dateRange && filters.value.dateRange.length === 2) {
+    const startDate = new Date(filters.value.dateRange[0])
+    const endDate = new Date(filters.value.dateRange[1])
+    endDate.setHours(23, 59, 59, 999) // Set to end of day
+
+    filtered = filtered.filter((invoice) => {
+      const invoiceDate = new Date(invoice.thoiGianTao || invoice.ngayTao)
+      return invoiceDate >= startDate && invoiceDate <= endDate
+    })
+  }
+
+  // Filter theo ngày hiện tại nếu được bật
+  if (filters.value.filterToday) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    filtered = filtered.filter((invoice) => {
+      const invoiceDate = new Date(invoice.thoiGianTao || invoice.ngayTao)
+      return invoiceDate >= today && invoiceDate < tomorrow
+    })
+  }
+
+  return filtered
 })
 
 // Methods
@@ -417,15 +517,16 @@ const getStatusText = (status: string) => {
 // API functions
 const calculateStatistics = () => {
   const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
   const todayStr = today.toISOString().split('T')[0]
-  const currentMonth = today.getMonth() + 1
-  const currentYear = today.getFullYear()
 
   totalInvoices.value = invoicesList.value.length
 
   // Đếm hóa đơn hôm nay
   todayInvoices.value = invoicesList.value.filter((invoice) => {
-    const dateStr = invoice.ngayTao || invoice.createdAt
+    const dateStr = invoice.thoiGianTao || invoice.ngayTao || invoice.createdAt
     if (!dateStr) return false
     const invoiceDate = new Date(dateStr)
     if (isNaN(invoiceDate.getTime())) return false
@@ -437,6 +538,12 @@ const calculateStatistics = () => {
 
   // Đếm hóa đơn chờ thanh toán
   pendingInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThai === false && !invoice.ngayThanhToan).length
+
+  // Đếm hóa đơn đã hủy
+  cancelledInvoices.value = invoicesList.value.filter((invoice) => {
+    // Logic hủy: có thể là invoice có flag hủy hoặc không có ngayThanhToan sau một thời gian
+    return invoice.trangThai === false && !invoice.ngayThanhToan
+  }).length
 
   // Tính tổng doanh thu từ tất cả hóa đơn đã thanh toán
   const paidInvoicesAll = invoicesList.value.filter((invoice) => {
@@ -492,7 +599,7 @@ const fetchInvoices = async () => {
 
     console.log('Dữ liệu hóa đơn đã xử lý:', invoicesList.value)
     calculateStatistics()
-    pagination.value.total = invoicesList.value.length
+    // Pagination total sẽ được tính từ computed invoices
     return
   } catch (error) {
     console.error('Lỗi khi gọi API hóa đơn:', error)
@@ -527,7 +634,7 @@ const fetchInvoices = async () => {
       },
     ]
     calculateStatistics()
-    pagination.value.total = invoicesList.value.length
+    // Pagination total sẽ được tính từ computed invoices
   } finally {
     loading.value = false
   }
@@ -542,12 +649,48 @@ const resetFilters = () => {
     search: '',
     status: 'all',
     dateRange: [],
+    filterToday: false,
   }
+  activeTab.value = 'all'
   fetchInvoices()
 }
 
 const handleDateChange = () => {
-  fetchInvoices()
+  // Khi thay đổi date range, tắt filter today
+  if (filters.value.dateRange && filters.value.dateRange.length > 0) {
+    filters.value.filterToday = false
+  }
+  // Không cần fetch lại vì computed sẽ tự động filter
+}
+
+const filterToday = () => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  filters.value.dateRange = [today, tomorrow]
+  filters.value.filterToday = true
+}
+
+const clearDateFilter = () => {
+  filters.value.dateRange = []
+  filters.value.filterToday = false
+}
+
+const handleTabChange = (key: string) => {
+  activeTab.value = key
+  // Cập nhật filter status để đồng bộ với tab
+  if (key === 'all') {
+    filters.value.status = 'all'
+  } else if (key === 'paid') {
+    filters.value.status = 'paid'
+  } else if (key === 'pending') {
+    filters.value.status = 'pending'
+  } else if (key === 'cancelled') {
+    filters.value.status = 'cancelled'
+  }
+  // Không cần fetch lại vì computed sẽ tự động filter
 }
 
 const handleTableChange = (paginationData: any) => {
@@ -716,6 +859,16 @@ onBeforeUnmount(() => {
 
 .stat-change.positive {
   color: #52c41a;
+}
+
+.tabs-card {
+  margin-bottom: 16px;
+}
+
+.tab-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .filters-card,

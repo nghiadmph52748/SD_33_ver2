@@ -12,18 +12,8 @@
             <RouterLink to="/" class="btn">{{ $t('page.returnHome') }}</RouterLink>
           </AppEmptyState>
           <div v-else class="bag-items">
-        <AppCartDisplay />
+            <AppCartDisplay />
           </div>
-
-          <section class="favourites" aria-label="Favourites">
-            <h2>{{ $t('cart.favourites') }}</h2>
-            <p>
-              {{ $t('cart.viewFavourites') }}
-              <a href="#">{{ $t('nav.joinUs') }}</a>
-              {{ $t('auth.or') }}
-              <a href="#">{{ $t('nav.signIn') }}</a>
-            </p>
-          </section>
       </section>
       
         <aside class="summary" aria-label="Order summary">
@@ -129,11 +119,6 @@ function applyPromo() {
   padding: 18px 0 24px;
   color: #4e5969;
 }
-
-.favourites { margin-top: 32px; }
-.favourites h2 { font-size: 20px; margin: 0 0 8px 0; }
-.favourites p { color: #4e5969; margin: 0; }
-.favourites a { color: #111111; text-decoration: underline; }
 
 .summary {
   background: #ffffff;

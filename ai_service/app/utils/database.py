@@ -292,22 +292,56 @@ class DatabaseClient:
         return results[0] if results else {}
 
     def search_products(self, keyword: str, limit: int = 10) -> List[Dict]:
-        """Search products by name with basic info and total variants/stock"""
-        query = """
-        SELECT TOP (?)
-            sp.id AS product_id,
-            sp.ten_san_pham AS product_name,
-            COUNT(ctsp.id) AS variant_count,
-            ISNULL(SUM(ctsp.so_luong), 0) AS total_stock,
-            MIN(ctsp.gia_ban) AS min_price,
-            MAX(ctsp.gia_ban) AS max_price
-        FROM san_pham sp
-        LEFT JOIN chi_tiet_san_pham ctsp ON ctsp.id_san_pham = sp.id AND ctsp.trang_thai = 1
-        WHERE sp.trang_thai = 1 AND sp.ten_san_pham LIKE ?
-        GROUP BY sp.id, sp.ten_san_pham
-        ORDER BY sp.ten_san_pham ASC
-        """
-        return self.execute_query(query, (limit, f"%{keyword}%"))
+        """Search products by name with basic info, total variants/stock, and first image"""
+        # Handle empty keyword - return all active products
+        if not keyword or not keyword.strip():
+            query = """
+            SELECT TOP (?)
+                sp.id AS product_id,
+                sp.ten_san_pham AS product_name,
+                COUNT(ctsp.id) AS variant_count,
+                ISNULL(SUM(ctsp.so_luong), 0) AS total_stock,
+                MIN(ctsp.gia_ban) AS min_price,
+                MAX(ctsp.gia_ban) AS max_price,
+                (SELECT TOP 1 asp.duong_dan_anh 
+                 FROM chi_tiet_san_pham_anh ctspa
+                 INNER JOIN anh_san_pham asp ON ctspa.id_anh_san_pham = asp.id
+                 INNER JOIN chi_tiet_san_pham ctsp_img ON ctspa.id_chi_tiet_san_pham = ctsp_img.id
+                 WHERE ctsp_img.id_san_pham = sp.id 
+                   AND ctspa.trang_thai = 1 
+                   AND asp.trang_thai = 1
+                 ORDER BY ctspa.id ASC) AS image_url
+            FROM san_pham sp
+            LEFT JOIN chi_tiet_san_pham ctsp ON ctsp.id_san_pham = sp.id AND ctsp.trang_thai = 1
+            WHERE sp.trang_thai = 1
+            GROUP BY sp.id, sp.ten_san_pham
+            ORDER BY sp.ten_san_pham ASC
+            """
+            return self.execute_query(query, (limit,))
+        else:
+            query = """
+            SELECT TOP (?)
+                sp.id AS product_id,
+                sp.ten_san_pham AS product_name,
+                COUNT(ctsp.id) AS variant_count,
+                ISNULL(SUM(ctsp.so_luong), 0) AS total_stock,
+                MIN(ctsp.gia_ban) AS min_price,
+                MAX(ctsp.gia_ban) AS max_price,
+                (SELECT TOP 1 asp.duong_dan_anh 
+                 FROM chi_tiet_san_pham_anh ctspa
+                 INNER JOIN anh_san_pham asp ON ctspa.id_anh_san_pham = asp.id
+                 INNER JOIN chi_tiet_san_pham ctsp_img ON ctspa.id_chi_tiet_san_pham = ctsp_img.id
+                 WHERE ctsp_img.id_san_pham = sp.id 
+                   AND ctspa.trang_thai = 1 
+                   AND asp.trang_thai = 1
+                 ORDER BY ctspa.id ASC) AS image_url
+            FROM san_pham sp
+            LEFT JOIN chi_tiet_san_pham ctsp ON ctsp.id_san_pham = sp.id AND ctsp.trang_thai = 1
+            WHERE sp.trang_thai = 1 AND sp.ten_san_pham LIKE ?
+            GROUP BY sp.id, sp.ten_san_pham
+            ORDER BY sp.ten_san_pham ASC
+            """
+            return self.execute_query(query, (limit, f"%{keyword}%"))
 
     def get_product_variants(self, product_id: int) -> List[Dict]:
         """Get variants for a product with color/size/price/stock"""

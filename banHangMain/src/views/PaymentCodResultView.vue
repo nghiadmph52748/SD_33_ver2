@@ -6,7 +6,7 @@
           <header class="status-header">
             <span class="status-icon" aria-hidden="true">{{ status.icon }}</span>
             <div>
-              <p class="eyebrow">{{ $t('payment.title') }}</p>
+              <p class="eyebrow">{{ $t('payment.codTitle') || 'Giao hàng tận nơi (COD)' }}</p>
               <h1>{{ $t(status.titleKey) }}</h1>
               <p class="lead">{{ $t(status.messageKey) }}</p>
             </div>
@@ -29,10 +29,10 @@
             <header class="details-header">
               <h2>{{ $t('payment.detailsHeading') }}</h2>
               <button
-                v-if="txnRef.value"
+                v-if="orderId"
                 type="button"
                 class="copy-btn pill-btn"
-                @click="copyReference"
+                @click="copyOrderId"
                 :disabled="copying"
               >
                 {{ copying ? $t('payment.details.copied') : $t('payment.details.copyRef') }}
@@ -55,37 +55,12 @@
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { formatCurrency } from '@/utils/currency'
 
 const route = useRoute()
 const { t } = useI18n()
 
-// VNPAY specific fields
-const code = computed(() => String(route.query.code ?? ''))
-const txnRef = computed(() => String(route.query.txnRef ?? ''))
-const transactionNo = computed(() => String(route.query.transactionNo ?? ''))
-const bankTranNo = computed(() => String(route.query.bankTranNo ?? ''))
-const bankCode = computed(() => String(route.query.bankCode ?? ''))
-const cardType = computed(() => String(route.query.cardType ?? ''))
-const orderInfo = computed(() => String(route.query.orderInfo ?? ''))
-const payDateRaw = computed(() => String(route.query.payDate ?? ''))
-
-const amountRaw = computed(() => Number(route.query.amount ?? 0) / 100)
-const displayAmount = computed(() => {
-  return amountRaw.value > 0 ? formatCurrency(amountRaw.value) : '—'
-})
-
-const formattedPayDate = computed(() => {
-  const raw = payDateRaw.value
-  if (!raw || raw.length !== 14) return raw || '—'
-  const year = raw.slice(0, 4)
-  const month = raw.slice(4, 6)
-  const day = raw.slice(6, 8)
-  const hour = raw.slice(8, 10)
-  const minute = raw.slice(10, 12)
-  const second = raw.slice(12, 14)
-  return `${day}/${month}/${year} ${hour}:${minute}:${second}`
-})
+const orderId = computed(() => String(route.query.orderId ?? ''))
+const statusParam = computed(() => String(route.query.status ?? ''))
 
 type StatusVariant = 'success' | 'failure' | 'pending'
 
@@ -101,47 +76,19 @@ interface StatusConfig {
 }
 
 const status = computed<StatusConfig>(() => {
-  // Handle VNPAY orders
-  if (code.value === '00') {
+  if (statusParam.value === 'success' && orderId.value) {
     return {
-      titleKey: 'payment.successTitle',
-      messageKey: 'payment.successMessage',
+      titleKey: 'payment.codSuccessTitle',
+      messageKey: 'payment.codSuccessMessage',
       primaryRoute: '/',
       primaryLabelKey: 'payment.actions.continueShopping',
-      secondaryRoute: '/cart',
-      secondaryLabelKey: 'payment.actions.viewCart',
+      secondaryRoute: undefined,
+      secondaryLabelKey: undefined,
       variant: 'success',
       icon: '✅',
     }
   }
-
-  if (code.value === '24') {
-    // User cancelled on VNPAY UI
-    return {
-      titleKey: 'payment.cancelTitle',
-      messageKey: 'payment.cancelMessage',
-      primaryRoute: '/checkout',
-      primaryLabelKey: 'payment.actions.retryCheckout',
-      secondaryRoute: '/',
-      secondaryLabelKey: 'payment.actions.continueShopping',
-      variant: 'failure',
-      icon: '⚠️',
-    }
-  }
-
-  if (!code.value) {
-    return {
-      titleKey: 'payment.unknownTitle',
-      messageKey: 'payment.unknownMessage',
-      primaryRoute: '/',
-      primaryLabelKey: 'payment.actions.continueShopping',
-      secondaryRoute: '/checkout',
-      secondaryLabelKey: 'payment.actions.retryCheckout',
-      variant: 'pending',
-      icon: '⏳',
-    }
-  }
-
+  
   return {
     titleKey: 'payment.failureTitle',
     messageKey: 'payment.failureMessage',
@@ -157,30 +104,22 @@ const status = computed<StatusConfig>(() => {
 const detailItems = computed(() => {
   const rows: { label: string; value: string }[] = []
   
-  // Show VNPAY details
-  rows.push(
-    { label: 'payment.details.code', value: code.value || '—' },
-    { label: 'payment.details.txnRef', value: txnRef.value || '—' },
-    { label: 'payment.details.transaction', value: transactionNo.value || '—' },
-    { label: 'payment.details.amount', value: displayAmount.value },
-    { label: 'payment.details.bank', value: bankCode.value || '—' },
-    { label: 'payment.details.bankTranNo', value: bankTranNo.value || '—' },
-    { label: 'payment.details.cardType', value: cardType.value || '—' },
-    { label: 'payment.details.orderInfo', value: orderInfo.value || '—' },
-    { label: 'payment.details.payDate', value: formattedPayDate.value || '—' }
-  )
-
+  if (orderId.value) {
+    rows.push({ label: 'payment.details.orderId', value: orderId.value })
+  }
+  rows.push({ label: 'payment.details.method', value: t('payment.cod') })
+  
   return rows.filter(row => row.value && row.value !== '—')
 })
 
 const copying = ref(false)
 
-async function copyReference() {
-  if (copying.value || !txnRef.value) return
+async function copyOrderId() {
+  if (copying.value || !orderId.value) return
   
   copying.value = true
   try {
-    const text = `${t('payment.details.txnRef')}: ${txnRef.value}`
+    const text = `${t('payment.details.orderId')}: ${orderId.value}`
     if (navigator?.clipboard?.writeText) {
       await navigator.clipboard.writeText(text)
     } else {
@@ -195,7 +134,7 @@ async function copyReference() {
       document.body.removeChild(textarea)
     }
   } catch (error) {
-    console.warn('Failed to copy reference', error)
+    console.warn('Failed to copy order ID', error)
   } finally {
     setTimeout(() => {
       copying.value = false
@@ -394,5 +333,4 @@ dd {
   }
 }
 </style>
-
 

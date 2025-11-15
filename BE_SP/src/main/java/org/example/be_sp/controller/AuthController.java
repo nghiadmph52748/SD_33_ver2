@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -273,6 +272,61 @@ public class AuthController {
             return new ResponseObject<>(true, null, "Đặt lại mật khẩu thành công!");
         } catch (Exception e) {
             return new ResponseObject<>(false, null, e.getMessage());
+        }
+    }
+
+    @PostMapping("/me")
+    public ResponseObject<?> me(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            // Lấy token từ header
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return new ResponseObject<>(false, null, "Thiếu token xác thực");
+            }
+
+            String token = authHeader.substring(7);
+
+            // Kiểm tra token có bị blacklist không
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                return new ResponseObject<>(false, null, "Token không hợp lệ");
+            }
+
+            // Validate token
+            if (jwtUtils.isTokenExpired(token)) {
+                return new ResponseObject<>(false, null, "Token đã hết hạn");
+            }
+
+            // Lấy username từ token
+            String username = jwtUtils.getUsernameFromToken(token);
+
+            // Tìm nhân viên
+            NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);
+            if (nhanVien == null) {
+                return new ResponseObject<>(false, null, "Không tìm thấy nhân viên");
+            }
+
+            // Kiểm tra trạng thái tài khoản
+            if (!Boolean.TRUE.equals(nhanVien.getTrangThai())) {
+                return new ResponseObject<>(false, null, "Tài khoản đã bị khóa");
+            }
+
+            // Chuẩn bị dữ liệu trả về (không cần token mới, chỉ trả về thông tin user)
+            LoginResponseData responseData = new LoginResponseData();
+            responseData.setId(nhanVien.getId());
+            responseData.setMaNhanVien(nhanVien.getMaNhanVien());
+            responseData.setTenNhanVien(nhanVien.getTenNhanVien());
+            responseData.setTenTaiKhoan(nhanVien.getTenTaiKhoan());
+            responseData.setEmail(nhanVien.getEmail());
+            if (nhanVien.getIdQuyenHan() != null) {
+                responseData.setIdQuyenHan(nhanVien.getIdQuyenHan().getId());
+                responseData.setTenQuyenHan(nhanVien.getIdQuyenHan().getTenQuyenHan());
+            }
+            // Không trả về accessToken và refreshToken mới vì đây là endpoint lấy thông tin user
+            // Frontend sẽ sử dụng token hiện tại từ header
+
+            return new ResponseObject<>(true, responseData, "Lấy thông tin nhân viên thành công");
+
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy thông tin nhân viên: " + e.getMessage());
         }
     }
 
