@@ -133,7 +133,6 @@ public class HoaDonService {
         } catch (Exception e) {
             log.error("Failed to send order creation notification: {}", e.getMessage());
         }
-
         return new HoaDonResponse(savedHoaDon);
     }
 

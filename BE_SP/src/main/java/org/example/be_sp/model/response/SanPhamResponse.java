@@ -2,6 +2,7 @@ package org.example.be_sp.model.response;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.example.be_sp.entity.SanPham;
@@ -101,9 +102,15 @@ public class SanPhamResponse {
                     bienTheResp.setGiaBan(ct.getGiaBan());
 
                     // Get discount info from active discount promotion
+                    // Check: trangThai = true, not deleted, and within valid date range
                     ct.getChiTietDotGiamGias().stream()
                             .filter(cdgg -> cdgg.getTrangThai() != null && cdgg.getTrangThai()
-                            && (cdgg.getDeleted() == null || !cdgg.getDeleted()))
+                            && (cdgg.getDeleted() == null || !cdgg.getDeleted())
+                            && cdgg.getIdDotGiamGia() != null
+                            && cdgg.getIdDotGiamGia().getTrangThai() != null
+                            && cdgg.getIdDotGiamGia().getTrangThai()
+                            && isDiscountActive(cdgg.getIdDotGiamGia().getNgayBatDau(),
+                                    cdgg.getIdDotGiamGia().getNgayKetThuc()))
                             .findFirst()
                             .ifPresent(cdgg -> {
                                 bienTheResp.setGiaTriGiamGia(BigDecimal.valueOf(cdgg.getIdDotGiamGia().getGiaTriGiamGia()));
@@ -129,5 +136,14 @@ public class SanPhamResponse {
                 })
                 .distinct()
                 .toList();
+    }
+
+    // Check if discount is within valid date range (today is between ngayBatDau and ngayKetThuc)
+    private boolean isDiscountActive(LocalDateTime ngayBatDau, LocalDateTime ngayKetThuc) {
+        if (ngayBatDau == null || ngayKetThuc == null) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        return !now.isBefore(ngayBatDau) && !now.isAfter(ngayKetThuc);
     }
 }

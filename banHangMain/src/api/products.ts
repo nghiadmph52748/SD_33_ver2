@@ -120,9 +120,9 @@ export interface Product {
   name: string;
   review: string;
   starrating: number;
-  price: number; // Min discounted price (display price)
-  priceMax?: number; // Max discounted price (if range exists)
-  originalPrice?: number; // Original max price (strikethrough when discount)
+  price: number; // Min price after discount
+  priceMax?: number; // Max price after discount (if range exists)
+  originalPrice?: number; // Original max price (strikethrough when has discount)
   img: string;
   sizes?: string[];
 }
@@ -157,12 +157,11 @@ function calculatePriceRange(variants: ProductVariant[] | undefined) {
     return {
       minPrice: 0,
       maxPrice: 0,
-      minOriginalPrice: 0,
       maxOriginalPrice: 0,
     };
   }
 
-  // Calculate prices for each variant
+  // Calculate prices for each variant considering discounts
   const prices = variants
     .filter((v) => v.giaBan != null && v.giaBan > 0)
     .map((v) => {
@@ -170,7 +169,11 @@ function calculatePriceRange(variants: ProductVariant[] | undefined) {
       let discountedPrice = originalPrice;
 
       // Calculate discounted price if giaTriGiamGia exists
-      if (v.giaTriGiamGia != null && v.giaTriGiamGia > 0) {
+      if (
+        v.giaTriGiamGia != null &&
+        v.giaTriGiamGia > 0 &&
+        v.giaTriGiamGia <= 100
+      ) {
         discountedPrice = (originalPrice * (100 - v.giaTriGiamGia)) / 100;
       }
 
@@ -181,21 +184,19 @@ function calculatePriceRange(variants: ProductVariant[] | undefined) {
     return {
       minPrice: 0,
       maxPrice: 0,
-      minOriginalPrice: 0,
       maxOriginalPrice: 0,
     };
   }
 
   const minPrice = Math.min(...prices.map((p) => p.discountedPrice));
   const maxPrice = Math.max(...prices.map((p) => p.discountedPrice));
-  const minOriginalPrice = Math.min(...prices.map((p) => p.originalPrice));
   const maxOriginalPrice = Math.max(...prices.map((p) => p.originalPrice));
 
-  return { minPrice, maxPrice, minOriginalPrice, maxOriginalPrice };
+  return { minPrice, maxPrice, maxOriginalPrice };
 }
 
 function mapBackendToFrontend(backendProduct: BackendProduct): Product {
-  // Calculate price range from variants with discount support
+  // Calculate price range with discounts
   const priceInfo = calculatePriceRange(backendProduct.bienThe);
 
   // Get primary color from variants (if available)
@@ -227,7 +228,7 @@ function mapBackendToFrontend(backendProduct: BackendProduct): Product {
     gender: determineGender(backendProduct.tenDanhMuc || ""),
     name: backendProduct.tenSanPham,
     review: `Quality product from ${backendProduct.tenNhaSanXuat || "GearUp"}`,
-    starrating: 4, // Default rating, could be from backend
+    starrating: 4,
     price: priceInfo.minPrice,
     priceMax:
       priceInfo.minPrice !== priceInfo.maxPrice
@@ -463,7 +464,7 @@ async function resolveProductImage(
 async function mapBackendToFrontendAsync(
   backendProduct: BackendProduct
 ): Promise<Product> {
-  // Calculate price range from variants with discount support
+  // Calculate price range with discounts
   const priceInfo = calculatePriceRange(backendProduct.bienThe);
 
   const primaryColor = backendProduct.bienThe?.[0]?.tenMauSac || "Black";
