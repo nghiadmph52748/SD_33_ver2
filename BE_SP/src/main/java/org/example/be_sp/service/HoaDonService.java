@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class HoaDonService {
+
     @Autowired
     private HoaDonRepository hoaDonRepository;
     @Autowired
@@ -52,34 +53,34 @@ public class HoaDonService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-
-
     public List<HoaDonResponse> getAll() {
         return hoaDonRepository.findAll().stream().map(HoaDonResponse::new).toList();
     }
+
     public PagingResponse<HoaDonResponse> phanTrang(Integer no, Integer size) {
         Pageable page = PageRequest.of(no, size);
         return new PagingResponse<>(hoaDonRepository.findAll(page).map(HoaDonResponse::new), no);
     }
 
     public HoaDonResponse getByid(Integer id) {
-        HoaDon hoaDon = hoaDonRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn","404"));
+        HoaDon hoaDon = hoaDonRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn", "404"));
         return new HoaDonResponse(hoaDon);
     }
+
     public HoaDonResponse add(BanHangTaiQuayRequest request) {
         HoaDon hd = MapperUtils.map(request, HoaDon.class);
         if (request.getIdKhachHang() != null) {
             hd.setIdKhachHang(khachHangRepository.findById(request.getIdKhachHang())
-                .orElseThrow(() -> new ApiException("Khách hàng không tồn tại", "404")));
+                    .orElseThrow(() -> new ApiException("Khách hàng không tồn tại", "404")));
         }
         if (request.getIdPhieuGiamGia() != null) {
             hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
         }
         if (request.getIdNhanVien() != null) {
             hd.setIdNhanVien(nhanVienRepository.findById(request.getIdNhanVien())
-                .orElseThrow(() -> new ApiException("Nhân viên không tồn tại", "404")));
+                    .orElseThrow(() -> new ApiException("Nhân viên không tồn tại", "404")));
         }
-        
+
         // Tự động điền tên và mã nhân viên
         if (hd.getIdNhanVien() != null) {
             if (request.getTenNhanVien() == null || request.getTenNhanVien().trim().isEmpty()) {
@@ -89,7 +90,7 @@ public class HoaDonService {
                 hd.setMaNhanVien(hd.getIdNhanVien().getMaNhanVien());
             }
         }
-        
+
         // Tự động điền tên và mã phiếu giảm giá
         if (hd.getIdPhieuGiamGia() != null) {
             if (request.getTenPhieuGiamGia() == null || request.getTenPhieuGiamGia().trim().isEmpty()) {
@@ -99,9 +100,9 @@ public class HoaDonService {
                 hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
             }
         }
-        
+
         HoaDon savedHoaDon = hoaDonRepository.save(hd);
-        
+
         // Generate invoice code using stored procedure
         try {
             String maHoaDon = generateInvoiceCode(savedHoaDon.getId());
@@ -112,32 +113,33 @@ public class HoaDonService {
             log.error("Failed to generate invoice code for order ID: {}", savedHoaDon.getId(), e);
             // Continue even if code generation fails - order is still created
         }
-        
+
         // Send order confirmation email (after generating code)
         sendOrderConfirmationEmail(savedHoaDon);
-        
+
         // 🔔 NOTIFICATION: New order created
         try {
             // Notify staff member assigned to order
             if (savedHoaDon.getIdNhanVien() != null) {
                 notificationService.createNotification(
-                    savedHoaDon.getIdNhanVien().getId(),
-                    "todo",
-                    "Đơn hàng mới #" + savedHoaDon.getMaHoaDon(),
-                    "Chờ xử lý",
-                    "Đơn hàng mới từ " + (savedHoaDon.getTenNguoiNhan() != null ? savedHoaDon.getTenNguoiNhan() : "khách hàng"),
-                    2  // in progress
+                        savedHoaDon.getIdNhanVien().getId(),
+                        "todo",
+                        "Đơn hàng mới #" + savedHoaDon.getMaHoaDon(),
+                        "Chờ xử lý",
+                        "Đơn hàng mới từ " + (savedHoaDon.getTenNguoiNhan() != null ? savedHoaDon.getTenNguoiNhan() : "khách hàng"),
+                        2 // in progress
                 );
             }
         } catch (Exception e) {
             log.error("Failed to send order creation notification: {}", e.getMessage());
         }
-        
+
         return new HoaDonResponse(savedHoaDon);
     }
+
     public HoaDonResponse update(Integer id, BanHangTaiQuayRequest request) {
         HoaDon hd = hoaDonRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn","404"));
+                .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn", "404"));
 
         // Cập nhật thủ công từng field
         if (request.getTenNguoiNhan() != null) {
@@ -192,11 +194,11 @@ public class HoaDonService {
         // Gán lại các quan hệ
         if (request.getIdKhachHang() != null) {
             hd.setIdKhachHang(khachHangRepository.findById(request.getIdKhachHang())
-                .orElseThrow(() -> new ApiException("Khách hàng không tồn tại", "404")));
+                    .orElseThrow(() -> new ApiException("Khách hàng không tồn tại", "404")));
         }
         if (request.getIdPhieuGiamGia() != null) {
             hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
-            
+
             // Tự động điền tên và mã phiếu giảm giá nếu chưa có
             if (hd.getIdPhieuGiamGia() != null) {
                 if (hd.getTenPhieuGiamGia() == null || hd.getTenPhieuGiamGia().trim().isEmpty()) {
@@ -209,7 +211,7 @@ public class HoaDonService {
         }
         if (request.getIdNhanVien() != null) {
             hd.setIdNhanVien(nhanVienRepository.getById(request.getIdNhanVien()));
-            
+
             // Tự động điền tên và mã nhân viên nếu chưa có
             if (hd.getIdNhanVien() != null) {
                 if (hd.getTenNhanVien() == null || hd.getTenNhanVien().trim().isEmpty()) {
@@ -221,40 +223,38 @@ public class HoaDonService {
             }
         }
         hd.setUpdateAt(LocalDate.now());
-        
+
         // Track original status before update
         Boolean originalStatus = hd.getTrangThai();
-        
+
         HoaDon saved = hoaDonRepository.save(hd);
-        
+
         //NOTIFICATION: Order status updated
         if (request.getTrangThai() != null && !request.getTrangThai().equals(originalStatus) && saved.getIdKhachHang() != null) {
             try {
                 String statusText = saved.getTrangThai() ? "Đã hoàn thành" : "Đang xử lý";
                 notificationService.createNotification(
-                    saved.getIdKhachHang().getId(),
-                    "notice",
-                    "Cập nhật đơn hàng #" + saved.getMaHoaDon(),
-                    statusText,
-                    "Trạng thái đơn hàng của bạn: " + statusText,
-                    saved.getTrangThai() ? 1 : 2  // 1 = completed, 2 = in progress
+                        saved.getIdKhachHang().getId(),
+                        "notice",
+                        "Cập nhật đơn hàng #" + saved.getMaHoaDon(),
+                        statusText,
+                        "Trạng thái đơn hàng của bạn: " + statusText,
+                        saved.getTrangThai() ? 1 : 2 // 1 = completed, 2 = in progress
                 );
             } catch (Exception e) {
                 log.error("Failed to send order update notification: {}", e.getMessage());
             }
         }
-        
+
         return new HoaDonResponse(saved);
     }
 
-
-
     public void delete(Integer id) {
-        HoaDon hd = hoaDonRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn","404"));
+        HoaDon hd = hoaDonRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn", "404"));
         hd.setDeleted(true);
         hoaDonRepository.save(hd);
     }
-    
+
     /**
      * Generate invoice code using stored procedure
      */
@@ -262,15 +262,15 @@ public class HoaDonService {
         try {
             // Call stored procedure with idHoaDon parameter - procedure will UPDATE the column directly
             // Updated to support 12 characters: HD + 10 digits
-            String sql = "DECLARE @maHoaDon NVARCHAR(12); EXEC sp_GenerateMaHoaDon @idHoaDon = ?, @maMoiGenerated = @maHoaDon OUTPUT; SELECT @maMoiGenerated as ma_hoa_don";
-            
+            String sql = "DECLARE @maHoaDon NVARCHAR(12); EXEC sp_GenerateMaHoaDon @idHoaDon = ?, @maMoiGenerated = @maHoaDon OUTPUT; SELECT @maHoaDon as ma_hoa_don";
+
             String result = jdbcTemplate.queryForObject(sql, String.class, idHoaDon);
             return result;
         } catch (Exception e) {
             throw new RuntimeException("Error generating invoice code: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Helper method to send order confirmation email
      */
@@ -283,39 +283,39 @@ public class HoaDonService {
                     customerEmail = hoaDon.getIdKhachHang().getEmail();
                 }
             }
-            
+
             if (customerEmail == null || customerEmail.trim().isEmpty()) {
-                log.warn("Order {} has no email address, skipping order confirmation email", 
+                log.warn("Order {} has no email address, skipping order confirmation email",
                         hoaDon.getMaHoaDon());
                 return;
             }
-            
+
             // Build order items list
             List<OrderEmailData.OrderItemData> items = new ArrayList<>();
             if (hoaDon.getHoaDonChiTiets() != null && !hoaDon.getHoaDonChiTiets().isEmpty()) {
                 items = hoaDon.getHoaDonChiTiets().stream()
-                    .map(item -> {
-                        String productName = "Sản phẩm";
-                        BigDecimal price = BigDecimal.ZERO;
-                        if (item.getIdChiTietSanPham() != null) {
-                            if (item.getIdChiTietSanPham().getIdSanPham() != null) {
-                                productName = item.getIdChiTietSanPham().getIdSanPham().getTenSanPham();
+                        .map(item -> {
+                            String productName = "Sản phẩm";
+                            BigDecimal price = BigDecimal.ZERO;
+                            if (item.getIdChiTietSanPham() != null) {
+                                if (item.getIdChiTietSanPham().getIdSanPham() != null) {
+                                    productName = item.getIdChiTietSanPham().getIdSanPham().getTenSanPham();
+                                }
+                                price = item.getGiaBan() != null ? item.getGiaBan() : BigDecimal.ZERO;
                             }
-                            price = item.getGiaBan() != null ? item.getGiaBan() : BigDecimal.ZERO;
-                        }
-                        Integer quantity = item.getSoLuong() != null ? item.getSoLuong() : 0;
-                        BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
-                        
-                        return OrderEmailData.OrderItemData.builder()
-                            .productName(productName)
-                            .quantity(quantity)
-                            .price(price)
-                            .subtotal(subtotal)
-                            .build();
-                    })
-                    .collect(Collectors.toList());
+                            Integer quantity = item.getSoLuong() != null ? item.getSoLuong() : 0;
+                            BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
+
+                            return OrderEmailData.OrderItemData.builder()
+                                    .productName(productName)
+                                    .quantity(quantity)
+                                    .price(price)
+                                    .subtotal(subtotal)
+                                    .build();
+                        })
+                        .collect(Collectors.toList());
             }
-            
+
             // Calculate discount amount
             BigDecimal discountAmount = BigDecimal.ZERO;
             if (hoaDon.getTongTien() != null && hoaDon.getTongTienSauGiam() != null) {
@@ -324,50 +324,50 @@ public class HoaDonService {
                     discountAmount = discountAmount.subtract(hoaDon.getPhiVanChuyen());
                 }
             }
-            
+
             OrderEmailData emailData = OrderEmailData.builder()
-                .orderCode(hoaDon.getMaHoaDon())
-                .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
-                .customerEmail(customerEmail)
-                .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDate.now())
-                .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
-                .discountAmount(discountAmount)
-                .shippingFee(hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO)
-                .finalAmount(hoaDon.getTongTienSauGiam() != null ? hoaDon.getTongTienSauGiam() : BigDecimal.ZERO)
-                .deliveryAddress(hoaDon.getDiaChiNguoiNhan() != null ? hoaDon.getDiaChiNguoiNhan() : "")
-                .phoneNumber(hoaDon.getSoDienThoaiNguoiNhan() != null ? hoaDon.getSoDienThoaiNguoiNhan() : "")
-                .items(items)
-                .build();
-                
+                    .orderCode(hoaDon.getMaHoaDon())
+                    .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
+                    .customerEmail(customerEmail)
+                    .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDate.now())
+                    .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
+                    .discountAmount(discountAmount)
+                    .shippingFee(hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO)
+                    .finalAmount(hoaDon.getTongTienSauGiam() != null ? hoaDon.getTongTienSauGiam() : BigDecimal.ZERO)
+                    .deliveryAddress(hoaDon.getDiaChiNguoiNhan() != null ? hoaDon.getDiaChiNguoiNhan() : "")
+                    .phoneNumber(hoaDon.getSoDienThoaiNguoiNhan() != null ? hoaDon.getSoDienThoaiNguoiNhan() : "")
+                    .items(items)
+                    .build();
+
             emailService.sendOrderConfirmationEmail(emailData);
             log.info("Order confirmation email sent for order: {}", hoaDon.getMaHoaDon());
-            
+
         } catch (Exception e) {
-            log.error("Failed to send order confirmation email for order: {}", 
+            log.error("Failed to send order confirmation email for order: {}",
                     hoaDon.getMaHoaDon(), e);
             // Don't throw exception - we don't want to rollback the order creation
         }
     }
-    
+
     /**
      * Thêm dữ liệu mẫu cho 3 hóa đơn
      */
     public void addSampleData() {
         try {
             log.info("Bắt đầu thêm dữ liệu mẫu...");
-            
+
             // Lấy nhân viên đầu tiên
             NhanVien nhanVien = nhanVienRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên", "404"));
-            
+                    .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên", "404"));
+
             // Lấy khách hàng đầu tiên
             KhachHang khachHang = khachHangRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new ApiException("Không tìm thấy khách hàng", "404"));
-            
+                    .orElseThrow(() -> new ApiException("Không tìm thấy khách hàng", "404"));
+
             // Lấy chi tiết sản phẩm đầu tiên
             ChiTietSanPham chiTietSanPham = chiTietSanPhamRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm", "404"));
-            
+                    .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm", "404"));
+
             // Tạo 3 hóa đơn mẫu
             for (int i = 1; i <= 3; i++) {
                 HoaDon hoaDon = new HoaDon();
@@ -385,9 +385,9 @@ public class HoaDonService {
                 hoaDon.setNgayTao(LocalDate.now());
                 hoaDon.setTrangThai(true); // Hoàn thành
                 hoaDon.setDeleted(false);
-                
+
                 HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
-                
+
                 // Tạo chi tiết hóa đơn
                 HoaDonChiTiet hoaDonChiTiet = new HoaDonChiTiet();
                 hoaDonChiTiet.setIdHoaDon(savedHoaDon);
@@ -398,14 +398,14 @@ public class HoaDonService {
                 hoaDonChiTiet.setTrangThai(true);
                 hoaDonChiTiet.setGhiChu("Sản phẩm mẫu " + i + " - Màu đen - Size 42");
                 hoaDonChiTiet.setDeleted(false);
-                
+
                 hoaDonChiTietRepository.save(hoaDonChiTiet);
-                
+
                 log.info("Đã tạo hóa đơn mẫu {} với ID: {}", i, savedHoaDon.getId());
             }
-            
+
             log.info("Hoàn thành thêm dữ liệu mẫu!");
-            
+
         } catch (Exception e) {
             log.error("Lỗi khi thêm dữ liệu mẫu: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi thêm dữ liệu mẫu: " + e.getMessage(), "500");

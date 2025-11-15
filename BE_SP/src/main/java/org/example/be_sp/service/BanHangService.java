@@ -119,7 +119,7 @@ public class BanHangService {
         try {
             // Call stored procedure with idHoaDon parameter - procedure will UPDATE the column directly
             // Updated to support 12 characters: HD + 10 digits
-            String sql = "DECLARE @maHoaDon NVARCHAR(12); EXEC sp_GenerateMaHoaDon @idHoaDon = ?, @maMoiGenerated = @maHoaDon OUTPUT; SELECT @maMoiGenerated as ma_hoa_don";
+            String sql = "DECLARE @maHoaDon NVARCHAR(12); EXEC sp_GenerateMaHoaDon @idHoaDon = ?, @maMoiGenerated = @maHoaDon OUTPUT; SELECT @maHoaDon as ma_hoa_don";
 
             String result = jdbcTemplate.queryForObject(sql, String.class, idHoaDon);
             return result;
