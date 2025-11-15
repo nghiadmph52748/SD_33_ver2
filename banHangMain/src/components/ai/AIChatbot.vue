@@ -60,8 +60,8 @@
                 <span v-html="renderMarkdown(msg.content)"></span><span v-if="msg.processingStatus === 'analyzing' || (isProcessing && msg.id === messages[messages.length - 1]?.id)" class="streaming-cursor">▋</span>
               </div>
 
-              <!-- Product Cards -->
-              <div v-if="msg.role === 'assistant' && msg.products && msg.products.length > 0 && msg.processingStatus === 'ready'" class="product-cards">
+              <!-- Product Cards - Only show in separate message for product suggestions -->
+              <div v-if="msg.role === 'assistant' && msg.products && msg.products.length > 0 && msg.processingStatus === 'ready' && msg.isProductSuggestion === true" class="product-cards">
                 <ProductCard v-for="product in msg.products" :key="product.id" :product="product" />
               </div>
 
@@ -169,6 +169,7 @@ interface ChatMessage {
   queryType?: string
   processingStatus?: string
   isSuggestionsOnly?: boolean
+  isProductSuggestion?: boolean // Flag to indicate this message is for product cards only
   products?: Product[]
 }
 
@@ -243,7 +244,7 @@ const chatSessions = ref<Record<string, ChatMessage[]>>({})
 const sessionNames = ref<Record<string, string>>({})
 
 const userInitials = computed(() => {
-  const displayName = (userStore.name || userStore.tenTaiKhoan || '').trim()
+  const displayName = (userStore.name || userStore.profile?.tenTaiKhoan || '').trim()
   if (!displayName) {
     return 'U'
   }
@@ -384,6 +385,11 @@ function generateDefaultSuggestions(aiResponse: string, allMessages: ChatMessage
 
 function saveHistory() {
   try {
+    // Don't save history if user is not authenticated
+    if (!userStore.isAuthenticated) {
+      return
+    }
+    
     normalizeSuggestionMessages(messages.value)
 
     const messagesToSave = [...messages.value]
@@ -438,8 +444,58 @@ async function saveAiChatToDatabase(role: 'user' | 'assistant', content: string)
   }
 }
 
+function clearChatHistory() {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(CHAT_SESSIONS_KEY)
+    localStorage.removeItem(SESSION_NAMES_KEY)
+    chatSessions.value = {}
+    sessionNames.value = {}
+    currentSessionId.value = generateSessionId()
+    messages.value = [
+      {
+        id: 0,
+        role: 'assistant',
+        content:
+          'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, chương trình khuyến mãi và đơn hàng. Bạn cần giúp gì không? 😊',
+        timestamp: new Date().toLocaleTimeString('vi-VN'),
+      },
+      {
+        id: -1,
+        role: 'assistant',
+        content: '',
+        timestamp: '',
+        followUpSuggestions: [
+          'Sản phẩm nào đang giảm giá?',
+          'Tôi muốn biết kích cỡ phù hợp',
+          'Chính sách đổi trả là gì?',
+          'Gợi ý cho tôi giày chạy bộ',
+        ],
+        isSuggestionsOnly: true,
+      },
+    ]
+    normalizeSuggestionMessages(messages.value)
+    sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
+    chatSessions.value[currentSessionId.value] = [...messages.value]
+    console.log('🧹 Chat history cleared for unauthenticated user')
+  } catch (error) {
+    console.error('Error clearing chat history:', error)
+  }
+}
+
 function loadHistory() {
   try {
+    // If user is not authenticated, clear chat history
+    if (!userStore.isAuthenticated) {
+      clearChatHistory()
+      emit('session-state', {
+        sessions: chatSessions.value,
+        currentSessionId: currentSessionId.value,
+        sessionNames: sessionNames.value,
+      })
+      return
+    }
+    
     const sessionsRaw = localStorage.getItem(CHAT_SESSIONS_KEY)
     if (sessionsRaw) {
       const parsed: Record<string, ChatMessage[]> = JSON.parse(sessionsRaw)
@@ -660,6 +716,8 @@ async function sendMessage(text: string = input.value) {
   try {
     let fullContent = ''
     let shouldRedirectToStaff = false
+    let receivedProducts: Product[] = [] // Store products from metadata
+    let receivedQueryType: string | undefined = undefined
 
     await chatWithAIStream(
       text,
@@ -676,9 +734,15 @@ async function sendMessage(text: string = input.value) {
           if (metadata) {
             if (metadata.data_source) messages.value[msgIndex].dataSource = metadata.data_source
             if (metadata.follow_up_suggestions) messages.value[msgIndex].followUpSuggestions = metadata.follow_up_suggestions
-            if (metadata.intent) messages.value[msgIndex].queryType = metadata.intent
-            if (metadata.products && Array.isArray(metadata.products)) {
+            if (metadata.intent) {
+              messages.value[msgIndex].queryType = metadata.intent
+              receivedQueryType = metadata.intent
+            }
+            if (metadata.products && Array.isArray(metadata.products) && metadata.products.length > 0) {
+              // Store products in the message AND in local variable
               messages.value[msgIndex].products = metadata.products
+              receivedProducts = [...metadata.products]
+              console.log('📦 Products received from backend:', metadata.products.length, 'products', metadata.products)
             }
             messages.value[msgIndex].processingStatus = 'analyzing'
           }
@@ -704,6 +768,14 @@ async function sendMessage(text: string = input.value) {
           const msg = messages.value[msgIndex]
           msg.content = fullContent.trim()
           msg.processingStatus = 'ready'
+          
+          // Ensure products and queryType are set from received data
+          if (receivedProducts.length > 0 && !msg.products) {
+            msg.products = [...receivedProducts]
+          }
+          if (receivedQueryType && !msg.queryType) {
+            msg.queryType = receivedQueryType
+          }
         }
 
         const userMessages = messages.value.filter((msg) => msg.role === 'user' && msg.id !== 0)
@@ -728,6 +800,98 @@ async function sendMessage(text: string = input.value) {
             emit('redirect-to-staff')
           }, 1500)
           return
+        }
+        
+        // Check if we should show product cards in a separate message
+        // Only show product cards when customer explicitly asks for product suggestions
+        // Pattern: "gợi ý [sản phẩm/giày/product/shoe]" or "suggest [product/shoe]"
+        const userMessageLower = text.toLowerCase().trim()
+        
+        // Check for explicit suggestion request with product keywords
+        const hasExplicitSuggestionRequest = 
+          // Vietnamese patterns: "gợi ý" + product keywords
+          (userMessageLower.includes('gợi ý') && (
+            userMessageLower.includes('giày') ||
+            userMessageLower.includes('shoe') ||
+            userMessageLower.includes('sản phẩm') ||
+            userMessageLower.includes('product') ||
+            userMessageLower.includes('nike') ||
+            userMessageLower.includes('adidas') ||
+            userMessageLower.includes('puma') ||
+            userMessageLower.includes('vans') ||
+            userMessageLower.includes('converse') ||
+            userMessageLower.includes('chạy bộ') ||
+            userMessageLower.includes('running') ||
+            userMessageLower.includes('thể thao') ||
+            userMessageLower.includes('sport')
+          )) ||
+          // English patterns: "suggest" + product keywords
+          (userMessageLower.includes('suggest') && (
+            userMessageLower.includes('shoe') ||
+            userMessageLower.includes('product') ||
+            userMessageLower.includes('nike') ||
+            userMessageLower.includes('adidas') ||
+            userMessageLower.includes('puma') ||
+            userMessageLower.includes('vans') ||
+            userMessageLower.includes('converse') ||
+            userMessageLower.includes('running')
+          )) ||
+          // Alternative patterns: "cho tôi xem" + product keywords
+          ((userMessageLower.includes('cho tôi') || userMessageLower.includes('show me')) && (
+            userMessageLower.includes('giày') ||
+            userMessageLower.includes('shoe') ||
+            userMessageLower.includes('sản phẩm') ||
+            userMessageLower.includes('product')
+          ))
+        
+        // Only show product cards if:
+        // 1. Query type is product_inquiry (from backend), AND
+        // 2. User explicitly asked for product suggestions (hasExplicitSuggestionRequest), AND
+        // 3. We have products from backend
+        const isProductSuggestionQuery = 
+          (aiMsg?.queryType === 'product_inquiry' || aiMsg?.queryType === 'promotion_inquiry') &&
+          hasExplicitSuggestionRequest
+        
+        // Use products from aiMsg or receivedProducts
+        const productsToCheck = aiMsg?.products || receivedProducts
+        
+        // If this is a product suggestion query AND we have products, create a separate message for product cards
+        if (isProductSuggestionQuery && productsToCheck && productsToCheck.length > 0) {
+          console.log('📦 Creating separate product cards message:', {
+            queryType: aiMsg?.queryType || receivedQueryType,
+            productsCount: productsToCheck.length,
+            userMessage: text.substring(0, 50),
+            hasExplicitSuggestionRequest,
+            products: productsToCheck
+          })
+          
+          // Remove products from the main message
+          if (aiMsg) {
+            aiMsg.products = undefined
+          }
+          
+          // Create a separate message for product cards
+          const productMessage: ChatMessage = {
+            id: Date.now() + 1,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date().toLocaleTimeString('vi-VN'),
+            products: [...productsToCheck],
+            processingStatus: 'ready',
+            isProductSuggestion: true,
+          }
+          messages.value.push(productMessage)
+          
+          await nextTick()
+          scrollToBottom()
+        } else if (aiMsg && aiMsg.products && aiMsg.products.length > 0) {
+          // If we have products but it's not a suggestion query, remove them from the message
+          console.log('📦 Products received but not a suggestion query, removing from message', {
+            queryType: aiMsg.queryType,
+            hasExplicitSuggestionRequest,
+            userMessage: text.substring(0, 50)
+          })
+          aiMsg.products = undefined
         }
         
         // Always show suggestions card after AI response (unless redirecting to staff)
@@ -868,8 +1032,11 @@ watch(
         return false
       })
       
-      if (matchingConv && allMessages && allMessages[matchingConv.id]) {
-        messagesToProcess = allMessages[matchingConv.id]
+      if (matchingConv && allMessages && typeof allMessages === 'object' && !Array.isArray(allMessages)) {
+        const convMessages = (allMessages as Record<number, any[]>)[matchingConv.id]
+        if (Array.isArray(convMessages)) {
+          messagesToProcess = convMessages
+        }
       } else if (!convId) {
         // No conversation yet, but we can still check all messages for ones from/to this receiver
         // This handles the case where a message arrives before the conversation is created
@@ -1051,7 +1218,13 @@ function clearMessages() {
 let healthTimer: any = null
 
 onMounted(async () => {
-  loadHistory()
+  // Clear chat history if user is not authenticated
+  if (!userStore.isAuthenticated) {
+    clearChatHistory()
+  } else {
+    loadHistory()
+  }
+  
   await nextTick()
 
   setTimeout(() => {
@@ -1103,9 +1276,31 @@ watch(
   { deep: true }
 )
 
+// Watch for authentication status changes
+watch(
+  () => userStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (!isAuthenticated) {
+      // User logged out, clear chat history
+      clearChatHistory()
+      emit('session-state', {
+        sessions: chatSessions.value,
+        currentSessionId: currentSessionId.value,
+        sessionNames: sessionNames.value,
+      })
+    }
+  }
+)
+
 function renderMarkdown(md: string) {
   try {
-    return markedParse(md || '') as string
+    if (!md) return ''
+    // Configure marked to preserve line breaks
+    const html = markedParse(md, {
+      breaks: true, // Convert line breaks to <br>
+      gfm: true, // GitHub Flavored Markdown
+    }) as string
+    return html
   } catch {
     return md
   }
@@ -1307,20 +1502,51 @@ defineExpose({
 
     .text {
       line-height: 1.7;
-      white-space: normal;
+      white-space: normal; /* Let markdown handle line breaks */
+      word-wrap: break-word;
       font-size: 14px;
       color: var(--color-text-1);
+      display: block; /* Ensure block-level display */
+
+      /* Ensure streaming cursor is inline with content */
+      > span:first-child {
+        display: inline;
+      }
 
       /* Paragraphs - better spacing */
       :deep(p) {
         margin: 0 0 12px 0;
         line-height: 1.7;
         color: var(--color-text-1);
+        display: block; /* Ensure paragraphs are block-level */
+      }
+
+      :deep(p:first-child) {
+        margin-top: 0;
       }
 
       :deep(p:last-child) {
         margin-bottom: 0;
+      }
+      
+      /* Ensure last paragraph's content allows inline cursor */
+      :deep(p:last-child) {
+        display: block;
+      }
+      
+      /* Make sure inline elements in last paragraph allow cursor on same line */
+      :deep(p:last-child > *:last-child) {
         display: inline;
+      }
+
+      /* Handle line breaks within paragraphs */
+      :deep(br) {
+        line-height: 1.7;
+      }
+
+      /* Spacing between paragraphs */
+      :deep(p + p) {
+        margin-top: 12px;
       }
 
       /* Headings - highlighted with colors */
@@ -1365,6 +1591,7 @@ defineExpose({
         margin: 12px 0;
         padding-left: 24px;
         line-height: 1.8;
+        display: block;
       }
 
       :deep(ul) {
@@ -1376,13 +1603,28 @@ defineExpose({
       }
 
       :deep(li) {
-        margin: 6px 0;
+        margin: 8px 0;
         padding-left: 4px;
         color: var(--color-text-1);
+        display: list-item;
+        line-height: 1.7;
       }
 
       :deep(li::marker) {
         color: var(--color-primary, #111111);
+      }
+
+      /* Ensure list items have proper spacing */
+      :deep(li + li) {
+        margin-top: 8px;
+      }
+
+      /* Spacing between list and other elements */
+      :deep(p + ul),
+      :deep(p + ol),
+      :deep(ul + p),
+      :deep(ol + p) {
+        margin-top: 12px;
       }
 
       /* Nested lists */
@@ -1728,7 +1970,7 @@ defineExpose({
 
 /* Streaming cursor animation */
 .streaming-cursor {
-  display: inline;
+  display: inline-block;
   font-family: monospace;
   color: var(--color-primary, #111111);
   font-size: 14px;
@@ -1736,7 +1978,7 @@ defineExpose({
   animation: blink 0.8s step-end infinite;
   margin-left: 2px;
   vertical-align: baseline;
-  line-height: inherit;
+  line-height: 1.7;
 }
 
 @keyframes typingDot {

@@ -2,14 +2,15 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, validator
 from app.utils.lm_studio import lm_client
-from app.utils.database import DatabaseClient
+from app.utils.customer_database import CustomerDatabaseClient
 import logging
 import json
 import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/customer", tags=["Customer Chatbot"])
-db_client = DatabaseClient()
+# Use restricted customer database client - blocks admin queries
+db_client = CustomerDatabaseClient()
 
 # Security constants
 MAX_MESSAGE_LENGTH = 1000  # Maximum characters per message

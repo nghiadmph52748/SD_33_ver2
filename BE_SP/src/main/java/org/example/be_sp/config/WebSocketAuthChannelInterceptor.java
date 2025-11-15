@@ -1,5 +1,6 @@
 package org.example.be_sp.config;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.example.be_sp.entity.KhachHang;
@@ -22,10 +23,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import io.jsonwebtoken.ExpiredJwtException;
 
 /**
  * Interceptor cho kênh WebSocket để xác thực người dùng qua JWT token
  * Xác thực JWT token trong quá trình bắt tay WebSocket (lệnh CONNECT)
+ * Cho phép token expired - session sẽ valid cho đến khi đóng
  */
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
 public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
@@ -82,16 +85,37 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                     throw buildUnauthorizedException("Token đã bị thu hồi");
                 }
 
-                // Xác thực và trích xuất username từ token
-                String username = jwtUtils.getUsernameFromToken(token);
+                String username = null;
+                List<String> roles = Collections.emptyList();
+                boolean tokenExpired = false;
 
-                if (username == null || jwtUtils.isTokenExpired(token)) {
-                    log.error("[WebSocket Auth] Token expired or invalid");
-                    throw buildUnauthorizedException("Token hết hạn hoặc không hợp lệ");
+                try {
+                    // Thử parse token bình thường
+                    username = jwtUtils.getUsernameFromToken(token);
+                    roles = jwtUtils.getRolesFromToken(token);
+                    tokenExpired = jwtUtils.isTokenExpired(token);
+                } catch (ExpiredJwtException e) {
+                    // Token expired nhưng vẫn có thể lấy thông tin từ claims
+                    tokenExpired = true;
+                    username = e.getClaims().getSubject();
+                    Object rolesObj = e.getClaims().get("roles");
+                    if (rolesObj instanceof List<?>) {
+                        roles = ((List<?>) rolesObj).stream()
+                                .map(Object::toString)
+                                .collect(java.util.stream.Collectors.toList());
+                    }
+                    log.warn("[WebSocket Auth] Token expired but extracting info from claims. Username: {}", username);
                 }
 
-                // Lấy roles từ token trước
-                List<String> roles = jwtUtils.getRolesFromToken(token);
+                if (username == null || username.isEmpty()) {
+                    log.error("[WebSocket Auth] Token invalid - cannot extract username");
+                    throw buildUnauthorizedException("Token không hợp lệ - không thể trích xuất username");
+                }
+
+                // Cho phép token expired cho WebSocket - session sẽ valid cho đến khi đóng
+                if (tokenExpired) {
+                    log.warn("[WebSocket Auth] Token expired but allowing connection - session will remain valid until disconnect. Username: {}", username);
+                }
                 List<SimpleGrantedAuthority> authorities = roles.stream()
                         .map(SimpleGrantedAuthority::new)
                         .toList();
