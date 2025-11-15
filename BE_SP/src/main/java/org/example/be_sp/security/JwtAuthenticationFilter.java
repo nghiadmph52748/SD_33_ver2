@@ -92,7 +92,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 List<String> roles = jwtUtils.getRolesFromToken(jwt);
 
                 // Debug: in ra console (có thể xóa sau)
-                System.out.println(">>> Roles from token: " + roles);
+                System.out.println("Roles from token: " + roles);
 
                 // Kiểm tra xem có phải customer không
                 boolean isCustomer = roles.stream()

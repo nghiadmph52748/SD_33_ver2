@@ -21,7 +21,7 @@
 
         <a-form-item :label="t('invoice.common.time')">
           <a-space>
-            <a-range-picker v-model="filters.dateRange" style="width: 280px" @change="handleDateChange" />
+          <a-range-picker v-model="filters.dateRange" style="width: 280px" @change="handleDateChange" />
             <a-button @click="filterToday" type="outline" size="small">
               {{ t('invoice.common.today') }}
             </a-button>
@@ -62,7 +62,7 @@
                   {{ t('invoice.common.all') }}
                   <a-badge :count="totalInvoices" :number-style="{ backgroundColor: '#165dff' }" />
                 </span>
-              </template>
+            </template>
             </a-tab-pane>
             <a-tab-pane key="waiting_confirmation">
               <template #title>
@@ -70,7 +70,7 @@
                   {{ t('invoice.common.waitingConfirmation') }}
                   <a-badge :count="waitingConfirmationInvoices" :number-style="{ backgroundColor: '#ff7d00' }" />
                 </span>
-              </template>
+            </template>
             </a-tab-pane>
             <a-tab-pane key="waiting_delivery">
               <template #title>
@@ -86,7 +86,7 @@
                   {{ t('invoice.common.shipping') }}
                   <a-badge :count="shippingInvoices" :number-style="{ backgroundColor: '#165dff' }" />
                 </span>
-              </template>
+            </template>
             </a-tab-pane>
             <a-tab-pane key="paid">
               <template #title>
@@ -94,7 +94,7 @@
                   {{ t('invoice.common.paid') }}
                   <a-badge :count="paidInvoices" :number-style="{ backgroundColor: '#00b42a' }" />
                 </span>
-              </template>
+      </template>
             </a-tab-pane>
             <a-tab-pane key="cancelled">
               <template #title>
@@ -510,9 +510,10 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const formatDate = (dateString: string | Date) => {
+const formatDate = (dateString: string | Date | null | undefined) => {
   if (!dateString) return 'N/A'
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  if (isNaN(date.getTime())) return 'N/A' // Invalid date
   return date.toLocaleString('vi-VN')
 }
 
@@ -640,31 +641,38 @@ const fetchInvoices = async () => {
       }
       
       // Format ngayTao - use createAt if ngayTao is not available
-      let ngayTaoValue = invoice.ngayTao || invoice.createAt
+      // Don't fallback to current time - use null if not available
+      let ngayTaoValue: string | null = null
+      if (invoice.ngayTao) {
+        ngayTaoValue = invoice.ngayTao
+      } else if (invoice.createAt) {
+        ngayTaoValue = invoice.createAt
+      }
+      
+      // Format date string if available
       if (ngayTaoValue && typeof ngayTaoValue === 'string') {
         // If it's a date string, ensure it's in ISO format
         if (!ngayTaoValue.includes('T')) {
-          // If it's just a date (YYYY-MM-DD), add time
+          // If it's just a date (YYYY-MM-DD), add time at midnight
           ngayTaoValue = `${ngayTaoValue}T00:00:00`
         }
-      } else if (!ngayTaoValue) {
-        ngayTaoValue = new Date().toISOString()
       }
+      // If ngayTaoValue is still null, leave it as null (don't use current time)
       
       return {
-        id: invoice.id,
+      id: invoice.id,
         maHoaDon: invoice.maHoaDon || `HD${String(invoice.id || 0).padStart(6, '0')}`,
-        tenNhanVien: invoice.tenNhanVien || 'Chưa xác định',
+      tenNhanVien: invoice.tenNhanVien || 'Chưa xác định',
         soDienThoaiKhachHang: invoice.soDienThoaiKhachHang || invoice.soDienThoai || invoice.soDienThoaiNguoiNhan || 'Chưa có',
         tenKhachHang: invoice.tenKhachHang || invoice.tenNguoiNhan || 'Khách lẻ',
-        moTaLoaiDon: invoice.moTaLoaiDon || (invoice.loaiDon ? 'Bán hàng online' : 'Bán hàng tại quầy'),
+      moTaLoaiDon: invoice.moTaLoaiDon || (invoice.loaiDon ? 'Bán hàng online' : 'Bán hàng tại quầy'),
         thoiGianTao: ngayTaoValue,
         ngayTao: ngayTaoValue,
         // Use tongTienSauGiam from API if available, otherwise use calculated value
         tongTienSauGiam: invoice.tongTienSauGiam && invoice.tongTienSauGiam > 0 ? invoice.tongTienSauGiam : calculatedTongTien,
         tongTien: invoice.tongTien && invoice.tongTien > 0 ? invoice.tongTien : calculatedTongTien,
-        trangThai: invoice.trangThai,
-        ngayThanhToan: invoice.ngayThanhToan,
+      trangThai: invoice.trangThai,
+      ngayThanhToan: invoice.ngayThanhToan,
         hoaDonChiTiets: invoice.items || invoice.chiTietSanPham || [],
         trangThaiGiaoHang: invoice.trangThaiGiaoHang, // For filtering
       }

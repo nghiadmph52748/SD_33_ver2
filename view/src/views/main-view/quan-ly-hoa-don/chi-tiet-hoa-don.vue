@@ -27,6 +27,12 @@
           </template>
           Quay lại
         </a-button>
+        <a-button type="primary" @click="showUpdateModal" class="update-button">
+          <template #icon>
+            <icon-edit />
+          </template>
+          Cập nhật
+        </a-button>
         <a-button type="primary" @click="goToPrintPage" class="print-button">
           <template #icon>
             <icon-printer />
@@ -56,7 +62,7 @@
             <div class="stage-connector" v-if="index > 0" :class="{ active: stage.active || stage.completed }"></div>
             <div class="stage-icon" :class="{ active: stage.active, completed: stage.completed }">
               <component :is="stage.icon" v-if="stage.icon" />
-            </div>
+          </div>
             <div class="stage-label">{{ stage.label }}</div>
             <div class="stage-time">{{ stage.time }}</div>
           </div>
@@ -67,32 +73,32 @@
       <a-row :gutter="24" class="info-row">
         <!-- Thông tin đơn hàng - Left Column -->
         <a-col :span="12">
-          <a-card class="order-info-card" :bordered="false">
-            <template #title>
-              <div class="card-header">
-                <icon-file />
-                <span>Thông tin đơn hàng</span>
-              </div>
-            </template>
+      <a-card class="order-info-card" :bordered="false">
+        <template #title>
+          <div class="card-header">
+            <icon-file />
+            <span>Thông tin đơn hàng</span>
+          </div>
+        </template>
             <div class="info-list-compact">
               <div class="info-item-compact">
                 <span class="label">Mã đơn hàng:</span>
                 <a-tag color="blue" class="value-tag">
                   {{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}
                 </a-tag>
-              </div>
+                </div>
               <div class="info-item-compact">
                 <span class="label">Loại đơn:</span>
                 <a-tag :color="invoice.loaiDon ? 'blue' : 'green'" class="value-tag">
                   {{ invoice.loaiDon ? 'online' : 'tại quầy' }}
                 </a-tag>
-              </div>
+                </div>
               <div class="info-item-compact">
-                <span class="label">Trạng thái:</span>
+                  <span class="label">Trạng thái:</span>
                 <a-tag :color="getStatusColor(invoice.trangThai)" class="value-tag">
-                  {{ getStatusText(invoice.trangThai) }}
-                </a-tag>
-              </div>
+                      {{ getStatusText(invoice.trangThai) }}
+                    </a-tag>
+                </div>
               <div class="info-item-compact">
                 <span class="label">Phiếu giảm giá:</span>
                 <span class="value">{{ invoice.maPhieuGiamGia || 'Không có' }}</span>
@@ -100,33 +106,33 @@
               <div class="info-item-compact">
                 <span class="label">Ngày đặt:</span>
                 <span class="value">{{ formatDateTime(invoice.ngayTao) }}</span>
-              </div>
             </div>
-          </a-card>
+            </div>
+      </a-card>
         </a-col>
 
         <!-- Thông tin khách hàng - Right Column -->
         <a-col :span="12">
-          <a-card class="customer-info-card" :bordered="false">
-            <template #title>
-              <div class="card-header">
-                <icon-user />
-                <span>Thông tin khách hàng</span>
-              </div>
-            </template>
+      <a-card class="customer-info-card" :bordered="false">
+        <template #title>
+          <div class="card-header">
+            <icon-user />
+            <span>Thông tin khách hàng</span>
+          </div>
+        </template>
             <div class="info-list-compact">
               <div class="info-item-compact">
-                <span class="label">Tên khách hàng:</span>
+                  <span class="label">Tên khách hàng:</span>
                 <span class="value">{{ invoice.tenNguoiNhan || invoice.tenKhachHang || 'Khách lẻ' }}</span>
-              </div>
+                </div>
               <div class="info-item-compact">
-                <span class="label">Số điện thoại:</span>
-                <span class="value">{{ invoice.soDienThoaiNguoiNhan || invoice.soDienThoai || 'Chưa có' }}</span>
-              </div>
+                  <span class="label">Số điện thoại:</span>
+                  <span class="value">{{ invoice.soDienThoaiNguoiNhan || invoice.soDienThoai || 'Chưa có' }}</span>
+                </div>
               <div class="info-item-compact">
-                <span class="label">Địa chỉ:</span>
+                  <span class="label">Địa chỉ:</span>
                 <span class="value">{{ invoice.diaChiNhanHang || invoice.diaChiNguoiNhan || invoice.diaChi || 'Chưa có' }}</span>
-              </div>
+                </div>
               <div class="info-item-compact">
                 <span class="label">Email:</span>
                 <span class="value">{{ invoice.emailNguoiNhan || invoice.email || 'N/A' }}</span>
@@ -134,11 +140,11 @@
               <div class="info-item-compact">
                 <span class="label">Ghi chú:</span>
                 <span class="value">{{ invoice.ghiChu || 'Không có' }}</span>
-              </div>
+            </div>
             </div>
           </a-card>
-        </a-col>
-      </a-row>
+          </a-col>
+        </a-row>
 
 
       <!-- Danh sách sản phẩm đã bán -->
@@ -170,12 +176,12 @@
         <a-col :span="12">
           <!-- Lịch sử thanh toán -->
           <a-card class="payment-history-card" :bordered="false">
-            <template #title>
-              <div class="card-header">
-                <icon-file />
+        <template #title>
+          <div class="card-header">
+            <icon-file />
                 <span>Lịch sử thanh toán</span>
-              </div>
-            </template>
+          </div>
+        </template>
             <div class="history-list">
               <div v-if="paymentHistory.length > 0">
                 <div v-for="(payment, index) in paymentHistory" :key="index" class="history-item">
@@ -196,7 +202,7 @@
                 <p>Chưa có lịch sử thanh toán</p>
               </div>
             </div>
-          </a-card>
+      </a-card>
 
           <!-- Lịch sử hóa đơn -->
           <a-card class="invoice-history-card" :bordered="false" style="margin-top: 16px">
@@ -230,33 +236,33 @@
 
         <!-- Right Column: Summary -->
         <a-col :span="12">
-          <a-card class="summary-card" :bordered="false">
-            <template #title>
-              <div class="card-header">
-                <icon-file />
-                <span>Tổng kết đơn hàng</span>
-              </div>
-            </template>
-            <div class="summary-content">
+      <a-card class="summary-card" :bordered="false">
+        <template #title>
+          <div class="card-header">
+            <icon-file />
+            <span>Tổng kết đơn hàng</span>
+          </div>
+        </template>
+        <div class="summary-content">
               <div class="summary-section">
-                <div class="summary-row">
+          <div class="summary-row">
                   <div class="summary-label-wrapper">
                     <icon-file class="summary-icon" />
-                    <span class="summary-label">Tổng tiền hàng:</span>
-                  </div>
+            <span class="summary-label">Tổng tiền hàng:</span>
+          </div>
                   <span class="summary-value">{{ formatCurrency(calculatedTongTien) }}</span>
-                </div>
-                <div class="summary-row" v-if="invoice.giaTriGiamGia && invoice.giaTriGiamGia > 0">
+          </div>
+          <div class="summary-row" v-if="invoice.giaTriGiamGia && invoice.giaTriGiamGia > 0">
                   <div class="summary-label-wrapper">
                     <icon-check-circle class="summary-icon" />
-                    <span class="summary-label">Giảm giá:</span>
+            <span class="summary-label">Giảm giá:</span>
                   </div>
-                  <span class="summary-value discount">-{{ formatCurrency(invoice.giaTriGiamGia) }}</span>
-                </div>
-                <div class="summary-row total-row">
+            <span class="summary-value discount">-{{ formatCurrency(invoice.giaTriGiamGia) }}</span>
+          </div>
+          <div class="summary-row total-row">
                   <div class="summary-label-wrapper">
                     <icon-check-circle class="summary-icon" />
-                    <span class="summary-label">Thành tiền:</span>
+            <span class="summary-label">Thành tiền:</span>
                   </div>
                   <span class="summary-value total">{{ formatCurrency(calculatedTongTienSauGiam) }}</span>
                 </div>
@@ -264,18 +270,12 @@
                   <icon-check-circle class="status-icon" />
                   <span>Đã xác nhận</span>
                 </div>
-              </div>
-            </div>
-          </a-card>
+          </div>
+        </div>
+      </a-card>
         </a-col>
       </a-row>
 
-      <!-- Action Buttons -->
-      <div class="action-buttons">
-        <a-button @click="goBack" class="action-btn back-btn">Quay lại</a-button>
-        <a-button type="primary" @click="showUpdateModal" class="action-btn update-btn">Cập nhật</a-button>
-        <a-button type="primary" @click="goToPrintPage" class="action-btn print-btn">In hóa đơn</a-button>
-      </div>
     </div>
 
     <!-- Error State -->
@@ -1204,9 +1204,21 @@ onMounted(() => {
 }
 
 .back-button,
+.update-button,
 .print-button {
   height: 36px;
   padding: 0 16px;
+}
+
+.update-button {
+  background-color: #165dff;
+  border-color: #165dff;
+  color: white;
+}
+
+.update-button:hover {
+  background-color: #0e42d2;
+  border-color: #0e42d2;
 }
 
 /* Loading */
@@ -1459,53 +1471,6 @@ onMounted(() => {
   color: #00b42a;
 }
 
-/* Action Buttons */
-.action-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #f2f3f5;
-}
-
-.action-btn {
-  min-width: 120px;
-}
-
-.back-btn {
-  background-color: #f2f3f5;
-  color: #1d2129;
-  border-color: #e5e6eb;
-}
-
-.back-btn:hover {
-  background-color: #e5e6eb;
-  border-color: #c9cdd4;
-  color: #1d2129;
-}
-
-.update-btn {
-  background-color: #165dff;
-  border-color: #165dff;
-  color: white;
-}
-
-.update-btn:hover {
-  background-color: #0e42d2;
-  border-color: #0e42d2;
-}
-
-.print-btn {
-  background-color: #165dff;
-  border-color: #165dff;
-  color: white;
-}
-
-.print-btn:hover {
-  background-color: #0e42d2;
-  border-color: #0e42d2;
-}
 
 /* Update Modal */
 .update-modal :deep(.arco-modal-header) {

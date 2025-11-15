@@ -1222,7 +1222,7 @@ onMounted(async () => {
   if (!userStore.isAuthenticated) {
     clearChatHistory()
   } else {
-    loadHistory()
+  loadHistory()
   }
   
   await nextTick()
