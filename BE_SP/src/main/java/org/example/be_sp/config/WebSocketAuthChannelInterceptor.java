@@ -63,8 +63,23 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
         
         // Xử lý CONNECT command - xác thực JWT token
         if (StompCommand.CONNECT.equals(command)) {
+            List<String> qrAnonHeaders = accessor.getNativeHeader("x-qr-anon");
+            boolean allowAnonymousQr = qrAnonHeaders != null && qrAnonHeaders.stream()
+                    .anyMatch(value -> "true".equalsIgnoreCase(value));
+
             // Trích xuất JWT token từ header trong quá trình CONNECT
             List<String> authHeaders = accessor.getNativeHeader("Authorization");
+
+            if ((authHeaders == null || authHeaders.isEmpty()) && allowAnonymousQr) {
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        "qr-anonymous-client",
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_QR_VIEWER")));
+                accessor.setUser(authentication);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.info("[WebSocket Auth] Allowing anonymous QR viewer connection");
+                return message;
+            }
 
             if (authHeaders == null || authHeaders.isEmpty()) {
                 log.error("[WebSocket Auth] Missing Authorization header for CONNECT");

@@ -1,0 +1,383 @@
+package org.example.be_sp.service;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.example.be_sp.entity.HoaDon;
+import org.example.be_sp.entity.QRSession;
+import org.example.be_sp.model.request.CreateQRSessionRequest;
+import org.example.be_sp.model.response.QRSessionEvent;
+import org.example.be_sp.model.response.QRSessionResponse;
+import org.example.be_sp.repository.HoaDonRepository;
+import org.example.be_sp.repository.QRSessionRepository;
+import org.example.be_sp.service.upload.UploadImageToCloudinary;
+import org.example.be_sp.util.QRGeneration;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@Slf4j
+public class QRSessionService {
+
+    private static final int SESSION_TIMEOUT_MINUTES = 15;
+
+    @Autowired
+    private QRSessionRepository qrSessionRepository;
+
+    @Autowired
+    private HoaDonRepository hoaDonRepository;
+
+    @Autowired
+    private VietQRService vietQRService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private Environment env;
+
+    @Autowired
+    private UploadImageToCloudinary uploadImageToCloudinary;
+
+    @Autowired(required = false)
+    private SimpMessagingTemplate messagingTemplate;
+
+    @Transactional
+    public QRSessionResponse createSession(CreateQRSessionRequest request) {
+        try {
+            HoaDon hoaDon = resolveHoaDon(request.getInvoiceId());
+            Optional<QRSession> existingSession = findExistingSession(request, hoaDon);
+
+            QRSession session = existingSession.orElseGet(QRSession::new);
+            boolean isNewSession = session.getId() == null;
+
+            if (isNewSession) {
+                session.setSessionId(UUID.randomUUID().toString());
+                session.setCreatedAt(LocalDateTime.now());
+            }
+
+            applyRequestDataToSession(session, request, hoaDon);
+
+            QRSession saved = qrSessionRepository.save(session);
+            publishSessionUpdate(saved);
+            return mapToDTO(saved);
+        } catch (Exception e) {
+            log.error("Failed to create QR session", e);
+            throw new RuntimeException("Failed to create QR session: " + e.getMessage(), e);
+        }
+    }
+
+    public QRSessionResponse getSession(String sessionId) {
+        QRSession session = qrSessionRepository.findBySessionId(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
+
+        if (session.getExpiresAt() != null && session.getExpiresAt().isBefore(LocalDateTime.now())
+                && !"PAID".equals(session.getStatus())) {
+            session.setStatus("EXPIRED");
+            QRSession saved = qrSessionRepository.save(session);
+            publishSessionUpdate(saved);
+            session = saved;
+        }
+
+        return mapToDTO(session);
+    }
+
+    public QRSessionResponse getLatestActiveSession() {
+        while (true) {
+            QRSession session = qrSessionRepository
+                    .findFirstByStatusAndExpiresAtAfterOrderByCreatedAtDesc("PENDING", LocalDateTime.now())
+                    .orElseThrow(() -> new RuntimeException("Không có phiên VietQR đang hoạt động"));
+
+            if (isSessionUsable(session)) {
+                return mapToDTO(session);
+            }
+
+            // Session không còn hợp lệ -> chuyển sang EXPIRED và tiếp tục tìm session khác
+            session.setStatus("EXPIRED");
+            session.setExpiresAt(LocalDateTime.now());
+            qrSessionRepository.save(session);
+            publishSessionUpdate(session);
+        }
+    }
+
+    @Transactional
+    public QRSessionResponse updateSession(String sessionId, CreateQRSessionRequest request) {
+        try {
+            QRSession session = qrSessionRepository.findBySessionId(sessionId)
+                    .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
+
+            if ("PAID".equals(session.getStatus())) {
+                throw new RuntimeException("Cannot update session: payment already completed");
+            }
+
+            HoaDon hoaDon = resolveHoaDon(request.getInvoiceId());
+            // If invoice not supplied, keep existing
+            if (hoaDon == null) {
+                hoaDon = session.getIdHoaDon();
+            }
+
+            applyRequestDataToSession(session, request, hoaDon);
+
+            QRSession saved = qrSessionRepository.save(session);
+            publishSessionUpdate(saved);
+            return mapToDTO(saved);
+        } catch (Exception e) {
+            log.error("Failed to update QR session {}", sessionId, e);
+            throw new RuntimeException("Failed to update QR session: " + e.getMessage(), e);
+        }
+    }
+
+    @Transactional
+    public void updateStatus(String sessionId, String status) {
+        QRSession session = qrSessionRepository.findBySessionId(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
+        session.setStatus(status);
+        if (!"PAID".equals(status)) {
+            session.setExpiresAt(LocalDateTime.now());
+            clearSessionFinancials(session);
+        }
+        QRSession saved = qrSessionRepository.save(session);
+        publishSessionUpdate(saved);
+    }
+
+    @Transactional
+    public QRSessionResponse generateQrForSession(String sessionId) {
+        QRSession session = qrSessionRepository.findBySessionId(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
+
+        if ("PAID".equals(session.getStatus())) {
+            throw new RuntimeException("Cannot generate QR for a paid session");
+        }
+
+        if (session.getFinalPrice() == null || session.getFinalPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Final price must be greater than zero to generate QR");
+        }
+
+        if (session.getQrCodeUrl() == null) {
+            CreateQRSessionRequest request = new CreateQRSessionRequest();
+            request.setOrderCode(session.getOrderCode());
+            request.setFinalPrice(session.getFinalPrice());
+            request.setSubtotal(session.getSubtotal());
+            request.setDiscountAmount(session.getDiscountAmount());
+            request.setShippingFee(session.getShippingFee());
+
+            String qrUrl = generateQrUrl(session.getSessionId(), request);
+            session.setQrCodeUrl(qrUrl);
+            if (!"PAID".equals(session.getStatus())) {
+                session.setStatus("PENDING");
+            }
+            QRSession saved = qrSessionRepository.save(session);
+            log.info("Generated QR for existing session {}", session.getSessionId());
+            publishSessionUpdate(saved);
+            session = saved;
+        }
+
+        return mapToDTO(session);
+    }
+
+    private void applyRequestDataToSession(QRSession session, CreateQRSessionRequest request, HoaDon hoaDon)
+            throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        session.setOrderCode(request.getOrderCode());
+        if (hoaDon != null) {
+            session.setIdHoaDon(hoaDon);
+        }
+        session.setExpiresAt(now.plusMinutes(SESSION_TIMEOUT_MINUTES));
+
+        if (!"PAID".equals(session.getStatus())) {
+            session.setStatus("PENDING");
+        }
+
+        String cartDataJson = objectMapper.writeValueAsString(request.getItems());
+        session.setCartDataJson(cartDataJson);
+        session.setSubtotal(request.getSubtotal());
+        session.setDiscountAmount(request.getDiscountAmount());
+        session.setShippingFee(request.getShippingFee());
+        session.setFinalPrice(request.getFinalPrice());
+    }
+
+    private HoaDon resolveHoaDon(Integer invoiceId) {
+        if (invoiceId == null) {
+            return null;
+        }
+        return hoaDonRepository.findById(invoiceId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));
+    }
+
+    private Optional<QRSession> findExistingSession(CreateQRSessionRequest request, HoaDon hoaDon) {
+        if (hoaDon != null) {
+            return qrSessionRepository.findByIdHoaDon_Id(hoaDon.getId());
+        }
+        if (request.getOrderCode() != null) {
+            return qrSessionRepository.findByOrderCode(request.getOrderCode());
+        }
+        return Optional.empty();
+    }
+
+    private String generateQrUrl(String sessionId, CreateQRSessionRequest request) {
+        try {
+            VietQRService.VietQRRequest vietQRRequest = new VietQRService.VietQRRequest();
+            vietQRRequest.setAmount(request.getFinalPrice() != null ? request.getFinalPrice().longValue() : 0L);
+            vietQRRequest.setAddInfo("Thanh toan don hang " + request.getOrderCode());
+
+            VietQRService.VietQRResponse vietQRResponse = vietQRService.createPaymentQR(vietQRRequest);
+
+            if (vietQRResponse.getData() != null && vietQRResponse.getData().getQrDataURL() != null) {
+                return vietQRResponse.getData().getQrDataURL();
+            }
+            throw new RuntimeException("VietQR generation failed: " + vietQRResponse.getDesc());
+        } catch (Exception e) {
+            log.warn("VietQR generation failed, using fallback QR generation: {}", e.getMessage());
+            String qrContent = generateQRContent(sessionId);
+            byte[] qrCodeBytes = QRGeneration.generateQRCode(qrContent);
+            return uploadQRCodeToCloudinary(qrCodeBytes);
+        }
+    }
+
+    private String generateQRContent(String sessionId) {
+        String frontendUrl = env.getProperty("app.frontendUrl", "http://localhost:5173");
+        return frontendUrl + "/payment/qr?session=" + sessionId;
+    }
+
+    private String uploadQRCodeToCloudinary(byte[] qrCodeBytes) {
+        try {
+            return uploadImageToCloudinary.uploadQrCode(qrCodeBytes);
+        } catch (Exception e) {
+            log.error("Failed to upload QR code to Cloudinary", e);
+            throw new RuntimeException("Failed to upload QR code: " + e.getMessage(), e);
+        }
+    }
+
+    private QRSessionResponse mapToDTO(QRSession session) {
+        List<QRSessionResponse.CartItemResponse> items = null;
+        try {
+            if (session.getCartDataJson() != null) {
+                List<CreateQRSessionRequest.CartItemDTO> cartItems = objectMapper.readValue(
+                        session.getCartDataJson(),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class,
+                                CreateQRSessionRequest.CartItemDTO.class));
+
+                items = cartItems.stream().map(item -> QRSessionResponse.CartItemResponse.builder()
+                        .productId(item.getProductId())
+                        .productName(item.getProductName())
+                        .price(item.getPrice())
+                        .discount(item.getDiscount())
+                        .quantity(item.getQuantity())
+                        .image(item.getImage())
+                        .tenMauSac(item.getTenMauSac())
+                        .maMau(item.getMaMau())
+                        .tenKichThuoc(item.getTenKichThuoc())
+                        .tenDeGiay(item.getTenDeGiay())
+                        .tenChatLieu(item.getTenChatLieu())
+                        .build()).collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse cart data JSON", e);
+        }
+
+        return QRSessionResponse.builder()
+                .qrSessionId(session.getSessionId())
+                .qrCodeUrl(session.getQrCodeUrl())
+                .orderCode(session.getOrderCode())
+                .items(items)
+                .subtotal(session.getSubtotal())
+                .discountAmount(session.getDiscountAmount())
+                .shippingFee(session.getShippingFee())
+                .finalPrice(session.getFinalPrice())
+                .status(session.getStatus())
+                .expiresAt(session.getExpiresAt())
+                .createdAt(session.getCreatedAt())
+                .build();
+    }
+
+    private void publishSessionUpdate(QRSession session) {
+        if (messagingTemplate == null) {
+            return;
+        }
+
+        QRSessionEvent event = QRSessionEvent.builder()
+                .sessionId(session.getSessionId())
+                .orderCode(session.getOrderCode())
+                .status(session.getStatus())
+                .finalPrice(session.getFinalPrice())
+                .subtotal(session.getSubtotal())
+                .discountAmount(session.getDiscountAmount())
+                .shippingFee(session.getShippingFee())
+                .qrCodeUrl(session.getQrCodeUrl())
+                .expiresAt(session.getExpiresAt())
+                .createdAt(session.getCreatedAt())
+                .build();
+
+        messagingTemplate.convertAndSend("/topic/qr-session", event);
+    }
+
+    private boolean isSessionUsable(QRSession session) {
+        if (!"PENDING".equals(session.getStatus())) {
+            return false;
+        }
+        if (session.getFinalPrice() == null || session.getFinalPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        }
+        if (session.getCartDataJson() == null || session.getCartDataJson().isBlank()) {
+            return false;
+        }
+        return true;
+    }
+
+    private void clearSessionFinancials(QRSession session) {
+        session.setQrCodeUrl(null);
+        session.setCartDataJson(null);
+        session.setSubtotal(BigDecimal.ZERO);
+        session.setDiscountAmount(BigDecimal.ZERO);
+        session.setShippingFee(BigDecimal.ZERO);
+        session.setFinalPrice(BigDecimal.ZERO);
+    }
+
+    @Transactional
+    public void cancelSessionsByInvoice(Integer invoiceId) {
+        if (invoiceId == null) {
+            return;
+        }
+        List<QRSession> sessions = qrSessionRepository.findAllByIdHoaDon_Id(invoiceId);
+        if (sessions.isEmpty()) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (QRSession session : sessions) {
+            session.setStatus("EXPIRED");
+            session.setExpiresAt(now);
+            clearSessionFinancials(session);
+        }
+        qrSessionRepository.saveAll(sessions);
+        sessions.forEach(this::publishSessionUpdate);
+    }
+
+    @Scheduled(fixedDelay = 60000)
+    public void expireStaleSessions() {
+        LocalDateTime now = LocalDateTime.now();
+        List<QRSession> staleSessions = qrSessionRepository.findByStatusAndExpiresAtBefore("PENDING", now);
+        if (staleSessions.isEmpty()) {
+            return;
+        }
+        staleSessions.forEach(session -> {
+            session.setStatus("EXPIRED");
+            session.setExpiresAt(now);
+            clearSessionFinancials(session);
+        });
+        qrSessionRepository.saveAll(staleSessions);
+        staleSessions.forEach(this::publishSessionUpdate);
+    }
+}
+

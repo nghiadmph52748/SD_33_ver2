@@ -213,3 +213,66 @@ export const getInvoiceTimeline = (idHoaDon: number) =>
   requestJson<TimelineEntry[]>(`/api/pos/timeline/${idHoaDon}`, {
     method: 'GET',
   })
+
+// ==================== QR Session APIs ====================
+
+export interface QRSessionItemPayload {
+  productId: string
+  productName: string
+  price: number
+  discount: number
+  quantity: number
+  image?: string
+  tenMauSac?: string
+  maMau?: string
+  tenKichThuoc?: string
+  tenDeGiay?: string
+  tenChatLieu?: string
+}
+
+export interface CreateQrSessionPayload {
+  orderCode: string
+  invoiceId?: number
+  items: QRSessionItemPayload[]
+  subtotal: number
+  discountAmount: number
+  shippingFee: number
+  finalPrice: number
+  customerId?: string | null
+}
+
+export interface QRSessionResponse {
+  qrSessionId: string
+  qrCodeUrl: string
+  orderCode: string
+  items: QRSessionItemPayload[]
+  subtotal: number
+  discountAmount: number
+  shippingFee: number
+  finalPrice: number
+  status: string
+  expiresAt?: string
+  createdAt?: string
+}
+
+export const createQrSession = (payload: CreateQrSessionPayload) =>
+  requestJson<QRSessionResponse>('/api/pos/qr-session', {
+    method: 'POST',
+    data: payload,
+  })
+
+export const updateQrSession = (sessionId: string, payload: CreateQrSessionPayload) =>
+  requestJson<QRSessionResponse>(`/api/pos/qr-session/${sessionId}`, {
+    method: 'PUT',
+    data: payload,
+  })
+
+export const cancelQrSession = (sessionId: string) =>
+  requestJson<void>(`/api/pos/qr-session/${sessionId}/cancel`, {
+    method: 'POST',
+  })
+
+export const generateQrForSession = (sessionId: string) =>
+  requestJson<QRSessionResponse>(`/api/pos/qr-session/${sessionId}/qr`, {
+    method: 'POST',
+  })

@@ -45,13 +45,13 @@ public class ResponseObject<T> {
     }
 
     //Phản hồi lỗi:
-    public static ResponseObject error(String errorMessage) {
-        return new ResponseObject(false, null, errorMessage);
+    public static <T> ResponseObject<T> error(String errorMessage) {
+        return new ResponseObject<>(false, null, errorMessage);
     }
 
     //Phản hồi thành công:
-    public static ResponseObject success(Object data, String message) {
-        return new ResponseObject(true, data, message);
+    public static <T> ResponseObject<T> success(T data, String message) {
+        return new ResponseObject<>(true, data, message);
     }
 
 }

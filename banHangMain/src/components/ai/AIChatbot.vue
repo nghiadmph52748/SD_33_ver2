@@ -242,6 +242,8 @@ const messagesContainerStyle = ref<Record<string, string>>({})
 const currentSessionId = ref<string>('')
 const chatSessions = ref<Record<string, ChatMessage[]>>({})
 const sessionNames = ref<Record<string, string>>({})
+const loadedConversationIds = ref<Set<number>>(new Set())
+const processedMessageIds = ref<Set<number | string>>(new Set())
 
 const userInitials = computed(() => {
   const displayName = (userStore.name || userStore.profile?.tenTaiKhoan || '').trim()
@@ -620,22 +622,12 @@ async function sendMessage(text: string = input.value) {
 
   // If in staff chat mode, send to staff instead of AI
   if (props.staffChatMode && props.staffReceiverId) {
-    // Add user message to chat immediately
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      role: 'user',
-      content: text.trim(),
-      timestamp: new Date().toLocaleTimeString('vi-VN'),
-    }
-    messages.value.push(userMessage)
     const messageText = text.trim()
     input.value = ''
-    await nextTick()
-    scrollToBottom()
-    saveHistory()
     
     try {
-      // Send to staff via WebSocket
+      // Send to staff via WebSocket - it will add the message to chatStore
+      // The watcher will pick it up and add to messages.value
       await chatStore.sendMessageViaWebSocket({
         receiverId: props.staffReceiverId,
         content: messageText,
@@ -645,11 +637,6 @@ async function sendMessage(text: string = input.value) {
       return
     } catch (error: any) {
       Message.error('Không thể gửi tin nhắn đến nhân viên. Vui lòng thử lại.')
-      // Remove the message if sending failed
-      const index = messages.value.findIndex((m) => m.id === userMessage.id)
-      if (index >= 0) {
-        messages.value.splice(index, 1)
-      }
       input.value = messageText // Restore input
       return
     }
@@ -957,16 +944,19 @@ function askQuestion(question: string) {
   sendMessage(question)
 }
 
-// Watch for staff chat mode activation and load existing messages
+// Watch for staff chat mode activation and load existing messages (only once per conversation)
 watch(
   () => [props.staffChatMode, props.staffConversationId],
   async ([isStaffMode, convId]) => {
-    if (!isStaffMode || !convId) return
+    if (!isStaffMode || !convId || typeof convId !== 'number') return
+    
+    // Only load once per conversation
+    if (loadedConversationIds.value.has(convId)) return
     
     // Load existing messages from the conversation
     if (chatStore.activeMessages && Array.isArray(chatStore.activeMessages)) {
-      // Keep the initial AI greeting and AI conversation history
-      // Just add staff messages after the redirect message
+      // Mark this conversation as loaded
+      loadedConversationIds.value.add(convId)
       
       // Add all messages from the conversation
       chatStore.activeMessages.forEach((staffMsg: any) => {
@@ -1071,51 +1061,108 @@ watch(
       
       if (!isRelevant) return
       
-      // Check if message already exists
+      // Check if message already exists - improved duplicate detection
       const msgId = staffMsg.id || staffMsg.maTinNhan
+      const msgContent = staffMsg.content || ''
+      const msgSentAt = staffMsg.sentAt ? new Date(staffMsg.sentAt).getTime() : 0
+      
+      // Create a unique key for this message
+      const messageKey = msgId ? `${msgId}` : `${staffMsg.senderId}-${msgContent}-${msgSentAt}`
+      
+      // First check if we've already processed this message
+      if (processedMessageIds.value.has(messageKey)) {
+        console.log('⚠️ Skipped already processed message:', msgContent.substring(0, 50))
+        return
+      }
+      
+      // Then check if message exists in messages array
       const exists = messages.value.some((msg) => {
-        if (msgId && typeof msg.id === 'number') {
-          return msg.id === msgId
+        // Check by ID if available
+        if (msgId && typeof msg.id === 'number' && msg.id === msgId) {
+          return true
         }
-        // Also check by content and timestamp for duplicate detection
-        if (staffMsg.content && msg.content === staffMsg.content) {
-          const msgTime = staffMsg.sentAt ? new Date(staffMsg.sentAt).getTime() : 0
-          const existingTime = msg.timestamp ? new Date(msg.timestamp).getTime() : 0
-          if (Math.abs(msgTime - existingTime) < 5000) { // Within 5 seconds
-            return true
+        
+        // Check by content + role + timestamp (within 3 seconds)
+        if (msgContent && msg.content === msgContent) {
+          const isUserMsg = staffMsg.senderId === userStore.id
+          if (msg.role === (isUserMsg ? 'user' : 'assistant')) {
+            if (msgSentAt > 0) {
+              const now = Date.now()
+              const timeDiff = Math.abs(now - msgSentAt)
+              if (timeDiff < 3000) {
+                return true
+              }
+            }
           }
         }
+        
         return false
       })
       
       if (!exists) {
+        // Mark as processed
+        processedMessageIds.value.add(messageKey)
+        
         if (staffMsg.senderId === userStore.id) {
           // User message (customer sent this)
           const chatMsg: ChatMessage = {
             id: msgId || Date.now(),
             role: 'user',
-            content: staffMsg.content || '',
+            content: msgContent,
             timestamp: staffMsg.sentAt ? new Date(staffMsg.sentAt).toLocaleTimeString('vi-VN') : new Date().toLocaleTimeString('vi-VN'),
           }
           messages.value.push(chatMsg)
           console.log('✅ Added user message to AI chat:', chatMsg.content.substring(0, 50))
+          nextTick(() => scrollToBottom())
+          saveHistory()
         } else if (staffMsg.receiverId === userStore.id) {
           // Staff message (staff sent this to customer, displayed as assistant)
           const chatMsg: ChatMessage = {
             id: msgId || Date.now(),
             role: 'assistant',
-            content: staffMsg.content || '',
+            content: msgContent,
             timestamp: staffMsg.sentAt ? new Date(staffMsg.sentAt).toLocaleTimeString('vi-VN') : new Date().toLocaleTimeString('vi-VN'),
           }
           messages.value.push(chatMsg)
           console.log('✅ Added staff message to AI chat:', chatMsg.content.substring(0, 50))
+          nextTick(() => scrollToBottom())
+          saveHistory()
         }
-        nextTick(() => scrollToBottom())
-        saveHistory()
+      } else {
+        // Mark as processed even if it exists to avoid future checks
+        processedMessageIds.value.add(messageKey)
+        console.log('⚠️ Skipped duplicate message:', msgContent.substring(0, 50))
       }
     })
   },
   { deep: true }
+)
+
+// Watch for user logout to clear chat history (frontend only - database preserved)
+watch(
+  () => userStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (!isAuthenticated) {
+      // User logged out - clear frontend chat history
+      // Database messages are preserved for admin to read
+      clearChatHistory()
+      messages.value = [
+        {
+          id: 0,
+          role: 'assistant',
+          content: 'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp gì cho bạn?',
+          timestamp: new Date().toLocaleTimeString('vi-VN'),
+        },
+      ]
+      currentSessionId.value = ''
+      chatSessions.value = {}
+      sessionNames.value = {}
+      loadedConversationIds.value.clear()
+      processedMessageIds.value.clear()
+      saveHistory()
+    }
+  },
+  { immediate: false }
 )
 
 function switchToSession(sessionId: string) {

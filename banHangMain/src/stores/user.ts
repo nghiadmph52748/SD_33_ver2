@@ -128,9 +128,19 @@ export const useUserStore = defineStore('user', {
       localStorage.removeItem(PROFILE_KEY)
       
       // Clear AI chat sessions from localStorage (preserve in database)
+      // These are frontend-only storage keys - database messages are preserved
       localStorage.removeItem('gearup_storefront_ai_sessions_v1')
       localStorage.removeItem('gearup_storefront_ai_session_names_v1')
       localStorage.removeItem('gearup_storefront_ai_chat_v1')
+      
+      // Reset chat store state (frontend only - database messages preserved)
+      if (typeof window !== 'undefined') {
+        import('./chat').then((module) => {
+          const useChatStore = module.default || module.useChatStore
+          const chatStore = useChatStore()
+          chatStore.resetState()
+        })
+      }
       
       // Load guest cart when logging out
       if (typeof window !== 'undefined') {
