@@ -109,14 +109,13 @@ public class HoaDonService {
                 hd.setMaNhanVien(hd.getIdNhanVien().getMaNhanVien());
             }
         }
-        // Tự động điền tên và mã phiếu giảm giá
+        // Tự động điền tên phiếu giảm giá (nhưng KHÔNG điền mã để tránh truncation)
         if (hd.getIdPhieuGiamGia() != null) {
             if (request.getTenPhieuGiamGia() == null || request.getTenPhieuGiamGia().trim().isEmpty()) {
                 hd.setTenPhieuGiamGia(hd.getIdPhieuGiamGia().getTenPhieuGiamGia());
             }
-            if (request.getMaPhieuGiamGia() == null || request.getMaPhieuGiamGia().trim().isEmpty()) {
-                hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
-            }
+            // Do NOT auto-populate maPhieuGiamGia - keep it NULL to avoid DB column truncation
+            // hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
         }
         // Map diaChiNhanHang từ request vào diaChiNguoiNhan của entity
         // (vì tên field khác nhau nên ModelMapper không tự động map)
@@ -418,14 +417,13 @@ public class HoaDonService {
         if (request.getIdPhieuGiamGia() != null) {
             hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
 
-            // Tự động điền tên và mã phiếu giảm giá nếu chưa có
+            // Tự động điền tên phiếu giảm giá nếu chưa có (nhưng KHÔNG điền mã)
             if (hd.getIdPhieuGiamGia() != null) {
                 if (hd.getTenPhieuGiamGia() == null || hd.getTenPhieuGiamGia().trim().isEmpty()) {
                     hd.setTenPhieuGiamGia(hd.getIdPhieuGiamGia().getTenPhieuGiamGia());
                 }
-                if (hd.getMaPhieuGiamGia() == null || hd.getMaPhieuGiamGia().trim().isEmpty()) {
-                    hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
-                }
+                // Do NOT auto-populate maPhieuGiamGia - keep it NULL to avoid DB column truncation
+                // hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
             }
         }
         if (request.getIdNhanVien() != null) {
