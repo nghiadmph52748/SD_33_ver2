@@ -91,7 +91,9 @@
           <!-- Price Column -->
           <template #price="{ record }">
             <div class="price-info">
-              <div class="price">{{ formatPrice(record.giaBan) }}</div>
+              <div class="price">
+                {{ formatPrice(calculateUnitPrice(record)) }}
+              </div>
               <div v-if="record.thanhTien" class="total">Thành tiền: {{ formatPrice(record.thanhTien) }}</div>
             </div>
           </template>
@@ -227,6 +229,23 @@ const formatPrice = (price: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(price)
+}
+
+// Calculate unit price: prefer thanhTien / soLuong if available, otherwise use giaBan
+const calculateUnitPrice = (record: any): number => {
+  // If we have thanhTien and soLuong, calculate unit price from them (most accurate)
+  if (record.thanhTien && record.soLuong && record.soLuong > 0) {
+    const calculatedPrice = Number(record.thanhTien) / Number(record.soLuong)
+    // Round to nearest integer to avoid decimal issues
+    return Math.round(calculatedPrice)
+  }
+  
+  // Fallback to giaBan if available
+  if (record.giaBan) {
+    return Number(record.giaBan)
+  }
+  
+  return 0
 }
 
 const getColorTag = (color: string) => {

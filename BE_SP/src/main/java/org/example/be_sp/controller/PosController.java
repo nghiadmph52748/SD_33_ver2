@@ -162,4 +162,13 @@ public class PosController {
             return new ResponseObject<>(false, null, "Lỗi khi lấy timeline: " + e.getMessage());
         }
     }
+
+    @GetMapping("/validate-invoice/{idHoaDon}")
+    public ResponseObject<?> validateInvoiceBeforeConfirm(@PathVariable Integer idHoaDon) {
+        try {
+            return new ResponseObject<>(true, banHangService.validateInvoiceBeforeConfirm(idHoaDon), "Kiểm tra hóa đơn thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi kiểm tra hóa đơn: " + e.getMessage());
+        }
+    }
 }

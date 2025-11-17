@@ -296,57 +296,39 @@ export default function QRPaymentScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {hasQrCode ? (
-        <>
-          <Card style={styles.qrCard}>
-            <Card.Content style={styles.qrContent}>
-              <Text style={styles.title}>VietQR thanh toán</Text>
-              <Text style={styles.subtitle}>Quét bằng app ngân hàng để hoàn tất giao dịch</Text>
+        <Card style={styles.qrCard}>
+          <Card.Content style={styles.qrContent}>
+            <Text style={styles.title}>Thanh toán</Text>
+            <Text style={styles.subtitle}>Quét bằng app ngân hàng để hoàn tất giao dịch</Text>
 
-              <View style={styles.qrContainer}>
-                <Image source={{ uri: session.qrCodeUrl! }} style={styles.qrImage} resizeMode="contain" />
-              </View>
+            <View style={styles.qrContainer}>
+              <Image source={{ uri: session.qrCodeUrl! }} style={styles.qrImage} resizeMode="contain" />
+            </View>
 
-              <Text style={styles.amount}>{currencyFormatter.format(session.finalPrice)}</Text>
-              <Text style={styles.orderCode}>Mã đơn hàng: {session.orderCode}</Text>
-              {session.status === 'PENDING' && (
-                <View style={styles.statusContainer}>
-                  <ActivityIndicator size="small" style={styles.statusIndicator} />
-                  <Text style={styles.statusText}>Đang chờ khách thanh toán</Text>
-                </View>
-              )}
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.orderInfoCard}>
-            <Card.Title title="Thông tin đơn" />
-            <Card.Content>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Trạng thái</Text>
-                <Text
-                  style={[
-                    styles.infoValue,
-                    styles.statusBadge,
-                    session.status === 'PAID'
-                      ? styles.statusPaid
-                      : session.status === 'EXPIRED'
-                        ? styles.statusExpired
-                        : styles.statusPending,
-                  ]}
-                >
-                  {session.status}
-                </Text>
+            <Text style={styles.amount}>{currencyFormatter.format(session.finalPrice)}</Text>
+            <Text style={styles.orderCode}>Mã đơn hàng: {session.orderCode}</Text>
+            {session.status === 'PENDING' ? (
+              <View style={styles.statusContainer}>
+                <ActivityIndicator size="small" style={styles.statusIndicator} />
+                <Text style={styles.statusText}>Đang chờ khách thanh toán</Text>
               </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Tạo lúc</Text>
-                <Text style={styles.infoValue}>{formattedDate}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Session ID</Text>
-                <Text style={styles.infoValue}>{session.qrSessionId}</Text>
-              </View>
-            </Card.Content>
-          </Card>
-        </>
+            ) : (
+              <Text
+                style={[
+                  styles.statusBadge,
+                  session.status === 'PAID'
+                    ? styles.statusPaid
+                    : session.status === 'EXPIRED'
+                      ? styles.statusExpired
+                      : styles.statusPending,
+                ]}
+              >
+                {session.status}
+              </Text>
+            )}
+            <Text style={styles.createdText}>Tạo lúc: {formattedDate}</Text>
+          </Card.Content>
+        </Card>
       ) : (
         <Card style={styles.qrPlaceholderCard}>
           <Card.Content style={styles.qrPlaceholderContent}>
@@ -509,10 +491,6 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     alignItems: 'center',
   },
-  orderInfoCard: {
-    marginBottom: 16,
-    elevation: 2,
-  },
   panelTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -542,6 +520,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 24,
+  },
+  createdText: {
+    marginTop: 12,
+    fontSize: 13,
+    color: '#777',
   },
   qrContainer: {
     width: 280,

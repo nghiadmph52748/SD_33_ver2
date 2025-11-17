@@ -441,10 +441,188 @@ public class HoaDonService {
         }
         hd.setUpdateAt(LocalDate.now());
 
-        // Track original status before update
+        // Track original status and loaiDon before update
         Boolean originalStatus = hd.getTrangThai();
+        Boolean originalLoaiDon = hd.getGiaoHang();
 
         HoaDon saved = hoaDonRepository.save(hd);
+
+        // Get nhân viên for timeline (from request or from saved invoice)
+        NhanVien timelineNhanVien = saved.getIdNhanVien();
+        if (request.getIdNhanVien() != null) {
+            timelineNhanVien = nhanVienRepository.findById(request.getIdNhanVien()).orElse(saved.getIdNhanVien());
+        }
+        if (timelineNhanVien == null) {
+            // Fallback to first available staff
+            timelineNhanVien = nhanVienRepository.findAll().stream()
+                    .filter(nv -> nv.getTrangThai() != null && nv.getTrangThai())
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        // Get original idTrangThaiDonHang from latest ThongTinDonHang
+        Integer originalIdTrangThaiDonHang = null;
+        try {
+            List<ThongTinDonHang> thongTinDonHangs = thongTinDonHangRepository.findByHoaDonIdOrderByThoiGianDesc(saved.getId());
+            if (thongTinDonHangs != null && !thongTinDonHangs.isEmpty()) {
+                ThongTinDonHang latestThongTin = thongTinDonHangs.get(0);
+                if (latestThongTin.getIdTrangThaiDonHang() != null) {
+                    originalIdTrangThaiDonHang = latestThongTin.getIdTrangThaiDonHang().getId();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get original idTrangThaiDonHang from ThongTinDonHang: {}", e.getMessage());
+        }
+        
+        // Check if idTrangThaiDonHang changed
+        boolean idTrangThaiDonHangChanged = request.getIdTrangThaiDonHang() != null 
+            && !request.getIdTrangThaiDonHang().equals(originalIdTrangThaiDonHang);
+        
+        // Create timeline entry when status changes (either boolean or idTrangThaiDonHang)
+        if (timelineNhanVien != null && 
+            ((request.getTrangThai() != null && !request.getTrangThai().equals(originalStatus)) || idTrangThaiDonHangChanged)) {
+            try {
+                // Get original status text from latest ThongTinDonHang if available
+                String trangThaiCu = "Chờ xác nhận"; // Default
+                try {
+                    List<ThongTinDonHang> thongTinDonHangs = thongTinDonHangRepository.findByHoaDonIdOrderByThoiGianDesc(saved.getId());
+                    if (thongTinDonHangs != null && !thongTinDonHangs.isEmpty()) {
+                        ThongTinDonHang latestThongTin = thongTinDonHangs.get(0);
+                        if (latestThongTin.getIdTrangThaiDonHang() != null) {
+                            // Map idTrangThaiDonHang to status text
+                            switch (latestThongTin.getIdTrangThaiDonHang().getId()) {
+                                case 1:
+                                    trangThaiCu = "Chờ xác nhận";
+                                    break;
+                                case 2:
+                                    trangThaiCu = "Chờ giao hàng";
+                                    break;
+                                case 3:
+                                    trangThaiCu = "Đang giao";
+                                    break;
+                                case 5:
+                                    trangThaiCu = "Hoàn thành";
+                                    break;
+                                default:
+                                    trangThaiCu = originalStatus != null && originalStatus ? "Hoàn thành" : "Chờ xác nhận";
+                                    break;
+                            }
+                        } else {
+                            trangThaiCu = originalStatus != null && originalStatus ? "Hoàn thành" : "Chờ xác nhận";
+                        }
+                    } else {
+                        trangThaiCu = originalStatus != null && originalStatus ? "Hoàn thành" : "Chờ xác nhận";
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to get original status from ThongTinDonHang, using boolean: {}", e.getMessage());
+                    trangThaiCu = originalStatus != null && originalStatus ? "Hoàn thành" : "Chờ xác nhận";
+                }
+                
+                // Get new status text from idTrangThaiDonHang if provided, otherwise map from boolean
+                String trangThaiMoi;
+                
+                if (request.getIdTrangThaiDonHang() != null) {
+                    // Map idTrangThaiDonHang to status text
+                    switch (request.getIdTrangThaiDonHang()) {
+                        case 1:
+                            trangThaiMoi = "Chờ xác nhận";
+                            break;
+                        case 2:
+                            trangThaiMoi = "Chờ giao hàng";
+                            break;
+                        case 3:
+                            trangThaiMoi = "Đang giao";
+                            break;
+                        case 5:
+                            trangThaiMoi = "Hoàn thành";
+                            break;
+                        default:
+                            trangThaiMoi = saved.getTrangThai() ? "Hoàn thành" : "Chờ xác nhận";
+                            break;
+                    }
+                } else {
+                    // Fallback: map boolean to status text
+                    trangThaiMoi = saved.getTrangThai() ? "Hoàn thành" : "Chờ xác nhận";
+                }
+                
+                String hanhDong = "Cập nhật";
+                String moTa = "Cập nhật trạng thái đơn hàng từ \"" + trangThaiCu + "\" sang \"" + trangThaiMoi + "\"";
+
+                TimelineDonHang timeline = new TimelineDonHang();
+                timeline.setIdHoaDon(saved);
+                timeline.setIdNhanVien(timelineNhanVien);
+                timeline.setTrangThaiCu(trangThaiCu);
+                timeline.setTrangThaiMoi(trangThaiMoi);
+                timeline.setHanhDong(hanhDong);
+                timeline.setMoTa(moTa);
+                timeline.setThoiGian(java.time.Instant.now());
+                timeline.setTrangThai(true);
+                timeline.setDeleted(false);
+                timelineDonHangRepository.save(timeline);
+                log.info("Created timeline entry for status update: {} -> {} for invoice ID: {}", trangThaiCu, trangThaiMoi, saved.getId());
+                
+                // Update ThongTinDonHang with corresponding idTrangThaiDonHang
+                // idTrangThaiDonHang: 1 = Chờ xác nhận, 2 = Chờ giao hàng, 3 = Đang giao, 5 = Hoàn thành
+                try {
+                    // Use idTrangThaiDonHang from request if provided, otherwise map from boolean
+                    Integer requestedIdTrangThaiDonHang = request.getIdTrangThaiDonHang();
+                    final Integer idTrangThaiDonHang;
+                    if (requestedIdTrangThaiDonHang != null) {
+                        idTrangThaiDonHang = requestedIdTrangThaiDonHang;
+                    } else {
+                        // Fallback: map boolean to: false = 1 (Chờ xác nhận), true = 5 (Hoàn thành)
+                        idTrangThaiDonHang = saved.getTrangThai() ? 5 : 1;
+                    }
+                    
+                    // Validate idTrangThaiDonHang exists
+                    if (!trangThaiDonHangRepository.existsById(idTrangThaiDonHang)) {
+                        log.warn("Trạng thái đơn hàng với id: {} không tồn tại, bỏ qua tạo ThongTinDonHang", idTrangThaiDonHang);
+                    } else {
+                        // Create new ThongTinDonHang entry for status change
+                        ThongTinDonHang newThongTin = new ThongTinDonHang();
+                        newThongTin.setIdHoaDon(saved);
+                        newThongTin.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(idTrangThaiDonHang)
+                                .orElseThrow(() -> new ApiException("Không tìm thấy trạng thái đơn hàng với id: " + idTrangThaiDonHang, "404")));
+                        newThongTin.setThoiGian(LocalDate.now());
+                        newThongTin.setTrangThai(true);
+                        newThongTin.setDeleted(false);
+                        thongTinDonHangRepository.save(newThongTin);
+                        log.info("Created ThongTinDonHang entry with idTrangThaiDonHang: {} for invoice ID: {}", idTrangThaiDonHang, saved.getId());
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to update ThongTinDonHang for status update: {}", e.getMessage(), e);
+                    // Don't throw - timeline is already created, main update should succeed
+                }
+            } catch (Exception e) {
+                log.error("Failed to create timeline entry for status update: {}", e.getMessage());
+            }
+        }
+
+        // Create timeline entry when loaiDon (giaoHang) changes
+        if (request.getLoaiDon() != null && !request.getLoaiDon().equals(originalLoaiDon) && timelineNhanVien != null) {
+            try {
+                String loaiDonCu = originalLoaiDon != null && originalLoaiDon ? "online" : "tại quầy";
+                String loaiDonMoi = saved.getGiaoHang() ? "online" : "tại quầy";
+                String hanhDong = "Cập nhật";
+                String moTa = "Cập nhật loại đơn từ \"" + loaiDonCu + "\" sang \"" + loaiDonMoi + "\"";
+
+                TimelineDonHang timeline = new TimelineDonHang();
+                timeline.setIdHoaDon(saved);
+                timeline.setIdNhanVien(timelineNhanVien);
+                timeline.setTrangThaiCu(saved.getTrangThai() != null && saved.getTrangThai() ? "Hoàn thành" : "Chờ xác nhận");
+                timeline.setTrangThaiMoi(saved.getTrangThai() != null && saved.getTrangThai() ? "Hoàn thành" : "Chờ xác nhận");
+                timeline.setHanhDong(hanhDong);
+                timeline.setMoTa(moTa);
+                timeline.setGhiChu("Loại đơn: " + loaiDonMoi);
+                timeline.setThoiGian(java.time.Instant.now());
+                timeline.setTrangThai(true);
+                timeline.setDeleted(false);
+                timelineDonHangRepository.save(timeline);
+                log.info("Created timeline entry for loaiDon update: {} -> {} for invoice ID: {}", loaiDonCu, loaiDonMoi, saved.getId());
+            } catch (Exception e) {
+                log.error("Failed to create timeline entry for loaiDon update: {}", e.getMessage());
+            }
+        }
 
         //NOTIFICATION: Order status updated
         if (request.getTrangThai() != null && !request.getTrangThai().equals(originalStatus) && saved.getIdKhachHang() != null) {

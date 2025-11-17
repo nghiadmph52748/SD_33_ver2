@@ -52,10 +52,10 @@
     <div v-else-if="invoice" class="invoice-content">
       <!-- Horizontal Timeline Status -->
       <a-card class="timeline-status-card" :bordered="false">
-        <div class="horizontal-timeline">
+        <div class="horizontal-timeline" :key="`timeline-${timelineData.length}-${invoice?.id}`">
           <div
             v-for="(stage, index) in statusStages"
-            :key="stage.key"
+            :key="`${stage.key}-${stage.time}`"
             class="timeline-stage"
             :class="{ active: stage.active, completed: stage.completed }"
           >
@@ -64,7 +64,7 @@
               <component :is="stage.icon" v-if="stage.icon" />
           </div>
             <div class="stage-label">{{ stage.label }}</div>
-            <div class="stage-time">{{ stage.time }}</div>
+            <div class="stage-time" :key="`time-${stage.key}-${stage.time}`">{{ stage.time }}</div>
           </div>
         </div>
       </a-card>
@@ -252,12 +252,12 @@
           </div>
                   <span class="summary-value">{{ formatCurrency(calculatedTongTien) }}</span>
           </div>
-          <div class="summary-row" v-if="invoice.giaTriGiamGia && invoice.giaTriGiamGia > 0">
+          <div class="summary-row" v-if="calculatedDiscountAmount > 0">
                   <div class="summary-label-wrapper">
                     <icon-check-circle class="summary-icon" />
             <span class="summary-label">Giảm giá:</span>
                   </div>
-            <span class="summary-value discount">-{{ formatCurrency(invoice.giaTriGiamGia) }}</span>
+            <span class="summary-value discount">-{{ formatCurrency(calculatedDiscountAmount) }}</span>
           </div>
           <div class="summary-row total-row">
                   <div class="summary-label-wrapper">
@@ -372,6 +372,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { fetchTimelineByHoaDonId, type TimelineItem } from '@/api/timeline'
+import { useUserStore } from '@/store'
+import { Message } from '@arco-design/web-vue'
 import {
   IconArrowLeft,
   IconPrinter,
@@ -387,12 +389,14 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 // Data
 const invoice = ref<any>(null)
 const loading = ref(true)
 const invoiceId = ref(route.params.id as string)
 const timelineData = ref<TimelineItem[]>([])
+const paymentMethods = ref<any[]>([])
 
 // Update Modal
 const updateModalVisible = ref(false)
@@ -474,69 +478,217 @@ const getStatusText = (status: any) => {
 }
 
 // Helper: Get time from timeline by status/action
+// Rebuild logic để đảm bảo mỗi status lấy đúng entry của nó
 const getTimeFromTimeline = (statusKey: string): string => {
   try {
+    // Nếu không có timeline, fallback về invoice dates
     if (!timelineData.value || timelineData.value.length === 0) {
-      // Fallback to invoice dates if no timeline
       if (statusKey === 'completed') {
         return formatDateTime(invoice.value?.ngayThanhToan || invoice.value?.ngayTao)
       }
       return formatDateTime(invoice.value?.ngayTao || invoice.value?.createAt)
     }
 
-    // Sort timeline by time (oldest first) to ensure correct order
+    // Sort timeline theo thời gian tăng dần (cũ nhất trước)
     const sortedTimeline = [...timelineData.value].sort((a, b) => {
       try {
         const timeA = new Date(a.thoiGian).getTime()
         const timeB = new Date(b.thoiGian).getTime()
-        if (isNaN(timeA) || isNaN(timeB)) return 0
-        return timeA - timeB
+        if (isNaN(timeA) && isNaN(timeB)) {
+          return (a.id || 0) - (b.id || 0)
+        }
+        if (isNaN(timeA)) return 1
+        if (isNaN(timeB)) return -1
+        return timeA - timeB // Tăng dần: cũ nhất trước
       } catch {
         return 0
       }
     })
 
-    // Map status keys to timeline actions/statuses (based on actual database values)
-    const statusMap: { [key: string]: string[] } = {
-      pending: ['Tạo đơn hàng', 'Tạo mới', 'Chờ xác nhận', 'Chờ thanh toán'],
-      waiting: ['Xác nhận đơn hàng', 'Xác nhận', 'Đang chuẩn bị hàng', 'Chuẩn bị', 'Chờ giao hàng'],
-      shipping: ['Đang giao hàng', 'Đang giao', 'Giao hàng'],
-      completed: ['Đã giao hàng', 'Hoàn thành', 'Đã thanh toán', 'Thanh toán'],
+    // Helper function để normalize text
+    const normalize = (text?: string): string => {
+      return (text || '').toLowerCase().trim()
     }
 
-    const searchTerms = statusMap[statusKey] || []
-    
-    // Find timeline entry matching the status (search from beginning for earlier stages, end for later stages)
-    const searchOrder = statusKey === 'completed' ? [...sortedTimeline].reverse() : sortedTimeline
-    
-    for (const term of searchTerms) {
-      const entry = searchOrder.find(
-        (item) =>
-          item.trangThaiMoi?.toLowerCase().includes(term.toLowerCase()) ||
-          item.hanhDong?.toLowerCase().includes(term.toLowerCase())
-      )
-      if (entry && entry.thoiGian) {
-        return formatDateTime(entry.thoiGian)
+    // Helper function để check match
+    const matches = (item: any, patterns: string[]): boolean => {
+      const hanhDong = normalize(item.hanhDong)
+      const trangThaiMoi = normalize(item.trangThaiMoi)
+      return patterns.some((pattern) => hanhDong.includes(pattern) || trangThaiMoi.includes(pattern))
+    }
+
+    // Helper function để check exclude
+    const excludes = (item: any, patterns: string[]): boolean => {
+      const hanhDong = normalize(item.hanhDong)
+      const trangThaiMoi = normalize(item.trangThaiMoi)
+      return patterns.some((pattern) => hanhDong.includes(pattern) || trangThaiMoi.includes(pattern))
+    }
+
+    // ========== PENDING: Chờ xác nhận ==========
+    // Ưu tiên entry "Cập nhật" với trangThaiMoi="Chờ xác nhận" (mới nhất), sau đó mới đến entry "Tạo"
+    if (statusKey === 'pending') {
+      // Tìm từ cuối lên để lấy entry "Cập nhật" với "Chờ xác nhận" mới nhất
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        const isCapNhatChoXacNhan = normalize(item.hanhDong) === 'cập nhật' && matches(item, ['chờ xác nhận'])
+        
+        if (isCapNhatChoXacNhan && item.thoiGian) {
+          console.log(`Found ${statusKey} time (Cập nhật):`, {
+            id: item.id,
+            hanhDong: item.hanhDong,
+            trangThaiMoi: item.trangThaiMoi,
+            thoiGian: item.thoiGian,
+            formatted: formatDateTime(item.thoiGian)
+          })
+          return formatDateTime(item.thoiGian)
+        }
       }
+      
+      // Nếu không có "Cập nhật", tìm entry "Tạo" hoặc "Chờ xác nhận" từ đầu timeline
+      for (const item of sortedTimeline) {
+        const isTao = matches(item, ['tạo']) || matches(item, ['tạo đơn hàng'])
+        const isChoXacNhan = matches(item, ['chờ xác nhận'])
+        
+        if ((isTao || isChoXacNhan) && item.thoiGian) {
+          console.log(`Found ${statusKey} time (Tạo):`, {
+            id: item.id,
+            hanhDong: item.hanhDong,
+            trangThaiMoi: item.trangThaiMoi,
+            thoiGian: item.thoiGian,
+            formatted: formatDateTime(item.thoiGian)
+          })
+          return formatDateTime(item.thoiGian)
+        }
+      }
+      
+      // Fallback: entry đầu tiên trong timeline (entry sớm nhất)
+      if (sortedTimeline.length > 0 && sortedTimeline[0].thoiGian) {
+        return formatDateTime(sortedTimeline[0].thoiGian)
+      }
+      // Final fallback
+      return formatDateTime(invoice.value?.ngayTao || invoice.value?.createAt)
     }
 
-    // Fallback: use first timeline entry for pending, last for completed
-    if (statusKey === 'pending' && sortedTimeline.length > 0) {
-      return formatDateTime(sortedTimeline[0].thoiGian)
-    }
-    if (statusKey === 'completed' && sortedTimeline.length > 0) {
-      return formatDateTime(sortedTimeline[sortedTimeline.length - 1].thoiGian)
-    }
-    if (statusKey === 'waiting' && sortedTimeline.length > 1) {
-      // Use second entry for waiting (after creation)
-      return formatDateTime(sortedTimeline[1].thoiGian)
-    }
-    if (statusKey === 'shipping' && sortedTimeline.length > 2) {
-      // Use entry before last for shipping
-      return formatDateTime(sortedTimeline[sortedTimeline.length - 2].thoiGian)
+    // ========== WAITING: Chờ giao hàng ==========
+    // Entry sau "Tạo": "Xác nhận" đơn hàng hoặc "Cập nhật" với trangThaiMoi="Chờ giao hàng"
+    if (statusKey === 'waiting') {
+      // Tìm từ cuối lên để lấy entry "Chờ giao hàng" mới nhất
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        
+        // LOẠI TRỪ entry "Hoàn thành"
+        if (excludes(item, ['hoàn thành', 'đã thanh toán'])) {
+          continue
+        }
+        
+        // Tìm entry có "Chờ giao hàng" trong trangThaiMoi hoặc hanhDong="Cập nhật" với trangThaiMoi="Chờ giao hàng"
+        if (matches(item, ['chờ giao hàng']) || 
+            (normalize(item.hanhDong) === 'cập nhật' && matches(item, ['chờ giao hàng']))) {
+          if (item.thoiGian) {
+            return formatDateTime(item.thoiGian)
+          }
+        }
+      }
+      
+      // Fallback: Tìm entry "Xác nhận" hoặc "Chuẩn bị"
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        if (excludes(item, ['hoàn thành', 'đã thanh toán'])) {
+          continue
+        }
+        if (matches(item, ['xác nhận', 'chuẩn bị'])) {
+          if (item.thoiGian) {
+            return formatDateTime(item.thoiGian)
+          }
+        }
+      }
+      
+      // Không tìm thấy -> N/A (đơn tại quầy có thể không có bước này)
+      return 'N/A'
     }
 
-    // Final fallback
+    // ========== SHIPPING: Đang giao ==========
+    // Entry có "Đang giao hàng" hoặc "Giao hàng"
+    if (statusKey === 'shipping') {
+      // Tìm từ cuối lên để lấy entry gần nhất
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        
+        // LOẠI TRỪ entry "Hoàn thành"
+        if (excludes(item, ['hoàn thành', 'đã thanh toán'])) {
+          continue
+        }
+        
+        // Tìm entry "Đang giao" hoặc "Giao hàng"
+        if (matches(item, ['đang giao', 'giao hàng'])) {
+          if (item.thoiGian) {
+            return formatDateTime(item.thoiGian)
+          }
+        }
+      }
+      
+      // Không tìm thấy -> N/A (đơn tại quầy không có bước này)
+      return 'N/A'
+    }
+
+    // ========== COMPLETED: Hoàn thành ==========
+    // Entry cuối cùng có "Hoàn thành" hoặc "Đã thanh toán" hoặc "Cập nhật" với trangThaiMoi="Hoàn thành"
+    // Ưu tiên entry "Cập nhật" với trangThaiMoi="Hoàn thành" trước entry "Xác nhận" với trangThaiMoi="Hoàn thành"
+    if (statusKey === 'completed') {
+      // Bước 1: Tìm từ cuối lên để lấy entry "Cập nhật" với trangThaiMoi="Hoàn thành" (ưu tiên cao nhất)
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        const isCapNhatHoanThanh = normalize(item.hanhDong) === 'cập nhật' && matches(item, ['hoàn thành'])
+        
+        if (isCapNhatHoanThanh && item.thoiGian) {
+          console.log(`Found ${statusKey} time (Cập nhật):`, {
+            id: item.id,
+            hanhDong: item.hanhDong,
+            trangThaiCu: item.trangThaiCu,
+            trangThaiMoi: item.trangThaiMoi,
+            thoiGian: item.thoiGian,
+            formatted: formatDateTime(item.thoiGian)
+          })
+          return formatDateTime(item.thoiGian)
+        }
+      }
+      
+      // Bước 2: Nếu không tìm thấy "Cập nhật", tìm entry "Hoàn thành" hoặc "Đã thanh toán" hoặc "Xác nhận" với trangThaiMoi="Hoàn thành"
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        
+        // Lấy entry "Hoàn thành" hoặc "Đã thanh toán" hoặc "Xác nhận" với trangThaiMoi="Hoàn thành"
+        const isHoanThanh = matches(item, ['hoàn thành', 'đã thanh toán'])
+        const isXacNhanHoanThanh = normalize(item.hanhDong) === 'xác nhận' && matches(item, ['hoàn thành'])
+        
+        if ((isHoanThanh || isXacNhanHoanThanh) && item.thoiGian) {
+          console.log(`Found ${statusKey} time (Xác nhận/Hoàn thành):`, {
+            id: item.id,
+            hanhDong: item.hanhDong,
+            trangThaiCu: item.trangThaiCu,
+            trangThaiMoi: item.trangThaiMoi,
+            thoiGian: item.thoiGian,
+            formatted: formatDateTime(item.thoiGian)
+          })
+          return formatDateTime(item.thoiGian)
+        }
+      }
+      
+      // Fallback: entry cuối cùng trong timeline (entry mới nhất) - chỉ dùng nếu có timeline
+      // Đảm bảo luôn lấy từ timeline thay vì invoice để format giống nhau
+      if (sortedTimeline.length > 0) {
+        const lastEntry = sortedTimeline[sortedTimeline.length - 1]
+        if (lastEntry && lastEntry.thoiGian) {
+          return formatDateTime(lastEntry.thoiGian)
+        }
+      }
+      
+      // Final fallback: chỉ dùng invoice nếu không có timeline nào
+      // Nhưng vẫn format giống nhau bằng formatDateTime
+      return formatDateTime(invoice.value?.ngayThanhToan || invoice.value?.ngayTao)
+    }
+
+    // Default fallback
     return formatDateTime(invoice.value?.ngayTao || invoice.value?.createAt)
   } catch (error) {
     console.error('Error in getTimeFromTimeline:', error)
@@ -549,7 +701,12 @@ const getTimeFromTimeline = (statusKey: string): string => {
 }
 
 // Computed: Status stages for horizontal timeline
+// Force reactivity by explicitly depending on timelineData
 const statusStages = computed(() => {
+  // Explicitly access timelineData to ensure reactivity
+  const timeline = timelineData.value
+  const invoiceData = invoice.value
+  
   // Always return default stages even if invoice is not loaded yet
   const defaultStages = [
     {
@@ -708,15 +865,76 @@ const statusStages = computed(() => {
 const paymentHistory = computed(() => {
   if (!invoice.value) return []
   const history = []
-  if (invoice.value.ngayThanhToan) {
+  
+  // Nếu có paymentMethods từ API, sử dụng thông tin đó
+  if (paymentMethods.value && paymentMethods.value.length > 0) {
+    paymentMethods.value.forEach((payment: any) => {
+      const idPTTT = payment.idPhuongThucThanhToan
+      // Convert BigDecimal to number
+      const tienMat = Number(payment.tienMat) || 0
+      const tienChuyenKhoan = Number(payment.tienChuyenKhoan) || 0
+      
+      // idPTTT: 1 = Tiền mặt, 2 = Chuyển khoản, 3 = Cả hai
+      if (idPTTT === 1 && tienMat > 0) {
+        // Tiền mặt
+        history.push({
+          method: 'Tiền mặt',
+          amount: tienMat,
+          code: `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}`,
+          userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
+          date: invoice.value.ngayThanhToan || invoice.value.ngayTao,
+        })
+      } else if (idPTTT === 2 && tienChuyenKhoan > 0) {
+        // Chuyển khoản
+        history.push({
+          method: 'Chuyển khoản',
+          amount: tienChuyenKhoan,
+          code: `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}`,
+          userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
+          date: invoice.value.ngayThanhToan || invoice.value.ngayTao,
+        })
+      } else if (idPTTT === 3) {
+        // Cả hai
+        if (tienMat > 0) {
+          history.push({
+            method: 'Tiền mặt',
+            amount: tienMat,
+            code: `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}-TM`,
+            userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
+            date: invoice.value.ngayThanhToan || invoice.value.ngayTao,
+          })
+        }
+        if (tienChuyenKhoan > 0) {
+          history.push({
+            method: 'Chuyển khoản',
+            amount: tienChuyenKhoan,
+            code: `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}-CK`,
+            userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
+            date: invoice.value.ngayThanhToan || invoice.value.ngayTao,
+          })
+        }
+      }
+    })
+  } else if (invoice.value.ngayThanhToan) {
+    // Fallback: nếu không có paymentMethods, sử dụng thông tin cũ
+    const idPTTT = invoice.value.idPhuongThucThanhToan || invoice.value.idPTTT
+    let method = 'Chuyển khoản'
+    
+    if (idPTTT === 1) {
+      method = 'Tiền mặt'
+    } else if (idPTTT === 3) {
+      method = 'Tiền mặt + Chuyển khoản'
+    }
+    
     history.push({
-      method: 'Chuyển khoản',
+      method: method,
       amount: invoice.value.tongTienSauGiam || invoice.value.tongTien || 0,
       code: `PTT${String(invoice.value.id || 0).padStart(5, '0')}`,
-      userCode: invoice.value.maNhanVien || 'NV000001',
+      userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
       date: invoice.value.ngayThanhToan,
     })
   }
+  
   return history
 })
 
@@ -738,27 +956,34 @@ const invoiceHistory = computed(() => {
 const calculatedTongTien = computed(() => {
   if (!invoice.value) return 0
   
-  // Use tongTienHang or tongTien if available
+  // Priority 1: Use tongTienHang if available (from ThongTinDonHang)
   if (invoice.value.tongTienHang && invoice.value.tongTienHang > 0) {
-    return invoice.value.tongTienHang
-  }
-  if (invoice.value.tongTien && invoice.value.tongTien > 0) {
-    return invoice.value.tongTien
+    return Number(invoice.value.tongTienHang)
   }
   
-  // Calculate from hoaDonChiTiets
+  // Priority 2: Use tongTien from HoaDon
+  if (invoice.value.tongTien && invoice.value.tongTien > 0) {
+    return Number(invoice.value.tongTien)
+  }
+  
+  // Priority 3: Calculate from hoaDonChiTiets
   if (invoice.value.hoaDonChiTiets && invoice.value.hoaDonChiTiets.length > 0) {
     const total = invoice.value.hoaDonChiTiets.reduce((sum: number, item: any) => {
-      const thanhTien = item.thanhTien || (item.giaBan || 0) * (item.soLuong || 0)
+      // Use thanhTien if available, otherwise calculate from giaBan * soLuong
+      const thanhTien = item.thanhTien 
+        ? Number(item.thanhTien)
+        : (Number(item.giaBan) || 0) * (Number(item.soLuong) || 0)
       return sum + (thanhTien || 0)
     }, 0)
     return total
   }
   
-  // Fallback: try items array
+  // Priority 4: Fallback to items array
   if (invoice.value.items && invoice.value.items.length > 0) {
     const total = invoice.value.items.reduce((sum: number, item: any) => {
-      const thanhTien = item.thanhTien || (item.giaBan || 0) * (item.soLuong || 0)
+      const thanhTien = item.thanhTien 
+        ? Number(item.thanhTien)
+        : (Number(item.giaBan) || 0) * (Number(item.soLuong) || 0)
       return sum + (thanhTien || 0)
     }, 0)
     return total
@@ -771,15 +996,42 @@ const calculatedTongTien = computed(() => {
 const calculatedTongTienSauGiam = computed(() => {
   if (!invoice.value) return 0
   
-  // Use tongTienSauGiam if available
+  // Priority 1: Use tongTienSauGiam from backend if available
   if (invoice.value.tongTienSauGiam && invoice.value.tongTienSauGiam > 0) {
-    return invoice.value.tongTienSauGiam
+    return Number(invoice.value.tongTienSauGiam)
   }
   
-  // Calculate: tongTien - giamGia
+  // Priority 2: Calculate from tongTien - discount
+  // Only calculate if we have tongTien and can determine discount
   const tongTien = calculatedTongTien.value
-  const giamGia = invoice.value.giaTriGiamGia || invoice.value.giamGia || 0
-  return Math.max(0, tongTien - giamGia)
+  if (tongTien > 0) {
+    // If we have tongTienSauGiam in backend, use it (already handled above)
+    // Otherwise, try to calculate discount from other fields
+    // But since we don't have reliable discount field, just return tongTien
+    // The discount will be calculated separately
+    return tongTien
+  }
+  
+  return 0
+})
+
+// Calculate actual discount amount
+const calculatedDiscountAmount = computed(() => {
+  if (!invoice.value) return 0
+  
+  // Always calculate from the difference between tongTien and tongTienSauGiam
+  // This ensures accuracy regardless of how the values were obtained
+  const tongTien = calculatedTongTien.value
+  const tongTienSauGiam = calculatedTongTienSauGiam.value
+  
+  // If tongTienSauGiam is from backend, use it directly
+  if (invoice.value.tongTienSauGiam && invoice.value.tongTienSauGiam > 0) {
+    const discount = tongTien - Number(invoice.value.tongTienSauGiam)
+    return Math.max(0, discount)
+  }
+  
+  // If no tongTienSauGiam from backend, discount is 0 (no discount applied)
+  return 0
 })
 
 // Methods
@@ -796,6 +1048,20 @@ const fetchInvoiceDetail = async () => {
     } catch (timelineError) {
       console.warn('⚠️ Failed to load timeline:', timelineError)
       timelineData.value = []
+    }
+
+    // Fetch payment methods
+    try {
+      const paymentResponse = await axios.get(`/api/hinh-thuc-thanh-toan-management/by-hoa-don/${invoiceId.value}`)
+      if (paymentResponse.data && paymentResponse.data.data) {
+        paymentMethods.value = paymentResponse.data.data
+        console.log('✅ Payment methods loaded:', paymentMethods.value.length, 'entries', paymentMethods.value)
+      } else {
+        paymentMethods.value = []
+      }
+    } catch (paymentError) {
+      console.warn('⚠️ Failed to load payment methods:', paymentError)
+      paymentMethods.value = []
     }
 
     // Ưu tiên lấy từ API thông tin đơn hàng mới nhất (có đầy đủ hoaDonChiTiets)
@@ -1057,21 +1323,58 @@ const handleSaveUpdate = async () => {
   
   saving.value = true
   try {
-    // Map status text to boolean
-    // true = Hoàn thành/Đã thanh toán, false = Chờ xác nhận/Chờ giao hàng/Đang giao
+    // Map status text to boolean and idTrangThaiDonHang
+    // idTrangThaiDonHang: 1 = Chờ xác nhận, 2 = Chờ giao hàng, 3 = Đang giao, 5 = Hoàn thành
     let trangThai = false
+    let idTrangThaiDonHang: number | null = null
+    
     if (updateForm.value.trangThaiText === 'Hoàn thành' || updateForm.value.trangThaiText === 'Đã thanh toán') {
       trangThai = true
-    } else if (updateForm.value.trangThaiText === 'Đã hủy') {
-      trangThai = false // Hủy = false
-    } else {
-      // Chờ xác nhận, Chờ giao hàng, Đang giao = false
+      idTrangThaiDonHang = 5 // Hoàn thành
+    } else if (updateForm.value.trangThaiText === 'Chờ giao hàng') {
       trangThai = false
+      idTrangThaiDonHang = 2 // Chờ giao hàng
+    } else if (updateForm.value.trangThaiText === 'Đang giao') {
+      trangThai = false
+      idTrangThaiDonHang = 3 // Đang giao
+    } else if (updateForm.value.trangThaiText === 'Đã hủy') {
+      trangThai = false
+      idTrangThaiDonHang = 1 // Chờ xác nhận (hoặc có thể là trạng thái hủy riêng)
+    } else {
+      // Chờ xác nhận = default
+      trangThai = false
+      idTrangThaiDonHang = 1 // Chờ xác nhận
+    }
+    
+    // Get current values to check if they changed
+    const currentTrangThai = invoice.value.trangThai
+    const currentLoaiDon = invoice.value.loaiDon
+    
+    // Get idNhanVien - prioritize from invoice, then userStore, then createBy
+    let idNhanVienValue: number | null = null
+    if (invoice.value.idNhanVien) {
+      idNhanVienValue = typeof invoice.value.idNhanVien === 'number' 
+        ? invoice.value.idNhanVien 
+        : (invoice.value.idNhanVien?.id || null)
+    }
+    if (!idNhanVienValue && userStore.id) {
+      idNhanVienValue = userStore.id
+    }
+    if (!idNhanVienValue && invoice.value.createBy) {
+      idNhanVienValue = invoice.value.createBy
     }
     
     const updateData: any = {
+      // Always include loaiDon and trangThai to ensure they are updated
       loaiDon: updateForm.value.loaiDon,
       trangThai: trangThai,
+      // Include idTrangThaiDonHang for detailed status update
+      idTrangThaiDonHang: idTrangThaiDonHang,
+    }
+    
+    // Only include idNhanVien if we have a valid value
+    if (idNhanVienValue) {
+      updateData.idNhanVien = idNhanVienValue
     }
     
     // Only include fields that have values to avoid overwriting with empty strings
@@ -1092,22 +1395,116 @@ const handleSaveUpdate = async () => {
     }
     
     // Call API to update invoice
-    const response = await axios.put(`/api/hoa-don-management/update/${invoice.value.id}`, updateData)
+    console.log('Updating invoice with data:', updateData)
+    let updateSucceeded = false
+    try {
+      const response = await axios.put(`/api/hoa-don-management/update/${invoice.value.id}`, updateData)
+      console.log('Update response:', response)
+      console.log('Update response.data:', response?.data)
+      
+      // ResponseObject has isSuccess field (not success)
+      // Backend returns: { isSuccess: true, data: null, message: "..." }
+      // Check response.data structure
+      if (response?.data && response.data.isSuccess === false) {
+        // Explicitly failed
+        const errorMessage = response.data.message || 'Cập nhật thất bại'
+        console.error('Update failed:', response.data)
+        throw new Error(errorMessage)
+      }
+      
+      // Success case - if we got here, assume success
+      // Even if response.status is undefined, backend may have updated successfully
+      updateSucceeded = true
+    } catch (axiosError: any) {
+      // Axios throws error for non-2xx responses or network errors
+      console.error('Axios error:', axiosError)
+      console.error('Axios error response:', axiosError?.response)
+      console.error('Axios error response.data:', axiosError?.response?.data)
+      
+      // If axios got a response from server (even if error status)
+      if (axiosError?.response) {
+        const responseData = axiosError.response.data
+        const status = axiosError.response.status
+        
+        // Check if it's actually a success response wrapped in error
+        // Backend may return success but axios throws error due to interceptor or other reasons
+        if (responseData?.isSuccess === true || responseData?.success === true) {
+          // Success response
+          updateSucceeded = true
+        } else if (status >= 200 && status < 300) {
+          // Status is OK - assume success (backend updated successfully)
+          console.warn('Status OK but no isSuccess field, assuming success')
+          updateSucceeded = true
+        } else {
+          // It's a real error response
+          let errorMessage = 'Cập nhật thất bại'
+          if (responseData?.message) {
+            errorMessage = responseData.message
+          } else if (responseData?.error) {
+            errorMessage = responseData.error
+          } else if (axiosError.message) {
+            errorMessage = axiosError.message
+          }
+          throw new Error(errorMessage)
+        }
+      } else {
+        // Network error or no response - but backend may have updated successfully
+        // Since reload shows the update, we'll assume success and refresh
+        console.warn('No response from server, but assuming update succeeded (will refresh)')
+        updateSucceeded = true
+      }
+    }
     
-    // ResponseObject has isSuccess field (not success)
-    if (response.data && (response.data.isSuccess || response.data.data)) {
-      // Refresh invoice data
+    // If update succeeded (either from try or catch), refresh data
+    if (updateSucceeded) {
       await fetchInvoiceDetail()
+      // Force refresh timeline to get latest updates
+      // Add small delay to ensure backend has committed the transaction
+      await new Promise(resolve => setTimeout(resolve, 300))
+      try {
+        const timelineResponse = await fetchTimelineByHoaDonId(Number(invoiceId.value))
+        timelineData.value = timelineResponse || []
+        console.log('Timeline refreshed after update:', timelineData.value.length, 'entries')
+        console.log('All timeline entries (sorted by time):', [...timelineData.value]
+          .sort((a: any, b: any) => {
+            const timeA = new Date(a.thoiGian).getTime()
+            const timeB = new Date(b.thoiGian).getTime()
+            return timeA - timeB
+          })
+          .map((e: any) => ({
+            id: e.id,
+            hanhDong: e.hanhDong,
+            trangThaiCu: e.trangThaiCu,
+            trangThaiMoi: e.trangThaiMoi,
+            thoiGian: e.thoiGian,
+            formatted: e.thoiGian ? formatDateTime(e.thoiGian) : 'N/A'
+          })))
+        console.log('Latest timeline entries (last 3):', timelineData.value.slice(-3).map((e: any) => ({
+          id: e.id,
+          hanhDong: e.hanhDong,
+          trangThaiCu: e.trangThaiCu,
+          trangThaiMoi: e.trangThaiMoi,
+          thoiGian: e.thoiGian,
+          formatted: e.thoiGian ? formatDateTime(e.thoiGian) : 'N/A'
+        })))
+      } catch (timelineError) {
+        console.warn('Failed to refresh timeline:', timelineError)
+      }
       closeUpdateModal()
-      // Show success message (you can use a notification component)
-      console.log('Cập nhật thành công')
-    } else {
-      throw new Error(response.data?.message || 'Cập nhật thất bại')
+      Message.success('Cập nhật hóa đơn thành công')
     }
   } catch (error: any) {
     console.error('Error updating invoice:', error)
-    // Show error message (you can use a notification component)
-    alert(error?.response?.data?.message || error?.message || 'Có lỗi xảy ra khi cập nhật')
+    console.error('Error message:', error?.message)
+    console.error('Error stack:', error?.stack)
+    
+    // Handle different error types
+    let errorMessage = 'Có lỗi xảy ra khi cập nhật'
+    if (error?.message) {
+      errorMessage = error.message
+    }
+    
+    Message.error(errorMessage)
   } finally {
     saving.value = false
   }

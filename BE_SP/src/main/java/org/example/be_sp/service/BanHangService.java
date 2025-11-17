@@ -16,6 +16,7 @@ import org.example.be_sp.entity.HoaDonChiTiet;
 import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.PhieuGiamGia;
 import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
+import org.example.be_sp.entity.PhuongThucThanhToan;
 import org.example.be_sp.entity.ThongTinDonHang;
 import org.example.be_sp.entity.TimelineDonHang;
 import org.example.be_sp.entity.TrangThaiDonHang;
@@ -96,6 +97,11 @@ public class BanHangService {
         timelineRepository.save(timeline);
     }
 
+    private TrangThaiDonHang getOrderStatus(Integer statusId) {
+        return ttTdRepository.findById(statusId)
+                .orElseThrow(() -> new ApiException("Không tìm thấy trạng thái đơn hàng với id: " + statusId, "404"));
+    }
+
     public Object taoHoaDon(Integer idNhanVien) {
         HoaDon hd = new HoaDon();
         hd.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
@@ -120,7 +126,7 @@ public class BanHangService {
         saved = hdRepository.findById(saved.getId()).orElseThrow();
         ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
         thongTinDonHang.setIdHoaDon(saved);
-        thongTinDonHang.setIdTrangThaiDonHang(ttTdRepository.findById(1).orElse(null));
+        thongTinDonHang.setIdTrangThaiDonHang(getOrderStatus(1));
         thongTinDonHang.setThoiGian(LocalDate.now());
         thongTinDonHang.setTrangThai(true);
         thongTinDonHang.setDeleted(false);
@@ -502,8 +508,20 @@ public class BanHangService {
                 pggRepository.save(pgg);
             }
         }
-        // Note: idPTTT (1: cash, 2: transfer, 3: both) is just recorded in hoaDon
-        // No need to update HinhThucThanhToan entity for POS orders
+        
+        // Save payment information to hinh_thuc_thanh_toan table
+        // idPTTT: 1 = Tiền mặt, 2 = Chuyển khoản, 3 = Cả hai
+        if (request.getIdPTTT() != null) {
+            PhuongThucThanhToan pttt = ptttRepository.getById(request.getIdPTTT());
+            HinhThucThanhToan hinhThucThanhToan = new HinhThucThanhToan();
+            hinhThucThanhToan.setIdHoaDon(saved);
+            hinhThucThanhToan.setIdPhuongThucThanhToan(pttt);
+            hinhThucThanhToan.setTienMat(tienMat);
+            hinhThucThanhToan.setTienChuyenKhoan(tienChuyenKhoan);
+            hinhThucThanhToan.setTrangThai(true);
+            hinhThucThanhToan.setDeleted(false);
+            htttRepository.save(hinhThucThanhToan);
+        }
 
         // Create timeline: Xác nhận bán hàng
         addTimeline(hoaDon, "Đang xử lý", "Hoàn thành", "Xác nhận",
@@ -556,6 +574,44 @@ public class BanHangService {
         return kiemTraTonKhoPhieuGiamGia(idPhieuGiamGia, null);
     }
 
+    public Map<String, Object> validateInvoiceBeforeConfirm(Integer idHoaDon) {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> inactiveVariants = new ArrayList<>();
+        
+        HoaDon hoaDon = hdRepository.findById(idHoaDon)
+                .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
+        
+        ArrayList<HoaDonChiTiet> chiTiets = hdctRepository.findAllByIdHoaDonAndTrangThai(hoaDon, true);
+        
+        if (chiTiets != null && !chiTiets.isEmpty()) {
+            for (HoaDonChiTiet ct : chiTiets) {
+                ChiTietSanPham ctsp = ct.getIdChiTietSanPham();
+                if (ctsp != null && (ctsp.getTrangThai() == null || !ctsp.getTrangThai())) {
+                    Map<String, Object> variantInfo = new HashMap<>();
+                    variantInfo.put("id", ctsp.getId());
+                    variantInfo.put("soLuong", ct.getSoLuong());
+                    // Get product name from variant
+                    if (ctsp.getIdSanPham() != null) {
+                        variantInfo.put("tenSanPham", ctsp.getIdSanPham().getTenSanPham());
+                    }
+                    // Get variant details
+                    if (ctsp.getIdMauSac() != null) {
+                        variantInfo.put("mauSac", ctsp.getIdMauSac().getTenMauSac());
+                    }
+                    if (ctsp.getIdKichThuoc() != null) {
+                        variantInfo.put("kichThuoc", ctsp.getIdKichThuoc().getTenKichThuoc());
+                    }
+                    inactiveVariants.add(variantInfo);
+                }
+            }
+        }
+        
+        result.put("isValid", inactiveVariants.isEmpty());
+        result.put("inactiveVariants", inactiveVariants);
+        
+        return result;
+    }
+
     public void kiemTra(Map<Integer, Integer> listIdChiTietSanPham, Integer idPhieuGiamGia, Integer idNhanVien, Integer idKhachHang, Integer idPhuongThucThanhToan) {
         listIdChiTietSanPham.forEach((id, soLuong) -> {
             Boolean ctspTT = ctspRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + id, "404")).getTrangThai();
@@ -599,21 +655,21 @@ public class BanHangService {
     public void trangThaiDonHangOffline(Integer idHoaDon) {
         ThongTinDonHang thongTinDonHang2 = new ThongTinDonHang();
         thongTinDonHang2.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
-        thongTinDonHang2.setIdTrangThaiDonHang(ttTdRepository.findById(2).orElse(null));
+        thongTinDonHang2.setIdTrangThaiDonHang(getOrderStatus(2));
         thongTinDonHang2.setThoiGian(LocalDate.now());
         thongTinDonHang2.setTrangThai(true);
         thongTinDonHang2.setDeleted(false);
         ttDhRepository.save(thongTinDonHang2);
         ThongTinDonHang thongTinDonHang3 = new ThongTinDonHang();
         thongTinDonHang3.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
-        thongTinDonHang3.setIdTrangThaiDonHang(ttTdRepository.findById(3).orElse(null));
+        thongTinDonHang3.setIdTrangThaiDonHang(getOrderStatus(3));
         thongTinDonHang3.setThoiGian(LocalDate.now());
         thongTinDonHang3.setTrangThai(true);
         thongTinDonHang3.setDeleted(false);
         ttDhRepository.save(thongTinDonHang3);
         ThongTinDonHang thongTinDonHang4 = new ThongTinDonHang();
         thongTinDonHang4.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
-        thongTinDonHang4.setIdTrangThaiDonHang(ttTdRepository.findById(7).orElse(null));
+        thongTinDonHang4.setIdTrangThaiDonHang(getOrderStatus(5));
         thongTinDonHang4.setThoiGian(LocalDate.now());
         thongTinDonHang4.setTrangThai(true);
         thongTinDonHang4.setDeleted(false);
@@ -622,14 +678,14 @@ public class BanHangService {
     public void trangThaiDonHangOnline(Integer idHoaDon) {
         ThongTinDonHang thongTinDonHang2 = new ThongTinDonHang();
         thongTinDonHang2.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
-        thongTinDonHang2.setIdTrangThaiDonHang(ttTdRepository.findById(2).orElse(null));
+        thongTinDonHang2.setIdTrangThaiDonHang(getOrderStatus(2));
         thongTinDonHang2.setThoiGian(LocalDate.now());
         thongTinDonHang2.setTrangThai(true);
         thongTinDonHang2.setDeleted(false);
         ttDhRepository.save(thongTinDonHang2);
         ThongTinDonHang thongTinDonHang3 = new ThongTinDonHang();
         thongTinDonHang3.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
-        thongTinDonHang3.setIdTrangThaiDonHang(ttTdRepository.findById(3).orElse(null));
+        thongTinDonHang3.setIdTrangThaiDonHang(getOrderStatus(3));
         thongTinDonHang3.setThoiGian(LocalDate.now());
         thongTinDonHang3.setTrangThai(true);
         thongTinDonHang3.setDeleted(false);

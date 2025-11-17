@@ -189,6 +189,9 @@ export interface ConfirmBanHangRequest {
   idPTTT?: number
   idPhieuGiamGia?: number
   idNhanVien: number
+  tienMat?: number
+  tienChuyenKhoan?: number
+  soTienConLai?: number
   [key: string]: any
 }
 
@@ -211,6 +214,23 @@ export interface TimelineEntry {
 
 export const getInvoiceTimeline = (idHoaDon: number) =>
   requestJson<TimelineEntry[]>(`/api/pos/timeline/${idHoaDon}`, {
+    method: 'GET',
+  })
+
+/** Validate invoice before confirming */
+export interface ValidateInvoiceResponse {
+  isValid: boolean
+  inactiveVariants: Array<{
+    id: number
+    soLuong: number
+    tenSanPham?: string
+    mauSac?: string
+    kichThuoc?: string
+  }>
+}
+
+export const validateInvoiceBeforeConfirm = (idHoaDon: number) =>
+  requestJson<ValidateInvoiceResponse>(`/api/pos/validate-invoice/${idHoaDon}`, {
     method: 'GET',
   })
 

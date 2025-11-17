@@ -14,6 +14,7 @@ public class HinhThucThanhToanReponse {
     private Integer id;
     private String maHoaDon;
     private String tenHoaDon;
+    private Integer idPhuongThucThanhToan;
     private String tenPhuongThucThanhToan;
     private String maHinhThucThanhToan;
     private BigDecimal tienChuyenKhoan;
@@ -27,6 +28,7 @@ public class HinhThucThanhToanReponse {
         this.id = httt.getId();
         this.maHoaDon = httt.getIdHoaDon().getMaHoaDon();
         this.tenHoaDon = httt.getIdHoaDon().getTenHoaDon();
+        this.idPhuongThucThanhToan = httt.getIdPhuongThucThanhToan().getId();
         this.tenPhuongThucThanhToan = httt.getIdPhuongThucThanhToan().getTenPhuongThucThanhToan();
         this.maHinhThucThanhToan = httt.getMaHinhThucThanhToan();
         this.tienChuyenKhoan = httt.getTienChuyenKhoan();

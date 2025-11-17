@@ -191,14 +191,37 @@
       @ok="confirmAddProduct"
     />
 
+    <!-- Confirm Order Modal -->
+    <ConfirmOrderModal
+      :visible="showConfirmOrderModal"
+      :order-code="currentOrder?.orderCode || ''"
+      :order-type="orderType as any"
+      :customer-name="selectedCustomer?.name || 'Khách lẻ'"
+      :customer-phone="selectedCustomer?.phone"
+      :customer-address="getCustomerAddress()"
+      :items="currentOrder?.items || []"
+      :subtotal="subtotal"
+      :discount-amount="discountAmount"
+      :shipping-fee="shippingFee"
+      :final-price="finalPrice"
+      :payment-method="paymentForm.method"
+      :cash-received="paymentForm.cashReceived"
+      :transfer-received="paymentForm.transferReceived"
+      :selected-coupon="selectedCoupon as any"
+      :confirm-loading="confirmLoading"
+      @cancel="cancelConfirmOrder"
+      @confirm="handleConfirmOrderFromModal"
+    />
+
     <!-- Confirm Order - Better Voucher Modal -->
     <ConfirmBetterVoucherModal
-      :visible="showConfirmOrderModal"
+      :visible="showBetterVoucherModal"
+      :suggested-better-vouchers="checkBetterVouchers()"
       :selected-coupon="selectedCoupon as any"
       :calculate-voucher-discount="calculateVoucherDiscount as any"
       :confirm-loading="confirmLoading"
-      @cancel="cancelConfirmOrder"
-      @confirm="doConfirmOrder"
+      @cancel="() => { showBetterVoucherModal = false; showConfirmOrderModal = true }"
+      @confirm="handleConfirmFromBetterVoucher"
     />
   </div>
 </template>
@@ -261,6 +284,7 @@ import QrScannerModal from './components/QrScannerModal.vue'
 import AddCustomerModal from './components/AddCustomerModal.vue'
 import DeleteProductModal from './components/DeleteProductModal.vue'
 import DeleteOrderModal from './components/DeleteOrderModal.vue'
+import ConfirmOrderModal from './components/ConfirmOrderModal.vue'
 import ConfirmBetterVoucherModal from './components/ConfirmBetterVoucherModal.vue'
 import AddProductConfirmModal from './components/AddProductConfirmModal.vue'
 import PriceChangeNotificationModal from './components/PriceChangeNotificationModal.vue'
@@ -1178,24 +1202,43 @@ const forceSyncQrSession = () => {
   syncQrSession(true)
 }
 
-const openMobileSession = () => {
-  const session = currentQrSession.value
-  if (!session?.sessionId) {
+const triggerDeepLink = (url: string) => {
+  if (typeof document === 'undefined') return
+  const iframe = document.createElement('iframe')
+  iframe.style.display = 'none'
+  iframe.src = url
+  document.body.appendChild(iframe)
+  setTimeout(() => {
+    document.body.removeChild(iframe)
+  }, 1000)
+}
+
+const openMobileSession = async () => {
+  if (finalPrice.value <= 0) {
+    Message.warning('Giỏ hàng chưa có tổng tiền hợp lệ')
+    return
+  }
+
+  let session = currentQrSession.value
+  if (!session || session.status !== 'PENDING') {
+    await syncQrSession(true)
+    session = currentQrSession.value
+  }
+
+  if (!session?.sessionId || session.status !== 'PENDING') {
     Message.warning('Chưa có VietQR để mở trên mobile')
     return
   }
-  generateQrPayment(session.sessionId)
-    .then(() => {
-      const deepLink = `mobileadmin://qr?sessionId=${session.sessionId}`
-      if (typeof window !== 'undefined') {
-        window.open(deepLink)
-      }
-      Message.success('Đã mở VietQR trên mobile')
-    })
-    .catch((error: any) => {
-      console.error('Không thể tạo mã QR:', error)
-      Message.error(error.message || 'Không thể tạo mã QR thanh toán')
-    })
+
+  try {
+    await generateQrPayment(session.sessionId)
+    const deepLink = `mobileadmin://qr?sessionId=${session.sessionId}`
+    triggerDeepLink(deepLink)
+    Message.success('Đã mở VietQR trên mobile')
+  } catch (error: any) {
+    console.error('Không thể tạo mã QR:', error)
+    Message.error(error.message || 'Không thể tạo mã QR thanh toán')
+  }
 }
 
 const cancelCurrentQrSession = async () => {
@@ -1267,6 +1310,7 @@ const {
   paymentForm,
   orderType,
   finalPrice,
+  subtotal,
   selectedCoupon,
   calculateVoucherDiscount,
   coupons,
@@ -1285,6 +1329,50 @@ const { showQRScanner, initQRScanner, closeQRScanner } = useQrScanner({
   loadAllProducts,
   refreshProductStock,
 })
+
+// Better voucher modal state (separate from main confirm modal)
+const showBetterVoucherModal = ref(false)
+
+// Helper function to get customer address
+const getCustomerAddress = (): string | undefined => {
+  if (selectedCustomer.value?.address) {
+    return selectedCustomer.value.address
+  }
+  if (isWalkIn.value) {
+    const addressParts = [
+      walkInLocation.value.diaChiCuThe,
+      walkInLocation.value.phuong,
+      walkInLocation.value.quan,
+      walkInLocation.value.thanhPho,
+    ].filter(Boolean)
+    return addressParts.length > 0 ? addressParts.join(', ') : undefined
+  }
+  return undefined
+}
+
+// Handle confirm order from modal - check for better vouchers first
+const handleConfirmOrderFromModal = async () => {
+  const betterVouchers = checkBetterVouchers()
+  if (betterVouchers.length > 0) {
+    // Close main confirm modal and show better voucher modal
+    showConfirmOrderModal.value = false
+    showBetterVoucherModal.value = true
+  } else {
+    // No better vouchers, proceed with confirmation
+    await doConfirmOrder()
+    // Ensure both modals are closed after confirmation
+    showConfirmOrderModal.value = false
+    showBetterVoucherModal.value = false
+  }
+}
+
+// Handle confirm from better voucher modal
+const handleConfirmFromBetterVoucher = async () => {
+  await doConfirmOrder()
+  // Close both modals after confirmation
+  showConfirmOrderModal.value = false
+  showBetterVoucherModal.value = false
+}
 
 onMounted(() => {
   // Do NOT initialize with an empty order - let user create orders manually by clicking "Thêm Đơn"

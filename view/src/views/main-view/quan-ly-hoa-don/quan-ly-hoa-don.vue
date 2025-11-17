@@ -143,7 +143,7 @@
         </template>
 
         <template #ngayTao="{ record }">
-          {{ formatDate(record.thoiGianTao || record.ngayTao) }}
+          {{ formatDateOnly(record.thoiGianTao || record.ngayTao) }}
         </template>
 
         <template #payment_method="{ record }">
@@ -170,7 +170,7 @@
         <div class="invoice-header">
           <div class="invoice-info">
             <h3>Mã hóa đơn: {{ selectedInvoice.id }}</h3>
-            <p>Ngày tạo: {{ formatDate(selectedInvoice.ngayTao) }}</p>
+            <p>Ngày tạo: {{ formatDateOnly(selectedInvoice.ngayTao) }}</p>
             <p>
               Trạng thái:
               <a-tag :color="getStatusColor(selectedInvoice.trangThai ? 'paid' : 'pending')">
@@ -371,6 +371,19 @@ const invoiceColumns = [
     dataIndex: 'thoiGianTao',
     slotName: 'ngayTao',
     width: 150,
+    sortable: {
+      sortDirections: ['ascend', 'descend'],
+    },
+    sorter: (a: any, b: any) => {
+      const dateA = new Date(a.thoiGianTao || a.ngayTao || 0).getTime()
+      const dateB = new Date(b.thoiGianTao || b.ngayTao || 0).getTime()
+      if (isNaN(dateA) && isNaN(dateB)) {
+        return (b.id || 0) - (a.id || 0)
+      }
+      if (isNaN(dateA)) return 1
+      if (isNaN(dateB)) return -1
+      return dateB - dateA // Giảm dần: mới nhất trước
+    },
   },
   {
     title: 'Tổng tiền',
@@ -378,7 +391,6 @@ const invoiceColumns = [
     slotName: 'total',
     width: 120,
     align: 'right',
-    sorter: true,
   },
   {
     title: 'Trạng thái đơn hàng',
@@ -486,17 +498,38 @@ const invoices = computed(() => {
     })
   }
 
-  // Sort theo ngày tạo giảm dần (mới nhất trước)
+  // Sort theo ngày tạo giảm dần (mới nhất trước) - luôn áp dụng sort này
   filtered.sort((a, b) => {
-    const dateA = new Date(a.thoiGianTao || a.ngayTao || 0).getTime()
-    const dateB = new Date(b.thoiGianTao || b.ngayTao || 0).getTime()
-    // Nếu không có ngày, sắp xếp theo ID giảm dần
+    // Ưu tiên thoiGianTao, sau đó ngayTao, sau đó createAt
+    const dateStrA = a.thoiGianTao || a.ngayTao || a.createAt || ''
+    const dateStrB = b.thoiGianTao || b.ngayTao || b.createAt || ''
+    
+    // Nếu cả hai đều không có ngày, sort theo ID giảm dần (mới nhất trước)
+    if (!dateStrA && !dateStrB) {
+      return (b.id || 0) - (a.id || 0)
+    }
+    
+    // Nếu một trong hai không có ngày, đưa xuống dưới
+    if (!dateStrA) return 1
+    if (!dateStrB) return -1
+    
+    // Parse dates
+    const dateA = new Date(dateStrA).getTime()
+    const dateB = new Date(dateStrB).getTime()
+    
+    // Nếu parse lỗi, fallback về ID
     if (isNaN(dateA) && isNaN(dateB)) {
       return (b.id || 0) - (a.id || 0)
     }
-    if (isNaN(dateA)) return 1 // a không có ngày -> đưa xuống dưới
-    if (isNaN(dateB)) return -1 // b không có ngày -> đưa xuống dưới
-    return dateB - dateA // Giảm dần: mới nhất trước
+    if (isNaN(dateA)) return 1
+    if (isNaN(dateB)) return -1
+    
+    // Sort giảm dần: mới nhất trước
+    const diff = dateB - dateA
+    if (diff !== 0) return diff
+    
+    // Nếu cùng ngày, sort theo ID giảm dần (mới nhất trước)
+    return (b.id || 0) - (a.id || 0)
   })
 
   return filtered
@@ -515,6 +548,13 @@ const formatDate = (dateString: string | Date | null | undefined) => {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
   if (isNaN(date.getTime())) return 'N/A' // Invalid date
   return date.toLocaleString('vi-VN')
+}
+
+const formatDateOnly = (dateString: string | Date | null | undefined) => {
+  if (!dateString) return 'N/A'
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  if (isNaN(date.getTime())) return 'N/A' // Invalid date
+  return date.toLocaleDateString('vi-VN')
 }
 
 const getStatusColor = (status: string) => {
@@ -625,8 +665,11 @@ const fetchInvoices = async () => {
     const apiData = await fetchHoaDonList()
     console.log('Dữ liệu từ API:', apiData)
 
+    // Chỉ hiển thị những hóa đơn đã hoàn tất (không còn trong trạng thái tạo nháp ở POS)
+    const confirmedInvoices = apiData.filter((invoice: HoaDonApiModel) => invoice.ghiChu !== 'Tạo hóa đơn bán hàng tại quầy')
+
     // Map dữ liệu để đảm bảo có đầy đủ các trường cần thiết
-    invoicesList.value = apiData.map((invoice: HoaDonApiModel) => {
+    invoicesList.value = confirmedInvoices.map((invoice: HoaDonApiModel) => {
       // Calculate tongTien from items if not provided
       let calculatedTongTien = invoice.tongTienSauGiam || invoice.tongTien || 0
       if (calculatedTongTien === 0 && invoice.items && invoice.items.length > 0) {

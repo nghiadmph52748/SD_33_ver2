@@ -109,7 +109,7 @@
                 <div v-if="product.tenDeGiay" class="attribute">Đế: {{ product.tenDeGiay }}</div>
               </td>
               <td class="center">{{ product.soLuong }}</td>
-              <td class="right">{{ formatPrice(product.giaBan) }}</td>
+              <td class="right">{{ formatPrice(calculateUnitPrice(product)) }}</td>
               <td class="right total">{{ formatPrice(product.thanhTien) }}</td>
             </tr>
           </tbody>
@@ -187,6 +187,23 @@ const formatPrice = (price: number) => {
     style: 'currency',
     currency: 'VND',
   }).format(price)
+}
+
+// Calculate unit price: prefer thanhTien / soLuong if available, otherwise use giaBan
+const calculateUnitPrice = (product: any): number => {
+  // If we have thanhTien and soLuong, calculate unit price from them (most accurate)
+  if (product.thanhTien && product.soLuong && product.soLuong > 0) {
+    const calculatedPrice = Number(product.thanhTien) / Number(product.soLuong)
+    // Round to nearest integer to avoid decimal issues
+    return Math.round(calculatedPrice)
+  }
+  
+  // Fallback to giaBan if available
+  if (product.giaBan) {
+    return Number(product.giaBan)
+  }
+  
+  return 0
 }
 
 const formatDate = (date: string) => {

@@ -39,4 +39,8 @@ public class HinhThucThanhToanController {
         hinhThucThanhToanService.trangThai(id);
         return new ResponseObject<>(true, null, "Xoa thanh cong");
     }
+    @GetMapping("/by-hoa-don/{hoaDonId}")
+    public ResponseObject<?> getByHoaDonId(@PathVariable Integer hoaDonId) {
+        return new ResponseObject<>(hinhThucThanhToanService.getByHoaDonId(hoaDonId), "Lấy hình thức thanh toán theo hóa đơn thành công");
+    }
 }

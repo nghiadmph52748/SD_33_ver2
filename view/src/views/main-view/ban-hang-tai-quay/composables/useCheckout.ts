@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import type { CouponApiModel } from '@/api/discount-management'
 import type { ConfirmBanHangRequest } from '@/api/pos'
-import { createInvoiceTimeline, createConfirmOrderTimeline } from '@/utils/timeline-helper'
+import { validateInvoiceBeforeConfirm } from '@/api/pos'
 
 interface CartItem {
   id: string
@@ -35,6 +35,7 @@ export default function useCheckout(params: {
   paymentForm: Ref<{ discountCode: string | null; method: 'cash' | 'transfer' | 'both'; cashReceived: number; transferReceived: number }>
   orderType: Ref<'counter' | 'delivery'>
   finalPrice: Ref<number>
+  subtotal: Ref<number>
   selectedCoupon: Ref<CouponApiModel | null>
   calculateVoucherDiscount: (coupon: CouponApiModel | null | undefined) => number
   coupons: Ref<CouponApiModel[]>
@@ -59,6 +60,7 @@ export default function useCheckout(params: {
     paymentForm,
     orderType,
     finalPrice,
+    subtotal,
     selectedCoupon,
     calculateVoucherDiscount,
     coupons,
@@ -111,62 +113,58 @@ export default function useCheckout(params: {
       }
       const invoiceId = parseInt(currentOrder.value.id, 10)
 
-      return new Promise<void>((resolve) => {
-        Modal.confirm({
-          title: '🔔 Xác Nhận Đơn Hàng',
-          content: `Bạn có chắc chắn muốn xác nhận đơn hàng ${currentOrder.value?.orderCode}?`,
-          okText: 'Xác nhận',
-          cancelText: 'Huỷ',
-          onOk: async () => {
-            try {
-              let walkInAddress = ''
-              if (!selectedCustomer.value && currentOrder.value!.customerId === '') {
-                const addressParts = [
-                  walkInLocation.value.diaChiCuThe,
-                  walkInLocation.value.phuong,
-                  walkInLocation.value.quan,
-                  walkInLocation.value.thanhPho,
-                ].filter(Boolean)
-                walkInAddress = addressParts.join(', ')
-              }
+      // Prepare order request data
+      let walkInAddress = ''
+      if (!selectedCustomer.value && currentOrder.value!.customerId === '') {
+        const addressParts = [
+          walkInLocation.value.diaChiCuThe,
+          walkInLocation.value.phuong,
+          walkInLocation.value.quan,
+          walkInLocation.value.thanhPho,
+        ].filter(Boolean)
+        walkInAddress = addressParts.join(', ')
+      }
 
-              const customerId = selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id, 10) : undefined
-              // eslint-disable-next-line no-nested-ternary
-              const paymentMethodId = paymentForm.value.method === 'cash' ? 1 : paymentForm.value.method === 'transfer' ? 2 : 3
+      const customerId = selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id, 10) : undefined
+      // eslint-disable-next-line no-nested-ternary
+      const paymentMethodId = paymentForm.value.method === 'cash' ? 1 : paymentForm.value.method === 'transfer' ? 2 : 3
 
-              const req: ConfirmBanHangRequest = {
-                idHoaDon: invoiceId,
-                idKhachHang: customerId || null,
-                tenKhachHang: selectedCustomer.value?.name || 'Khách lẻ',
-                soDienThoai: selectedCustomer.value?.phone || null,
-                diaChiKhachHang: selectedCustomer.value?.address || walkInAddress || null,
-                emailKhachHang: selectedCustomer.value?.email || null,
-                idPTTT: paymentMethodId,
-                idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id, 10) : null,
-                idNhanVien: userId,
-              }
+      // Calculate payment amounts based on payment method
+      let tienMat = 0
+      let tienChuyenKhoan = 0
+      if (paymentForm.value.method === 'cash') {
+        tienMat = paymentForm.value.cashReceived > 0 ? paymentForm.value.cashReceived : finalPrice.value
+      } else if (paymentForm.value.method === 'transfer') {
+        tienChuyenKhoan = paymentForm.value.transferReceived > 0 ? paymentForm.value.transferReceived : finalPrice.value
+      } else if (paymentForm.value.method === 'both') {
+        tienMat = paymentForm.value.cashReceived > 0 ? paymentForm.value.cashReceived : 0
+        tienChuyenKhoan = paymentForm.value.transferReceived > 0 ? paymentForm.value.transferReceived : 0
+      }
 
-              suggestedBetterVouchers.value = checkBetterVouchers()
-              confirmOrderRequest.value = req
+      const totalReceived = tienMat + tienChuyenKhoan
+      const soTienConLai = Math.max(0, finalPrice.value - totalReceived)
 
-              if (suggestedBetterVouchers.value.length > 0) {
-                showConfirmOrderModal.value = true
-              } else {
-                // eslint-disable-next-line no-use-before-define
-                await doConfirmOrder()
-              }
+      const req: ConfirmBanHangRequest = {
+        idHoaDon: invoiceId,
+        idKhachHang: customerId || null,
+        tenKhachHang: selectedCustomer.value?.name || 'Khách lẻ',
+        soDienThoai: selectedCustomer.value?.phone || null,
+        diaChiKhachHang: selectedCustomer.value?.address || walkInAddress || null,
+        emailKhachHang: selectedCustomer.value?.email || null,
+        idPTTT: paymentMethodId,
+        idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id, 10) : null,
+        idNhanVien: userId,
+        tienMat: tienMat,
+        tienChuyenKhoan: tienChuyenKhoan,
+        soTienConLai: soTienConLai,
+        trangThaiThanhToan: totalReceived >= finalPrice.value,
+        tongTien: subtotal.value,
+        tongTienSauGiam: finalPrice.value,
+      }
 
-              resolve()
-            } catch (error: any) {
-              Message.error(error.message || 'Có lỗi xảy ra khi xác nhận đơn hàng. Vui lòng thử lại.')
-              resolve()
-            }
-          },
-          onCancel: () => {
-            resolve()
-          },
-        })
-      })
+      confirmOrderRequest.value = req
+      // Show the new confirm order modal
+      showConfirmOrderModal.value = true
     } catch (error: any) {
       console.error('Lỗi khi mở dialog xác nhận:', error)
       Message.error(error.message || 'Có lỗi xảy ra. Vui lòng thử lại.')
@@ -181,21 +179,33 @@ export default function useCheckout(params: {
       const invoiceId = confirmOrderRequest.value.idHoaDon
       const paymentMethod = paymentForm.value.method
 
+      // Validate invoice before confirming
+      try {
+        const validationResult = await validateInvoiceBeforeConfirm(invoiceId)
+        if (!validationResult.isValid && validationResult.inactiveVariants.length > 0) {
+          const variantNames = validationResult.inactiveVariants.map((v) => {
+            const parts = [v.tenSanPham]
+            if (v.mauSac) parts.push(`Màu: ${v.mauSac}`)
+            if (v.kichThuoc) parts.push(`Size: ${v.kichThuoc}`)
+            return parts.join(' - ')
+          }).join(', ')
+          throw new Error(`Không thể xác nhận đơn hàng. Các sản phẩm sau đã bị vô hiệu hóa: ${variantNames}. Vui lòng xóa các sản phẩm này khỏi đơn hàng.`)
+        }
+      } catch (validationError: any) {
+        // If validation fails, show error and stop
+        if (validationError.message) {
+          Message.error(validationError.message)
+        } else {
+          Message.error('Lỗi khi kiểm tra đơn hàng. Vui lòng thử lại.')
+        }
+        return
+      }
+
       await confirmPosOrder(confirmOrderRequest.value)
 
-      // Tạo timeline tự động dựa trên payment method
-      try {
-        // Tạo timeline "Tạo đơn hàng" và các bước tiếp theo
-        await createInvoiceTimeline(invoiceId, paymentMethod, userId, userName)
-
-        // Nếu là transfer hoặc both, tạo thêm các bước xác nhận, chuẩn bị, giao hàng
-        if (paymentMethod === 'transfer' || paymentMethod === 'both') {
-          await createConfirmOrderTimeline(invoiceId, paymentMethod, userId, userName)
-        }
-      } catch (timelineError) {
-        console.error('Lỗi khi tạo timeline (không ảnh hưởng đến đơn hàng):', timelineError)
-        // Không throw error để không ảnh hưởng đến flow chính
-      }
+      // Backend đã tự động tạo timeline khi confirm order:
+      // - "Hoàn thành" với thời gian chính xác từ Instant.now()
+      // Không cần tạo timeline từ frontend nữa để tránh duplicate và đảm bảo thời gian chính xác
 
       const orderTypeText = orderType.value === 'delivery' ? 'giao hàng' : 'tại quầy'
       let successMessage = `✅ Đơn ${orderTypeText} ${currentOrder.value!.orderCode} xác nhận thành công!`

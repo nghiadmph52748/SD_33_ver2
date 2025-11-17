@@ -1,3 +1,5 @@
+import router from '@/router'
+import pinia, { useUserStore } from '@/store'
 import { getToken, setToken } from '@/utils/auth'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
@@ -31,6 +33,27 @@ axios.interceptors.request.use(
     return Promise.reject(error)
   }
 )
+let isHandlingAuthError = false
+
+const handleAuthError = async (message?: string) => {
+  if (isHandlingAuthError) return
+  isHandlingAuthError = true
+  const userStore = useUserStore(pinia)
+  await userStore.logout().catch(() => {})
+  Message.warning({
+    content: message || 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
+    duration: 4000,
+  })
+  const currentPath = router.currentRoute.value?.fullPath || '/'
+  await router.replace({
+    name: 'login',
+    query: { redirect: currentPath },
+  }).catch(() => {})
+  // Force full reload to reset entire state and view
+  window.location.reload()
+  isHandlingAuthError = false
+}
+
 // add response interceptors
 axios.interceptors.response.use(
   (response: any) => {
@@ -57,9 +80,13 @@ axios.interceptors.response.use(
     // Return the actual data for successful requests
     return res
   },
-  (error) => {
+  async (error) => {
     // Handle network errors or other axios errors
     if (error.response) {
+      if (error.response.status === 401) {
+        await handleAuthError(error.response.data?.message)
+        return Promise.reject(error)
+      }
       // Server responded with error status
       const errorMessage = error.response.data?.message || `Request failed with status ${error.response.status}`
       Message.error({
