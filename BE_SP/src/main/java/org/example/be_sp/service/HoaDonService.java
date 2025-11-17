@@ -15,7 +15,6 @@ import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.entity.PhuongThucThanhToan;
 import org.example.be_sp.entity.ThongTinDonHang;
 import org.example.be_sp.entity.TimelineDonHang;
-import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
@@ -36,8 +35,8 @@ import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -110,7 +109,6 @@ public class HoaDonService {
                 hd.setMaNhanVien(hd.getIdNhanVien().getMaNhanVien());
             }
         }
-
         // Tự động điền tên và mã phiếu giảm giá
         if (hd.getIdPhieuGiamGia() != null) {
             if (request.getTenPhieuGiamGia() == null || request.getTenPhieuGiamGia().trim().isEmpty()) {
@@ -120,32 +118,29 @@ public class HoaDonService {
                 hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
             }
         }
-
         // Map diaChiNhanHang từ request vào diaChiNguoiNhan của entity
         // (vì tên field khác nhau nên ModelMapper không tự động map)
         if (request.getDiaChiNhanHang() != null && !request.getDiaChiNhanHang().trim().isEmpty()) {
             hd.setDiaChiNguoiNhan(request.getDiaChiNhanHang());
         }
-
         // Set ngayTao if not provided
         if (hd.getNgayTao() == null) {
             hd.setNgayTao(LocalDate.now());
         }
-        
         // Set createAt if not provided
         if (hd.getCreateAt() == null) {
             hd.setCreateAt(LocalDate.now());
         }
-
+        if (request.getLoaiDon() != null) {
+            hd.setGiaoHang(request.getLoaiDon()); // Default to true (online order)
+        }
         HoaDon savedHoaDon = hoaDonRepository.save(hd);
-
         // Create HoaDonChiTiet from request.hoaDonChiTiet (for orders from banHangMain)
         if (request.getHoaDonChiTiet() != null && !request.getHoaDonChiTiet().isEmpty()) {
             try {
                 for (HoaDonChiTietRequest chiTietRequest : request.getHoaDonChiTiet()) {
                     HoaDonChiTiet hoaDonChiTiet = new HoaDonChiTiet();
                     hoaDonChiTiet.setIdHoaDon(savedHoaDon);
-                    
                     // Support idChiTietSanPham, idBienTheSanPham, and idBienThe (from banHangMain)
                     Integer idChiTietSanPhamValue = chiTietRequest.getIdChiTietSanPham();
                     if (idChiTietSanPhamValue == null) {
@@ -154,44 +149,37 @@ public class HoaDonService {
                     if (idChiTietSanPhamValue == null) {
                         idChiTietSanPhamValue = chiTietRequest.getIdBienThe();
                     }
-                    
                     if (idChiTietSanPhamValue == null) {
                         log.warn("Skipping HoaDonChiTiet: missing idChiTietSanPham/idBienTheSanPham/idBienThe");
                         continue;
                     }
-                    
                     final Integer idChiTietSanPham = idChiTietSanPhamValue;
                     ChiTietSanPham chiTietSanPham = chiTietSanPhamRepository.findById(idChiTietSanPham)
-                        .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + idChiTietSanPham, "404"));
-                    
+                            .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + idChiTietSanPham, "404"));
                     hoaDonChiTiet.setIdChiTietSanPham(chiTietSanPham);
                     hoaDonChiTiet.setSoLuong(chiTietRequest.getSoLuong() != null ? chiTietRequest.getSoLuong() : 1);
                     hoaDonChiTiet.setGiaBan(chiTietRequest.getGiaBan() != null ? chiTietRequest.getGiaBan() : BigDecimal.ZERO);
-                    
                     // Calculate thanhTien if not provided
                     if (chiTietRequest.getThanhTien() != null) {
                         hoaDonChiTiet.setThanhTien(chiTietRequest.getThanhTien());
                     } else {
                         BigDecimal thanhTien = hoaDonChiTiet.getGiaBan()
-                            .multiply(BigDecimal.valueOf(hoaDonChiTiet.getSoLuong()));
+                                .multiply(BigDecimal.valueOf(hoaDonChiTiet.getSoLuong()));
                         hoaDonChiTiet.setThanhTien(thanhTien);
                     }
-                    
                     hoaDonChiTiet.setTrangThai(chiTietRequest.getTrangThai() != null ? chiTietRequest.getTrangThai() : true);
                     hoaDonChiTiet.setGhiChu(chiTietRequest.getGhiChu());
                     hoaDonChiTiet.setDeleted(false);
-                    
                     hoaDonChiTietRepository.save(hoaDonChiTiet);
                     log.info("Created HoaDonChiTiet for product variant ID: {}, quantity: {}", idChiTietSanPham, hoaDonChiTiet.getSoLuong());
                 }
-                
                 // Update tongTien after creating all chi tiết
                 savedHoaDon = hoaDonRepository.findById(savedHoaDon.getId()).orElseThrow();
                 BigDecimal totalTien = savedHoaDon.getHoaDonChiTiets().stream()
-                    .filter(ct -> ct.getDeleted() == null || !ct.getDeleted())
-                    .map(ct -> ct.getThanhTien() != null ? ct.getThanhTien() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+                        .filter(ct -> ct.getDeleted() == null || !ct.getDeleted())
+                        .map(ct -> ct.getThanhTien() != null ? ct.getThanhTien() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
                 if (savedHoaDon.getTongTien() == null || savedHoaDon.getTongTien().compareTo(BigDecimal.ZERO) == 0) {
                     savedHoaDon.setTongTien(totalTien);
                     if (savedHoaDon.getTongTienSauGiam() == null || savedHoaDon.getTongTienSauGiam().compareTo(BigDecimal.ZERO) == 0) {
@@ -199,14 +187,12 @@ public class HoaDonService {
                     }
                     savedHoaDon = hoaDonRepository.save(savedHoaDon);
                 }
-                
                 log.info("Created {} HoaDonChiTiet items for order ID: {}", request.getHoaDonChiTiet().size(), savedHoaDon.getId());
             } catch (Exception e) {
                 log.error("Failed to create HoaDonChiTiet for order ID: {}", savedHoaDon.getId(), e);
                 // Don't throw - order is already created, chi tiết can be added later
             }
         }
-
         // Generate invoice code using stored procedure
         String generatedMaHoaDon = null;
         try {
@@ -228,7 +214,6 @@ public class HoaDonService {
                 log.warn("Using temporary invoice code: {} for order ID: {}", tempCode, savedHoaDon.getId());
             }
         }
-
         // Ensure maHoaDon is set before creating response
         if (savedHoaDon.getMaHoaDon() == null || savedHoaDon.getMaHoaDon().trim().isEmpty()) {
             String fallbackCode = generatedMaHoaDon != null ? generatedMaHoaDon : ("HD" + String.format("%010d", savedHoaDon.getId()));
@@ -239,18 +224,16 @@ public class HoaDonService {
                 savedHoaDon.getHoaDonChiTiets().size(); // Trigger lazy loading
             }
         }
-        
         // Create TimelineDonHang entry for order tracking
         try {
             // Use system admin or first available staff member if no staff assigned
             NhanVien timelineNhanVien = savedHoaDon.getIdNhanVien();
             if (timelineNhanVien == null) {
                 timelineNhanVien = nhanVienRepository.findAll().stream()
-                    .filter(nv -> nv.getTrangThai() != null && nv.getTrangThai())
-                    .findFirst()
-                    .orElse(null);
+                        .filter(nv -> nv.getTrangThai() != null && nv.getTrangThai())
+                        .findFirst()
+                        .orElse(null);
             }
-            
             if (timelineNhanVien != null) {
                 TimelineDonHang timeline = new TimelineDonHang();
                 timeline.setIdHoaDon(savedHoaDon);
@@ -272,32 +255,27 @@ public class HoaDonService {
             log.error("Failed to create TimelineDonHang for order ID: {}", savedHoaDon.getId(), e);
             // Don't throw - order creation should still succeed
         }
-
         // Create HinhThucThanhToan if payment method is provided
         if (request.getIdPhuongThucThanhToan() != null) {
             try {
                 PhuongThucThanhToan phuongThucThanhToan = phuongThucThanhToanRepository.findById(request.getIdPhuongThucThanhToan())
-                    .orElse(null);
-                
+                        .orElse(null);
                 if (phuongThucThanhToan != null) {
                     HinhThucThanhToan hinhThucThanhToan = new HinhThucThanhToan();
                     hinhThucThanhToan.setIdHoaDon(savedHoaDon);
                     hinhThucThanhToan.setIdPhuongThucThanhToan(phuongThucThanhToan);
-                    
                     // Determine payment type based on method name or ID
                     // COD (usually ID 1) uses cash, VNPAY uses bank transfer
-                    String tenPhuongThuc = phuongThucThanhToan.getTenPhuongThucThanhToan() != null 
-                        ? phuongThucThanhToan.getTenPhuongThucThanhToan().toLowerCase() 
-                        : "";
-                    boolean isCOD = request.getIdPhuongThucThanhToan() == 1 
-                        || tenPhuongThuc.contains("cod") 
-                        || tenPhuongThuc.contains("tiền mặt")
-                        || tenPhuongThuc.contains("cash");
-                    
-                    BigDecimal totalAmount = savedHoaDon.getTongTienSauGiam() != null 
-                        ? savedHoaDon.getTongTienSauGiam() 
-                        : (savedHoaDon.getTongTien() != null ? savedHoaDon.getTongTien() : BigDecimal.ZERO);
-                    
+                    String tenPhuongThuc = phuongThucThanhToan.getTenPhuongThucThanhToan() != null
+                            ? phuongThucThanhToan.getTenPhuongThucThanhToan().toLowerCase()
+                            : "";
+                    boolean isCOD = request.getIdPhuongThucThanhToan() == 1
+                            || tenPhuongThuc.contains("cod")
+                            || tenPhuongThuc.contains("tiền mặt")
+                            || tenPhuongThuc.contains("cash");
+                    BigDecimal totalAmount = savedHoaDon.getTongTienSauGiam() != null
+                            ? savedHoaDon.getTongTienSauGiam()
+                            : (savedHoaDon.getTongTien() != null ? savedHoaDon.getTongTien() : BigDecimal.ZERO);
                     if (isCOD) {
                         hinhThucThanhToan.setTienMat(totalAmount);
                         hinhThucThanhToan.setTienChuyenKhoan(BigDecimal.ZERO);
@@ -305,48 +283,17 @@ public class HoaDonService {
                         hinhThucThanhToan.setTienChuyenKhoan(totalAmount);
                         hinhThucThanhToan.setTienMat(BigDecimal.ZERO);
                     }
-                    
                     hinhThucThanhToan.setTrangThai(true);
                     hinhThucThanhToan.setDeleted(false);
                     hinhThucThanhToanRepository.save(hinhThucThanhToan);
-                    log.info("Created HinhThucThanhToan for order ID: {} with payment method ID: {} (COD: {})", 
-                        savedHoaDon.getId(), request.getIdPhuongThucThanhToan(), isCOD);
+                    log.info("Created HinhThucThanhToan for order ID: {} with payment method ID: {} (COD: {})",
+                            savedHoaDon.getId(), request.getIdPhuongThucThanhToan(), isCOD);
                 }
             } catch (Exception e) {
                 log.error("Failed to create HinhThucThanhToan for order ID: {}", savedHoaDon.getId(), e);
                 // Don't throw - order creation should still succeed
             }
         }
-
-        // Create ThongTinDonHang for tracking order status
-        try {
-            // Find default status "Chờ xác nhận" (usually ID 1 or first status)
-            TrangThaiDonHang defaultStatus = trangThaiDonHangRepository.findAll().stream()
-                .filter(tt -> tt.getTenTrangThaiDonHang() != null && 
-                    (tt.getTenTrangThaiDonHang().contains("Chờ xác nhận") || 
-                     tt.getTenTrangThaiDonHang().contains("Chờ") ||
-                     tt.getId() == 1))
-                .findFirst()
-                .orElse(trangThaiDonHangRepository.findAll().stream().findFirst().orElse(null));
-            
-            if (defaultStatus != null) {
-                ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
-                thongTinDonHang.setIdHoaDon(savedHoaDon);
-                thongTinDonHang.setIdTrangThaiDonHang(defaultStatus);
-                thongTinDonHang.setThoiGian(LocalDate.now());
-                thongTinDonHang.setGhiChu("Đơn hàng được tạo từ hệ thống bán hàng online");
-                thongTinDonHang.setTrangThai(true);
-                thongTinDonHang.setDeleted(false);
-                thongTinDonHangRepository.save(thongTinDonHang);
-                log.info("Created ThongTinDonHang for order ID: {}", savedHoaDon.getId());
-            } else {
-                log.warn("No TrangThaiDonHang found, skipping ThongTinDonHang creation for order ID: {}", savedHoaDon.getId());
-            }
-        } catch (Exception e) {
-            log.error("Failed to create ThongTinDonHang for order ID: {}", savedHoaDon.getId(), e);
-            // Don't throw - order creation should still succeed
-        }
-
         // Final refresh to ensure all data is loaded before creating response
         savedHoaDon = hoaDonRepository.findById(savedHoaDon.getId()).orElseThrow();
         // Force load all lazy collections after creating all related entities
@@ -367,10 +314,8 @@ public class HoaDonService {
             log.warn("Failed to force load lazy collections for order ID: {}", savedHoaDon.getId(), e);
             // Continue - response will still be created
         }
-
         // Send order confirmation email once invoice is persisted
         sendOrderConfirmationEmail(savedHoaDon);
-
         // 🔔 NOTIFICATION: New order created
         try {
             // Notify staff member assigned to order
@@ -387,7 +332,27 @@ public class HoaDonService {
         } catch (Exception e) {
             log.error("Failed to send order creation notification: {}", e.getMessage());
         }
-
+        ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
+        thongTinDonHang.setIdHoaDon(savedHoaDon);
+        thongTinDonHang.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(1).orElse(null));
+        thongTinDonHang.setThoiGian(LocalDate.now());
+        thongTinDonHang.setTrangThai(true);
+        thongTinDonHang.setDeleted(false);
+        thongTinDonHangRepository.save(thongTinDonHang);
+        ThongTinDonHang thongTinDonHang2 = new ThongTinDonHang();
+        thongTinDonHang2.setIdHoaDon(savedHoaDon);
+        thongTinDonHang2.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(2).orElse(null));
+        thongTinDonHang2.setThoiGian(LocalDate.now());
+        thongTinDonHang2.setTrangThai(true);
+        thongTinDonHang2.setDeleted(false);
+        thongTinDonHangRepository.save(thongTinDonHang2);
+        ThongTinDonHang thongTinDonHang3 = new ThongTinDonHang();
+        thongTinDonHang3.setIdHoaDon(savedHoaDon);
+        thongTinDonHang3.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(3).orElse(null));
+        thongTinDonHang3.setThoiGian(LocalDate.now());
+        thongTinDonHang3.setTrangThai(true);
+        thongTinDonHang3.setDeleted(false);
+        thongTinDonHangRepository.save(thongTinDonHang3);
         return new HoaDonResponse(savedHoaDon);
     }
 

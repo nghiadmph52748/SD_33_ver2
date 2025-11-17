@@ -23,6 +23,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "trang_thai_don_hang")
 public class TrangThaiDonHang {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)

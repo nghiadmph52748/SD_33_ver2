@@ -1,202 +1,281 @@
 <template>
-  <div class="checkout-page">
-    <div class="container">
-      <h1>{{ $t("cart.checkout") }}</h1>
-      <div class="grid">
-        <section class="details">
-          <form class="form" @submit.prevent>
-            <div class="row two">
-              <div>
-                <label for="fullName">{{ $t("checkout.fullName") }}</label>
+  <div class="checkout-wrapper">
+    <div class="checkout-page">
+      <div class="container">
+        <h1>{{ $t("cart.checkout") }}</h1>
+        <div class="grid">
+          <section class="details">
+            <form class="form" @submit.prevent>
+              <div class="row two">
+                <div>
+                  <label for="fullName">{{ $t("checkout.fullName") }}</label>
+                  <input
+                    id="fullName"
+                    v-model.trim="contact.fullName"
+                    :class="{ invalid: errs.fullName }"
+                    type="text"
+                    placeholder="Nguyen Van A"
+                  />
+                  <small v-if="errs.fullName" class="error-text">{{
+                    errs.fullName
+                  }}</small>
+                </div>
+                <div>
+                  <label for="phone">{{ $t("checkout.phone") }}</label>
+                  <input
+                    id="phone"
+                    v-model.trim="contact.phone"
+                    :class="{ invalid: errs.phone }"
+                    type="tel"
+                    placeholder="090..."
+                  />
+                  <small v-if="errs.phone" class="error-text">{{
+                    errs.phone
+                  }}</small>
+                </div>
+              </div>
+              <div class="row">
+                <label for="email">{{ $t("checkout.email") }}</label>
                 <input
-                  id="fullName"
-                  v-model.trim="contact.fullName"
-                  :class="{ invalid: errs.fullName }"
-                  type="text"
-                  placeholder="Nguyen Van A"
+                  id="email"
+                  v-model.trim="contact.email"
+                  :class="{ invalid: errs.email }"
+                  type="email"
+                  placeholder="you@example.com"
                 />
-                <small v-if="errs.fullName" class="error-text">{{
-                  errs.fullName
+                <small v-if="errs.email" class="error-text">{{
+                  errs.email
                 }}</small>
               </div>
-              <div>
-                <label for="phone">{{ $t("checkout.phone") }}</label>
-                <input
-                  id="phone"
-                  v-model.trim="contact.phone"
-                  :class="{ invalid: errs.phone }"
-                  type="tel"
-                  placeholder="090..."
-                />
-                <small v-if="errs.phone" class="error-text">{{
-                  errs.phone
-                }}</small>
+              <div class="row two">
+                <div>
+                  <label for="province">{{ $t("checkout.province") }}</label>
+                  <select
+                    id="province"
+                    v-model="address.province"
+                    @change="onProvinceChange"
+                    :class="{ invalid: errs.province }"
+                  >
+                    <option value="">{{ "—" }}</option>
+                    <option
+                      v-for="p in provinces"
+                      :key="p.code"
+                      :value="p.value"
+                    >
+                      {{ p.label }}
+                    </option>
+                  </select>
+                  <small v-if="errs.province" class="error-text">{{
+                    errs.province
+                  }}</small>
+                </div>
+                <div>
+                  <label for="district">{{ $t("checkout.district") }}</label>
+                  <select
+                    id="district"
+                    v-model="address.district"
+                    @change="onDistrictChange"
+                    :disabled="!districts.length"
+                    :class="{ invalid: errs.district }"
+                  >
+                    <option value="">{{ "—" }}</option>
+                    <option
+                      v-for="d in districts"
+                      :key="d.code"
+                      :value="d.value"
+                    >
+                      {{ d.label }}
+                    </option>
+                  </select>
+                  <small v-if="errs.district" class="error-text">{{
+                    errs.district
+                  }}</small>
+                </div>
               </div>
+              <div class="row two">
+                <div>
+                  <label for="ward">{{ $t("checkout.ward") }}</label>
+                  <select
+                    id="ward"
+                    v-model="address.ward"
+                    :disabled="!wards.length"
+                    :class="{ invalid: errs.ward }"
+                  >
+                    <option value="">{{ "—" }}</option>
+                    <option v-for="w in wards" :key="w.value" :value="w.value">
+                      {{ w.label }}
+                    </option>
+                  </select>
+                  <small v-if="errs.ward" class="error-text">{{
+                    errs.ward
+                  }}</small>
+                </div>
+                <div>
+                  <label for="street">{{ $t("checkout.street") }}</label>
+                  <input
+                    id="street"
+                    v-model.trim="address.street"
+                    :class="{ invalid: errs.street }"
+                    type="text"
+                    placeholder="123 Street"
+                  />
+                  <small v-if="errs.street" class="error-text">{{
+                    errs.street
+                  }}</small>
+                </div>
+              </div>
+              <div class="row">
+                <label>{{ $t("checkout.paymentMethod") }}</label>
+                <div class="payment-methods">
+                  <label class="payment-option">
+                    <input type="radio" v-model="paymentMethod" value="cod" />
+                    <span class="payment-label">
+                      <strong>{{ $t("checkout.cod") }}</strong>
+                      <small>{{ $t("checkout.codDesc") }}</small>
+                    </span>
+                  </label>
+                  <label class="payment-option">
+                    <input type="radio" v-model="paymentMethod" value="vnpay" />
+                    <span class="payment-label">
+                      <strong>VNPAY</strong>
+                      <small>{{ $t("checkout.vnpayDesc") }}</small>
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <div class="row" v-if="paymentMethod === 'vnpay'">
+                <label for="bank">{{ $t("checkout.bankOptional") }}</label>
+                <select id="bank" v-model="bankCode">
+                  <option value="">{{ "—" }}</option>
+                  <option value="NCB">NCB</option>
+                  <option value="VCB">VCB</option>
+                  <option value="ABB">ABBANK</option>
+                </select>
+              </div>
+            </form>
+            <!-- Inline alert inside details to avoid shifting the summary column -->
+            <div v-if="showAllEmptyAlert" class="form-alert">
+              {{
+                t("checkout.err.requiredAll") ||
+                "Vui lòng điền đầy đủ thông tin trước khi thanh toán."
+              }}
             </div>
+          </section>
+          <section class="summary">
+            <h2>{{ $t("cart.summary") }}</h2>
             <div class="row">
-              <label for="email">{{ $t("checkout.email") }}</label>
-              <input
-                id="email"
-                v-model.trim="contact.email"
-                :class="{ invalid: errs.email }"
-                type="email"
-                placeholder="you@example.com"
-              />
-              <small v-if="errs.email" class="error-text">{{
-                errs.email
-              }}</small>
+              <span>{{ $t("cart.subtotal") }}</span>
+              <span>{{
+                cartCount === 0 ? "—" : formatCurrency(cartTotal)
+              }}</span>
             </div>
-            <div class="row two">
-              <div>
-                <label for="province">{{ $t("checkout.province") }}</label>
-                <select
-                  id="province"
-                  v-model="address.province"
-                  @change="onProvinceChange"
-                  :class="{ invalid: errs.province }"
+            <div class="row muted">
+              <span>{{ $t("cart.estimatedDelivery") }}</span>
+              <span>
+                {{ cartCount === 0 ? "—" : formatCurrency(shippingFee) }}
+                <small
+                  v-if="isCalculatingShipping"
+                  style="
+                    display: block;
+                    font-size: 11px;
+                    color: #6b7280;
+                    margin-top: 2px;
+                  "
                 >
-                  <option value="">{{ "—" }}</option>
-                  <option v-for="p in provinces" :key="p.code" :value="p.value">
-                    {{ p.label }}
-                  </option>
-                </select>
-                <small v-if="errs.province" class="error-text">{{
-                  errs.province
-                }}</small>
-              </div>
-              <div>
-                <label for="district">{{ $t("checkout.district") }}</label>
-                <select
-                  id="district"
-                  v-model="address.district"
-                  @change="onDistrictChange"
-                  :disabled="!districts.length"
-                  :class="{ invalid: errs.district }"
-                >
-                  <option value="">{{ "—" }}</option>
-                  <option v-for="d in districts" :key="d.code" :value="d.value">
-                    {{ d.label }}
-                  </option>
-                </select>
-                <small v-if="errs.district" class="error-text">{{
-                  errs.district
-                }}</small>
-              </div>
-            </div>
-            <div class="row two">
-              <div>
-                <label for="ward">{{ $t("checkout.ward") }}</label>
-                <select
-                  id="ward"
-                  v-model="address.ward"
-                  :disabled="!wards.length"
-                  :class="{ invalid: errs.ward }"
-                >
-                  <option value="">{{ "—" }}</option>
-                  <option v-for="w in wards" :key="w.value" :value="w.value">
-                    {{ w.label }}
-                  </option>
-                </select>
-                <small v-if="errs.ward" class="error-text">{{
-                  errs.ward
-                }}</small>
-              </div>
-              <div>
-                <label for="street">{{ $t("checkout.street") }}</label>
-                <input
-                  id="street"
-                  v-model.trim="address.street"
-                  :class="{ invalid: errs.street }"
-                  type="text"
-                  placeholder="123 Street"
-                />
-                <small v-if="errs.street" class="error-text">{{
-                  errs.street
-                }}</small>
-              </div>
-            </div>
-            <div class="row">
-              <label>{{ $t("checkout.paymentMethod") }}</label>
-              <div class="payment-methods">
-                <label class="payment-option">
-                  <input type="radio" v-model="paymentMethod" value="cod" />
-                  <span class="payment-label">
-                    <strong>{{ $t("checkout.cod") }}</strong>
-                    <small>{{ $t("checkout.codDesc") }}</small>
-                  </span>
-                </label>
-                <label class="payment-option">
-                  <input type="radio" v-model="paymentMethod" value="vnpay" />
-                  <span class="payment-label">
-                    <strong>VNPAY</strong>
-                    <small>{{ $t("checkout.vnpayDesc") }}</small>
-                  </span>
-                </label>
-              </div>
-            </div>
-            <div class="row" v-if="paymentMethod === 'vnpay'">
-              <label for="bank">{{ $t("checkout.bankOptional") }}</label>
-              <select id="bank" v-model="bankCode">
-                <option value="">{{ "—" }}</option>
-                <option value="NCB">NCB</option>
-                <option value="VCB">VCB</option>
-                <option value="ABB">ABBANK</option>
-              </select>
-            </div>
-          </form>
-          <!-- Inline alert inside details to avoid shifting the summary column -->
-          <div v-if="showAllEmptyAlert" class="form-alert">
-            {{
-              t("checkout.err.requiredAll") ||
-              "Vui lòng điền đầy đủ thông tin trước khi thanh toán."
-            }}
-          </div>
-        </section>
-        <section class="summary">
-          <h2>{{ $t("cart.summary") }}</h2>
-          <div class="row">
-            <span>{{ $t("cart.subtotal") }}</span>
-            <span>{{ cartCount === 0 ? "—" : formatCurrency(cartTotal) }}</span>
-          </div>
-          <div class="row muted">
-            <span>{{ $t("cart.estimatedDelivery") }}</span>
-            <span>{{
-              cartCount === 0 ? "—" : formatCurrency(shippingFee)
-            }}</span>
-          </div>
-          <div class="row muted">
-            <span>VAT (10%)</span>
-            <span>{{ cartCount === 0 ? "—" : formatCurrency(vat) }}</span>
-          </div>
-          <hr />
-          <div class="row total">
-            <span>{{ $t("cart.total") }}</span>
-            <span>{{
-              cartCount === 0 ? "—" : formatCurrency(orderTotal)
-            }}</span>
-          </div>
-          <div class="actions">
-            <button
-              class="btn btn-block"
-              :disabled="cartCount === 0 || paying || !paymentMethod"
-              @click="handleCheckout"
-            >
-              <span v-if="!paying">
-                <span v-if="paymentMethod === 'cod'"
-                  >{{ $t("checkout.placeOrder") }} — COD</span
-                >
-                <span v-else-if="paymentMethod === 'vnpay'"
-                  >{{ $t("cart.checkout") }} — VNPAY</span
-                >
-                <span v-else>{{ $t("cart.checkout") }}</span>
+                  Đang tính...
+                </small>
               </span>
-              <span v-else>{{ $t("cart.processing") }}</span>
-            </button>
-          </div>
-          <p v-if="error" class="error">{{ error }}</p>
-        </section>
+            </div>
+
+            <!-- Voucher Section -->
+            <div class="row muted voucher-section">
+              <span>Phiếu giảm giá</span>
+              <button class="btn-select-voucher" @click="openVoucherModal">
+                {{
+                  selectedVoucher
+                    ? selectedVoucher.maPhieuGiamGia
+                    : "Chọn phiếu"
+                }}
+              </button>
+            </div>
+
+            <!-- Voucher Details -->
+            <div v-if="selectedVoucher" class="voucher-details-display">
+              <div class="row muted">
+                <span>Loại giảm</span>
+                <span
+                  class="type-badge"
+                  :class="{ percentage: !selectedVoucher.loaiPhieuGiamGia }"
+                >
+                  {{
+                    selectedVoucher.loaiPhieuGiamGia
+                      ? `Giảm ${formatCurrency(selectedVoucher.giaTriGiamGia)}`
+                      : `Giảm ${selectedVoucher.giaTriGiamGia}%`
+                  }}
+                </span>
+              </div>
+              <div class="row muted">
+                <span>Giảm giá</span>
+                <span class="discount">
+                  -{{ formatCurrency(voucherDiscount) }}
+                </span>
+              </div>
+              <div
+                v-if="
+                  selectedVoucher.hoaDonToiThieu &&
+                  selectedVoucher.hoaDonToiThieu > 0
+                "
+                class="row muted"
+                style="font-size: 12px; color: #999"
+              >
+                <span>Điều kiện</span>
+                <span
+                  >Tối thiểu
+                  {{ formatCurrency(selectedVoucher.hoaDonToiThieu) }}</span
+                >
+              </div>
+            </div>
+
+            <hr />
+            <div class="row total">
+              <span>{{ $t("cart.total") }}</span>
+              <span>{{
+                cartCount === 0 ? "—" : formatCurrency(orderTotal)
+              }}</span>
+            </div>
+            <div class="actions">
+              <button
+                class="btn btn-block"
+                :disabled="cartCount === 0 || paying || !paymentMethod"
+                @click="handleCheckout"
+              >
+                <span v-if="!paying">
+                  <span v-if="paymentMethod === 'cod'"
+                    >{{ $t("checkout.placeOrder") }} — COD</span
+                  >
+                  <span v-else-if="paymentMethod === 'vnpay'"
+                    >{{ $t("cart.checkout") }} — VNPAY</span
+                  >
+                  <span v-else>{{ $t("cart.checkout") }}</span>
+                </span>
+                <span v-else>{{ $t("cart.processing") }}</span>
+              </button>
+            </div>
+            <p v-if="error" class="error">{{ error }}</p>
+          </section>
+        </div>
       </div>
     </div>
+
+    <!-- Voucher Selection Modal -->
+    <VoucherModal
+      :is-open="voucherModalOpen"
+      :customer-id="userStore.id || 0"
+      :subtotal="cartTotal"
+      :current-voucher-id="selectedVoucher?.id"
+      @close="closeVoucherModal"
+      @select="selectVoucher"
+    />
   </div>
 </template>
 
@@ -211,6 +290,19 @@ import { formatCurrency } from "@/utils/currency";
 import { createVnPayPayment } from "@/api/payment";
 import { createOrderFromCart } from "@/api/orders";
 import { fetchVariantsByProduct } from "@/api/variants";
+import {
+  calculateShippingFee,
+  fetchGHNDistrictsByProvince,
+  fetchGHNWards,
+  fetchGHNProvinces,
+  type ShippingLocation,
+} from "@/api/shipping";
+import {
+  calculateVoucherDiscount,
+  validateVoucherUsage,
+  type Voucher,
+} from "@/api/vouchers";
+import VoucherModal from "@/components/VoucherModal.vue";
 import type { CustomerAddress } from "@/api/auth";
 
 // i18n
@@ -220,9 +312,72 @@ const cartStore = useCartStore();
 const userStore = useUserStore();
 const { cartCount, cartTotal, cart } = storeToRefs(cartStore);
 
-const shippingFee = 250000;
-const vat = computed(() => Math.round((cartTotal.value + shippingFee) * 0.1));
-const orderTotal = computed(() => cartTotal.value + shippingFee + vat.value);
+const shippingFee = ref(0);
+const isCalculatingShipping = ref(false);
+const selectedVoucher = ref<Voucher | null>(null);
+const voucherModalOpen = ref(false);
+
+const voucherDiscount = computed(() => {
+  if (!selectedVoucher.value) return 0;
+  return calculateVoucherDiscount(
+    selectedVoucher.value,
+    cartTotal.value,
+    shippingFee.value
+  );
+});
+
+const orderTotal = computed(
+  () => cartTotal.value + shippingFee.value - voucherDiscount.value
+);
+
+// Calculate shipping fee from GHN
+async function updateShippingFee() {
+  if (
+    !address.value.ward ||
+    !address.value.district ||
+    !address.value.province
+  ) {
+    return;
+  }
+
+  isCalculatingShipping.value = true;
+  try {
+    const result = await calculateShippingFee({
+      location: {
+        thanhPho: address.value.province,
+        quan: address.value.district,
+        phuong: address.value.ward,
+        diaChiCuThe: address.value.street,
+      },
+      subtotal: cartTotal.value,
+    });
+    shippingFee.value = result.fee;
+  } catch (err) {
+    console.error("Error calculating shipping fee:", err);
+    // Fallback to default
+    shippingFee.value = 15000;
+  } finally {
+    isCalculatingShipping.value = false;
+  }
+}
+
+// Voucher functions
+function openVoucherModal() {
+  voucherModalOpen.value = true;
+}
+
+function closeVoucherModal() {
+  voucherModalOpen.value = false;
+}
+
+function selectVoucher(voucher: Voucher) {
+  selectedVoucher.value = voucher;
+  closeVoucherModal();
+}
+
+function clearVoucher() {
+  selectedVoucher.value = null;
+}
 
 const paying = ref(false);
 const error = ref("");
@@ -345,6 +500,19 @@ async function loadDistrictsForProvinceName(
   address.value.ward = "";
 
   try {
+    // Try GHN API first - get districts for this specific province
+    const ghnDistricts = await fetchGHNDistrictsByProvince(province.code);
+    if (ghnDistricts && ghnDistricts.length > 0) {
+      districts.value = ghnDistricts.map((d: any) => ({
+        value: d.DistrictName,
+        label: d.DistrictName,
+        code: d.DistrictID,
+      }));
+      address.value.province = province.value;
+      return true;
+    }
+
+    // Fallback to old API
     const res = await fetch(`${provincesApiUrl}/p/${province.code}?depth=2`);
     const data = await res.json();
     districts.value = (data.districts || []).map((d: any) => ({
@@ -378,6 +546,18 @@ async function loadWardsForDistrictName(
   address.value.ward = "";
 
   try {
+    // Try GHN API first
+    const ghnWards = await fetchGHNWards(district.code);
+    if (ghnWards && ghnWards.length > 0) {
+      wards.value = ghnWards.map((w: any) => ({
+        value: w.WardName,
+        label: w.WardName,
+      }));
+      address.value.district = district.value;
+      return true;
+    }
+
+    // Fallback to old API
     const res = await fetch(`${provincesApiUrl}/d/${district.code}?depth=2`);
     const data = await res.json();
     wards.value = (data.wards || []).map((w: any) => ({
@@ -568,8 +748,32 @@ watch(
   () => validateField("street")
 );
 
+// Watch address changes to update shipping fee
+watch(
+  () => ({
+    province: address.value.province,
+    district: address.value.district,
+    ward: address.value.ward,
+  }),
+  () => {
+    updateShippingFee();
+  }
+);
+
 async function loadProvinces() {
   try {
+    // Try GHN API first
+    const ghnProvinces = await fetchGHNProvinces();
+    if (ghnProvinces && ghnProvinces.length > 0) {
+      provinces.value = ghnProvinces.map((p: any) => ({
+        value: p.name,
+        label: p.name,
+        code: p.code,
+      }));
+      return;
+    }
+
+    // Fallback to old API if GHN fails
     const res = await fetch(`${provincesApiUrl}/p/`);
     const data = await res.json();
     provinces.value = data.map((p: any) => ({
@@ -675,17 +879,29 @@ async function handleCODCheckout() {
       })
     );
 
+    // Convert cart items to plain objects to avoid circular reference errors
+    // This removes Vue reactive proxies which cause JSON serialization errors
+    const plainCartItems = JSON.parse(JSON.stringify(cartItemsWithVariants));
+
     // Create order with COD payment method (typically ID 1 or 2, adjust based on your backend)
     // COD payment method ID is usually 1 or 2, VNPAY might be 2 or 3
     const codPaymentMethodId = 1; // Adjust this based on your backend
 
     const orderNotes = `Giao hàng đến: ${deliveryAddress}\nNgười nhận: ${contact.value.fullName}\nSĐT: ${contact.value.phone}\nEmail: ${contact.value.email}`;
 
-    const order = await createOrderFromCart(cartItemsWithVariants, {
+    console.log(
+      "[CHECKOUT] Creating order with voucher:",
+      selectedVoucher.value?.id,
+      "voucherId:",
+      selectedVoucher.value?.maPhieuGiamGia
+    );
+
+    const order = await createOrderFromCart(plainCartItems, {
       customerId: userStore.id || undefined,
       paymentMethodId: codPaymentMethodId,
+      voucherId: selectedVoucher.value?.id,
       notes: orderNotes,
-      shippingFee,
+      shippingFee: shippingFee.value, // Extract ref value
       subtotal: cartTotal.value,
       totalAmount: orderTotal.value,
       recipient: {
@@ -736,6 +952,11 @@ async function handleVnpayCheckout() {
 </script>
 
 <style scoped lang="scss">
+.checkout-wrapper {
+  width: 100%;
+  min-height: 100%;
+}
+
 .checkout-page {
   padding: 24px 0 48px;
 }
@@ -860,6 +1081,52 @@ async function handleVnpayCheckout() {
 }
 .row.total span:first-child {
   font-weight: 700;
+}
+.row.voucher-section {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+}
+.btn-select-voucher {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #f77234;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-select-voucher:hover {
+  border-color: #f77234;
+  background: #fef7f3;
+}
+.discount {
+  color: #f77234 !important;
+  font-weight: 600;
+}
+.voucher-details-display {
+  background: #fff8f2;
+  border-left: 3px solid #f77234;
+  padding: 12px 12px;
+  margin-top: 8px;
+  border-radius: 4px;
+
+  .type-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #f0f0f0;
+    color: #666;
+
+    &.percentage {
+      background: #ffe8d6;
+      color: #f77234;
+    }
+  }
 }
 .actions {
   margin-top: 12px;

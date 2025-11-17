@@ -1,12 +1,12 @@
 package org.example.be_sp.model.request;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class HoaDonRequest {
     private String tenHoaDon;
-    private Boolean loaiDon;
+    private Boolean giaoHang;
     private BigDecimal phiVanChuyen;
     private BigDecimal tongTien;
     private BigDecimal tongTienSauGiam;

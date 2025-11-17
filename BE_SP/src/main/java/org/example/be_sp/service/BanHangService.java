@@ -16,7 +16,9 @@ import org.example.be_sp.entity.HoaDonChiTiet;
 import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.PhieuGiamGia;
 import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
+import org.example.be_sp.entity.ThongTinDonHang;
 import org.example.be_sp.entity.TimelineDonHang;
+import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.banHang.ConfirmBanHangRequest;
 import org.example.be_sp.model.response.CreateInvoiceResponse;
@@ -78,7 +80,7 @@ public class BanHangService {
      * Helper method to create timeline entry automatically
      */
     private void addTimeline(HoaDon hoaDon, String trangThaiCu, String trangThaiMoi,
-            String hanhDong, String moTa, Integer idNhanVien) {
+                             String hanhDong, String moTa, Integer idNhanVien) {
         TimelineDonHang timeline = new TimelineDonHang();
         timeline.setIdHoaDon(hoaDon);
         timeline.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
@@ -114,7 +116,13 @@ public class BanHangService {
 
         // Refresh entity to get updated ma_hoa_don from database
         saved = hdRepository.findById(saved.getId()).orElseThrow();
-
+        ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
+        thongTinDonHang.setIdHoaDon(saved);
+        thongTinDonHang.setIdTrangThaiDonHang(ttTdRepository.findById(1).orElse(null));
+        thongTinDonHang.setThoiGian(LocalDate.now());
+        thongTinDonHang.setTrangThai(true);
+        thongTinDonHang.setDeleted(false);
+        ttDhRepository.save(thongTinDonHang);
         return new CreateInvoiceResponse(saved.getId(), maHoaDon);
     }
 
@@ -355,7 +363,7 @@ public class BanHangService {
         // Create timeline: Cập nhật hình thức giao hàng
         addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
                 "Cập nhật hình thức giao hàng: " + (giaohangCu ? "Không giao" : "Giao hàng")
-                + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
+                        + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
                 idNhanVien);
     }
 
@@ -363,8 +371,8 @@ public class BanHangService {
         HoaDon hoaDon = hdRepository.findById(idHoaDon).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
         HinhThucThanhToan httt
                 = htttRepository.findByIdHoaDonAndTrangThaiAndDeleted(hdRepository.findById(idHoaDon).orElseThrow(),
-                        true,
-                        false);
+                true,
+                false);
 
         // Create new HinhThucThanhToan if none exists
         if (httt == null) {
@@ -411,7 +419,6 @@ public class BanHangService {
         addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
                 "Áp dụng phiếu giảm giá: " + pgg.getMaPhieuGiamGia(),
                 idNhanVien);
-
         return pgg.getId();
     }
 
@@ -437,7 +444,7 @@ public class BanHangService {
         hoaDon.setSoTienDaThanhToan(tienMat.add(tienChuyenKhoan));
         hoaDon.setSoTienConLai(request.getSoTienConLai());
         hoaDon.setGhiChu("Bán hàng tại quầy");
-        hdRepository.save(hoaDon);
+        HoaDon saved = hdRepository.save(hoaDon);
 
         // Handle voucher (only process if provided)
         if (request.getIdPhieuGiamGia() != null) {
@@ -476,6 +483,11 @@ public class BanHangService {
         addTimeline(hoaDon, "Đang xử lý", "Hoàn thành", "Xác nhận",
                 "Xác nhận bán hàng tại quầy - Tổng tiền: " + hoaDon.getTongTien(),
                 request.getIdNhanVien());
+        if (!saved.getGiaoHang()){
+            trangThaiDonHangOffline(saved.getId());
+        } else {
+            trangThaiDonHangOnline(saved.getId());
+        }
     }
 
     public void kiemTraTonKhoBienThe(Integer idChiTietSanPham, Integer soLuong) {
@@ -552,8 +564,49 @@ public class BanHangService {
 
     public ArrayList<TimelineDonHang> getTimelineByHoaDon(Integer idHoaDon) {
         // Verify hóa đơn exists before fetching timeline
-        hdRepository.findById(idHoaDon).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
+        hdRepository.findById(idHoaDon)
+                .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
         List<TimelineDonHang> timeline = timelineRepository.findByHoaDonId(idHoaDon);
         return timeline != null ? new ArrayList<>(timeline) : new ArrayList<>();
+    }
+
+    public void trangThaiDonHangOffline(Integer idHoaDon) {
+        ThongTinDonHang thongTinDonHang2 = new ThongTinDonHang();
+        thongTinDonHang2.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
+        thongTinDonHang2.setIdTrangThaiDonHang(ttTdRepository.findById(2).orElse(null));
+        thongTinDonHang2.setThoiGian(LocalDate.now());
+        thongTinDonHang2.setTrangThai(true);
+        thongTinDonHang2.setDeleted(false);
+        ttDhRepository.save(thongTinDonHang2);
+        ThongTinDonHang thongTinDonHang3 = new ThongTinDonHang();
+        thongTinDonHang3.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
+        thongTinDonHang3.setIdTrangThaiDonHang(ttTdRepository.findById(3).orElse(null));
+        thongTinDonHang3.setThoiGian(LocalDate.now());
+        thongTinDonHang3.setTrangThai(true);
+        thongTinDonHang3.setDeleted(false);
+        ttDhRepository.save(thongTinDonHang3);
+        ThongTinDonHang thongTinDonHang4 = new ThongTinDonHang();
+        thongTinDonHang4.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
+        thongTinDonHang4.setIdTrangThaiDonHang(ttTdRepository.findById(7).orElse(null));
+        thongTinDonHang4.setThoiGian(LocalDate.now());
+        thongTinDonHang4.setTrangThai(true);
+        thongTinDonHang4.setDeleted(false);
+        ttDhRepository.save(thongTinDonHang4);
+    }
+    public void trangThaiDonHangOnline(Integer idHoaDon) {
+        ThongTinDonHang thongTinDonHang2 = new ThongTinDonHang();
+        thongTinDonHang2.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
+        thongTinDonHang2.setIdTrangThaiDonHang(ttTdRepository.findById(2).orElse(null));
+        thongTinDonHang2.setThoiGian(LocalDate.now());
+        thongTinDonHang2.setTrangThai(true);
+        thongTinDonHang2.setDeleted(false);
+        ttDhRepository.save(thongTinDonHang2);
+        ThongTinDonHang thongTinDonHang3 = new ThongTinDonHang();
+        thongTinDonHang3.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
+        thongTinDonHang3.setIdTrangThaiDonHang(ttTdRepository.findById(3).orElse(null));
+        thongTinDonHang3.setThoiGian(LocalDate.now());
+        thongTinDonHang3.setTrangThai(true);
+        thongTinDonHang3.setDeleted(false);
+        ttDhRepository.save(thongTinDonHang3);
     }
 }

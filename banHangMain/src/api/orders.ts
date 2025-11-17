@@ -8,22 +8,37 @@ export interface OrderItem {
   giaBan: number;
 }
 
+export interface HoaDonChiTietRequest {
+  idChiTietSanPham?: number; // idBienThe from cart (ChiTietSanPham ID)
+  idBienTheSanPham?: number; // Alternative field name
+  idBienThe?: number; // Alternative field name (from cart)
+  soLuong: number;
+  giaBan: number;
+  thanhTien?: number;
+  ghiChu?: string;
+  trangThai?: boolean;
+  deleted?: boolean;
+  createAt?: string;
+}
+
 export interface CreateOrderRequest {
   idKhachHang?: number;
   idPhieuGiamGia?: number;
   idPhuongThucThanhToan?: number;
+  idNhanVien?: number;
+  idTrangThaiDonHang?: number;
   tenNguoiNhan: string;
   diaChiNhanHang: string;
   soDienThoaiNguoiNhan: string;
   emailNguoiNhan: string;
+  hoaDonChiTiet: HoaDonChiTietRequest[]; // Cart items
   loaiDon?: boolean;
-  giaoHang: boolean;
   phiVanChuyen: number;
   tongTien: number;
   tongTienSauGiam: number;
   ghiChu?: string;
-  trangThai: boolean;
-  deleted: boolean;
+  trangThai?: boolean;
+  deleted?: boolean;
   createAt: string;
 }
 
@@ -69,6 +84,17 @@ export interface CreateOrderOptions {
   };
 }
 
+// Convert cart items to plain objects (removes Vue reactive proxies)
+// Uses JSON stringify/parse to safely handle circular references
+export function toPlainObject(obj: any): any {
+  try {
+    return JSON.parse(JSON.stringify(obj));
+  } catch (error) {
+    console.warn("Failed to convert object to plain object:", error);
+    return obj;
+  }
+}
+
 // Convert cart items to order items (need to map product variants)
 export function convertCartToOrderItems(cartItems: CartItem[]): OrderItem[] {
   // This is a simplified conversion - in production, you'd need to:
@@ -105,37 +131,94 @@ export async function createOrderFromCart(
       throw new Error("Thiếu thông tin người nhận để tạo hoá đơn");
     }
 
-    const createdAt =
-      options.createAt ?? new Date().toISOString().split("T")[0];
-    const shippingFee = options.shippingFee ?? 0;
-    const subtotal =
-      options.subtotal ??
-      cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
-    const baseTotal = subtotal + shippingFee;
-    const requestedFinal = options.totalAmount ?? baseTotal;
+    // Validate cart items have required IDs
+    const validCartItems = cartItems.filter((item) => {
+      const hasId = (item as any).idBienThe && (item as any).idBienThe > 0;
+      if (!hasId) {
+        console.warn("[ORDER] Skipping cart item without idBienThe:", item);
+      }
+      return hasId;
+    });
 
-    // SQL check constraint enforces tong_tien_sau_giam <= tong_tien
-    const tongTien = Math.max(baseTotal, requestedFinal);
-    const tongTienSauGiam = Math.min(requestedFinal, tongTien);
+    if (validCartItems.length === 0) {
+      throw new Error("Giỏ hàng không có sản phẩm hợp lệ");
+    }
+
+    // Convert Vue reactive cart items to plain objects to avoid circular reference errors
+    const plainCartItems = validCartItems.map((item) =>
+      toPlainObject(item)
+    ) as CartItem[];
+
+    // Extract primitive values from options to avoid circular references
+    // Don't use toPlainObject on the whole options object as it contains reactive refs
+    const createdAt = (options.createAt ??
+      new Date().toISOString().split("T")[0]) as string;
+    const shippingFee = Number(options.shippingFee ?? 0);
+    const subtotal =
+      Number(options.subtotal) ||
+      plainCartItems.reduce(
+        (total, item) => total + item.price * item.quantity,
+        0
+      );
+
+    // totalAmount = subtotal + shippingFee (without VAT)
+    const totalAmount = Number(options.totalAmount ?? 0);
+
+    // tongTien = total invoice amount (subtotal + shipping fee)
+    // tongTienSauGiam = final amount customer pays (same as tongTien, no discount/voucher yet)
+    const tongTien = totalAmount > 0 ? totalAmount : subtotal + shippingFee;
+    const tongTienSauGiam = tongTien;
 
     const orderRequest: CreateOrderRequest = {
-      idKhachHang: options.customerId,
-      idPhuongThucThanhToan: options.paymentMethodId,
-      idPhieuGiamGia: options.voucherId,
-      tenNguoiNhan: options.recipient.fullName,
-      diaChiNhanHang: options.recipient.address,
-      soDienThoaiNguoiNhan: options.recipient.phone,
-      emailNguoiNhan: options.recipient.email,
+      idKhachHang: options.customerId ? Number(options.customerId) : undefined,
+      idPhuongThucThanhToan: options.paymentMethodId
+        ? Number(options.paymentMethodId)
+        : undefined,
+      idPhieuGiamGia: options.voucherId ? Number(options.voucherId) : undefined,
+      tenNguoiNhan: String(options.recipient.fullName),
+      diaChiNhanHang: String(options.recipient.address),
+      soDienThoaiNguoiNhan: String(options.recipient.phone),
+      emailNguoiNhan: String(options.recipient.email),
+      hoaDonChiTiet: plainCartItems.map((item) => {
+        const idChiTietSanPham = (item as any).idBienThe || 0;
+        if (idChiTietSanPham <= 0) {
+          console.warn(
+            "[ORDER] Invalid idChiTietSanPham:",
+            idChiTietSanPham,
+            "for item:",
+            item.name
+          );
+        }
+        const request: HoaDonChiTietRequest = {
+          idBienThe: idChiTietSanPham, // Backend accepts this as idChiTietSanPham
+          soLuong: item.quantity,
+          giaBan: item.price,
+          trangThai: true,
+          deleted: false,
+          createAt: createdAt,
+        };
+        console.log("[ORDER] Cart item:", {
+          name: item.name,
+          idBienThe: idChiTietSanPham,
+          quantity: item.quantity,
+          price: item.price,
+        });
+        return request;
+      }),
       loaiDon: true,
-      giaoHang: true,
-      phiVanChuyen: shippingFee,
-      tongTien,
-      tongTienSauGiam,
-      ghiChu: options.notes,
+      phiVanChuyen: Number(shippingFee), // Ensure it's a number
+      tongTien: Number(tongTien),
+      tongTienSauGiam: Number(tongTienSauGiam),
+      ghiChu: String(options.notes ?? ""),
       trangThai: true,
       deleted: false,
       createAt: createdAt,
     };
+
+    console.log(
+      "[ORDER] Creating order with request:",
+      JSON.stringify(orderRequest, null, 2)
+    );
 
     const response = await createOrder(orderRequest);
     const order = response.data as OrderResponse;
@@ -146,7 +229,7 @@ export async function createOrderFromCart(
 
     // Persist line items using invoice detail endpoint
     await Promise.all(
-      cartItems.map((item) => {
+      plainCartItems.map((item) => {
         if (!(item as any).idBienThe) {
           throw new Error(`Thiếu mã biến thể cho sản phẩm ${item.id}`);
         }
@@ -166,8 +249,20 @@ export async function createOrderFromCart(
     );
 
     return order;
-  } catch (error) {
-    console.error("Error creating order:", error);
+  } catch (error: any) {
+    console.error("[ORDER] Error creating order:", error.message);
+    if (error.response) {
+      console.error("[ORDER] Backend error status:", error.response.status);
+      console.error(
+        "[ORDER] Backend error data:",
+        JSON.stringify(error.response.data, null, 2)
+      );
+      console.error("[ORDER] Full response:", error.response);
+    } else if (error.request) {
+      console.error("[ORDER] No response from backend:", error.request);
+    } else {
+      console.error("[ORDER] Error details:", error);
+    }
     return null;
   }
 }
