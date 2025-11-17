@@ -104,7 +104,6 @@ async function updateShippingFee() {
     });
 
     shippingFee.value = result.fee;
-    console.log("Shipping fee calculated:", result);
   } catch (error) {
     console.error("Error calculating shipping fee:", error);
     // Fallback to a default fee

@@ -166,7 +166,6 @@ async function handleSubmit() {
 
 function handleSocialLogin(provider: string) {
   // Social login logic
-  console.log(`Login with ${provider}`)
 }
 </script>
 
