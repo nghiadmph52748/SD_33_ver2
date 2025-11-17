@@ -27,17 +27,26 @@ export function useTinhToanThongKe(
     return Number.isNaN(soTien) ? 0 : soTien
   }
 
+  const layChiTietHoaDon = (hoaDon: HoaDon) => {
+    if (hoaDon.hoaDonChiTiets && Array.isArray(hoaDon.hoaDonChiTiets) && hoaDon.hoaDonChiTiets.length > 0) {
+      return hoaDon.hoaDonChiTiets
+    }
+    if (hoaDon.items && Array.isArray(hoaDon.items) && hoaDon.items.length > 0) {
+      return hoaDon.items as any[]
+    }
+    return []
+  }
+
   const tinhSanPhamDaBan = (danhSachHoaDon: HoaDon[]) => {
     return danhSachHoaDon.reduce((tong: number, hoaDon: HoaDon) => {
-      if (hoaDon.hoaDonChiTiets && Array.isArray(hoaDon.hoaDonChiTiets)) {
-        return (
-          tong +
-          hoaDon.hoaDonChiTiets.reduce((sum: number, chiTiet: any) => {
-            return sum + (Number(chiTiet.soLuong) || 0)
-          }, 0)
-        )
-      }
-      return tong
+      const chiTiet = layChiTietHoaDon(hoaDon)
+      if (chiTiet.length === 0) return tong
+      return (
+        tong +
+        chiTiet.reduce((sum: number, item: any) => {
+          return sum + (Number(item?.soLuong) || 0)
+        }, 0)
+      )
     }, 0)
   }
 
@@ -373,16 +382,20 @@ export function useTinhToanThongKe(
     const demDanhMuc = new Map<string, number>()
 
     danhSachHoaDon.value.forEach((hd) => {
-      if (hd.hoaDonChiTiets && Array.isArray(hd.hoaDonChiTiets)) {
-        hd.hoaDonChiTiets.forEach((chiTiet: any) => {
-          if (chiTiet.idChiTietSanPham?.idSanPham?.tenSanPham) {
-            const tenSP = chiTiet.idChiTietSanPham.idSanPham.tenSanPham
-            const danhMuc = phanLoaiSanPham(tenSP)
-            const soLuong = chiTiet.soLuong || 0
-            demDanhMuc.set(danhMuc, (demDanhMuc.get(danhMuc) || 0) + soLuong)
-          }
-        })
-      }
+      const chiTiet = layChiTietHoaDon(hd)
+      if (chiTiet.length === 0) return
+      chiTiet.forEach((item: any) => {
+        const tenSP =
+          item?.idChiTietSanPham?.idSanPham?.tenSanPham ||
+          item?.sanPham?.tenSanPham ||
+          item?.tenSanPham ||
+          item?.tenSanPhamChiTiet
+        if (!tenSP) return
+        const danhMuc = phanLoaiSanPham(tenSP)
+        const soLuong = Number(item?.soLuong || 0)
+        const soLuongHopLe = Number.isNaN(soLuong) ? 0 : soLuong
+        demDanhMuc.set(danhMuc, (demDanhMuc.get(danhMuc) || 0) + soLuongHopLe)
+      })
     })
 
     const mauSac = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2']
