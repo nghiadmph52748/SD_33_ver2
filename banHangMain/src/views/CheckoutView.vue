@@ -35,17 +35,19 @@
                 </div>
               </div>
               <div class="row">
-                <label for="email">{{ $t("checkout.email") }}</label>
-                <input
-                  id="email"
-                  v-model.trim="contact.email"
-                  :class="{ invalid: errs.email }"
-                  type="email"
-                  placeholder="you@example.com"
-                />
-                <small v-if="errs.email" class="error-text">{{
-                  errs.email
-                }}</small>
+                <div style="width: 100%">
+                  <label for="email">{{ $t("checkout.email") }}</label>
+                  <input
+                    id="email"
+                    v-model.trim="contact.email"
+                    :class="{ invalid: errs.email }"
+                    type="email"
+                    placeholder="you@example.com"
+                  />
+                  <small v-if="errs.email" class="error-text">{{
+                    errs.email
+                  }}</small>
+                </div>
               </div>
               <div class="row two">
                 <div>
@@ -56,7 +58,7 @@
                     @change="onProvinceChange"
                     :options="provinces"
                     :allow-search="true"
-                    :placeholder="$t('checkout.selectProvince')"
+                    :placeholder="'----'"
                     :class="{ invalid: errs.province }"
                   />
                   <small v-if="errs.province" class="error-text">{{
@@ -72,7 +74,7 @@
                     :options="districts"
                     :allow-search="true"
                     :disabled="!districts.length"
-                    :placeholder="$t('checkout.selectDistrict')"
+                    :placeholder="'----'"
                     :class="{ invalid: errs.district }"
                   />
                   <small v-if="errs.district" class="error-text">{{
@@ -89,7 +91,7 @@
                     :options="wards"
                     :allow-search="true"
                     :disabled="!wards.length"
-                    :placeholder="$t('checkout.selectWard')"
+                    :placeholder="'----'"
                     :class="{ invalid: errs.ward }"
                   />
                   <small v-if="errs.ward" class="error-text">{{
