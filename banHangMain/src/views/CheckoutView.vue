@@ -50,43 +50,31 @@
               <div class="row two">
                 <div>
                   <label for="province">{{ $t("checkout.province") }}</label>
-                  <select
+                  <a-select
                     id="province"
                     v-model="address.province"
                     @change="onProvinceChange"
+                    :options="provinces"
+                    :allow-search="true"
+                    :placeholder="$t('checkout.selectProvince')"
                     :class="{ invalid: errs.province }"
-                  >
-                    <option value="">{{ "—" }}</option>
-                    <option
-                      v-for="p in provinces"
-                      :key="p.code"
-                      :value="p.value"
-                    >
-                      {{ p.label }}
-                    </option>
-                  </select>
+                  />
                   <small v-if="errs.province" class="error-text">{{
                     errs.province
                   }}</small>
                 </div>
                 <div>
                   <label for="district">{{ $t("checkout.district") }}</label>
-                  <select
+                  <a-select
                     id="district"
                     v-model="address.district"
                     @change="onDistrictChange"
+                    :options="districts"
+                    :allow-search="true"
                     :disabled="!districts.length"
+                    :placeholder="$t('checkout.selectDistrict')"
                     :class="{ invalid: errs.district }"
-                  >
-                    <option value="">{{ "—" }}</option>
-                    <option
-                      v-for="d in districts"
-                      :key="d.code"
-                      :value="d.value"
-                    >
-                      {{ d.label }}
-                    </option>
-                  </select>
+                  />
                   <small v-if="errs.district" class="error-text">{{
                     errs.district
                   }}</small>
@@ -95,17 +83,15 @@
               <div class="row two">
                 <div>
                   <label for="ward">{{ $t("checkout.ward") }}</label>
-                  <select
+                  <a-select
                     id="ward"
                     v-model="address.ward"
+                    :options="wards"
+                    :allow-search="true"
                     :disabled="!wards.length"
+                    :placeholder="$t('checkout.selectWard')"
                     :class="{ invalid: errs.ward }"
-                  >
-                    <option value="">{{ "—" }}</option>
-                    <option v-for="w in wards" :key="w.value" :value="w.value">
-                      {{ w.label }}
-                    </option>
-                  </select>
+                  />
                   <small v-if="errs.ward" class="error-text">{{
                     errs.ward
                   }}</small>
@@ -290,6 +276,7 @@ import { formatCurrency } from "@/utils/currency";
 import { createVnPayPayment } from "@/api/payment";
 import { createOrderFromCart } from "@/api/orders";
 import { fetchVariantsByProduct } from "@/api/variants";
+import { Select as ASelect } from "@arco-design/web-vue";
 import {
   calculateShippingFee,
   fetchGHNDistrictsByProvince,
@@ -889,13 +876,6 @@ async function handleCODCheckout() {
 
     const orderNotes = `Giao hàng đến: ${deliveryAddress}\nNgười nhận: ${contact.value.fullName}\nSĐT: ${contact.value.phone}\nEmail: ${contact.value.email}`;
 
-    console.log(
-      "[CHECKOUT] Creating order with voucher:",
-      selectedVoucher.value?.id,
-      "voucherId:",
-      selectedVoucher.value?.maPhieuGiamGia
-    );
-
     const order = await createOrderFromCart(plainCartItems, {
       customerId: userStore.id || undefined,
       paymentMethodId: codPaymentMethodId,
@@ -1090,9 +1070,9 @@ async function handleVnpayCheckout() {
 .btn-select-voucher {
   background: white;
   border: 1px solid #e5e5e5;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 13px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
   color: #f77234;
   font-weight: 500;
   cursor: pointer;
@@ -1134,6 +1114,83 @@ async function handleVnpayCheckout() {
 .error {
   color: #c53030;
   margin: 12px 0 0;
+}
+
+/* ArcoDesign Select Styles */
+:deep(.arco-select) {
+  width: 100%;
+  font-size: 14px;
+  border: 1px solid #e5e5e5 !important;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+:deep(
+    .arco-select-view-single.arco-select-view-size-medium
+      .arco-select-view-input,
+    .arco-select-view-single.arco-select-view-size-medium
+      .arco-select-view-value
+  ) {
+  padding: 1.06px 0;
+  font-size: 15px;
+}
+
+:deep(.arco-select .arco-select-view) {
+  border-radius: 8px !important;
+  padding: 0 !important;
+  height: auto !important;
+  min-height: 38px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #d4d4d4 !important;
+  }
+
+  .arco-select-view-single {
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}
+
+:deep(.arco-select.arco-select-open .arco-select-view) {
+  border-color: #333 !important;
+  box-shadow: none;
+}
+
+:deep(.arco-select.arco-select-disabled .arco-select-view) {
+  background: #f5f5f5 !important;
+  border-color: #e5e5e5 !important;
+  color: #999 !important;
+}
+
+:deep(.arco-select-popup) {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e5e5;
+}
+
+:deep(.arco-select-option) {
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  &.arco-select-option-selected {
+    background-color: #fff7e6;
+    color: #f77234;
+    font-weight: 500;
+  }
+}
+
+:deep(.arco-select.arco-select-error .arco-select-view) {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }
 
 @media (max-width: 980px) {
