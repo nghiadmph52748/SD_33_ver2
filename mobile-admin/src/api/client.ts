@@ -1,7 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
 
 import { notifyError } from '../utils/notifications'
-import tokenManager from './tokenManager'
 import env from '../config/env'
 
 export interface ApiEnvelope<T> {
@@ -17,24 +16,8 @@ const client = axios.create({
   withCredentials: true,
 })
 
-client.interceptors.request.use((config: AxiosRequestConfig) => {
-  const token = tokenManager.getAccessToken()
-  if (token) {
-    if (!config.headers) {
-      config.headers = {}
-    }
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 client.interceptors.response.use(
-  async <T>(response: AxiosResponse<ApiEnvelope<T> | T>) => {
-    const newToken = response.headers['new-token'] as string | undefined
-    if (newToken) {
-      await tokenManager.notifyTokenRefreshed(newToken)
-    }
-
+  <T>(response: AxiosResponse<ApiEnvelope<T> | T>) => {
     const payload = response.data
 
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -59,11 +42,8 @@ client.interceptors.response.use(
 
     return payload as T
   },
-  async (error: AxiosError<{ message?: string }>) => {
+  (error: AxiosError<{ message?: string }>) => {
     const status = error.response?.status
-    if (status === 401 || status === 403) {
-      await tokenManager.notifyUnauthorized()
-    }
 
     const message =
       error.response?.data?.message ||

@@ -112,27 +112,18 @@ const getDefaultBaseURL = () => {
 }
 
 const DEFAULT_API_BASE_URL = getDefaultBaseURL()
-const DEFAULT_AI_BASE_URL = `${DEFAULT_API_BASE_URL}/api/ai`
-const DEFAULT_WS_URL = DEFAULT_API_BASE_URL.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws-chat'
 
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.EXPO_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL
-const AI_BASE_URL = process.env.AI_BASE_URL ?? process.env.EXPO_PUBLIC_AI_BASE_URL ?? DEFAULT_AI_BASE_URL
-const WEB_SOCKET_URL =
-  process.env.WEB_SOCKET_URL ?? process.env.EXPO_PUBLIC_WEB_SOCKET_URL ?? DEFAULT_WS_URL
 
 // Log connection info in development
 if (process.env.NODE_ENV !== 'production') {
   console.log('API Configuration:')
   console.log('  Platform:', Platform.OS)
   console.log('  API Base URL:', API_BASE_URL)
-  console.log('  AI Base URL:', AI_BASE_URL)
-  console.log('  WebSocket URL:', WEB_SOCKET_URL)
 }
 
 export const env = {
   API_BASE_URL,
-  AI_BASE_URL,
-  WEB_SOCKET_URL,
 }
 
 export default env

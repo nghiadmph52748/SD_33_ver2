@@ -139,8 +139,8 @@
           placeholder="Nhập số tiền mặt"
           style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
           :precision="0"
-          :formatter="(value) => formatCurrency(value || 0)"
-          :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
+          :formatter="(value: number | string | undefined) => formatCurrency(Number(value) || 0)"
+          :parser="(value: string) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
           @update:model-value="$emit('update:cash', $event || 0)"
         />
       </a-form-item>
@@ -158,8 +158,8 @@
           placeholder="Nhập số tiền chuyển khoản"
           style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
           :precision="0"
-          :formatter="(value) => formatCurrency(value || 0)"
-          :parser="(value) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
+          :formatter="(value: number | string | undefined) => formatCurrency(Number(value) || 0)"
+          :parser="(value: string) => parseFloat(value.replace(/[^\d]/g, '')) || 0"
           @update:model-value="$emit('update:transfer', $event || 0)"
         />
       </a-form-item>
@@ -209,6 +209,79 @@
         </p>
       </div>
 
+      <div class="qr-session-panel" :class="{ 'qr-session-panel--active': !!qrSession }">
+        <div class="qr-session-head">
+          <div>
+            <div class="qr-session-title">VietQR tại quầy</div>
+            <div class="qr-session-desc">
+              {{
+                qrSession
+                  ? 'Khách sẽ quét mã trên thiết bị mobile để hoàn tất thanh toán.'
+                  : 'Chưa có mã VietQR. Hoàn tất giỏ hàng và nhấn “Mở trên mobile” để tạo mã.'
+              }}
+            </div>
+          </div>
+          <a-tag v-if="qrSession" :color="qrStatusTagColor" class="qr-status-tag">
+            {{ qrStatusLabel }}
+          </a-tag>
+          <a-tag v-else color="default" class="qr-status-tag">CHƯA HIỂN THỊ</a-tag>
+        </div>
+
+        <div v-if="qrSyncing" class="qr-session-syncing">
+          <icon-refresh class="spin" />
+          <span>Đang đồng bộ giỏ hàng…</span>
+        </div>
+
+        <div v-else-if="qrSession" class="qr-session-body">
+          <div class="qr-session-info">
+            <div class="info-block">
+              <p class="info-label">Mã phiên</p>
+              <p class="info-value code">{{ qrSession.sessionId }}</p>
+            </div>
+            <div class="info-block">
+              <p class="info-label">Thành tiền</p>
+              <p class="info-value">{{ formatCurrency(finalPrice) }}</p>
+            </div>
+          </div>
+          <p class="qr-session-expired" v-if="qrSession.expiresAt">Hết hạn sau: {{ formatQrExpires(qrSession.expiresAt) }}</p>
+        </div>
+
+        <div v-else class="qr-session-empty">
+          <icon-qrcode class="qr-session-empty-icon" />
+          <div>
+            <p class="empty-title">Chưa tạo VietQR</p>
+            <p class="empty-desc">Nhân viên hãy kiểm tra giỏ hàng, sau đó bấm “Mở trên mobile” để hiển thị mã.</p>
+          </div>
+        </div>
+
+        <p v-if="qrSyncError" class="qr-session-error">
+          <icon-info-circle style="margin-right: 4px" /> {{ qrSyncError }}
+        </p>
+
+        <a-space direction="vertical" size="small" style="width: 100%; margin-top: 12px">
+          <a-button
+            long
+            type="primary"
+            status="success"
+            :ghost="true"
+            :loading="qrSyncing"
+            :disabled="!qrSession"
+            @click="$emit('open-mobile')"
+          >
+            <template #icon>
+              <icon-qrcode />
+            </template>
+            Mở trên mobile
+          </a-button>
+          <a-button long type="outline" :disabled="qrSyncing" @click="$emit('sync-qr')">
+            <template #icon>
+              <icon-refresh />
+            </template>
+            Đồng bộ giỏ hàng
+          </a-button>
+        </a-space>
+      </div>
+
       <a-space direction="vertical" size="large" style="width: 100%; margin-top: 16px">
         <a-button type="primary" long size="large" :disabled="!canConfirmOrder" :loading="confirmLoading" @click="$emit('confirm-order')">
           <template #icon>
@@ -223,14 +296,15 @@
 </template>
 
 <script setup lang="ts">
-import { IconCheck, IconInfoCircle } from '@arco-design/web-vue/es/icon'
+import { computed } from 'vue'
+import { IconCheck, IconInfoCircle, IconQrcode, IconRefresh } from '@arco-design/web-vue/es/icon'
 import type { CouponApiModel } from '@/api/discount-management'
 import BestVoucherSuggestionCard from './BestVoucherSuggestionCard.vue'
 import VoucherAlmostEligible from './VoucherAlmostEligible.vue'
 import ShippingFeeCalculator from './ShippingFeeCalculator.vue'
 import { formatCurrency } from '../utils'
 
-defineProps<{
+const props = defineProps<{
   orderType: 'counter' | 'delivery'
   orderCode: string
   paymentForm: { method: 'cash' | 'transfer' | 'both'; cashReceived: number; transferReceived: number; discountCode: string | null }
@@ -259,6 +333,9 @@ defineProps<{
   }
   selectedCoupon: CouponApiModel | null
   discountDisplay: string
+  qrSession?: { sessionId: string; status?: string; expiresAt?: string } | null
+  qrSyncing?: boolean
+  qrSyncError?: string | null
 }>()
 
 defineEmits<{
@@ -276,5 +353,168 @@ defineEmits<{
   (e: 'change:district', value: string): void
   (e: 'update:walkin-address', value: string): void
   (e: 'update:walkin-ward', value: string): void
+  (e: 'open-mobile'): void
+  (e: 'sync-qr'): void
 }>()
+
+const qrStatusLabel = computed(() => {
+  const status = props.qrSession?.status
+  if (status === 'PAID') return 'ĐÃ THANH TOÁN'
+  if (status === 'EXPIRED') return 'ĐÃ ĐÓNG'
+  return 'ĐANG CHỜ'
+})
+
+const qrStatusTagColor = computed(() => {
+  const status = props.qrSession?.status
+  if (status === 'PAID') return 'green'
+  if (status === 'EXPIRED') return 'orange'
+  return 'blue'
+})
+
+const formatQrExpires = (value?: string) => {
+  if (!value) return '—'
+  try {
+    const date = new Date(value)
+    return date.toLocaleString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+  } catch {
+    return value
+  }
+}
 </script>
+
+<style scoped lang="less">
+.qr-session-panel {
+  border: 1px dashed #e2e8f0;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc, #fefefe);
+  margin-top: 16px;
+  transition: border-color 0.3s ease, background 0.3s ease;
+
+  &--active {
+    border-color: #c7d2fe;
+    background: linear-gradient(135deg, rgba(199, 210, 254, 0.2), #fff);
+  }
+}
+
+.qr-session-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.qr-session-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: #111;
+}
+
+.qr-session-desc {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.qr-status-tag {
+  font-weight: 600;
+}
+
+.qr-session-syncing {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #2563eb;
+  margin-bottom: 10px;
+
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.qr-session-body {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.qr-session-info {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.info-block {
+  flex: 1;
+  min-width: 140px;
+}
+
+.info-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+
+  &.code {
+    font-family: 'JetBrains Mono', monospace;
+    word-break: break-all;
+  }
+}
+
+.qr-session-expired {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.qr-session-empty {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border: 1px dashed #d7e3fc;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.qr-session-empty-icon {
+  font-size: 28px;
+  color: #94a3b8;
+}
+
+.empty-title {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.empty-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.qr-session-error {
+  font-size: 12px;
+  color: #d32f2f;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+}
+</style>

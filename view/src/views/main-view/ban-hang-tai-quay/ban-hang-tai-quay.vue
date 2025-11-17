@@ -28,7 +28,7 @@
               <a-card class="cart-card">
                 <template #title>🛒 Giỏ Hàng</template>
                 <CartTable
-                  :items="paginatedCartItems"
+                  :items="paginatedCartItems as any"
                   :table-key="cartTableKey"
                   :pagination="{
                     current: (cartPagination as any).value?.current || 1,
@@ -40,7 +40,7 @@
                   :over-stock-items="overStockItems"
                   @paginate="(page) => ((cartPagination as any).value.current = page)"
                   @update-quantity="({ id, value }) => updateQuantity(id, value)"
-                  @delete="(record) => showDeleteProductConfirm(record)"
+                  @delete="(record: any) => showDeleteProductConfirm(record)"
                 />
               </a-card>
             </OrderHeaderCard>
@@ -80,6 +80,9 @@
             :discount-display="selectedCoupon ? getDiscountDisplay(selectedCoupon as any) : ''"
             :best-voucher="bestVoucher as any"
             :calculate-voucher-discount="calculateVoucherDiscount as any"
+            :qr-session="currentQrSession"
+            :qr-syncing="qrSyncing"
+            :qr-sync-error="qrSyncError"
             @change:orderType="handleOrderTypeChange"
             @open-voucher="showVoucherModal = true"
             @change:paymentMethod="handlePaymentMethodChange"
@@ -89,11 +92,13 @@
             @confirm-order="confirmOrder"
             @select-best="bestVoucher && selectVoucher(bestVoucher as any)"
             @print="printOrder"
-            @update:shippingFee="(v) => (shippingFee = v)"
+            @update:shippingFee="updateShippingFeeValue"
             @change:province="onWalkInProvinceChange"
             @change:district="onWalkInDistrictChange"
-            @update:walkin-address="(v) => (walkInLocation.diaChiCuThe = v)"
-            @update:walkin-ward="(v) => (walkInLocation.phuong = v)"
+            @update:walkin-address="updateWalkInAddress"
+            @update:walkin-ward="updateWalkInWard"
+            @open-mobile="openMobileSession"
+            @sync-qr="forceSyncQrSession"
           />
         </a-col>
       </a-row>
@@ -240,6 +245,13 @@ import useCartActions from './composables/useCartActions'
 import { useOrdersManager } from './composables/useOrdersManager'
 import { useStock } from './composables/useStock'
 import useRealTimePriceSync from './composables/useRealTimePriceSync'
+import type { CreateQrSessionPayload } from '@/api/pos'
+import {
+  createQrPaymentSession,
+  updateQrPaymentSession,
+  cancelQrPaymentSession,
+  generateQrPayment,
+} from './services/qrSessionService'
 import CartTable from './components/CartTable.vue'
 import CustomerCard from './components/CustomerCard.vue'
 import PaymentCard from './components/PaymentCard.vue'
@@ -282,6 +294,15 @@ interface Order {
   createdAt: Date
 }
 
+interface QrSessionState {
+  sessionId: string
+  status: string
+  qrCodeUrl?: string
+  expiresAt?: string
+  lastPayloadHash: string
+  updatedAt: number
+}
+
 interface Customer {
   id: string
   name: string
@@ -302,8 +323,15 @@ const soldQuantitiesByProductId = ref<Record<string | number, number>>({})
 // Cache dữ liệu để chỉ reload khi có thay đổi
 const cachedProducts = ref<Map<number, number>>(new Map()) // productId -> soLuong
 const cachedCoupons = ref<string>('') // JSON string of coupon data for comparison
+const cachedCustomerCoupons = ref<string>('') // Cache for customer-specific vouchers
 
 const showVoucherModal = ref(false)
+
+const qrSessions = ref<Record<string, QrSessionState>>({})
+const qrSyncing = ref(false)
+const qrSyncError = ref<string | null>(null)
+const QR_SYNC_DEBOUNCE_MS = 200
+let qrSyncTimeout: number | null = null
 
 // Confirm order modal state - moved to useCheckout
 
@@ -332,6 +360,12 @@ const breadcrumbItems = []
 const currentOrder = computed(() => {
   const idx = parseInt(currentOrderIndex.value, 10)
   return orders.value[idx] || null
+})
+
+const currentQrSession = computed(() => {
+  const orderId = currentOrder.value?.id
+  if (!orderId) return null
+  return qrSessions.value[orderId] ?? null
 })
 
 // Customer state (used across payment, voucher, checkout)
@@ -491,7 +525,7 @@ const handleCustomerChange = async (customerId: string) => {
     await updateInvoiceCustomer(invoiceId, walkInLocation)
 
     Message.success('Khách hàng đã được cập nhật')
-  } catch (error) {
+  } catch (error: any) {
     Message.error(error.message || 'Có lỗi xảy ra khi cập nhật khách hàng')
   }
 }
@@ -513,7 +547,7 @@ const addNewCustomer = async () => {
       tenTaiKhoan: newCustomerForm.value.email.split('@')[0],
       trangThai: true,
       deleted: false,
-    })
+    } as any)
 
     // Reload danh sách khách hàng
     await loadCustomers()
@@ -531,7 +565,7 @@ const addNewCustomer = async () => {
     showAddCustomerModal.value = false
     newCustomerForm.value = { name: '', phone: '', email: '' }
     Message.success('Thêm khách hàng thành công')
-  } catch (error) {
+  } catch (error: any) {
     console.error('Lỗi thêm khách hàng:', error)
     Message.error(error.message || 'Có lỗi xảy ra khi thêm khách hàng')
   }
@@ -639,7 +673,7 @@ const selectVoucher = async (coupon: CouponApiModel) => {
 
     showVoucherModal.value = false
     Message.success(`Đã áp dụng voucher: ${coupon.tenPhieuGiamGia}`)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Lỗi áp dụng voucher:', error)
     Message.error(error.message || 'Có lỗi xảy ra khi áp dụng voucher')
   }
@@ -671,6 +705,48 @@ watch(selectedCustomer, async (newCustomer) => {
     await refreshVouchers()
   }
 })
+
+watch(
+  () => ({
+    orderId: currentOrder.value?.id,
+    items:
+      currentOrder.value?.items?.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+      })) ?? [],
+    subtotal: subtotal.value,
+    discountAmount: discountAmount.value,
+    shippingFee: shippingFee.value,
+    finalPrice: finalPrice.value,
+  }),
+  () => {
+    if (!currentOrder.value) return
+    if (!currentOrder.value.items?.length) return
+    if (!finalPrice.value || finalPrice.value <= 0) return
+    scheduleQrSync()
+  },
+  { deep: true }
+)
+
+watch(
+  () => currentOrder.value?.items?.length ?? 0,
+  async (newLength, oldLength) => {
+    if (oldLength && oldLength > 0 && newLength === 0 && currentOrder.value) {
+      const orderId = currentOrder.value.id
+      const existing = qrSessions.value[orderId]
+      if (existing?.sessionId) {
+        try {
+          await cancelQrPaymentSession(existing.sessionId)
+        } catch (error: any) {
+          console.error('Không thể huỷ session khi xoá toàn bộ sản phẩm:', error)
+        }
+      }
+      delete qrSessions.value[orderId]
+    }
+  }
+)
 
 // Watch for isWalkIn changes to debug reactivity
 watch(
@@ -994,6 +1070,168 @@ const handleOrderTypeChange = async (value: string) => {
   }
 }
 
+const updateShippingFeeValue = (value: number) => {
+  shippingFee.value = value
+}
+
+const updateWalkInAddress = (value: string) => {
+  walkInLocation.value.diaChiCuThe = value
+}
+
+const updateWalkInWard = (value: string) => {
+  walkInLocation.value.phuong = value
+}
+
+const buildQrPayload = (order: Order): CreateQrSessionPayload | null => {
+  if (!order || !order.items?.length) return null
+  const invoiceId = parseInt(order.id, 10)
+  if (Number.isNaN(invoiceId)) return null
+  // Ưu tiên dùng mã hoá đơn (HD000...) để đồng bộ với UI POS và mobile
+  const displayOrderCode = order.maHoaDon || order.orderCode
+  if (!displayOrderCode) return null
+  if (!finalPrice.value || finalPrice.value <= 0) return null
+
+  return {
+    orderCode: displayOrderCode,
+    invoiceId,
+    items: order.items.map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+      price: item.price,
+      discount: item.discount,
+      quantity: item.quantity,
+      image: item.image,
+      tenMauSac: item.tenMauSac,
+      maMau: item.maMau,
+      tenKichThuoc: item.tenKichThuoc,
+      tenDeGiay: item.tenDeGiay,
+      tenChatLieu: item.tenChatLieu,
+    })),
+    subtotal: subtotal.value,
+    discountAmount: discountAmount.value,
+    shippingFee: shippingFee.value,
+    finalPrice: finalPrice.value,
+    customerId: order.customerId || undefined,
+  }
+}
+
+const syncQrSession = async (force = false) => {
+  const order = currentOrder.value
+  if (!order) return
+  const payload = buildQrPayload(order)
+  if (!payload) {
+    const existing = qrSessions.value[order.id]
+    if (existing?.sessionId) {
+      try {
+        await cancelQrPaymentSession(existing.sessionId)
+      } catch (error: any) {
+        console.error('Không thể huỷ QR session khi giỏ hàng trống:', error)
+      } finally {
+        delete qrSessions.value[order.id]
+      }
+    }
+    return
+  }
+
+  const payloadHash = JSON.stringify(payload)
+  const existing = qrSessions.value[order.id]
+  if (!force && existing?.lastPayloadHash === payloadHash) return
+
+  qrSyncing.value = true
+  qrSyncError.value = null
+  try {
+    const response = existing?.sessionId
+      ? await updateQrPaymentSession(existing.sessionId, payload)
+      : await createQrPaymentSession(payload)
+
+    qrSessions.value[order.id] = {
+      sessionId: response.qrSessionId,
+      status: response.status,
+      qrCodeUrl: response.qrCodeUrl,
+      expiresAt: response.expiresAt,
+      lastPayloadHash: payloadHash,
+      updatedAt: Date.now(),
+    }
+  } catch (error: any) {
+    console.error('Không thể đồng bộ QR session:', error)
+    qrSyncError.value = error.message || 'Không thể đồng bộ VietQR'
+  } finally {
+    qrSyncing.value = false
+  }
+}
+
+const scheduleQrSync = () => {
+  if (typeof window === 'undefined') return
+  if (qrSyncTimeout) {
+    window.clearTimeout(qrSyncTimeout)
+  }
+  qrSyncTimeout = window.setTimeout(() => {
+    syncQrSession()
+  }, QR_SYNC_DEBOUNCE_MS)
+}
+
+const forceSyncQrSession = () => {
+  if (typeof window !== 'undefined' && qrSyncTimeout) {
+    window.clearTimeout(qrSyncTimeout)
+    qrSyncTimeout = null
+  }
+  syncQrSession(true)
+}
+
+const openMobileSession = () => {
+  const session = currentQrSession.value
+  if (!session?.sessionId) {
+    Message.warning('Chưa có VietQR để mở trên mobile')
+    return
+  }
+  generateQrPayment(session.sessionId)
+    .then(() => {
+      const deepLink = `mobileadmin://qr?sessionId=${session.sessionId}`
+      if (typeof window !== 'undefined') {
+        window.open(deepLink)
+      }
+      Message.success('Đã mở VietQR trên mobile')
+    })
+    .catch((error: any) => {
+      console.error('Không thể tạo mã QR:', error)
+      Message.error(error.message || 'Không thể tạo mã QR thanh toán')
+    })
+}
+
+const cancelCurrentQrSession = async () => {
+  try {
+    const session = currentQrSession.value
+    if (!session || session.status !== 'PENDING') return
+    await cancelQrPaymentSession(session.sessionId)
+  } catch (error: any) {
+    console.error('Không thể huỷ QR session hiện tại:', error)
+  }
+}
+
+watch(
+  () => ({
+    orderId: currentOrder.value?.id,
+    items:
+      currentOrder.value?.items?.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+      })) ?? [],
+    subtotal: subtotal.value,
+    discountAmount: discountAmount.value,
+    shippingFee: shippingFee.value,
+    finalPrice: finalPrice.value,
+  }),
+  () => {
+    if (!currentOrder.value) return
+    if (!currentOrder.value.items?.length) return
+    if (!finalPrice.value || finalPrice.value <= 0) return
+    scheduleQrSync()
+  },
+  { deep: true }
+)
+
 const {
   showProductModal,
   productSearchText,
@@ -1032,7 +1270,7 @@ const {
   selectedCoupon,
   calculateVoucherDiscount,
   coupons,
-  userId: userStoreInstance.id,
+  userId: userStoreInstance.id || 0,
   userName: userStoreInstance.name,
   orders,
   currentOrderIndex,
@@ -1154,10 +1392,11 @@ onMounted(() => {
   )
 
   // Store interval IDs for cleanup
-  // @ts-ignore
-  window.__stockRefreshInterval = stockRefreshInterval
-  // @ts-ignore
-  window.__productModalRefreshInterval = productModalRefreshInterval
+  ;(window as any).__stockRefreshInterval = stockRefreshInterval
+  ;(window as any).__productModalRefreshInterval = productModalRefreshInterval
+
+  // Huỷ QR session hiện tại khi reload/đóng tab
+  window.addEventListener('beforeunload', cancelCurrentQrSession)
 })
 
 // Cleanup intervals on unmount
@@ -1165,23 +1404,30 @@ onBeforeUnmount(() => {
   if (voucherRefreshInterval !== null) {
     clearInterval(voucherRefreshInterval)
   }
-  // @ts-ignore
-  if (window.__stockRefreshInterval) {
-    clearInterval(window.__stockRefreshInterval)
+  const globalWindow = window as any
+  if (globalWindow.__stockRefreshInterval) {
+    clearInterval(globalWindow.__stockRefreshInterval)
   }
-  // @ts-ignore
-  if (window.__productModalRefreshInterval) {
-    clearInterval(window.__productModalRefreshInterval)
+  if (globalWindow.__productModalRefreshInterval) {
+    clearInterval(globalWindow.__productModalRefreshInterval)
   }
 
   // Close BroadcastChannels
   if (stockBroadcastChannel) {
     stockBroadcastChannel.close()
   }
-  // @ts-ignore
-  if (window.__couponBroadcastChannel) {
-    window.__couponBroadcastChannel.close()
+  if (globalWindow.__couponBroadcastChannel) {
+    globalWindow.__couponBroadcastChannel.close()
   }
+
+  if (qrSyncTimeout !== null) {
+    clearTimeout(qrSyncTimeout)
+  }
+
+  window.removeEventListener('beforeunload', cancelCurrentQrSession)
+
+  // Huỷ QR session hiện tại khi rời khỏi trang POS
+  cancelCurrentQrSession()
 })
 </script>
 

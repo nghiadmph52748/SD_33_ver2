@@ -1,28 +1,19 @@
 import React from 'react'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { NavigatorScreenParams } from '@react-navigation/native'
 
-import { SCREENS } from '../constants/routes'
-import useAuthStore from '../store/useAuthStore'
-import AppTabs from './AppTabs'
-import AuthNavigator from './AuthNavigator'
+import QRPaymentNavigator, { QRPaymentStackParamList } from './QRPaymentNavigator'
 
 export type RootStackParamList = {
-  [SCREENS.APP.ROOT]: undefined
-  Auth: undefined
+  'QR.Stack': NavigatorScreenParams<QRPaymentStackParamList>
 }
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
 const RootNavigator = () => {
-  const accessToken = useAuthStore((state) => state.accessToken)
-
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {accessToken ? (
-        <Stack.Screen name={SCREENS.APP.ROOT} component={AppTabs} />
-      ) : (
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      )}
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="QR.Stack">
+      <Stack.Screen name="QR.Stack" component={QRPaymentNavigator} options={{ presentation: 'modal' }} />
     </Stack.Navigator>
   )
 }

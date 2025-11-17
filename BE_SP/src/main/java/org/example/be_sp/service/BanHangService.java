@@ -73,6 +73,8 @@ public class BanHangService {
     ChiTietSanPhamService ctspService;
     @Autowired
     JdbcTemplate jdbcTemplate;
+    @Autowired
+    QRSessionService qrSessionService;
 
     /**
      * Helper method to create timeline entry automatically
@@ -137,6 +139,11 @@ public class BanHangService {
         hd.setUpdateAt(LocalDate.now());
         hd.setUpdateBy(idNhanVien);
         hdRepository.save(hd);
+        try {
+            qrSessionService.cancelSessionsByInvoice(idHoaDon);
+        } catch (Exception e) {
+            log.error("Không thể huỷ QR session khi xoá hóa đơn {}: {}", idHoaDon, e.getMessage());
+        }
         ArrayList<HoaDonChiTiet> lst = hdctRepository.findAllByIdHoaDonAndTrangThai(hd, true);
         Integer[] lstIdHdct = lst.stream().map(HoaDonChiTiet::getId).toArray(Integer[]::new);
         xoaSanPham(lstIdHdct, idNhanVien);
@@ -219,14 +226,33 @@ public class BanHangService {
 
     private void updateTongTienHoaDon(HoaDon hoaDon) {
         ArrayList<HoaDonChiTiet> chiTiets = hdctRepository.findAllByIdHoaDonAndTrangThai(hoaDon, true);
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
         if (chiTiets != null && !chiTiets.isEmpty()) {
-            BigDecimal totalAmount = BigDecimal.ZERO;
             for (HoaDonChiTiet ct : chiTiets) {
                 totalAmount = totalAmount.add(ct.getThanhTien() != null ? ct.getThanhTien() : BigDecimal.ZERO);
             }
             hoaDon.setTongTien(totalAmount);
-            hdRepository.save(hoaDon);
+            // Bảo đảm tổng sau giảm không vượt tổng gốc (tránh vi phạm CK constraint)
+            hoaDon.setTongTienSauGiam(
+                    hoaDon.getTongTienSauGiam() != null && hoaDon.getTongTienSauGiam().compareTo(totalAmount) <= 0
+                            ? hoaDon.getTongTienSauGiam()
+                            : totalAmount);
+        } else {
+            hoaDon.setTongTien(BigDecimal.ZERO);
+            hoaDon.setTongTienSauGiam(BigDecimal.ZERO);
+            hoaDon.setSoTienDaThanhToan(BigDecimal.ZERO);
+            hoaDon.setSoTienConLai(BigDecimal.ZERO);
         }
+
+        // Nếu không còn tổng, xoá các tham chiếu voucher để tránh áp dụng giảm giá ảo
+        if (hoaDon.getTongTien().compareTo(BigDecimal.ZERO) == 0) {
+            hoaDon.setIdPhieuGiamGia(null);
+            hoaDon.setMaPhieuGiamGia(null);
+            hoaDon.setTenPhieuGiamGia(null);
+        }
+
+        hdRepository.save(hoaDon);
     }
 
     public void updateSoLuongSanPham(Integer idHoaDonChiTiet, Integer soLuong, Integer idNhanVien) {
