@@ -25,16 +25,14 @@
 
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="Ca làm việc" required>
+            <a-form-item label="Ca làm việc">
               <a-select
-                v-model="form.caLamViecId"
-                placeholder="Chọn ca làm việc"
-                allow-clear
+                v-model:value="form.caLamViecId"
+                :options="caOptions"
+                placeholder="Chọn ca"
                 :loading="loadingCa"
-                not-found-content="Không có ca để chọn"
-              >
-                <a-option v-for="ca in caLamViecs" :key="ca.id" :value="ca.id">{{ ca.tenCa }}</a-option>
-              </a-select>
+                allow-clear
+              />
             </a-form-item>
           </a-col>
 
@@ -97,7 +95,7 @@ import { Message } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { IconSave, IconRefresh } from '@arco-design/web-vue/es/icon'
-
+import { computed , nextTick  } from 'vue'
 // Breadcrumb
 const { breadcrumbItems } = useBreadcrumb()
 
@@ -124,6 +122,14 @@ const loadingNhanVien = ref(false)
 const loadingCa = ref(false)
 const loadingSubmit = ref(false)
 const loadingInitial = ref(false)
+
+const caOptions = computed(() => {
+  if (loadingCa.value) return []
+  if (!caLamViecs.value || caLamViecs.value.length === 0) {
+    return [{ label: 'Không có ca', value: null, disabled: true }]
+  }
+  return caLamViecs.value.map(c => ({ label: c.tenCa, value: c.id }))
+})
 
 // Keep original fetched data to allow restore
 const originalData = ref<any>(null)
@@ -255,49 +261,53 @@ const fetchNhanViens = async () => {
 
 // Fetch shifts (same robust handler as add form)
 const fetchCaLamViecs = async () => {
-  loadingCa.value = true
+  loadingCa.value = true;
+  const url = 'http://localhost:8080/api/ca-lam-viec';
   try {
-    const res = await axios.get('http://localhost:8080/api/ca-lam-viec')
-    // normalize possible shapes
-    const candidates = [res.data, res.data?.data, res.data?.items, res.data?.payload, res.data?.result, res.data?.caLamViecs]
-    const arr = candidates.find((c) => Array.isArray(c)) as any[] | undefined
+    // allow any status so we can inspect response even khi không 2xx
+    const res = await axios.get(url, { validateStatus: () => true });
+    // Normalize: nếu axios trả cả response object thì payload = res.data,
+    // nếu axios đã unwrap và trả luôn data thì payload = res
+    const payload = res && res.data !== undefined ? res.data : res;
 
-    let finalArr = arr
-    if (!finalArr && res.data && typeof res.data === 'object') {
-      const maybeValues = Object.values(res.data).filter((v) => v && (Array.isArray(v) || typeof v === 'object'))
-      if (maybeValues.length) {
-        const firstArray = maybeValues.find((v) => Array.isArray(v))
-        finalArr = (firstArray as any[]) ?? (maybeValues[0] as any[])
-      }
+    // debug nhẹ — bạn có thể tắt/loại bỏ sau khi confirm
+    console.log('fetchCaLamViecs - normalized payload:', payload);
+
+    // payload có thể là mảng trực tiếp (như Postman) hoặc { data: [...] } hoặc nested
+    const arr = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+      ? payload.data
+      : payload?.data?.items ?? [];
+
+    if (!Array.isArray(arr) || arr.length === 0) {
+      console.warn('Không có ca làm việc trả về từ server', arr);
+      Message.warning('Không có dữ liệu ca làm việc từ server');
+      caLamViecs.value = [];
+      return;
     }
 
-    if (!finalArr) {
-      caLamViecs.value = []
-      // eslint-disable-next-line no-console
-      console.warn('Dữ liệu ca làm việc không đúng định dạng hoặc rỗng:', res.data)
-      return
-    }
-
-    caLamViecs.value = finalArr
+    caLamViecs.value = arr
       .map((item: any) => {
-        const idRaw = item?.id ?? item?.caId ?? item?.value ?? null
-        const id = idRaw !== undefined && idRaw !== null ? Number(idRaw) : NaN
-        const tenCa = item?.tenCa ?? item?.ten ?? item?.name ?? item?.ten_ca ?? item?.label ?? null
+        const id = Number(item.id ?? item.caLamViecId ?? item.value);
+        const tenRaw = item.tenCa ?? item.name ?? item.label ?? `Ca ${id}`;
         return {
           id,
-          tenCa: tenCa ?? (Number.isFinite(id) ? `Ca ${id}` : 'Ca không tên'),
-        }
+          tenCa: (typeof tenRaw === 'string' ? tenRaw.trim() : String(tenRaw)),
+        };
       })
-      .filter((c: any) => Number.isFinite(c.id))
-    console.log('caLamViecs loaded', caLamViecs.value)
+      .filter((c: any) => Number.isFinite(c.id));
+
+    console.log('mapped caLamViecs:', caLamViecs.value);
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Lỗi tải ca làm việc', err)
-    Message.error('Không thể tải danh sách ca làm việc')
+    console.error('Lỗi tải ca làm việc', err);
+    Message.error('Không thể tải danh sách ca làm việc (xem console/network)');
+    caLamViecs.value = [];
   } finally {
-    loadingCa.value = false
+    loadingCa.value = false;
   }
-}
+};
+
 
 // Fetch existing giao ca by id and populate form
 const fetchExistingGiaoCa = async () => {
@@ -315,9 +325,9 @@ const fetchExistingGiaoCa = async () => {
     // Try to extract fields from raw or raw.data
     const item = raw?.data ?? raw?.giaoCa ?? raw ?? null
 
-    const nguoiGiaoIdRaw = item?.nguoiGiaoId ?? item?.nguoi_giao_id ?? item?.nguoi_giao ?? null
-    const nguoiNhanIdRaw = item?.nguoiNhanId ?? item?.nguoi_nhan_id ?? item?.nguoi_nhan ?? null
-    const caLamViecIdRaw = item?.caLamViecId ?? item?.ca_lam_viec_id ?? item?.caId ?? item?.ca_id ?? null
+    const nguoiGiaoIdRaw = item?.nguoiGiao?.id ?? null
+    const nguoiNhanIdRaw = item?.nguoiNhan?.id ?? null
+    const caLamViecIdRaw = item?.caLamViec?.id ?? null
     const thoiGianGiaoCa = item?.thoiGianGiaoCa ?? item?.thoi_gian_giao_ca ?? item?.thoiGian ?? ''
     const tongTienBanDau = item?.tongTienBanDau ?? item?.tong_tien_ban_dau ?? null
     const tongTienCuoiCa = item?.tongTienCuoiCa ?? item?.tong_tien_cuoi_ca ?? null
@@ -359,10 +369,9 @@ const fetchExistingGiaoCa = async () => {
 }
 
 onMounted(async () => {
-  // Load options first to ensure Select has items when we set v-model values
-  await Promise.all([fetchNhanViens(), fetchCaLamViecs()])
-  // Then load the existing giao ca and assign values
-  await fetchExistingGiaoCa()
+await Promise.all([fetchNhanViens(), fetchCaLamViecs()])
+await fetchExistingGiaoCa()
+
 })
 </script>
 
