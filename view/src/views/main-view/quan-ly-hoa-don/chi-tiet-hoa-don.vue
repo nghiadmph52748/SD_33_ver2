@@ -191,7 +191,13 @@
                       <span class="history-title">{{ payment.method }} - {{ formatCurrency(payment.amount) }}</span>
                     </div>
                     <div class="history-meta">
-                      <a-tag color="green" size="small">{{ payment.code }}</a-tag>
+                      <a-tag 
+                        color="green" 
+                        size="small"
+                        :title="`Mã hình thức thanh toán: ${payment.code}\nTra cứu trong bảng hinh_thuc_thanh_toan (ma_hinh_thuc_thanh_toan)`"
+                      >
+                        {{ payment.code }}
+                      </a-tag>
                       <span class="history-user">({{ payment.userCode }})</span>
                     </div>
                   </div>
@@ -443,9 +449,29 @@ const formatDateTime = (dateString?: string | Date) => {
   return `${time} ${dateStr}`
 }
 
-const formatDateShort = (dateString?: string) => {
+const formatDateShort = (dateString?: string | Date) => {
   if (!dateString) return 'N/A'
-  const date = new Date(dateString)
+  
+  let date: Date
+  if (dateString instanceof Date) {
+    date = dateString
+  } else {
+    // Handle LocalDate format from backend (YYYY-MM-DD)
+    // If it's just a date string without time, add time to ensure correct parsing
+    const dateStr = dateString.toString().trim()
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // LocalDate format: add time to make it a valid datetime
+      date = new Date(dateStr + 'T00:00:00')
+    } else {
+      date = new Date(dateString)
+    }
+  }
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return 'N/A'
+  }
+  
   return date.toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: '2-digit',
@@ -974,10 +1000,34 @@ const paymentHistory = computed(() => {
   // Nếu có paymentMethods từ API, sử dụng thông tin đó
   if (paymentMethods.value && paymentMethods.value.length > 0) {
     paymentMethods.value.forEach((payment: any) => {
+      // Skip deleted or inactive payment records
+      if (payment.deleted === true || payment.trangThai === false) {
+        return
+      }
+      
       const idPTTT = payment.idPhuongThucThanhToan
       // Convert BigDecimal to number
       const tienMat = Number(payment.tienMat) || 0
       const tienChuyenKhoan = Number(payment.tienChuyenKhoan) || 0
+      
+      // Get date from payment record, fallback to invoice, then timeline
+      let paymentDate = payment.ngayTao || invoice.value.ngayThanhToan || invoice.value.ngayTao
+      // If still no date, try to get from timeline (completed entry)
+      if (!paymentDate && timelineData.value && timelineData.value.length > 0) {
+        const completedEntry = timelineData.value.find((t: any) => {
+          const trangThaiMoi = (t.trangThaiMoi || '').toLowerCase()
+          return trangThaiMoi.includes('hoàn thành') || trangThaiMoi.includes('đã thanh toán')
+        })
+        if (completedEntry?.thoiGian) {
+          paymentDate = completedEntry.thoiGian
+        }
+      }
+      
+      // Get user code from payment record, fallback to invoice
+      const userCode = payment.tenNhanVienXacNhan || invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001'
+      
+      // Get payment code - prefer maHinhThucThanhToan from backend, fallback to generated code
+      const paymentCode = payment.maHinhThucThanhToan || `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}`
       
       // idPTTT: 1 = Tiền mặt, 2 = Chuyển khoản, 3 = Cả hai
       if (idPTTT === 1 && tienMat > 0) {
@@ -985,43 +1035,50 @@ const paymentHistory = computed(() => {
         history.push({
           method: 'Tiền mặt',
           amount: tienMat,
-          code: `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}`,
-          userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
-          date: invoice.value.ngayThanhToan || invoice.value.ngayTao,
+          code: paymentCode,
+          userCode: userCode,
+          date: paymentDate,
         })
       } else if (idPTTT === 2 && tienChuyenKhoan > 0) {
         // Chuyển khoản
         history.push({
           method: 'Chuyển khoản',
           amount: tienChuyenKhoan,
-          code: `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}`,
-          userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
-          date: invoice.value.ngayThanhToan || invoice.value.ngayTao,
+          code: paymentCode,
+          userCode: userCode,
+          date: paymentDate,
         })
       } else if (idPTTT === 3) {
-        // Cả hai
+        // Cả hai - tạo mã riêng cho từng phương thức
+        const paymentCodeTM = payment.maHinhThucThanhToan 
+          ? `${payment.maHinhThucThanhToan}-TM` 
+          : `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}-TM`
+        const paymentCodeCK = payment.maHinhThucThanhToan 
+          ? `${payment.maHinhThucThanhToan}-CK` 
+          : `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}-CK`
+        
         if (tienMat > 0) {
           history.push({
             method: 'Tiền mặt',
             amount: tienMat,
-            code: `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}-TM`,
-            userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
-            date: invoice.value.ngayThanhToan || invoice.value.ngayTao,
+            code: paymentCodeTM,
+            userCode: userCode,
+            date: paymentDate,
           })
         }
         if (tienChuyenKhoan > 0) {
           history.push({
             method: 'Chuyển khoản',
             amount: tienChuyenKhoan,
-            code: `PTT${String(payment.id || invoice.value.id || 0).padStart(5, '0')}-CK`,
-            userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
-            date: invoice.value.ngayThanhToan || invoice.value.ngayTao,
+            code: paymentCodeCK,
+            userCode: userCode,
+            date: paymentDate,
           })
         }
       }
     })
   } else if (invoice.value.ngayThanhToan) {
-    // Fallback: nếu không có paymentMethods, sử dụng thông tin cũ
+    // Fallback: nếu không có paymentMethods, sử dụng thông tin từ invoice
     const idPTTT = invoice.value.idPhuongThucThanhToan || invoice.value.idPTTT
     let method = 'Chuyển khoản'
     
@@ -1157,8 +1214,16 @@ const fetchInvoiceDetail = async () => {
     // Fetch payment methods
     try {
       const paymentResponse = await axios.get(`/api/hinh-thuc-thanh-toan-management/by-hoa-don/${invoiceId.value}`)
-      if (paymentResponse.data && paymentResponse.data.data) {
-        paymentMethods.value = paymentResponse.data.data
+      // ResponseObject structure: { data: [...], message: "...", isSuccess: true }
+      if (paymentResponse.data) {
+        // Check if data is directly in response.data or in response.data.data
+        if (Array.isArray(paymentResponse.data)) {
+          paymentMethods.value = paymentResponse.data
+        } else if (paymentResponse.data.data && Array.isArray(paymentResponse.data.data)) {
+          paymentMethods.value = paymentResponse.data.data
+        } else {
+          paymentMethods.value = []
+        }
       } else {
         paymentMethods.value = []
       }

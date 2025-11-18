@@ -6,7 +6,6 @@ import lombok.Setter;
 import org.example.be_sp.entity.HinhThucThanhToan;
 import java.time.LocalDate;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
@@ -36,13 +35,19 @@ public class HinhThucThanhToanReponse {
         this.deleted = httt.getDeleted();
 //        this.ghiChu = httt.getGhiChu();
 
-//        this.tenNhanVienXacNhan = httt.getNhanVienXacNhan(); // vì nó đã là String
-//        if (httt.getIdHoaDon() != null) {
-//            this.ngayTao = httt.getIdHoaDon().getNgayTao();
-//        }
-//        if (httt.getIdHoaDon() != null && httt.getIdHoaDon().getIdNhanVien() != null) {
-//            this.tenNhanVienXacNhan = httt.getIdHoaDon().getIdNhanVien().getTenNhanVien();
-//        }
+        // Set ngayTao from hoaDon (prefer ngayThanhToan, fallback to ngayTao)
+        if (httt.getIdHoaDon() != null) {
+            this.ngayTao = httt.getIdHoaDon().getNgayThanhToan() != null 
+                ? httt.getIdHoaDon().getNgayThanhToan() 
+                : httt.getIdHoaDon().getNgayTao();
+        }
+        // Set tenNhanVienXacNhan from hoaDon
+        if (httt.getIdHoaDon() != null && httt.getIdHoaDon().getIdNhanVien() != null) {
+            this.tenNhanVienXacNhan = httt.getIdHoaDon().getIdNhanVien().getTenNhanVien();
+        } else if (httt.getIdHoaDon() != null && httt.getIdHoaDon().getTenNhanVien() != null) {
+            // Fallback to tenNhanVien string field if idNhanVien is null
+            this.tenNhanVienXacNhan = httt.getIdHoaDon().getTenNhanVien();
+        }
 
     }
 }
