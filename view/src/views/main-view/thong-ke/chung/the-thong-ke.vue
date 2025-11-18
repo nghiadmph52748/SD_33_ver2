@@ -9,15 +9,16 @@
       </div>
       <div class="the-revenue-section">
         <div class="the-revenue-value">{{ dinhDangTien(doanhThu) }}</div>
-        <div class="the-revenue-change">
-          <icon-arrow-down class="change-icon" />
-          <span>{{ tangTruong }}%</span>
+        <div :class="['the-revenue-change', tangTruong >= 0 ? 'positive' : 'negative']">
+          <icon-arrow-up v-if="tangTruong > 0" class="change-icon" />
+          <icon-arrow-down v-else-if="tangTruong < 0" class="change-icon" />
+          <span>{{ Math.abs(tangTruong) }}%</span>
         </div>
       </div>
     </div>
     <div class="the-details">
       <span class="the-detail-text">
-        {{ $t('thongKe.card.productsSold') }}: {{ sanPhamDaBan }} | {{ $t('thongKe.card.ordersCount') }}: {{ soDonHang }}
+        {{ $t('thongKe.card.productsSold') }}: {{ sanPhamDaBan }} | {{ $t('thongKe.card.ordersCount') }}: {{ soDonHang }} | {{ $t('thongKe.card.discount') }}: {{ dinhDangTien(soTienGiamGia) }}
       </span>
     </div>
   </a-card>
@@ -25,18 +26,20 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { IconArrowDown, IconCalendar } from '@arco-design/web-vue/es/icon'
+import { IconArrowDown, IconArrowUp, IconCalendar } from '@arco-design/web-vue/es/icon'
 
 interface Props {
   tieuDe: string
   doanhThu: number
   sanPhamDaBan: number
   soDonHang: number
+  soTienGiamGia?: number
   tangTruong?: number
   loaiMau?: 'today' | 'week' | 'month' | 'year'
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  soTienGiamGia: 0,
   tangTruong: 0,
   loaiMau: 'today',
 })
@@ -135,8 +138,20 @@ const mauIconClass = computed(() => {
   justify-content: flex-end;
   gap: 4px;
   font-size: 14px;
-  color: #86909c;
+  font-weight: 600;
   animation: fadeInRight 0.6s ease-out 0.8s both;
+}
+
+.the-revenue-change.positive {
+  color: rgb(var(--green-6));
+}
+
+.the-revenue-change.negative {
+  color: rgb(var(--red-6));
+}
+
+.the-revenue-change:not(.positive):not(.negative) {
+  color: #86909c;
 }
 
 .change-icon {

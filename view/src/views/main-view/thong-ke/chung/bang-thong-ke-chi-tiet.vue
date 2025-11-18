@@ -32,6 +32,11 @@
             <span class="avg-amount">{{ dinhDangTien(record.giaTriTB) }}</span>
           </div>
         </template>
+        <template #soTienGiamGia="{ record }">
+          <div class="discount-cell">
+            <div class="discount-amount">{{ dinhDangTien(record.soTienGiamGia) }}</div>
+          </div>
+        </template>
         <template #tangTruong="{ record }">
           <div class="growth-container">
             <div :class="['growth-badge', record.tangTruong >= 0 ? 'positive' : 'negative']">
@@ -97,6 +102,13 @@ const cot = [
     align: 'right' as const,
   },
   {
+    title: t('thongKe.detailTable.discount'),
+    dataIndex: 'soTienGiamGia',
+    slotName: 'soTienGiamGia',
+    width: 150,
+    align: 'right' as const,
+  },
+  {
     title: t('thongKe.detailTable.growth'),
     dataIndex: 'tangTruong',
     slotName: 'tangTruong',
@@ -137,7 +149,7 @@ const cot = [
 }
 
 .table-container {
-  /* No margin needed */
+  width: 100%;
 }
 
 .detail-table :deep(.arco-table-cell) {
@@ -199,6 +211,12 @@ const cot = [
 .avg-amount {
   font-weight: 500;
   color: var(--color-text-2);
+}
+
+/* Discount Cell Styles */
+.discount-amount {
+  font-weight: 600;
+  color: rgb(var(--orange-6));
 }
 
 /* Growth Cell Styles */

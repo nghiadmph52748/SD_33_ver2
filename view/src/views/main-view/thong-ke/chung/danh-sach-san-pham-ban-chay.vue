@@ -4,9 +4,13 @@
       <span class="card-title">{{ $t('thongKe.topProducts.title') }}</span>
     </template>
     <template #extra>
-      <a-select :model-value="kyThongKe" size="small" style="width: 120px" @change="$emit('update:kyThongKe', $event)">
+      <a-select :model-value="kyThongKe" size="small" style="width: 140px" @change="$emit('update:kyThongKe', $event)">
         <a-option value="week">{{ $t('thongKe.topProducts.week') }}</a-option>
         <a-option value="month">{{ $t('thongKe.topProducts.month') }}</a-option>
+        <a-option value="quarter1">{{ $t('thongKe.topProducts.quarter1') }}</a-option>
+        <a-option value="quarter2">{{ $t('thongKe.topProducts.quarter2') }}</a-option>
+        <a-option value="quarter3">{{ $t('thongKe.topProducts.quarter3') }}</a-option>
+        <a-option value="quarter4">{{ $t('thongKe.topProducts.quarter4') }}</a-option>
       </a-select>
     </template>
 

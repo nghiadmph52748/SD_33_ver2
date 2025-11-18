@@ -107,7 +107,9 @@ public class BanHangService {
     public Object taoHoaDon(Integer idNhanVien) {
         HoaDon hd = new HoaDon();
         hd.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
-        hd.setCreateAt(LocalDate.now());
+        LocalDate now = LocalDate.now();
+        hd.setCreateAt(now);
+        hd.setNgayTao(now);
         hd.setCreateBy(idNhanVien);
         hd.setGiaoHang(false);
         hd.setGhiChu("Tạo hóa đơn bán hàng tại quầy");
@@ -492,6 +494,14 @@ public class BanHangService {
         hoaDon.setSoTienDaThanhToan(tienMat.add(tienChuyenKhoan));
         hoaDon.setSoTienConLai(request.getSoTienConLai());
         hoaDon.setGhiChu("Bán hàng tại quầy");
+        // Set ngayThanhToan when checkout is successful
+        if (request.getTrangThaiThanhToan() != null && request.getTrangThaiThanhToan()) {
+            hoaDon.setNgayThanhToan(LocalDate.now());
+        }
+        // Ensure ngayTao is set if not already set
+        if (hoaDon.getNgayTao() == null) {
+            hoaDon.setNgayTao(LocalDate.now());
+        }
         HoaDon saved = hdRepository.save(hoaDon);
 
         // Handle voucher (only process if provided)

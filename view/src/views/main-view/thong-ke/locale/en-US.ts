@@ -27,6 +27,7 @@ export default {
   'thongKe.card.custom': 'Custom',
   'thongKe.card.productsSold': 'Products Sold',
   'thongKe.card.ordersCount': 'Orders',
+  'thongKe.card.discount': 'Discount Amount',
 
   // Revenue chart
   'thongKe.revenue.title': 'Revenue Chart',
@@ -38,6 +39,10 @@ export default {
   'thongKe.topProducts.title': 'Top Selling Products',
   'thongKe.topProducts.week': 'This Week',
   'thongKe.topProducts.month': 'This Month',
+  'thongKe.topProducts.quarter1': 'Q1',
+  'thongKe.topProducts.quarter2': 'Q2',
+  'thongKe.topProducts.quarter3': 'Q3',
+  'thongKe.topProducts.quarter4': 'Q4',
   'thongKe.topProducts.sold': 'Sold',
   'thongKe.topProducts.revenue': 'Revenue',
   'thongKe.topProducts.quantity': 'quantity',
@@ -68,6 +73,7 @@ export default {
   'thongKe.detailTable.revenue': 'Revenue',
   'thongKe.detailTable.orders': 'Orders',
   'thongKe.detailTable.avgValue': 'Avg Value/Order',
+  'thongKe.detailTable.discount': 'Discount Amount',
   'thongKe.detailTable.growth': 'Growth',
   'thongKe.detailTable.status': 'Status',
   'thongKe.detailTable.active': 'Active',

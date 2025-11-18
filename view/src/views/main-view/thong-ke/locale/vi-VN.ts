@@ -27,6 +27,7 @@ export default {
   'thongKe.card.custom': 'Tùy chọn',
   'thongKe.card.productsSold': 'Sản phẩm đã bán',
   'thongKe.card.ordersCount': 'Đơn hàng',
+  'thongKe.card.discount': 'Số tiền giảm giá',
 
   // Biểu đồ doanh thu
   'thongKe.revenue.title': 'Biểu Đồ Doanh Thu',
@@ -38,6 +39,10 @@ export default {
   'thongKe.topProducts.title': 'Sản Phẩm Bán Chạy',
   'thongKe.topProducts.week': 'Tuần này',
   'thongKe.topProducts.month': 'Tháng này',
+  'thongKe.topProducts.quarter1': 'Quý I',
+  'thongKe.topProducts.quarter2': 'Quý II',
+  'thongKe.topProducts.quarter3': 'Quý III',
+  'thongKe.topProducts.quarter4': 'Quý IV',
   'thongKe.topProducts.sold': 'Đã bán',
   'thongKe.topProducts.revenue': 'Doanh thu',
   'thongKe.topProducts.quantity': 'số lượng',
@@ -68,6 +73,7 @@ export default {
   'thongKe.detailTable.revenue': 'Doanh thu',
   'thongKe.detailTable.orders': 'Số đơn hàng',
   'thongKe.detailTable.avgValue': 'Giá trị TB/đơn',
+  'thongKe.detailTable.discount': 'Số tiền giảm giá',
   'thongKe.detailTable.growth': 'Tăng trưởng',
   'thongKe.detailTable.status': 'Trạng thái',
   'thongKe.detailTable.active': 'Hoạt động',

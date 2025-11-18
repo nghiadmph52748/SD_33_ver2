@@ -58,11 +58,24 @@ export function useTinhToanThongKe(
       }, 0)
   }
 
+  const tinhSoTienGiamGia = (danhSachHoaDon: HoaDon[]) => {
+    return danhSachHoaDon
+      .filter((hoaDon) => laHoaDonDaThanhToan(hoaDon))
+      .reduce((tong: number, hoaDon: HoaDon) => {
+        const tongTien = Number(hoaDon?.tongTien ?? 0)
+        const tongTienSauGiam = Number(hoaDon?.tongTienSauGiam ?? hoaDon?.tongTien ?? 0)
+        const soTienGiam = tongTien - tongTienSauGiam
+        return tong + (Number.isNaN(soTienGiam) ? 0 : Math.max(0, soTienGiam))
+      }, 0)
+  }
+
   // ============= DỮ LIỆU THỐNG KÊ CƠ BẢN =============
   const duLieuHomNay = ref<DuLieuThongKe>({
     productsSold: 0,
     orders: 0,
     revenue: 0,
+    soTienGiamGia: 0,
+    tangTruong: 0,
     title: t('thongKe.time.today'),
   })
 
@@ -70,6 +83,8 @@ export function useTinhToanThongKe(
     productsSold: 0,
     orders: 0,
     revenue: 0,
+    soTienGiamGia: 0,
+    tangTruong: 0,
     title: t('thongKe.time.thisWeek'),
   })
 
@@ -77,6 +92,8 @@ export function useTinhToanThongKe(
     productsSold: 0,
     orders: 0,
     revenue: 0,
+    soTienGiamGia: 0,
+    tangTruong: 0,
     title: t('thongKe.time.thisMonth'),
   })
 
@@ -84,6 +101,8 @@ export function useTinhToanThongKe(
     productsSold: 0,
     orders: 0,
     revenue: 0,
+    soTienGiamGia: 0,
+    tangTruong: 0,
     title: t('thongKe.time.thisYear'),
   })
 
@@ -91,6 +110,8 @@ export function useTinhToanThongKe(
     productsSold: 0,
     orders: 0,
     revenue: 0,
+    soTienGiamGia: 0,
+    tangTruong: 0,
     title: t('thongKe.time.custom'),
   })
 
@@ -107,10 +128,26 @@ export function useTinhToanThongKe(
       return ngayHoaDon >= homNay && ngayHoaDon < ngayMai
     })
 
+    // Tính hôm qua để so sánh
+    const homQua = new Date(homNay)
+    homQua.setDate(homQua.getDate() - 1)
+    const hoaDonHomQua = danhSachHoaDon.value.filter((hoaDon) => {
+      if (!hoaDon.ngayTao) return false
+      const ngayHoaDon = new Date(hoaDon.ngayTao)
+      return ngayHoaDon >= homQua && ngayHoaDon < homNay
+    })
+    const doanhThuHomQua = tinhDoanhThu(hoaDonHomQua)
+    const doanhThuHomNay = tinhDoanhThu(hoaDonHomNay)
+    const tangTruong = doanhThuHomQua > 0 
+      ? Math.round(((doanhThuHomNay - doanhThuHomQua) / doanhThuHomQua) * 100 * 100) / 100
+      : (doanhThuHomNay > 0 ? 100 : 0)
+
     return {
       orders: hoaDonHomNay,
-      revenue: tinhDoanhThu(hoaDonHomNay),
+      revenue: doanhThuHomNay,
+      soTienGiamGia: tinhSoTienGiamGia(hoaDonHomNay),
       orderCount: hoaDonHomNay.length,
+      tangTruong,
     }
   }
 
@@ -128,10 +165,27 @@ export function useTinhToanThongKe(
       return ngayHoaDon >= dauTuan && ngayHoaDon < cuoiTuan
     })
 
+    // Tính tuần trước để so sánh
+    const dauTuanTruoc = new Date(dauTuan)
+    dauTuanTruoc.setDate(dauTuanTruoc.getDate() - 7)
+    const cuoiTuanTruoc = new Date(dauTuan)
+    const hoaDonTuanTruoc = danhSachHoaDon.value.filter((hoaDon) => {
+      if (!hoaDon.ngayTao) return false
+      const ngayHoaDon = new Date(hoaDon.ngayTao)
+      return ngayHoaDon >= dauTuanTruoc && ngayHoaDon < cuoiTuanTruoc
+    })
+    const doanhThuTuanTruoc = tinhDoanhThu(hoaDonTuanTruoc)
+    const doanhThuTuan = tinhDoanhThu(hoaDonTuan)
+    const tangTruong = doanhThuTuanTruoc > 0 
+      ? Math.round(((doanhThuTuan - doanhThuTuanTruoc) / doanhThuTuanTruoc) * 100 * 100) / 100
+      : (doanhThuTuan > 0 ? 100 : 0)
+
     return {
       orders: hoaDonTuan,
-      revenue: tinhDoanhThu(hoaDonTuan),
+      revenue: doanhThuTuan,
+      soTienGiamGia: tinhSoTienGiamGia(hoaDonTuan),
       orderCount: hoaDonTuan.length,
+      tangTruong,
     }
   }
 
@@ -146,10 +200,26 @@ export function useTinhToanThongKe(
       return ngayHoaDon >= dauThang && ngayHoaDon < cuoiThang
     })
 
+    // Tính tháng trước để so sánh
+    const dauThangTruoc = new Date(hienTai.getFullYear(), hienTai.getMonth() - 1, 1)
+    const cuoiThangTruoc = new Date(hienTai.getFullYear(), hienTai.getMonth(), 1)
+    const hoaDonThangTruoc = danhSachHoaDon.value.filter((hoaDon) => {
+      if (!hoaDon.ngayTao) return false
+      const ngayHoaDon = new Date(hoaDon.ngayTao)
+      return ngayHoaDon >= dauThangTruoc && ngayHoaDon < cuoiThangTruoc
+    })
+    const doanhThuThangTruoc = tinhDoanhThu(hoaDonThangTruoc)
+    const doanhThuThang = tinhDoanhThu(hoaDonThang)
+    const tangTruong = doanhThuThangTruoc > 0 
+      ? Math.round(((doanhThuThang - doanhThuThangTruoc) / doanhThuThangTruoc) * 100 * 100) / 100
+      : (doanhThuThang > 0 ? 100 : 0)
+
     return {
       orders: hoaDonThang,
-      revenue: tinhDoanhThu(hoaDonThang),
+      revenue: doanhThuThang,
+      soTienGiamGia: tinhSoTienGiamGia(hoaDonThang),
       orderCount: hoaDonThang.length,
+      tangTruong,
     }
   }
 
@@ -164,10 +234,26 @@ export function useTinhToanThongKe(
       return ngayHoaDon >= dauNam && ngayHoaDon < cuoiNam
     })
 
+    // Tính năm trước để so sánh
+    const dauNamTruoc = new Date(hienTai.getFullYear() - 1, 0, 1)
+    const cuoiNamTruoc = new Date(hienTai.getFullYear(), 0, 1)
+    const hoaDonNamTruoc = danhSachHoaDon.value.filter((hoaDon) => {
+      if (!hoaDon.ngayTao) return false
+      const ngayHoaDon = new Date(hoaDon.ngayTao)
+      return ngayHoaDon >= dauNamTruoc && ngayHoaDon < cuoiNamTruoc
+    })
+    const doanhThuNamTruoc = tinhDoanhThu(hoaDonNamTruoc)
+    const doanhThuNam = tinhDoanhThu(hoaDonNam)
+    const tangTruong = doanhThuNamTruoc > 0 
+      ? Math.round(((doanhThuNam - doanhThuNamTruoc) / doanhThuNamTruoc) * 100 * 100) / 100
+      : (doanhThuNam > 0 ? 100 : 0)
+
     return {
       orders: hoaDonNam,
-      revenue: tinhDoanhThu(hoaDonNam),
+      revenue: doanhThuNam,
+      soTienGiamGia: tinhSoTienGiamGia(hoaDonNam),
       orderCount: hoaDonNam.length,
+      tangTruong,
     }
   }
 
@@ -208,9 +294,112 @@ export function useTinhToanThongKe(
   // ============= DỮ LIỆU SẢN PHẨM BÁN CHẠY =============
   const duLieuSanPhamBanChay = ref<SanPhamBanChay[]>([])
 
-  const xayDungDuLieuSanPhamBanChay = () => {
+  const xayDungDuLieuSanPhamBanChay = (kyThongKe: string = 'month') => {
     const map: Record<string, SanPhamBanChay> = {}
-    danhSachHoaDon.value
+    const hienTai = new Date()
+    
+    // Lọc hóa đơn theo kỳ thống kê
+    let hoaDonLoc: HoaDon[] = []
+    
+    switch (kyThongKe) {
+      case 'week': {
+        const dauTuan = new Date(hienTai)
+        dauTuan.setDate(hienTai.getDate() - hienTai.getDay())
+        dauTuan.setHours(0, 0, 0, 0)
+        const cuoiTuan = new Date(dauTuan)
+        cuoiTuan.setDate(dauTuan.getDate() + 7)
+        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
+          if (!ngayStr) return false
+          const ngayHD = new Date(ngayStr)
+          if (Number.isNaN(ngayHD.getTime())) return false
+          ngayHD.setHours(0, 0, 0, 0)
+          return ngayHD >= dauTuan && ngayHD < cuoiTuan
+        })
+        break
+      }
+      case 'month': {
+        const dauThang = new Date(hienTai.getFullYear(), hienTai.getMonth(), 1)
+        dauThang.setHours(0, 0, 0, 0)
+        const cuoiThang = new Date(hienTai.getFullYear(), hienTai.getMonth() + 1, 1)
+        cuoiThang.setHours(0, 0, 0, 0)
+        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
+          if (!ngayStr) return false
+          const ngayHD = new Date(ngayStr)
+          if (Number.isNaN(ngayHD.getTime())) return false
+          ngayHD.setHours(0, 0, 0, 0)
+          return ngayHD >= dauThang && ngayHD < cuoiThang
+        })
+        break
+      }
+      case 'quarter1': {
+        const dauQuy = new Date(hienTai.getFullYear(), 0, 1)
+        dauQuy.setHours(0, 0, 0, 0)
+        const cuoiQuy = new Date(hienTai.getFullYear(), 3, 1)
+        cuoiQuy.setHours(0, 0, 0, 0)
+        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
+          if (!ngayStr) return false
+          const ngayHD = new Date(ngayStr)
+          if (Number.isNaN(ngayHD.getTime())) return false
+          ngayHD.setHours(0, 0, 0, 0)
+          return ngayHD >= dauQuy && ngayHD < cuoiQuy
+        })
+        break
+      }
+      case 'quarter2': {
+        const dauQuy = new Date(hienTai.getFullYear(), 3, 1)
+        dauQuy.setHours(0, 0, 0, 0)
+        const cuoiQuy = new Date(hienTai.getFullYear(), 6, 1)
+        cuoiQuy.setHours(0, 0, 0, 0)
+        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
+          if (!ngayStr) return false
+          const ngayHD = new Date(ngayStr)
+          if (Number.isNaN(ngayHD.getTime())) return false
+          ngayHD.setHours(0, 0, 0, 0)
+          return ngayHD >= dauQuy && ngayHD < cuoiQuy
+        })
+        break
+      }
+      case 'quarter3': {
+        const dauQuy = new Date(hienTai.getFullYear(), 6, 1)
+        dauQuy.setHours(0, 0, 0, 0)
+        const cuoiQuy = new Date(hienTai.getFullYear(), 9, 1)
+        cuoiQuy.setHours(0, 0, 0, 0)
+        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
+          if (!ngayStr) return false
+          const ngayHD = new Date(ngayStr)
+          if (Number.isNaN(ngayHD.getTime())) return false
+          ngayHD.setHours(0, 0, 0, 0)
+          return ngayHD >= dauQuy && ngayHD < cuoiQuy
+        })
+        break
+      }
+      case 'quarter4': {
+        const dauQuy = new Date(hienTai.getFullYear(), 9, 1)
+        dauQuy.setHours(0, 0, 0, 0)
+        const cuoiQuy = new Date(hienTai.getFullYear() + 1, 0, 1)
+        cuoiQuy.setHours(0, 0, 0, 0)
+        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
+          if (!ngayStr) return false
+          const ngayHD = new Date(ngayStr)
+          if (Number.isNaN(ngayHD.getTime())) return false
+          ngayHD.setHours(0, 0, 0, 0)
+          return ngayHD >= dauQuy && ngayHD < cuoiQuy
+        })
+        break
+      }
+      default: {
+        hoaDonLoc = danhSachHoaDon.value
+        break
+      }
+    }
+    
+    hoaDonLoc
       .filter((hd) => laHoaDonDaThanhToan(hd))
       .forEach((hd) => {
         const items = Array.isArray(hd.items) ? hd.items : []
@@ -491,6 +680,7 @@ export function useTinhToanThongKe(
         doanhThu: data.revenue,
         soDonHang: data.orderCount,
         giaTriTB,
+        soTienGiamGia: data.soTienGiamGia || 0,
         tangTruong: 0,
         trangThai: data.orderCount > 0 ? t('thongKe.detailTable.active') : t('thongKe.detailTable.inactive'),
       }
@@ -522,6 +712,8 @@ export function useTinhToanThongKe(
       productsSold: tinhSanPhamDaBan(homNay.orders),
       orders: homNay.orderCount,
       revenue: homNay.revenue,
+      soTienGiamGia: homNay.soTienGiamGia || 0,
+      tangTruong: homNay.tangTruong || 0,
       title: 'Hôm nay',
     }
 
@@ -530,6 +722,8 @@ export function useTinhToanThongKe(
       productsSold: tinhSanPhamDaBan(tuan.orders),
       orders: tuan.orderCount,
       revenue: tuan.revenue,
+      soTienGiamGia: tuan.soTienGiamGia || 0,
+      tangTruong: tuan.tangTruong || 0,
       title: 'Tuần này',
     }
 
@@ -538,6 +732,8 @@ export function useTinhToanThongKe(
       productsSold: tinhSanPhamDaBan(thang.orders),
       orders: thang.orderCount,
       revenue: thang.revenue,
+      soTienGiamGia: thang.soTienGiamGia || 0,
+      tangTruong: thang.tangTruong || 0,
       title: 'Tháng này',
     }
 
@@ -546,18 +742,19 @@ export function useTinhToanThongKe(
       productsSold: tinhSanPhamDaBan(nam.orders),
       orders: nam.orderCount,
       revenue: nam.revenue,
+      soTienGiamGia: nam.soTienGiamGia || 0,
+      tangTruong: nam.tangTruong || 0,
       title: 'Năm này',
     }
 
     // Cập nhật biểu đồ và bảng
     xayDungDuLieuDoanhThu()
-    xayDungDuLieuSanPhamBanChay()
     capNhatDuLieuTrangThai(kyThongKe)
     capNhatDuLieuKenhPhanPhoi()
     capNhatDuLieuDanhMuc()
-    capNhatSanPhamBanChayNhat()
     capNhatSanPhamSapHetHang()
     capNhatBangChiTiet()
+    // xayDungDuLieuSanPhamBanChay() và capNhatSanPhamBanChayNhat() sẽ được gọi từ watch trong component
   }
 
   // Watch for data changes
@@ -588,6 +785,8 @@ export function useTinhToanThongKe(
     // Methods
     capNhatToanBoDuLieu,
     capNhatDuLieuTrangThai,
+    xayDungDuLieuSanPhamBanChay,
+    capNhatSanPhamBanChayNhat,
     layTrangThaiKho,
   }
 }

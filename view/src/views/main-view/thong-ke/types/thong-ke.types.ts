@@ -66,6 +66,8 @@ export interface DuLieuThongKe {
   productsSold: number
   orders: number
   revenue: number
+  soTienGiamGia: number
+  tangTruong: number
   title: string
 }
 
@@ -114,6 +116,7 @@ export interface DuLieuBangChiTiet {
   doanhThu: number
   soDonHang: number
   giaTriTB: number
+  soTienGiamGia: number
   tangTruong: number
   trangThai: string
 }

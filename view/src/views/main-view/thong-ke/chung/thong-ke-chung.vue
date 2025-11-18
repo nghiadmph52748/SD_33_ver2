@@ -21,6 +21,8 @@
         :doanh-thu="duLieuHienThi.revenue"
         :san-pham-da-ban="duLieuHienThi.productsSold"
         :so-don-hang="duLieuHienThi.orders"
+        :so-tien-giam-gia="duLieuHienThi.soTienGiamGia"
+        :tang-truong="duLieuHienThi.tangTruong"
         :loai-mau="khoangThoiGian === 'custom' ? 'today' : khoangThoiGian"
       />
       <TheThongKe
@@ -28,6 +30,8 @@
         :doanh-thu="duLieuTuan.revenue"
         :san-pham-da-ban="duLieuTuan.productsSold"
         :so-don-hang="duLieuTuan.orders"
+        :so-tien-giam-gia="duLieuTuan.soTienGiamGia"
+        :tang-truong="duLieuTuan.tangTruong"
         loai-mau="week"
       />
       <TheThongKe
@@ -35,6 +39,8 @@
         :doanh-thu="duLieuThang.revenue"
         :san-pham-da-ban="duLieuThang.productsSold"
         :so-don-hang="duLieuThang.orders"
+        :so-tien-giam-gia="duLieuThang.soTienGiamGia"
+        :tang-truong="duLieuThang.tangTruong"
         loai-mau="month"
       />
       <TheThongKe
@@ -42,6 +48,8 @@
         :doanh-thu="duLieuNam.revenue"
         :san-pham-da-ban="duLieuNam.productsSold"
         :so-don-hang="duLieuNam.orders"
+        :so-tien-giam-gia="duLieuNam.soTienGiamGia"
+        :tang-truong="duLieuNam.tangTruong"
         loai-mau="year"
       />
     </div>
@@ -151,6 +159,8 @@ const {
   duLieuBangChiTiet,
   capNhatToanBoDuLieu,
   capNhatDuLieuTrangThai,
+  xayDungDuLieuSanPhamBanChay,
+  capNhatSanPhamBanChayNhat,
 } = useTinhToanThongKe(danhSachHoaDon, danhSachChiTietSanPham, kyDoanhThu, t)
 
 // ============= EXCEL EXPORT =============
@@ -295,6 +305,15 @@ watch(kyTrangThaiDonHang, (newValue) => {
   capNhatDuLieuTrangThai(newValue)
 })
 
+watch(kyTopProducts, (newValue) => {
+  xayDungDuLieuSanPhamBanChay(newValue)
+  // capNhatSanPhamBanChayNhat() sẽ được gọi tự động khi duLieuSanPhamBanChay thay đổi
+})
+
+watch(duLieuSanPhamBanChay, () => {
+  capNhatSanPhamBanChayNhat()
+}, { immediate: true })
+
 watch(duLieuBangChiTiet, (newValue) => {
   phanTrangBangChiTiet.value.total = newValue.length
 })
@@ -310,6 +329,8 @@ watch(sanPhamSapHetHang, (newValue) => {
 onMounted(async () => {
   await taiToanBoDuLieu()
   capNhatToanBoDuLieu('day')
+  xayDungDuLieuSanPhamBanChay(kyTopProducts.value)
+  capNhatSanPhamBanChayNhat()
 })
 </script>
 
