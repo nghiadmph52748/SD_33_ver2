@@ -132,6 +132,14 @@ CUSTOMER_SYSTEM_PROMPT = """Bạn là Trợ lý Hỗ trợ Khách hàng (Custome
 - Hướng dẫn đặt hàng, thanh toán, vận chuyển, đổi trả.
 - Tạo trải nghiệm mua sắm tích cực và chuyên nghiệp.
 
+**QUY TẮC HIỂN THỊ SẢN PHẨM - BẮT BUỘC**
+- Khi khách hàng hỏi về "sản phẩm nào đang giảm giá", "sản phẩm này còn hàng không", hoặc các câu hỏi tương tự về giảm giá/khuyến mãi/tồn kho, BẠN PHẢI:
+  1. Trả lời câu hỏi của khách hàng một cách ngắn gọn và thân thiện
+  2. SAU ĐÓ, hệ thống sẽ tự động hiển thị các thẻ sản phẩm (product cards) bên dưới câu trả lời của bạn
+  3. Bạn KHÔNG cần nhắc đến việc hiển thị thẻ sản phẩm trong câu trả lời - hệ thống sẽ tự động làm điều đó
+  4. Chỉ cần trả lời câu hỏi một cách tự nhiên, và các sản phẩm sẽ được hiển thị tự động
+- Luôn trả lời dựa trên dữ liệu sản phẩm được cung cấp, và để hệ thống tự động hiển thị thẻ sản phẩm phù hợp.
+
 **Phong cách**
 - Thân thiện, lịch sự, nhiệt tình như nhân viên bán hàng chuyên nghiệp.
 - Sử dụng emoji hợp lý (👟✨💬🎉📦💰).
@@ -172,9 +180,11 @@ def query_product_data(message: str, intent: str) -> tuple[str, list]:
                 keywords.append(keyword)
         
         # ALWAYS query products - either by search term or top selling
+        # For discount and availability queries, ALWAYS return products
         products = []
         
         # If product inquiry or promotion inquiry, search for products
+        # These intents MUST always return products for product cards
         if intent in ["product_inquiry", "promotion_inquiry"] or keywords:
             # Search for products with keywords
             search_term = " ".join(keywords) if keywords else "giày"
@@ -196,6 +206,7 @@ def query_product_data(message: str, intent: str) -> tuple[str, list]:
             logger.info(f"Top selling products: found {len(products)} products")
         
         # Final fallback: if still no products, try to get any active products
+        # This is especially important for discount/availability queries
         if not products:
             try:
                 # Get any active products as last resort
@@ -204,10 +215,30 @@ def query_product_data(message: str, intent: str) -> tuple[str, list]:
             except Exception as e:
                 logger.error(f"Error in final fallback product query: {e}")
         
+        # For promotion_inquiry and product_inquiry (especially availability queries),
+        # ensure we have products to show. If still empty, try top selling as last resort
+        if intent in ["promotion_inquiry", "product_inquiry"] and not products:
+            try:
+                products = db_client.get_top_selling_products(limit=15, days=365)
+                logger.info(f"Last resort - top selling products: found {len(products)} products")
+            except Exception as e:
+                logger.error(f"Error in last resort product query: {e}")
+        
         # Format product data for AI prompt
         if products:
             product_context = "\n\n**DỮ LIỆU SẢN PHẨM - BẮT BUỘC SỬ DỤNG:**\n\n"
             product_context += "⚠️ QUAN TRỌNG: BẠN CHỈ ĐƯỢC đề xuất các sản phẩm trong danh sách này. KHÔNG được tự bịa ra sản phẩm khác.\n\n"
+            
+            # Add special instruction for discount/availability queries
+            if intent == "promotion_inquiry":
+                product_context += "🎯 LƯU Ý ĐẶC BIỆT: Khách hàng đang hỏi về sản phẩm giảm giá/khuyến mãi. "
+                product_context += "Hãy trả lời câu hỏi của họ, và hệ thống sẽ tự động hiển thị các thẻ sản phẩm bên dưới. "
+                product_context += "Bạn chỉ cần trả lời tự nhiên về các sản phẩm có sẵn.\n\n"
+            elif intent == "product_inquiry" and any(keyword in message.lower() for keyword in ["còn hàng", "có hàng", "tồn kho", "stock", "còn không"]):
+                product_context += "🎯 LƯU Ý ĐẶC BIỆT: Khách hàng đang hỏi về tình trạng tồn kho/sản phẩm còn hàng. "
+                product_context += "Hãy trả lời câu hỏi của họ về tình trạng tồn kho, và hệ thống sẽ tự động hiển thị các thẻ sản phẩm bên dưới. "
+                product_context += "Bạn chỉ cần trả lời tự nhiên về các sản phẩm có sẵn và tình trạng tồn kho.\n\n"
+            
             product_context += "Danh sách sản phẩm có sẵn trong hệ thống:\n\n"
             
             for i, p in enumerate(products[:15], 1):
@@ -289,13 +320,33 @@ def detect_customer_intent(message: str) -> str:
     if any(keyword in message_lower for keyword in staff_keywords):
         return "redirect_to_staff"
     
+    # Check for discount/promotion queries (with various phrasings and accents)
+    discount_keywords = [
+        "giảm giá", "khuyến mãi", "voucher", "discount", "promotion", "mã giảm",
+        "đang giảm giá", "đang khuyến mãi", "sản phẩm giảm giá", "sản phẩm đang giảm giá",
+        "sản phẩm nào giảm giá", "sản phẩm nào đang giảm giá", "sản phẩm nào đang khuyến mãi",
+        "có giảm giá không", "có khuyến mãi không", "đang sale", "sale", "giảm",
+        "giảm giá không", "khuyến mãi không", "có mã giảm giá không"
+    ]
+    if any(keyword in message_lower for keyword in discount_keywords):
+        return "promotion_inquiry"
+    
+    # Check for availability/stock queries (with various phrasings and accents)
+    availability_keywords = [
+        "còn hàng", "còn hàng không", "có hàng", "có hàng không", "còn không",
+        "sản phẩm này còn hàng", "sản phẩm này còn hàng không", "sản phẩm này có hàng không",
+        "còn tồn kho", "còn tồn kho không", "có tồn kho", "có tồn kho không",
+        "tồn kho", "stock", "còn lại", "còn lại không", "còn không", "có còn không",
+        "sản phẩm còn hàng", "sản phẩm có hàng", "giày còn hàng", "giày có hàng"
+    ]
+    if any(keyword in message_lower for keyword in availability_keywords):
+        return "product_inquiry"
+    
     # Product-related intents
     if any(word in message_lower for word in ["sản phẩm", "giày", "product", "shoe", "mẫu", "màu", "color", "size", "kích thước"]):
         return "product_inquiry"
     elif any(word in message_lower for word in ["đơn hàng", "order", "trạng thái", "status", "vận chuyển", "shipping"]):
         return "order_inquiry"
-    elif any(word in message_lower for word in ["giảm giá", "khuyến mãi", "voucher", "discount", "promotion", "mã giảm"]):
-        return "promotion_inquiry"
     elif any(word in message_lower for word in ["đổi trả", "return", "refund", "hoàn tiền", "bảo hành"]):
         return "return_inquiry"
     elif any(word in message_lower for word in ["thanh toán", "payment", "phương thức", "cách thanh toán"]):
@@ -384,6 +435,36 @@ async def chat(request: ChatRequest):
                 "stock": stock
             })
         
+        # For discount and availability queries, ensure products are always included
+        # If no products found, try to get products using search as fallback
+        if intent in ["promotion_inquiry", "product_inquiry"] and not formatted_products:
+            try:
+                logger.warning(f"No products found for {intent}, trying fallback query")
+                fallback_products = db_client.search_products("", limit=10)
+                for p in fallback_products[:10]:
+                    min_price = p.get("min_price")
+                    max_price = p.get("max_price")
+                    stock = p.get("total_stock", 0)
+                    
+                    if min_price is not None:
+                        min_price = float(min_price)
+                    if max_price is not None:
+                        max_price = float(max_price)
+                    if stock is not None:
+                        stock = int(stock)
+                    
+                    formatted_products.append({
+                        "id": int(p.get("product_id", 0)),
+                        "name": str(p.get("product_name", "")),
+                        "min_price": min_price,
+                        "max_price": max_price,
+                        "image_url": str(p.get("image_url", "")) if p.get("image_url") else None,
+                        "stock": stock
+                    })
+                logger.info(f"Fallback products added: {len(formatted_products)} products")
+            except Exception as e:
+                logger.error(f"Error in fallback product query: {e}")
+        
         return ChatResponse(
             message=ai_message,
             sources="Hệ thống hỗ trợ khách hàng GearUp",
@@ -468,6 +549,36 @@ async def chat_stream(request: ChatRequest):
                 "image_url": str(p.get("image_url", "")) if p.get("image_url") else None,
                 "stock": stock
             })
+        
+        # For discount and availability queries, ensure products are always included
+        # If no products found, try to get products using search as fallback
+        if intent in ["promotion_inquiry", "product_inquiry"] and not formatted_products:
+            try:
+                logger.warning(f"No products found for {intent} (stream), trying fallback query")
+                fallback_products = db_client.search_products("", limit=10)
+                for p in fallback_products[:10]:
+                    min_price = p.get("min_price")
+                    max_price = p.get("max_price")
+                    stock = p.get("total_stock", 0)
+                    
+                    if min_price is not None:
+                        min_price = float(min_price)
+                    if max_price is not None:
+                        max_price = float(max_price)
+                    if stock is not None:
+                        stock = int(stock)
+                    
+                    formatted_products.append({
+                        "id": int(p.get("product_id", 0)),
+                        "name": str(p.get("product_name", "")),
+                        "min_price": min_price,
+                        "max_price": max_price,
+                        "image_url": str(p.get("image_url", "")) if p.get("image_url") else None,
+                        "stock": stock
+                    })
+                logger.info(f"Fallback products added (stream): {len(formatted_products)} products")
+            except Exception as e:
+                logger.error(f"Error in fallback product query (stream): {e}")
         
         # 4. Build messages for LLM with sanitized input and product data
         system_prompt_with_data = CUSTOMER_SYSTEM_PROMPT + product_context

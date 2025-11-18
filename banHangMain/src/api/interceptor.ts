@@ -1,6 +1,6 @@
 import { getToken, setToken, clearToken } from '@/utils/auth'
 import axios from 'axios'
-import { showMessageError } from '@/utils/message'
+import { showMessageError, showMessageWarning } from '@/utils/message'
 
 export interface HttpResponse<T = unknown> {
   success: boolean
@@ -71,28 +71,74 @@ axios.interceptors.response.use(
     // This matches the view project's interceptor behavior
     return res
   },
-  (error) => {
+  async (error) => {
     // Handle network errors or other axios errors
     if (error.response) {
       const status = error.response.status
       const url = error.config?.url || ''
       
-      // If it's a 401 on a public endpoint, clear any invalid token and retry
-      if (status === 401 && isPublicEndpoint(url)) {
-        // Clear invalid token that might be causing the issue
-        clearToken()
-        
-        // Don't show error for public endpoints with 401 - just log it
-        console.warn('401 on public endpoint, cleared token. Retrying without token...')
-        
-        // Retry the request without token
-        return axios.request({
-          ...error.config,
-          headers: {
-            ...error.config.headers,
-            Authorization: undefined
+      // Handle 401 Unauthorized (token expired or invalid)
+      if (status === 401) {
+        // If it's a public endpoint, clear any invalid token and retry
+        if (isPublicEndpoint(url)) {
+          // Clear invalid token that might be causing the issue
+          clearToken()
+          
+          // Don't show error for public endpoints with 401 - just log it
+          console.warn('401 on public endpoint, cleared token. Retrying without token...')
+          
+          // Retry the request without token
+          return axios.request({
+            ...error.config,
+            headers: {
+              ...error.config.headers,
+              Authorization: undefined
+            }
+          })
+        } else {
+          // For protected endpoints, token has expired - force logout
+          const token = getToken()
+          if (token) {
+            // Only logout if we had a token (avoid infinite loops)
+            showMessageWarning('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+            
+            // Clear token immediately
+            clearToken()
+            
+            // Import and call logout from user store
+            try {
+              const { useUserStore } = await import('@/stores/user')
+              const userStore = useUserStore()
+              userStore.logout()
+            } catch (err) {
+              console.error('Error during logout:', err)
+            }
+            
+            // Redirect to login page, preserving the intended destination
+            try {
+              const routerModule = await import('@/router')
+              const router = routerModule.default
+              const currentPath = router.currentRoute.value.fullPath
+              if (currentPath !== '/login') {
+                router.push({
+                  path: '/login',
+                  query: { redirect: currentPath }
+                }).catch(() => {
+                  // Ignore navigation errors (e.g., if already on login page)
+                })
+              }
+            } catch (routerError) {
+              // Fallback: use window.location if router import fails
+              console.error('Error accessing router:', routerError)
+              if (window.location.pathname !== '/login') {
+                window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+              }
+            }
           }
-        })
+          
+          // Reject with a clear error message
+          return Promise.reject(new Error('Phiên đăng nhập đã hết hạn'))
+        }
       }
       
       // Server responded with error status

@@ -1,6 +1,7 @@
 import pyodbc
 from app.config import get_settings
 import logging
+import platform
 from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -8,25 +9,99 @@ settings = get_settings()
 
 class DatabaseClient:
     def __init__(self):
+        self.driver = self._find_odbc_driver()
         self.connection_string = (
-            f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+            f"DRIVER={{{self.driver}}};"
             f"SERVER={settings.db_host},{settings.db_port};"
             f"DATABASE={settings.db_name};"
             f"UID={settings.db_user};"
             f"PWD={settings.db_password};"
             f"TrustServerCertificate=yes;"
         )
+        logger.info(f"Using ODBC driver: {self.driver}")
+    
+    def _find_odbc_driver(self) -> str:
+        """Find available ODBC driver for SQL Server, with Windows-specific fallbacks"""
+        # List of drivers to try in order of preference
+        drivers_to_try = [
+            "ODBC Driver 18 for SQL Server",
+            "ODBC Driver 17 for SQL Server",
+            "ODBC Driver 13 for SQL Server",
+            "SQL Server Native Client 11.0",
+            "SQL Server",
+        ]
+        
+        # On Windows, also try these common alternatives
+        if platform.system() == "Windows":
+            drivers_to_try.extend([
+                "SQL Server Native Client 10.0",
+                "SQL Server Native Client",
+            ])
+        
+        # Get list of available drivers
+        try:
+            available_drivers = [driver for driver in pyodbc.drivers()]
+            logger.info(f"Available ODBC drivers: {available_drivers}")
+            
+            # Try to find a matching driver
+            for driver in drivers_to_try:
+                if driver in available_drivers:
+                    logger.info(f"Found ODBC driver: {driver}")
+                    return driver
+            
+            # If no driver found, log warning and use first available SQL Server driver
+            sql_server_drivers = [d for d in available_drivers if "SQL Server" in d or "ODBC Driver" in d]
+            if sql_server_drivers:
+                logger.warning(f"No preferred driver found, using: {sql_server_drivers[0]}")
+                return sql_server_drivers[0]
+            
+            # Last resort: use the first driver in our list (will likely fail, but provides clear error)
+            logger.error(f"No SQL Server ODBC driver found. Available drivers: {available_drivers}")
+            logger.error("Please install 'ODBC Driver 18 for SQL Server' or 'ODBC Driver 17 for SQL Server'")
+            return drivers_to_try[0]  # Will fail with clear error message
+            
+        except Exception as e:
+            logger.error(f"Error detecting ODBC drivers: {e}")
+            # Fallback to default
+            return drivers_to_try[0]
+    
+    def test_connection(self) -> tuple[bool, str]:
+        """Test database connection and return (success, message)"""
+        try:
+            with pyodbc.connect(self.connection_string, timeout=5) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+                return True, "Connection successful"
+        except pyodbc.Error as e:
+            error_msg = f"ODBC Error: {str(e)}"
+            if "IM002" in str(e) or "driver" in str(e).lower():
+                error_msg += f"\nDriver '{self.driver}' not found. Please install ODBC Driver for SQL Server."
+            elif "08001" in str(e) or "login" in str(e).lower() or "authentication" in str(e).lower():
+                error_msg += f"\nCheck database credentials: host={settings.db_host}, port={settings.db_port}, database={settings.db_name}"
+            elif "network" in str(e).lower() or "timeout" in str(e).lower():
+                error_msg += f"\nCannot reach database server at {settings.db_host}:{settings.db_port}"
+            logger.error(error_msg)
+            return False, error_msg
+        except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
     
     def execute_query(self, query: str, params: tuple = None) -> List[Dict[str, Any]]:
         """Execute SQL query and return results as list of dicts"""
         try:
-            with pyodbc.connect(self.connection_string) as conn:
+            with pyodbc.connect(self.connection_string, timeout=10) as conn:
                 cursor = conn.cursor()
                 
                 if params:
                     cursor.execute(query, params)
                 else:
                     cursor.execute(query)
+                
+                # Handle queries that don't return results (e.g., INSERT without RETURNING)
+                if cursor.description is None:
+                    return []
                 
                 columns = [column[0] for column in cursor.description]
                 results = []
@@ -34,14 +109,21 @@ class DatabaseClient:
                     results.append(dict(zip(columns, row)))
                 
                 return results
+        except pyodbc.Error as e:
+            error_msg = f"Database query error: {str(e)}"
+            if "IM002" in str(e) or "driver" in str(e).lower():
+                error_msg += f"\nODBC Driver issue: '{self.driver}' may not be installed or configured correctly."
+                error_msg += f"\nAvailable drivers: {[d for d in pyodbc.drivers()]}"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
         except Exception as e:
-            logger.error(f"Database error: {e}")
+            logger.error(f"Database error: {e}", exc_info=True)
             raise
     
     def execute_non_query(self, query: str, params: tuple = None) -> int:
         """Execute INSERT/UPDATE/DELETE and return affected row count"""
         try:
-            with pyodbc.connect(self.connection_string) as conn:
+            with pyodbc.connect(self.connection_string, timeout=10) as conn:
                 cursor = conn.cursor()
                 if params:
                     cursor.execute(query, params)
@@ -49,8 +131,14 @@ class DatabaseClient:
                     cursor.execute(query)
                 conn.commit()
                 return cursor.rowcount
+        except pyodbc.Error as e:
+            error_msg = f"Database write error: {str(e)}"
+            if "IM002" in str(e) or "driver" in str(e).lower():
+                error_msg += f"\nODBC Driver issue: '{self.driver}' may not be installed or configured correctly."
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
         except Exception as e:
-            logger.error(f"Database error: {e}")
+            logger.error(f"Database error: {e}", exc_info=True)
             raise
     
     def get_top_selling_products(self, limit: int = 5, days: int = 365) -> List[Dict]:

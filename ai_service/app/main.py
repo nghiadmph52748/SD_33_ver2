@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import customer_chatbot, admin_chatbot
 from app.config import get_settings
+from app.utils.database import db_client
 import logging
+import platform
 
 # Logging configuration
 logging.basicConfig(
@@ -53,7 +55,24 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    """Health check endpoint"""
+    db_status, db_message = db_client.test_connection()
+    
+    return {
+        "status": "healthy" if db_status else "degraded",
+        "database": {
+            "connected": db_status,
+            "message": db_message,
+            "driver": db_client.driver,
+            "host": settings.db_host,
+            "port": settings.db_port,
+            "database": settings.db_name
+        },
+        "system": {
+            "platform": platform.system(),
+            "platform_version": platform.version()
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn

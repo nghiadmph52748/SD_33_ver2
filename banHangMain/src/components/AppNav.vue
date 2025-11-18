@@ -301,7 +301,7 @@ header.scrolled {
 }
 
 .brand-name {
-  font-family: "Times New Roman", Georgia, "PT Serif", serif;
+  font-family: var(--font-family-serif);
   font-weight: 700;
   font-size: 18px;
   letter-spacing: .4px;

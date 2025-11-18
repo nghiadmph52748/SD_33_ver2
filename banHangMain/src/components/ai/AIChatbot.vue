@@ -219,6 +219,29 @@ const messages = ref<ChatMessage[]>([
   },
 ])
 
+function normalizeText(input: string | undefined): string {
+  if (!input) return ''
+  return input
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function filterProductsByMention(content: string | undefined, products: Product[] = []): Product[] {
+  if (!products.length) return products
+  const normalizedContent = normalizeText(content)
+  if (!normalizedContent) return products
+  const matched = products.filter((product) => {
+    const normalizedName = normalizeText(product.name)
+    return normalizedName && normalizedContent.includes(normalizedName)
+  })
+  return matched.length > 0 ? matched : products
+}
+
 const userStore = useUserStore()
 const chatStore = useChatStore()
 const input = ref('')
@@ -790,8 +813,7 @@ async function sendMessage(text: string = input.value) {
         }
         
         // Check if we should show product cards in a separate message
-        // Only show product cards when customer explicitly asks for product suggestions
-        // Pattern: "gợi ý [sản phẩm/giày/product/shoe]" or "suggest [product/shoe]"
+        // Always show for explicit product suggestions OR discount/availability questions
         const userMessageLower = text.toLowerCase().trim()
         
         // Check for explicit suggestion request with product keywords
@@ -830,26 +852,66 @@ async function sendMessage(text: string = input.value) {
             userMessageLower.includes('sản phẩm') ||
             userMessageLower.includes('product')
           ))
-        
-        // Only show product cards if:
-        // 1. Query type is product_inquiry (from backend), AND
-        // 2. User explicitly asked for product suggestions (hasExplicitSuggestionRequest), AND
-        // 3. We have products from backend
-        const isProductSuggestionQuery = 
-          (aiMsg?.queryType === 'product_inquiry' || aiMsg?.queryType === 'promotion_inquiry') &&
-          hasExplicitSuggestionRequest
+
+        // Discount / promotion keywords (e.g., "sản phẩm nào đang giảm giá")
+        const discountKeywords = [
+          'giảm giá',
+          'đang giảm',
+          'đang giảm giá',
+          'đang khuyến mãi',
+          'khuyến mãi',
+          'promotion',
+          'discount',
+          'sale',
+          'mã giảm',
+          'voucher',
+          'sản phẩm nào đang giảm giá',
+          'sản phẩm nào giảm giá'
+        ]
+        const mentionsDiscount = discountKeywords.some((keyword) => userMessageLower.includes(keyword))
+
+        // Availability / stock keywords (e.g., "sản phẩm này còn hàng không")
+        const availabilityKeywords = [
+          'còn hàng',
+          'còn hàng không',
+          'có hàng',
+          'có hàng không',
+          'còn không',
+          'có còn không',
+          'còn tồn kho',
+          'tồn kho',
+          'stock',
+          'còn lại',
+          'sản phẩm này còn hàng',
+          'sản phẩm này còn hàng không',
+          'sản phẩm này có hàng không'
+        ]
+        const mentionsAvailability = availabilityKeywords.some((keyword) => userMessageLower.includes(keyword))
+
+        const resolvedQueryType = aiMsg?.queryType || receivedQueryType
+        const isPromotionIntent = resolvedQueryType === 'promotion_inquiry'
+        const isProductIntent = resolvedQueryType === 'product_inquiry'
+
+        const isProductSuggestionQuery = (
+          (isPromotionIntent && (hasExplicitSuggestionRequest || mentionsDiscount)) ||
+          (isProductIntent && (hasExplicitSuggestionRequest || mentionsAvailability))
+        )
         
         // Use products from aiMsg or receivedProducts
         const productsToCheck = aiMsg?.products || receivedProducts
+        const filteredProducts = filterProductsByMention(
+          aiMsg?.content || fullContent,
+          productsToCheck || []
+        )
         
         // If this is a product suggestion query AND we have products, create a separate message for product cards
-        if (isProductSuggestionQuery && productsToCheck && productsToCheck.length > 0) {
+        if (isProductSuggestionQuery && filteredProducts && filteredProducts.length > 0) {
           console.log('📦 Creating separate product cards message:', {
             queryType: aiMsg?.queryType || receivedQueryType,
-            productsCount: productsToCheck.length,
+            productsCount: filteredProducts.length,
             userMessage: text.substring(0, 50),
             hasExplicitSuggestionRequest,
-            products: productsToCheck
+            products: filteredProducts
           })
           
           // Remove products from the main message
@@ -863,7 +925,7 @@ async function sendMessage(text: string = input.value) {
             role: 'assistant',
             content: '',
             timestamp: new Date().toLocaleTimeString('vi-VN'),
-            products: [...productsToCheck],
+            products: [...filteredProducts],
             processingStatus: 'ready',
             isProductSuggestion: true,
           }

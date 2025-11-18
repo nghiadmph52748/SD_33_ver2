@@ -126,7 +126,17 @@ onBeforeUnmount(stop);
   z-index: 1;
 }
 
-.hero-title { font-weight: 500; font-size: clamp(28px, 6vw, 64px); line-height: 1.1; margin: 0 0 8px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.35); color: #ffffff; }
+.hero-title {
+  font-family: var(--font-family-sans);
+  font-weight: 600;
+  font-size: clamp(28px, 6vw, 64px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px 0;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  color: #ffffff;
+  text-rendering: optimizeLegibility;
+}
 .hero-sub { font-weight: 400; font-size: clamp(14px, 2.4vw, 20px); color: rgba(255, 255, 255, 0.9); margin: 0 0 16px 0; text-shadow: 0 1px 3px rgba(0,0,0,0.35); }
 
 .slide-left-enter-active,
