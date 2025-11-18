@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Optional;
 
 import org.example.be_sp.entity.ChiTietSanPham;
+import org.example.be_sp.entity.SanPham;
+import org.example.be_sp.util.MapperUtils;
+import org.springframework.beans.PropertyValues;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -88,4 +91,8 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     @Query("SELECT ctsp FROM ChiTietSanPham ctsp "
             + "WHERE ctsp.trangThai = true AND (ctsp.soLuong IS NULL OR ctsp.soLuong <= 0) AND ctsp.deleted = false")
     List<ChiTietSanPham> findAllEnabledWithZeroOrNegativeQuantity();
+
+    List<ChiTietSanPham> findAllByIdSanPham_Id(Integer idSanPhamId);
+
+    Page<ChiTietSanPham> findAllByIdSanPham_Id(Integer idSanPhamId, Pageable pageable);
 }

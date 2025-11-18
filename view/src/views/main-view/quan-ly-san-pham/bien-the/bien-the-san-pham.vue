@@ -285,8 +285,8 @@
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.trangThai ? 'green' : 'red'">
-            {{ record.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}
+          <a-tag :color="record.trangThai && !record.deleted ? 'green' : record.trangThai && record.deleted ? 'orange' : 'red'">
+            {{ record.trangThai && !record.deleted ? 'Đang bán' : !record.trangThai && !record.deleted ? 'Hết hàng' : 'Tạm ngưng bán' }}
           </a-tag>
         </template>
 
@@ -294,7 +294,7 @@
           <a-space>
             <!-- Status Toggle Switch -->
             <a-tooltip content="Thay đổi trạng thái bán">
-              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="!record.deleted" type="round" @click="toggleStatus(record)" :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -355,14 +355,14 @@
     >
       <template #default>
         <div v-if="variantToToggleStatus">
-          <div>Bạn có chắc chắn muốn {{ variantToToggleStatus.trangThai ? 'tạm ngưng bán' : 'kích hoạt bán' }} biến thể này?</div>
+          <div>Bạn có chắc chắn muốn {{ !variantToToggleStatus.deleted ? 'tạm ngưng bán' : 'kích hoạt bán' }} biến thể này?</div>
           <div>
             Mã biến thể:
             <strong>{{ variantToToggleStatus.maChiTietSanPham }}</strong>
           </div>
           <div>
             Trạng thái hiện tại:
-            <strong>{{ variantToToggleStatus.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}</strong>
+            <strong>{{ !variantToToggleStatus.deleted ? 'Đang bán' : 'Tạm ngưng bán' }}</strong>
           </div>
         </div>
       </template>
@@ -1369,9 +1369,9 @@ const performToggleStatus = async (record: any) => {
       idTrongLuong: findIdByName(trongLuongOptions.value, 'tenTrongLuong', record.tenTrongLuong),
       soLuong: record.soLuong,
       giaBan: record.giaBan,
-      trangThai: !record.trangThai, // Toggle status
+      trangThai: record.trangThai,
       ghiChu: record.ghiChu || '',
-      deleted: record.deleted || false,
+      deleted: !record.deleted, // Toggle deleted status
     }
 
     // Call API to update variant
@@ -1379,23 +1379,23 @@ const performToggleStatus = async (record: any) => {
 
     if (response.success || response.status === 200 || response.data) {
       // Update local data immediately for better UX
-      record.trangThai = !record.trangThai
+      record.deleted = !record.deleted
 
       // Update in variants array
       const index = variants.value.findIndex((v) => v.id === record.id)
       if (index !== -1) {
-        variants.value[index].trangThai = record.trangThai
+        variants.value[index].deleted = record.deleted
       }
 
       // Update in originalVariants if exists
       if (originalVariants.value?.data) {
         const origIndex = originalVariants.value.data.findIndex((v) => v.id === record.id)
         if (origIndex !== -1) {
-          originalVariants.value.data[origIndex].trangThai = record.trangThai
+          originalVariants.value.data[origIndex].deleted = record.deleted
         }
       }
 
-      const statusText = record.trangThai ? 'Đang bán' : 'Tạm ngưng bán'
+      const statusText = !record.deleted ? 'Đang bán' : 'Tạm ngưng bán'
       Message.success(`Đã cập nhật trạng thái thành: ${statusText}`)
     } else {
       // Revert the local change if API fails

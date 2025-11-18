@@ -82,9 +82,9 @@
                 <template #label>
                   <span class="required-field">Trạng thái</span>
                 </template>
-                <a-radio-group v-model="formData.trangThai">
-                  <a-radio :value="true">Đang bán</a-radio>
-                  <a-radio :value="false">Tạm ngưng bán</a-radio>
+                <a-radio-group v-model="formData.deleted">
+                  <a-radio :value="false">Đang bán</a-radio>
+                  <a-radio :value="true">Tạm ngưng bán</a-radio>
                 </a-radio-group>
               </a-form-item>
             </a-card>
@@ -331,7 +331,7 @@
           <ul style="margin-top: 8px; padding-left: 20px">
             <li>Giá bán: {{ formatCurrency(formData.giaBan) }}</li>
             <li>Số lượng: {{ formData.soLuong }}</li>
-            <li>Trạng thái: {{ formData.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}</li>
+            <li>Trạng thái: {{ !formData.deleted ? 'Đang bán' : 'Tạm ngưng bán' }}</li>
             <li>Màu sắc: {{ formData.mauSac }}</li>
             <li>Kích thước: {{ formData.kichThuoc }}</li>
             <li>Chất liệu: {{ formData.chatLieu }}</li>
@@ -429,6 +429,7 @@ const formData = reactive({
   giaTriGiamGia: 0,
   soLuong: 0,
   trangThai: true,
+  deleted: false,
   mauSac: null,
   kichThuoc: null,
   chatLieu: null,
@@ -808,7 +809,7 @@ const handleUpdate = async () => {
         deGiay: formData.deGiay,
         trongLuong: formData.trongLuong,
         ghiChu: variant.value.ghiChu,
-        deleted: variant.value.deleted,
+        deleted: formData.deleted,
         createAt: variant.value.createdAt,
         createBy: variant.value.createdBy,
         updateAt: new Date().toISOString().split('T')[0], // LocalDate format: YYYY-MM-DD
@@ -900,7 +901,7 @@ const performUpdate = async () => {
       deGiay: formData.deGiay,
       trongLuong: formData.trongLuong,
       ghiChu: variant.value.ghiChu,
-      deleted: variant.value.deleted,
+      deleted: formData.deleted,
       createAt: variant.value.createdAt,
       createBy: variant.value.createdBy,
       updateAt: new Date().toISOString().split('T')[0],
@@ -1013,6 +1014,7 @@ const loadVariantData = async () => {
       formData.giaTriGiamGia = variant.value.giaTriGiamGia || 0
       formData.soLuong = variant.value.soLuong || 0
       formData.trangThai = variant.value.trangThai !== false
+      formData.deleted = variant.value.deleted || false
 
       // Find attribute IDs by matching names with loaded options
       formData.mauSac = findAttributeIdByName(colorOptions.value, variant.value.tenMauSac, 'màu sắc')

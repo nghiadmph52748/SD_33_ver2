@@ -54,27 +54,26 @@ public class ChiTietSanPhamService {
     NhanVienRepository nhanVienRepository;
 
     public List<ChiTietSanPhamFullResponse> getAll() {
-        return repository.findAllByDeletedWithDetails(false).stream().map(ChiTietSanPhamFullResponse::new).toList();
+        return repository.findAll().stream().map(ChiTietSanPhamFullResponse::new).toList();
     }
 
     public List<ChiTietSanPhamFullResponse> getAllByIdSanPham(Integer idSanPham) {
-        return repository.findAllByDeletedAndIdSanPhamIdWithDetails(false, idSanPham).stream()
+        return repository.findAllByIdSanPham_Id(idSanPham).stream()
                 .map(ChiTietSanPhamFullResponse::new).toList();
     }
 
     public PagingResponse<ChiTietSanPhamFullResponse> getAllWithPage(int page, int size) {
-        return new PagingResponse<>(repository.findAllByDeleted(false, PageRequest.of(page, size))
+        return new PagingResponse<>(repository.findAll(PageRequest.of(page, size))
                 .map(ChiTietSanPhamFullResponse::new), page);
     }
 
     public PagingResponse<ChiTietSanPhamFullResponse> getAllByIdSanPhamWithPage(Integer idSanPham, int page, int size) {
-        return new PagingResponse<>(repository.findAllByDeletedAndIdSanPham_Id(false, idSanPham, PageRequest.of(page,
-                size)).map(ChiTietSanPhamFullResponse::new),
+        return new PagingResponse<>(repository.findAllByIdSanPham_Id(idSanPham, PageRequest.of(page, size)).map(ChiTietSanPhamFullResponse::new),
                 page);
     }
 
     public ChiTietSanPhamFullResponse getById(Integer id) {
-        return repository.findByIdWithDetails(id).map(ChiTietSanPhamFullResponse::new)
+        return repository.findById(id).map(ChiTietSanPhamFullResponse::new)
                 .orElseThrow(() -> new ApiException("Chi tiết sản phẩm không tồn tại", "404"));
     }
 

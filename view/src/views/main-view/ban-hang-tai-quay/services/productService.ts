@@ -33,7 +33,7 @@ export async function fetchAllProducts(pageSize = 100): Promise<BienTheSanPham[]
 
 export async function fetchAllAvailableProducts(pageSize = 100): Promise<BienTheSanPham[]> {
   const all = await fetchAllProducts(pageSize)
-  return all.filter((p) => (p.soLuong ?? 0) > 0)
+  return all.filter((p) => (p.soLuong ?? 0) > 0 && !p.deleted)
 }
 
 export async function fetchFilterOptions(): Promise<{

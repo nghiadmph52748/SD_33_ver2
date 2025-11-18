@@ -45,7 +45,7 @@ public class SanPhamService {
     }
     
     public List<SanPhamResponse> getAll() {
-        return repository.findAllByDeleted(false).stream()
+        return repository.findAll().stream()
                 .map(SanPhamResponse::new)
                 .toList();
     }

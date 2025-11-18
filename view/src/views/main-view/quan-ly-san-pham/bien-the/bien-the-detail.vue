@@ -41,8 +41,13 @@
               Mã biến thể:
               <strong>{{ variant.maChiTietSanPham || variant.id }}</strong>
             </p>
-            <a-tag :color="variant.trangThai ? 'green' : 'red'" size="large">
-              {{ variant.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}
+            <a-tag
+              :color="variant.trangThai && !variant.deleted ? 'green' : !variant.trangThai && !variant.deleted ? 'red' : 'orange'"
+              size="large"
+            >
+              {{
+                variant.trangThai && !variant.deleted ? 'Đang bán' : !variant.trangThai && !variant.deleted ? 'Hết hàng' : 'Tạm ngưng bán'
+              }}
             </a-tag>
           </div>
         </div>
@@ -76,8 +81,14 @@
                 </span>
               </a-descriptions-item>
               <a-descriptions-item label="Trạng thái">
-                <a-tag :color="variant.trangThai ? 'green' : 'red'">
-                  {{ variant.trangThai ? 'Đang bán' : 'Tạm ngưng bán' }}
+                <a-tag :color="variant.trangThai && !variant.deleted ? 'green' : !variant.trangThai && !variant.deleted ? 'red' : 'orange'">
+                  {{
+                    variant.trangThai && !variant.deleted
+                      ? 'Đang bán'
+                      : !variant.trangThai && !variant.deleted
+                        ? 'Hết hàng'
+                        : 'Tạm ngưng bán'
+                  }}
                 </a-tag>
               </a-descriptions-item>
             </a-descriptions>
