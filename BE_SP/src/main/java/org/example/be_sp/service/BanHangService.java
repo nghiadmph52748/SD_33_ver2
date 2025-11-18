@@ -2,6 +2,7 @@ package org.example.be_sp.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -183,7 +184,7 @@ public class BanHangService {
         BigDecimal giaBanSauGiam = chiTietSanPham.getGiaBan();
         if (chiTietSanPham.getChiTietDotGiamGias() != null && !chiTietSanPham.getChiTietDotGiamGias().isEmpty()) {
             ChiTietDotGiamGia ctdg = chiTietSanPham.getChiTietDotGiamGias().stream()
-                    .filter(ChiTietDotGiamGia::getTrangThai)
+                    .filter(ctdgItem -> ctdgItem.getTrangThai() && !ctdgItem.getDeleted() && ctdgItem.getIdDotGiamGia().getNgayBatDau().isBefore(LocalDateTime.now()) && ctdgItem.getIdDotGiamGia().getNgayKetThuc().isAfter(LocalDateTime.now()))
                     .findFirst()
                     .orElse(null);
             if (ctdg != null) {
