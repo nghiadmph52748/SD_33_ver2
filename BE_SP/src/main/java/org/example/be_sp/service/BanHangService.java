@@ -602,7 +602,7 @@ public class BanHangService {
         if (chiTiets != null && !chiTiets.isEmpty()) {
             for (HoaDonChiTiet ct : chiTiets) {
                 ChiTietSanPham ctsp = ct.getIdChiTietSanPham();
-                if (ctsp != null && (ctsp.getTrangThai() == null || !ctsp.getTrangThai())) {
+                if (ctsp != null && (ctsp.getDeleted() != null && ctsp.getDeleted())) {
                     Map<String, Object> variantInfo = new HashMap<>();
                     variantInfo.put("id", ctsp.getId());
                     variantInfo.put("soLuong", ct.getSoLuong());
@@ -630,8 +630,8 @@ public class BanHangService {
 
     public void kiemTra(Map<Integer, Integer> listIdChiTietSanPham, Integer idPhieuGiamGia, Integer idNhanVien, Integer idKhachHang, Integer idPhuongThucThanhToan) {
         listIdChiTietSanPham.forEach((id, soLuong) -> {
-            Boolean ctspTT = ctspRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + id, "404")).getTrangThai();
-            if (!ctspTT) {
+            ChiTietSanPham ctsp = ctspRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + id, "404"));
+            if (ctsp.getDeleted() != null && ctsp.getDeleted()) {
                 throw new ApiException("Chi tiết sản phẩm với id: " + id + " không hoạt động", "400");
             }
         });
