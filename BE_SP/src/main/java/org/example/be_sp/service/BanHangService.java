@@ -23,6 +23,7 @@ import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.banHang.ConfirmBanHangRequest;
 import org.example.be_sp.model.response.CreateInvoiceResponse;
+import org.example.be_sp.repository.ChiTietDotGiamGiaRepository;
 import org.example.be_sp.repository.ChiTietSanPhamRepository;
 import org.example.be_sp.repository.DiaChiKhachHangRepository;
 import org.example.be_sp.repository.HinhThucThanhToanRepository;
@@ -83,7 +84,7 @@ public class BanHangService {
      * Helper method to create timeline entry automatically
      */
     private void addTimeline(HoaDon hoaDon, String trangThaiCu, String trangThaiMoi,
-                             String hanhDong, String moTa, Integer idNhanVien) {
+            String hanhDong, String moTa, Integer idNhanVien) {
         TimelineDonHang timeline = new TimelineDonHang();
         timeline.setIdHoaDon(hoaDon);
         timeline.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
@@ -178,8 +179,22 @@ public class BanHangService {
         hdct.setIdHoaDon(hoaDon);
         hdct.setIdChiTietSanPham(chiTietSanPham);
         hdct.setSoLuong(soLuong);
-        hdct.setGiaBan(chiTietSanPham.getGiaBan().multiply(BigDecimal.valueOf(chiTietSanPham.getChiTietDotGiamGias().stream().filter(ChiTietDotGiamGia::getTrangThai).mapToDouble(ctdg -> (100 - ctdg.getIdDotGiamGia().getGiaTriGiamGia()) / 100.0).reduce(1.0, (a, b) -> a * b))));
-        hdct.setThanhTien(chiTietSanPham.getGiaBan().multiply(BigDecimal.valueOf(soLuong)));
+        // Tính giá bán sau khuyến mãi: giá gốc × (100 - % giảm) / 100
+        BigDecimal giaBanSauGiam = chiTietSanPham.getGiaBan();
+        if (chiTietSanPham.getChiTietDotGiamGias() != null && !chiTietSanPham.getChiTietDotGiamGias().isEmpty()) {
+            ChiTietDotGiamGia ctdg = chiTietSanPham.getChiTietDotGiamGias().stream()
+                    .filter(ChiTietDotGiamGia::getTrangThai)
+                    .findFirst()
+                    .orElse(null);
+            if (ctdg != null) {
+                BigDecimal giaTriGiam = new BigDecimal(ctdg.getIdDotGiamGia().getGiaTriGiamGia());
+                giaBanSauGiam = chiTietSanPham.getGiaBan()
+                        .multiply(BigDecimal.valueOf(100).subtract(giaTriGiam))
+                        .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            }
+        }
+        hdct.setGiaBan(giaBanSauGiam);
+        hdct.setThanhTien(hdct.getGiaBan().multiply(BigDecimal.valueOf(soLuong)));
         hdct.setTrangThai(true);
         hdct.setDeleted(false);
         hdct.setCreateAt(LocalDate.now());
@@ -250,8 +265,8 @@ public class BanHangService {
             // Bảo đảm tổng sau giảm không vượt tổng gốc (tránh vi phạm CK constraint)
             hoaDon.setTongTienSauGiam(
                     hoaDon.getTongTienSauGiam() != null && hoaDon.getTongTienSauGiam().compareTo(totalAmount) <= 0
-                            ? hoaDon.getTongTienSauGiam()
-                            : totalAmount);
+                    ? hoaDon.getTongTienSauGiam()
+                    : totalAmount);
         } else {
             hoaDon.setTongTien(BigDecimal.ZERO);
             hoaDon.setTongTienSauGiam(BigDecimal.ZERO);
@@ -395,7 +410,7 @@ public class BanHangService {
         // Create timeline: Cập nhật hình thức giao hàng
         addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
                 "Cập nhật hình thức giao hàng: " + (giaohangCu ? "Không giao" : "Giao hàng")
-                        + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
+                + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
                 idNhanVien);
     }
 
@@ -403,8 +418,8 @@ public class BanHangService {
         HoaDon hoaDon = hdRepository.findById(idHoaDon).orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
         HinhThucThanhToan httt
                 = htttRepository.findByIdHoaDonAndTrangThaiAndDeleted(hdRepository.findById(idHoaDon).orElseThrow(),
-                true,
-                false);
+                        true,
+                        false);
 
         // Create new HinhThucThanhToan if none exists
         if (httt == null) {
@@ -508,7 +523,7 @@ public class BanHangService {
                 pggRepository.save(pgg);
             }
         }
-        
+
         // Save payment information to hinh_thuc_thanh_toan table
         // idPTTT: 1 = Tiền mặt, 2 = Chuyển khoản, 3 = Cả hai
         if (request.getIdPTTT() != null) {
@@ -527,7 +542,7 @@ public class BanHangService {
         addTimeline(hoaDon, "Đang xử lý", "Hoàn thành", "Xác nhận",
                 "Xác nhận bán hàng tại quầy - Tổng tiền: " + hoaDon.getTongTien(),
                 request.getIdNhanVien());
-        if (!saved.getGiaoHang()){
+        if (!saved.getGiaoHang()) {
             trangThaiDonHangOffline(saved.getId());
         } else {
             trangThaiDonHangOnline(saved.getId());
@@ -577,12 +592,12 @@ public class BanHangService {
     public Map<String, Object> validateInvoiceBeforeConfirm(Integer idHoaDon) {
         Map<String, Object> result = new HashMap<>();
         List<Map<String, Object>> inactiveVariants = new ArrayList<>();
-        
+
         HoaDon hoaDon = hdRepository.findById(idHoaDon)
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
-        
+
         ArrayList<HoaDonChiTiet> chiTiets = hdctRepository.findAllByIdHoaDonAndTrangThai(hoaDon, true);
-        
+
         if (chiTiets != null && !chiTiets.isEmpty()) {
             for (HoaDonChiTiet ct : chiTiets) {
                 ChiTietSanPham ctsp = ct.getIdChiTietSanPham();
@@ -605,10 +620,10 @@ public class BanHangService {
                 }
             }
         }
-        
+
         result.put("isValid", inactiveVariants.isEmpty());
         result.put("inactiveVariants", inactiveVariants);
-        
+
         return result;
     }
 
@@ -675,6 +690,7 @@ public class BanHangService {
         thongTinDonHang4.setDeleted(false);
         ttDhRepository.save(thongTinDonHang4);
     }
+
     public void trangThaiDonHangOnline(Integer idHoaDon) {
         ThongTinDonHang thongTinDonHang2 = new ThongTinDonHang();
         thongTinDonHang2.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
