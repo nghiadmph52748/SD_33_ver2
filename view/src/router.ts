@@ -20,7 +20,7 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
 
-    // ✅ Thêm route cho trang đổi mật khẩu (Reset Password)
+    //  Thêm route cho trang đổi mật khẩu (Reset Password)
     {
     path: '/auth/reset-password',
     name: 'reset-password',

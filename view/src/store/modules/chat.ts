@@ -129,7 +129,7 @@ const useChatStore = defineStore('chat', {
         const data = response.data?.data || response.data || []
         const fetchedConversations = Array.isArray(data) ? data : []
         
-        console.log('📋 Fetched conversations from backend:', fetchedConversations.length)
+        console.log(' Fetched conversations from backend:', fetchedConversations.length)
         fetchedConversations.forEach((conv: Conversation) => {
           console.log('  - Conversation:', {
             id: conv.id,
@@ -180,7 +180,7 @@ const useChatStore = defineStore('chat', {
             })
 
             if (realConv && realConv.id !== tempId) {
-              console.log(`🔄 Migrating messages from temp conversation ${tempId} to real conversation ${realConv.id}`)
+              console.log(` Migrating messages from temp conversation ${tempId} to real conversation ${realConv.id}`)
               // Merge messages
               if (!this.messages[realConv.id]) {
                 this.messages[realConv.id] = []
@@ -209,9 +209,9 @@ const useChatStore = defineStore('chat', {
 
         // Cập nhật total unread count
         this.updateTotalUnreadCount()
-        console.log(`✅ Total unread count: ${this.totalUnreadCount}`)
+        console.log(` Total unread count: ${this.totalUnreadCount}`)
       } catch (error: any) {
-        console.error('❌ Fetch conversations error:', error)
+        console.error(' Fetch conversations error:', error)
         Message.error(`Không thể tải danh sách cuộc trò chuyện: ${error.message}`)
       } finally {
         this.loadingConversations = false
@@ -261,7 +261,7 @@ const useChatStore = defineStore('chat', {
         } else {
         }
       } catch (error: any) {
-        console.error('❌ Fetch messages error:', error)
+        console.error(' Fetch messages error:', error)
         Message.error(`Không thể tải tin nhắn: ${error.message}`)
       } finally {
         this.loadingMessages = false
@@ -452,7 +452,7 @@ const useChatStore = defineStore('chat', {
         })
         const userIds: number[] = await response.json()
         this.onlineUsers = new Set(userIds)
-        console.log('📊 Online users:', Array.from(this.onlineUsers))
+        console.log(' Online users:', Array.from(this.onlineUsers))
       } catch (error: any) {
         console.error('Lỗi khi lấy danh sách online users:', error)
       }
@@ -467,7 +467,7 @@ const useChatStore = defineStore('chat', {
         console.log(`🟢 User ${userId} is now ONLINE`)
       } else {
         this.onlineUsers.delete(userId)
-        console.log(`🔴 User ${userId} is now OFFLINE`)
+        console.log(` User ${userId} is now OFFLINE`)
       }
     },
 
@@ -547,7 +547,7 @@ const useChatStore = defineStore('chat', {
 
               try {
                 const chatMessage: ChatMessage = JSON.parse(message.body)
-                console.log('📬 Parsed chat message:', chatMessage)
+                console.log(' Parsed chat message:', chatMessage)
                 console.log('Message details:', {
                   id: chatMessage.id,
                   senderId: chatMessage.senderId,
@@ -636,7 +636,7 @@ const useChatStore = defineStore('chat', {
         },
 
         onDisconnect: () => {
-          console.log('🔌 WebSocket disconnected')
+          console.log(' WebSocket disconnected')
           this.wsConnected = false
           this.wsConnecting = false
         },
@@ -644,7 +644,7 @@ const useChatStore = defineStore('chat', {
 
       client.activate()
       this.stompClient = client
-      console.log('🚀 WebSocket client activated')
+      console.log(' WebSocket client activated')
     },
 
     /**
@@ -710,7 +710,7 @@ const useChatStore = defineStore('chat', {
           }
 
           if (matchesSender && message.receiverId === userStore.id) {
-            console.log('📖 Auto-marking message as read (user is viewing this conversation)')
+            console.log(' Auto-marking message as read (user is viewing this conversation)')
             // Mark as read immediately without waiting for API
             try {
               await this.markAsRead(message.senderId, this.activeConversationId)
@@ -860,7 +860,7 @@ const useChatStore = defineStore('chat', {
 
       // Nếu conversation chưa tồn tại, tạo một conversation tạm thời
       if (!conversation) {
-        console.log('🆕 Creating temporary conversation for new message')
+        console.log(' Creating temporary conversation for new message')
         console.log('Message:', {
           senderId: message.senderId,
           receiverId: message.receiverId,

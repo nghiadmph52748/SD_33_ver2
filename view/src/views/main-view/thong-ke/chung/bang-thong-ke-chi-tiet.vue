@@ -2,7 +2,7 @@
   <a-card class="chart-card" :bordered="false">
     <template #title>
       <div class="chart-title">
-        <div class="title-icon">📊</div>
+        <div class="title-icon"></div>
         <span>{{ $t('thongKe.detailTable.title') }}</span>
       </div>
     </template>

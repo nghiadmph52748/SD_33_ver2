@@ -1,7 +1,7 @@
 <template>
   <a-modal
     :visible="visible"
-    title="🔔 Thông Báo Cập Nhật Giá"
+    title=" Thông Báo Cập Nhật Giá"
     width="700px"
     :ok-text="'Xác Nhận'"
     :cancel-button-props="{ style: { display: 'none' } }"
@@ -111,15 +111,15 @@ const getChangeText = (change: PriceChange) => {
   const discountDiff = change.newDiscount - change.oldDiscount
 
   if (priceDiff > 0 && discountDiff === 0) {
-    return `📈 Tăng: +${formatCurrency(priceDiff)}`
+    return ` Tăng: +${formatCurrency(priceDiff)}`
   } else if (priceDiff < 0 && discountDiff === 0) {
-    return `📉 Giảm: ${formatCurrency(priceDiff)}`
+    return ` Giảm: ${formatCurrency(priceDiff)}`
   } else if (priceDiff === 0 && discountDiff > 0) {
-    return `🎁 Chiết khấu tăng: +${discountDiff}%`
+    return ` Chiết khấu tăng: +${discountDiff}%`
   } else if (priceDiff === 0 && discountDiff < 0) {
-    return `📌 Chiết khấu giảm: ${discountDiff}%`
+    return ` Chiết khấu giảm: ${discountDiff}%`
   } else if (priceDiff !== 0 && discountDiff !== 0) {
-    return `⚡ Giá và chiết khấu cùng thay đổi`
+    return ` Giá và chiết khấu cùng thay đổi`
   }
 
   return 'Không có thay đổi'

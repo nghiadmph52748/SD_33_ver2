@@ -242,7 +242,7 @@ const useNotificationStore = defineStore('notification', {
         heartbeatOutgoing: 4000,
 
         onConnect: () => {
-          console.log('✅ Notification WebSocket connected')
+          console.log(' Notification WebSocket connected')
           this.wsConnected = true
           this.wsConnecting = false
 
@@ -250,22 +250,22 @@ const useNotificationStore = defineStore('notification', {
           client.subscribe('/user/queue/notifications', (message: IMessage) => {
             try {
               const notification: MessageRecord = JSON.parse(message.body)
-              console.log('📬 Received notification:', notification)
+              console.log(' Received notification:', notification)
               this.addNotification(notification)
             } catch (err) {
-              console.error('❌ Error parsing notification:', err)
+              console.error(' Error parsing notification:', err)
             }
           })
         },
 
         onStompError: (frame) => {
-          console.error('❌ Notification STOMP error:', frame.headers.message)
+          console.error(' Notification STOMP error:', frame.headers.message)
           this.wsConnected = false
           this.wsConnecting = false
         },
 
         onWebSocketClose: () => {
-          console.log('🔌 Notification WebSocket closed')
+          console.log(' Notification WebSocket closed')
           this.wsConnected = false
           this.wsConnecting = false
         },
@@ -282,7 +282,7 @@ const useNotificationStore = defineStore('notification', {
         this.stompClient = null
         this.wsConnected = false
         this.wsConnecting = false
-        console.log('🔌 Notification WebSocket disconnected')
+        console.log(' Notification WebSocket disconnected')
       }
     },
   },

@@ -1,6 +1,6 @@
 export default {
   // Context Settings
-  'aiChatbot.context.title': '⚙️ Context Settings',
+  'aiChatbot.context.title': ' Context Settings',
   'aiChatbot.context.timeRange': 'Time Range',
   'aiChatbot.context.timeRange.placeholder': 'Select range',
   'aiChatbot.context.timeRange.today': 'Today',
@@ -30,14 +30,14 @@ export default {
   'aiChatbot.actions.clearHistory': 'Delete chat history',
 
   // Quick Suggestions
-  'aiChatbot.suggestions.label': '💡 Quick suggestions:',
+  'aiChatbot.suggestions.label': ' Quick suggestions:',
   'aiChatbot.suggestions.slowProducts': 'Slow products this week',
   'aiChatbot.suggestions.revenueCompare': 'Compare monthly revenue',
   'aiChatbot.suggestions.lowStock': 'Low stock alert',
   'aiChatbot.suggestions.pendingOrders': 'Pending confirmations',
   'aiChatbot.suggestions.topEmployees': 'Top performing employees',
   'aiChatbot.suggestions.channelCompare': 'Compare sales channels',
-  'aiChatbot.suggestions.followUp': '💡 Follow-up questions:',
+  'aiChatbot.suggestions.followUp': ' Follow-up questions:',
 
   // Introduction
   'aiChatbot.intro.title': 'Introduction',
@@ -53,7 +53,7 @@ export default {
   'aiChatbot.intro.channelDistribution': 'Sales channel distribution',
 
   // Tips
-  'aiChatbot.tips.title': '💡 Usage Tips',
+  'aiChatbot.tips.title': ' Usage Tips',
   'aiChatbot.tips.useQuickActions': 'Use "Quick suggestions" buttons to query common information',
   'aiChatbot.tips.naturalLanguage': 'Ask in natural language, e.g.: "Which shoes are best sellers?"',
   'aiChatbot.tips.realData': 'AI will query real data from the system and answer accurately',

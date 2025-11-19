@@ -80,14 +80,14 @@ import { layDanhSachNhanVien } from '@/api/nhan-vien'
 import { getCaLamViec } from '@/api/ca-lam-viec'
 import { getLichLamViecById, suaLichLamViec } from '@/api/lich-lam-viec'
 
-// 🔹 Router + route
+//  Router + route
 const router = useRouter()
 const route = useRoute()
 
-// 🔹 Loading
+//  Loading
 const loading = ref(false)
 
-// 🔹 Form
+//  Form
 const updateFormRef = ref()
 const form = ref({
   nhanVien: null as number | null,
@@ -96,11 +96,11 @@ const form = ref({
   ghiChu: ''
 })
 
-// 🔹 Dữ liệu select
+//  Dữ liệu select
 const nhanViens = ref<{id:number, tenNhanVien:string}[]>([])
 const caLamViecs = ref<{id:number, tenCa:string}[]>([])
 
-// 🔹 Quy tắc validate
+//  Quy tắc validate
 const rules = {
   nhanVien: [{ required: true, message: 'Vui lòng chọn nhân viên' }],
   caLamViec: [{ required: true, message: 'Vui lòng chọn ca làm việc' }],
@@ -108,7 +108,7 @@ const rules = {
 }
 
 // ===========================
-// 🔹 Hàm load danh sách nhân viên
+//  Hàm load danh sách nhân viên
 // ===========================
 const fetchNhanViens = async () => {
   try {
@@ -119,15 +119,15 @@ const fetchNhanViens = async () => {
       id: nv.id,
       tenNhanVien: nv.tenNhanVien || nv.tennhanvien || 'Không rõ'
     }))
-    console.log('📦 Nhân viên list:', nhanViens.value)
+    console.log(' Nhân viên list:', nhanViens.value)
   } catch (err) {
-    console.error('❌ Lỗi tải nhân viên:', err)
+    console.error(' Lỗi tải nhân viên:', err)
     Message.error('Không thể tải danh sách nhân viên')
   }
 }
 
 // ===========================
-// 🔹 Hàm load danh sách ca làm việc
+//  Hàm load danh sách ca làm việc
 // ===========================
 const fetchCaLamViecs = async () => {
   try {
@@ -151,15 +151,15 @@ const fetchCaLamViecs = async () => {
       tenCa: ca.tenCa || ca.tenca || 'Không rõ'
     }))
 
-    console.log('📦 Ca làm việc list:', caLamViecs.value)
+    console.log(' Ca làm việc list:', caLamViecs.value)
   } catch (err) {
-    console.error('❌ Lỗi tải ca làm việc:', err)
+    console.error(' Lỗi tải ca làm việc:', err)
     Message.error('Không thể tải danh sách ca làm việc')
   }
 }
 
 // ===========================
-// 🔹 Hàm load dữ liệu form theo ID
+//  Hàm load dữ liệu form theo ID
 // ===========================
 const loadData = async () => {
   const id = Number(route.params.id)
@@ -177,7 +177,7 @@ const loadData = async () => {
     const lich = lichRes.data ?? lichRes; // lichRes.data mới chứa object từ backend
 
 
-    console.log('📦 Dữ liệu lịch:', lich)
+    console.log(' Dữ liệu lịch:', lich)
 
     if (!lich) {
       Message.error('Lịch làm việc với ID này không tồn tại!')
@@ -189,13 +189,13 @@ const loadData = async () => {
     form.value.ngayLamViec = lich.ngayLamViec ? dayjs(lich.ngayLamViec) : null
     form.value.ghiChu = lich.ghiChu ?? ''
   } catch (err) {
-    console.error('❌ Lỗi khi load dữ liệu:', err)
+    console.error(' Lỗi khi load dữ liệu:', err)
     Message.error('Không thể tải dữ liệu lịch làm việc. Kiểm tra console để biết chi tiết.')
   }
 }
 
 // ===========================
-// 🔹 Hàm cập nhật lịch
+//  Hàm cập nhật lịch
 // ===========================
 
 const handleUpdate = async () => {
@@ -223,7 +223,7 @@ const handleUpdate = async () => {
           Message.success('Cập nhật lịch làm việc thành công')
           router.push('/lich-lam-viec/danh-sach')
         } catch (err) {
-          console.error('❌ Lỗi khi cập nhật:', err)
+          console.error(' Lỗi khi cập nhật:', err)
           Message.error('Không thể cập nhật lịch làm việc')
         } finally {
           loading.value = false
@@ -232,12 +232,12 @@ const handleUpdate = async () => {
     })
 
   } catch (err) {
-    console.error('❌ Lỗi validate form:', err)
+    console.error(' Lỗi validate form:', err)
   }
 }
 
 // ===========================
-// 🔹 Hủy chỉnh sửa
+//  Hủy chỉnh sửa
 // ===========================
 const handleCancel = () => {
   updateFormRef.value.resetFields()
@@ -245,7 +245,7 @@ const handleCancel = () => {
 }
 
 // ===========================
-// 🔄 Khi mount, load dữ liệu
+//  Khi mount, load dữ liệu
 // ===========================
 onMounted(loadData)
 </script>

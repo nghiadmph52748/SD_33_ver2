@@ -150,7 +150,7 @@ onMounted(async () => {
   loading.value = true
   try {
     const response = await getCaLamViec()
-    console.log('📦 API Response:', response)
+    console.log(' API Response:', response)
 
     // Nếu API trả về dạng { data: [...] } thì lấy mảng bên trong
     const list = response?.data ?? response ?? []
@@ -163,14 +163,14 @@ onMounted(async () => {
       tenCa: item.tenca || item.tenCa || '',
       thoiGianBatDau: item.thoigianbatdau || item.thoiGianBatDau || '',
       thoiGianKetThuc: item.thoigianketthuc || item.thoiGianKetThuc || '',
-     trangThaiBool: item.trangThai === true,  // 🔹 đúng property
+     trangThaiBool: item.trangThai === true,  //  đúng property
   trangThai: item.trangThai === true ? 'Hoạt động' : 'Dự Kiến',
     }))
 
     pagination.value.total = danhSach.value.length
-    console.log('✅ Danh sách đã gán:', danhSach.value)
+    console.log(' Danh sách đã gán:', danhSach.value)
   } catch (error) {
-    console.error('❌ Lỗi khi lấy danh sách ca làm việc:', error)
+    console.error(' Lỗi khi lấy danh sách ca làm việc:', error)
     Message.error('Không thể tải danh sách ca làm việc')
   } finally {
     loading.value = false
@@ -190,7 +190,7 @@ const toggleTrangThai = async (record: CaLamViec) => {
   try {
     // Gọi API cập nhật backend
     const res = await updateTrangThaiCa(record.id, isActive)
-    console.log('✅ API cập nhật trạng thái:', res)
+    console.log(' API cập nhật trạng thái:', res)
 
     // Nếu backend trả dữ liệu mới, cập nhật lại theo backend
     if (res?.data?.trangthai !== undefined) {
@@ -202,7 +202,7 @@ const toggleTrangThai = async (record: CaLamViec) => {
     // Rollback lại nếu lỗi
     if (target) target.trangThai = oldStatus
     danhSach.value = [...danhSach.value]
-    console.error('❌ Lỗi khi cập nhật trạng thái:', error)
+    console.error(' Lỗi khi cập nhật trạng thái:', error)
     Message.error('Cập nhật trạng thái thất bại')
   }
 }
@@ -210,7 +210,7 @@ const toggleTrangThai = async (record: CaLamViec) => {
 
 
 
-// ✏️ Hàm sửa ca làm việc
+//  Hàm sửa ca làm việc
 const handleEdit = (record: CaLamViec) => {
  router.push({ name: 'updatecalamviec', params: { id: record.id } })
 }

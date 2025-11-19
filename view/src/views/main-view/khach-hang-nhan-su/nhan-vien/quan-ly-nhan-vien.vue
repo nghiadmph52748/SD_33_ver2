@@ -262,7 +262,7 @@ const navigateToAddStaff = () => {
 
 const goToEdit = (record: any) => {
   if (!record?.id) {
-    // console.error('❌ record không có id:', record)
+    // console.error(' record không có id:', record)
     return
   }
   router.push({ name: 'Updatenhanvien', params: { id: record.id } })
@@ -376,7 +376,7 @@ const timKiemNhanVien = async () => {
       })
       mappedData.sort((a, b) => b.id - a.id)
 
-      // ✅ Đánh lại STT sau khi sắp xếp
+      //  Đánh lại STT sau khi sắp xếp
       mappedData.forEach((item, index) => {
         item.stt = index + 1
       })

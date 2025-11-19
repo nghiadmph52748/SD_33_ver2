@@ -503,7 +503,7 @@ const luuKhach = async () => {
         Message.success('Thêm mới khách hàng thành công!')
       }
 
-      router.push({ name: 'QuanLyKhachHang' }) // ✅ SPA routing với route name
+      router.push({ name: 'QuanLyKhachHang' }) //  SPA routing với route name
       return true
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -521,7 +521,7 @@ const luuKhach = async () => {
 }
 
 const quayLai = () => {
-  router.push({ name: 'QuanLyKhachHang' }) // ✅ SPA routing với route name
+  router.push({ name: 'QuanLyKhachHang' }) //  SPA routing với route name
 }
 const loadProvinces = async () => {
   const res = await fetch('https://provinces.open-api.vn/api/p/')

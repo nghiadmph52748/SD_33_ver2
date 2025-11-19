@@ -73,35 +73,35 @@
             <a-divider />
             <div class="feature-list">
               <div class="feature-item">
-                <span class="icon">📊</span>
+                <span class="icon"></span>
                 <span>{{ $t('aiChatbot.intro.bestSellers') }}</span>
               </div>
               <div class="feature-item">
-                <span class="icon">💰</span>
+                <span class="icon"></span>
                 <span>{{ $t('aiChatbot.intro.revenueStats') }}</span>
               </div>
               <div class="feature-item">
-                <span class="icon">⚠️</span>
+                <span class="icon"></span>
                 <span>{{ $t('aiChatbot.intro.lowStockWarning') }}</span>
               </div>
               <div class="feature-item">
-                <span class="icon">📋</span>
+                <span class="icon"></span>
                 <span>{{ $t('aiChatbot.intro.orderStatus') }}</span>
               </div>
               <div class="feature-item">
-                <span class="icon">👥</span>
+                <span class="icon"></span>
                 <span>{{ $t('aiChatbot.intro.topCustomers') }}</span>
               </div>
               <div class="feature-item">
-                <span class="icon">🎉</span>
+                <span class="icon"></span>
                 <span>{{ $t('aiChatbot.intro.activeDiscounts') }}</span>
               </div>
               <div class="feature-item">
-                <span class="icon">👨‍💼</span>
+                <span class="icon">‍</span>
                 <span>{{ $t('aiChatbot.intro.employeePerformance') }}</span>
               </div>
               <div class="feature-item">
-                <span class="icon">🛒</span>
+                <span class="icon"></span>
                 <span>{{ $t('aiChatbot.intro.channelDistribution') }}</span>
               </div>
             </div>

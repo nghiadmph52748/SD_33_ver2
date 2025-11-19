@@ -488,7 +488,7 @@ const handleSubmit = async () => {
     }
 
     await themKhachHang(payload)
-    router.push({ name: 'QuanLyKhachHang' }) // ✅ SPA routing với route name
+    router.push({ name: 'QuanLyKhachHang' }) //  SPA routing với route name
   } catch (error) {
     Message.error('Thêm khách hàng thất bại. Vui lòng kiểm tra lại thông tin.')
     // console.error(error)

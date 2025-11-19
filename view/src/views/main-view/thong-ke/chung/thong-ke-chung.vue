@@ -261,19 +261,19 @@ const generateStatisticsPrompt = () => {
 
   return `Hãy phân tích chi tiết dữ liệu thống kê kinh doanh của tôi:
 
-📊 **THỐNG KÊ TỔNG QUAN:**
+ **THỐNG KÊ TỔNG QUAN:**
 - Khoảng thời gian hiện tại: ${khoangThoiGian.value}
 - Tổng doanh thu: ${currentData.revenue.toLocaleString('vi-VN')} VNĐ
 - Tổng đơn hàng: ${currentData.orders} đơn
 - Sản phẩm đã bán: ${currentData.productsSold} sản phẩm
 
-📈 **SO SÁNH THEO THỜI GIAN:**
+ **SO SÁNH THEO THỜI GIAN:**
 - Hôm nay: ${todayData.revenue.toLocaleString('vi-VN')} VNĐ (${todayData.orders} đơn)
 - Tuần này: ${weekData.revenue.toLocaleString('vi-VN')} VNĐ (${weekData.orders} đơn)
 - Tháng này: ${monthData.revenue.toLocaleString('vi-VN')} VNĐ (${monthData.orders} đơn)
 - Năm này: ${yearData.revenue.toLocaleString('vi-VN')} VNĐ (${yearData.orders} đơn)
 
-🏆 **TOP 5 SẢN PHẨM BÁN CHẠY:**
+ **TOP 5 SẢN PHẨM BÁN CHẠY:**
 ${topProducts
   .map(
     (product, index) =>
@@ -281,10 +281,10 @@ ${topProducts
   )
   .join('\n')}
 
-⚠️ **SẢN PHẨM SẮP HẾT HÀNG:**
+ **SẢN PHẨM SẮP HẾT HÀNG:**
 ${lowStockProducts.map((product, index) => `${index + 1}. ${product.tenSanPham} - Còn ${product.soLuongTon} sản phẩm`).join('\n')}
 
-📊 **DỮ LIỆU BIỂU ĐỒ:**
+ **DỮ LIỆU BIỂU ĐỒ:**
 - Doanh thu theo ${kyDoanhThu.value}: ${duLieuDoanhThu.value.length} điểm dữ liệu
 - Trạng thái đơn hàng theo ${kyTrangThaiDonHang.value}: ${duLieuTrangThaiDonHang.value.length} trạng thái
 - Phân phối kênh: ${duLieuKenhPhanPhoi.value.length} kênh

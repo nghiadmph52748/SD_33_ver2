@@ -64,7 +64,7 @@
               <div style="margin-top: 8px; font-size: 11px; color: #666">
                 <span v-if="!isVoucherEligibleFn(coupon)" style="color: #ff4d4f">{{ getVoucherStatusFn(coupon) }}</span>
                 <span v-else>
-                  <span>💰 {{ getDiscountDisplayFn(coupon) }} giảm giá</span>
+                  <span> {{ getDiscountDisplayFn(coupon) }} giảm giá</span>
                   <span v-if="coupon.hoaDonToiThieu" style="margin-left: 12px">
                     Min: {{ formatCurrency(Number(coupon.hoaDonToiThieu)) }}
                   </span>

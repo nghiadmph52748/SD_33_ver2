@@ -392,7 +392,7 @@
           style="width: 100%; max-width: 500px; height: 500px; border: 2px solid #1890ff; border-radius: 4px; overflow: hidden"
         ></div>
         <div style="margin-top: 16px; text-align: center; color: #86909c">
-          <div style="font-size: 12px; margin-bottom: 8px">🎯 Hướng camera vào mã QR để quét</div>
+          <div style="font-size: 12px; margin-bottom: 8px"> Hướng camera vào mã QR để quét</div>
           <a-button @click="stopQRScanner" type="secondary">Đóng Quét</a-button>
         </div>
       </div>

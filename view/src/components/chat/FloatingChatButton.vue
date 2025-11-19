@@ -220,7 +220,7 @@ const filteredConversations = computed(() => {
   const conversations = chatStore.conversations || []
   
   // Debug logging
-  console.log('📋 Filtering conversations:', {
+  console.log(' Filtering conversations:', {
     total: conversations.length,
     customerStaff: conversations.filter(c => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length,
     staffStaff: conversations.filter(c => c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi).length,
@@ -228,7 +228,7 @@ const filteredConversations = computed(() => {
   })
   
   if (!searchKeyword.value) {
-    console.log('✅ Returning all conversations:', conversations.length)
+    console.log(' Returning all conversations:', conversations.length)
     return conversations
   }
   
@@ -237,7 +237,7 @@ const filteredConversations = computed(() => {
     return name.includes(searchKeyword.value.toLowerCase())
   })
   
-  console.log('🔍 Filtered conversations:', filtered.length)
+  console.log(' Filtered conversations:', filtered.length)
   return filtered
 })
 
@@ -264,9 +264,9 @@ function toggleDrawer() {
 
   if (drawerVisible.value) {
     // Always refresh conversations when opening drawer to get latest data
-    console.log('🔄 Opening drawer, fetching conversations...')
+    console.log(' Opening drawer, fetching conversations...')
     chatStore.fetchConversations().then(() => {
-      console.log('✅ Conversations fetched:', chatStore.conversations.length)
+      console.log(' Conversations fetched:', chatStore.conversations.length)
       console.log('   Customer-staff:', chatStore.conversations.filter(c => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length)
       console.log('   Staff-staff:', chatStore.conversations.filter(c => c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi).length)
     })
@@ -430,7 +430,7 @@ watch(
           const newUnreadMessages = messages.filter((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
           if (newUnreadMessages.length > 0 && chatStore.activeConversationUserInitiated) {
-            console.log(`📖 Auto-marking ${newUnreadMessages.length} new message(s) as read`)
+            console.log(` Auto-marking ${newUnreadMessages.length} new message(s) as read`)
             try {
               await chatStore.markAsRead(otherUserId, activeConversation.value.id)
             } catch (error) {
@@ -520,7 +520,7 @@ watch(
     // Badge will automatically update via reactivity
     if (newCount > oldCount && newCount > 0) {
       // Optional: Show notification when new message arrives
-      console.log(`📬 New message! Unread count: ${newCount}`)
+      console.log(` New message! Unread count: ${newCount}`)
     }
   }
 )
@@ -555,7 +555,7 @@ watch(
         const hasUnreadMessages = messages.some((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
         if (hasUnreadMessages && chatStore.activeConversationUserInitiated) {
-          console.log('📖 Auto-marking messages as read (drawer open, viewing conversation)')
+          console.log(' Auto-marking messages as read (drawer open, viewing conversation)')
           try {
             await chatStore.markAsRead(otherUserId, currentConv.id)
           } catch (error) {

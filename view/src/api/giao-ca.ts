@@ -2,7 +2,7 @@ import axios from 'axios'
 
 /**
  * =============================
- * 🧩 CẤU TRÚC DỮ LIỆU GIAO CA
+ *  CẤU TRÚC DỮ LIỆU GIAO CA
  * =============================
  * Ví dụ payload backend (Postman):
  * {
@@ -28,7 +28,7 @@ import axios from 'axios'
  */
 
 /** =============================
- * 👤 Kiểu dữ liệu Nhân Viên
+ *  Kiểu dữ liệu Nhân Viên
  * ============================= */
 export interface ApiNhanVien {
   id: number
@@ -68,7 +68,7 @@ export interface ApiGiaoCa {
 
 
 /** =============================
- * 📊 Kiểu dữ liệu Thống Kê Giao Ca
+ *  Kiểu dữ liệu Thống Kê Giao Ca
  * ============================= */
 export interface ApiThongKeGiaoCa {
   tongCaLam: number
@@ -83,7 +83,7 @@ export interface ApiThongKeGiaoCa {
 
 /**
  * =============================
- * 🚀 CÁC HÀM GỌI API GIAO CA
+ *  CÁC HÀM GỌI API GIAO CA
  * =============================
  */
 

@@ -37,7 +37,7 @@
             style="padding: 12px; background-color: #e6f7ff; border-radius: 4px; margin-top: 12px"
           >
             <div style="font-size: 12px; color: #0050b3">
-              <strong>⏱️ Dự kiến giao hàng:</strong>
+              <strong>⏱ Dự kiến giao hàng:</strong>
               {{ shippingInfo.estimatedDays }}
             </div>
           </div>

@@ -21,7 +21,7 @@ const useUserStore = defineStore('user', {
     tenQuyenHan: undefined,
     accessToken: undefined,
     refreshToken: undefined,
-    roles: [], // 🔹 dùng array cho nhiều quyền
+    roles: [], //  dùng array cho nhiều quyền
   }),
 
   getters: {
@@ -93,7 +93,7 @@ async login(loginForm: LoginData) {
     const employeeId = res.data.id
     localStorage.setItem(USER_ID_STORAGE_KEY, employeeId.toString())
 
-    // 🔹 Mapping idQuyenHan thành RoleType chính xác
+    //  Mapping idQuyenHan thành RoleType chính xác
     const roleMap: Record<number, RoleType> = {
       1: 'admin', // idQuyenHan = 1 là admin
       2: 'user',  // idQuyenHan = 2 là nhân viên

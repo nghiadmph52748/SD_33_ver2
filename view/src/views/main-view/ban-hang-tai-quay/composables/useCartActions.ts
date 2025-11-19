@@ -62,9 +62,9 @@ export default function useCartActions(params: {
     productQuantityInput.value = val
     const stock = selectedProductForAdd.value?.soLuong || 0
     if (val && val > stock) {
-      Message.warning(`⚠️ Số lượng vượt quá tồn kho! Tồn kho: ${stock}`)
+      Message.warning(` Số lượng vượt quá tồn kho! Tồn kho: ${stock}`)
     } else if (val && val < 1) {
-      Message.warning('⚠️ Số lượng phải lớn hơn 0')
+      Message.warning(' Số lượng phải lớn hơn 0')
     }
   }
 
@@ -169,7 +169,7 @@ export default function useCartActions(params: {
           throw new Error(`Tồn kho không đủ! Yêu cầu tăng: ${diff} cái | Còn lại trong kho: ${currentStockInWarehouse} cái`)
         }
       } catch (stockError: any) {
-        Message.error(`❌ ${stockError.message}`)
+        Message.error(` ${stockError.message}`)
         item.quantity = oldQuantity
         cartTableKey.value += 1
         return

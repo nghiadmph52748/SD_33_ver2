@@ -1,6 +1,6 @@
 export default {
   // Context Settings
-  'aiChatbot.context.title': '⚙️ Cài đặt ngữ cảnh',
+  'aiChatbot.context.title': ' Cài đặt ngữ cảnh',
   'aiChatbot.context.timeRange': 'Phạm vi thời gian',
   'aiChatbot.context.timeRange.placeholder': 'Chọn phạm vi',
   'aiChatbot.context.timeRange.today': 'Hôm nay',
@@ -30,14 +30,14 @@ export default {
   'aiChatbot.actions.clearHistory': 'Xóa lịch sử chat',
 
   // Quick Suggestions
-  'aiChatbot.suggestions.label': '💡 Gợi ý nhanh:',
+  'aiChatbot.suggestions.label': ' Gợi ý nhanh:',
   'aiChatbot.suggestions.slowProducts': 'SP bán chậm tuần này',
   'aiChatbot.suggestions.revenueCompare': 'So sánh DT tháng',
   'aiChatbot.suggestions.lowStock': 'Cảnh báo tồn kho',
   'aiChatbot.suggestions.pendingOrders': 'Đơn chờ xác nhận',
   'aiChatbot.suggestions.topEmployees': 'Top NV hiệu suất cao',
   'aiChatbot.suggestions.channelCompare': 'So sánh kênh bán',
-  'aiChatbot.suggestions.followUp': '💡 Câu hỏi tiếp theo:',
+  'aiChatbot.suggestions.followUp': ' Câu hỏi tiếp theo:',
 
   // Introduction
   'aiChatbot.intro.title': 'Giới thiệu',
@@ -53,7 +53,7 @@ export default {
   'aiChatbot.intro.channelDistribution': 'Phân bố kênh bán hàng',
 
   // Tips
-  'aiChatbot.tips.title': '💡 Mẹo sử dụng',
+  'aiChatbot.tips.title': ' Mẹo sử dụng',
   'aiChatbot.tips.useQuickActions': 'Sử dụng các nút "Gợi ý nhanh" để truy vấn thông tin phổ biến',
   'aiChatbot.tips.naturalLanguage': 'Hỏi bằng ngôn ngữ tự nhiên, ví dụ: "Giày nào bán nhiều nhất?"',
   'aiChatbot.tips.realData': 'AI sẽ truy vấn dữ liệu thực tế từ hệ thống và trả lời chính xác',

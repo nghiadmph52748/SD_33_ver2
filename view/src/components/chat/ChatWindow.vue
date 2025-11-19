@@ -310,16 +310,16 @@ async function loadAiHistory() {
   loadingAiHistory.value = true
   try {
     const customerId = activeConversation.value.khachHangId
-    console.log('📥 Loading AI chat history for customer:', customerId)
+    console.log(' Loading AI chat history for customer:', customerId)
     const response = await getCustomerAiChatHistory(customerId)
     aiHistory.value = response.data?.data || []
-    console.log('✅ Loaded AI chat history:', aiHistory.value.length, 'messages')
+    console.log(' Loaded AI chat history:', aiHistory.value.length, 'messages')
     if (aiHistory.value.length > 0) {
-      console.log('📋 Session ID:', aiHistory.value[0]?.sessionId)
+      console.log(' Session ID:', aiHistory.value[0]?.sessionId)
     }
   } catch (error: any) {
     // Silently fail - don't show error if AI history doesn't exist
-    console.error('❌ Failed to load AI chat history:', error)
+    console.error(' Failed to load AI chat history:', error)
     aiHistory.value = []
   } finally {
     loadingAiHistory.value = false

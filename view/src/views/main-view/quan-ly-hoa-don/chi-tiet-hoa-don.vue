@@ -1207,7 +1207,7 @@ const fetchInvoiceDetail = async () => {
       const timelineResponse = await fetchTimelineByHoaDonId(Number(invoiceId.value))
       timelineData.value = timelineResponse || []
     } catch (timelineError) {
-      console.warn('⚠️ Failed to load timeline:', timelineError)
+      console.warn(' Failed to load timeline:', timelineError)
       timelineData.value = []
     }
 
@@ -1228,7 +1228,7 @@ const fetchInvoiceDetail = async () => {
         paymentMethods.value = []
       }
     } catch (paymentError) {
-      console.warn('⚠️ Failed to load payment methods:', paymentError)
+      console.warn(' Failed to load payment methods:', paymentError)
       paymentMethods.value = []
     }
 

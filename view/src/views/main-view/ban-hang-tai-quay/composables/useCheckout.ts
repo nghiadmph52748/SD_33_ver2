@@ -208,7 +208,7 @@ export default function useCheckout(params: {
       // Không cần tạo timeline từ frontend nữa để tránh duplicate và đảm bảo thời gian chính xác
 
       const orderTypeText = orderType.value === 'delivery' ? 'giao hàng' : 'tại quầy'
-      let successMessage = `✅ Đơn ${orderTypeText} ${currentOrder.value!.orderCode} xác nhận thành công!`
+      let successMessage = ` Đơn ${orderTypeText} ${currentOrder.value!.orderCode} xác nhận thành công!`
       if (selectedCoupon.value) successMessage += ` (Áp dụng: ${selectedCoupon.value.tenPhieuGiamGia})`
       Message.success(successMessage)
 

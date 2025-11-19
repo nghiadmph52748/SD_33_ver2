@@ -92,7 +92,7 @@ import { themLichLamViec } from '@/api/lich-lam-viec'
 
 const router = useRouter()
 
-// 🧩 Interface chuẩn hóa dữ liệu
+//  Interface chuẩn hóa dữ liệu
 interface NhanVien {
   id: number
   tenNhanVien: string
@@ -107,7 +107,7 @@ interface CaLamViec {
   trangThai: boolean | string
 }
 
-// 🧾 Form dữ liệu
+//  Form dữ liệu
 const form = ref({
   nhanVien: null as number | null,
   caLamViec: null as number | null,
@@ -115,7 +115,7 @@ const form = ref({
   ghiChu: ''
 })
 
-// 🧩 Dữ liệu từ backend
+//  Dữ liệu từ backend
 const nhanViens = ref<NhanVien[]>([])
 const caLamViecs = ref<CaLamViec[]>([])
 
@@ -125,13 +125,13 @@ const loadingCa = ref(false)
 const loadingSubmit = ref(false)
 
 // ===========================
-// 🧩 Lấy danh sách nhân viên
+//  Lấy danh sách nhân viên
 // ===========================
 const fetchNhanViens = async () => {
   try {
     loadingNhanVien.value = true
     const res = await layDanhSachNhanVien()
-    console.log('📦 API nhân viên:', res)
+    console.log(' API nhân viên:', res)
 
     // Lấy dữ liệu từ response (tùy backend trả về)
     const list = res.data?.data ?? res.data ?? []
@@ -141,7 +141,7 @@ const fetchNhanViens = async () => {
       tenNhanVien: item.tenNhanVien || item.tennhanvien || 'Không rõ'
     }))
   } catch (err) {
-    console.error('❌ Lỗi tải nhân viên:', err)
+    console.error(' Lỗi tải nhân viên:', err)
     Message.error('Không thể tải danh sách nhân viên')
   } finally {
     loadingNhanVien.value = false
@@ -149,13 +149,13 @@ const fetchNhanViens = async () => {
 }
 
 // ===========================
-// 🧩 Lấy danh sách ca làm việc
+//  Lấy danh sách ca làm việc
 // ===========================
 const fetchCaLamViecs = async () => {
   try {
     loadingCa.value = true;
     const res = await getCaLamViec(); // Gọi API lấy danh sách ca làm việc
-    console.log('📦 API ca làm việc:', res);
+    console.log(' API ca làm việc:', res);
 
     // Kiểm tra res trực tiếp là mảng, không cần res.data nữa
     const data = Array.isArray(res) ? res : [];
@@ -170,9 +170,9 @@ const fetchCaLamViecs = async () => {
       tenCa: item.tenCa || item.tenca // chỉ lấy tên ca
     }));
 
-    console.log('✅ Danh sách ca làm việc:', caLamViecs.value);
+    console.log(' Danh sách ca làm việc:', caLamViecs.value);
   } catch (err: any) {
-    console.error('❌ Lỗi tải ca làm việc:', err);
+    console.error(' Lỗi tải ca làm việc:', err);
     Message.error(`Không thể tải danh sách ca làm việc: ${err.message || 'Lỗi không xác định'}`);
   } finally {
     loadingCa.value = false;
@@ -182,7 +182,7 @@ const fetchCaLamViecs = async () => {
 
 
 // ===========================
-// 🧩 Submit form thêm lịch làm việc
+//  Submit form thêm lịch làm việc
 // ===========================
 
 const handleSubmit = async () => {
@@ -197,7 +197,7 @@ const handleSubmit = async () => {
     okText: 'Lưu',
     cancelText: 'Hủy',
     async onOk() {
-      // ✅ Đặt toàn bộ code build payload + gọi API + thông báo thành công ở đây
+      //  Đặt toàn bộ code build payload + gọi API + thông báo thành công ở đây
       const nhanVienId = Number(form.value.nhanVien);
       const caLamViecId = Number(form.value.caLamViec);
       const ngayLamViec = dayjs(form.value.ngayLamViec).format('YYYY-MM-DD');
@@ -216,7 +216,7 @@ const handleSubmit = async () => {
         Message.success('Thêm lịch làm việc thành công!');
         router.push('/lich-lam-viec/danh-sach');
       } catch (err: any) {
-        console.error('❌ Lỗi khi thêm lịch làm việc:', err);
+        console.error(' Lỗi khi thêm lịch làm việc:', err);
         Message.error('Không thể thêm lịch làm việc!');
       } finally {
         loadingSubmit.value = false;
@@ -227,7 +227,7 @@ const handleSubmit = async () => {
 
 
 // ===========================
-// 🧩 Reset form
+//  Reset form
 // ===========================
 const handleCancel = () => {
   form.value = {
@@ -240,7 +240,7 @@ const handleCancel = () => {
 }
 
 // ===========================
-// 🔄 Khi mount, load dữ liệu
+//  Khi mount, load dữ liệu
 // ===========================
 onMounted(() => {
   fetchNhanViens()

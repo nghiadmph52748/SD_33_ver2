@@ -223,10 +223,10 @@ const submitForm = async (maybeEventOrPayload?: any) => {
 
     // PUT or PATCH depending on your backend; using PUT here
     await axios.put(`http://localhost:8080/api/giao-ca/${idParam}`, payload)
-    Message.success('✅ Cập nhật giao ca thành công!')
+    Message.success(' Cập nhật giao ca thành công!')
     router.back()
   } catch (err: any) {
-    Message.error(`❌ ${err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật giao ca'}`)
+    Message.error(` ${err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật giao ca'}`)
   } finally {
     loadingSubmit.value = false
   }

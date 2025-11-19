@@ -306,7 +306,7 @@ async function handleSelectConversation(conversation: Conversation) {
  * Xử lý tạo chat mới
  */
 async function handleNewChat(userId: number) {
-  console.log('🆕 Starting new chat with user:', userId)
+  console.log(' Starting new chat with user:', userId)
   try {
     // Kiểm tra xem đã có conversation chưa (check both staff-staff and customer-staff)
     const existingConv = (chatStore.conversations || []).find((c) => {
@@ -338,7 +338,7 @@ async function handleNewChat(userId: number) {
       console.log('Sending first message to create conversation...')
       await chatStore.sendMessageViaAPI({
         receiverId: userId,
-        content: 'Xin chào! 👋',
+        content: 'Xin chào! ',
         messageType: 'TEXT',
       })
 

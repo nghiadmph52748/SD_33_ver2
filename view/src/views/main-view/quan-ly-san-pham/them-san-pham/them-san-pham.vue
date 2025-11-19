@@ -577,7 +577,7 @@
               class="attribute-input-checkbox"
             >
               {{ color.label }}
-              <!-- Debug: {{ tempColors.map(String).includes(String(color.value)) ? '✓' : '✗' }} -->
+              <!-- Debug: {{ tempColors.map(String).includes(String(color.value)) ? '' : '' }} -->
             </a-checkbox>
             <input type="color" :value="color.maMau" disabled class="color-preview-input" />
           </div>
@@ -2437,7 +2437,7 @@ const showImageModal = async (colorId: string) => {
     existingImages.value = response.data || []
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('❌ Failed to load existing images:', error)
+    console.error(' Failed to load existing images:', error)
     existingImages.value = []
     Message.error('Không thể tải ảnh có sẵn')
   } finally {
@@ -2559,7 +2559,7 @@ const handleImageModalOk = async () => {
         uploadProgressText.value = 'Upload thất bại!'
 
         // eslint-disable-next-line no-console
-        console.error('❌ Failed to upload images:', uploadError)
+        console.error(' Failed to upload images:', uploadError)
         if (uploadError.message.includes('timeout')) {
           Message.error('Upload ảnh quá thời gian cho phép (30s). Vui lòng thử lại.')
         } else {
@@ -2604,7 +2604,7 @@ const handleImageModalOk = async () => {
     Message.success(`Đã lưu ${allImages.length} ảnh cho màu này`)
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('❌ Failed to process images:', error)
+    console.error(' Failed to process images:', error)
     Message.error(`Lỗi xử lý ảnh: ${error.message || 'Unknown error'}`)
   } finally {
     uploadingImages.value = false
@@ -2782,14 +2782,14 @@ const confirmSubmit = async () => {
             updatedCount += 1
           } catch (error) {
             // eslint-disable-next-line no-console
-            console.error('❌ Lỗi khi update biến thể:', error)
+            console.error(' Lỗi khi update biến thể:', error)
             throw error
           }
         } else {
           variantResponse = await createBienTheSanPham(variantData)
           if (!variantResponse?.success || !variantResponse.data) {
             // eslint-disable-next-line no-console
-            console.error('❌ Invalid variant response:', variantResponse)
+            console.error(' Invalid variant response:', variantResponse)
             throw new Error('Failed to create variant - no ID returned')
           }
           variantId = variantResponse.data // ID is directly in data field
@@ -2819,9 +2819,9 @@ const confirmSubmit = async () => {
               await themAnhChoBienThe(linkData)
             } catch (error) {
               // eslint-disable-next-line no-console
-              console.error(`❌ Failed to link images to variant ${variantId}:`, error.message)
+              console.error(` Failed to link images to variant ${variantId}:`, error.message)
               // eslint-disable-next-line no-console
-              console.error('🔍 Link error details:', error)
+              console.error(' Link error details:', error)
               // Don't stop the process for image linking errors, but log the error
             }
           }
@@ -2856,7 +2856,7 @@ const confirmSubmit = async () => {
     // Validate productId before navigation
     if (!productId) {
       // eslint-disable-next-line no-console
-      console.error('❌ ProductId is missing after submission')
+      console.error(' ProductId is missing after submission')
       Message.error('Lỗi: Không tìm thấy ID sản phẩm')
       return
     }
@@ -2870,7 +2870,7 @@ const confirmSubmit = async () => {
   } catch (error) {
     loading.value = false
     // eslint-disable-next-line no-console
-    console.error('❌ Submission failed:', error.message || error)
+    console.error(' Submission failed:', error.message || error)
     Message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message || error}`)
   }
 }

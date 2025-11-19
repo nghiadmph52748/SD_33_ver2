@@ -24,7 +24,7 @@ const LICH_LAM_VIEC: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'danh-sach', // ⚙️ path con khác nhau
+      path: 'danh-sach', //  path con khác nhau
       name: 'QuanLyLichLamViec',
       component: () => import('@/views/main-view/lich-lam-viec/lich-lam-viec.vue'),
       meta: {

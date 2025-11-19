@@ -107,11 +107,11 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import { getGiaoCa, xoaGiaoCa } from '@/api/giao-ca'
 import useBreadcrumb from '@/hooks/breadcrumb'
 
-// 🧭 Router & Breadcrumb
+//  Router & Breadcrumb
 const router = useRouter()
 const { breadcrumbItems } = useBreadcrumb()
 
-// ⚙️ Data & filter
+//  Data & filter
 const search = ref('')
 const filterForm = ref({
   caLam: '',
@@ -121,7 +121,7 @@ const filterForm = ref({
 const loading = ref(false)
 const giaoCaList = ref([])
 
-// 🧮 Table columns
+//  Table columns
 const columns = [
   { title: '#', dataIndex: 'id', width: 60 },
   { title: 'Ca làm việc', dataIndex: 'caLamViec.tenCa', width: 120 },
@@ -135,7 +135,7 @@ const columns = [
   { title: 'Hành động', slotName: 'action', width: 120 }
 ]
 
-// 🔄 Lọc dữ liệu
+//  Lọc dữ liệu
 const filteredList = computed(() =>
   giaoCaList.value.filter(g =>
     // Tìm kiếm
@@ -155,7 +155,7 @@ const filteredList = computed(() =>
 )
 
 
-// 🔁 Lấy danh sách
+//  Lấy danh sách
 const fetchData = async () => {
   loading.value = true
   try {
@@ -207,7 +207,7 @@ const deleteGiaoCa = async (id: number) => {
 
 onMounted(() => fetchData())
 
-// 📄 Pagination
+//  Pagination
 const pagination = {
   pageSize: 10,
   showTotal: true

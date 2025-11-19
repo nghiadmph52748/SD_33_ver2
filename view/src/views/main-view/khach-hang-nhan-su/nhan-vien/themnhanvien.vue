@@ -143,8 +143,8 @@
                       :src="previewUrl"
                       alt="Ảnh nhân viên"
                       class="preview-image"
-                      @load="console.log('✅ Ảnh đã load thành công')"
-                      @error="console.error('❌ Lỗi load ảnh:', $event)"
+                      @load="console.log(' Ảnh đã load thành công')"
+                      @error="console.error(' Lỗi load ảnh:', $event)"
                     />
                     <div class="image-overlay">
                       <a-button type="text" size="small" @click="removeImage" class="remove-button">
@@ -167,7 +167,7 @@
                   v-else-if="selectedFiles.length > 0"
                   style="margin-top: 16px; padding: 16px; border: 1px dashed #ccc; text-align: center; color: #666"
                 >
-                  <div>⚠️ Không thể hiển thị preview</div>
+                  <div> Không thể hiển thị preview</div>
                   <div style="font-size: 12px; margin-top: 4px">File: {{ selectedFiles[0].name }}</div>
                 </div>
               </div>
@@ -441,7 +441,7 @@ const openQRModal = async () => {
     videoRef.value,
     (result: ScanResult) => {
       const raw = result.data.trim()
-      console.log('✅ QR Result:', raw)
+      console.log(' QR Result:', raw)
 
       // Nếu là loại chứa dấu |
       if (raw.includes('|')) {
@@ -464,7 +464,7 @@ const openQRModal = async () => {
           formData.value.quan = addressParts[2] || ''
           formData.value.thanhPho = addressParts[3] || ''
 
-          Message.success('✅ Đã tự động điền thông tin từ CCCD!')
+          Message.success(' Đã tự động điền thông tin từ CCCD!')
         } else {
           Message.warning('Không thể đọc đầy đủ thông tin từ mã CCCD!')
         }
@@ -472,7 +472,7 @@ const openQRModal = async () => {
       // Nếu là loại mã hóa JWT
       else if (raw.split('.').length === 3) {
         formData.value.cccd = raw
-        Message.info('📦 Mã CCCD mới (JWT) – không thể giải mã thông tin chi tiết!')
+        Message.info(' Mã CCCD mới (JWT) – không thể giải mã thông tin chi tiết!')
       } else {
         Message.warning('Mã QR không đúng định dạng CCCD!')
       }
@@ -514,7 +514,7 @@ const handleCCCDImageUpload = async (event: Event) => {
         formData.value.quan = addressParts[2] || ''
         formData.value.thanhPho = addressParts[3] || ''
 
-        Message.success('✅ Đã tự động điền thông tin từ ảnh CCCD!')
+        Message.success(' Đã tự động điền thông tin từ ảnh CCCD!')
       } else {
         Message.warning('Không thể đọc được đầy đủ thông tin từ ảnh CCCD!')
       }
@@ -565,7 +565,7 @@ const handleNativeFileChange = async (event: Event) => {
     }
 
     reader.onerror = (error) => {
-      console.error('❌ FileReader error:', error)
+      console.error(' FileReader error:', error)
       Message.error('Không thể đọc file ảnh!')
       selectedFiles.value = []
       previewUrl.value = ''
@@ -574,7 +574,7 @@ const handleNativeFileChange = async (event: Event) => {
 
     reader.readAsDataURL(file)
   } catch (error) {
-    console.error('❌ Lỗi khi xử lý file:', error)
+    console.error(' Lỗi khi xử lý file:', error)
     Message.error('Lỗi khi xử lý file ảnh!')
     selectedFiles.value = []
     previewUrl.value = ''
@@ -663,11 +663,11 @@ const handleSubmit = async () => {
       return
     }
 
-    // ✅ Tự động tạo tên tài khoản từ email
+    //  Tự động tạo tên tài khoản từ email
     const emailUsername = formData.value.email.split('@')[0]
     formData.value.tenTaiKhoan = emailUsername
 
-    // ✅ Tạo FormData để gửi file
+    //  Tạo FormData để gửi file
     const submitFormData = new FormData()
     // Thêm thông tin nhân viên
     Object.keys(formData.value).forEach((key) => {
@@ -684,14 +684,14 @@ const handleSubmit = async () => {
       })
     }
 
-    // ✅ Gửi request với FormData
+    //  Gửi request với FormData
     const response = await themNhanVien(submitFormData)
     const result = await response.data
 
     Message.success('Thêm nhân viên thành công!')
-    router.push({ name: 'QuanLyNhanVien' }) // ✅ SPA routing với route name
+    router.push({ name: 'QuanLyNhanVien' }) //  SPA routing với route name
   } catch (error: unknown) {
-    console.error('❌ Submit failed:', (error as any)?.message)
+    console.error(' Submit failed:', (error as any)?.message)
 
     const err = error as any
     if (err.message?.includes('tài khoản đã tồn tại')) {
@@ -730,7 +730,7 @@ const cancelSaveEmployee = () => {
 
 // Handle cancel
 const handleCancel = () => {
-  router.push({ name: 'QuanLyNhanVien' }) // ✅ SPA routing với route name
+  router.push({ name: 'QuanLyNhanVien' }) //  SPA routing với route name
 }
 </script>
 

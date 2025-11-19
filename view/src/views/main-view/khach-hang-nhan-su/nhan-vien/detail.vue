@@ -52,14 +52,14 @@ onMounted(async () => {
   try {
     const { id } = route.params
     if (!id) {
-      console.error('❌ Không có id trong route:', route.params)
+      console.error(' Không có id trong route:', route.params)
       return
     }
 
-    console.log('👉 id nhân viên:', id)
+    console.log(' id nhân viên:', id)
 
     const res = await layChiTietNhanVien(id)
-    console.log('📌 Dữ liệu từ API:', res.data)
+    console.log(' Dữ liệu từ API:', res.data)
 
     const { data } = res
     formData.value = {
@@ -77,7 +77,7 @@ onMounted(async () => {
       idQuyenHan: data.idQuyenHan ?? null,
     }
   } catch (err) {
-    console.error('❌ Lỗi load chi tiết nhân viên:', err)
+    console.error(' Lỗi load chi tiết nhân viên:', err)
   }
 })
 </script>

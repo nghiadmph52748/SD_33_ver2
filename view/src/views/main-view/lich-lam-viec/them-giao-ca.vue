@@ -232,11 +232,11 @@ const submitForm = async (maybeEventOrPayload?: any) => {
     }
 
     await axios.post('http://localhost:8080/api/giao-ca', payload)
-    Message.success('✅ Giao ca thành công!')
+    Message.success(' Giao ca thành công!')
     resetForm()
     router.back()
   } catch (err: any) {
-    Message.error(`❌ ${err.response?.data?.message || 'Có lỗi xảy ra khi thêm giao ca'}`)
+    Message.error(` ${err.response?.data?.message || 'Có lỗi xảy ra khi thêm giao ca'}`)
   } finally {
     loadingSubmit.value = false
   }

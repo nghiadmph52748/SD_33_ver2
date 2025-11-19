@@ -94,7 +94,7 @@ const validateForm = () => {
 const onSubmit = async () => {
   if (!validateForm()) return
 
-  // ⚠️ Xác nhận trước khi lưu
+  //  Xác nhận trước khi lưu
   Modal.confirm({
     title: 'Xác nhận lưu ca làm việc',
     content: 'Bạn có chắc chắn muốn lưu ca làm việc này không?',
@@ -111,12 +111,12 @@ const onSubmit = async () => {
       try {
         const res = await themCaLamViec(payload)
         console.log('Created object:', res.data)
-        Message.success('✅ Thêm ca thành công')
+        Message.success(' Thêm ca thành công')
         // Quay lại danh sách
         router.push({ name: 'CaLamViec', query: { refresh: String(Date.now()) } })
       } catch (err) {
         console.error('Lỗi tạo ca:', err)
-        Message.error('❌ Thêm ca thất bại')
+        Message.error(' Thêm ca thất bại')
       }
     },
   })

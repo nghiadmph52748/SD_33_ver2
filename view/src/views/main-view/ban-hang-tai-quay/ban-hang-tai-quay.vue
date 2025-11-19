@@ -26,7 +26,7 @@
               @open-product="openProductModal"
             >
               <a-card class="cart-card">
-                <template #title>🛒 Giỏ Hàng</template>
+                <template #title> Giỏ Hàng</template>
                 <CartTable
                   :items="paginatedCartItems as any"
                   :table-key="cartTableKey"
@@ -1727,7 +1727,7 @@ onBeforeUnmount(() => {
     }
 
     &::after {
-      content: '✓';
+      content: '';
       position: absolute;
       top: 8px;
       right: 12px;

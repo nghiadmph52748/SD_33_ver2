@@ -2,13 +2,13 @@
   <a-card class="chart-card" :bordered="false">
     <template #title>
       <div class="chart-title">
-        <div class="title-icon">⚠️</div>
+        <div class="title-icon"></div>
         <span>{{ $t('thongKe.lowStockTable.title') }}</span>
       </div>
     </template>
     <div class="table-container">
       <div v-if="duLieu.length === 0" class="no-data-container">
-        <div class="no-data-icon">🎉</div>
+        <div class="no-data-icon"></div>
         <div class="no-data-text">{{ $t('thongKe.lowStockTable.noData') }}</div>
         <div class="no-data-subtext">{{ $t('thongKe.lowStockTable.noDataSub') }}</div>
       </div>

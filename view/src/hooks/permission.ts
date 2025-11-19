@@ -25,7 +25,7 @@ export default function usePermission() {
 
   return {
     accessRouter(route: RouteLocationNormalized | RouteRecordRaw) {
-      // ⚡ Nếu route KHÔNG yêu cầu đăng nhập thì cho phép luôn
+      //  Nếu route KHÔNG yêu cầu đăng nhập thì cho phép luôn
       if (route.meta?.requiresAuth === false) {
         return true
       }
@@ -33,7 +33,7 @@ export default function usePermission() {
       // Lấy roles hiện tại từ store; dùng getter `normalizedRoles` trả về mảng
       const currentRoles = (userStore as any).normalizedRoles || (userStore as any).roles || []
 
-      // ⚡ Nếu route có yêu cầu đăng nhập thì kiểm tra quyền, bao gồm cả children
+      //  Nếu route có yêu cầu đăng nhập thì kiểm tra quyền, bao gồm cả children
       return hasPermission(route, currentRoles)
     },
 

@@ -22,7 +22,7 @@
         <!-- Empty state for new conversations -->
         <div v-if="messages.length === 0 && !loading" class="empty-messages">
           <div class="empty-content">
-            <div class="empty-icon">💬</div>
+            <div class="empty-icon"></div>
             <div class="empty-title">Chào mừng đến với GearUp AI!</div>
             <div class="empty-description">Hãy bắt đầu cuộc trò chuyện bằng cách đặt câu hỏi hoặc sử dụng các gợi ý bên dưới.</div>
           </div>
@@ -63,7 +63,7 @@
               <!-- Data Source (only when AI response is complete) -->
               <div v-if="msg.role === 'assistant' && msg.content && msg.dataSource && msg.processingStatus === 'ready'" class="message-metadata">
                 <div class="data-source">
-                  <span class="metadata-icon">📊</span>
+                  <span class="metadata-icon"></span>
                   <span class="metadata-label">Nguồn:</span>
                   <span class="metadata-value">{{ msg.dataSource }}</span>
                 </div>
@@ -197,7 +197,7 @@ const messages = ref<ChatMessage[]>([
     id: 0,
     role: 'assistant',
     content:
-      'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? 😊',
+      'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? ',
     timestamp: new Date().toLocaleTimeString('vi-VN'),
   },
   {
@@ -297,16 +297,16 @@ function generateSessionName(msgs: ChatMessage[]): string {
 
   // Common patterns for automatic naming
   const patterns = [
-    { pattern: /sản phẩm.*bán chạy|top.*sản phẩm|bán nhiều nhất/, name: '📊 Top sản phẩm' },
-    { pattern: /doanh thu|revenue|tháng này|tháng trước/, name: '💰 Doanh thu' },
-    { pattern: /tồn kho|hết hàng|stock|inventory/, name: '⚠️ Tồn kho' },
-    { pattern: /đơn hàng|order|trạng thái/, name: '📋 Đơn hàng' },
-    { pattern: /khách hàng|customer|chi tiêu/, name: '👥 Khách hàng' },
-    { pattern: /giảm giá|discount|promotion/, name: '🎉 Giảm giá' },
-    { pattern: /nhân viên|employee|bán hàng/, name: '👨‍💼 Nhân viên' },
-    { pattern: /kênh bán|online|tại quầy/, name: '🛒 Kênh bán hàng' },
-    { pattern: /thống kê|statistics|báo cáo/, name: '📈 Thống kê' },
-    { pattern: /tài chính|finance|tiền/, name: '💳 Tài chính' },
+    { pattern: /sản phẩm.*bán chạy|top.*sản phẩm|bán nhiều nhất/, name: ' Top sản phẩm' },
+    { pattern: /doanh thu|revenue|tháng này|tháng trước/, name: ' Doanh thu' },
+    { pattern: /tồn kho|hết hàng|stock|inventory/, name: ' Tồn kho' },
+    { pattern: /đơn hàng|order|trạng thái/, name: ' Đơn hàng' },
+    { pattern: /khách hàng|customer|chi tiêu/, name: ' Khách hàng' },
+    { pattern: /giảm giá|discount|promotion/, name: ' Giảm giá' },
+    { pattern: /nhân viên|employee|bán hàng/, name: '‍ Nhân viên' },
+    { pattern: /kênh bán|online|tại quầy/, name: ' Kênh bán hàng' },
+    { pattern: /thống kê|statistics|báo cáo/, name: ' Thống kê' },
+    { pattern: /tài chính|finance|tiền/, name: ' Tài chính' },
   ]
 
   // Check for patterns
@@ -638,7 +638,7 @@ async function sendMessage(text: string = input.value) {
         // Update message with error
         const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
-          messages.value[msgIndex].content = '❌ Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
+          messages.value[msgIndex].content = ' Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
         }
       }
     )
@@ -650,7 +650,7 @@ async function sendMessage(text: string = input.value) {
     // Update message with error
     const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
     if (msgIndex !== -1) {
-      messages.value[msgIndex].content = '❌ Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
+      messages.value[msgIndex].content = ' Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
     }
   }
 }
@@ -700,7 +700,7 @@ function createNewChat() {
       id: 0,
       role: 'assistant',
       content:
-        'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? 😊',
+        'Xin chào! Tôi là trợ lý AI của GearUp. Tôi có thể giúp bạn tra cứu thông tin về sản phẩm, doanh thu, tồn kho và nhiều thứ khác. Bạn cần giúp gì không? ',
       timestamp: new Date().toLocaleTimeString('vi-VN'),
     },
     {

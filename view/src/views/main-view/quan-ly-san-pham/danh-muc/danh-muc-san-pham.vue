@@ -728,9 +728,9 @@ const completeBulkUpdate = async () => {
     editingData.value = {}
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('❌ LỖI khi cập nhật hàng loạt:', error)
+    console.error(' LỖI khi cập nhật hàng loạt:', error)
     // eslint-disable-next-line no-console
-    console.error('❌ Error details:', {
+    console.error(' Error details:', {
       message: error.message,
       stack: error.stack,
       response: error.response,
