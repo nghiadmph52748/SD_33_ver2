@@ -479,6 +479,33 @@ const formatDateShort = (dateString?: string | Date) => {
   })
 }
 
+const formatTimelineAction = (item: TimelineItem) => {
+  const action = (item.hanhDong || '').trim()
+  const newStatus = (item.trangThaiMoi || '').trim()
+  const description = (item.moTa || item.ghiChu || '').trim()
+
+  if (action && newStatus) {
+    return `${action} → ${newStatus}`
+  }
+  if (action) {
+    return action
+  }
+  if (newStatus) {
+    return `Trạng thái: ${newStatus}`
+  }
+  if (description) {
+    return description
+  }
+  return 'Cập nhật trạng thái'
+}
+
+const getHistoryUserCode = (item?: TimelineItem) => {
+  if (item?.tenNhanVien) return item.tenNhanVien
+  if (invoice.value?.tenNhanVien) return invoice.value.tenNhanVien
+  if (invoice.value?.maNhanVien) return invoice.value.maNhanVien
+  return 'Hệ thống'
+}
+
 const getStatusText = (status: any) => {
   // Xử lý cả boolean và string
   if (typeof status === 'boolean') {
@@ -1102,15 +1129,43 @@ const paymentHistory = computed(() => {
 
 // Invoice history
 const invoiceHistory = computed(() => {
-  if (!invoice.value) return []
-  const history = []
-  if (invoice.value.ngayTao) {
+  const history: Array<{ action: string; userCode: string; date: string }> = []
+  const timeline = timelineData.value || []
+
+  if (timeline.length > 0) {
+    const sorted = [...timeline].sort((a, b) => {
+      const timeA = a.thoiGian ? new Date(a.thoiGian).getTime() : 0
+      const timeB = b.thoiGian ? new Date(b.thoiGian).getTime() : 0
+      return timeB - timeA
+    })
+
+    sorted.forEach((item) => {
+      history.push({
+        action: formatTimelineAction(item),
+        userCode: getHistoryUserCode(item),
+        date: item.thoiGian,
+      })
+    })
+
+    return history
+  }
+
+  if (invoice.value?.ngayTao) {
     history.push({
-      action: 'Thanh toán hóa đơn',
-      userCode: invoice.value.maNhanVien || 'NV000001',
+      action: 'Tạo hóa đơn',
+      userCode: invoice.value.tenNhanVien || invoice.value.maNhanVien || 'Hệ thống',
       date: invoice.value.ngayTao,
     })
   }
+
+  if (invoice.value?.ngayThanhToan) {
+    history.push({
+      action: 'Thanh toán hóa đơn',
+      userCode: invoice.value.tenNhanVien || invoice.value.maNhanVien || 'Hệ thống',
+      date: invoice.value.ngayThanhToan,
+    })
+  }
+
   return history
 })
 
