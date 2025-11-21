@@ -6,7 +6,7 @@ import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
+import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
 
 import jakarta.persistence.Column;
@@ -30,7 +30,7 @@ public class DeGiay {
     private Integer id;
 
     @ColumnDefault("'DG'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
-    @Generated(GenerationTime.ALWAYS)
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @Column(name = "ma_de_giay", length = 7)
     private String maDeGiay;
 

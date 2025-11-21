@@ -6,7 +6,7 @@ import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
+import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -30,7 +30,7 @@ public class KhachHang {
     @Column(name = "id", nullable = false)
     private Integer id;
 
-    @Generated(GenerationTime.ALWAYS)
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @ColumnDefault("'KH'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
     @Column(name = "ma_khach_hang", insertable = false, updatable = false)
     private String maKhachHang;

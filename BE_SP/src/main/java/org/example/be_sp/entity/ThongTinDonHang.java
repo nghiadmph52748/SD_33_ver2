@@ -4,7 +4,7 @@ import java.time.LocalDate;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
+import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
 
 import jakarta.persistence.Column;
@@ -37,7 +37,7 @@ public class ThongTinDonHang {
     @JoinColumn(name = "id_trang_thai_don_hang", nullable = false)
     private TrangThaiDonHang idTrangThaiDonHang;
 
-    @Generated(GenerationTime.ALWAYS)
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @ColumnDefault("'TTDH'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
     @Column(name = "ma_thong_tin_don_hang", length = 9, insertable = false, updatable = false)
     private String maThongTinDonHang;

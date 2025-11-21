@@ -7,7 +7,7 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
+import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -42,7 +42,7 @@ public class NhanVien {
     @JoinColumn(name = "id_quyen_han", nullable = false)
     private QuyenHan idQuyenHan;
 
-    @Generated(GenerationTime.ALWAYS)
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @ColumnDefault("'NV'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
     @Column(name = "ma_nhan_vien", insertable = false, updatable = false)
     private String maNhanVien;

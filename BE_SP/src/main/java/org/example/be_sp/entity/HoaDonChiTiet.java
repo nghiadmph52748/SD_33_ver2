@@ -5,7 +5,7 @@ import java.time.LocalDate;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
+import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -41,7 +41,7 @@ public class HoaDonChiTiet {
     @JoinColumn(name = "id_chi_tiet_san_pham", nullable = false)
     private ChiTietSanPham idChiTietSanPham;
 
-    @Generated(GenerationTime.ALWAYS)
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @ColumnDefault("'HDCT'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
     @Column(name = "ma_hoa_don_chi_tiet", length = 9,insertable = false, updatable = false)
     private String maHoaDonChiTiet;

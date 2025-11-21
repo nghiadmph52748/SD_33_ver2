@@ -2,7 +2,7 @@ package org.example.be_sp.entity;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
+import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
 
 import jakarta.persistence.Column;
@@ -32,7 +32,7 @@ public class DiaChiKhachHang {
     @JoinColumn(name = "id_khach_hang", nullable = false)
     private KhachHang idKhachHang;
 
-    @Generated(GenerationTime.ALWAYS)
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @ColumnDefault("'DC'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
     @Column(name = "ma_dia_chi", length = 7, insertable = false, updatable = false)
     private String maDiaChi;
