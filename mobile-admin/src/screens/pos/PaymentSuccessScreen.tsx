@@ -7,13 +7,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 type QRPaymentStackParamList = {
   'QR.Payment': { sessionId?: string }
-  'QR.Success': { sessionId: string }
+  'QR.Success': { sessionId: string; paymentResult?: Record<string, string> }
 }
 
 type PaymentSuccessScreenRouteProp = {
   key: string
   name: 'QR.Success'
-  params: { sessionId: string }
+  params: { sessionId: string; paymentResult?: Record<string, string> }
 }
 
 type PaymentSuccessScreenNavigationProp = NativeStackNavigationProp<

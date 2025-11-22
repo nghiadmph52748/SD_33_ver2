@@ -17,7 +17,6 @@ import org.example.be_sp.repository.QRSessionRepository;
 import org.example.be_sp.service.upload.UploadImageToCloudinary;
 import org.example.be_sp.util.QRGeneration;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -40,13 +39,10 @@ public class QRSessionService {
     private HoaDonRepository hoaDonRepository;
 
     @Autowired
-    private VietQRService vietQRService;
+    private VnPayService vnPayService;
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private Environment env;
 
     @Autowired
     private UploadImageToCloudinary uploadImageToCloudinary;
@@ -95,10 +91,19 @@ public class QRSessionService {
     }
 
     public QRSessionResponse getLatestActiveSession() {
+        LocalDateTime now = LocalDateTime.now();
+        // Only return sessions created in the last 5 minutes to avoid stale sessions after page reload
+        LocalDateTime minCreatedAt = now.minusMinutes(5);
+        
         while (true) {
-            QRSession session = qrSessionRepository
-                    .findFirstByStatusAndExpiresAtAfterOrderByCreatedAtDesc("PENDING", LocalDateTime.now())
-                    .orElseThrow(() -> new RuntimeException("Không có phiên VietQR đang hoạt động"));
+            Optional<QRSession> sessionOpt = qrSessionRepository
+                    .findFirstByStatusAndExpiresAtAfterAndCreatedAtAfterOrderByCreatedAtDesc("PENDING", now, minCreatedAt);
+            
+            if (sessionOpt.isEmpty()) {
+                throw new RuntimeException("Không có phiên VNPAY đang hoạt động");
+            }
+            
+            QRSession session = sessionOpt.get();
 
             if (isSessionUsable(session)) {
                 return mapToDTO(session);
@@ -106,7 +111,7 @@ public class QRSessionService {
 
             // Session không còn hợp lệ -> chuyển sang EXPIRED và tiếp tục tìm session khác
             session.setStatus("EXPIRED");
-            session.setExpiresAt(LocalDateTime.now());
+            session.setExpiresAt(now);
             qrSessionRepository.save(session);
             publishSessionUpdate(session);
         }
@@ -228,28 +233,32 @@ public class QRSessionService {
 
     private String generateQrUrl(String sessionId, CreateQRSessionRequest request) {
         try {
-            VietQRService.VietQRRequest vietQRRequest = new VietQRService.VietQRRequest();
-            vietQRRequest.setAmount(request.getFinalPrice() != null ? request.getFinalPrice().longValue() : 0L);
-            vietQRRequest.setAddInfo("Thanh toan don hang " + request.getOrderCode());
+            org.example.be_sp.model.request.VnpayCreatePaymentRequest vnpayRequest = 
+                new org.example.be_sp.model.request.VnpayCreatePaymentRequest();
+            vnpayRequest.setOrderId(request.getOrderCode());
+            vnpayRequest.setAmount(request.getFinalPrice() != null ? request.getFinalPrice().longValue() : 0L);
+            vnpayRequest.setOrderInfo("Thanh toan don hang " + request.getOrderCode());
+            vnpayRequest.setLocale("vn");
 
-            VietQRService.VietQRResponse vietQRResponse = vietQRService.createPaymentQR(vietQRRequest);
+            String clientIp = "127.0.0.1";
+            org.example.be_sp.model.response.VnpayCreatePaymentResponse vnpayResponse = 
+                vnPayService.createPayment(vnpayRequest, clientIp);
 
-            if (vietQRResponse.getData() != null && vietQRResponse.getData().getQrDataURL() != null) {
-                return vietQRResponse.getData().getQrDataURL();
+            if (vnpayResponse != null && vnpayResponse.getPayUrl() != null) {
+                // VNPAY payment URL when encoded as QR code IS the banking QR format
+                // Banking apps (Vietcombank, BIDV, Techcombank, etc.) recognize VNPAY URLs
+                // and can process payments directly from the QR code
+                String payUrl = vnpayResponse.getPayUrl();
+                byte[] qrCodeBytes = QRGeneration.generateQRCode(payUrl);
+                return uploadQRCodeToCloudinary(qrCodeBytes);
             }
-            throw new RuntimeException("VietQR generation failed: " + vietQRResponse.getDesc());
+            throw new RuntimeException("VNPAY payment URL generation failed");
         } catch (Exception e) {
-            log.warn("VietQR generation failed, using fallback QR generation: {}", e.getMessage());
-            String qrContent = generateQRContent(sessionId);
-            byte[] qrCodeBytes = QRGeneration.generateQRCode(qrContent);
-            return uploadQRCodeToCloudinary(qrCodeBytes);
+            log.error("VNPAY QR generation failed: {}. Cannot generate banking QR without VNPAY configuration.", e.getMessage());
+            throw new RuntimeException("Không thể tạo mã QR thanh toán. Vui lòng cấu hình VNPAY (tmnCode/hashSecret) trong application.properties", e);
         }
     }
 
-    private String generateQRContent(String sessionId) {
-        String frontendUrl = env.getProperty("app.frontendUrl", "http://localhost:5173");
-        return frontendUrl + "/payment/qr?session=" + sessionId;
-    }
 
     private String uploadQRCodeToCloudinary(byte[] qrCodeBytes) {
         try {

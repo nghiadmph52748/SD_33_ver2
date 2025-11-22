@@ -415,7 +415,7 @@ public class ChatService {
         try {
             // First check if customer has any history
             Long totalCount = aiChatHistoryRepository.countByCustomerId(customerId);
-            System.out.println("📊 Total AI chat history count for customer " + customerId + ": " + totalCount);
+            //System.out.println("📊 Total AI chat history count for customer " + customerId + ": " + totalCount);
             
             if (totalCount == null || totalCount == 0) {
                 System.out.println("⚠️ No AI chat history found for customer " + customerId);
@@ -426,27 +426,27 @@ public class ChatService {
             List<String> sessionIds = aiChatHistoryRepository.findMostRecentSessionIds(customerId);
             
             if (sessionIds == null || sessionIds.isEmpty()) {
-                System.out.println("⚠️ No session ID found for customer " + customerId);
+                //System.out.println("⚠️ No session ID found for customer " + customerId);
                 return List.of();
             }
             
             String mostRecentSessionId = sessionIds.get(0);
             if (mostRecentSessionId == null || mostRecentSessionId.trim().isEmpty()) {
-                System.out.println("⚠️ Session ID is empty for customer " + customerId);
+                //System.out.println("⚠️ Session ID is empty for customer " + customerId);
                 return List.of();
             }
             
-            System.out.println("✅ Loading AI chat history for customer " + customerId + ", session: " + mostRecentSessionId);
+            //System.out.println("✅ Loading AI chat history for customer " + customerId + ", session: " + mostRecentSessionId);
             
             // Get all messages from the most recent session
             List<AiChatHistory> history = aiChatHistoryRepository.findByCustomerIdAndSessionId(customerId, mostRecentSessionId);
-            System.out.println("✅ Found " + history.size() + " messages in session " + mostRecentSessionId);
+            //System.out.println("✅ Found " + history.size() + " messages in session " + mostRecentSessionId);
             
             return history.stream()
                 .map(AiChatHistoryResponse::new)
                 .toList();
         } catch (Exception e) {
-            System.err.println("❌ Error in getCustomerAiChatHistory for customer " + customerId + ": " + e.getMessage());
+            //System.err.println("❌ Error in getCustomerAiChatHistory for customer " + customerId + ": " + e.getMessage());
             e.printStackTrace();
             throw e;
         }

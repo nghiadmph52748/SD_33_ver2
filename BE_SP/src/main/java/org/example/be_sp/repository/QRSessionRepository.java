@@ -20,6 +20,12 @@ public interface QRSessionRepository extends JpaRepository<QRSession, Long> {
 
     Optional<QRSession> findFirstByStatusAndExpiresAtAfterOrderByCreatedAtDesc(String status, LocalDateTime now);
 
+    @Query("SELECT q FROM QRSession q WHERE q.status = :status AND q.expiresAt > :now AND q.createdAt >= :minCreatedAt ORDER BY q.createdAt DESC")
+    Optional<QRSession> findFirstByStatusAndExpiresAtAfterAndCreatedAtAfterOrderByCreatedAtDesc(
+            @Param("status") String status, 
+            @Param("now") LocalDateTime now,
+            @Param("minCreatedAt") LocalDateTime minCreatedAt);
+
     Optional<QRSession> findByIdHoaDon_Id(Integer hoaDonId);
 
     List<QRSession> findAllByIdHoaDon_Id(Integer hoaDonId);

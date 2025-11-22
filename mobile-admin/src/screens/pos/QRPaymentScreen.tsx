@@ -57,7 +57,7 @@ export default function QRPaymentScreen() {
       } else {
         setSessionId(null)
         setSession(null)
-        setError('Chưa có phiên VietQR đang hoạt động')
+        setError('Chưa có phiên VNPAY đang hoạt động')
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Không thể tìm thấy phiên thanh toán'
@@ -94,7 +94,7 @@ export default function QRPaymentScreen() {
         ) {
           setSession(null)
           setSessionId(null)
-          setError('Chưa có phiên VietQR đang hoạt động')
+          setError('Chưa có phiên VNPAY đang hoạt động')
           return
         }
 
@@ -192,7 +192,7 @@ export default function QRPaymentScreen() {
         if (!latest && sessionId) {
           setSessionId(null)
           setSession(null)
-          setError('Chưa có phiên VietQR đang hoạt động')
+          setError('Chưa có phiên VNPAY đang hoạt động')
         }
       } catch (err) {
         if (__DEV__) {
@@ -267,13 +267,13 @@ export default function QRPaymentScreen() {
         <Card style={styles.welcomeCard}>
           <Card.Content>
             <Text style={styles.welcomeEmoji}>🤝</Text>
-            <Text style={styles.welcomeTitle}>Chào mừng đến màn hình VietQR</Text>
+            <Text style={styles.welcomeTitle}>Chào mừng đến màn hình VNPAY</Text>
             <Text style={styles.welcomeSubtitle}>
-              Hãy thao tác trên POS để mở QR, màn hình này sẽ tự hiển thị giỏ hàng và mã VietQR ngay khi có tín hiệu.
+              Hãy thao tác trên POS để mở QR, màn hình này sẽ tự hiển thị giỏ hàng và mã VNPAY ngay khi có tín hiệu.
             </Text>
             <View style={styles.welcomeSteps}>
               <Text style={styles.welcomeStep}>① Thêm sản phẩm vào giỏ tại quầy.</Text>
-              <Text style={styles.welcomeStep}>② Nhấn “Mở trên mobile” trong thẻ VietQR.</Text>
+              <Text style={styles.welcomeStep}>② Nhấn "Mở trên mobile" trong thẻ VNPAY.</Text>
               <Text style={styles.welcomeStep}>③ QR và thông tin đơn sẽ hiển thị tại đây ngay lập tức.</Text>
             </View>
             {message ? <Text style={styles.welcomeHint}>{message}</Text> : null}
@@ -332,9 +332,9 @@ export default function QRPaymentScreen() {
       ) : (
         <Card style={styles.qrPlaceholderCard}>
           <Card.Content style={styles.qrPlaceholderContent}>
-            <Text style={styles.placeholderTitle}>Chưa hiển thị VietQR</Text>
+            <Text style={styles.placeholderTitle}>Chưa hiển thị VNPAY</Text>
             <Text style={styles.placeholderText}>
-              Nhân viên quầy chưa mở mã QR. Vui lòng chờ thao tác “Hiển thị QR” trên hệ thống bán hàng.
+              Nhân viên quầy chưa mở mã QR. Vui lòng chờ thao tác "Hiển thị QR" trên hệ thống bán hàng.
             </Text>
           </Card.Content>
         </Card>

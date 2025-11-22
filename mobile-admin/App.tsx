@@ -34,13 +34,30 @@ const App: React.FC = () => {
       if (!url) return
       const parsed = ExpoLinking.parse(url)
       const normalizedPath = parsed?.path?.replace(/^\//, '') ?? ''
-      if (normalizedPath !== 'qr') return
+      
+      // Handle QR session deep links
+      if (normalizedPath === 'qr' || normalizedPath === 'payment/qr') {
+        const query = parsed.queryParams ?? {}
+        const sessionParam = (query.session as string) || (query.sessionId as string)
+        if (sessionParam && typeof sessionParam === 'string') {
+          navigateToQrScreen(sessionParam)
+        }
+        return
+      }
 
-      const query = parsed.queryParams ?? {}
-      const sessionParam = (query.session as string) || (query.sessionId as string)
-      if (!sessionParam || typeof sessionParam !== 'string') return
-
-      navigateToQrScreen(sessionParam)
+      // Handle VNPAY payment result deep links
+      if (normalizedPath === 'payment/vnpay/result' || normalizedPath.includes('vnpay')) {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('QR.Stack', {
+            screen: 'QR.Success',
+            params: { 
+              sessionId: (parsed.queryParams?.txnRef as string) || 'unknown',
+              paymentResult: parsed.queryParams
+            },
+          })
+        }
+        return
+      }
     },
     [navigateToQrScreen]
   )

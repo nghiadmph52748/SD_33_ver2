@@ -4,25 +4,20 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.Normalizer;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.SortedMap;
-import java.util.TimeZone;
 import java.util.TreeMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.example.be_sp.model.request.VnpayCreatePaymentRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.model.response.VnpayCreatePaymentResponse;
-import org.springframework.core.env.Environment;
 import org.example.be_sp.entity.OrderPayment;
 import org.example.be_sp.repository.OrderPaymentRepository;
+import org.example.be_sp.service.VnPayService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -37,11 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 @CrossOrigin(origins = "*")
 public class VnPayController {
 
-    private final Environment env;
+    private final VnPayService vnPayService;
     private final OrderPaymentRepository orderRepo;
 
-    public VnPayController(Environment env, OrderPaymentRepository orderRepo) {
-        this.env = env;
+    public VnPayController(VnPayService vnPayService, OrderPaymentRepository orderRepo) {
+        this.vnPayService = vnPayService;
         this.orderRepo = orderRepo;
     }
 
@@ -49,74 +44,17 @@ public class VnPayController {
     public ResponseObject<VnpayCreatePaymentResponse> createPayment(@RequestBody VnpayCreatePaymentRequest req,
             HttpServletRequest http) {
         try {
-            String vnpTmnCode = get("vnp.tmnCode", "");
-            String vnpHashSecret = get("vnp.hashSecret", "");
-            String vnpReturnUrl = get("vnp.returnUrl", "http://localhost:8080/api/payment/vnpay/return");
-            String vnpPayUrl = get("vnp.payUrl", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html");
-
-            if (!StringUtils.hasText(vnpTmnCode) || !StringUtils.hasText(vnpHashSecret)) {
-                return ResponseObject.error("VNPAY configuration is missing (tmnCode/hashSecret)");
-            }
-
-            long amount = Optional.ofNullable(req.getAmount()).orElse(0L);
-            if (amount <= 0) {
-                return ResponseObject.error("Invalid amount");
-            }
-
-            String locale = StringUtils.hasText(req.getLocale()) ? req.getLocale() : "vn";
-            String orderInfoRaw = StringUtils.hasText(req.getOrderInfo()) ? req.getOrderInfo() : "Thanh toan don hang";
-            String orderInfo = normalizeAscii(orderInfoRaw);
-
-            String baseId = StringUtils.hasText(req.getOrderId()) ? req.getOrderId() : "HD";
-            String attempt = String.valueOf(System.currentTimeMillis() % 1_000_000L);
-            String txnRef = (baseId + "-" + attempt).replaceAll("[^A-Za-z0-9_-]", "");
-            if (txnRef.length() > 32) {
-                txnRef = txnRef.substring(0, 32);
-            }
-
             String ip = getClientIp(http);
-            String createDate = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT+7"));
-            cal.add(Calendar.MINUTE, 15);
-            String expireDate = new SimpleDateFormat("yyyyMMddHHmmss").format(cal.getTime());
-
-            // Detect current frontend origin (e.g. http://localhost:5174) so we can return to the correct dev port
-            String origin = http.getHeader("Origin");
-            String clientBase = StringUtils.hasText(origin) ? origin : get("app.frontendUrl", "http://localhost:5173");
-            // Attach client base as a passthrough param so /return can redirect accurately
-            String returnUrlWithClient = vnpReturnUrl + (vnpReturnUrl.contains("?") ? "&" : "?")
-                    + "client=" + URLEncoder.encode(clientBase, StandardCharsets.UTF_8);
-
-            Map<String, String> vnp = new HashMap<>();
-            vnp.put("vnp_Version", "2.1.0");
-            vnp.put("vnp_Command", "pay");
-            vnp.put("vnp_TmnCode", vnpTmnCode);
-            vnp.put("vnp_Amount", String.valueOf(amount * 100));
-            vnp.put("vnp_CurrCode", "VND");
-            vnp.put("vnp_TxnRef", txnRef);
-            vnp.put("vnp_OrderInfo", orderInfo);
-            vnp.put("vnp_OrderType", "other");
-            vnp.put("vnp_Locale", locale);
-            vnp.put("vnp_ReturnUrl", returnUrlWithClient);
-            vnp.put("vnp_IpAddr", ip);
-            vnp.put("vnp_CreateDate", createDate);
-            vnp.put("vnp_ExpireDate", expireDate);
-            if (StringUtils.hasText(req.getBankCode())) {
-                vnp.put("vnp_BankCode", req.getBankCode());
-            }
-
-            String query = buildQuery(vnp);
-            String secureHash = hmacSHA512(vnpHashSecret, query);
-            String payUrl = vnpPayUrl + "?" + query + "&vnp_SecureHash=" + secureHash;
+            VnpayCreatePaymentResponse response = vnPayService.createPayment(req, ip);
 
             // Persist a pending order for tracking
             OrderPayment op = new OrderPayment();
-            op.setTxnRef(txnRef);
-            op.setAmount(amount);
+            op.setTxnRef(response.getTxnRef());
+            op.setAmount(req.getAmount());
             op.setStatus("PENDING");
             orderRepo.save(op);
 
-            return new ResponseObject<>(new VnpayCreatePaymentResponse(payUrl, txnRef));
+            return new ResponseObject<>(response);
         } catch (Exception e) {
             return ResponseObject.error("VNPAY create error: " + e.getMessage());
         }
@@ -124,7 +62,7 @@ public class VnPayController {
 
     @GetMapping("/return")
     public ResponseEntity<Void> handleReturn(HttpServletRequest req) throws Exception {
-        String vnpHashSecret = get("vnp.hashSecret", "");
+        String vnpHashSecret = vnPayService.getHashSecret();
         Map<String, String> params = extractParams(req);
         String receivedHash = req.getParameter("vnp_SecureHash");
         String hashData = buildQuery(params);
@@ -133,7 +71,7 @@ public class VnPayController {
         // Prefer client base passed through from /create; fallback to configured default
         String frontBase = Optional.ofNullable(req.getParameter("client"))
                 .filter(StringUtils::hasText)
-                .orElse(get("app.frontendUrl", "http://localhost:5173"));
+                .orElse(vnPayService.getFrontendUrl());
         StringBuilder redirect = new StringBuilder(frontBase);
         if (!frontBase.endsWith("/")) {
             redirect.append('/');
@@ -175,7 +113,7 @@ public class VnPayController {
 
     @GetMapping("/ipn")
     public ResponseEntity<Map<String, String>> handleIpn(HttpServletRequest req) throws Exception {
-        String vnpHashSecret = get("vnp.hashSecret", "");
+        String vnpHashSecret = vnPayService.getHashSecret();
         Map<String, String> params = extractParams(req);
         String receivedHash = req.getParameter("vnp_SecureHash");
         String hashData = buildQuery(params);
@@ -213,11 +151,6 @@ public class VnPayController {
         resp.put("RspCode", "00");
         resp.put("Message", "Confirm Success");
         return ResponseEntity.ok(resp);
-    }
-
-    private String get(String key, String defVal) {
-        String value = env.getProperty(key);
-        return (value == null || value.isBlank()) ? defVal : value;
     }
 
     private static String getClientIp(HttpServletRequest req) {
@@ -267,12 +200,4 @@ public class VnPayController {
         return sb.toString();
     }
 
-    private static String normalizeAscii(String input) {
-        if (input == null) {
-            return "";
-        }
-        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
-        normalized = normalized.replaceAll("[\\u0300-\\u036f]", "");
-        return normalized.replaceAll("[^\\x20-\\x7E]", "");
-    }
 }
