@@ -1146,6 +1146,7 @@ CREATE TABLE dbo.lich_lam_viec (
 		ghi_chu NVARCHAR(255) NULL,
 		so_tien_nhan_thuc_te DECIMAL(18,2) NULL, 
 		trang_thai_xac_nhan NVARCHAR(50) NOT NULL DEFAULT (N'Chưa xác nhận'), 
+		thoi_gian_xac_nhan DATETIME2 NULL,
 		ghi_chu_xac_nhan NVARCHAR(255) NULL, 
 		trang_thai_ca NVARCHAR(50) NULL DEFAULT (N'Đang làm'),
 		CONSTRAINT FK_giao_ca_nguoi_giao FOREIGN KEY (nguoi_giao_id) REFERENCES dbo.nhan_vien(id),

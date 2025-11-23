@@ -88,47 +88,18 @@ const LICH_LAM_VIEC: AppRouteRecordRaw = {
   },
 },
 {
-  path: 'danh-sach-giao-ca',
-  name: 'danhsachgiaoca',
+  path: 'giao-ca',
+  name: 'giaoca',
   component: () => import('@/views/main-view/lich-lam-viec/giao-ca.vue'),
   meta: {
-    locale: 'Danh Sách Giao Ca',
+    locale: 'Giao Ca',
     requiresAuth: true,
     roles: ['admin'],
   },
 },
-{
-  path: 'update-giao-ca/:id',
-  name: 'updategiaoca',
-  component: () => import('@/views/main-view/lich-lam-viec/updategiaoca.vue'),
-  meta: {
-    locale: 'Update Giao Ca',
-    requiresAuth: true,
-    roles: ['*'],
-    hideInMenu: true,
-  },
-},
-{
-      path: 'giao-ca',
-      name: 'GiaoCa',
-      component: () => import('@/views/main-view/lich-lam-viec/them-giao-ca.vue'),
-      meta: {
-        locale: 'Giao Ca',
-        requiresAuth: true,
-        roles: ['*'],
-      },
-    },
-{
-  path: 'xac-nhan-giao-ca/:id',
-  name: 'XacNhanGiaoCa',
-  component: () => import('@/views/main-view/lich-lam-viec/xacnhangiaoca.vue'),
-  meta: {
-    locale: 'Xác nhận Giao Ca',
-    requiresAuth: true,
-    roles: ['*'], 
-    hideInMenu: true, 
-  },
-},
+
+
+
 
 
 

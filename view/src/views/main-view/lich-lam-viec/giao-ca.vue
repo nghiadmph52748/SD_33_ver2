@@ -1,262 +1,179 @@
 <template>
-  <div class="giao-ca-page">
-    <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" />
+  <div class="giao-ca-card">
+    <h3>Ca Làm Việc</h3>
 
-    <!-- Bộ lọc -->
-    <a-card class="filters-card">
-      <a-form :model="filterForm" layout="vertical">
-        <a-row :gutter="16">
-          <a-col :span="6">
-            <a-form-item label="Tìm kiếm">
-              <a-input v-model="search" placeholder="Tìm theo nhân viên, ca làm..." allow-clear />
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="5">
-            <a-form-item label="Ca làm việc">
-              <a-select v-model="filterForm.caLam" placeholder="Chọn ca làm" allow-clear>
-                <a-option value="Ca sáng">Ca sáng</a-option>
-                <a-option value="Ca chiều">Ca chiều</a-option>
-                <a-option value="Ca tối">Ca tối</a-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="5">
-            <a-form-item label="Ngày giao ca">
-              <a-date-picker
-                v-model="filterForm.ngayGiaoCa"
-                placeholder="Chọn ngày"
-                format="YYYY-MM-DD"
-                allow-clear
-              />
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="8">
-            <a-form-item label="Trạng thái">
-              <a-radio-group v-model="filterForm.trangThai" type="button">
-                <a-radio value="all">Tất cả</a-radio>
-                <a-radio value="Đang làm">Đang làm</a-radio>
-                <a-radio value="Đã kết thúc">Hoàn tất</a-radio>
-              </a-radio-group>
-            </a-form-item>
-          </a-col>
-        </a-row>
-      </a-form>
-
-      <div class="actions-row">
-        <a-space>
-          <a-button @click="resetFilters">
-            <template #icon><icon-refresh /></template>
-            Đặt lại
-          </a-button>
-
-          <a-button type="primary" @click="themGiaoCa">
-            <template #icon><icon-plus /></template>
-            Giao ca
-          </a-button>
-        </a-space>
+    <div v-if="lastShift">
+      <div class="previous-shift">
+        <strong>Thông tin ca trước (Bàn giao)</strong>
+        <div>Tiền mặt cuối ca trước: <strong>{{ formatCurrency(lastShift.tongTienCuoiCa) }}</strong></div>
+        <div>Số đơn hàng chờ xử lý: <strong>{{ lastShift.soDonChoXuLy || 0 }}</strong></div>
       </div>
-    </a-card>
+    </div>
 
-    <!-- Danh sách giao ca -->
-    <a-card title="Danh sách giao ca" class="table-card">
-      <a-table
-        :columns="columns"
-        :data="filteredList"
-        :pagination="pagination"
-        :loading="loading"
-        :scroll="{ x: 1200 }"
-      >
-        <!-- Cột trạng thái -->
-        <template #trangThai="{ record }">
-          <a-tag
-            :class="{
-              'success-tag': record.trangThai === 'Đã kết thúc',
-              'info-tag': record.trangThai === 'Đang làm'
-            }"
-          >
-            {{ record.trangThai }}
-          </a-tag>
-        </template>
+    <div v-if="!activeShift">
+      <p>Chưa có ca nào đang hoạt động. Nhập số tiền mặt ban đầu rồi bắt đầu ca.</p>
+      <label>
+        Số tiền mặt ban đầu (VND)
+        <input type="number" v-model.number="initialCash" placeholder="Nhập số tiền mặt" />
+      </label>
+      <button class="btn-start" :disabled="loading" @click="startShift">
+        {{ loading ? 'Đang tạo...' : 'Bắt Đầu Ca' }}
+      </button>
+    </div>
 
-        <!-- Cột hành động -->
-        <template #action="{ record }">
-          <a-space>
-            <a-button type="text" @click="viewDetail(record)">
-              <template #icon><icon-edit /></template>
-            </a-button>
-
-            <a-button type="text" status="danger" @click="deleteGiaoCa(record.id)">
-              <template #icon><icon-delete /></template>
-            </a-button>
-          </a-space>
-        </template>
-      </a-table>
-    </a-card>
+    <div v-else>
+      <p>Ca đang hoạt động từ: <strong>{{ formatDate(activeShift.thoiGianGiaoCa) }}</strong></p>
+      <p v-if="activeShift.tongTienBanDau">Số tiền mặt ban đầu: <strong>{{ formatCurrency(activeShift.tongTienBanDau) }}</strong></p>
+      <div class="actions">
+        <button class="btn-end" :disabled="loading" @click="endShift">
+          {{ loading ? 'Đang xử lý...' : 'Kết Thúc Ca' }}
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Message,Modal } from '@arco-design/web-vue'
-import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
-import { getGiaoCa, xoaGiaoCa } from '@/api/giao-ca'
-import useBreadcrumb from '@/hooks/breadcrumb'
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { themGiaoCa, suaGiaoCa, getGiaoCa } from '@/api/giao-ca'
 
-//  Router & Breadcrumb
-const router = useRouter()
-const { breadcrumbItems } = useBreadcrumb()
-
-//  Data & filter
-const search = ref('')
-const filterForm = ref({
-  caLam: '',
-  ngayGiaoCa: '',
-  trangThai: 'all'
-})
 const loading = ref(false)
-const giaoCaList = ref([])
+const activeShift = ref(null)
+const lastShift = ref(null)
+const initialCash = ref(0)
+const userStore = useUserStore()
 
-//  Table columns
-const columns = [
-  { title: '#', dataIndex: 'id', width: 60 },
-  { title: 'Ca làm việc', dataIndex: 'caLamViec.tenCa', width: 120 },
-  { title: 'Người giao', dataIndex: 'nguoiGiao.tenNhanVien', width: 160 },
-  { title: 'Người nhận', dataIndex: 'nguoiNhan.tenNhanVien', width: 160 },
-   { title: 'Ngày giao ca', dataIndex: 'thoiGianGiaoCa', width: 150 },
-  { title: 'Tiền đầu ca', dataIndex: 'tongTienBanDau', width: 120 },
-  { title: 'Tiền cuối ca', dataIndex: 'tongTienCuoiCa', width: 120 },
-  { title: 'Ghi chú', dataIndex: 'ghiChu', width: 200 },
-  { title: 'Trạng thái', dataIndex: 'trangThai', slotName: 'trangThai', width: 120 },
-  { title: 'Hành động', slotName: 'action', width: 120 }
-]
+function formatDate(d) {
+  if (!d) return '-'
+  try {
+    // Accept both 'T' and space as separator between date and time
+    let s = d
+    if (typeof s === 'string' && s.length >= 19 && s[10] === ' ') {
+      s = s.replace(' ', 'T')
+    }
+    return new Date(s).toLocaleString()
+  } catch (e) {
+    return d
+  }
+}
 
-//  Lọc dữ liệu
-const filteredList = computed(() =>
-  giaoCaList.value.filter(g =>
-    // Tìm kiếm
-    (!search.value ||
-      g.nguoiGiao?.tenNhanVien.toLowerCase().includes(search.value.toLowerCase()) ||
-      g.nguoiNhan?.tenNhanVien.toLowerCase().includes(search.value.toLowerCase()) ||
-      g.caLamViec?.tenCa.toLowerCase().includes(search.value.toLowerCase())
-    ) &&
-    // Lọc theo ca
-    (!filterForm.value.caLam || g.caLamViec?.tenCa === filterForm.value.caLam) &&
-    // Lọc theo trạng thái
-    (filterForm.value.trangThai === 'all' || g.trangThai === filterForm.value.trangThai) &&
-    // Lọc theo ngày
-    (!filterForm.value.ngayGiaoCa || 
-      new Date(g.thoiGianGiaoCa).toISOString().slice(0,10) === filterForm.value.ngayGiaoCa)
-  )
-)
+function toLocalDateTimeString(date) {
+  const pad = (n) => String(n).padStart(2, '0')
+  const Y = date.getFullYear()
+  const M = pad(date.getMonth() + 1)
+  const D = pad(date.getDate())
+  const h = pad(date.getHours())
+  const m = pad(date.getMinutes())
+  const s = pad(date.getSeconds())
+  // Use space separator to match backend LocalDateTime parsing ("yyyy-MM-dd HH:mm:ss")
+  return `${Y}-${M}-${D} ${h}:${m}:${s}`
+}
 
+function formatCurrency(n) {
+  if (n == null) return '-'
+  return new Intl.NumberFormat('vi-VN').format(n) + ' ₫'
+}
 
-//  Lấy danh sách
-const fetchData = async () => {
+async function startShift() {
   loading.value = true
   try {
-    const res = await getGiaoCa()
-    giaoCaList.value = res.data || res || []
-  } catch (error) {
-    Message.error('Lỗi khi tải danh sách giao ca')
+    const payload = {
+      nguoiNhan: {
+        id: userStore.id,
+        tenNhanVien: userStore.name || userStore.tenNhanVien || userStore.ten || ''
+      },
+      thoiGianGiaoCa: toLocalDateTimeString(new Date()),
+      tongTienBanDau: Number(initialCash.value) || 0,
+      trangThai: 'Đang hoạt động'
+    }
+    const res = await themGiaoCa(payload)
+    activeShift.value = res.data || res
+  } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(error)
+    console.error('Lỗi khi bắt đầu ca', err)
+    alert('Bắt đầu ca thất bại')
   } finally {
     loading.value = false
   }
 }
 
-const resetFilters = () => {
-  search.value = ''
-  filterForm.value = { caLam: '', ngayGiaoCa: '', trangThai: 'all' }
-}
+// Load shifts on mount to find active or last shift
+onMounted(async () => {
+  try {
+    const res = await getGiaoCa()
+    const list = (res.data || res) || []
+    // find active shift: trangThai === 'Đang hoạt động' or no thoiGianKetThuc
+    const active = list.find((s) => s.trangThai === 'Đang hoạt động' || !s.thoiGianKetThuc)
+    if (active) {
+      activeShift.value = active
+    }
+    // find last (most recent) ended shift
+    const ended = list
+      .filter((s) => s.thoiGianKetThuc)
+      .sort((a, b) => new Date(b.thoiGianKetThuc) - new Date(a.thoiGianKetThuc))
+    if (ended.length) {
+      lastShift.value = ended[0]
+      // prefill initial cash from previous shift's tongTienCuoiCa if available
+      if (lastShift.value.tongTienCuoiCa != null) initialCash.value = Number(lastShift.value.tongTienCuoiCa)
+    }
+  } catch (e) {
+    // ignore errors for now
+    // eslint-disable-next-line no-console
+    console.warn('Không lấy được danh sách giao ca', e)
+  }
+})
 
-const themGiaoCa = () => {
-  router.push({ name: 'GiaoCa' })
-}
-
-const viewDetail = (record: any) => {
-  router.push({
-    name: 'updategiaoca',
-    params: { id: record.id },
-  })
-}
-
-
-const deleteGiaoCa = async (id: number) => {
-  Modal.confirm({
-    title: 'Xác nhận xóa',
-    content: 'Bạn có chắc chắn muốn xóa giao ca này không?',
-    okText: 'Xóa',
-    cancelText: 'Hủy',
-    async onOk() {
-      try {
-        await xoaGiaoCa(id)
-        Message.success('Xóa giao ca thành công')
-        fetchData()
-      } catch (_error) {
-        Message.error('Không thể xóa giao ca')
+async function endShift() {
+  if (!activeShift.value || !activeShift.value.id) return
+  const ok = confirm('Bạn có chắc muốn kết thúc ca hiện tại không?')
+  if (!ok) return
+  loading.value = true
+  try {
+    const payload = {
+      thoiGianKetThuc: toLocalDateTimeString(new Date()),
+      trangThai: 'Đã kết thúc',
+      nguoiGiao: {
+        id: userStore.id,
+        tenNhanVien: userStore.name || userStore.tenNhanVien || userStore.ten || ''
       }
     }
-  })
-}
-
-onMounted(() => fetchData())
-
-//  Pagination
-const pagination = {
-  pageSize: 10,
-  showTotal: true
+    // dùng endpoint PUT /api/giao-ca/{id} có sẵn trên backend
+    await suaGiaoCa(activeShift.value.id, payload)
+    activeShift.value = null
+    alert('Kết thúc ca thành công')
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Lỗi khi kết thúc ca', err)
+    alert('Kết thúc ca thất bại')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
-
 <style scoped>
-.schedule-management-page {
-  padding: 0 20px 20px 20px;
+.giao-ca-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
-
-.filters-card,
-.table-card {
-  margin-bottom: 16px;
-  border-radius: 12px;
+.btn-start {
+  background: #2ecc71;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
 }
-
-.actions-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+.btn-end {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
 }
-
-/* Table cell padding */
-:deep(.arco-table .arco-table-cell) {
-  padding: 6px 8px;
-}
-
-/* Tag styling để hiển thị trạng thái */
-:deep(.success-tag) {
-  color: rgb(var(--success-6)) !important;
-  background: rgb(var(--success-1)) !important;
-  border-color: rgb(var(--success-1)) !important;
-}
-
-:deep(.info-tag) {
-  color: rgb(var(--primary-6)) !important;
-  background: rgb(var(--primary-1)) !important;
-  border-color: rgb(var(--primary-1)) !important;
-}
-
-/* Button nhỏ gọn trong table */
-:deep(.arco-table .arco-btn) {
-  padding: 2px 6px;
-}
-
-/* Optional: căn chỉnh input, select filter */
-:deep(.filters-card .arco-form-item) {
-  margin-bottom: 12px;
-}
+.actions { margin-top: 12px }
 </style>

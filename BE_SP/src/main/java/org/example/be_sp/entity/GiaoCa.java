@@ -71,7 +71,11 @@ public class GiaoCa {
     @Column(name = "trang_thai_xac_nhan")
     private String trangThaiXacNhan; // 'Chưa xác nhận', 'Đã xác nhận', 'Chênh lệch', 'Từ chối'
 
-    @Column(name = "thoi_gian_xac_nhan")
+    /**
+     * This field is optional in DB in some deployments. Marked transient to avoid
+     * mapping errors when the column is missing in the database schema.
+     */
+    @Transient
     private LocalDateTime thoiGianXacNhan;
 
     @Column(name = "ghi_chu_xac_nhan")
