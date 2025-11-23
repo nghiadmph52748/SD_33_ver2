@@ -79,10 +79,9 @@ async function startShift() {
   loading.value = true
   try {
     const payload = {
-      nguoiNhan: {
-        id: userStore.id,
-        tenNhanVien: userStore.name || userStore.tenNhanVien || userStore.ten || ''
-      },
+      nguoiGiaoId: (lastShift.value && lastShift.value.nguoiGiao && lastShift.value.nguoiGiao.id) || userStore.id,
+      nguoiNhanId: userStore.id,
+      caLamViecId: (lastShift.value && (lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id)) || 1,
       thoiGianGiaoCa: toLocalDateTimeString(new Date()),
       tongTienBanDau: Number(initialCash.value) || 0,
       trangThai: 'Đang hoạt động'

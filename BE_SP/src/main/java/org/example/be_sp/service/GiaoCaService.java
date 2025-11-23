@@ -50,9 +50,7 @@ public class GiaoCaService {
             .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc"));
 
         // 2. Kiểm tra người giao và người nhận không trùng
-        if (nguoiGiao.getId().equals(nguoiNhan.getId())) {
-            throw new RuntimeException("Người giao và người nhận không thể trùng nhau");
-        }
+        // NOTE: allow nguoiGiao == nguoiNhan for self-started shifts; do not throw here.
 
         // 3. Kiểm tra tiền
         if (req.getTongTienBanDau() != null && req.getTongTienBanDau() < 0) {
