@@ -31,22 +31,26 @@ public class GiaoCaService {
 
     // Lấy giao ca theo ID
     public GiaoCa getById(Long id) {
+        if (id == null) throw new IllegalArgumentException("giaoCa id must not be null");
         return giaoCaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao ca ID: " + id));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy giao ca ID: " + id));
     }
     public GiaoCa create(GiaoCaRequest req) {
+        if (req == null) throw new IllegalArgumentException("GiaoCaRequest must not be null");
+        if (req.getNguoiGiaoId() == null) throw new IllegalArgumentException("nguoiGiaoId must not be null");
+        if (req.getNguoiNhanId() == null) throw new IllegalArgumentException("nguoiNhanId must not be null");
+        if (req.getCaLamViecId() == null) throw new IllegalArgumentException("caLamViecId must not be null");
+
         // 1. Kiểm tra nhân viên & ca làm việc tồn tại
         NhanVien nguoiGiao = nhanVienRepository.findById(req.getNguoiGiaoId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên giao ca"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên giao ca"));
         NhanVien nguoiNhan = nhanVienRepository.findById(req.getNguoiNhanId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên nhận ca"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên nhận ca"));
         CaLamViec caLamViec = caLamViecRepository.findById(req.getCaLamViecId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc"));
 
         // 2. Kiểm tra người giao và người nhận không trùng
-        if (nguoiGiao.getId().equals(nguoiNhan.getId())) {
-            throw new RuntimeException("Người giao và người nhận không thể trùng nhau");
-        }
+        // NOTE: allow nguoiGiao == nguoiNhan for self-started shifts; do not throw here.
 
         // 3. Kiểm tra tiền
         if (req.getTongTienBanDau() != null && req.getTongTienBanDau() < 0) {
@@ -113,14 +117,20 @@ public class GiaoCaService {
 
     // Cập nhật giao ca
     public GiaoCa update(Long id, GiaoCaRequest req) {
+        if (id == null) throw new IllegalArgumentException("giaoCa id must not be null");
+        if (req == null) throw new IllegalArgumentException("GiaoCaRequest must not be null");
         GiaoCa giaoCa = getById(id);
 
+        if (req.getNguoiGiaoId() == null) throw new IllegalArgumentException("nguoiGiaoId must not be null");
+        if (req.getNguoiNhanId() == null) throw new IllegalArgumentException("nguoiNhanId must not be null");
+        if (req.getCaLamViecId() == null) throw new IllegalArgumentException("caLamViecId must not be null");
+
         NhanVien nguoiGiao = nhanVienRepository.findById(req.getNguoiGiaoId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên giao ca"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên giao ca"));
         NhanVien nguoiNhan = nhanVienRepository.findById(req.getNguoiNhanId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên nhận ca"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên nhận ca"));
         CaLamViec caLamViec = caLamViecRepository.findById(req.getCaLamViecId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc"));
 
         giaoCa.setNguoiGiao(nguoiGiao);
         giaoCa.setNguoiNhan(nguoiNhan);
@@ -143,11 +153,14 @@ public class GiaoCaService {
 
     // Xóa giao ca
     public void delete(Long id) {
+        if (id == null) throw new IllegalArgumentException("giaoCa id must not be null");
         GiaoCa giaoCa = giaoCaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao ca ID: " + id));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy giao ca ID: " + id));
         giaoCaRepository.delete(giaoCa);
     }
     public GiaoCa xacNhanCa(Long giaoCaId, GiaoCaRequest req) {
+        if (giaoCaId == null) throw new IllegalArgumentException("giaoCaId must not be null");
+        if (req == null) throw new IllegalArgumentException("GiaoCaRequest must not be null");
         GiaoCa giaoCa = getById(giaoCaId);
 
         if (!giaoCa.getNguoiNhan().getId().equals(req.getNguoiNhanId())) {
@@ -166,6 +179,7 @@ public class GiaoCaService {
 
     @Transactional
     public Optional<GiaoCa> findPendingCaByUser(Integer nhanVienId) {
+        if (nhanVienId == null) throw new IllegalArgumentException("nhanVienId must not be null");
         // Giả sử "Chưa xác nhận" là trạng thái "Chờ xác nhận", bạn có thể thay đổi trạng thái này theo yêu cầu
         return giaoCaRepository.findByNguoiNhanIdAndTrangThaiXacNhan(nhanVienId, "Chưa xác nhận");
     }

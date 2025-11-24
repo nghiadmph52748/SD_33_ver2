@@ -1,5 +1,8 @@
 <template>
   <div class="staff-management-page">
+    <!-- Breadcrumb -->
+    <Breadcrumb :items="breadcrumbItems" />
+
     <!-- Filters and Search -->
     <a-card class="filters-card">
       <a-form :model="boLoc" layout="vertical">
@@ -160,6 +163,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import useBreadcrumb from '@/hooks/breadcrumb'
 import { Message } from '@arco-design/web-vue'
 import * as XLSX from 'xlsx'
 import { layDanhSachNhanVien, capNhatNhanVien } from '@/api/nhan-vien'
@@ -250,6 +255,7 @@ const cancelToggleStatus = () => {
 }
 
 // Breadcrumb setup
+const { breadcrumbItems } = useBreadcrumb()
 // Modal and for
 const router = useRouter()
 
@@ -262,7 +268,7 @@ const navigateToAddStaff = () => {
 
 const goToEdit = (record: any) => {
   if (!record?.id) {
-    // console.error(' record không có id:', record)
+    // console.error('❌ record không có id:', record)
     return
   }
   router.push({ name: 'Updatenhanvien', params: { id: record.id } })
@@ -353,6 +359,7 @@ const timKiemNhanVien = async () => {
 
       // Map dữ liệu
       const mappedData = filtered.map((item: any, index: number) => {
+        const tenQuyenHanMap = item.idQuyenHan === 1 ? 'Quản lý' : 'Nhân viên'
         return {
           id: item.id,
           stt: index + 1,
@@ -367,7 +374,7 @@ const timKiemNhanVien = async () => {
           quan: item.quan,
           phuong: item.phuong,
           diaChi: item.diaChiCuThe,
-          tenQuyenHan: item.tenQuyenHan,
+          tenQuyenHan: tenQuyenHanMap,
           idQuyenHan: item.idQuyenHan,
           trangThai: Boolean(item.trangThai),
           anhNhanVien: item.anhNhanVien ? `/uploads/${item.anhNhanVien}` : null,
@@ -376,15 +383,15 @@ const timKiemNhanVien = async () => {
       })
       mappedData.sort((a, b) => b.id - a.id)
 
-      //  Đánh lại STT sau khi sắp xếp
+      // ✅ Đánh lại STT sau khi sắp xếp
       mappedData.forEach((item, index) => {
         item.stt = index + 1
       })
       danhSachNhanVien.value = mappedData
       phanTrang.total = mappedData.length
     }
-  } catch (_) {
-    Message.error('Không thể tải dữ liệu nhân viên')
+    // } catch (_) {
+    //   Message.error('Không thể tải dữ liệu nhân viên')
   } finally {
     loading.value = false
   }
@@ -484,7 +491,7 @@ onMounted(async () => {
   padding: 6px 8px;
 }
 .staff-management-page {
-  padding: 16px 20px;
+  padding: 0 20px 20px 20px;
 }
 
 .stats-grid {

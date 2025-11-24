@@ -1,5 +1,8 @@
 <template>
   <div class="edit-employee-page">
+    <!-- Breadcrumb -->
+    <Breadcrumb :items="breadcrumbItems" />
+
     <!-- Card 1: Thông tin nhân viên -->
     <a-card title="Thông tin nhân viên" :loading="loading">
       <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">
@@ -138,8 +141,8 @@
                       :src="previewUrl || formData.anhNhanVien"
                       alt="Ảnh nhân viên"
                       class="preview-image"
-                      @load="console.log(' Ảnh đã load thành công')"
-                      @error="console.error(' Lỗi load ảnh:', $event)"
+                      @load="console.log('✅ Ảnh đã load thành công')"
+                      @error="console.error('❌ Lỗi load ảnh:', $event)"
                     />
                     <div class="image-overlay">
                       <a-button type="text" size="small" @click="removeImage" class="remove-button">
@@ -281,6 +284,8 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
+import useBreadcrumb from '@/hooks/breadcrumb'
 import { layChiTietNhanVien, capNhatNhanVien, type NhanVienRequest } from '@/api/nhan-vien'
 import { Modal, Message } from '@arco-design/web-vue'
 import { IconUpload, IconClose, IconSave } from '@arco-design/web-vue/es/icon'
@@ -288,6 +293,7 @@ import { useUserStore } from '@/store'
 
 const route = useRoute()
 const router = useRouter()
+const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 const loading = ref(false)
 const formRef = ref(null)
@@ -435,7 +441,7 @@ const handleNativeFileChange = async (event: Event) => {
     }
 
     reader.onerror = (error) => {
-      console.error(' FileReader error:', error)
+      console.error('❌ FileReader error:', error)
       Message.error('Không thể đọc file ảnh!')
       selectedFiles.value = []
       previewUrl.value = ''
@@ -444,7 +450,7 @@ const handleNativeFileChange = async (event: Event) => {
 
     reader.readAsDataURL(file)
   } catch (error) {
-    console.error(' Lỗi khi xử lý file:', error)
+    console.error('❌ Lỗi khi xử lý file:', error)
     Message.error('Lỗi khi xử lý file ảnh!')
     selectedFiles.value = []
     previewUrl.value = ''
@@ -468,18 +474,18 @@ const removeImage = () => {
 // load dữ liệu nhân viên
 onMounted(async () => {
   try {
-    console.log(' Loading nhân viên với ID:', id)
+    console.log('🔍 Loading nhân viên với ID:', id)
     const res = await layChiTietNhanVien(id)
-    console.log(' Response từ API:', res)
-    console.log(' Data nhân viên:', res.data)
-    console.log(' Ảnh nhân viên từ API:', res.data.anhNhanVien)
+    console.log('📦 Response từ API:', res)
+    console.log('👤 Data nhân viên:', res.data)
+    console.log('🖼️ Ảnh nhân viên từ API:', res.data.anhNhanVien)
 
     formData.value = res.data
 
-    console.log(' FormData sau khi set:', formData.value)
-    console.log(' Ảnh trong formData:', formData.value.anhNhanVien)
+    console.log('✅ FormData sau khi set:', formData.value)
+    console.log('🖼️ Ảnh trong formData:', formData.value.anhNhanVien)
   } catch (error) {
-    console.error(' Lỗi load nhân viên:', error)
+    console.error('❌ Lỗi load nhân viên:', error)
     Message.error('Không thể tải dữ liệu nhân viên')
   }
 })
@@ -540,14 +546,14 @@ const handleSubmit = async () => {
     }
 
     if (formData.value.id) {
-      //  Tự động tạo tên tài khoản từ email
+      // ✅ Tự động tạo tên tài khoản từ email
       const emailUsername = formData.value.email.split('@')[0]
       formData.value.tenTaiKhoan = emailUsername
 
-      //  Tạo FormData để gửi file giống như component thêm
+      // ✅ Tạo FormData để gửi file giống như component thêm
       const submitFormData = new FormData()
 
-      console.log(' Updating:', formData.value.tenNhanVien, '- Files:', selectedFiles.value.length)
+      console.log('🔄 Updating:', formData.value.tenNhanVien, '- Files:', selectedFiles.value.length)
 
       // Thêm thông tin nhân viên
       Object.keys(formData.value).forEach((key) => {
@@ -573,11 +579,11 @@ const handleSubmit = async () => {
         })
       }
 
-      //  Gửi request với FormData giống như component thêm
+      // ✅ Gửi request với FormData giống như component thêm
       await capNhatNhanVien(formData.value.id, submitFormData)
 
       Message.success('Cập nhật nhân viên thành công!')
-      router.push({ name: 'QuanLyNhanVien' }) //  SPA routing với route name
+      router.push({ name: 'QuanLyNhanVien' }) // ✅ SPA routing với route name
     } else {
       Message.error('Không tìm thấy ID nhân viên')
     }
@@ -607,13 +613,13 @@ const cancelUpdateEmployee = () => {
 }
 
 const handleCancel = () => {
-  router.push({ name: 'QuanLyNhanVien' }) //  SPA routing với route name
+  router.push({ name: 'QuanLyNhanVien' }) // ✅ SPA routing với route name
 }
 </script>
 
 <style scoped>
 .edit-employee-page {
-  padding: 16px 20px;
+  padding: 0 20px 20px 20px;
 }
 
 .upload-container {
