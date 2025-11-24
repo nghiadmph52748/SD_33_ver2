@@ -45,7 +45,8 @@ public class VnPayController {
             HttpServletRequest http) {
         try {
             String ip = getClientIp(http);
-            VnpayCreatePaymentResponse response = vnPayService.createPayment(req, ip);
+            String origin = http.getHeader("Origin");
+            VnpayCreatePaymentResponse response = vnPayService.createPayment(req, ip, origin);
 
             // Persist a pending order for tracking
             OrderPayment op = new OrderPayment();

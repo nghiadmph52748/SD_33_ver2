@@ -31,7 +31,7 @@ public class VnPayService {
 
     private final Environment env;
 
-    public VnpayCreatePaymentResponse createPayment(VnpayCreatePaymentRequest req, String clientIp) {
+    public VnpayCreatePaymentResponse createPayment(VnpayCreatePaymentRequest req, String clientIp, String origin) {
         try {
             String vnpTmnCode = get("vnp.tmnCode", "");
             String vnpHashSecret = get("vnp.hashSecret", "");
@@ -64,7 +64,9 @@ public class VnPayService {
             cal.add(Calendar.MINUTE, 15);
             String expireDate = new SimpleDateFormat("yyyyMMddHHmmss").format(cal.getTime());
 
-            String clientBase = get("app.frontendUrl", "http://localhost:5173");
+            // Detect frontend URL from Origin header, or use configured default
+            // banHangMain runs on port 5174, admin view runs on 5173
+            String clientBase = StringUtils.hasText(origin) ? origin : get("app.frontendUrl", "http://localhost:5173");
             String returnUrlWithClient = vnpReturnUrl + (vnpReturnUrl.contains("?") ? "&" : "?")
                     + "client=" + URLEncoder.encode(clientBase, StandardCharsets.UTF_8);
 
