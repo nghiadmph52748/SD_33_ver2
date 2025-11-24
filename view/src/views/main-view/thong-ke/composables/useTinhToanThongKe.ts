@@ -20,11 +20,31 @@ export function useTinhToanThongKe(
   t: (key: string, params?: Record<string, any>) => string
 ) {
   // ============= HELPER FUNCTIONS =============
-  const laHoaDonDaThanhToan = (hoaDon: HoaDon) => hoaDon?.trangThai === true || !!hoaDon?.ngayThanhToan
+  // Chỉ tính doanh thu khi đơn hàng đã được thanh toán (có ngayThanhToan)
+  const laHoaDonDaThanhToan = (hoaDon: HoaDon) => {
+    // Kiểm tra có ngày thanh toán và trạng thái hoàn thành
+    return !!hoaDon?.ngayThanhToan && hoaDon?.trangThai === true
+  }
 
-  const layTongTienHoaDon = (hoaDon: HoaDon) => {
-    const soTien = Number(hoaDon?.tongTienSauGiam ?? hoaDon?.tongTien ?? 0)
+  // Tính tổng tiền gốc (trước khi giảm giá)
+  const layTongTienGocHoaDon = (hoaDon: HoaDon) => {
+    const soTien = Number(hoaDon?.tongTien ?? 0)
     return Number.isNaN(soTien) ? 0 : soTien
+  }
+
+  // Tính số tiền đã giảm giá
+  const laySoTienGiamGiaHoaDon = (hoaDon: HoaDon) => {
+    const tongTien = Number(hoaDon?.tongTien ?? 0)
+    const tongTienSauGiam = Number(hoaDon?.tongTienSauGiam ?? hoaDon?.tongTien ?? 0)
+    const soTienGiam = tongTien - tongTienSauGiam
+    return Number.isNaN(soTienGiam) ? 0 : Math.max(0, soTienGiam)
+  }
+
+  // Tính doanh thu thực (tổng tiền - tiền giảm giá)
+  const layDoanhThuThucHoaDon = (hoaDon: HoaDon) => {
+    const tongTienGoc = layTongTienGocHoaDon(hoaDon)
+    const tienGiamGia = laySoTienGiamGiaHoaDon(hoaDon)
+    return tongTienGoc - tienGiamGia
   }
 
   const layChiTietHoaDon = (hoaDon: HoaDon) => {
@@ -50,11 +70,21 @@ export function useTinhToanThongKe(
     }, 0)
   }
 
-  const tinhDoanhThu = (danhSachHoaDon: HoaDon[]) => {
+  // Cập nhật hàm tính doanh thu thực
+  const tinhDoanhThuThuc = (danhSachHoaDon: HoaDon[]) => {
     return danhSachHoaDon
       .filter((hoaDon) => laHoaDonDaThanhToan(hoaDon))
       .reduce((tong: number, hoaDon: HoaDon) => {
-        return tong + layTongTienHoaDon(hoaDon)
+        return tong + layDoanhThuThucHoaDon(hoaDon)
+      }, 0)
+  }
+
+  // Cập nhật hàm tính tổng tiền gốc
+  const tinhTongTienGoc = (danhSachHoaDon: HoaDon[]) => {
+    return danhSachHoaDon
+      .filter((hoaDon) => laHoaDonDaThanhToan(hoaDon))
+      .reduce((tong: number, hoaDon: HoaDon) => {
+        return tong + layTongTienGocHoaDon(hoaDon)
       }, 0)
   }
 
@@ -62,10 +92,7 @@ export function useTinhToanThongKe(
     return danhSachHoaDon
       .filter((hoaDon) => laHoaDonDaThanhToan(hoaDon))
       .reduce((tong: number, hoaDon: HoaDon) => {
-        const tongTien = Number(hoaDon?.tongTien ?? 0)
-        const tongTienSauGiam = Number(hoaDon?.tongTienSauGiam ?? hoaDon?.tongTien ?? 0)
-        const soTienGiam = tongTien - tongTienSauGiam
-        return tong + (Number.isNaN(soTienGiam) ? 0 : Math.max(0, soTienGiam))
+        return tong + laySoTienGiamGiaHoaDon(hoaDon)
       }, 0)
   }
 
@@ -136,8 +163,8 @@ export function useTinhToanThongKe(
       const ngayHoaDon = new Date(hoaDon.ngayTao)
       return ngayHoaDon >= homQua && ngayHoaDon < homNay
     })
-    const doanhThuHomQua = tinhDoanhThu(hoaDonHomQua)
-    const doanhThuHomNay = tinhDoanhThu(hoaDonHomNay)
+    const doanhThuHomQua = tinhDoanhThuThuc(hoaDonHomQua)
+    const doanhThuHomNay = tinhDoanhThuThuc(hoaDonHomNay)
     const tangTruong = doanhThuHomQua > 0 
       ? Math.round(((doanhThuHomNay - doanhThuHomQua) / doanhThuHomQua) * 100 * 100) / 100
       : (doanhThuHomNay > 0 ? 100 : 0)
@@ -174,8 +201,8 @@ export function useTinhToanThongKe(
       const ngayHoaDon = new Date(hoaDon.ngayTao)
       return ngayHoaDon >= dauTuanTruoc && ngayHoaDon < cuoiTuanTruoc
     })
-    const doanhThuTuanTruoc = tinhDoanhThu(hoaDonTuanTruoc)
-    const doanhThuTuan = tinhDoanhThu(hoaDonTuan)
+    const doanhThuTuanTruoc = tinhDoanhThuThuc(hoaDonTuanTruoc)
+    const doanhThuTuan = tinhDoanhThuThuc(hoaDonTuan)
     const tangTruong = doanhThuTuanTruoc > 0 
       ? Math.round(((doanhThuTuan - doanhThuTuanTruoc) / doanhThuTuanTruoc) * 100 * 100) / 100
       : (doanhThuTuan > 0 ? 100 : 0)
@@ -208,8 +235,8 @@ export function useTinhToanThongKe(
       const ngayHoaDon = new Date(hoaDon.ngayTao)
       return ngayHoaDon >= dauThangTruoc && ngayHoaDon < cuoiThangTruoc
     })
-    const doanhThuThangTruoc = tinhDoanhThu(hoaDonThangTruoc)
-    const doanhThuThang = tinhDoanhThu(hoaDonThang)
+    const doanhThuThangTruoc = tinhDoanhThuThuc(hoaDonThangTruoc)
+    const doanhThuThang = tinhDoanhThuThuc(hoaDonThang)
     const tangTruong = doanhThuThangTruoc > 0 
       ? Math.round(((doanhThuThang - doanhThuThangTruoc) / doanhThuThangTruoc) * 100 * 100) / 100
       : (doanhThuThang > 0 ? 100 : 0)
@@ -242,8 +269,8 @@ export function useTinhToanThongKe(
       const ngayHoaDon = new Date(hoaDon.ngayTao)
       return ngayHoaDon >= dauNamTruoc && ngayHoaDon < cuoiNamTruoc
     })
-    const doanhThuNamTruoc = tinhDoanhThu(hoaDonNamTruoc)
-    const doanhThuNam = tinhDoanhThu(hoaDonNam)
+    const doanhThuNamTruoc = tinhDoanhThuThuc(hoaDonNamTruoc)
+    const doanhThuNam = tinhDoanhThuThuc(hoaDonNam)
     const tangTruong = doanhThuNamTruoc > 0 
       ? Math.round(((doanhThuNam - doanhThuNamTruoc) / doanhThuNamTruoc) * 100 * 100) / 100
       : (doanhThuNam > 0 ? 100 : 0)
@@ -285,7 +312,7 @@ export function useTinhToanThongKe(
         const nam = ngay.getFullYear()
         const thang = ngay.getMonth()
         const viTri = cacThang.findIndex((t) => t.year === nam && t.monthIndex === thang)
-        if (viTri >= 0) tongTien[viTri] += layTongTienHoaDon(hd)
+        if (viTri >= 0) tongTien[viTri] += layTongTienGocHoaDon(hd)
       })
 
     duLieuDoanhThu.value = cacThang.map((t, idx) => ({ month: t.label, revenue: tongTien[idx] }))
