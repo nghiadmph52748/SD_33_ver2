@@ -242,7 +242,7 @@ public class QRSessionService {
 
             String clientIp = "127.0.0.1";
             org.example.be_sp.model.response.VnpayCreatePaymentResponse vnpayResponse = 
-                vnPayService.createPayment(vnpayRequest, clientIp);
+                vnPayService.createPayment(vnpayRequest, clientIp, null);
 
             if (vnpayResponse != null && vnpayResponse.getPayUrl() != null) {
                 // VNPAY payment URL when encoded as QR code IS the banking QR format
