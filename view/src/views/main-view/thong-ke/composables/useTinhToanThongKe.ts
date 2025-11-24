@@ -322,6 +322,8 @@ export function useTinhToanThongKe(
   const duLieuSanPhamBanChay = ref<SanPhamBanChay[]>([])
 
   const xayDungDuLieuSanPhamBanChay = (kyThongKe: string = 'month') => {
+    console.log('🔍 Bắt đầu xây dựng dữ liệu sản phẩm bán chạy cho kỳ:', kyThongKe)
+    
     const map: Record<string, SanPhamBanChay> = {}
     const hienTai = new Date()
     
@@ -336,6 +338,7 @@ export function useTinhToanThongKe(
         const cuoiTuan = new Date(dauTuan)
         cuoiTuan.setDate(dauTuan.getDate() + 7)
         hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          if (!laHoaDonDaThanhToan(hd)) return false
           const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
           if (!ngayStr) return false
           const ngayHD = new Date(ngayStr)
@@ -351,6 +354,7 @@ export function useTinhToanThongKe(
         const cuoiThang = new Date(hienTai.getFullYear(), hienTai.getMonth() + 1, 1)
         cuoiThang.setHours(0, 0, 0, 0)
         hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          if (!laHoaDonDaThanhToan(hd)) return false
           const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
           if (!ngayStr) return false
           const ngayHD = new Date(ngayStr)
@@ -360,57 +364,18 @@ export function useTinhToanThongKe(
         })
         break
       }
-      case 'quarter1': {
-        const dauQuy = new Date(hienTai.getFullYear(), 0, 1)
-        dauQuy.setHours(0, 0, 0, 0)
-        const cuoiQuy = new Date(hienTai.getFullYear(), 3, 1)
-        cuoiQuy.setHours(0, 0, 0, 0)
-        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
-          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
-          if (!ngayStr) return false
-          const ngayHD = new Date(ngayStr)
-          if (Number.isNaN(ngayHD.getTime())) return false
-          ngayHD.setHours(0, 0, 0, 0)
-          return ngayHD >= dauQuy && ngayHD < cuoiQuy
-        })
-        break
-      }
-      case 'quarter2': {
-        const dauQuy = new Date(hienTai.getFullYear(), 3, 1)
-        dauQuy.setHours(0, 0, 0, 0)
-        const cuoiQuy = new Date(hienTai.getFullYear(), 6, 1)
-        cuoiQuy.setHours(0, 0, 0, 0)
-        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
-          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
-          if (!ngayStr) return false
-          const ngayHD = new Date(ngayStr)
-          if (Number.isNaN(ngayHD.getTime())) return false
-          ngayHD.setHours(0, 0, 0, 0)
-          return ngayHD >= dauQuy && ngayHD < cuoiQuy
-        })
-        break
-      }
-      case 'quarter3': {
-        const dauQuy = new Date(hienTai.getFullYear(), 6, 1)
-        dauQuy.setHours(0, 0, 0, 0)
-        const cuoiQuy = new Date(hienTai.getFullYear(), 9, 1)
-        cuoiQuy.setHours(0, 0, 0, 0)
-        hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
-          const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
-          if (!ngayStr) return false
-          const ngayHD = new Date(ngayStr)
-          if (Number.isNaN(ngayHD.getTime())) return false
-          ngayHD.setHours(0, 0, 0, 0)
-          return ngayHD >= dauQuy && ngayHD < cuoiQuy
-        })
-        break
-      }
+      case 'quarter1': 
+      case 'quarter2': 
+      case 'quarter3': 
       case 'quarter4': {
-        const dauQuy = new Date(hienTai.getFullYear(), 9, 1)
+        const quyMap = { 'quarter1': 0, 'quarter2': 3, 'quarter3': 6, 'quarter4': 9 }
+        const thangBatDau = quyMap[kyThongKe as keyof typeof quyMap]
+        const dauQuy = new Date(hienTai.getFullYear(), thangBatDau, 1)
         dauQuy.setHours(0, 0, 0, 0)
-        const cuoiQuy = new Date(hienTai.getFullYear() + 1, 0, 1)
+        const cuoiQuy = new Date(hienTai.getFullYear(), thangBatDau + 3, 1)
         cuoiQuy.setHours(0, 0, 0, 0)
         hoaDonLoc = danhSachHoaDon.value.filter((hd) => {
+          if (!laHoaDonDaThanhToan(hd)) return false
           const ngayStr = hd?.ngayThanhToan ?? hd?.ngayTao
           if (!ngayStr) return false
           const ngayHD = new Date(ngayStr)
@@ -421,30 +386,52 @@ export function useTinhToanThongKe(
         break
       }
       default: {
-        hoaDonLoc = danhSachHoaDon.value
+        hoaDonLoc = danhSachHoaDon.value.filter((hd) => laHoaDonDaThanhToan(hd))
         break
       }
     }
     
-    hoaDonLoc
-      .filter((hd) => laHoaDonDaThanhToan(hd))
-      .forEach((hd) => {
-        const items = Array.isArray(hd.items) ? hd.items : []
-        items.forEach((item: any) => {
-          const ten = item?.tenSanPham ?? 'Không rõ'
-          const soLuong = Number(item?.soLuong ?? 0)
-          const doanhThuDong = Number(item?.thanhTien ?? Number(item?.giaBan ?? 0) * soLuong)
-          if (!map[ten]) {
-            map[ten] = { name: ten, value: 0, revenue: 0 }
+    console.log('📊 Số hóa đơn đã thanh toán trong kỳ:', hoaDonLoc.length)
+    
+    hoaDonLoc.forEach((hd) => {
+      // Lấy chi tiết từ cả 2 nguồn: items và hoaDonChiTiets
+      const chiTietItems = layChiTietHoaDon(hd)
+      
+      console.log('🧾 Hóa đơn ID:', hd.id, 'có', chiTietItems.length, 'sản phẩm')
+      
+      chiTietItems.forEach((item: any) => {
+        // Lấy tên sản phẩm từ nhiều nguồn khác nhau
+        const tenSanPham = 
+          item?.tenSanPham ||
+          item?.idChiTietSanPham?.idSanPham?.tenSanPham ||
+          item?.sanPham?.tenSanPham ||
+          item?.tenSanPhamChiTiet ||
+          'Sản phẩm không xác định'
+        
+        const soLuong = Number(item?.soLuong ?? 0)
+        const giaBan = Number(item?.giaBan ?? item?.donGia ?? 0)
+        const thanhTien = Number(item?.thanhTien ?? giaBan * soLuong)
+        
+        console.log('🛍️ Sản phẩm:', tenSanPham, '- SL:', soLuong, '- Giá:', giaBan, '- Thành tiền:', thanhTien)
+        
+        if (tenSanPham && tenSanPham !== 'Sản phẩm không xác định' && soLuong > 0) {
+          if (!map[tenSanPham]) {
+            map[tenSanPham] = { name: tenSanPham, value: 0, revenue: 0 }
           }
-          map[ten].value += Number.isNaN(soLuong) ? 0 : soLuong
-          map[ten].revenue += Number.isNaN(doanhThuDong) ? 0 : doanhThuDong
-        })
+          map[tenSanPham].value += soLuong
+          map[tenSanPham].revenue += thanhTien
+        }
       })
+    })
 
-    duLieuSanPhamBanChay.value = Object.values(map)
+    const ketQua = Object.values(map)
+      .filter(sp => sp.value > 0) // Chỉ lấy sản phẩm đã bán
       .sort((a, b) => b.value - a.value || b.revenue - a.revenue)
       .slice(0, 5)
+    
+    console.log('🏆 Top 5 sản phẩm bán chạy:', ketQua)
+    
+    duLieuSanPhamBanChay.value = ketQua
   }
 
   // ============= DỮ LIỆU TRẠNG THÁI ĐƠN HÀNG =============
@@ -555,71 +542,98 @@ export function useTinhToanThongKe(
   // ============= DỮ LIỆU DANH MỤC =============
   const duLieuDanhMuc = ref<DuLieuDanhMuc[]>([])
 
-  const phanLoaiSanPham = (tenSanPham: string): string => {
-    const ten = tenSanPham.toLowerCase()
-
-    if (
-      ten.includes('sneaker') ||
-      ten.includes('giày thể thao') ||
-      ten.includes('running') ||
-      ten.includes('basketball') ||
-      ten.includes('tennis')
-    ) {
-      return t('thongKe.category.sports')
+  // Phân loại sản phẩm theo mức độ bán chạy thay vì theo loại giày
+  const phanLoaiTheoBanChay = (soLuongBan: number): string => {
+    if (soLuongBan >= 50) {
+      return 'Bán cực chạy (50+ sản phẩm)'
     }
-    if (ten.includes('chạy') || ten.includes('marathon') || ten.includes('jogging')) {
-      return t('thongKe.category.running')
+    if (soLuongBan >= 20) {
+      return 'Bán chạy (20-49 sản phẩm)'
     }
-    if (ten.includes('bóng đá') || ten.includes('football') || ten.includes('soccer')) {
-      return t('thongKe.category.football')
+    if (soLuongBan >= 5) {
+      return 'Bán vừa (5-19 sản phẩm)'
     }
-    if (ten.includes('bóng rổ') || ten.includes('basketball')) {
-      return t('thongKe.category.basketball')
-    }
-    if (ten.includes('tennis') || ten.includes('quần vợt')) {
-      return t('thongKe.category.tennis')
-    }
-    if (ten.includes('lifestyle') || ten.includes('casual') || ten.includes('street')) {
-      return t('thongKe.category.lifestyle')
-    }
-    if (ten.includes('cao gót') || ten.includes('heels')) {
-      return t('thongKe.category.heels')
-    }
-    if (ten.includes('boot') || ten.includes('bốt')) {
-      return t('thongKe.category.boots')
-    }
-    if (ten.includes('sandal') || ten.includes('dép')) {
-      return t('thongKe.category.sandals')
-    }
-    return t('thongKe.category.other')
+    return 'Bán ít (1-4 sản phẩm)'
   }
 
   const capNhatDuLieuDanhMuc = () => {
-    const demDanhMuc = new Map<string, number>()
-
-    danhSachHoaDon.value.forEach((hd) => {
-      const chiTiet = layChiTietHoaDon(hd)
-      if (chiTiet.length === 0) return
-      chiTiet.forEach((item: any) => {
-        const tenSP =
-          item?.idChiTietSanPham?.idSanPham?.tenSanPham ||
-          item?.sanPham?.tenSanPham ||
-          item?.tenSanPham ||
-          item?.tenSanPhamChiTiet
-        if (!tenSP) return
-        const danhMuc = phanLoaiSanPham(tenSP)
-        const soLuong = Number(item?.soLuong || 0)
-        const soLuongHopLe = Number.isNaN(soLuong) ? 0 : soLuong
-        demDanhMuc.set(danhMuc, (demDanhMuc.get(danhMuc) || 0) + soLuongHopLe)
+    console.log('🔍 Bắt đầu phân loại sản phẩm theo mức độ bán chạy')
+    
+    // Tính tổng số lượng bán cho từng sản phẩm
+    const sanPhamBanMap = new Map<string, number>()
+    
+    danhSachHoaDon.value
+      .filter((hd) => laHoaDonDaThanhToan(hd))
+      .forEach((hd) => {
+        const chiTiet = layChiTietHoaDon(hd)
+        if (chiTiet.length === 0) return
+        
+        chiTiet.forEach((item: any) => {
+          const tenSP = 
+            item?.tenSanPham ||
+            item?.idChiTietSanPham?.idSanPham?.tenSanPham ||
+            item?.sanPham?.tenSanPham ||
+            item?.tenSanPhamChiTiet
+          
+          if (!tenSP) return
+          
+          const soLuong = Number(item?.soLuong || 0)
+          const soLuongHopLe = Number.isNaN(soLuong) ? 0 : soLuong
+          
+          if (soLuongHopLe > 0) {
+            sanPhamBanMap.set(tenSP, (sanPhamBanMap.get(tenSP) || 0) + soLuongHopLe)
+          }
+        })
       })
+
+    console.log('📊 Đã tính toán số lượng bán cho', sanPhamBanMap.size, 'sản phẩm')
+    
+    // Phân loại sản phẩm theo mức độ bán chạy và lưu chi tiết
+    const demMucDoBanChay = new Map<string, { count: number, products: Array<{name: string, quantity: number}> }>()
+    
+    sanPhamBanMap.forEach((soLuongBan, tenSanPham) => {
+      const mucDo = phanLoaiTheoBanChay(soLuongBan)
+      
+      if (!demMucDoBanChay.has(mucDo)) {
+        demMucDoBanChay.set(mucDo, { count: 0, products: [] })
+      }
+      
+      const data = demMucDoBanChay.get(mucDo)!
+      data.count += 1
+      data.products.push({ name: tenSanPham, quantity: soLuongBan })
+      
+      console.log(`🛍️ ${tenSanPham}: ${soLuongBan} sản phẩm → ${mucDo}`)
     })
 
-    const mauSac = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2']
-    duLieuDanhMuc.value = Array.from(demDanhMuc.entries())
-      .map(([name, value]) => ({ name, value, color: '' }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6)
-      .map((item, index) => ({ ...item, color: mauSac[index % mauSac.length] }))
+    const mauSac = ['#ff4d4f', '#faad14', '#52c41a', '#1890ff'] // Đỏ, Cam, Xanh lá, Xanh dương
+    duLieuDanhMuc.value = [
+      { 
+        name: 'Bán cực chạy (50+ sản phẩm)', 
+        value: demMucDoBanChay.get('Bán cực chạy (50+ sản phẩm)')?.count || 0, 
+        color: mauSac[0],
+        products: demMucDoBanChay.get('Bán cực chạy (50+ sản phẩm)')?.products || []
+      },
+      { 
+        name: 'Bán chạy (20-49 sản phẩm)', 
+        value: demMucDoBanChay.get('Bán chạy (20-49 sản phẩm)')?.count || 0, 
+        color: mauSac[1],
+        products: demMucDoBanChay.get('Bán chạy (20-49 sản phẩm)')?.products || []
+      },
+      { 
+        name: 'Bán vừa (5-19 sản phẩm)', 
+        value: demMucDoBanChay.get('Bán vừa (5-19 sản phẩm)')?.count || 0, 
+        color: mauSac[2],
+        products: demMucDoBanChay.get('Bán vừa (5-19 sản phẩm)')?.products || []
+      },
+      { 
+        name: 'Bán ít (1-4 sản phẩm)', 
+        value: demMucDoBanChay.get('Bán ít (1-4 sản phẩm)')?.count || 0, 
+        color: mauSac[3],
+        products: demMucDoBanChay.get('Bán ít (1-4 sản phẩm)')?.products || []
+      },
+    ].filter(item => item.value > 0) // Chỉ hiển thị các mức có sản phẩm
+
+    console.log('📈 Kết quả phân loại theo mức độ bán chạy:', duLieuDanhMuc.value)
   }
 
   // ============= SẢN PHẨM BÁN CHẠY NHẤT =============

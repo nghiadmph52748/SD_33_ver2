@@ -31,17 +31,71 @@ const props = defineProps<Props>()
 const cauHinhBieuDo = computed(() => ({
   tooltip: {
     trigger: 'item',
-    formatter: '{a} <br/>{b}: {c} ({d}%)',
+    formatter: (params: any) => {
+      const data = params.data
+      if (!data.products || data.products.length === 0) {
+        return `${data.name}<br/>Số lượng sản phẩm: ${data.value}`
+      }
+      
+      // Sắp xếp sản phẩm theo số lượng bán giảm dần
+      const sortedProducts = [...data.products].sort((a, b) => b.quantity - a.quantity)
+      
+      let tooltip = `<div style="max-width: 400px;">
+        <div style="font-weight: bold; margin-bottom: 8px; color: ${data.color};">
+          ${data.name}
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong>Tổng số sản phẩm: ${data.value}</strong>
+        </div>
+        <div style="font-size: 12px; color: #666; margin-bottom: 4px;">
+          Chi tiết sản phẩm:
+        </div>`
+      
+      // Hiển thị tối đa 10 sản phẩm để tránh tooltip quá dài
+      const productsToShow = sortedProducts.slice(0, 10)
+      productsToShow.forEach((product) => {
+        tooltip += `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 11px;">
+            <span style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              • ${product.name}
+            </span>
+            <span style="margin-left: 8px; color: #1890ff; font-weight: 500;">
+              ${product.quantity} sp
+            </span>
+          </div>`
+      })
+      
+      // Hiển thị thông báo nếu có nhiều sản phẩm hơn
+      if (sortedProducts.length > 10) {
+        tooltip += `
+          <div style="font-size: 10px; color: #999; margin-top: 4px; font-style: italic;">
+            ... và ${sortedProducts.length - 10} sản phẩm khác
+          </div>`
+      }
+      
+      tooltip += '</div>'
+      return tooltip
+    },
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderColor: '#d9d9d9',
+    borderWidth: 1,
+    textStyle: {
+      color: '#333'
+    },
+    extraCssText: 'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); border-radius: 6px; padding: 12px;'
   },
   legend: {
     orient: 'horizontal',
     left: 'center',
     bottom: 0,
     itemGap: 15,
+    textStyle: {
+      fontSize: 11
+    }
   },
   series: [
     {
-      name: 'Danh mục sản phẩm bán chạy',
+      name: 'Phân loại sản phẩm theo mức độ bán chạy',
       type: 'pie',
       radius: ['40%', '65%'],
       center: ['50%', '45%'],
@@ -54,8 +108,9 @@ const cauHinhBieuDo = computed(() => ({
         },
       },
       label: {
-        formatter: '{b}: {d}%',
-        fontSize: 11,
+        formatter: '{b}: {c} sản phẩm\n({d}%)',
+        fontSize: 10,
+        lineHeight: 14
       },
       labelLine: {
         show: true,

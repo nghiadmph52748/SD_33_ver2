@@ -65,7 +65,7 @@ export default {
   'thongKe.channel.offline': 'Tại quầy',
 
   // Biểu đồ danh mục
-  'thongKe.category.title': 'Danh Mục Sản Phẩm Bán Chạy',
+  'thongKe.category.title': 'Phân Loại Sản Phẩm Theo Mức Độ Bán Chạy',
 
   // Bảng thống kê chi tiết
   'thongKe.detailTable.title': 'Bảng Thống Kê Chi Tiết',
