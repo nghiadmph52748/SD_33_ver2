@@ -10,6 +10,17 @@ interface ApiEnvelope<T> {
   message?: string
 }
 
+export interface ThongTinDonHangModel {
+  id?: number
+  idHoaDon?: number
+  idTrangThaiDonHang?: number
+  tenTrangThaiDonHang?: string
+  thoiGian?: string
+  ghiChu?: string
+  trangThai?: boolean
+  deleted?: boolean
+}
+
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
@@ -95,6 +106,7 @@ export interface HoaDonApiModel {
   moTaLoaiDon?: string
   items?: any[]
   chiTietSanPham?: any[]
+  thongTinDonHangs?: ThongTinDonHangModel[]
 }
 
 export interface BanHangTaiQuayRequest {

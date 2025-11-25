@@ -19,4 +19,12 @@ export default {
   'invoice.common.invoiceCode': 'Invoice Code',
   'invoice.common.customerName': 'Customer Name',
   'invoice.common.searchPlaceholder': 'Invoice code, customer name...',
+
+  // Status tabs
+  'invoice.status.all': 'All',
+  'invoice.status.waitingConfirmation': 'Waiting Confirmation',
+  'invoice.status.confirmed': 'Confirmed',
+  'invoice.status.shipping': 'Shipping',
+  'invoice.status.paid': 'Paid',
+  'invoice.status.cancelled': 'Cancelled',
 }

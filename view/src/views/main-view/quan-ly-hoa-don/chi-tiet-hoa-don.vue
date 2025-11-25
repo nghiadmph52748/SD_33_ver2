@@ -568,7 +568,26 @@ const getHighestPriorityStatusFromInvoice = (): string => {
 // Rebuild logic để đảm bảo mỗi status lấy đúng entry của nó
 const getTimeFromTimeline = (statusKey: string): string => {
   try {
-    // Nếu không có timeline, fallback về invoice dates
+    // Priority 1: Use thongTinDonHangs from invoice (most reliable)
+    if (invoice.value?.thongTinDonHangs && Array.isArray(invoice.value.thongTinDonHangs)) {
+      const statusMap: Record<string, string> = {
+        pending: 'Chờ xác nhận',
+        waiting: 'Đã xác nhận',
+        shipping: 'Đang giao hàng',
+        completed: 'Hoàn thành',
+      }
+
+      const targetStatus = statusMap[statusKey]
+      if (targetStatus) {
+        for (const item of invoice.value.thongTinDonHangs) {
+          if (item.tenTrangThaiDonHang === targetStatus && item.thoiGian) {
+            return formatDateTime(item.thoiGian)
+          }
+        }
+      }
+    }
+
+    // Priority 2: Use timelineData from API (fallback)
     if (!timelineData.value || !Array.isArray(timelineData.value) || timelineData.value.length === 0) {
       if (statusKey === 'completed') {
         return formatDateTime(invoice.value?.ngayThanhToan || invoice.value?.ngayTao)
@@ -886,7 +905,7 @@ const statusStages = computed(() => {
     },
     {
       key: 'waiting',
-      label: 'Chờ giao hàng',
+      label: 'Đã xác nhận',
       icon: IconCheckCircle,
       active: false,
       completed: false,
@@ -894,7 +913,7 @@ const statusStages = computed(() => {
     },
     {
       key: 'shipping',
-      label: 'Đang giao',
+      label: 'Đang giao hàng',
       icon: IconSend,
       active: false,
       completed: false,
@@ -978,7 +997,7 @@ const statusStages = computed(() => {
       },
       {
         key: 'shipping',
-        label: 'Đang giao',
+        label: 'Đang giao hàng',
         icon: IconSend,
         active: false,
         completed: false,
@@ -1002,7 +1021,7 @@ const statusStages = computed(() => {
       stages[1].time = 'N/A'
       stages[2].time = 'N/A'
       stages[3].time = 'N/A'
-    } else if (currentStatus === 'Đã xác nhận' || currentStatus === 'Chờ giao hàng') {
+    } else if (currentStatus === 'Đã xác nhận') {
       stages[0].completed = true
       stages[1].active = true
       stages[1].completed = true
@@ -1220,8 +1239,30 @@ const paymentHistory = computed(() => {
 // Invoice history
 const invoiceHistory = computed(() => {
   const history: Array<{ action: string; userCode: string; date: string }> = []
-  const timeline = timelineData.value || []
 
+  // Priority 1: Use thongTinDonHangs from invoice (most reliable)
+  if (invoice.value?.thongTinDonHangs && Array.isArray(invoice.value.thongTinDonHangs) && invoice.value.thongTinDonHangs.length > 0) {
+    const sorted = [...invoice.value.thongTinDonHangs].sort((a, b) => {
+      const timeA = a.thoiGian ? new Date(a.thoiGian).getTime() : 0
+      const timeB = b.thoiGian ? new Date(b.thoiGian).getTime() : 0
+      return timeB - timeA
+    })
+
+    sorted.forEach((item) => {
+      if (item.tenTrangThaiDonHang && item.thoiGian) {
+        history.push({
+          action: item.tenTrangThaiDonHang,
+          userCode: item.ghiChu || invoice.value?.tenNhanVien || invoice.value?.maNhanVien || 'Hệ thống',
+          date: item.thoiGian,
+        })
+      }
+    })
+
+    return history
+  }
+
+  // Priority 2: Use timelineData from API (fallback)
+  const timeline = timelineData.value || []
   if (timeline.length > 0) {
     const sorted = [...timeline].sort((a, b) => {
       const timeA = a.thoiGian ? new Date(a.thoiGian).getTime() : 0
@@ -1240,6 +1281,7 @@ const invoiceHistory = computed(() => {
     return history
   }
 
+  // Fallback: Use ngayTao and ngayThanhToan
   if (invoice.value?.ngayTao) {
     history.push({
       action: 'Tạo hóa đơn',
@@ -2115,6 +2157,7 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  padding: 8px 0;
   position: relative;
   padding-left: 8px;
 }

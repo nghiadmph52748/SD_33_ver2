@@ -59,7 +59,7 @@
             <a-tab-pane key="all">
               <template #title>
                 <span class="tab-title">
-                  {{ t('invoice.common.all') }}
+                  {{ t('invoice.status.all') }}
                   <a-badge :count="totalInvoices" :number-style="{ backgroundColor: '#165dff' }" />
                 </span>
               </template>
@@ -67,15 +67,15 @@
             <a-tab-pane key="waiting_confirmation">
               <template #title>
                 <span class="tab-title">
-                  {{ t('invoice.common.waitingConfirmation') }}
+                  {{ t('invoice.status.waitingConfirmation') }}
                   <a-badge :count="waitingConfirmationInvoices" :number-style="{ backgroundColor: '#ff7d00' }" />
                 </span>
               </template>
             </a-tab-pane>
-            <a-tab-pane key="waiting_delivery">
+            <a-tab-pane key="confirmed">
               <template #title>
                 <span class="tab-title">
-                  {{ t('invoice.common.waitingDelivery') }}
+                  {{ t('invoice.status.confirmed') }}
                   <a-badge :count="waitingDeliveryInvoices" :number-style="{ backgroundColor: '#ff7d00' }" />
                 </span>
               </template>
@@ -83,7 +83,7 @@
             <a-tab-pane key="shipping">
               <template #title>
                 <span class="tab-title">
-                  {{ t('invoice.common.shipping') }}
+                  {{ t('invoice.status.shipping') }}
                   <a-badge :count="shippingInvoices" :number-style="{ backgroundColor: '#165dff' }" />
                 </span>
               </template>
@@ -91,7 +91,7 @@
             <a-tab-pane key="paid">
               <template #title>
                 <span class="tab-title">
-                  {{ t('invoice.common.paid') }}
+                  {{ t('invoice.status.paid') }}
                   <a-badge :count="paidInvoices" :number-style="{ backgroundColor: '#00b42a' }" />
                 </span>
               </template>
@@ -99,7 +99,7 @@
             <a-tab-pane key="cancelled">
               <template #title>
                 <span class="tab-title">
-                  {{ t('invoice.common.cancelled') }}
+                  {{ t('invoice.status.cancelled') }}
                   <a-badge :count="cancelledInvoices" :number-style="{ backgroundColor: '#f53f3f' }" />
                 </span>
               </template>
@@ -433,31 +433,20 @@ const invoices = computed(() => {
   // Filter theo tab (trạng thái)
   if (activeTab.value !== 'all') {
     if (activeTab.value === 'paid') {
-      // Đã thanh toán: trangThai = true hoặc có ngayThanhToan
-      filtered = filtered.filter((invoice) => invoice.trangThai === true || invoice.ngayThanhToan)
+      // Đã thanh toán: ngayThanhToan có giá trị
+      filtered = filtered.filter((invoice) => invoice.ngayThanhToan)
     } else if (activeTab.value === 'waiting_confirmation') {
-      // Chờ xác nhận: trangThai = false, không có ngayThanhToan, và không có trạng thái giao hàng
-      filtered = filtered.filter((invoice) => {
-        return invoice.trangThai === false && !invoice.ngayThanhToan && !invoice.trangThaiGiaoHang
-      })
-    } else if (activeTab.value === 'waiting_delivery') {
-      // Chờ giao hàng: đã xác nhận nhưng chưa giao
-      filtered = filtered.filter((invoice) => {
-        return invoice.trangThai === true && !invoice.ngayThanhToan && invoice.trangThaiGiaoHang === 'waiting_delivery'
-      })
+      // Chờ xác nhận
+      filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Chờ xác nhận')
+    } else if (activeTab.value === 'confirmed') {
+      // Đã xác nhận
+      filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Đã xác nhận')
     } else if (activeTab.value === 'shipping') {
-      // Đang giao: trạng thái đang giao hàng
-      filtered = filtered.filter((invoice) => {
-        return invoice.trangThaiGiaoHang === 'shipping' || invoice.trangThaiGiaoHang === 'Đang giao'
-      })
-    } else if (activeTab.value === 'pending') {
-      // Chờ thanh toán (giữ lại cho tương thích)
-      filtered = filtered.filter((invoice) => invoice.trangThai === false && !invoice.ngayThanhToan)
+      // Đang giao: bao gồm "Đang giao hàng"
+      filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Đang giao hàng')
     } else if (activeTab.value === 'cancelled') {
       // Đã hủy
-      filtered = filtered.filter((invoice) => {
-        return invoice.trangThai === false && !invoice.ngayThanhToan && invoice.trangThaiGiaoHang === 'cancelled'
-      })
+      filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Đã huỷ')
     }
   }
 
@@ -605,75 +594,30 @@ const getStatusColorByName = (statusName: string): string => {
 
 // API functions
 const calculateStatistics = () => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const todayStr = today.toISOString().split('T')[0]
-
   totalInvoices.value = invoicesList.value.length
 
-  // Đếm hóa đơn hôm nay
-  todayInvoices.value = invoicesList.value.filter((invoice) => {
-    const dateStr = invoice.thoiGianTao || invoice.ngayTao || invoice.createdAt
-    if (!dateStr) return false
-    const invoiceDate = new Date(dateStr)
-    if (isNaN(invoiceDate.getTime())) return false
-    return invoiceDate.toISOString().split('T')[0] === todayStr
-  }).length
-
   // Đếm hóa đơn đã thanh toán
-  paidInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThai === true || invoice.ngayThanhToan).length
-
-  // Đếm hóa đơn chờ thanh toán
-  pendingInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThai === false && !invoice.ngayThanhToan).length
-
-  // Đếm hóa đơn đã hủy
-  cancelledInvoices.value = invoicesList.value.filter((invoice) => {
-    return invoice.trangThai === false && !invoice.ngayThanhToan && invoice.trangThaiGiaoHang === 'cancelled'
-  }).length
+  paidInvoices.value = invoicesList.value.filter((invoice) => invoice.ngayThanhToan).length
 
   // Đếm hóa đơn chờ xác nhận
-  waitingConfirmationInvoices.value = invoicesList.value.filter((invoice) => {
-    return invoice.trangThai === false && !invoice.ngayThanhToan && !invoice.trangThaiGiaoHang
-  }).length
+  waitingConfirmationInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThaiDonHang === 'Chờ xác nhận').length
 
-  // Đếm hóa đơn chờ giao hàng
-  waitingDeliveryInvoices.value = invoicesList.value.filter((invoice) => {
-    return invoice.trangThai === true && !invoice.ngayThanhToan && invoice.trangThaiGiaoHang === 'waiting_delivery'
-  }).length
+  // Đếm hóa đơn đã xác nhận
+  waitingDeliveryInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThaiDonHang === 'Đã xác nhận').length
 
   // Đếm hóa đơn đang giao
-  shippingInvoices.value = invoicesList.value.filter((invoice) => {
-    return invoice.trangThaiGiaoHang === 'shipping' || invoice.trangThaiGiaoHang === 'Đang giao'
-  }).length
+  shippingInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThaiDonHang === 'Đang giao hàng').length
+
+  // Đếm hóa đơn đã hủy
+  cancelledInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThaiDonHang === 'Đã huỷ').length
 
   // Tính tổng doanh thu từ tất cả hóa đơn đã thanh toán
-  const paidInvoicesAll = invoicesList.value.filter((invoice) => {
-    // Chỉ tính hóa đơn đã thanh toán (trangThai = true hoặc có ngayThanhToan)
-    return invoice.trangThai === true || invoice.ngayThanhToan
-  })
-
-  console.log('Tổng số hóa đơn đã thanh toán:', paidInvoicesAll.length)
-  console.log(
-    'Chi tiết hóa đơn đã thanh toán:',
-    paidInvoicesAll.map((inv) => ({
-      id: inv.id,
-      trangThai: inv.trangThai,
-      ngayThanhToan: inv.ngayThanhToan,
-      ngayTao: inv.ngayTao,
-      tongTienSauGiam: inv.tongTienSauGiam,
-      tongTien: inv.tongTien,
-    }))
-  )
-
-  totalRevenue.value = paidInvoicesAll.reduce((sum, invoice) => {
-    const amount = Number(invoice.tongTienSauGiam || invoice.tongTien || 0)
-    console.log(`Hóa đơn ${invoice.id}: ${amount}`)
-    return sum + amount
-  }, 0)
-
-  console.log('Tổng doanh thu:', totalRevenue.value)
+  totalRevenue.value = invoicesList.value
+    .filter((invoice) => invoice.ngayThanhToan)
+    .reduce((sum, invoice) => {
+      const amount = Number(invoice.tongTienSauGiam || invoice.tongTien || 0)
+      return sum + amount
+    }, 0)
 }
 
 // Helper function to get highest priority status from thongTinDonHangs
@@ -684,8 +628,8 @@ const getHighestPriorityStatus = (thongTinDonHangs: any[]): string => {
 
   // Priority order: Đã huỷ > Hoàn thành > Đã giao hàng > Đang giao hàng > Đang xử lý > Đã xác nhận > Chờ xác nhận
   const priorityMap: Record<string, number> = {
-    'Đã huỷ': 6,
-    'Hoàn thành': 7,
+    'Đã huỷ': 7,
+    'Hoàn thành': 6,
     'Đã giao hàng': 5,
     'Đang giao hàng': 4,
     'Đang xử lý': 3,
@@ -860,8 +804,8 @@ const handleTabChange = (key: string) => {
     filters.value.status = 'paid'
   } else if (key === 'waiting_confirmation') {
     filters.value.status = 'waiting_confirmation'
-  } else if (key === 'waiting_delivery') {
-    filters.value.status = 'waiting_delivery'
+  } else if (key === 'confirmed') {
+    filters.value.status = 'confirmed'
   } else if (key === 'shipping') {
     filters.value.status = 'shipping'
   } else if (key === 'pending') {

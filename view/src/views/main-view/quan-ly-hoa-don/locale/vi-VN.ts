@@ -19,4 +19,12 @@ export default {
   'invoice.common.invoiceCode': 'Mã hóa đơn',
   'invoice.common.customerName': 'Tên khách hàng',
   'invoice.common.searchPlaceholder': 'Mã hóa đơn, tên khách hàng...',
+
+  // Status tabs
+  'invoice.status.all': 'Tất cả',
+  'invoice.status.waitingConfirmation': 'Chờ xác nhận',
+  'invoice.status.confirmed': 'Đã xác nhận',
+  'invoice.status.shipping': 'Đang giao',
+  'invoice.status.paid': 'Đã thanh toán',
+  'invoice.status.cancelled': 'Đã hủy',
 }
