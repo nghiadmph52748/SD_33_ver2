@@ -133,8 +133,8 @@
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="getStatusColor(record.trangThai ? 'paid' : 'pending')">
-            {{ getStatusText(record.trangThai ? 'paid' : 'pending') }}
+          <a-tag :color="getStatusColorByName(record.trangThaiDonHang || 'Chờ xác nhận')">
+            {{ record.trangThaiDonHang || 'Chờ xác nhận' }}
           </a-tag>
         </template>
 
@@ -583,6 +583,28 @@ const getStatusText = (status: string) => {
   }
 }
 
+// Map tenTrangThaiDonHang to color
+const getStatusColorByName = (statusName: string): string => {
+  switch (statusName) {
+    case 'Đã huỷ':
+      return 'red'
+    case 'Hoàn thành':
+      return 'green'
+    case 'Đã giao hàng':
+      return 'green'
+    case 'Đang giao hàng':
+      return 'blue'
+    case 'Đang xử lý':
+      return 'orange'
+    case 'Đã xác nhận':
+      return 'orange'
+    case 'Chờ xác nhận':
+      return 'orange'
+    default:
+      return 'blue'
+  }
+}
+
 // API functions
 const calculateStatistics = () => {
   const today = new Date()
@@ -656,6 +678,38 @@ const calculateStatistics = () => {
   console.log('Tổng doanh thu:', totalRevenue.value)
 }
 
+// Helper function to get highest priority status from thongTinDonHangs
+const getHighestPriorityStatus = (thongTinDonHangs: any[]): string => {
+  if (!thongTinDonHangs || thongTinDonHangs.length === 0) {
+    return 'Chờ xác nhận'
+  }
+
+  // Priority order: Đã huỷ > Hoàn thành > Đã giao hàng > Đang giao hàng > Đang xử lý > Đã xác nhận > Chờ xác nhận
+  const priorityMap: Record<string, number> = {
+    'Đã huỷ': 7,
+    'Hoàn thành': 6,
+    'Đã giao hàng': 5,
+    'Đang giao hàng': 4,
+    'Đang xử lý': 3,
+    'Đã xác nhận': 2,
+    'Chờ xác nhận': 1,
+  }
+
+  let highestStatus = 'Chờ xác nhận'
+  let highestPriority = 0
+
+  thongTinDonHangs.forEach((item: any) => {
+    const status = item.tenTrangThaiDonHang || 'Chờ xác nhận'
+    const priority = priorityMap[status] || 0
+    if (priority > highestPriority) {
+      highestPriority = priority
+      highestStatus = status
+    }
+  })
+
+  return highestStatus
+}
+
 const fetchInvoices = async () => {
   try {
     loading.value = true
@@ -713,6 +767,8 @@ const fetchInvoices = async () => {
         ngayThanhToan: invoice.ngayThanhToan,
         hoaDonChiTiets: invoice.items || invoice.chiTietSanPham || [],
         trangThaiGiaoHang: invoice.trangThaiGiaoHang, // For filtering
+        // Get highest priority status from thongTinDonHangs
+        trangThaiDonHang: getHighestPriorityStatus(invoice.thongTinDonHangs),
       }
     })
 

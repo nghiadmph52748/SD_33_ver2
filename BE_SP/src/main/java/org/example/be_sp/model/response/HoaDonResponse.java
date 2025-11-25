@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.example.be_sp.entity.HoaDon;
+import org.example.be_sp.entity.ThongTinDonHang;
+import org.example.be_sp.entity.TrangThaiDonHang;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -54,13 +56,15 @@ public class HoaDonResponse {
     private Integer idNhanVien;
     private List<String> ghiChus;
     private List<HoaDonChiTietResponse> items;
+    private BigDecimal soTienDaThanhToan;
+    private List<ThongTinDonHangResponse> thongTinDonHangs;
 
     public HoaDonResponse(HoaDon hd) {
         this.id = hd.getId();
         // Ensure maHoaDon is never null - fallback to temporary code if needed
-        this.maHoaDon = (hd.getMaHoaDon() != null && !hd.getMaHoaDon().trim().isEmpty()) 
-            ? hd.getMaHoaDon() 
-            : ("HD" + String.format("%010d", hd.getId()));
+        this.maHoaDon = (hd.getMaHoaDon() != null && !hd.getMaHoaDon().trim().isEmpty())
+                ? hd.getMaHoaDon()
+                : ("HD" + String.format("%010d", hd.getId()));
 
         // Khách hàng
         if (hd.getIdKhachHang() != null) {
@@ -96,7 +100,11 @@ public class HoaDonResponse {
         this.createBy = hd.getCreateBy();
         this.updateAt = hd.getUpdateAt();
         this.updateBy = hd.getUpdateBy();
-
+        this.soTienDaThanhToan = hd.getSoTienDaThanhToan();
+		  this.thongTinDonHangs = hd.getThongTinDonHangs() != null ? hd.getThongTinDonHangs()
+					 .stream()
+					 .map(ThongTinDonHangResponse::new)
+					 .toList() : new ArrayList<>();
         // Mapping chi tiết sản phẩm
         // Mapping danh sách sản phẩm (items cho frontend)
 //        if (hd.getHoaDonChiTiets() != null) {

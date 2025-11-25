@@ -1,17 +1,5 @@
 <template>
   <div class="invoice-detail-page">
-    <!-- Simple Breadcrumb -->
-    <div class="simple-breadcrumb">
-      <a-button @click="goBack" type="text" size="small">
-        <template #icon>
-          <icon-arrow-left />
-        </template>
-        Quản lý hóa đơn
-      </a-button>
-      <span class="breadcrumb-separator">/</span>
-      <span class="breadcrumb-current">Chi tiết hóa đơn</span>
-    </div>
-
     <!-- Page Header -->
     <div class="page-header">
       <div class="header-left">
@@ -62,7 +50,7 @@
             <div class="stage-connector" v-if="index > 0" :class="{ active: stage.active || stage.completed }"></div>
             <div class="stage-icon" :class="{ active: stage.active, completed: stage.completed }">
               <component :is="stage.icon" v-if="stage.icon" />
-          </div>
+            </div>
             <div class="stage-label">{{ stage.label }}</div>
             <div class="stage-time" :key="`time-${stage.key}-${stage.time}`">{{ stage.time }}</div>
           </div>
@@ -73,32 +61,32 @@
       <a-row :gutter="24" class="info-row">
         <!-- Thông tin đơn hàng - Left Column -->
         <a-col :span="12">
-      <a-card class="order-info-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
-            <span>Thông tin đơn hàng</span>
-          </div>
-        </template>
+          <a-card class="order-info-card" :bordered="false">
+            <template #title>
+              <div class="card-header">
+                <icon-file />
+                <span>Thông tin đơn hàng</span>
+              </div>
+            </template>
             <div class="info-list-compact">
               <div class="info-item-compact">
                 <span class="label">Mã đơn hàng:</span>
                 <a-tag color="blue" class="value-tag">
                   {{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}
                 </a-tag>
-                </div>
+              </div>
               <div class="info-item-compact">
                 <span class="label">Loại đơn:</span>
                 <a-tag :color="invoice.loaiDon ? 'blue' : 'green'" class="value-tag">
                   {{ invoice.loaiDon ? 'online' : 'tại quầy' }}
                 </a-tag>
-                </div>
+              </div>
               <div class="info-item-compact">
-                  <span class="label">Trạng thái:</span>
-                <a-tag :color="getStatusColor(invoice.trangThai)" class="value-tag">
-                      {{ getStatusText(invoice.trangThai) }}
-                    </a-tag>
-                </div>
+                <span class="label">Trạng thái:</span>
+                <a-tag :color="getStatusColorByName(currentStageStatus)" class="value-tag">
+                  {{ currentStageStatus }}
+                </a-tag>
+              </div>
               <div class="info-item-compact">
                 <span class="label">Phiếu giảm giá:</span>
                 <span class="value">{{ invoice.maPhieuGiamGia || 'Không có' }}</span>
@@ -106,33 +94,33 @@
               <div class="info-item-compact">
                 <span class="label">Ngày đặt:</span>
                 <span class="value">{{ ngayDat }}</span>
+              </div>
             </div>
-            </div>
-      </a-card>
+          </a-card>
         </a-col>
 
         <!-- Thông tin khách hàng - Right Column -->
         <a-col :span="12">
-      <a-card class="customer-info-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-user />
-            <span>Thông tin khách hàng</span>
-          </div>
-        </template>
+          <a-card class="customer-info-card" :bordered="false">
+            <template #title>
+              <div class="card-header">
+                <icon-user />
+                <span>Thông tin khách hàng</span>
+              </div>
+            </template>
             <div class="info-list-compact">
               <div class="info-item-compact">
-                  <span class="label">Tên khách hàng:</span>
+                <span class="label">Tên khách hàng:</span>
                 <span class="value">{{ invoice.tenNguoiNhan || invoice.tenKhachHang || 'Khách lẻ' }}</span>
-                </div>
+              </div>
               <div class="info-item-compact">
-                  <span class="label">Số điện thoại:</span>
-                  <span class="value">{{ invoice.soDienThoaiNguoiNhan || invoice.soDienThoai || 'Chưa có' }}</span>
-                </div>
+                <span class="label">Số điện thoại:</span>
+                <span class="value">{{ invoice.soDienThoaiNguoiNhan || invoice.soDienThoai || 'Chưa có' }}</span>
+              </div>
               <div class="info-item-compact">
-                  <span class="label">Địa chỉ:</span>
+                <span class="label">Địa chỉ:</span>
                 <span class="value">{{ invoice.diaChiNhanHang || invoice.diaChiNguoiNhan || invoice.diaChi || 'Chưa có' }}</span>
-                </div>
+              </div>
               <div class="info-item-compact">
                 <span class="label">Email:</span>
                 <span class="value">{{ invoice.emailNguoiNhan || invoice.email || 'Chưa có' }}</span>
@@ -140,12 +128,11 @@
               <div class="info-item-compact">
                 <span class="label">Ghi chú:</span>
                 <span class="value">{{ invoice.ghiChu || 'Không có' }}</span>
-            </div>
+              </div>
             </div>
           </a-card>
-          </a-col>
-        </a-row>
-
+        </a-col>
+      </a-row>
 
       <!-- Danh sách sản phẩm đã bán -->
       <a-card class="product-list-card" :bordered="false">
@@ -176,12 +163,12 @@
         <a-col :span="12">
           <!-- Lịch sử thanh toán -->
           <a-card class="payment-history-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
+            <template #title>
+              <div class="card-header">
+                <icon-file />
                 <span>Lịch sử thanh toán</span>
-          </div>
-        </template>
+              </div>
+            </template>
             <div class="history-list">
               <div v-if="paymentHistory.length > 0">
                 <div v-for="(payment, index) in paymentHistory" :key="index" class="history-item">
@@ -208,7 +195,7 @@
                 <p>Chưa có lịch sử thanh toán</p>
               </div>
             </div>
-      </a-card>
+          </a-card>
 
           <!-- Lịch sử hóa đơn -->
           <a-card class="invoice-history-card" :bordered="false" style="margin-top: 16px">
@@ -242,33 +229,33 @@
 
         <!-- Right Column: Summary -->
         <a-col :span="12">
-      <a-card class="summary-card" :bordered="false">
-        <template #title>
-          <div class="card-header">
-            <icon-file />
-            <span>Tổng kết đơn hàng</span>
-          </div>
-        </template>
-        <div class="summary-content">
+          <a-card class="summary-card" :bordered="false">
+            <template #title>
+              <div class="card-header">
+                <icon-file />
+                <span>Tổng kết đơn hàng</span>
+              </div>
+            </template>
+            <div class="summary-content">
               <div class="summary-section">
-          <div class="summary-row">
+                <div class="summary-row">
                   <div class="summary-label-wrapper">
                     <icon-file class="summary-icon" />
-            <span class="summary-label">Tổng tiền hàng:</span>
-          </div>
-                  <span class="summary-value">{{ formatCurrency(calculatedTongTien) }}</span>
-          </div>
-          <div class="summary-row" v-if="calculatedDiscountAmount > 0">
-                  <div class="summary-label-wrapper">
-                    <icon-check-circle class="summary-icon" />
-            <span class="summary-label">Giảm giá:</span>
+                    <span class="summary-label">Tổng tiền hàng:</span>
                   </div>
-            <span class="summary-value discount">-{{ formatCurrency(calculatedDiscountAmount) }}</span>
-          </div>
-          <div class="summary-row total-row">
+                  <span class="summary-value">{{ formatCurrency(calculatedTongTien) }}</span>
+                </div>
+                <div class="summary-row" v-if="calculatedDiscountAmount > 0">
                   <div class="summary-label-wrapper">
                     <icon-check-circle class="summary-icon" />
-            <span class="summary-label">Thành tiền:</span>
+                    <span class="summary-label">Giảm giá:</span>
+                  </div>
+                  <span class="summary-value discount">-{{ formatCurrency(calculatedDiscountAmount) }}</span>
+                </div>
+                <div class="summary-row total-row">
+                  <div class="summary-label-wrapper">
+                    <icon-check-circle class="summary-icon" />
+                    <span class="summary-label">Thành tiền:</span>
                   </div>
                   <span class="summary-value total">{{ formatCurrency(calculatedTongTienSauGiam) }}</span>
                 </div>
@@ -276,12 +263,11 @@
                   <icon-check-circle class="status-icon" />
                   <span>Đã xác nhận</span>
                 </div>
-          </div>
-        </div>
-      </a-card>
+              </div>
+            </div>
+          </a-card>
         </a-col>
       </a-row>
-
     </div>
 
     <!-- Error State -->
@@ -294,13 +280,7 @@
     </div>
 
     <!-- Update Invoice Modal -->
-    <a-modal
-      v-model:visible="updateModalVisible"
-      title="Cập Nhật Thông Tin"
-      :width="600"
-      :mask-closable="false"
-      class="update-modal"
-    >
+    <a-modal v-model:visible="updateModalVisible" title="Cập Nhật Thông Tin" :width="600" :mask-closable="false" class="update-modal">
       <template #title>
         <div class="modal-title">
           <icon-edit class="title-icon" />
@@ -343,21 +323,13 @@
               <a-input v-model="updateForm.soDienThoaiNguoiNhan" placeholder="Nhập số điện thoại" />
             </a-form-item>
             <a-form-item label="Địa chỉ">
-              <a-textarea
-                v-model="updateForm.diaChiNhanHang"
-                placeholder="Nhập địa chỉ"
-                :auto-size="{ minRows: 2, maxRows: 4 }"
-              />
+              <a-textarea v-model="updateForm.diaChiNhanHang" placeholder="Nhập địa chỉ" :auto-size="{ minRows: 2, maxRows: 4 }" />
             </a-form-item>
             <a-form-item label="Email">
               <a-input v-model="updateForm.emailNguoiNhan" placeholder="Nhập email" type="email" />
             </a-form-item>
             <a-form-item label="Ghi chú">
-              <a-textarea
-                v-model="updateForm.ghiChu"
-                placeholder="Nhập ghi chú (nếu có)"
-                :auto-size="{ minRows: 2, maxRows: 4 }"
-              />
+              <a-textarea v-model="updateForm.ghiChu" placeholder="Nhập ghi chú (nếu có)" :auto-size="{ minRows: 2, maxRows: 4 }" />
             </a-form-item>
           </a-form>
         </a-tab-pane>
@@ -530,12 +502,43 @@ const getStatusText = (status: any) => {
   return 'Chưa xác định'
 }
 
+// Helper to get highest priority status from thongTinDonHangs
+const getHighestPriorityStatusFromInvoice = (): string => {
+  if (!invoice.value?.thongTinDonHangs || invoice.value.thongTinDonHangs.length === 0) {
+    return 'Chờ xác nhận'
+  }
+
+  const priorityMap: Record<string, number> = {
+    'Đã huỷ': 7,
+    'Hoàn thành': 6,
+    'Đã giao hàng': 5,
+    'Đang giao hàng': 4,
+    'Đang xử lý': 3,
+    'Đã xác nhận': 2,
+    'Chờ xác nhận': 1,
+  }
+
+  let highestStatus = 'Chờ xác nhận'
+  let highestPriority = 0
+
+  invoice.value.thongTinDonHangs.forEach((item: any) => {
+    const status = item.tenTrangThaiDonHang || 'Chờ xác nhận'
+    const priority = priorityMap[status] || 0
+    if (priority > highestPriority) {
+      highestPriority = priority
+      highestStatus = status
+    }
+  })
+
+  return highestStatus
+}
+
 // Helper: Get time from timeline by status/action
 // Rebuild logic để đảm bảo mỗi status lấy đúng entry của nó
 const getTimeFromTimeline = (statusKey: string): string => {
   try {
     // Nếu không có timeline, fallback về invoice dates
-    if (!timelineData.value || timelineData.value.length === 0) {
+    if (!timelineData.value || !Array.isArray(timelineData.value) || timelineData.value.length === 0) {
       if (statusKey === 'completed') {
         return formatDateTime(invoice.value?.ngayThanhToan || invoice.value?.ngayTao)
       }
@@ -543,7 +546,7 @@ const getTimeFromTimeline = (statusKey: string): string => {
     }
 
     // Sort timeline theo thời gian tăng dần (cũ nhất trước)
-    const sortedTimeline = [...timelineData.value].sort((a, b) => {
+    const sortedTimeline = [...(Array.isArray(timelineData.value) ? timelineData.value : [])].sort((a, b) => {
       try {
         // Xử lý thoiGian có thể là string hoặc Instant object
         const timeA = a.thoiGian ? new Date(a.thoiGian).getTime() : 0
@@ -628,8 +631,7 @@ const getTimeFromTimeline = (statusKey: string): string => {
         }
 
         // Tìm entry có "Chờ giao hàng" trong trangThaiMoi hoặc hanhDong="Cập nhật" với trangThaiMoi="Chờ giao hàng"
-        if (matches(item, ['chờ giao hàng']) ||
-            (normalize(item.hanhDong) === 'cập nhật' && matches(item, ['chờ giao hàng']))) {
+        if (matches(item, ['chờ giao hàng']) || (normalize(item.hanhDong) === 'cập nhật' && matches(item, ['chờ giao hàng']))) {
           if (item.thoiGian) {
             return formatDateTime(item.thoiGian)
           }
@@ -754,9 +756,9 @@ const ngayDat = computed(() => {
   }
 
   // Second try: get from timeline entry "Tạo" (first entry)
-  if (timelineData.value && timelineData.value.length > 0) {
+  if (timelineData.value && Array.isArray(timelineData.value) && timelineData.value.length > 0) {
     // Sort timeline by time to get the first entry
-    const sortedTimeline = [...timelineData.value].sort((a, b) => {
+    const sortedTimeline = [...(Array.isArray(timelineData.value) ? timelineData.value : [])].sort((a, b) => {
       try {
         const timeA = a.thoiGian ? new Date(a.thoiGian).getTime() : 0
         const timeB = b.thoiGian ? new Date(b.thoiGian).getTime() : 0
@@ -789,6 +791,39 @@ const ngayDat = computed(() => {
 
   // Final fallback: use createAt
   return formatDateTime(invoice.value?.createAt)
+})
+
+// Map tenTrangThaiDonHang to color
+const getStatusColorByName = (statusName: string): string => {
+  switch (statusName) {
+    case 'Đã huỷ':
+      return 'red'
+    case 'Hoàn thành':
+      return 'green'
+    case 'Đã giao hàng':
+      return 'green'
+    case 'Đang giao hàng':
+      return 'blue'
+    case 'Đang xử lý':
+      return 'orange'
+    case 'Đã xác nhận':
+      return 'orange'
+    case 'Chờ xác nhận':
+      return 'orange'
+    default:
+      return 'blue'
+  }
+}
+
+// Computed: Get current stage status label (for display in order info)
+const currentStageStatus = computed(() => {
+  try {
+    if (!invoice.value) return 'Chờ xác nhận'
+    return getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
+  } catch (error) {
+    console.error('Error getting current stage status:', error)
+    return 'Chờ xác nhận'
+  }
 })
 
 // Computed: Status stages for horizontal timeline
@@ -840,7 +875,7 @@ const statusStages = computed(() => {
   }
 
   try {
-    const currentStatus = getStatusText(invoice.value.trangThai)
+    const currentStatus = getHighestPriorityStatusFromInvoice()
     const isTaiQuay = invoice.value.loaiDon === false
 
     // Nếu là đơn tại quầy, chỉ hiển thị 2 stage: Chờ xác nhận và Hoàn thành
@@ -894,8 +929,8 @@ const statusStages = computed(() => {
         time: getTimeFromTimeline('pending'),
       },
       {
-        key: 'waiting',
-        label: 'Chờ giao hàng',
+        key: 'confirmed',
+        label: 'Đã xác nhận',
         icon: IconCheckCircle,
         active: false,
         completed: false,
@@ -927,21 +962,21 @@ const statusStages = computed(() => {
       stages[1].time = 'N/A'
       stages[2].time = 'N/A'
       stages[3].time = 'N/A'
-    } else if (currentStatus === 'Chờ giao hàng') {
+    } else if (currentStatus === 'Đã xác nhận' || currentStatus === 'Chờ giao hàng') {
       stages[0].completed = true
       stages[1].active = true
       stages[1].completed = true
       // Only show time for completed stages
       stages[2].time = 'N/A'
       stages[3].time = 'N/A'
-    } else if (currentStatus === 'Đang giao') {
+    } else if (currentStatus === 'Đang giao hàng' || currentStatus === 'Đang giao') {
       stages[0].completed = true
       stages[1].completed = true
       stages[2].active = true
       stages[2].completed = true
       // Only show time for completed stages
       stages[3].time = 'N/A'
-    } else if (currentStatus === 'Hoàn thành' || currentStatus === 'Đã thanh toán') {
+    } else if (currentStatus === 'Hoàn thành' || currentStatus === 'Đã thanh toán' || currentStatus === 'Đã giao hàng') {
       stages.forEach((stage) => {
         stage.completed = true
       })
@@ -1022,7 +1057,16 @@ const statusStages = computed(() => {
 // Payment history
 const paymentHistory = computed(() => {
   if (!invoice.value) return []
+
+  // Check if invoice has been paid at all
+  const soTienDaThanhToan = Number(invoice.value.soTienDaThanhToan) || 0
+
+  if (soTienDaThanhToan <= 0) {
+    return []
+  }
+
   const history = []
+  let hasValidPaymentRecord = false
 
   // Nếu có paymentMethods từ API, sử dụng thông tin đó
   if (paymentMethods.value && paymentMethods.value.length > 0) {
@@ -1032,6 +1076,7 @@ const paymentHistory = computed(() => {
         return
       }
 
+      hasValidPaymentRecord = true
       const idPTTT = payment.idPhuongThucThanhToan
       // Convert BigDecimal to number
       const tienMat = Number(payment.tienMat) || 0
@@ -1104,20 +1149,25 @@ const paymentHistory = computed(() => {
         }
       }
     })
-  } else if (invoice.value.ngayThanhToan) {
+  }
+
+  // Fallback: nếu không có paymentMethods hoặc tất cả đều bị skip, sử dụng thông tin từ invoice
+  if (!hasValidPaymentRecord && soTienDaThanhToan > 0) {
     // Fallback: nếu không có paymentMethods, sử dụng thông tin từ invoice
     const idPTTT = invoice.value.idPhuongThucThanhToan || invoice.value.idPTTT
     let method = 'Chuyển khoản'
 
     if (idPTTT === 1) {
       method = 'Tiền mặt'
+    } else if (idPTTT === 2) {
+      method = 'Chuyển khoản'
     } else if (idPTTT === 3) {
       method = 'Tiền mặt + Chuyển khoản'
     }
 
     history.push({
       method: method,
-      amount: invoice.value.tongTienSauGiam || invoice.value.tongTien || 0,
+      amount: soTienDaThanhToan,
       code: `PTT${String(invoice.value.id || 0).padStart(5, '0')}`,
       userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
       date: invoice.value.ngayThanhToan,
@@ -1187,9 +1237,7 @@ const calculatedTongTien = computed(() => {
   if (invoice.value.hoaDonChiTiets && invoice.value.hoaDonChiTiets.length > 0) {
     const total = invoice.value.hoaDonChiTiets.reduce((sum: number, item: any) => {
       // Use thanhTien if available, otherwise calculate from giaBan * soLuong
-      const thanhTien = item.thanhTien
-        ? Number(item.thanhTien)
-        : (Number(item.giaBan) || 0) * (Number(item.soLuong) || 0)
+      const thanhTien = item.thanhTien ? Number(item.thanhTien) : (Number(item.giaBan) || 0) * (Number(item.soLuong) || 0)
       return sum + (thanhTien || 0)
     }, 0)
     return total
@@ -1198,9 +1246,7 @@ const calculatedTongTien = computed(() => {
   // Priority 4: Fallback to items array
   if (invoice.value.items && invoice.value.items.length > 0) {
     const total = invoice.value.items.reduce((sum: number, item: any) => {
-      const thanhTien = item.thanhTien
-        ? Number(item.thanhTien)
-        : (Number(item.giaBan) || 0) * (Number(item.soLuong) || 0)
+      const thanhTien = item.thanhTien ? Number(item.thanhTien) : (Number(item.giaBan) || 0) * (Number(item.soLuong) || 0)
       return sum + (thanhTien || 0)
     }, 0)
     return total
@@ -1255,6 +1301,7 @@ const calculatedDiscountAmount = computed(() => {
 
 const fetchInvoiceDetail = async () => {
   try {
+    console.log('[fetchInvoiceDetail] Starting, invoiceId:', invoiceId.value)
     loading.value = true
 
     // Fetch timeline data in parallel
@@ -1294,7 +1341,8 @@ const fetchInvoiceDetail = async () => {
       if (orderInfoResponse.data && orderInfoResponse.data.data) {
         const orderInfo = orderInfoResponse.data.data
         invoice.value = orderInfo.idHoaDon
-
+        console.log('[fetchInvoiceDetail] Loaded invoice from thong-tin-hoa-don API:', invoice.value)
+        loading.value = false
         return // Thành công, không cần fallback
       }
     } catch (orderInfoError) {
@@ -1421,6 +1469,7 @@ const fetchInvoiceDetail = async () => {
       ],
     }
   } finally {
+    console.log('[fetchInvoiceDetail] Finished, invoice.value:', invoice.value?.id, invoice.value?.maHoaDon)
     loading.value = false
   }
 }
@@ -1436,7 +1485,6 @@ const formatDate = (dateString: string) => {
     minute: '2-digit',
   })
 }
-
 
 const formatCurrency = (amount: number) => {
   if (!amount) return '0 ₫'
@@ -1563,9 +1611,7 @@ const handleSaveUpdate = async () => {
     // Get idNhanVien - prioritize from invoice, then userStore, then createBy
     let idNhanVienValue: number | null = null
     if (invoice.value.idNhanVien) {
-      idNhanVienValue = typeof invoice.value.idNhanVien === 'number'
-        ? invoice.value.idNhanVien
-        : (invoice.value.idNhanVien?.id || null)
+      idNhanVienValue = typeof invoice.value.idNhanVien === 'number' ? invoice.value.idNhanVien : invoice.value.idNhanVien?.id || null
     }
     if (!idNhanVienValue && userStore.id) {
       idNhanVienValue = userStore.id
@@ -1667,7 +1713,7 @@ const handleSaveUpdate = async () => {
       await fetchInvoiceDetail()
       // Force refresh timeline to get latest updates
       // Add small delay to ensure backend has committed the transaction
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await new Promise((resolve) => setTimeout(resolve, 300))
       try {
         const timelineResponse = await fetchTimelineByHoaDonId(Number(invoiceId.value))
         timelineData.value = timelineResponse || []
@@ -2051,7 +2097,6 @@ onMounted(() => {
 .status-icon {
   color: #00b42a;
 }
-
 
 /* Update Modal */
 .update-modal :deep(.arco-modal-header) {
