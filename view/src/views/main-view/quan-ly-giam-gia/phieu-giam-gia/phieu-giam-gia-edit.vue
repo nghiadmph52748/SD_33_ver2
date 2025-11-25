@@ -1253,6 +1253,11 @@ const confirmCouponEdit = async () => {
   const quantityValue = Number(couponEditForm.quantity)
   const [startDate, endDate] = couponEditForm.dateRange
 
+  const toBackendDateTime = (value: string): string => {
+    if (!value) return value
+    return value.replace(' ', 'T')
+  }
+
   const payload = {
     maPhieuGiamGia: couponEditForm.code.trim(),
     tenPhieuGiamGia: couponEditForm.name.trim(),
@@ -1261,8 +1266,8 @@ const confirmCouponEdit = async () => {
     soTienToiDa: isPercentEdit.value ? Number(couponEditForm.maxDiscount ?? 0) : null,
     hoaDonToiThieu: couponEditForm.minOrder ? Number(couponEditForm.minOrder) : 0,
     soLuongDung: quantityValue,
-    ngayBatDau: startDate,
-    ngayKetThuc: endDate,
+    ngayBatDau: toBackendDateTime(startDate),
+    ngayKetThuc: toBackendDateTime(endDate),
     trangThai: couponEditForm.active,
     moTa: couponEditForm.description.trim() || null,
     deleted: false,

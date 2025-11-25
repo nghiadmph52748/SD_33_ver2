@@ -26,6 +26,9 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
   maximumFractionDigits: 0,
 })
 
+const BANK_SHORT_CODE = 'MB'
+const BANK_ACCOUNT_NUMBER = '288579542666'
+
 export default function QRPaymentScreen() {
   const route = useRoute<QRPaymentScreenRouteProp>()
   const navigation = useNavigation<QRPaymentScreenNavigationProp>()
@@ -208,7 +211,7 @@ export default function QRPaymentScreen() {
     if (session?.status === 'EXPIRED') {
       setSession(null)
       setSessionId(null)
-      setError('Chưa có phiên VietQR đang hoạt động')
+      setError('Chưa có phiên QR thanh toán đang hoạt động')
     }
   }, [session?.status])
 
@@ -242,6 +245,19 @@ export default function QRPaymentScreen() {
       return session.createdAt
     }
   }, [session?.createdAt])
+
+  const qrImageUrl = useMemo(() => {
+    // Only build QR when backend says staff has chosen to display it (qrCodeUrl present)
+    if (!session?.finalPrice || !session.orderCode || !session.qrCodeUrl) return null
+    try {
+      const amount = Math.round(session.finalPrice)
+      const info = encodeURIComponent(`${session.orderCode}`)
+      // VietQR static image for MB Bank account
+      return `https://img.vietqr.io/image/${BANK_SHORT_CODE}-${BANK_ACCOUNT_NUMBER}-qr_only.png?amount=${amount}&addInfo=${info}`
+    } catch {
+      return null
+    }
+  }, [session?.finalPrice, session?.orderCode, session?.qrCodeUrl])
 
   if (loading && !session) {
     return (
@@ -283,7 +299,7 @@ export default function QRPaymentScreen() {
     return renderWelcome(error || 'Không tìm thấy phiên VietQR đang hoạt động')
   }
 
-  const hasQrCode = Boolean(session.qrCodeUrl)
+  const hasQrCode = Boolean(qrImageUrl)
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -294,7 +310,11 @@ export default function QRPaymentScreen() {
             <Text style={styles.subtitle}>Quét bằng app ngân hàng để hoàn tất giao dịch</Text>
 
             <View style={styles.qrContainer}>
-              <Image source={{ uri: session.qrCodeUrl! }} style={styles.qrImage} resizeMode="contain" />
+              {qrImageUrl ? (
+                <Image source={{ uri: qrImageUrl }} style={styles.qrImage} resizeMode="contain" />
+              ) : (
+                <Text style={styles.errorText}>Không thể tạo mã QR thanh toán</Text>
+              )}
             </View>
 
             <Text style={styles.amount}>{currencyFormatter.format(session.finalPrice)}</Text>
