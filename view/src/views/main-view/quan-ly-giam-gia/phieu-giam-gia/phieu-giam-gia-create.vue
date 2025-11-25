@@ -1063,6 +1063,12 @@ const calculateStatus = (startDate: string, endDate: string): boolean => {
   return now >= start && now <= end
 }
 
+const toBackendDateTime = (value: string): string => {
+  if (!value) return value
+  // Backend expects ISO_LOCAL_DATE_TIME (yyyy-MM-dd'T'HH:mm:ss)
+  return value.replace(' ', 'T')
+}
+
 const confirmSave = async () => {
   if (confirmSaveSubmitting.value) return
 
@@ -1077,9 +1083,12 @@ const confirmSave = async () => {
     soTienToiDa: isPercent.value ? Number(formState.maxDiscount ?? 0) : null,
     hoaDonToiThieu: formState.minOrder ? Number(formState.minOrder) : 0,
     soLuongDung: quantityValue,
-    ngayBatDau: formState.dateRange[0],
-    ngayKetThuc: formState.dateRange[1],
-    trangThai: calculateStatus(formState.dateRange[0], formState.dateRange[1]),
+    ngayBatDau: toBackendDateTime(formState.dateRange[0]),
+    ngayKetThuc: toBackendDateTime(formState.dateRange[1]),
+    trangThai: calculateStatus(
+      toBackendDateTime(formState.dateRange[0]),
+      toBackendDateTime(formState.dateRange[1])
+    ),
     moTa: formState.description.trim() || null,
     deleted: false,
     idKhachHang: formState.featured ? formState.selectedCustomerIds : [],
