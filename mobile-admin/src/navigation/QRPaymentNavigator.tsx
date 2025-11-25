@@ -16,7 +16,7 @@ const QRPaymentNavigator = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: true,
-        headerTitle: 'Thanh toán QR',
+        headerTitle: 'Quầy Thanh Toán',
         headerBackTitle: 'Quay lại',
       }}
     >
