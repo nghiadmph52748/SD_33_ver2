@@ -264,6 +264,15 @@
       @close="closeVoucherModal"
       @select="selectVoucher"
     />
+
+    <!-- Order Confirmation Modal -->
+    <OrderConfirmationModal
+      :is-open="orderConfirmationOpen"
+      :order-info="orderConfirmationInfo"
+      :loading="paying"
+      @close="closeOrderConfirmation"
+      @confirm="finalizeOrder"
+    />
   </div>
 </template>
 
@@ -292,6 +301,7 @@ import {
   type Voucher,
 } from "@/api/vouchers";
 import VoucherModal from "@/components/VoucherModal.vue";
+import OrderConfirmationModal from "@/components/OrderConfirmationModal.vue";
 import type { CustomerAddress } from "@/api/auth";
 
 // i18n
@@ -305,6 +315,8 @@ const shippingFee = ref(0);
 const isCalculatingShipping = ref(false);
 const selectedVoucher = ref<Voucher | null>(null);
 const voucherModalOpen = ref(false);
+const orderConfirmationOpen = ref(false);
+const orderConfirmationInfo = ref<any>({});
 
 const voucherDiscount = computed(() => {
   if (!selectedVoucher.value) return 0;
@@ -366,6 +378,59 @@ function selectVoucher(voucher: Voucher) {
 
 function clearVoucher() {
   selectedVoucher.value = null;
+}
+
+function closeOrderConfirmation() {
+  orderConfirmationOpen.value = false;
+}
+
+function openOrderConfirmation() {
+  // Build delivery address
+  const deliveryAddress = [
+    address.value.street,
+    address.value.ward,
+    address.value.district,
+    address.value.province,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  // Prepare confirmation info with deep copy to avoid reactivity issues
+  orderConfirmationInfo.value = {
+    fullName: contact.value.fullName,
+    phone: contact.value.phone,
+    email: contact.value.email,
+    address: deliveryAddress,
+    paymentMethod: paymentMethod.value as "cod" | "vnpay",
+    items: JSON.parse(JSON.stringify(cart.value)),
+    subtotal: cartTotal.value,
+    shippingFee: shippingFee.value,
+    voucherDiscount: voucherDiscount.value,
+    total: orderTotal.value,
+    voucher: selectedVoucher.value ? { ...selectedVoucher.value } : null,
+  };
+
+  console.log("Opening order confirmation modal", orderConfirmationInfo.value);
+  orderConfirmationOpen.value = true;
+  console.log("Modal state:", orderConfirmationOpen.value);
+}
+
+async function finalizeOrder() {
+  if (paying.value) return;
+
+  paying.value = true;
+
+  try {
+    if (paymentMethod.value === "cod") {
+      await handleCODCheckout();
+    } else if (paymentMethod.value === "vnpay") {
+      await handleVnpayCheckout();
+    }
+  } catch (e: any) {
+    error.value = e?.message || "Checkout failed";
+    paying.value = false;
+    orderConfirmationOpen.value = false;
+  }
 }
 
 const paying = ref(false);
@@ -785,7 +850,25 @@ async function onDistrictChange() {
 }
 
 async function handleCheckout() {
-  if (cartCount.value === 0 || paying.value || !paymentMethod.value) return;
+  console.log("handleCheckout called");
+  console.log("Conditions:", {
+    cartCount: cartCount.value,
+    paying: paying.value,
+    paymentMethod: paymentMethod.value,
+    orderConfirmationOpen: orderConfirmationOpen.value,
+  });
+
+  if (
+    cartCount.value === 0 ||
+    paying.value ||
+    !paymentMethod.value ||
+    orderConfirmationOpen.value
+  ) {
+    console.log("Early return due to conditions");
+    return;
+  }
+
+  console.log("Validating details...");
   if (!validateDetails()) {
     // Check if all fields are empty to show a global alert
     const allEmpty =
@@ -802,22 +885,15 @@ async function handleCheckout() {
       ".details .invalid"
     ) as HTMLElement | null;
     if (first?.focus) first.focus();
+    console.log("Validation failed");
     return;
   }
+  console.log("Validation passed, opening confirmation modal");
   showAllEmptyAlert.value = false;
-  paying.value = true;
   error.value = "";
 
-  try {
-    if (paymentMethod.value === "cod") {
-      await handleCODCheckout();
-    } else if (paymentMethod.value === "vnpay") {
-      await handleVnpayCheckout();
-    }
-  } catch (e: any) {
-    error.value = e?.message || "Checkout failed";
-    paying.value = false;
-  }
+  // Open confirmation modal instead of directly processing checkout
+  openOrderConfirmation();
 }
 
 async function handleCODCheckout() {
