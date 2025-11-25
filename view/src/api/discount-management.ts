@@ -177,6 +177,12 @@ export interface CustomerApiModel {
   gioiTinh?: boolean
   matKhau?: string
   trangThai?: boolean | number
+  phanLoai?: string | null
+  phanLoaiText?: string | null
+  tongChiTieu?: number | null
+  tongDon?: number | null
+  createdAt?: string
+  updatedAt?: string
 }
 
 export const fetchCustomers = () => requestJson<CustomerApiModel[]>('/khach-hang-management/playlist')

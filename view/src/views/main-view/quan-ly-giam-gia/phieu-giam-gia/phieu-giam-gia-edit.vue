@@ -142,6 +142,17 @@
       <a-col :span="12" v-if="couponEditForm.featured">
         <a-card :title="t('discount.coupon.selectCustomers')">
           <div class="customer-selection-section">
+            <div class="segment-filter">
+              <div class="segment-filter__label">Tiêu chí phân loại</div>
+              <a-radio-group v-model="customerSegment" type="button" size="mini" class="segment-filter__radios">
+                <a-radio v-for="segment in customerSegments" :key="segment.key" :value="segment.key">
+                  {{ segment.label }}
+                </a-radio>
+              </a-radio-group>
+              <div class="segment-filter__hint">
+                {{ currentCustomerSegment?.description }}
+              </div>
+            </div>
             <a-input-search
               v-model="customerSearchQuery"
               :placeholder="t('discount.coupon.searchCustomerPlaceholder')"
@@ -186,6 +197,16 @@
                   :model-value="couponEditForm.selectedCustomerIds.includes(record.id)"
                   @change="toggleEditCustomerSelection(record.id)"
                 />
+              </template>
+              <template #segment="{ record }">
+                <a-space size="mini" wrap>
+                  <a-tag v-for="tag in getCustomerSegmentLabels(record)" :key="tag" size="small">
+                    {{ tag }}
+                  </a-tag>
+                </a-space>
+              </template>
+              <template #birthday="{ record }">
+                {{ formatCustomerBirthday(record.ngaySinh) }}
               </template>
             </a-table>
 
@@ -402,6 +423,90 @@ const customers = ref<CustomerApiModel[]>([])
 const customersLoading = ref(false)
 const customerSearchQuery = ref('')
 
+type CustomerSegmentKey = 'all' | 'vip' | 'birthday' | 'loyal'
+
+interface CustomerSegment {
+  key: CustomerSegmentKey
+  label: string
+  description: string
+  matcher: (customer: CustomerApiModel) => boolean
+}
+
+const VIP_SPEND_THRESHOLD = 10_000_000
+const LOYAL_SPEND_THRESHOLD = 5_000_000
+const LOYAL_ORDER_THRESHOLD = 5
+
+const normalizeText = (value?: string | null) => value?.toString().toLowerCase().trim() ?? ''
+
+const isVipCustomer = (customer: CustomerApiModel) => {
+  const label = `${normalizeText(customer.phanLoai)} ${normalizeText(customer.phanLoaiText)}`
+  if (label.includes('vip')) {
+    return true
+  }
+  return (customer.tongChiTieu ?? 0) >= VIP_SPEND_THRESHOLD
+}
+
+const hasBirthdayThisMonth = (customer: CustomerApiModel) => {
+  if (!customer.ngaySinh) return false
+  const birthday = dayjs(customer.ngaySinh)
+  if (!birthday.isValid()) return false
+  return birthday.month() === dayjs().month()
+}
+
+const isLoyalCustomer = (customer: CustomerApiModel) => {
+  const spend = customer.tongChiTieu ?? 0
+  const orders = customer.tongDon ?? 0
+  return spend >= LOYAL_SPEND_THRESHOLD || orders >= LOYAL_ORDER_THRESHOLD
+}
+
+const customerSegments: CustomerSegment[] = [
+  {
+    key: 'all',
+    label: 'Tất cả',
+    description: 'Hiển thị toàn bộ khách hàng đang hoạt động',
+    matcher: () => true,
+  },
+  {
+    key: 'vip',
+    label: 'Khách VIP',
+    description: 'Khách được gắn nhãn VIP hoặc chi tiêu ≥ 10.000.000đ',
+    matcher: isVipCustomer,
+  },
+  {
+    key: 'birthday',
+    label: 'Sinh nhật tháng này',
+    description: 'Khách có ngày sinh trong tháng hiện tại',
+    matcher: hasBirthdayThisMonth,
+  },
+  {
+    key: 'loyal',
+    label: 'Khách thân thiết',
+    description: 'Khách có ≥ 5 đơn hàng hoặc chi tiêu ≥ 5.000.000đ',
+    matcher: isLoyalCustomer,
+  },
+]
+
+const customerSegment = ref<CustomerSegmentKey>('all')
+const currentCustomerSegment = computed(
+  () => customerSegments.find((segment) => segment.key === customerSegment.value) ?? customerSegments[0]
+)
+
+const getCustomerSegmentLabels = (customer: CustomerApiModel) => {
+  const labels: string[] = []
+  if (isVipCustomer(customer)) labels.push('VIP')
+  if (isLoyalCustomer(customer)) labels.push('Thân thiết')
+  if (hasBirthdayThisMonth(customer)) labels.push('Sinh nhật tháng này')
+  if (labels.length === 0) labels.push('Phổ thông')
+  return labels
+}
+
+const formatCustomerBirthday = (value?: string | null) => {
+  if (!value) return '—'
+  const date = dayjs(value)
+  if (!date.isValid()) return '—'
+  return date.format('DD/MM')
+}
+
 const customerColumns = computed(() => [
   {
     title: t('discount.customer.name'),
@@ -420,19 +525,36 @@ const customerColumns = computed(() => [
     dataIndex: 'soDienThoai',
     width: 130,
   },
+  {
+    title: 'Ngày sinh',
+    dataIndex: 'ngaySinh',
+    slotName: 'birthday',
+    width: 110,
+    align: 'center' as const,
+  },
+  {
+    title: 'Nhóm',
+    dataIndex: 'segment',
+    slotName: 'segment',
+    width: 160,
+  },
 ])
 
 const filteredCustomers = computed(() => {
-  if (!customerSearchQuery.value) {
-    return customers.value
+  const matcher = currentCustomerSegment.value?.matcher ?? (() => true)
+  let list = customers.value.filter((customer) => matcher(customer))
+
+  if (customerSearchQuery.value) {
+    const query = customerSearchQuery.value.toLowerCase()
+    list = list.filter(
+      (customer) =>
+        customer.tenKhachHang?.toLowerCase().includes(query) ||
+        customer.soDienThoai?.toLowerCase().includes(query) ||
+        customer.email?.toLowerCase().includes(query)
+    )
   }
-  const query = customerSearchQuery.value.toLowerCase()
-  return customers.value.filter(
-    (customer) =>
-      customer.tenKhachHang?.toLowerCase().includes(query) ||
-      customer.soDienThoai?.toLowerCase().includes(query) ||
-      customer.email?.toLowerCase().includes(query)
-  )
+
+  return list
 })
 
 const customerPagination = computed(() => ({
@@ -1226,6 +1348,29 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 16px;
   background: var(--color-bg-2);
+}
+
+.segment-filter {
+  margin-bottom: 12px;
+}
+
+.segment-filter__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-2);
+  margin-bottom: 4px;
+}
+
+.segment-filter__radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.segment-filter__hint {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-top: 4px;
 }
 
 .product-selection-section {
