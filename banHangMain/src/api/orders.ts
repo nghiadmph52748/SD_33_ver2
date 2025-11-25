@@ -229,26 +229,9 @@ export async function createOrderFromCart(
       throw new Error("Không nhận được ID hoá đơn từ máy chủ");
     }
 
-    // Persist line items using invoice detail endpoint
-    await Promise.all(
-      plainCartItems.map((item) => {
-        if (!(item as any).idBienThe) {
-          throw new Error(`Thiếu mã biến thể cho sản phẩm ${item.id}`);
-        }
-
-        const detailPayload: AddProductToCartRequest = {
-          idHoaDon: order.id,
-          idBienThe: Number((item as any).idBienThe),
-          soLuong: item.quantity,
-          giaBan: item.price,
-          trangThai: true,
-          deleted: false,
-          createAt: createdAt,
-        };
-
-        return addProductToCart(detailPayload);
-      })
-    );
+    // Backend API already creates hoaDonChiTiet items from the request payload
+    // No need to call addProductToCart separately - it would create duplicates!
+    // The items are already persisted via the createOrder() call above
 
     return order;
   } catch (error: any) {
