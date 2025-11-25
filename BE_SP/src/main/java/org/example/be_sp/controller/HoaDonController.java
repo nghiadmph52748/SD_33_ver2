@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/api/hoa-don-management")
 @CrossOrigin(origins = "*")
@@ -65,6 +67,74 @@ public class HoaDonController {
     public ResponseObject<?> addSampleData() {
         hoaDonService.addSampleData();
         return new ResponseObject<>(true, null, "Thêm dữ liệu mẫu thành công");
+    }
+
+    /**
+     * API thống kê doanh thu chỉ tính các đơn hàng đã hoàn thành (idTrangThaiDonHang = 7)
+     */
+    @GetMapping("/statistics/revenue")
+    public ResponseObject<?> getRevenueStatistics(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "day") String groupBy) {
+        return new ResponseObject<>(hoaDonService.getCompletedOrderRevenue(startDate, endDate, groupBy), 
+                                   "Lấy thống kê doanh thu thành công");
+    }
+
+    /**
+     * API thống kê tổng quan chỉ tính đơn hàng hoàn thành
+     */
+    @GetMapping("/statistics/dashboard")
+    public ResponseObject<?> getDashboardStatistics() {
+        return new ResponseObject<>(hoaDonService.getCompletedOrderDashboard(), 
+                                   "Lấy thống kê dashboard thành công");
+    }
+
+    /**
+     * API thống kê theo khoảng thời gian
+     */
+    @GetMapping("/statistics/period")
+    public ResponseObject<?> getPeriodStatistics(
+            @RequestParam String period, // "today", "week", "month", "year"
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return new ResponseObject<>(hoaDonService.getCompletedOrderStatisticsByPeriod(period, startDate, endDate), 
+                                   "Lấy thống kê theo thời gian thành công");
+    }
+
+    /**
+     * API so sánh doanh thu dự kiến vs thực tế
+     */
+    @GetMapping("/statistics/revenue-forecast")
+    public ResponseObject<?> getRevenueForecastComparison(
+            @RequestParam(defaultValue = "month") String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return new ResponseObject<>(hoaDonService.getRevenueForecastComparison(period, startDate, endDate), 
+                                   "Lấy so sánh doanh thu dự kiến vs thực tế thành công");
+    }
+
+    /**
+     * API cập nhật doanh thu dự kiến
+     */
+    @PostMapping("/statistics/set-target")
+    public ResponseObject<?> setRevenueTarget(
+            @RequestParam String period, // "month", "quarter", "year"
+            @RequestParam String targetDate, // YYYY-MM-DD hoặc YYYY-MM hoặc YYYY
+            @RequestParam BigDecimal targetAmount) {
+        return new ResponseObject<>(hoaDonService.setRevenueTarget(period, targetDate, targetAmount), 
+                                   "Cập nhật mục tiêu doanh thu thành công");
+    }
+
+    /**
+     * API lấy danh sách mục tiêu doanh thu
+     */
+    @GetMapping("/statistics/targets")
+    public ResponseObject<?> getRevenueTargets(
+            @RequestParam(defaultValue = "month") String period,
+            @RequestParam(required = false) String year) {
+        return new ResponseObject<>(hoaDonService.getRevenueTargets(period, year), 
+                                   "Lấy danh sách mục tiêu doanh thu thành công");
     }
 
 }
