@@ -38,6 +38,11 @@ public class HoaDonController {
         return new ResponseObject<>(hoaDonService.getByid(id), "Lấy chi tiết hóa đơn thành công");
     }
 
+    @GetMapping("/code/{code}")
+    public ResponseObject<?> getByCode(@PathVariable String code) {
+        return new ResponseObject<>(hoaDonService.getByMaHoaDon(code), "Lấy chi tiết hóa đơn thành công");
+    }
+
     @PostMapping("/add")
     public ResponseObject<?> add(@RequestBody BanHangTaiQuayRequest request) {
         HoaDonResponse created = hoaDonService.add(request);

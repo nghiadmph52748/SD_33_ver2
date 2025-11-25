@@ -58,6 +58,12 @@ const routes: RouteRecordRaw[] = [
     props: true
   },
   {
+    path: "/tra-cuu-hoa-don",
+    name: "order-lookup",
+    alias: ["/order-lookup"],
+    component: () => import("@/views/OrderLookupView.vue")
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("@/views/LoginView.vue")

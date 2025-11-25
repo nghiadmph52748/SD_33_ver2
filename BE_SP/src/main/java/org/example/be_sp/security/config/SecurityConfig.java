@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/hoa-don-management/**").permitAll() // Allow invoice management without auth for testing
                 .requestMatchers("/api/hoa-don-chi-tiet-management/**").permitAll() // Allow invoice detail management without auth for testing
                 .requestMatchers("/api/thong-tin-hoa-don-management/**").permitAll() // Allow order info management without auth for testing
+                .requestMatchers("/api/timeline-don-hang/**").permitAll() // Allow order timeline for customer tracking
                 .requestMatchers("/api/san-pham-management/**").permitAll() // Allow product management without auth for testing
                 .requestMatchers("/api/chi-tiet-san-pham-management/**").permitAll() // Allow product detail management without auth for testing
                 .requestMatchers("/api/khach-hang-management/**").permitAll() // Allow customer management without auth for testing
