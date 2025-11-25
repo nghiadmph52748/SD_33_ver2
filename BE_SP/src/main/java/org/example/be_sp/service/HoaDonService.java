@@ -88,6 +88,15 @@ public class HoaDonService {
         return new HoaDonResponse(hoaDon);
     }
 
+    public HoaDonResponse getByMaHoaDon(String maHoaDon) {
+        if (maHoaDon == null || maHoaDon.trim().isEmpty()) {
+            throw new ApiException("Mã hóa đơn không hợp lệ", "400");
+        }
+        HoaDon hoaDon = hoaDonRepository.findByMaHoaDon(maHoaDon.trim())
+                .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn", "404"));
+        return new HoaDonResponse(hoaDon);
+    }
+
     public HoaDonResponse add(BanHangTaiQuayRequest request) {
         HoaDon hd = MapperUtils.map(request, HoaDon.class);
         if (request.getIdKhachHang() != null) {

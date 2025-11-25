@@ -31,6 +31,11 @@
       <ul>
         <li><a href="#" :aria-label="$t('nav.findStore')">{{ $t('nav.findStore') }}</a></li>
         <li><a href="#" :aria-label="$t('nav.help')">{{ $t('nav.help') }}</a></li>
+        <li>
+          <RouterLink to="/tra-cuu-hoa-don" class="lookup-link" :aria-label="$t('nav.orderLookup')">
+            {{ $t('nav.orderLookup') }}
+          </RouterLink>
+        </li>
         <template v-if="!isAuthenticated">
           <li><a href="#" :aria-label="$t('nav.joinUs')">{{ $t('nav.joinUs') }}</a></li>
           <li><RouterLink to="/login" :aria-label="$t('nav.signIn')">{{ $t('nav.signIn') }}</RouterLink></li>
@@ -262,6 +267,22 @@ header.scrolled {
       line-height: 1;
     }
   }
+}
+
+.lookup-link {
+  border: 1px solid rgba(17, 17, 17, 0.3);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 600;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.lookup-link:hover,
+.lookup-link:focus-visible {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+  outline: none;
 }
 
 .customer-name {

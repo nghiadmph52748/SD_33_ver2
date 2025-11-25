@@ -13,25 +13,40 @@ const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 axios.defaults.baseURL = apiBaseURL
 
 // List of public endpoints that don't require authentication
-const PUBLIC_ENDPOINTS = [
-  '/api/san-pham-management/playlist',
-  '/api/san-pham-management/paging',
-  '/api/san-pham-management/detail',
-  '/api/anh-san-pham-management', // allow product images without token
-  '/api/public',
-  '/api/payment/vnpay/create',
-  '/api/payment/vnpay/return',
-  '/api/payment/vnpay/ipn',
+type PublicEndpoint = {
+  path: string
+  methods?: string[]
+}
+
+const PUBLIC_ENDPOINTS: PublicEndpoint[] = [
+  { path: '/api/san-pham-management/playlist' },
+  { path: '/api/san-pham-management/paging' },
+  { path: '/api/san-pham-management/detail' },
+  { path: '/api/anh-san-pham-management' }, // allow product images without token
+  { path: '/api/public' },
+  { path: '/api/payment/vnpay/create' },
+  { path: '/api/payment/vnpay/return' },
+  { path: '/api/payment/vnpay/ipn' },
+  // Guest order lookup endpoints (GET only)
+  { path: '/api/hoa-don-management', methods: ['GET'] },
+  { path: '/api/timeline-don-hang', methods: ['GET'] },
+  { path: '/api/thong-tin-hoa-don-management', methods: ['GET'] },
 ]
 
-const isPublicEndpoint = (url: string): boolean => {
-  return PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint))
+const isPublicEndpoint = (url = '', method = 'GET'): boolean => {
+  const upperMethod = method.toUpperCase()
+  return PUBLIC_ENDPOINTS.some(endpoint => {
+    if (!url.includes(endpoint.path)) return false
+    if (!endpoint.methods?.length) return true
+    return endpoint.methods.includes(upperMethod)
+  })
 }
 
 axios.interceptors.request.use(
   (config: any) => {
+    const method = (config.method || 'GET').toUpperCase()
     // Only add token for non-public endpoints
-    if (!isPublicEndpoint(config.url || '')) {
+    if (!isPublicEndpoint(config.url || '', method)) {
       const token = getToken()
       if (token) {
         if (!config.headers) {
@@ -76,11 +91,12 @@ axios.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       const url = error.config?.url || ''
+      const method = (error.config?.method || 'GET').toUpperCase()
       
       // Handle 401 Unauthorized (token expired or invalid)
       if (status === 401) {
         // If it's a public endpoint, clear any invalid token and retry
-        if (isPublicEndpoint(url)) {
+        if (isPublicEndpoint(url, method)) {
           // Clear invalid token that might be causing the issue
           clearToken()
           

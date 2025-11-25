@@ -49,6 +49,71 @@ export interface OrderResponse {
   trangThai: string;
 }
 
+export interface OrderTrackingDetail extends Partial<OrderResponse> {
+  tenNguoiNhan?: string;
+  tenKhachHang?: string;
+  diaChiNhanHang?: string;
+  diaChiNguoiNhan?: string;
+  diaChi?: string;
+  soDienThoaiNguoiNhan?: string;
+  soDienThoai?: string;
+  soDienThoaiKhachHang?: string;
+  emailNguoiNhan?: string;
+  email?: string;
+  emailKhachHang?: string;
+  tongTienSauGiam?: number;
+  phiVanChuyen?: number;
+  ngayTao?: string;
+  ngayThanhToan?: string;
+  createAt?: string;
+  loaiDon?: boolean;
+  ghiChu?: string;
+  hoaDonChiTiets?: Array<{
+    id?: number;
+    soLuong?: number;
+    giaBan?: number;
+    thanhTien?: number;
+    tenSanPhamChiTiet?: string;
+    maHoaDonChiTiet?: string;
+    idChiTietSanPham?: {
+      id?: number;
+      maChiTietSanPham?: string;
+      idSanPham?: {
+        tenSanPham?: string;
+        maSanPham?: string;
+      };
+      idMauSac?: {
+        tenMauSac?: string;
+        tenMau?: string;
+      };
+      idKichThuoc?: {
+        tenKichThuoc?: string;
+        kichThuoc?: string;
+      };
+    };
+  }>;
+}
+
+export interface OrderTimelineEntry {
+  id: number;
+  idHoaDon: number;
+  trangThaiMoi: string;
+  hanhDong: string;
+  moTa?: string;
+  ghiChu?: string;
+  thoiGian: string;
+  tenNhanVien?: string;
+}
+
+export interface OrderStatusSnapshot {
+  id?: number;
+  maDonHang?: string;
+  tenTrangThaiDonHang?: string;
+  maThongTinDonHang?: string;
+  thoiGian?: string;
+  ghiChu?: string;
+}
+
 export interface AddProductToCartRequest {
   idHoaDon: number;
   idBienThe: number;
@@ -119,6 +184,32 @@ export function addProductToCart(
   request: AddProductToCartRequest
 ): Promise<HttpResponse<AddProductToCartResponse>> {
   return axios.post("/api/hoa-don-chi-tiet-management/add-to-cart", request);
+}
+
+export function fetchOrderById(
+  orderId: number
+): Promise<HttpResponse<OrderTrackingDetail>> {
+  return axios.get(`/api/hoa-don-management/${orderId}`);
+}
+
+export function fetchOrderByCode(
+  orderCode: string
+): Promise<HttpResponse<OrderTrackingDetail>> {
+  return axios.get(`/api/hoa-don-management/code/${orderCode}`);
+}
+
+export function fetchOrderTimeline(
+  orderId: number
+): Promise<HttpResponse<OrderTimelineEntry[]>> {
+  return axios.get(`/api/timeline-don-hang/${orderId}`);
+}
+
+export function fetchLatestOrderStatus(
+  orderId: number
+): Promise<HttpResponse<OrderStatusSnapshot | null>> {
+  return axios.get(
+    `/api/thong-tin-hoa-don-management/latest-by-hoa-don/${orderId}`
+  );
 }
 
 // Create order from cart items
