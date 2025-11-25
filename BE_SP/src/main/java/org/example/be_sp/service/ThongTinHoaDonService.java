@@ -1,7 +1,7 @@
 package org.example.be_sp.service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -57,7 +57,7 @@ public class ThongTinHoaDonService {
         
         // Đảm bảo thời gian được set đúng
         if (ttdh.getThoiGian() == null) {
-            ttdh.setThoiGian(java.time.LocalDate.now());
+            ttdh.setThoiGian(java.time.LocalDateTime.now());
         }
         ttdh.setTrangThai(true);
         ttdh.setDeleted(false);
@@ -324,7 +324,7 @@ public class ThongTinHoaDonService {
                 .orderCode(hoaDon.getMaHoaDon())
                 .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                 .customerEmail(customerEmail)
-                .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDate.now())
+                .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
                 .orderStatus(statusName)
                 .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
                 .discountAmount(discountAmount)

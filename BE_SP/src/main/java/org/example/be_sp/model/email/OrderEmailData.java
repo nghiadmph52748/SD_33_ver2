@@ -1,12 +1,13 @@
 package org.example.be_sp.model.email;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
 
 /**
  * Email data transfer object for order-related emails
@@ -20,7 +21,7 @@ public class OrderEmailData {
     private String orderCode;
     private String customerName;
     private String customerEmail;
-    private LocalDate orderDate;
+    private LocalDateTime orderDate;
     private BigDecimal totalAmount;
     private BigDecimal discountAmount;
     private BigDecimal shippingFee;

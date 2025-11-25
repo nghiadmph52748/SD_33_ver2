@@ -1,11 +1,11 @@
 package org.example.be_sp.entity;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
+import org.hibernate.generator.EventType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,7 +43,7 @@ public class ThongTinDonHang {
     private String maThongTinDonHang;
 
     @Column(name = "thoi_gian")
-    private LocalDate thoiGian;
+    private LocalDateTime thoiGian;
 
     @Nationalized
     @Column(name = "ghi_chu")

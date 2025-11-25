@@ -1,7 +1,7 @@
 package org.example.be_sp.model.request;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,8 +27,8 @@ public class HoaDonRequest {
     private String maNhanVien;
     private String tenPhieuGiamGia;
     private String maPhieuGiamGia;
-    private LocalDate ngayThanhToan;
-    private LocalDate ngayTao;
+    private LocalDateTime ngayThanhToan;
+    private LocalDateTime ngayTao;
     private Integer idKhachHang;     // chỉ cần id thay vì full object
     private Integer idNhanVien;      // id nhân viên tạo/duyệt
     private Integer idPhieuGiamGia;  // id phiếu giảm giá (nếu có)

@@ -1,7 +1,7 @@
 package org.example.be_sp.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -99,10 +99,10 @@ public class HoaDon {
     private String maPhieuGiamGia;
 
     @Column(name = "ngay_tao")
-    private LocalDate ngayTao;
+    private LocalDateTime ngayTao;
 
     @Column(name = "ngay_thanh_toan")
-    private LocalDate ngayThanhToan;
+    private LocalDateTime ngayThanhToan;
 
     @ColumnDefault("1")
     @Column(name = "trang_thai")
@@ -113,13 +113,13 @@ public class HoaDon {
     private Boolean deleted;
 
     @Column(name = "create_at")
-    private LocalDate createAt;
+    private LocalDateTime createAt;
 
     @Column(name = "create_by")
     private Integer createBy;
 
     @Column(name = "update_at")
-    private LocalDate updateAt;
+    private LocalDateTime updateAt;
 
     @Column(name = "update_by")
     private Integer updateBy;

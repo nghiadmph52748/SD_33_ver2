@@ -151,8 +151,10 @@ export async function createOrderFromCart(
 
     // Extract primitive values from options to avoid circular references
     // Don't use toPlainObject on the whole options object as it contains reactive refs
+    // Format: YYYY-MM-DDTHH:mm:ss (backend expects LocalDateTime in ISO 8601 format)
+    const now = new Date();
     const createdAt = (options.createAt ??
-      new Date().toISOString().split("T")[0]) as string;
+      now.toISOString().split(".")[0]) as string;
     const shippingFee = Number(options.shippingFee ?? 0);
     const subtotal =
       Number(options.subtotal) ||

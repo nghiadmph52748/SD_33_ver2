@@ -1,13 +1,14 @@
 package org.example.be_sp.model.response;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.example.be_sp.entity.ThongTinDonHang;
-
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.example.be_sp.entity.ThongTinDonHang;
+
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -16,13 +17,13 @@ public class ThongTinDonHangResponse {
     private String maDonHang;
     private String tenTrangThaiDonHang;
     private String maThongTinDonHang;
-    private LocalDate thoiGian;
+    private LocalDateTime thoiGian;
     private String ghiChu;
     private Boolean deleted;
     
     // Thông tin từ hoa_don
-    private LocalDate ngayTao;
-    private LocalDate ngayThanhToan;
+    private LocalDateTime ngayTao;
+    private LocalDateTime ngayThanhToan;
     private String tenNhanVien;
     private String maNhanVien;
     

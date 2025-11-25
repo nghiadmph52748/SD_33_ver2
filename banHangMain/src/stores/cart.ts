@@ -139,10 +139,15 @@ export const useCartStore = defineStore("cart", {
         return 0;
       }
 
-      return state.cart.reduce(
-        (total, next) => total + next.quantity * next.price,
-        0
-      );
+      // Use integer math to avoid floating-point precision issues
+      // Convert to smallest unit (e.g., cents), calculate, then convert back
+      const total = state.cart.reduce((total, next) => {
+        // Ensure price is treated as integer (VND doesn't have decimals)
+        const priceInt = Math.round(next.price || 0);
+        return total + next.quantity * priceInt;
+      }, 0);
+
+      return total;
     },
     cartItems(state): CartPayload[] {
       if (!state.cart.length) {

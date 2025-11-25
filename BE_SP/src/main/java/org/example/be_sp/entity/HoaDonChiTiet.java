@@ -1,12 +1,12 @@
 package org.example.be_sp.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
+import org.hibernate.generator.EventType;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
@@ -76,13 +76,13 @@ public class HoaDonChiTiet {
     private Boolean deleted;
 
     @Column(name = "create_at")
-    private LocalDate createAt;
+    private LocalDateTime createAt;
 
     @Column(name = "create_by")
     private Integer createBy;
 
     @Column(name = "update_at")
-    private LocalDate updateAt;
+    private LocalDateTime updateAt;
 
     @Column(name = "update_by")
     private Integer updateBy;

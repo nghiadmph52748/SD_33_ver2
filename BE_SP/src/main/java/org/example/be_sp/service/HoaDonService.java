@@ -1,7 +1,7 @@
 package org.example.be_sp.service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -124,11 +124,11 @@ public class HoaDonService {
         }
         // Set ngayTao if not provided
         if (hd.getNgayTao() == null) {
-            hd.setNgayTao(LocalDate.now());
+            hd.setNgayTao(LocalDateTime.now());
         }
         // Set createAt if not provided
         if (hd.getCreateAt() == null) {
-            hd.setCreateAt(LocalDate.now());
+            hd.setCreateAt(LocalDateTime.now());
         }
         if (request.getLoaiDon() != null) {
             hd.setGiaoHang(request.getLoaiDon()); // Default to true (online order)
@@ -334,24 +334,10 @@ public class HoaDonService {
         ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
         thongTinDonHang.setIdHoaDon(savedHoaDon);
         thongTinDonHang.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(1).orElse(null));
-        thongTinDonHang.setThoiGian(LocalDate.now());
+        thongTinDonHang.setThoiGian(LocalDateTime.now());
         thongTinDonHang.setTrangThai(true);
         thongTinDonHang.setDeleted(false);
         thongTinDonHangRepository.save(thongTinDonHang);
-        ThongTinDonHang thongTinDonHang2 = new ThongTinDonHang();
-        thongTinDonHang2.setIdHoaDon(savedHoaDon);
-        thongTinDonHang2.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(2).orElse(null));
-        thongTinDonHang2.setThoiGian(LocalDate.now());
-        thongTinDonHang2.setTrangThai(true);
-        thongTinDonHang2.setDeleted(false);
-        thongTinDonHangRepository.save(thongTinDonHang2);
-        ThongTinDonHang thongTinDonHang3 = new ThongTinDonHang();
-        thongTinDonHang3.setIdHoaDon(savedHoaDon);
-        thongTinDonHang3.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(3).orElse(null));
-        thongTinDonHang3.setThoiGian(LocalDate.now());
-        thongTinDonHang3.setTrangThai(true);
-        thongTinDonHang3.setDeleted(false);
-        thongTinDonHangRepository.save(thongTinDonHang3);
         return new HoaDonResponse(savedHoaDon);
     }
 
@@ -439,7 +425,7 @@ public class HoaDonService {
                 }
             }
         }
-        hd.setUpdateAt(LocalDate.now());
+        hd.setUpdateAt(LocalDateTime.now());
 
         // Track original status and loaiDon before update
         Boolean originalStatus = hd.getTrangThai();
@@ -473,14 +459,14 @@ public class HoaDonService {
         } catch (Exception e) {
             log.warn("Failed to get original idTrangThaiDonHang from ThongTinDonHang: {}", e.getMessage());
         }
-        
+
         // Check if idTrangThaiDonHang changed
-        boolean idTrangThaiDonHangChanged = request.getIdTrangThaiDonHang() != null 
-            && !request.getIdTrangThaiDonHang().equals(originalIdTrangThaiDonHang);
-        
+        boolean idTrangThaiDonHangChanged = request.getIdTrangThaiDonHang() != null
+                && !request.getIdTrangThaiDonHang().equals(originalIdTrangThaiDonHang);
+
         // Create timeline entry when status changes (either boolean or idTrangThaiDonHang)
-        if (timelineNhanVien != null && 
-            ((request.getTrangThai() != null && !request.getTrangThai().equals(originalStatus)) || idTrangThaiDonHangChanged)) {
+        if (timelineNhanVien != null
+                && ((request.getTrangThai() != null && !request.getTrangThai().equals(originalStatus)) || idTrangThaiDonHangChanged)) {
             try {
                 // Get original status text from latest ThongTinDonHang if available
                 String trangThaiCu = "Chờ xác nhận"; // Default
@@ -495,12 +481,18 @@ public class HoaDonService {
                                     trangThaiCu = "Chờ xác nhận";
                                     break;
                                 case 2:
-                                    trangThaiCu = "Chờ giao hàng";
+                                    trangThaiCu = "Đã xác nhận";
                                     break;
-                                case 3:
-                                    trangThaiCu = "Đang giao";
+                                case 4:
+                                    trangThaiCu = "Đang giao hàng";
                                     break;
                                 case 5:
+                                    trangThaiCu = "Đã giao hàng";
+                                    break;
+                                case 6:
+                                    trangThaiCu = "Đã hủy";
+                                    break;
+                                case 7:
                                     trangThaiCu = "Hoàn thành";
                                     break;
                                 default:
@@ -517,24 +509,30 @@ public class HoaDonService {
                     log.warn("Failed to get original status from ThongTinDonHang, using boolean: {}", e.getMessage());
                     trangThaiCu = originalStatus != null && originalStatus ? "Hoàn thành" : "Chờ xác nhận";
                 }
-                
+
                 // Get new status text from idTrangThaiDonHang if provided, otherwise map from boolean
                 String trangThaiMoi;
-                
+
                 if (request.getIdTrangThaiDonHang() != null) {
                     // Map idTrangThaiDonHang to status text
                     switch (request.getIdTrangThaiDonHang()) {
                         case 1:
-                            trangThaiMoi = "Chờ xác nhận";
+                            trangThaiCu = "Chờ xác nhận";
                             break;
                         case 2:
-                            trangThaiMoi = "Chờ giao hàng";
+                            trangThaiCu = "Đã xác nhận";
                             break;
-                        case 3:
-                            trangThaiMoi = "Đang giao";
+                        case 4:
+                            trangThaiCu = "Đang giao hàng";
                             break;
                         case 5:
-                            trangThaiMoi = "Hoàn thành";
+                            trangThaiCu = "Đã giao hàng";
+                            break;
+                        case 6:
+                            trangThaiCu = "Đã hủy";
+                            break;
+                        case 7:
+                            trangThaiCu = "Hoàn thành";
                             break;
                         default:
                             trangThaiMoi = saved.getTrangThai() ? "Hoàn thành" : "Chờ xác nhận";
@@ -544,25 +542,8 @@ public class HoaDonService {
                     // Fallback: map boolean to status text
                     trangThaiMoi = saved.getTrangThai() ? "Hoàn thành" : "Chờ xác nhận";
                 }
-                
-                String hanhDong = "Cập nhật";
-                String moTa = "Cập nhật trạng thái đơn hàng từ \"" + trangThaiCu + "\" sang \"" + trangThaiMoi + "\"";
-
-                TimelineDonHang timeline = new TimelineDonHang();
-                timeline.setIdHoaDon(saved);
-                timeline.setIdNhanVien(timelineNhanVien);
-                timeline.setTrangThaiCu(trangThaiCu);
-                timeline.setTrangThaiMoi(trangThaiMoi);
-                timeline.setHanhDong(hanhDong);
-                timeline.setMoTa(moTa);
-                timeline.setThoiGian(java.time.Instant.now());
-                timeline.setTrangThai(true);
-                timeline.setDeleted(false);
-                timelineDonHangRepository.save(timeline);
-                log.info("Created timeline entry for status update: {} -> {} for invoice ID: {}", trangThaiCu, trangThaiMoi, saved.getId());
-                
                 // Update ThongTinDonHang with corresponding idTrangThaiDonHang
-                // idTrangThaiDonHang: 1 = Chờ xác nhận, 2 = Chờ giao hàng, 3 = Đang giao, 5 = Hoàn thành
+                // idTrangThaiDonHang: 1 = Chờ xác nhận, 2 = Đã xác nhận, 3 = Đang xử lý, 4 = Đang giao hàng, 5 = Đã giao hàng, 6 = Đã hủy, 7 = Hoàn thành
                 try {
                     // Use idTrangThaiDonHang from request if provided, otherwise map from boolean
                     Integer requestedIdTrangThaiDonHang = request.getIdTrangThaiDonHang();
@@ -570,10 +551,10 @@ public class HoaDonService {
                     if (requestedIdTrangThaiDonHang != null) {
                         idTrangThaiDonHang = requestedIdTrangThaiDonHang;
                     } else {
-                        // Fallback: map boolean to: false = 1 (Chờ xác nhận), true = 5 (Hoàn thành)
-                        idTrangThaiDonHang = saved.getTrangThai() ? 5 : 1;
+                        // Fallback: map boolean to: false = 1 (Chờ xác nhận), true = 7 (Hoàn thành)
+                        idTrangThaiDonHang = saved.getTrangThai() ? 7 : 1;
                     }
-                    
+
                     // Validate idTrangThaiDonHang exists
                     if (!trangThaiDonHangRepository.existsById(idTrangThaiDonHang)) {
                         log.warn("Trạng thái đơn hàng với id: {} không tồn tại, bỏ qua tạo ThongTinDonHang", idTrangThaiDonHang);
@@ -583,7 +564,7 @@ public class HoaDonService {
                         newThongTin.setIdHoaDon(saved);
                         newThongTin.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(idTrangThaiDonHang)
                                 .orElseThrow(() -> new ApiException("Không tìm thấy trạng thái đơn hàng với id: " + idTrangThaiDonHang, "404")));
-                        newThongTin.setThoiGian(LocalDate.now());
+                        newThongTin.setThoiGian(LocalDateTime.now());
                         newThongTin.setTrangThai(true);
                         newThongTin.setDeleted(false);
                         thongTinDonHangRepository.save(newThongTin);
@@ -720,7 +701,7 @@ public class HoaDonService {
                     .orderCode(hoaDon.getMaHoaDon())
                     .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                     .customerEmail(customerEmail)
-                    .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDate.now())
+                    .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
                     .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
                     .discountAmount(discountAmount)
                     .shippingFee(hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO)
@@ -773,7 +754,7 @@ public class HoaDonService {
                 hoaDon.setDiaChiNguoiNhan("Địa chỉ " + i + ", TP.HCM");
                 hoaDon.setSoDienThoaiNguoiNhan("012345678" + i);
                 hoaDon.setEmailNguoiNhan("khachhang" + i + "@email.com");
-                hoaDon.setNgayTao(LocalDate.now());
+                hoaDon.setNgayTao(LocalDateTime.now());
                 hoaDon.setTrangThai(true); // Hoàn thành
                 hoaDon.setDeleted(false);
 

@@ -1,6 +1,6 @@
 package org.example.be_sp.service;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.example.be_sp.entity.ChiTietSanPham;
@@ -208,7 +208,7 @@ public class HoaDonChiTietService {
         hdct.setGiaBan(request.getGiaBan());
         hdct.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : Boolean.TRUE);
         hdct.setDeleted(request.getDeleted() != null ? request.getDeleted() : Boolean.FALSE);
-        LocalDate createdAt = request.getCreateAt() != null ? request.getCreateAt() : LocalDate.now();
+        LocalDateTime createdAt = LocalDateTime.now();
         hdct.setCreateAt(createdAt);
 
         // Calculate thanhTien

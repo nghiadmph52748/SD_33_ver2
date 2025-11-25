@@ -200,20 +200,23 @@ function calculateLocalShippingFee(
   const STORE_DISTRICT = "Bắc Từ Liêm";
   const STORE_CITY = "Hà Nội";
 
+  // Ensure subtotal is integer (VND doesn't have decimals)
+  const subtotalInt = Math.round(subtotal || 0);
+
   // Miễn phí vận chuyển nếu >= 5 triệu
-  if (subtotal >= 5000000) {
+  if (subtotalInt >= 5000000) {
     return 0;
   }
 
   // Cùng quận - giảm 30% nếu >= 2 triệu
   if (location.quan === STORE_DISTRICT && location.thanhPho === STORE_CITY) {
-    if (subtotal >= 2000000) return 12000;
+    if (subtotalInt >= 2000000) return 12000;
     return 18000;
   }
 
   // Hà Nội khác quận
   if (location.thanhPho === STORE_CITY) {
-    if (subtotal >= 3000000) return 18000;
+    if (subtotalInt >= 3000000) return 18000;
     return 25000;
   }
 
@@ -231,7 +234,7 @@ function calculateLocalShippingFee(
       (p) => p.toLowerCase() === location.thanhPho.toLowerCase()
     )
   ) {
-    if (subtotal >= 3000000) return 28000;
+    if (subtotalInt >= 3000000) return 28000;
     return 38000;
   }
 
@@ -250,7 +253,7 @@ function calculateLocalShippingFee(
       (p) => p.toLowerCase() === location.thanhPho.toLowerCase()
     )
   ) {
-    if (subtotal >= 3000000) return 45000;
+    if (subtotalInt >= 3000000) return 45000;
     return 60000;
   }
 
@@ -271,7 +274,7 @@ function calculateLocalShippingFee(
       (p) => p.toLowerCase() === location.thanhPho.toLowerCase()
     )
   ) {
-    if (subtotal >= 3000000) return 48000;
+    if (subtotalInt >= 3000000) return 48000;
     return 68000;
   }
 
@@ -280,7 +283,7 @@ function calculateLocalShippingFee(
   if (
     tay_nguyen.some((p) => p.toLowerCase() === location.thanhPho.toLowerCase())
   ) {
-    if (subtotal >= 3000000) return 55000;
+    if (subtotalInt >= 3000000) return 55000;
     return 75000;
   }
 
@@ -312,7 +315,7 @@ function calculateLocalShippingFee(
       (p) => p.toLowerCase() === location.thanhPho.toLowerCase()
     )
   ) {
-    if (subtotal >= 3000000) return 58000;
+    if (subtotalInt >= 3000000) return 58000;
     return 80000;
   }
 
@@ -464,25 +467,30 @@ async function calculateShippingFeeFromGHN(
       cod_failed_amount: 0,
       coupon: null,
     };
-    //  const feeRes = await fetch(
-    //    "https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee",
-    //    {
-    //      method: "POST",
-    //      headers: {
-    //        "Content-Type": "application/json",
-    //        Token: GHN_TOKEN,
-    //      },
-    //      body: JSON.stringify(feePayload),
-    //    }
-    //  );
+
+    const feeRes = await fetch(
+      "https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Token: GHN_TOKEN,
+        },
+        body: JSON.stringify(feePayload),
+      }
+    );
 
     const feeData = await feeRes.json();
 
     if (!feeData.data || typeof feeData.data.total !== "number") {
       throw new Error("Invalid fee response format");
     }
+
+    // Ensure fee is integer
+    const shippingFeeInt = Math.round(feeData.data.total);
+
     return {
-      fee: feeData.data.total,
+      fee: shippingFeeInt,
       message: "Phí từ GHN",
       estimatedDays: "1-3 ngày",
     };

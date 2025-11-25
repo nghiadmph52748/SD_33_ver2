@@ -1,11 +1,13 @@
 package org.example.be_sp.model.response;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import org.example.be_sp.entity.HinhThucThanhToan;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.example.be_sp.entity.HinhThucThanhToan;
-import java.time.LocalDate;
-import java.math.BigDecimal;
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,7 +23,7 @@ public class HinhThucThanhToanReponse {
     private Boolean deleted;
     //    private String ghiChu;
     private String tenNhanVienXacNhan;
-    private LocalDate ngayTao;
+    private LocalDateTime ngayTao;
 
     public HinhThucThanhToanReponse(HinhThucThanhToan httt) {
         this.id = httt.getId();

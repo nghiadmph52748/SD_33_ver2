@@ -24,16 +24,10 @@
             <span>{{ $t("cart.subtotal") }}</span>
             <span>{{ cartCount === 0 ? "—" : formatCurrency(cartTotal) }}</span>
           </div>
-          <!-- <div class="row muted">
-            <span>{{ $t('cart.estimatedDelivery') }}</span>
-            <span>{{ cartCount === 0 ? '—' : formatCurrency(shippingFee) }}</span>
-          </div> -->
           <hr />
           <div class="row total">
             <span>{{ $t("cart.total") }}</span>
-            <span>{{
-              cartCount === 0 ? "—" : formatCurrency(orderTotal)
-            }}</span>
+            <span>{{ cartCount === 0 ? "—" : formatCurrency(cartTotal) }}</span>
           </div>
 
           <div class="summary-actions">
@@ -64,76 +58,10 @@ import AppSalesBoxes from "@/components/AppSalesBoxes.vue";
 import { useCartStore } from "@/stores/cart";
 import AppEmptyState from "@/components/AppEmptyState.vue";
 import { useI18n } from "vue-i18n";
-import { calculateShippingFee, ShippingLocation } from "@/api/shipping";
 
 const cartStore = useCartStore();
 const { cartUIStatus, cartCount, cartTotal } = storeToRefs(cartStore);
-const shippingFee = ref(0);
-const isCalculatingFee = ref(false);
-const orderTotal = computed(() => cartTotal.value + shippingFee.value);
 const { t } = useI18n();
-
-/**
- * Calculate shipping fee based on delivery location
- * For demo, using a default location - in production, this should come from checkout form
- */
-async function updateShippingFee() {
-  if (cartCount.value === 0) {
-    shippingFee.value = 0;
-    return;
-  }
-
-  isCalculatingFee.value = true;
-  try {
-    // TODO: Get actual delivery location from checkout form/user selection
-    // For now, using a default location in Hanoi
-    const deliveryLocation: ShippingLocation = {
-      thanhPho: "Hà Nội",
-      quan: "Hoàn Kiếm",
-      phuong: "Hàng Gai",
-      diaChiCuThe: "Số 1 Hàng Gai",
-    };
-
-    const result = await calculateShippingFee({
-      location: deliveryLocation,
-      weight: 500, // gram
-      length: 10, // cm
-      width: 10, // cm
-      height: 10, // cm
-      subtotal: cartTotal.value,
-    });
-
-    shippingFee.value = result.fee;
-  } catch (error) {
-    console.error("Error calculating shipping fee:", error);
-    // Fallback to a default fee
-    shippingFee.value = 15000;
-  } finally {
-    isCalculatingFee.value = false;
-  }
-}
-
-// Calculate shipping fee when cart total changes
-watch(
-  () => cartTotal.value,
-  () => {
-    if (cartCount.value > 0) {
-      updateShippingFee();
-    }
-  }
-);
-
-// Calculate initial shipping fee on component mount
-watch(
-  () => cartCount.value,
-  (newCount) => {
-    if (newCount > 0) {
-      updateShippingFee();
-    } else {
-      shippingFee.value = 0;
-    }
-  }
-);
 </script>
 
 <style scoped lang="scss">

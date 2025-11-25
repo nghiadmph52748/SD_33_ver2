@@ -1,7 +1,7 @@
 package org.example.be_sp.model.request;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 
@@ -29,15 +29,15 @@ public class BanHangTaiQuayRequest {
     private String diaChiNhanHang;
     private String soDienThoaiNguoiNhan;
     private String emailNguoiNhan;
-    private LocalDate ngayTao;
-    private LocalDate ngayThanhToan;
+    private LocalDateTime ngayTao;
+    private LocalDateTime ngayThanhToan;
     private Boolean loaiDon;
     private Boolean trangThai;
     private Boolean deleted;
     private String ghiChu;
-    private LocalDate createAt;
+    private LocalDateTime createAt;
     private Integer createBy;
-    private LocalDate updateAt;
+    private LocalDateTime updateAt;
     private Integer updateBy;
     
     // Các trường mới cho nhân viên và phiếu giảm giá
