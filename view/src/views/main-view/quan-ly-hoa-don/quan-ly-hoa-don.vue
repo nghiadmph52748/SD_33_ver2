@@ -133,9 +133,7 @@
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="getStatusColorByName(record.trangThaiDonHang || 'Chờ xác nhận')">
-            {{ record.trangThaiDonHang || 'Chờ xác nhận' }}
-          </a-tag>
+          <a-tag :color="getStatusColorByName(record.trangThaiDonHang)">{{ record.trangThaiDonHang }}</a-tag>
         </template>
 
         <template #total="{ record }">
@@ -686,8 +684,8 @@ const getHighestPriorityStatus = (thongTinDonHangs: any[]): string => {
 
   // Priority order: Đã huỷ > Hoàn thành > Đã giao hàng > Đang giao hàng > Đang xử lý > Đã xác nhận > Chờ xác nhận
   const priorityMap: Record<string, number> = {
-    'Đã huỷ': 7,
-    'Hoàn thành': 6,
+    'Đã huỷ': 6,
+    'Hoàn thành': 7,
     'Đã giao hàng': 5,
     'Đang giao hàng': 4,
     'Đang xử lý': 3,

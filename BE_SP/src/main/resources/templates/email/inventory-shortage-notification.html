@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Thông báo sự cố số lượng sản phẩm</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+			line-height: 1.6;
+			color: #1d2129;
+			background-color: #f7f8fa;
+			padding: 20px;
+		}
+
+		.email-container {
+			max-width: 600px;
+			margin: 0 auto;
+			background: white;
+			border-radius: 4px;
+			overflow: hidden;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		}
+
+		.email-header {
+			background: linear-gradient(135deg, #FFA940 0%, #FF7A45 100%);
+			padding: 32px 24px;
+			text-align: center;
+		}
+
+		.email-header h1 {
+			color: white;
+			font-size: 24px;
+			font-weight: 600;
+			margin-bottom: 8px;
+		}
+
+		.email-header p {
+			color: rgba(255, 255, 255, 0.9);
+			font-size: 14px;
+		}
+
+		.email-body {
+			padding: 32px 24px;
+		}
+
+		.greeting {
+			font-size: 16px;
+			color: #1d2129;
+			margin-bottom: 20px;
+			line-height: 1.5;
+		}
+
+		.alert-badge {
+			display: inline-block;
+			background: #FF4D4F;
+			color: white;
+			padding: 8px 16px;
+			border-radius: 2px;
+			font-size: 14px;
+			font-weight: 600;
+			margin: 16px 0;
+		}
+
+		.shortage-card {
+			background: #FFF7E6;
+			border: 2px solid #FFB800;
+			border-left: 5px solid #FF7A45;
+			padding: 20px;
+			margin: 24px 0;
+			border-radius: 4px;
+		}
+
+		.shortage-card h3 {
+			color: #D46B08;
+			font-size: 16px;
+			font-weight: 600;
+			margin-bottom: 12px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.product-shortage-item {
+			background: white;
+			border: 1px solid #FFB800;
+			padding: 12px;
+			margin: 8px 0;
+			border-radius: 3px;
+			font-size: 14px;
+		}
+
+		.product-shortage-item strong {
+			color: #D46B08;
+		}
+
+		.action-card {
+			background: #E6F7FF;
+			border: 1px solid #91D5FF;
+			border-left: 3px solid #1890FF;
+			padding: 20px;
+			margin: 24px 0;
+			border-radius: 4px;
+		}
+
+		.action-card h3 {
+			color: #0050B3;
+			font-size: 16px;
+			font-weight: 600;
+			margin-bottom: 12px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.action-card ul {
+			margin-left: 20px;
+			color: #1d2129;
+			font-size: 14px;
+		}
+
+		.action-card li {
+			margin: 8px 0;
+		}
+
+		.info-card {
+			background: #F7F8FA;
+			border: 1px solid #E5E6EB;
+			border-left: 3px solid #165DFF;
+			padding: 20px;
+			margin: 24px 0;
+			border-radius: 4px;
+		}
+
+		.info-card h3 {
+			color: #1d2129;
+			font-size: 16px;
+			font-weight: 600;
+			margin-bottom: 16px;
+		}
+
+		.info-row {
+			display: flex;
+			justify-content: space-between;
+			padding: 10px 0;
+			border-bottom: 1px solid #E5E6EB;
+		}
+
+		.info-row:last-child {
+			border-bottom: none;
+		}
+
+		.info-label {
+			color: #4e5969;
+			font-size: 14px;
+		}
+
+		.info-value {
+			color: #1d2129;
+			font-weight: 500;
+			font-size: 14px;
+		}
+
+		.highlight {
+			color: #165DFF;
+			font-weight: 600;
+		}
+
+		.highlight-warn {
+			color: #D46B08;
+			font-weight: 600;
+		}
+
+		.button {
+			display: inline-block;
+			background: #165DFF;
+			color: white;
+			padding: 12px 24px;
+			text-decoration: none;
+			border-radius: 4px;
+			font-weight: 500;
+			font-size: 14px;
+			margin: 20px 0;
+			transition: background 0.2s;
+		}
+
+		.button:hover {
+			background: #4080FF;
+		}
+
+		.support-box {
+			background: #F0F9FF;
+			border: 1px solid #BAE6FD;
+			border-radius: 4px;
+			padding: 16px;
+			margin: 20px 0;
+		}
+
+		.support-box p {
+			color: #0369A1;
+			font-size: 14px;
+			margin: 0;
+		}
+
+		.email-footer {
+			background: #F7F8FA;
+			padding: 24px;
+			text-align: center;
+			color: #86909C;
+			font-size: 13px;
+			border-top: 1px solid #E5E6EB;
+		}
+
+		.email-footer p {
+			margin: 8px 0;
+		}
+
+		@media only screen and (max-width: 600px) {
+			.email-container {
+				border-radius: 0;
+			}
+
+			.email-header,
+			.email-body,
+			.email-footer {
+				padding: 20px;
+			}
+
+			.info-row {
+				flex-direction: column;
+				gap: 5px;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div class="email-container">
+		<div class="email-header">
+			<h1>⚠️ GearUp</h1>
+			<p>Thông báo về tình trạng đơn hàng</p>
+		</div>
+		<div class="email-body">
+			<div class="greeting">
+				<p>Xin chào <strong th:text="${order.customerName}">Khách hàng</strong>,</p>
+				<p>Cảm ơn bạn đã đặt hàng tại GearUp! Chúng tôi muốn thông báo một tình trạng quan trọng về đơn hàng của
+					bạn:</p>
+			</div>
+
+			<!-- Shortage Alert Card -->
+			<div class="shortage-card">
+				<h3>❌ Sự cố về số lượng sản phẩm</h3>
+				<p style="margin-bottom: 12px; color: #1d2129;">Rất tiếc, một số sản phẩm trong đơn hàng của bạn hiện không
+					đủ số lượng:</p>
+				<div class="product-shortage-item">
+					<strong th:text="${order.orderStatus}">Nike Air Max: yêu cầu 5, có 3</strong>
+				</div>
+			</div>
+
+			<!-- Action Card -->
+			<div class="action-card">
+				<h3>✅ Cửa hàng đang cố gắng hoàn thành đơn hàng cho bạn</h3>
+				<p style="margin-bottom: 12px; color: #1d2129; font-size: 14px;">
+					Cửa hàng hiện đang tích cực nhập hàng để hoàn thành đơn hàng. Chúng tôi sẽ:
+				</p>
+				<ul style="color: #0050B3;">
+					<li><strong>✓ Liên hệ với bạn sớm nhất</strong> khi hàng về kho</li>
+					<li><strong>✓ Cập nhật tình trạng</strong> thường xuyên qua email</li>
+					<li><strong>✓ Gửi hàng nhanh chóng</strong> ngay khi có đủ sản phẩm</li>
+				</ul>
+			</div>
+
+			<!-- Order Info Card -->
+			<div class="info-card">
+				<h3>📦 Thông tin đơn hàng</h3>
+				<div class="info-row">
+					<span class="info-label">Mã đơn hàng:</span>
+					<span class="info-value highlight" th:text="${order.orderCode}">#HD00001</span>
+				</div>
+				<div class="info-row">
+					<span class="info-label">Ngày đặt hàng:</span>
+					<span class="info-value" th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}">15/11/2024
+						10:30</span>
+				</div>
+				<div class="info-row">
+					<span class="info-label">Tổng tiền:</span>
+					<span class="info-value highlight-warn"
+						th:text="${#numbers.formatDecimal(order.finalAmount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">1,430,000
+						₫</span>
+				</div>
+				<div class="info-row" th:if="${order.deliveryAddress}">
+					<span class="info-label">Địa chỉ giao hàng:</span>
+					<span class="info-value" th:text="${order.deliveryAddress}">123 Đường ABC</span>
+				</div>
+			</div>
+
+			<!-- Support Box -->
+			<div class="support-box">
+				<p>
+					<strong>☎️ Nếu bạn có câu hỏi hoặc cần hỗ trợ:</strong>
+					<br>
+					📞 Hotline: <span class="highlight">1900 1234</span>
+					<br>
+					📧 Email: <span class="highlight">support@gearup.com</span>
+					<br>
+					💬 Chat: Sẵn sàng trợ giúp trên website
+				</p>
+			</div>
+
+			<div style="text-align: center; margin: 20px 0;">
+				<p style="font-size: 14px; color: #1d2129;">
+					Cảm ơn bạn đã tin tưởng <strong>GearUp</strong> - Nơi mua sắm sản phẩm chính hãng!
+				</p>
+			</div>
+		</div>
+		<div class="email-footer">
+			<p><strong>GearUp - Gear Up Your Style!</strong></p>
+			<p>Địa chỉ: 123 Đường Sneaker, Quận Giày, TP. Thể Thao</p>
+			<p>Email: info@gearup.com | Hotline: 1900-1234</p>
+			<p style="margin-top: 16px; font-size: 12px; line-height: 1.4;">
+				⚠️ Email này được gửi tự động để thông báo về tình trạng đơn hàng của bạn. <br>
+				Vui lòng không trả lời email này. Liên hệ hotline hoặc email ở trên để được hỗ trợ.
+			</p>
+		</div>
+	</div>
+</body>
+
+</html>

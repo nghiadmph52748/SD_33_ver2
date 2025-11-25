@@ -4,9 +4,6 @@
     <div class="page-header">
       <div class="header-left">
         <h1 class="page-title">Chi tiết hóa đơn</h1>
-        <a-tag :color="getStatusColor(invoice?.trangThai)" class="status-badge">
-          {{ getStatusText(invoice?.trangThai) }}
-        </a-tag>
       </div>
       <div class="header-right">
         <a-button @click="goBack" class="back-button">
@@ -306,11 +303,23 @@
             <a-form-item label="Trạng thái">
               <a-select v-model="updateForm.trangThaiText" placeholder="Chọn trạng thái">
                 <a-option value="Chờ xác nhận">Chờ xác nhận</a-option>
-                <a-option value="Chờ giao hàng">Chờ giao hàng</a-option>
-                <a-option value="Đang giao">Đang giao</a-option>
+                <a-option value="Đã xác nhận">Đã xác nhận</a-option>
+                <a-option value="Đang xử lý">Đang xử lý</a-option>
+                <a-option value="Đang giao hàng">Đang giao hàng</a-option>
+                <a-option value="Đã giao hàng">Đã giao hàng</a-option>
                 <a-option value="Hoàn thành">Hoàn thành</a-option>
-                <a-option value="Đã hủy">Đã hủy</a-option>
+                <a-option value="Đã huỷ">Đã huỷ</a-option>
               </a-select>
+            </a-form-item>
+            <!-- Show payment input when status is "Hoàn thành" and order is online -->
+            <a-form-item v-if="showPaymentInput" label="Tiền khách trả">
+              <a-input-number
+                v-model="updateForm.soTienDaThanhToan"
+                :precision="0"
+                :step="1000"
+                placeholder="Nhập tiền khách trả"
+                :min="0"
+              />
             </a-form-item>
           </a-form>
         </a-tab-pane>
@@ -352,6 +361,8 @@ import axios from 'axios'
 import { fetchTimelineByHoaDonId, type TimelineItem } from '@/api/timeline'
 import { useUserStore } from '@/store'
 import { Message } from '@arco-design/web-vue'
+import { useOrderStatusNotification } from '@/composables/useOrderStatusNotification'
+import { useOrderStatusAsyncNotification } from '@/composables/useOrderStatusAsyncNotification'
 import {
   IconArrowLeft,
   IconPrinter,
@@ -368,6 +379,25 @@ import {
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
+// Async notification setup (for status change feedback)
+const asyncNotification = useOrderStatusAsyncNotification()
+
+// Real-time notification setup
+const { isConnected, notifications, lastNotification } = useOrderStatusNotification(parseInt(route.params.id as string), {
+  onStatusChange: (notification) => {
+    console.log('Order status changed:', notification)
+    // Refresh invoice data when status changes
+    if (notification.type === 'status_update') {
+      fetchInvoiceDetail()
+      fetchTimeline()
+    }
+  },
+  onError: (error) => {
+    console.error('Notification error:', error)
+  },
+  autoReload: false, // Don't auto-reload, let user see the changes first
+})
 
 // Data
 const invoice = ref<any>(null)
@@ -390,6 +420,7 @@ const updateForm = ref({
   diaChiNhanHang: '',
   emailNguoiNhan: '',
   ghiChu: '',
+  soTienDaThanhToan: 0, // Payment amount when completing order
 })
 
 // Helper functions
@@ -814,6 +845,15 @@ const getStatusColorByName = (statusName: string): string => {
       return 'blue'
   }
 }
+
+// Computed: Check if should show payment input (when selecting "Hoàn thành" and order is online/delivery)
+const showPaymentInput = computed(() => {
+  return (
+    updateForm.value.trangThaiText === 'Hoàn thành' &&
+    updateForm.value.loaiDon === true && // loaiDon = true means online (GiaoHang)
+    !updateForm.value.ghiChu?.includes('Bán hàng tại quầy') // not counter sales
+  )
+})
 
 // Computed: Get current stage status label (for display in order info)
 const currentStageStatus = computed(() => {
@@ -1301,7 +1341,6 @@ const calculatedDiscountAmount = computed(() => {
 
 const fetchInvoiceDetail = async () => {
   try {
-    console.log('[fetchInvoiceDetail] Starting, invoiceId:', invoiceId.value)
     loading.value = true
 
     // Fetch timeline data in parallel
@@ -1341,7 +1380,6 @@ const fetchInvoiceDetail = async () => {
       if (orderInfoResponse.data && orderInfoResponse.data.data) {
         const orderInfo = orderInfoResponse.data.data
         invoice.value = orderInfo.idHoaDon
-        console.log('[fetchInvoiceDetail] Loaded invoice from thong-tin-hoa-don API:', invoice.value)
         loading.value = false
         return // Thành công, không cần fallback
       }
@@ -1469,7 +1507,6 @@ const fetchInvoiceDetail = async () => {
       ],
     }
   } finally {
-    console.log('[fetchInvoiceDetail] Finished, invoice.value:', invoice.value?.id, invoice.value?.maHoaDon)
     loading.value = false
   }
 }
@@ -1541,8 +1578,8 @@ const handleViewProductDetail = (product: any) => {
 const showUpdateModal = () => {
   if (!invoice.value) return
 
-  // Get current status text
-  const currentStatusText = getStatusText(invoice.value.trangThai)
+  // Get current status text from trangThaiDonHang (from getHighestPriorityStatusFromInvoice)
+  const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
 
   // Populate form with current invoice data
   updateForm.value = {
@@ -1555,6 +1592,7 @@ const showUpdateModal = () => {
     diaChiNhanHang: invoice.value.diaChiNhanHang || invoice.value.diaChiNguoiNhan || invoice.value.diaChi || '',
     emailNguoiNhan: invoice.value.emailNguoiNhan || invoice.value.email || '',
     ghiChu: invoice.value.ghiChu || '',
+    soTienDaThanhToan: invoice.value.tongTienSauGiam || invoice.value.tongTien || 0, // Default payment amount
   }
   activeUpdateTab.value = 'order'
   updateModalVisible.value = true
@@ -1573,6 +1611,7 @@ const closeUpdateModal = () => {
     diaChiNhanHang: '',
     emailNguoiNhan: '',
     ghiChu: '',
+    soTienDaThanhToan: 0,
   }
 }
 
@@ -1581,27 +1620,30 @@ const handleSaveUpdate = async () => {
 
   saving.value = true
   try {
-    // Map status text to boolean and idTrangThaiDonHang
-    // idTrangThaiDonHang: 1 = Chờ xác nhận, 2 = Chờ giao hàng, 3 = Đang giao, 5 = Hoàn thành
+    // Map status text to priority ID
+    // Priority map: 'Đã huỷ': 6, 'Hoàn thành': 7, 'Đã giao hàng': 5, 'Đang giao hàng': 4,
+    // 'Đang xử lý': 3, 'Đã xác nhận': 2, 'Chờ xác nhận': 1
     let trangThai = false
-    let idTrangThaiDonHang: number | null = null
+    let idTrangThaiDonHang: number = 1 // Default to Chờ xác nhận
 
-    if (updateForm.value.trangThaiText === 'Hoàn thành' || updateForm.value.trangThaiText === 'Đã thanh toán') {
+    const statusPriorityMap: { [key: string]: number } = {
+      'Đã huỷ': 6,
+      'Hoàn thành': 7,
+      'Đã giao hàng': 5,
+      'Đang giao hàng': 4,
+      'Đang xử lý': 3,
+      'Đã xác nhận': 2,
+      'Chờ xác nhận': 1,
+    }
+
+    const statusName = updateForm.value.trangThaiText
+    idTrangThaiDonHang = statusPriorityMap[statusName] || 1 // Default to 1 if not found
+
+    // Set trangThai boolean based on status
+    if (statusName === 'Hoàn thành' || statusName === 'Đã giao hàng' || statusName === 'Đã huỷ') {
       trangThai = true
-      idTrangThaiDonHang = 5 // Hoàn thành
-    } else if (updateForm.value.trangThaiText === 'Chờ giao hàng') {
-      trangThai = false
-      idTrangThaiDonHang = 2 // Chờ giao hàng
-    } else if (updateForm.value.trangThaiText === 'Đang giao') {
-      trangThai = false
-      idTrangThaiDonHang = 3 // Đang giao
-    } else if (updateForm.value.trangThaiText === 'Đã hủy') {
-      trangThai = false
-      idTrangThaiDonHang = 1 // Chờ xác nhận (hoặc có thể là trạng thái hủy riêng)
     } else {
-      // Chờ xác nhận = default
       trangThai = false
-      idTrangThaiDonHang = 1 // Chờ xác nhận
     }
 
     // Get current values to check if they changed
@@ -1648,6 +1690,10 @@ const handleSaveUpdate = async () => {
     }
     if (updateForm.value.ghiChu !== undefined && updateForm.value.ghiChu !== null) {
       updateData.ghiChu = updateForm.value.ghiChu
+    }
+    // Include payment amount when completing order for delivery (online)
+    if (showPaymentInput.value && updateForm.value.soTienDaThanhToan > 0) {
+      updateData.soTienDaThanhToan = updateForm.value.soTienDaThanhToan
     }
 
     // Call API to update invoice
@@ -1710,6 +1756,9 @@ const handleSaveUpdate = async () => {
 
     // If update succeeded (either from try or catch), refresh data
     if (updateSucceeded) {
+      // Show loading notification
+      const hideLoader = asyncNotification.showLoadingNotification('Đang cập nhật trạng thái đơn hàng...')
+
       await fetchInvoiceDetail()
       // Force refresh timeline to get latest updates
       // Add small delay to ensure backend has committed the transaction
@@ -1720,8 +1769,21 @@ const handleSaveUpdate = async () => {
       } catch (timelineError) {
         console.warn('Failed to refresh timeline:', timelineError)
       }
+
       closeUpdateModal()
-      Message.success('Cập nhật hóa đơn thành công')
+
+      // Hide loader and show success notification
+      hideLoader()
+      asyncNotification.showSuccessNotification(
+        {
+          orderId: invoice.value.id,
+          orderCode: invoice.value.maHoaDon,
+          oldStatus: getStatusText(currentTrangThai),
+          newStatus: updateForm.value.trangThaiText,
+          message: `Cập nhật trạng thái thành công: ${updateForm.value.trangThaiText}`,
+        },
+        5
+      )
     }
   } catch (error: any) {
     console.error('Error updating invoice:', error)
@@ -1734,7 +1796,19 @@ const handleSaveUpdate = async () => {
       errorMessage = error.message
     }
 
-    Message.error(errorMessage)
+    // Show different notification based on error type
+    if (errorMessage.includes('Số lượng sản phẩm')) {
+      asyncNotification.showInventoryShortageNotification(errorMessage.replace('Số lượng sản phẩm yêu cầu không đủ: ', ''), 8)
+    } else {
+      asyncNotification.showErrorNotification(
+        {
+          orderId: invoice.value?.id,
+          orderCode: invoice.value?.maHoaDon,
+          message: errorMessage,
+        },
+        5
+      )
+    }
   } finally {
     saving.value = false
   }
@@ -1764,6 +1838,7 @@ const getTrangThaiDonColor = (trangThai: boolean) => {
 
 // Lifecycle
 onMounted(() => {
+  console.log('📡 WebSocket connection status:', isConnected.value)
   fetchInvoiceDetail()
 })
 </script>
@@ -1823,6 +1898,36 @@ onMounted(() => {
 .status-badge {
   font-size: 14px;
   font-weight: 500;
+}
+
+.connection-status-badge {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
+  animation: pulse 2s infinite;
+}
+
+.connection-status-badge[color='green'] {
+  background-color: #f0fdf4;
+  border-color: #22c55e;
+  color: #16a34a;
+}
+
+.connection-status-badge[color='red'] {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .header-right {
