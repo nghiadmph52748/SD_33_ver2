@@ -302,13 +302,9 @@
             </a-form-item>
             <a-form-item label="Trạng thái">
               <a-select v-model="updateForm.trangThaiText" placeholder="Chọn trạng thái">
-                <a-option value="Chờ xác nhận">Chờ xác nhận</a-option>
-                <a-option value="Đã xác nhận">Đã xác nhận</a-option>
-                <a-option value="Đang xử lý">Đang xử lý</a-option>
-                <a-option value="Đang giao hàng">Đang giao hàng</a-option>
-                <a-option value="Đã giao hàng">Đã giao hàng</a-option>
-                <a-option value="Hoàn thành">Hoàn thành</a-option>
-                <a-option value="Đã huỷ">Đã huỷ</a-option>
+                <a-option v-for="status in statusOptions" :key="status" :value="status">
+                  {{ status }}
+                </a-option>
               </a-select>
             </a-form-item>
             <!-- Show payment input when status is "Hoàn thành" and order is online -->
@@ -563,6 +559,30 @@ const getHighestPriorityStatusFromInvoice = (): string => {
 
   return highestStatus
 }
+
+const STATUS_FLOW_ORDER: Record<string, number> = {
+  'Chờ xác nhận': 1,
+  'Chờ thanh toán': 1,
+  'Đã xác nhận': 2,
+  'Đang xử lý': 3,
+  'Đang giao hàng': 4,
+  'Đang giao': 4,
+  'Đã giao hàng': 5,
+  'Hoàn thành': 6,
+  'Đã thanh toán': 6,
+  'Đã huỷ': 7,
+  'Đã hủy': 7,
+}
+
+const ONLINE_STATUS_OPTIONS = [
+  'Chờ xác nhận',
+  'Đã xác nhận',
+  'Đang giao hàng',
+  'Hoàn thành',
+  'Đã huỷ',
+]
+
+const OFFLINE_STATUS_OPTIONS = ['Chờ xác nhận', 'Hoàn thành', 'Đã huỷ']
 
 // Helper: Get time from timeline by status/action
 // Rebuild logic để đảm bảo mỗi status lấy đúng entry của nó
@@ -872,6 +892,13 @@ const showPaymentInput = computed(() => {
     updateForm.value.loaiDon === true && // loaiDon = true means online (GiaoHang)
     !updateForm.value.ghiChu?.includes('Bán hàng tại quầy') // not counter sales
   )
+})
+
+const statusOptions = computed(() => {
+  if (invoice.value?.loaiDon === false || updateForm.value.loaiDon === false) {
+    return OFFLINE_STATUS_OPTIONS
+  }
+  return ONLINE_STATUS_OPTIONS
 })
 
 // Computed: Get current stage status label (for display in order info)
@@ -1381,18 +1408,22 @@ const calculatedDiscountAmount = computed(() => {
 
 // Methods
 
+const fetchTimeline = async () => {
+  try {
+    const timelineResponse = await fetchTimelineByHoaDonId(Number(invoiceId.value))
+    timelineData.value = timelineResponse || []
+  } catch (timelineError) {
+    console.warn('Failed to load timeline:', timelineError)
+    timelineData.value = []
+  }
+}
+
 const fetchInvoiceDetail = async () => {
   try {
     loading.value = true
 
     // Fetch timeline data in parallel
-    try {
-      const timelineResponse = await fetchTimelineByHoaDonId(Number(invoiceId.value))
-      timelineData.value = timelineResponse || []
-    } catch (timelineError) {
-      console.warn(' Failed to load timeline:', timelineError)
-      timelineData.value = []
-    }
+    await fetchTimeline()
 
     // Fetch payment methods
     try {
@@ -1681,6 +1712,16 @@ const handleSaveUpdate = async () => {
     const statusName = updateForm.value.trangThaiText
     idTrangThaiDonHang = statusPriorityMap[statusName] || 1 // Default to 1 if not found
 
+    const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
+    const currentStatusOrder = STATUS_FLOW_ORDER[currentStatusText] || 0
+    const newStatusOrder = STATUS_FLOW_ORDER[statusName] || 0
+
+    if (currentStatusOrder > 0 && newStatusOrder > 0 && newStatusOrder < currentStatusOrder) {
+      Message.warning('Không thể quay lại trạng thái trước đó.')
+      saving.value = false
+      return
+    }
+
     // Set trangThai boolean based on status
     if (statusName === 'Hoàn thành' || statusName === 'Đã giao hàng' || statusName === 'Đã huỷ') {
       trangThai = true
@@ -1799,23 +1840,20 @@ const handleSaveUpdate = async () => {
     // If update succeeded (either from try or catch), refresh data
     if (updateSucceeded) {
       // Show loading notification
-      const hideLoader = asyncNotification.showLoadingNotification('Đang cập nhật trạng thái đơn hàng...')
+      const loadingMessage = asyncNotification.showLoadingNotification('Đang cập nhật trạng thái đơn hàng...')
 
       await fetchInvoiceDetail()
       // Force refresh timeline to get latest updates
       // Add small delay to ensure backend has committed the transaction
       await new Promise((resolve) => setTimeout(resolve, 300))
-      try {
-        const timelineResponse = await fetchTimelineByHoaDonId(Number(invoiceId.value))
-        timelineData.value = timelineResponse || []
-      } catch (timelineError) {
-        console.warn('Failed to refresh timeline:', timelineError)
-      }
+      await fetchTimeline()
 
       closeUpdateModal()
 
       // Hide loader and show success notification
-      hideLoader()
+      if (loadingMessage?.close) {
+        loadingMessage.close()
+      }
       asyncNotification.showSuccessNotification(
         {
           orderId: invoice.value.id,
@@ -2458,6 +2496,7 @@ onMounted(() => {
   background: #f2f3f5;
   padding: 2px 6px;
   border-radius: 4px;
+  color: #1d2129;
 }
 
 .price-text,

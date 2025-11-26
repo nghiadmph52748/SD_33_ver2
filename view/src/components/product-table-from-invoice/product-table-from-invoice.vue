@@ -59,7 +59,7 @@
             <div class="attributes">
               <div v-if="record.tenMauSac" class="attribute-item">
                 <span class="label">Màu:</span>
-                <a-tag :color="getColorTag(record.tenMauSac)">{{ record.tenMauSac }}</a-tag>
+                <a-tag :color="getColorTag(record.tenMauSac)" :style="getColorTagStyle(record.tenMauSac)">{{ record.tenMauSac }}</a-tag>
               </div>
               <div v-if="record.tenKichThuoc" class="attribute-item">
                 <span class="label">Size:</span>
@@ -260,6 +260,17 @@ const getColorTag = (color: string) => {
     Hồng: 'pink',
   }
   return colorMap[color] || 'default'
+}
+
+const getColorTagStyle = (color: string) => {
+  const background = getColorTag(color)
+  if (background === 'white' || background === 'yellow') {
+    return {
+      color: '#1d2129',
+      border: '1px solid #d9d9d9',
+    }
+  }
+  return {}
 }
 
 // Mock data fallback

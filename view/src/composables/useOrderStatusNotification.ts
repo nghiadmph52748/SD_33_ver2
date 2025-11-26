@@ -2,6 +2,7 @@ import { ref, Ref, onUnmounted } from 'vue'
 import { Message, Notification } from '@arco-design/web-vue'
 import SockJS from 'sockjs-client'
 import { Stomp } from '@stomp/stompjs'
+import { getToken } from '@/utils/auth'
 
 export interface OrderStatusNotification {
   orderId: number
@@ -43,14 +44,19 @@ export function useOrderStatusNotification(orderId: number | Ref<number>, option
       const socket = new SockJS('http://localhost:8080/ws-chat')
       stompClient = Stomp.over(socket)
 
-      // Get JWT token from localStorage or sessionStorage
-      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+      // Get JWT token using shared auth util (login stores token under `token`)
+      const token = getToken()
+
+      if (!token) {
+        console.error('No JWT token available for WebSocket connection')
+        throw new Error('Missing JWT token. Please log in again.')
+      }
 
       stompClient.connect(
         { Authorization: `Bearer ${token}` },
         (frame: any) => {
           // eslint-disable-next-line no-console
-          console.log('✅ WebSocket connected for order notifications:', frame)
+          console.log('WebSocket connected for order notifications:', frame)
           isConnected.value = true
           isConnecting = false
 
@@ -64,7 +70,7 @@ export function useOrderStatusNotification(orderId: number | Ref<number>, option
             (message: any) => {
               try {
                 const notification: OrderStatusNotification = JSON.parse(message.body)
-                console.log('📨 Order status notification received:', notification)
+                console.log('Order status notification received:', notification)
 
                 // Add to notifications list
                 notifications.value.push(notification)
@@ -96,7 +102,7 @@ export function useOrderStatusNotification(orderId: number | Ref<number>, option
           stompClient.subscribe('/user/queue/notifications', (message: any) => {
             try {
               const notification = JSON.parse(message.body)
-              console.log('📨 Personal notification received:', notification)
+              console.log('Personal notification received:', notification)
 
               notifications.value.push(notification)
               lastNotification.value = notification
@@ -112,7 +118,7 @@ export function useOrderStatusNotification(orderId: number | Ref<number>, option
           })
         },
         (error: any) => {
-          console.error('❌ WebSocket connection error:', error)
+          console.error('WebSocket connection error:', error)
           isConnecting = false
           isConnected.value = false
 
@@ -145,7 +151,7 @@ export function useOrderStatusNotification(orderId: number | Ref<number>, option
   const disconnectWebSocket = () => {
     if (stompClient && stompClient.connected) {
       stompClient.disconnect(() => {
-        console.log('✅ WebSocket disconnected')
+        console.log('WebSocket disconnected')
         isConnected.value = false
       })
     }
@@ -166,26 +172,26 @@ export function useOrderStatusNotification(orderId: number | Ref<number>, option
     // Choose notification type based on severity
     switch (notification.severity) {
       case 'success':
-        notificationConfig.title = `✅ ${notification.message}`
+        notificationConfig.title = `${notification.message}`
         Notification.success(notificationConfig)
         Message.success(notification.message)
         break
 
       case 'error':
-        notificationConfig.title = `❌ ${notification.message}`
+        notificationConfig.title = `${notification.message}`
         Notification.error(notificationConfig)
         Message.error(notification.message)
         break
 
       case 'warning':
-        notificationConfig.title = `⚠️ ${notification.message}`
+        notificationConfig.title = `${notification.message}`
         Notification.warning(notificationConfig)
         Message.warning(notification.message)
         break
 
       case 'info':
       default:
-        notificationConfig.title = `ℹ️ ${notification.message}`
+        notificationConfig.title = `ℹ${notification.message}`
         Notification.info(notificationConfig)
         Message.info(notification.message)
         break
@@ -194,7 +200,7 @@ export function useOrderStatusNotification(orderId: number | Ref<number>, option
     // Special handling for inventory shortage
     if (notification.type === 'inventory_shortage') {
       Notification.warning({
-        title: '⚠️ Sự cố về số lượng sản phẩm',
+        title: 'Sự cố về số lượng sản phẩm',
         content: notification.details || 'Một số sản phẩm không đủ số lượng. Cửa hàng đang cố gắng nhập hàng.',
         duration: 8,
         closable: true,

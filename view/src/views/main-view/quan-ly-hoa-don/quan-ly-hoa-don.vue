@@ -141,7 +141,7 @@
         </template>
 
         <template #ngayTao="{ record }">
-          {{ formatDate(record.thoiGianTao || record.ngayTao) }}
+          {{ formatDateOnly(record.thoiGianTao || record.ngayTao) }}
         </template>
 
         <template #payment_method="{ record }">
@@ -336,7 +336,7 @@ const invoiceColumns = [
     slotName: 'stt',
     width: 80,
     fixed: 'left',
-    align: 'center',
+    align: 'left',
   },
   {
     title: 'Mã hóa đơn',
@@ -388,7 +388,7 @@ const invoiceColumns = [
     dataIndex: 'tongTienSauGiam',
     slotName: 'total',
     width: 120,
-    align: 'right',
+    align: 'left',
   },
   {
     title: 'Trạng thái đơn hàng',
