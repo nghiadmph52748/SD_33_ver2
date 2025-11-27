@@ -45,10 +45,12 @@ const handleAuthError = async (message?: string) => {
     duration: 4000,
   })
   const currentPath = router.currentRoute.value?.fullPath || '/'
-  await router.replace({
-    name: 'login',
-    query: { redirect: currentPath },
-  }).catch(() => {})
+  await router
+    .replace({
+      name: 'login',
+      query: { redirect: currentPath },
+    })
+    .catch(() => {})
   // Force full reload to reset entire state and view
   window.location.reload()
   isHandlingAuthError = false

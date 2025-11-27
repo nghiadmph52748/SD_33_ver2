@@ -30,7 +30,6 @@
               <a-textarea v-model="form.ghiChu" placeholder="Ghi chú (tùy chọn)" rows="3" />
             </a-form-item>
           </a-col>
-
         </a-row>
 
         <div class="form-actions">
@@ -48,7 +47,7 @@
 import { ref, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { useRouter, useRoute } from 'vue-router'
-import { Message,Modal  } from '@arco-design/web-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { getCaLamViecById, suaCaLamViec } from '@/api/ca-lam-viec'
@@ -119,7 +118,6 @@ const validateForm = () => {
   return true
 }
 
-
 const onSubmit = async () => {
   if (!validateForm()) return
 
@@ -135,7 +133,7 @@ const onSubmit = async () => {
           tenCa: form.value.tenCa,
           gioBatDau: formatToLocalTime(form.value.gioBatDau),
           gioKetThuc: formatToLocalTime(form.value.gioKetThuc),
-          ghiChu: form.value.ghiChu
+          ghiChu: form.value.ghiChu,
         }
         await suaCaLamViec(id, payload)
         Message.success('Cập nhật ca thành công')
@@ -144,17 +142,14 @@ const onSubmit = async () => {
         console.error(err)
         Message.error('Cập nhật thất bại')
       }
-    }
+    },
   })
 }
 
 const onCancel = () => {
   router.back()
 }
-
 </script>
-
-
 
 <style scoped>
 /* Page background giống trang quản lý */
@@ -275,7 +270,10 @@ const onCancel = () => {
 }
 
 /* Fix nếu trước kia có opacity/filter làm mờ */
-.them-ca-page, .them-ca-card, .filters-card, .table-card {
+.them-ca-page,
+.them-ca-card,
+.filters-card,
+.table-card {
   opacity: 1 !important;
   filter: none !important;
 }

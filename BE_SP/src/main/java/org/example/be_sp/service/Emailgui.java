@@ -16,6 +16,9 @@ public class Emailgui {
 
 
     public void sendAccountInfo(String toEmail, String tenNhanVien, String matKhau) throws MessagingException {
+        System.out.println("📧 [Emailgui] Bắt đầu gửi email đến: " + toEmail);
+        System.out.println("📧 [Emailgui] Tên nhân viên: " + tenNhanVien);
+        
         String tenTaiKhoan = toEmail.split("@")[0];
         String subject = "Thông tin tài khoản nhân viên mới";
 
@@ -52,7 +55,9 @@ public class Emailgui {
         helper.setSubject(subject);
         helper.setText(body, true);
 
+        System.out.println("📧 [Emailgui] Đang gửi email qua SMTP...");
         mailSender.send(message);
+        System.out.println("✅ [Emailgui] Email đã được gửi thành công!");
     }
 
     public void sendEmail(String toEmail, String subject, String body) {

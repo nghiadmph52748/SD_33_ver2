@@ -18,10 +18,9 @@ export interface UserState {
   registrationDate?: string
   accountId?: string
   certification?: number
-  roles: RoleType[] 
+  roles: RoleType[]
   idQuyenHan?: number
   tenQuyenHan?: string
   accessToken?: string
   refreshToken?: string
-  
 }

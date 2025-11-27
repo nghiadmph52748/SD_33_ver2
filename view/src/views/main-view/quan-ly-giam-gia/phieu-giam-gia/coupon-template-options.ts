@@ -136,4 +136,3 @@ export const buildTemplatePayload = (template: CouponTemplateOption): CouponTemp
     dateRange: [start.format('YYYY-MM-DD HH:mm:ss'), end.format('YYYY-MM-DD HH:mm:ss')],
   }
 }
-

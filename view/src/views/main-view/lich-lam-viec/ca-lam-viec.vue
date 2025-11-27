@@ -73,7 +73,6 @@
             <a-button type="outline" size="small" @click="handleEdit(record)">
               <template #icon><icon-edit /></template>
             </a-button>
-            
 
             <!-- Nút tắt/bật trạng thái -->
             <a-switch
@@ -163,8 +162,8 @@ onMounted(async () => {
       tenCa: item.tenca || item.tenCa || '',
       thoiGianBatDau: item.thoigianbatdau || item.thoiGianBatDau || '',
       thoiGianKetThuc: item.thoigianketthuc || item.thoiGianKetThuc || '',
-     trangThaiBool: item.trangThai === true,  //  đúng property
-  trangThai: item.trangThai === true ? 'Hoạt động' : 'Dự Kiến',
+      trangThaiBool: item.trangThai === true, //  đúng property
+      trangThai: item.trangThai === true ? 'Hoạt động' : 'Dự Kiến',
     }))
 
     pagination.value.total = danhSach.value.length
@@ -207,12 +206,9 @@ const toggleTrangThai = async (record: CaLamViec) => {
   }
 }
 
-
-
-
 //  Hàm sửa ca làm việc
 const handleEdit = (record: CaLamViec) => {
- router.push({ name: 'updatecalamviec', params: { id: record.id } })
+  router.push({ name: 'updatecalamviec', params: { id: record.id } })
 }
 
 // Tính toán danh sách sau khi lọc

@@ -61,4 +61,3 @@ main().catch((err) => {
   console.error('[ERROR] Failed to remove emoji icons:', err)
   process.exit(1)
 })
-

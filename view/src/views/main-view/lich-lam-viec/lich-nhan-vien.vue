@@ -1,153 +1,176 @@
 <template>
-  <div class="container mt-4">
-    <h4 class="mb-3 fw-bold">Lịch làm việc của tôi</h4>
-
-    <!-- Bộ lọc -->
-    <div class="filter-container d-flex flex-wrap mb-3 align-items-center">
-      <input type="date" v-model="filters.startDate" class="form-control me-2" style="width: 200px" />
-      <input type="date" v-model="filters.endDate" class="form-control me-2" style="width: 200px" />
-      <select v-model="filters.status" class="form-select me-2" style="width: 180px">
-        <option value="">Chọn trạng thái</option>
-        <option value="Đã làm">Đã làm</option>
-        <option value="Dự kiến">Dự kiến</option>
-      </select>
-
-      <button class="btn btn-success me-2" @click="showCalendar = true" :disabled="loading">
-        <i class="bi bi-calendar-check"></i>
-        Xem dạng lịch
-      </button>
-      <button class="btn btn-outline-success me-2" @click="resetFilter" :disabled="loading">
-        <i class="bi bi-arrow-repeat"></i>
-        Xóa bộ lọc
-      </button>
-      <button class="btn btn-outline-primary" @click="fetchData" :disabled="loading">
-        <i class="bi bi-arrow-clockwise"></i>
-        Làm mới
-      </button>
+  <div class="lich-nhan-vien-container">
+    <div class="page-header">
+      <h2>{{ $t('lichLamViec.mySchedule.title') }}</h2>
+      <p>{{ $t('lichLamViec.mySchedule.subtitle') }}</p>
     </div>
 
-    <!-- Hiển thị lịch hoặc bảng -->
+    <!-- Filter Section -->
+    <a-card class="filter-card">
+      <div class="filter-content">
+        <a-date-picker
+          v-model="filters.startDate"
+          :placeholder="$t('lichLamViec.mySchedule.fromDate')"
+          style="width: 200px"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+        />
+        <a-date-picker
+          v-model="filters.endDate"
+          :placeholder="$t('lichLamViec.mySchedule.toDate')"
+          style="width: 200px"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+        />
+        <a-select
+          v-model="filters.status"
+          :placeholder="$t('lichLamViec.mySchedule.selectStatus')"
+          style="width: 180px"
+          allow-clear
+        >
+          <a-option value="Đã làm">{{ $t('lichLamViec.status.done') }}</a-option>
+          <a-option value="Dự kiến">{{ $t('lichLamViec.status.planned') }}</a-option>
+        </a-select>
+
+        <a-button type="primary" @click="showCalendar = true" :loading="loading">
+          <template #icon>
+            <icon-calendar />
+          </template>
+          {{ $t('lichLamViec.mySchedule.viewCalendar') }}
+        </a-button>
+        <a-button @click="resetFilter" :loading="loading">
+          <template #icon>
+            <icon-refresh />
+          </template>
+          {{ $t('lichLamViec.mySchedule.clearFilter') }}
+        </a-button>
+        <a-button @click="fetchData" :loading="loading">
+          <template #icon>
+            <icon-sync />
+          </template>
+          {{ $t('lichLamViec.mySchedule.refresh') }}
+        </a-button>
+      </div>
+    </a-card>
+
+    <!-- Table View -->
     <div v-if="!showCalendar">
-      <!-- Bảng danh sách -->
-      <div class="table-responsive">
-        <table class="table table-striped align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Nhân viên</th>
-              <th>Ca làm việc</th>
-              <th>Giờ bắt đầu</th>
-              <th>Giờ kết thúc</th>
-              <th>Ngày</th>
-              <th>Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(item, index) in filteredList" :key="item.id ?? item.tenNhanVien + index">
-              <td>{{ item.tenNhanVien }}</td>
-              <td>{{ item.caLamViec }}</td>
-              <td>{{ item.gioBatDau }}</td>
-              <td>{{ item.gioKetThuc }}</td>
-              <td>{{ item.ngay }}</td>
-              <td>
-                <span
-                  class="badge"
-                  :class="{
-                    'bg-success': item.trangThai === 'Đã làm',
-                    'bg-info': item.trangThai === 'Dự kiến',
-                  }"
-                >
-                  {{ item.trangThai }}
-                </span>
-              </td>
-            </tr>
-            <tr v-if="!loading && filteredList.length === 0">
-              <td colspan="6" class="text-center text-muted py-3">Không có dữ liệu phù hợp</td>
-            </tr>
-            <tr v-if="loading">
-              <td colspan="6" class="text-center py-3">Đang tải dữ liệu...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <a-card class="table-card">
+        <a-table
+          :columns="columns"
+          :data="filteredList"
+          :loading="loading"
+          :pagination="false"
+          :bordered="false"
+        >
+          <template #status="{ record }">
+            <a-tag :color="record.trangThai === 'Đã làm' ? 'green' : 'blue'">
+              {{ record.trangThai }}
+            </a-tag>
+          </template>
+          <template #empty>
+            <a-empty :description="$t('lichLamViec.mySchedule.noData')" />
+          </template>
+        </a-table>
 
-      <!-- Phân trang -->
-      <div class="d-flex justify-content-between align-items-center mt-3">
-        <span>Trang {{ currentPage }}</span>
-        <div class="btn-group">
-          <button class="btn btn-outline-secondary" @click="prevPage" :disabled="currentPage === 1">&laquo;</button>
-          <button class="btn btn-outline-secondary" @click="nextPage" :disabled="endIndex >= pagedSourceLength">&raquo;</button>
+        <!-- Pagination -->
+        <div class="pagination-wrapper">
+          <span class="page-info">{{ $t('lichLamViec.mySchedule.page') }} {{ currentPage }}</span>
+          <div class="pagination-controls">
+            <a-button @click="prevPage" :disabled="currentPage === 1">
+              <template #icon>
+                <icon-left />
+              </template>
+            </a-button>
+            <a-button @click="nextPage" :disabled="endIndex >= pagedSourceLength">
+              <template #icon>
+                <icon-right />
+              </template>
+            </a-button>
+          </div>
         </div>
-      </div>
+      </a-card>
     </div>
 
+    <!-- Calendar View -->
     <div v-else>
-      <div class="calendar-container mb-3">
-        <div class="calendar-header d-flex justify-content-between align-items-center mb-4">
+      <a-card class="calendar-card">
+        <div class="calendar-header">
           <div class="calendar-navigation">
-            <button class="btn btn-outline-secondary me-2" @click="previousMonth" :disabled="loading">
-              <i class="bi bi-chevron-left"></i>
-            </button>
-            <button class="btn btn-outline-secondary me-2" @click="currentMonthFn" :disabled="loading">Hôm nay</button>
-            <button class="btn btn-outline-secondary" @click="nextMonth" :disabled="loading">
-              <i class="bi bi-chevron-right"></i>
-            </button>
+            <a-button @click="previousMonth" :disabled="loading">
+              <template #icon>
+                <icon-left />
+              </template>
+            </a-button>
+            <a-button @click="currentMonthFn" :disabled="loading">{{ $t('lichLamViec.mySchedule.today') }}</a-button>
+            <a-button @click="nextMonth" :disabled="loading">
+              <template #icon>
+                <icon-right />
+              </template>
+            </a-button>
           </div>
 
-          <h3 class="calendar-title mb-0">Lịch làm việc - {{ currentMonthYear }}</h3>
+          <h3 class="calendar-title">{{ $t('lichLamViec.mySchedule.calendarTitle') }} - {{ currentMonthYear }}</h3>
 
-          <button class="btn btn-outline-secondary quay-lai-bang-btn" @click="showCalendar = false">
-            <i class="bi bi-list"></i>
-            Quay lại bảng
-          </button>
+          <a-button @click="showCalendar = false">
+            <template #icon>
+              <icon-list />
+            </template>
+            {{ $t('lichLamViec.mySchedule.backToTable') }}
+          </a-button>
         </div>
 
-        <table class="calendar-grid table table-bordered">
-          <thead>
-            <tr>
-              <th>CN</th>
-              <th>Th 2</th>
-              <th>Th 3</th>
-              <th>Th 4</th>
-              <th>Th 5</th>
-              <th>Th 6</th>
-              <th>Th 7</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(week, wIndex) in calendarDays" :key="wIndex">
-              <td
-                v-for="day in week"
-                :key="day.date.toISOString()"
-                :class="{
-                  'different-month': day.isCurrentMonth === false,
-                  'current-day': isCurrentDay(day.date),
-                }"
-                style="vertical-align: top; height: 120px; width: 14%"
-              >
-                <div class="calendar-date">{{ day.dayOfMonth }}</div>
-                <div class="calendar-events mt-2">
-                  <div
-                    v-for="event in getEventsForDay(day.date)"
-                    :key="event.id ?? event.tenNhanVien + event.caLamViec + event.gioBatDau"
-                    class="calendar-event mb-1 p-1"
-                    :class="{
-                      'event-done': event.trangThai === 'Đã làm',
-                      'event-planned': event.trangThai === 'Dự kiến',
-                    }"
-                    style="border-radius: 4px; font-size: 12px"
-                  >
-                    <div class="event-title fw-semibold">{{ event.tenNhanVien }}</div>
-                    <div class="event-time text-muted">{{ event.caLamViec }}</div>
-                    <div class="event-time text-muted">{{ event.gioBatDau }} - {{ event.gioKetThuc }}</div>
+        <div class="calendar-grid-wrapper">
+          <table class="calendar-grid">
+            <thead>
+              <tr>
+                <th>CN</th>
+                <th>Th 2</th>
+                <th>Th 3</th>
+                <th>Th 4</th>
+                <th>Th 5</th>
+                <th>Th 6</th>
+                <th>Th 7</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(week, wIndex) in calendarDays" :key="wIndex">
+                <td
+                  v-for="day in week"
+                  :key="day.date.toISOString()"
+                  :class="{
+                    'different-month': day.isCurrentMonth === false,
+                    'current-day': isCurrentDay(day.date),
+                  }"
+                  class="calendar-day"
+                >
+                  <div class="calendar-date">{{ day.dayOfMonth }}</div>
+                  <div class="calendar-events">
+                    <div
+                      v-for="event in getEventsForDay(day.date)"
+                      :key="event.id ?? event.tenNhanVien + event.caLamViec + event.gioBatDau"
+                      class="calendar-event"
+                      :class="{
+                        'event-done': event.trangThai === 'Đã làm',
+                        'event-planned': event.trangThai === 'Dự kiến',
+                      }"
+                    >
+                      <div class="event-title">{{ event.tenNhanVien }}</div>
+                      <div class="event-time">{{ event.caLamViec }}</div>
+                      <div class="event-time">{{ event.gioBatDau }} - {{ event.gioKetThuc }}</div>
+                    </div>
                   </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <div v-if="loading" class="text-center mt-2">Đang tải lịch...</div>
-      </div>
+        <div v-if="loading" class="loading-indicator">
+          <a-spin />
+          <span>{{ $t('lichLamViec.mySchedule.loadingCalendar') }}</span>
+        </div>
+      </a-card>
     </div>
   </div>
 </template>
@@ -155,7 +178,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import { useI18n } from 'vue-i18n'
 import { getLichLamViec } from '@/api/lich-lam-viec'
+import {
+  IconCalendar,
+  IconRefresh,
+  IconSync,
+  IconLeft,
+  IconRight,
+  IconList,
+} from '@arco-design/web-vue/es/icon'
+
+const { t } = useI18n()
 
 /* ===================== STATE ===================== */
 const showCalendar = ref(false)
@@ -171,6 +205,34 @@ const filters = ref({
 
 const currentPage = ref(1)
 const pageSize = 10
+
+const columns = computed(() => [
+  {
+    title: t('lichLamViec.mySchedule.columns.employee'),
+    dataIndex: 'tenNhanVien',
+  },
+  {
+    title: t('lichLamViec.mySchedule.columns.shift'),
+    dataIndex: 'caLamViec',
+  },
+  {
+    title: t('lichLamViec.mySchedule.columns.startTime'),
+    dataIndex: 'gioBatDau',
+  },
+  {
+    title: t('lichLamViec.mySchedule.columns.endTime'),
+    dataIndex: 'gioKetThuc',
+  },
+  {
+    title: t('lichLamViec.mySchedule.columns.date'),
+    dataIndex: 'ngay',
+  },
+  {
+    title: t('lichLamViec.mySchedule.columns.status'),
+    dataIndex: 'trangThai',
+    slotName: 'status',
+  },
+])
 
 /* ===================== HELPERS ===================== */
 function extractListFromResponse(res) {
@@ -193,8 +255,7 @@ function formatDateToYYYYMMDD(value) {
     const d = new Date(value)
     if (!Number.isNaN(d.getTime())) return d.toISOString().split('T')[0]
   } catch {
-     // Không làm gì, chỉ bỏ qua lỗi
-  // hoặc Message.error(err.message)
+    // Không làm gì, chỉ bỏ qua lỗi
   }
   return ''
 }
@@ -211,13 +272,12 @@ function mapApiItem(item) {
   const gioKetThuc = item?.gioKetThuc ?? item?.gio_ket_thuc ?? item?.caLamViec?.thoiGianKetThuc ?? item?.caLamViec?.thoi_gian_ket_thuc ?? ''
 
   // Kiểm tra và chuyển đổi giá trị trạng thái từ true/false sang "Đã làm" hoặc "Dự kiến"
-  let trangThai = '';
-if (item?.trangThai === true) {
-  trangThai = 'Đã làm';
-} else if (item?.trangThai === false) {
-  trangThai = 'Dự kiến';
-}
-
+  let trangThai = ''
+  if (item?.trangThai === true) {
+    trangThai = 'Đã làm'
+  } else if (item?.trangThai === false) {
+    trangThai = 'Dự kiến'
+  }
 
   return {
     id: item?.id,
@@ -226,11 +286,10 @@ if (item?.trangThai === true) {
     ngay: formatDateToYYYYMMDD(ngay),
     gioBatDau,
     gioKetThuc,
-    trangThai,  // Gán trạng thái đã chuyển đổi
+    trangThai, // Gán trạng thái đã chuyển đổi
     ghiChu: item?.ghiChu ?? item?.ghi_chu ?? null,
   }
 }
-
 
 /* ===================== FETCH ===================== */
 async function fetchData() {
@@ -243,7 +302,7 @@ async function fetchData() {
     currentPage.value = 1
   } catch (err) {
     // show error message
-    Message.error(err?.message ?? 'Không thể lấy lịch làm việc từ server')
+    Message.error(err?.message ?? t('lichLamViec.mySchedule.fetchError'))
   } finally {
     loading.value = false
   }
@@ -370,10 +429,6 @@ const currentMonthFn = () => {
 const startIndex = computed(() => (currentPage.value - 1) * pageSize)
 const endIndex = computed(() => startIndex.value + pageSize)
 
-const applyFilter = () => {
-  currentPage.value = 1
-}
-
 const resetFilter = () => {
   filters.value = { startDate: '', endDate: '', status: '' }
   currentPage.value = 1
@@ -396,48 +451,145 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Calendar styling */
-.calendar-container {
-  background: var(--color-bg-2);
+.lich-nhan-vien-container {
+  padding: 24px;
+  background: #f8fafc;
+  min-height: calc(100vh - 64px);
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.page-header p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.filter-card {
+  margin-bottom: 24px;
   border-radius: 12px;
-  padding: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.filter-content {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.table-card,
+.calendar-card {
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 8px;
+}
+
+/* Calendar Styles */
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.calendar-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calendar-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  text-transform: capitalize;
+  margin: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.calendar-grid-wrapper {
+  overflow-x: auto;
 }
 
 .calendar-grid {
   width: 100%;
   border-collapse: collapse;
+  background: #ffffff;
 }
 
 .calendar-grid th {
-  padding: 8px;
+  padding: 12px 8px;
   text-align: center;
-  background-color: var(--color-fill-2);
-  border: 1px solid var(--color-border);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   font-weight: 600;
+  font-size: 14px;
+  color: #475569;
 }
 
-.calendar-grid td {
-  border: 1px solid var(--color-border);
+.calendar-day {
   vertical-align: top;
   height: 120px;
   width: 14.28%;
-  padding: 4px;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.calendar-day.different-month {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.calendar-day.current-day {
+  background: #eff6ff;
+}
+
+.calendar-day.current-day .calendar-date {
+  color: #2563eb;
+  font-weight: 700;
 }
 
 .calendar-date {
   font-weight: 500;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   text-align: right;
-}
-
-.different-month {
-  background-color: var(--color-fill-1);
-  color: var(--color-text-3);
-}
-
-.current-day .calendar-date {
-  color: rgb(var(--primary-6));
-  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
 }
 
 .calendar-events {
@@ -447,294 +599,91 @@ onMounted(() => {
 }
 
 .calendar-event {
-  padding: 4px;
-  border-radius: 4px;
-  font-size: 12px;
-  line-height: 1.2;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .event-done {
-  background-color: rgb(var(--success-1));
-  color: rgb(var(--success-6));
-  border: 1px solid rgb(var(--success-3));
+  background: #d1fae5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
 }
 
 .event-planned {
-  background-color: rgb(var(--primary-1));
-  color: rgb(var(--primary-6));
-  border: 1px solid rgb(var(--primary-3));
+  background: #dbeafe;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
 }
 
 .event-title {
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 2px;
+  font-size: 12px;
 }
 
 .event-time {
-  font-size: 11px;
+  font-size: 10px;
   opacity: 0.8;
+  margin-top: 2px;
 }
 
-/* === Sửa phần header để căn khoảng cách đẹp hơn === */
-.calendar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  padding: 0 12px;
-  flex-wrap: nowrap; /* không cho xuống dòng */
-}
-
-.calendar-title {
-  font-size: 1.6rem;
-  font-weight: bold;
-  color: rgb(var(--primary-6));
-  text-transform: capitalize;
-  letter-spacing: 0.5px;
-  margin: 0 430px; /* tăng margin ngang trái phải */
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* Giữ nguyên các nút nằm 2 bên */
-.calendar-navigation {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0; /* không co nhỏ */
-}
-
-.calendar-navigation .btn-outline-secondary {
-  min-width: 40px;
-  height: 40px;
-  padding: 0;
+.loading-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-}
-
-.calendar-navigation .btn-outline-secondary:hover {
-  background-color: rgb(var(--primary-1));
-  color: rgb(var(--primary-6));
-  border-color: rgb(var(--primary-3));
-  transform: scale(1.05);
-}
-
-.calendar-navigation .btn-outline-secondary:nth-child(2) {
-  min-width: 100px;
-  border-radius: 20px;
-  background-color: rgb(var(--primary-1));
-  color: rgb(var(--primary-6));
-  font-weight: 500;
-}
-
-.calendar-navigation .btn-outline-secondary:nth-child(2):hover {
-  background-color: rgb(var(--primary-2));
-  border-color: rgb(var(--primary-4));
-}
-
-/* Nút Quay lại bảng */
-.quay-lai-bang-btn {
-  margin-left: auto;
-  border-radius: 20px;
-  padding: 8px 18px;
-  background-color: rgb(var(--success-1));
-  color: rgb(var(--success-6));
-  border-color: rgb(var(--success-3));
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.quay-lai-bang-btn:hover {
-  background-color: rgb(var(--success-2));
-  border-color: rgb(var(--success-4));
-  transform: scale(1.03);
-}
-
-/* Calendar-header .btn-outline-secondary ở ngoài (nút Quay lại bảng) */
-.calendar-header .btn-outline-secondary {
-  border-radius: 20px;
-  padding: 6px 16px;
-  background-color: rgb(var(--success-1));
-  color: rgb(var(--success-6));
-  border-color: rgb(var(--success-3));
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.calendar-header .btn-outline-secondary:hover {
-  background-color: rgb(var(--success-2));
-  border-color: rgb(var(--success-4));
-  transform: scale(1.02);
-}
-
-.container {
-  padding: 0 20px 20px 20px;
-}
-
-.filter-container {
-  gap: 16px;
-}
-
-/* Card styling */
-.table-responsive {
-  background: var(--color-bg-2);
-  border-radius: 12px;
-  margin-bottom: 16px;
-  padding: 16px;
-}
-
-/* Table styling */
-.table {
-  width: 100%;
-  background: var(--color-bg-2);
-  border-collapse: collapse;
-}
-
-.table th {
-  font-weight: 600;
-  background: var(--color-fill-2);
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-1);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-1);
-  text-align: left;
-  vertical-align: middle;
-}
-
-.table-striped > tbody > tr:nth-of-type(odd) {
-  background-color: var(--color-fill-1);
-}
-
-/* Badge styling to match Arco tags */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  line-height: 1.5715;
-}
-
-.bg-success {
-  color: rgb(var(--success-6));
-  background: rgb(var(--success-1));
-}
-
-.bg-info {
-  color: rgb(var(--primary-6));
-  background: rgb(var(--primary-1));
-}
-
-/* Filter controls */
-.form-control,
-.form-select {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-bg-2);
-  color: var(--color-text-1);
-  transition: all 0.1s cubic-bezier(0, 0, 1, 1);
-  margin-right: 8px;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: rgb(var(--primary-6));
-  box-shadow: 0 0 0 2px rgb(var(--primary-2));
-}
-
-/* Button styling to match Arco */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  line-height: 1.5715;
-  transition: all 0.1s cubic-bezier(0, 0, 1, 1);
   gap: 8px;
+  padding: 20px;
+  color: #64748b;
 }
 
-.btn-success {
-  color: #fff;
-  background: rgb(var(--success-6));
-  border: 1px solid rgb(var(--success-6));
+:deep(.arco-card-body) {
+  padding: 24px;
 }
 
-.btn-success:hover {
-  background: rgb(var(--success-5));
-  border-color: rgb(var(--success-5));
+:deep(.arco-table-th) {
+  background: #f8fafc;
+  font-weight: 600;
 }
 
-.btn-outline-success {
-  color: rgb(var(--success-6));
-  border: 1px solid rgb(var(--success-6));
-  background: transparent;
+:deep(.arco-table-tr:hover) {
+  background: #f8fafc;
 }
 
-.btn-outline-success:hover {
-  color: #fff;
-  background: rgb(var(--success-6));
+@media (max-width: 768px) {
+  .lich-nhan-vien-container {
+    padding: 16px;
+  }
+
+  .filter-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-content > * {
+    width: 100%;
+  }
+
+  .calendar-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .calendar-title {
+    text-align: center;
+  }
+
+  .calendar-navigation {
+    justify-content: center;
+  }
 }
-
-.btn-outline-secondary {
-  color: var(--color-text-1);
-  border: 1px solid var(--color-border);
-  background: transparent;
-}
-
-.btn-outline-secondary:hover:not(:disabled) {
-  color: rgb(var(--primary-6));
-  border-color: rgb(var(--primary-6));
-}
-
-.btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-/* Pagination section */
-.btn-group {
-  display: inline-flex;
-}
-
-.btn-group .btn {
-  border-radius: 0;
-}
-
-.btn-group .btn:first-child {
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-}
-
-.btn-group .btn:last-child {
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
-}
-
-/* Calendar title styling */
-
-/* Căn hàng ngang cho phần tiêu đề và các nút */
-/* Đã chuyển sang kiểu position absolute cho tiêu đề nên không cần nữa */
-/* .calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;  giúp responsive khi nhỏ màn hình 
-} */
-
-/* Tiêu đề nằm giữa, căn giữa đẹp */
-/* Đã cập nhật bên trên */
 </style>

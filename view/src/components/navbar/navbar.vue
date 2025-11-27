@@ -111,15 +111,21 @@
       <li>
         <a-dropdown trigger="click">
           <a-space style="cursor: pointer">
-            <a-avatar :size="32">{{ userInitials }}</a-avatar>
+            <a-avatar :size="32">
+              <img v-if="avatar && !avatarError" :src="avatar" alt="avatar" @error="handleAvatarError" @load="handleAvatarLoad" />
+              <template v-else>{{ userInitials }}</template>
+            </a-avatar>
             <span style="color: var(--color-text-1); font-weight: 500">{{ userStore.name || 'User' }}</span>
           </a-space>
           <template #content>
             <div style="padding: 10px 12px; min-width: 220px">
               <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px">
-                <a-avatar :size="40">{{ userInitials }}</a-avatar>
+                <a-avatar :size="40">
+                  <img v-if="avatar && !avatarError" :src="avatar" alt="avatar" @error="handleAvatarError" @load="handleAvatarLoad" />
+                  <template v-else>{{ userInitials }}</template>
+                </a-avatar>
                 <div>
-                  <div style="font-weight: 600">{{ userStore.name }}</div>
+                  <div style="font-weight: 600; color: var(--color-text-1)">{{ userStore.name }}</div>
                   <div style="font-size: 12px; color: var(--color-text-3)">{{ userStore.email }}</div>
                 </div>
               </div>
@@ -168,9 +174,10 @@ import useUser from '@/hooks/user'
 import { useAppStore, useUserStore } from '@/store'
 import useNotificationStore from '@/store/modules/notification'
 import useChatStore from '@/store/modules/chat'
+import { getUserInfo } from '@/api/user'
 import { Message } from '@arco-design/web-vue'
 import { useDark, useFullscreen, useToggle } from '@vueuse/core'
-import { computed, inject, ref, onMounted } from 'vue'
+import { computed, inject, ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { LOCALE_OPTIONS } from '@/locale'
@@ -179,6 +186,8 @@ import MessageBox from '../message-box/message-box.vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import StartShiftButton from '@/components/StartShiftButton.vue'
+
+const USER_INFO_STORAGE_KEY = 'userInfo'
 
 const { t, locale } = useI18n()
 const currentLocale = ref(locale.value)
@@ -193,8 +202,32 @@ const router = useRouter()
 const route = useRoute()
 const { isFullscreen, toggle: toggleFullScreen } = useFullscreen()
 const avatar = computed(() => {
-  return userStore.avatar
+  if (avatarError.value) {
+    console.log('Avatar error, returning null')
+    return null
+  }
+  const av = userStore.avatar
+  const isValid = av && typeof av === 'string' && av.trim() !== '' && av !== 'null' && av !== 'undefined'
+  const result = isValid ? av : null
+  if (av) {
+    console.log('Computed avatar check:', { 
+      av, 
+      result, 
+      type: typeof av, 
+      trimmed: av.trim(), 
+      isValid,
+      userStoreAvatar: userStore.avatar 
+    })
+  }
+  return result
 })
+
+watch(() => userStore.avatar, (newVal, oldVal) => {
+  console.log('Avatar changed in watch:', { oldVal, newVal, type: typeof newVal })
+  if (newVal && newVal !== oldVal) {
+    avatarError.value = false
+  }
+}, { immediate: true })
 const theme = computed(() => {
   return appStore.theme
 })
@@ -239,6 +272,17 @@ const userInitials = computed(() => {
   const last = parts[parts.length - 1]?.[0] || ''
   return (first + last).toUpperCase()
 })
+
+const avatarError = ref(false)
+const handleAvatarError = (event: Event) => {
+  avatarError.value = true
+  const img = event.target as HTMLImageElement
+  console.warn('Lỗi khi load avatar:', img.src, 'sử dụng initials')
+}
+const handleAvatarLoad = () => {
+  avatarError.value = false
+  console.log('Avatar loaded successfully')
+}
 const goProfile = () => {
   router.push('/profile')
 }
@@ -307,6 +351,36 @@ const selectFirstResult = () => {
 }
 onMounted(async () => {
   if (userStore.id) {
+    // Fetch user info if avatar is missing
+    const currentAvatar = userStore.avatar
+    if (!currentAvatar || currentAvatar.trim() === '' || currentAvatar === 'null' || currentAvatar === 'undefined') {
+      try {
+        const res = await getUserInfo()
+        const responseData = res.data?.data || res.data
+        const avatarUrl = responseData?.anhNhanVien
+        console.log('Response data:', responseData)
+        console.log('Avatar URL từ server:', avatarUrl, 'Type:', typeof avatarUrl)
+        if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim() !== '' && avatarUrl !== 'null' && avatarUrl !== 'undefined') {
+          console.log('Setting avatar to userStore:', avatarUrl)
+          userStore.setInfo({ avatar: avatarUrl })
+          // Force reactive update
+          await new Promise(resolve => setTimeout(resolve, 0))
+          console.log('Avatar sau khi set:', userStore.avatar)
+          // Update localStorage
+          const storedProfile = JSON.parse(localStorage.getItem(USER_INFO_STORAGE_KEY) || '{}')
+          storedProfile.avatar = avatarUrl
+          localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify(storedProfile))
+          console.log('Avatar đã được cập nhật:', avatarUrl)
+        } else {
+          console.log('Không có avatar từ server hoặc avatar không hợp lệ:', avatarUrl)
+        }
+      } catch (err) {
+        console.warn('Không thể lấy thông tin avatar:', err)
+      }
+    } else {
+      console.log('Avatar hiện tại:', currentAvatar)
+    }
+
     // Fetch notifications and connect WebSocket
     await notificationStore.fetchNotifications()
     notificationStore.connectWebSocket()

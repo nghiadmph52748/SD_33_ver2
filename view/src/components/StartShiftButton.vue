@@ -7,7 +7,14 @@
     </a-button>
   </a-tooltip>
 
-  <a-modal v-model:visible="showModal" title="Bắt Đầu Ca Làm Việc" width="420" :ok-loading="isLoading" @before-ok="onModalOk" @cancel="closeModal">
+  <a-modal
+    v-model:visible="showModal"
+    title="Bắt Đầu Ca Làm Việc"
+    width="420"
+    :ok-loading="isLoading"
+    @before-ok="onModalOk"
+    @cancel="closeModal"
+  >
     <div style="display: flex; flex-direction: column; gap: 12px">
       <div>Vui lòng nhập số tiền mặt ban đầu để bắt đầu ca làm việc.</div>
       <a-input v-model="startCashInput" style="width: 100%" placeholder="Số tiền mặt (VND)" type="number" />
@@ -51,7 +58,7 @@ function onModalOk() {
 
 async function confirmStart() {
   console.log('startCashInput.value:', startCashInput.value, 'type:', typeof startCashInput.value)
-  
+
   if (!startCashInput.value || startCashInput.value.trim() === '') {
     Message.error('Vui lòng nhập số tiền mặt')
     return false
@@ -70,12 +77,12 @@ async function confirmStart() {
       nguoiNhanId: userStore.id,
       nguoiNhan: {
         id: userStore.id,
-        tenNhanVien: userStore.name || 'Nhân viên'
+        tenNhanVien: userStore.name || 'Nhân viên',
       },
       caLamViecId: 1, // mặc định
       thoiGianGiaoCa: new Date().toISOString().replace('T', ' ').substring(0, 19),
       tongTienBanDau: cash,
-      trangThai: 'Đang hoạt động'
+      trangThai: 'Đang hoạt động',
     }
     await themGiaoCa(payload as any)
     Message.success('Bắt đầu ca thành công')

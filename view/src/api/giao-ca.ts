@@ -65,8 +65,6 @@ export interface ApiGiaoCa {
   updateAt?: string | null
 }
 
-
-
 /** =============================
  *  Kiểu dữ liệu Thống Kê Giao Ca
  * ============================= */
@@ -113,22 +111,14 @@ export function xoaGiaoCa(id: number) {
 }
 
 /** Tìm kiếm / lọc giao ca */
-export function timKiemGiaoCa(params: {
-  ngayBatDau?: string
-  ngayKetThuc?: string
-  nhanVienId?: number
-  trangThai?: string
-}) {
+export function timKiemGiaoCa(params: { ngayBatDau?: string; ngayKetThuc?: string; nhanVienId?: number; trangThai?: string }) {
   // Nếu backend có /api/giao-ca/search thì dùng endpoint này,
   // nếu không backend đọc query param từ /api/giao-ca
   return axios.get<ApiGiaoCa[]>('/api/giao-ca/search', { params })
 }
 
 /** Lấy thống kê giao ca (tổng doanh thu, tiền mặt, chênh lệch,...) */
-export function thongKeGiaoCa(params?: {
-  ngayBatDau?: string
-  ngayKetThuc?: string
-}) {
+export function thongKeGiaoCa(params?: { ngayBatDau?: string; ngayKetThuc?: string }) {
   return axios.get<ApiThongKeGiaoCa>('/api/giao-ca/thong-ke', { params })
 }
 

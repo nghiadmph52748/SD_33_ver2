@@ -3,12 +3,7 @@
     <template #title>
       <div class="cust-header">
         <span>Thông Tin Khách Hàng</span>
-        <a-select
-          :model-value="orderType"
-          placeholder="Loại đơn"
-          style="width: 140px"
-          @change="$emit('change:orderType', $event)"
-        >
+        <a-select :model-value="orderType" placeholder="Loại đơn" style="width: 140px" @change="$emit('change:orderType', $event)">
           <a-option value="counter">Tại quầy</a-option>
           <a-option value="delivery">Giao hàng</a-option>
         </a-select>
@@ -58,7 +53,11 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="Số điện thoại" :validate-status="phoneError ? 'error' : undefined" :help="phoneError || ''" required>
-              <a-input :model-value="walkInPhone" placeholder="Nhập số điện thoại" @update:model-value="$emit('update:walkInPhone', $event)" />
+              <a-input
+                :model-value="walkInPhone"
+                placeholder="Nhập số điện thoại"
+                @update:model-value="$emit('update:walkInPhone', $event)"
+              />
             </a-form-item>
           </a-col>
           <a-col :span="24">

@@ -310,9 +310,13 @@ watch(kyTopProducts, (newValue) => {
   // capNhatSanPhamBanChayNhat() sẽ được gọi tự động khi duLieuSanPhamBanChay thay đổi
 })
 
-watch(duLieuSanPhamBanChay, () => {
-  capNhatSanPhamBanChayNhat()
-}, { immediate: true })
+watch(
+  duLieuSanPhamBanChay,
+  () => {
+    capNhatSanPhamBanChayNhat()
+  },
+  { immediate: true }
+)
 
 watch(duLieuBangChiTiet, (newValue) => {
   phanTrangBangChiTiet.value.total = newValue.length

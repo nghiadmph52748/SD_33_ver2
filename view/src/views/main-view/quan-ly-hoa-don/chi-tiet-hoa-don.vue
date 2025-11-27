@@ -2312,7 +2312,7 @@ const handleSaveUpdate = async () => {
       }
     }
 
-    const statusChanged = (statusName !== currentStatusText)
+    const statusChanged = statusName !== currentStatusText
 
     const updateData: any = {
       // Always include loaiDon and trangThai to ensure they are updated

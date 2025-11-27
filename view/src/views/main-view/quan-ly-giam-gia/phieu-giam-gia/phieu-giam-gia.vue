@@ -1052,7 +1052,9 @@ const customerSegments: CustomerSegment[] = [
 ]
 
 const customerSegment = ref<CustomerSegmentKey>('all')
-const currentCustomerSegment = computed(() => customerSegments.find((segment) => segment.key === customerSegment.value) ?? customerSegments[0])
+const currentCustomerSegment = computed(
+  () => customerSegments.find((segment) => segment.key === customerSegment.value) ?? customerSegments[0]
+)
 
 const getCustomerSegmentLabels = (customer: CustomerApiModel) => {
   const labels: string[] = []

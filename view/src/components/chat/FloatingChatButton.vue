@@ -46,11 +46,16 @@
           <a-spin :loading="chatStore.loadingConversations" class="conversations-spin">
             <div class="conversations">
               <!-- Debug info (remove in production) -->
-              <div v-if="chatStore.conversations.length > 0" style="padding: 8px; font-size: 11px; color: #999; border-bottom: 1px solid #eee;">
-                Tổng: {{ chatStore.conversations.length }} cuộc trò chuyện
-                ({{ chatStore.conversations.filter(c => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length }} với khách hàng)
+              <div
+                v-if="chatStore.conversations.length > 0"
+                style="padding: 8px; font-size: 11px; color: #999; border-bottom: 1px solid #eee"
+              >
+                Tổng: {{ chatStore.conversations.length }} cuộc trò chuyện ({{
+                  chatStore.conversations.filter((c) => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length
+                }}
+                với khách hàng)
               </div>
-              
+
               <div v-for="conv in filteredConversations" :key="conv.id" class="conversation-item" @click="selectConversation(conv.id)">
                 <a-avatar :size="40">
                   <icon-user />
@@ -59,12 +64,14 @@
                   <div class="conv-header">
                     <span class="conv-name">
                       {{ getOtherUserName(conv) }}
-                      <span v-if="conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF'" style="font-size: 10px; color: #52c41a; margin-left: 4px;">(KH)</span>
+                      <span v-if="conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF'" style="font-size: 10px; color: #52c41a; margin-left: 4px">
+                        (KH)
+                      </span>
                     </span>
                     <span class="conv-time">{{ formatTime(conv.lastMessageTime) }}</span>
                   </div>
-              <div class="conv-preview">
-                <span class="last-message">{{ getLastMessagePreview(conv) }}</span>
+                  <div class="conv-preview">
+                    <span class="last-message">{{ getLastMessagePreview(conv) }}</span>
                     <a-badge v-if="getUnreadCount(conv) > 0" :count="getUnreadCount(conv)" class="unread-badge" />
                   </div>
                 </div>
@@ -218,25 +225,25 @@ const activeConversationName = computed(() => {
 const filteredConversations = computed(() => {
   // Force reactivity by accessing the conversations array
   const conversations = chatStore.conversations || []
-  
+
   // Debug logging
   console.log(' Filtering conversations:', {
     total: conversations.length,
-    customerStaff: conversations.filter(c => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length,
-    staffStaff: conversations.filter(c => c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi).length,
+    customerStaff: conversations.filter((c) => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length,
+    staffStaff: conversations.filter((c) => c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi).length,
     searchKeyword: searchKeyword.value,
   })
-  
+
   if (!searchKeyword.value) {
     console.log(' Returning all conversations:', conversations.length)
     return conversations
   }
-  
+
   const filtered = conversations.filter((conv) => {
     const name = getOtherUserName(conv).toLowerCase()
     return name.includes(searchKeyword.value.toLowerCase())
   })
-  
+
   console.log(' Filtered conversations:', filtered.length)
   return filtered
 })
@@ -267,8 +274,11 @@ function toggleDrawer() {
     console.log(' Opening drawer, fetching conversations...')
     chatStore.fetchConversations().then(() => {
       console.log(' Conversations fetched:', chatStore.conversations.length)
-      console.log('   Customer-staff:', chatStore.conversations.filter(c => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length)
-      console.log('   Staff-staff:', chatStore.conversations.filter(c => c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi).length)
+      console.log('   Customer-staff:', chatStore.conversations.filter((c) => c.loaiCuocTraoDoi === 'CUSTOMER_STAFF').length)
+      console.log(
+        '   Staff-staff:',
+        chatStore.conversations.filter((c) => c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi).length
+      )
     })
     chatStore.fetchUnreadCount()
   }
@@ -302,7 +312,7 @@ async function selectConversation(id: number) {
     } else {
       otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
     }
-    
+
     if (otherUserId !== undefined) {
       await chatStore.fetchMessages(otherUserId)
 
@@ -351,7 +361,7 @@ async function sendMessage() {
   } else {
     otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
   }
-  
+
   if (!otherUserId) return
 
   try {
@@ -414,31 +424,31 @@ watch(
     // Only process if drawer is open and we have an active conversation
     if (!drawerVisible.value || !activeConversation.value) return
 
-      // Check if there's a new unread message
-      if (Array.isArray(messages) && messages.length > 0) {
-        const conv = activeConversation.value
-        // Get other user ID based on conversation type
-        let otherUserId: number | undefined
-        if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
-          otherUserId = userStore.id === conv.khachHangId ? conv.nhanVienId : conv.khachHangId
-        } else {
-          otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
-        }
+    // Check if there's a new unread message
+    if (Array.isArray(messages) && messages.length > 0) {
+      const conv = activeConversation.value
+      // Get other user ID based on conversation type
+      let otherUserId: number | undefined
+      if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+        otherUserId = userStore.id === conv.khachHangId ? conv.nhanVienId : conv.khachHangId
+      } else {
+        otherUserId = userStore.id === conv.nhanVien1Id ? conv.nhanVien2Id : conv.nhanVien1Id
+      }
 
-        if (otherUserId !== undefined) {
-          // Find new unread messages from the other user
-          const newUnreadMessages = messages.filter((msg: any) => msg.senderId === otherUserId && !msg.isRead)
+      if (otherUserId !== undefined) {
+        // Find new unread messages from the other user
+        const newUnreadMessages = messages.filter((msg: any) => msg.senderId === otherUserId && !msg.isRead)
 
-          if (newUnreadMessages.length > 0 && chatStore.activeConversationUserInitiated) {
-            console.log(` Auto-marking ${newUnreadMessages.length} new message(s) as read`)
-            try {
-              await chatStore.markAsRead(otherUserId, activeConversation.value.id)
-            } catch (error) {
-              console.error('Error auto-marking new messages as read:', error)
-            }
+        if (newUnreadMessages.length > 0 && chatStore.activeConversationUserInitiated) {
+          console.log(` Auto-marking ${newUnreadMessages.length} new message(s) as read`)
+          try {
+            await chatStore.markAsRead(otherUserId, activeConversation.value.id)
+          } catch (error) {
+            console.error('Error auto-marking new messages as read:', error)
           }
         }
       }
+    }
   },
   { deep: true, immediate: false }
 )

@@ -13,7 +13,7 @@
     <!-- Main Content -->
     <a-row :gutter="[16, 16]">
       <!-- Left Column: Form -->
-      <a-col :span="couponEditForm.featured ? 11 : 24">
+      <a-col :span="couponEditForm.featured ? 11 : 24" class="left-column-edit">
         <a-card :title="t('discount.coupon.info')">
           <div class="template-selection">
             <div class="template-selection-header">
@@ -278,9 +278,7 @@
 
             <!-- Selection Controls -->
             <div class="selection-controls">
-              <a-checkbox :model-value="isAllEditCustomersSelected" @change="toggleAllEditCustomers">
-                Chọn tất cả trong trang
-              </a-checkbox>
+              <a-checkbox :model-value="isAllEditCustomersSelected" @change="toggleAllEditCustomers">Chọn tất cả trong trang</a-checkbox>
               <a-button size="small" @click="selectAllEditCustomers" type="text">Chọn tất cả kết quả</a-button>
               <a-button size="small" @click="deselectAllEditCustomers" type="text">Xóa chọn</a-button>
             </div>
@@ -328,7 +326,9 @@
             <!-- Footer -->
             <div class="selection-footer">
               <div class="selection-summary">
-                Đã chọn: <strong>{{ couponEditForm.selectedCustomerIds.length }}</strong> khách hàng
+                Đã chọn:
+                <strong>{{ couponEditForm.selectedCustomerIds.length }}</strong>
+                khách hàng
               </div>
             </div>
           </div>
@@ -366,8 +366,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, reactive, watch, type Component } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, reactive, watch, type Component } from 'vue'
 import router from '@/router'
+import { useRoute, onBeforeRouteUpdate } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
 import { useI18n } from 'vue-i18n'
@@ -376,18 +377,22 @@ import { fetchCustomers, fetchCustomersBySegment, type CustomerApiModel, updateC
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
 import { IconPlus, IconDelete, IconLeft, IconUp, IconUser, IconGift, IconCalendar, IconStar, IconFire } from '@arco-design/web-vue/es/icon'
 import dayjs from 'dayjs'
-import {
-  couponTemplateOptions,
-  buildTemplatePayload,
-  type CouponTemplateOption,
-  type CouponTemplateIcon,
-} from './coupon-template-options'
+import { couponTemplateOptions, buildTemplatePayload, type CouponTemplateOption, type CouponTemplateIcon } from './coupon-template-options'
 
 // Router
 const { t } = useI18n()
+const route = useRoute()
 
 // Get coupon ID from route params
-const couponId = computed(() => Number(router.currentRoute.value.params.id))
+const couponId = computed(() => {
+  const id = route.params.id
+  const numId = Number(id)
+  if (Number.isNaN(numId) || numId <= 0) {
+    console.error('Invalid coupon ID:', id)
+    return 0
+  }
+  return numId
+})
 
 // Loading state
 const loading = ref(false)
@@ -1225,10 +1230,22 @@ const goBack = () => {
 
 // Load coupon data
 const loadCouponData = async () => {
+  if (!couponId.value || couponId.value <= 0) {
+    Message.error('ID phiếu giảm giá không hợp lệ')
+    goBack()
+    return
+  }
+  
   loading.value = true
   try {
     const response = await axios.get(`/api/phieu-giam-gia-management/detail/${couponId.value}`)
-    const coupon = response.data.data || response.data
+    const coupon = response.data?.data || response.data
+    
+    if (!coupon || !coupon.id) {
+      Message.error('Không tìm thấy phiếu giảm giá')
+      goBack()
+      return
+    }
 
     couponEditForm.code = coupon.maPhieuGiamGia ?? ''
     couponEditForm.name = coupon.tenPhieuGiamGia ?? ''
@@ -1496,9 +1513,28 @@ const scrollToTop = () => {
   })
 }
 
-onMounted(() => {
-  loadCouponData()
+onMounted(async () => {
+  try {
+    await loadCouponData()
+  } catch (error) {
+    console.error('Error loading coupon data:', error)
+    Message.error('Không thể tải dữ liệu phiếu giảm giá')
+  }
   window.addEventListener('scroll', handleScroll)
+})
+
+// Handle route parameter changes (when navigating between different coupon IDs)
+onBeforeRouteUpdate(async (to, from, next) => {
+  if (to.params.id !== from.params.id) {
+    loading.value = true
+    try {
+      await loadCouponData()
+    } catch (error) {
+      console.error('Error loading coupon data on route update:', error)
+      Message.error('Không thể tải dữ liệu phiếu giảm giá')
+    }
+  }
+  next()
 })
 
 onUnmounted(() => {
@@ -1575,7 +1611,10 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
   background: var(--color-bg-1);
 }
 
@@ -1695,7 +1734,6 @@ onUnmounted(() => {
   text-align: center;
 }
 
-
 .product-selection-section {
   border: 1px solid var(--color-border-2);
   border-radius: 8px;
@@ -1772,5 +1810,17 @@ onUnmounted(() => {
 
 .status-switch-wrapper .arco-switch::before {
   inset-inline-start: 4px;
+}
+
+/* Hide scrollbar for left column */
+.left-column-edit :deep(.arco-card-body) {
+  max-height: 72vh;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.left-column-edit :deep(.arco-card-body)::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 </style>

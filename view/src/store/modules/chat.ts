@@ -128,7 +128,7 @@ const useChatStore = defineStore('chat', {
         // Handle different response structures
         const data = response.data?.data || response.data || []
         const fetchedConversations = Array.isArray(data) ? data : []
-        
+
         console.log(' Fetched conversations from backend:', fetchedConversations.length)
         fetchedConversations.forEach((conv: Conversation) => {
           console.log('  - Conversation:', {
@@ -172,10 +172,8 @@ const useChatStore = defineStore('chat', {
               }
               // For staff-staff conversations, match by staff IDs
               return (
-                (fc.nhanVien1Id === tempConv.nhanVien1Id &&
-                  fc.nhanVien2Id === tempConv.nhanVien2Id) ||
-                (fc.nhanVien1Id === tempConv.nhanVien2Id &&
-                  fc.nhanVien2Id === tempConv.nhanVien1Id)
+                (fc.nhanVien1Id === tempConv.nhanVien1Id && fc.nhanVien2Id === tempConv.nhanVien2Id) ||
+                (fc.nhanVien1Id === tempConv.nhanVien2Id && fc.nhanVien2Id === tempConv.nhanVien1Id)
               )
             })
 
@@ -185,10 +183,7 @@ const useChatStore = defineStore('chat', {
               if (!this.messages[realConv.id]) {
                 this.messages[realConv.id] = []
               }
-              this.messages[realConv.id] = [
-                ...(this.messages[realConv.id] || []),
-                ...existingMessages[tempId],
-              ]
+              this.messages[realConv.id] = [...(this.messages[realConv.id] || []), ...existingMessages[tempId]]
               // Remove duplicate messages
               const seen = new Set()
               this.messages[realConv.id] = this.messages[realConv.id].filter((msg) => {
@@ -198,9 +193,7 @@ const useChatStore = defineStore('chat', {
                 return true
               })
               // Sort by sentAt
-              this.messages[realConv.id].sort(
-                (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
-              )
+              this.messages[realConv.id].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())
               // Clean up temp conversation messages
               delete this.messages[tempId]
             }
@@ -766,18 +759,18 @@ const useChatStore = defineStore('chat', {
           receiverName: message.receiverName,
           currentUserId: userStore.id,
         })
-        
+
         // Tạo conversation tạm với ID timestamp
         const tempId = Date.now()
         const otherUserId = message.senderId === userStore.id ? message.receiverId : message.senderId
         const otherUserName = message.senderId === userStore.id ? message.receiverName : message.senderName
-        
+
         // Try to determine conversation type based on message metadata
         // If message has loaiTinNhanType, use it to determine conversation type
         // Otherwise, we'll need to check if the other user is a customer
         // For now, we'll create a temporary conversation and let the backend correct it
         // The backend will return the correct type when we fetch conversations
-        
+
         // Check if this might be a customer-staff conversation
         // We can't definitively know without checking the backend, so we'll create a generic one
         // The backend will correct the type when we fetch conversations
@@ -838,9 +831,7 @@ const useChatStore = defineStore('chat', {
         this.messages[conversation.id].splice(existingIndex, 1)
       }
       // Sort messages by sentAt to maintain order
-      this.messages[conversation.id].sort(
-        (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
-      )
+      this.messages[conversation.id].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())
     },
 
     /**
@@ -875,12 +866,12 @@ const useChatStore = defineStore('chat', {
           receiverName: message.receiverName,
           currentUserId: userStore.id,
         })
-        
+
         // Tính unread count ban đầu: nếu mình là người nhận và tin nhắn chưa đọc, thì = 1
         const initialUnreadCount = message.receiverId === userStore.id && !message.isRead ? 1 : 0
         const otherUserId = message.senderId === userStore.id ? message.receiverId : message.senderId
         const otherUserName = message.senderId === userStore.id ? message.receiverName : message.senderName
-        
+
         // Create temporary conversation - backend will correct the type when we fetch
         conversation = {
           id: Date.now(), // Temporary ID
@@ -904,7 +895,7 @@ const useChatStore = defineStore('chat', {
         // Chỉ cập nhật nếu tin nhắn này mới hơn tin nhắn cuối cùng
         const currentLastTime = conversation.lastMessageTime ? new Date(conversation.lastMessageTime).getTime() : 0
         const newMessageTime = message.sentAt ? new Date(message.sentAt).getTime() : 0
-        
+
         if (newMessageTime >= currentLastTime) {
           conversation.lastMessageContent = message.content
           conversation.lastMessageTime = message.sentAt
@@ -968,12 +959,10 @@ const useChatStore = defineStore('chat', {
         } else if (currentUserId === conversation.nhanVienId) {
           conversation.unreadCountNv1 = 0
         }
-      } else {
-        if (currentUserId === conversation.nhanVien1Id) {
-          conversation.unreadCountNv2 = 0
-        } else if (currentUserId === conversation.nhanVien2Id) {
-          conversation.unreadCountNv1 = 0
-        }
+      } else if (currentUserId === conversation.nhanVien1Id) {
+        conversation.unreadCountNv2 = 0
+      } else if (currentUserId === conversation.nhanVien2Id) {
+        conversation.unreadCountNv1 = 0
       }
     },
 

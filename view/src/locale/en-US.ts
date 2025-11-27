@@ -27,6 +27,7 @@ import localeThongKe from '@/views/main-view/thong-ke/locale/en-US'
 import localeChat from '@/views/chat/locale/en-US'
 import localeAIChatbot from '@/views/ai-chatbot/locale/en-US'
 import localeInvoice from '@/views/main-view/quan-ly-hoa-don/locale/en-US'
+import localeLichLamViec from '@/views/main-view/lich-lam-viec/locale/en-US'
 
 // Dashboard components don't use localization
 /** simple end */
@@ -113,5 +114,6 @@ export default {
   ...localeChat,
   ...localeAIChatbot,
   ...localeInvoice,
+  ...localeLichLamViec,
   /** simple end */
 }

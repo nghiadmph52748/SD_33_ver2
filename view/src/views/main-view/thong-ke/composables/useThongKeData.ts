@@ -39,9 +39,7 @@ const layChiTietTuHoaDon = (hoaDon: HoaDonApiModel) => {
 
 const tinhTongTienChiTiet = (chiTiet: any[]): number => {
   return chiTiet.reduce((sum, item) => {
-    const line =
-      Number(item?.thanhTien) ||
-      Number(item?.giaBan || 0) * Number(item?.soLuong || 0)
+    const line = Number(item?.thanhTien) || Number(item?.giaBan || 0) * Number(item?.soLuong || 0)
     return sum + (Number.isNaN(line) ? 0 : line)
   }, 0)
 }

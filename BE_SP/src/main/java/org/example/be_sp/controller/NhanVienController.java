@@ -79,11 +79,16 @@ public class NhanVienController {
     @PostMapping("/add")
     public ResponseObject<?> createNhanVien(@RequestBody NhanVienJsonRequest jsonRequest) {
         try {
+            System.out.println("📥 [NhanVienController] Nhận request tạo nhân viên mới");
+            System.out.println("📥 [NhanVienController] Email: " + (jsonRequest.getEmail() != null ? jsonRequest.getEmail() : "null"));
             NhanVienRequest request = jsonRequest.toNhanVienRequest();
             request.setDeleted(false);
             nhanVienService.saveNhanVien(request, passwordEncoder);
+            System.out.println("✅ [NhanVienController] Nhân viên đã được tạo thành công");
             return new ResponseObject<>(true, null, "Thêm nhân viên mới thành công");
         } catch (Exception e) {
+            System.err.println("❌ [NhanVienController] Lỗi khi thêm nhân viên: " + e.getMessage());
+            e.printStackTrace();
             return new ResponseObject<>(false, null, "Lỗi khi thêm nhân viên: " + e.getMessage());
         }
     }

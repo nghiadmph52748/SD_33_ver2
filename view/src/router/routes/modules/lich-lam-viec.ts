@@ -33,7 +33,7 @@ const LICH_LAM_VIEC: AppRouteRecordRaw = {
         roles: ['admin'],
       },
     },
-    
+
     {
       path: 'lich-nhan-vien',
       name: 'LichNhanVien',
@@ -56,55 +56,48 @@ const LICH_LAM_VIEC: AppRouteRecordRaw = {
       },
     },
     {
-  path: 'update-ca-lam-viec/:id',
-  name: 'updatecalamviec',
-  component: () => import('@/views/main-view/lich-lam-viec/updatecalamviec.vue'),
-  meta: {
-    locale: 'Update Ca Làm Việc',
-    requiresAuth: true,
-    roles: ['*'],
-    hideInMenu: true,
-  },
-},{
-  path: 'them-lich-lam-viec',
-  name: 'themlichlamviec',
-  component: () => import('@/views/main-view/lich-lam-viec/themlichlamviec.vue'),
-  meta: {
-    locale: 'Thêm Lịch Làm Việc',
-    requiresAuth: true,
-    roles: ['*'],
-    hideInMenu: true,
-  },
-},
-{
-  path: 'update-lich-lam-viec/:id',
-  name: 'updatelichlamviec',
-  component: () => import('@/views/main-view/lich-lam-viec/formupdatelichlamviec.vue'),
-  meta: {
-    locale: 'Cập Nhật Lịch Làm Việc',
-    requiresAuth: true,
-    roles: ['*'],
-    hideInMenu: true,
-  },
-},
-{
-  path: 'giao-ca',
-  name: 'giaoca',
-  component: () => import('@/views/main-view/lich-lam-viec/giao-ca.vue'),
-  meta: {
-    locale: 'Giao Ca',
-    requiresAuth: true,
-    roles: ['admin'],
-  },
-},
-
-
-
-
-
-
-
-    
+      path: 'update-ca-lam-viec/:id',
+      name: 'updatecalamviec',
+      component: () => import('@/views/main-view/lich-lam-viec/updatecalamviec.vue'),
+      meta: {
+        locale: 'Update Ca Làm Việc',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+      },
+    },
+    {
+      path: 'them-lich-lam-viec',
+      name: 'themlichlamviec',
+      component: () => import('@/views/main-view/lich-lam-viec/themlichlamviec.vue'),
+      meta: {
+        locale: 'Thêm Lịch Làm Việc',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+      },
+    },
+    {
+      path: 'update-lich-lam-viec/:id',
+      name: 'updatelichlamviec',
+      component: () => import('@/views/main-view/lich-lam-viec/formupdatelichlamviec.vue'),
+      meta: {
+        locale: 'Cập Nhật Lịch Làm Việc',
+        requiresAuth: true,
+        roles: ['*'],
+        hideInMenu: true,
+      },
+    },
+    {
+      path: 'giao-ca',
+      name: 'giaoca',
+      component: () => import('@/views/main-view/lich-lam-viec/giao-ca.vue'),
+      meta: {
+        locale: 'Giao Ca',
+        requiresAuth: true,
+        roles: ['*'],
+      },
+    },
   ],
 }
 

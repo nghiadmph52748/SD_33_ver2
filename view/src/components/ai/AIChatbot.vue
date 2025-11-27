@@ -48,7 +48,11 @@
             <div class="content">
               <!-- Spinning animation - show FIRST when processing but no content yet -->
               <div
-                v-if="msg.role === 'assistant' && (msg.processingStatus === 'querying' || msg.processingStatus === 'analyzing') && (!msg.content || msg.content.trim().length === 0)"
+                v-if="
+                  msg.role === 'assistant' &&
+                  (msg.processingStatus === 'querying' || msg.processingStatus === 'analyzing') &&
+                  (!msg.content || msg.content.trim().length === 0)
+                "
                 class="processing-indicator"
               >
                 <a-spin :size="16" />
@@ -57,11 +61,20 @@
 
               <!-- Content display with streaming animation -->
               <div v-if="msg.content && msg.content.trim().length > 0" class="text">
-                <span v-html="renderMarkdown(msg.content)"></span><span v-if="msg.processingStatus === 'analyzing' || (isProcessing && msg.id === messages[messages.length - 1]?.id)" class="streaming-cursor">▋</span>
+                <span v-html="renderMarkdown(msg.content)"></span>
+                <span
+                  v-if="msg.processingStatus === 'analyzing' || (isProcessing && msg.id === messages[messages.length - 1]?.id)"
+                  class="streaming-cursor"
+                >
+                  ▋
+                </span>
               </div>
 
               <!-- Data Source (only when AI response is complete) -->
-              <div v-if="msg.role === 'assistant' && msg.content && msg.dataSource && msg.processingStatus === 'ready'" class="message-metadata">
+              <div
+                v-if="msg.role === 'assistant' && msg.content && msg.dataSource && msg.processingStatus === 'ready'"
+                class="message-metadata"
+              >
                 <div class="data-source">
                   <span class="metadata-icon"></span>
                   <span class="metadata-label">Nguồn:</span>
@@ -474,7 +487,6 @@ function scrollToBottom() {
   }
 }
 
-
 // Expanded view removed
 
 async function checkConnection() {
@@ -537,18 +549,18 @@ async function sendMessage(text: string = input.value) {
     dataSource: '',
     queryType: '',
   }
-  
+
   // Push message immediately - Vue will reactively update
   messages.value.push(aiMessage)
   input.value = ''
-  
+
   // Force immediate DOM update to show spinner
   await nextTick()
   scrollToBottom()
-  
+
   // Additional tick to ensure spinner renders
   await nextTick()
-  
+
   saveHistory()
   loading.value = false
 
@@ -580,7 +592,7 @@ async function sendMessage(text: string = input.value) {
             // Keep content empty to show spinner until real content arrives
             messages.value[msgIndex].content = ''
           }
-          
+
           // Scroll while streaming
           nextTick(() => scrollToBottom())
         }
@@ -1644,7 +1656,6 @@ defineExpose({
     opacity: 0;
   }
 }
-
 
 /* Processing Status Styles */
 .processing-status {

@@ -56,6 +56,7 @@ const QUAN_LY_GIAM_GIA: AppRouteRecordRaw = {
         roles: ['*'],
         hideInMenu: true,
         activeMenu: 'QuanLyPhieuGiamGia',
+        ignoreCache: true,
       },
     },
     {
@@ -68,6 +69,7 @@ const QUAN_LY_GIAM_GIA: AppRouteRecordRaw = {
         roles: ['*'],
         hideInMenu: true,
         activeMenu: 'QuanLyPhieuGiamGia',
+        ignoreCache: true,
       },
     },
     {

@@ -72,7 +72,6 @@ onMounted(async () => {
       trangThai: Boolean(data.trangThai),
       idQuyenHan: data.idQuyenHan ?? null,
     }
-  } catch (err) {
-  }
+  } catch (err) {}
 })
 </script>

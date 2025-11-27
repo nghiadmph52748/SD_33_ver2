@@ -71,22 +71,21 @@
         </template>
 
         <template #action="{ record }">
-  <a-space>
-    <!-- Nút sửa -->
-    <a-button type="text" @click="editSchedule(record)">
-      <template #icon><icon-edit /></template>
-    </a-button>
+          <a-space>
+            <!-- Nút sửa -->
+            <a-button type="text" @click="editSchedule(record)">
+              <template #icon><icon-edit /></template>
+            </a-button>
 
-    <!-- Nút tắt bật trạng thái -->
-    <a-switch
-      :checked="record.trangThai === 'Đã làm'"
-      checked-color="blue"
-      unchecked-color="#d9d9d9"
-      @change="toggleTrangThai(record)"
-    />
-  </a-space>
-</template>
-
+            <!-- Nút tắt bật trạng thái -->
+            <a-switch
+              :checked="record.trangThai === 'Đã làm'"
+              checked-color="blue"
+              unchecked-color="#d9d9d9"
+              @change="toggleTrangThai(record)"
+            />
+          </a-space>
+        </template>
       </a-table>
     </a-card>
   </div>
@@ -98,13 +97,8 @@ import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { getLichLamViec } from '@/api/lich-lam-viec'
 import axios from 'axios'
-import { useRouter } from 'vue-router' 
-import {
-  IconPlus,
-  IconRefresh,
-  IconEdit,
-  IconDelete
-} from '@arco-design/web-vue/es/icon'
+import { useRouter } from 'vue-router'
+import { IconPlus, IconRefresh, IconEdit, IconDelete } from '@arco-design/web-vue/es/icon'
 // removed unused XLSX import
 const router = useRouter()
 
@@ -128,7 +122,7 @@ const search = ref('')
 const filter = ref<'all' | 'working' | 'off'>('all')
 const filterForm = ref({
   caLam: '',
-  ngayLam: '' as any // có thể là string | Date | dayjs
+  ngayLam: '' as any, // có thể là string | Date | dayjs
 })
 
 const pagination = ref({
@@ -137,7 +131,7 @@ const pagination = ref({
   pageSize: 10,
   showTotal: true,
   showJumper: true,
-  showPageSize: true
+  showPageSize: true,
 })
 
 const danhSach = ref<LichLamViecItem[]>([])
@@ -150,7 +144,7 @@ const columns = [
   { title: 'Giờ bắt đầu', dataIndex: 'gioBatDau', width: 120 },
   { title: 'Giờ kết thúc', dataIndex: 'gioKetThuc', width: 120 },
   { title: 'Trạng thái', dataIndex: 'trangThai', slotName: 'trangThai', width: 120 },
-  { title: 'Thao tác', slotName: 'action', width: 120, fixed: 'right' }
+  { title: 'Thao tác', slotName: 'action', width: 120, fixed: 'right' },
 ]
 
 /* ===================== HELPERS ===================== */
@@ -197,27 +191,26 @@ async function fetchLichLamViec() {
     const list = extractListFromResponse(res)
 
     danhSach.value = list.map((item: any) => {
-  const nhanVienName = item?.nhanVien?.tenNhanVien ?? ''
-  const caLamName = item?.caLamViec?.tenCa ?? item?.caLam ?? ''
-  const ngayLamVal = item?.ngayLamViec ?? ''
-  const gioBatDau = item?.caLamViec?.thoiGianBatDau ?? ''
-  const gioKetThuc = item?.caLamViec?.thoiGianKetThuc ?? ''
+      const nhanVienName = item?.nhanVien?.tenNhanVien ?? ''
+      const caLamName = item?.caLamViec?.tenCa ?? item?.caLam ?? ''
+      const ngayLamVal = item?.ngayLamViec ?? ''
+      const gioBatDau = item?.caLamViec?.thoiGianBatDau ?? ''
+      const gioKetThuc = item?.caLamViec?.thoiGianKetThuc ?? ''
 
-  // Chuyển trạng thái Boolean thành string để hiển thị
-  const trangThaiStr = item?.trangThai === true ? 'Đã làm' : 'Dự kiến'
+      // Chuyển trạng thái Boolean thành string để hiển thị
+      const trangThaiStr = item?.trangThai === true ? 'Đã làm' : 'Dự kiến'
 
-  return {
-    id: item?.id,
-    nhanVien: nhanVienName,
-    caLam: caLamName,
-    ngayLam: ngayLamVal,
-    gioBatDau,
-    gioKetThuc,
-    trangThai: trangThaiStr,
-    ghiChu: item?.ghiChu ?? null
-  } as LichLamViecItem
-})
-
+      return {
+        id: item?.id,
+        nhanVien: nhanVienName,
+        caLam: caLamName,
+        ngayLam: ngayLamVal,
+        gioBatDau,
+        gioKetThuc,
+        trangThai: trangThaiStr,
+        ghiChu: item?.ghiChu ?? null,
+      } as LichLamViecItem
+    })
 
     pagination.value.total = danhSach.value.length
   } catch (error: any) {
@@ -238,32 +231,26 @@ async function toggleTrangThai(record: LichLamViecItem) {
   // Gọi API cập nhật backend
   try {
     await axios.patch(`http://localhost:8080/api/lich-lam-viec/${record.id}/trang-thai`, {
-      trangThai: newStatus === 'Đã làm'
+      trangThai: newStatus === 'Đã làm',
     })
   } catch (error) {
     Message.error('Cập nhật trạng thái thất bại')
   }
 }
 
-
 /* ===================== FILTER & PAGINATION ===================== */
 const filteredList = computed(() => {
   let list = [...danhSach.value]
 
- if (filter.value === 'working') {
-  list = list.filter((x) => x.trangThai === 'Đã làm')
-} else if (filter.value === 'off') {
-  list = list.filter((x) => x.trangThai === 'Dự kiến')
-}
-
+  if (filter.value === 'working') {
+    list = list.filter((x) => x.trangThai === 'Đã làm')
+  } else if (filter.value === 'off') {
+    list = list.filter((x) => x.trangThai === 'Dự kiến')
+  }
 
   if (search.value) {
     const keyword = search.value.toLowerCase()
-    list = list.filter(
-      (x) =>
-        (x.nhanVien || '').toLowerCase().includes(keyword) ||
-        (x.caLam || '').toLowerCase().includes(keyword)
-    )
+    list = list.filter((x) => (x.nhanVien || '').toLowerCase().includes(keyword) || (x.caLam || '').toLowerCase().includes(keyword))
   }
 
   if (filterForm.value.caLam) {
@@ -300,13 +287,11 @@ function themLichLamViec() {
 }
 
 function editSchedule(record: LichLamViecItem) {
-   router.push({
+  router.push({
     name: 'updatelichlamviec',
     params: { id: record.id },
   })
 }
-
-
 
 /* ===================== LIFECYCLE ===================== */
 onMounted(() => {
@@ -316,46 +301,126 @@ onMounted(() => {
 <style scoped>
 .schedule-management-page {
   padding: 0 20px 20px 20px;
+  background: #f5f7fa;
+  min-height: calc(100vh - 64px);
 }
 
 .filters-card,
 .table-card {
-  margin-bottom: 16px;
-  border-radius: 12px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+}
+
+.filters-card {
+  padding: 20px;
 }
 
 .actions-row {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* Table cell padding */
 :deep(.arco-table .arco-table-cell) {
-  padding: 6px 8px;
+  padding: 12px 16px;
+}
+
+:deep(.arco-table) {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:deep(.arco-table thead) {
+  background: #f9fafb;
+}
+
+:deep(.arco-table thead th) {
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+:deep(.arco-table tbody tr) {
+  transition: background-color 0.2s;
+}
+
+:deep(.arco-table tbody tr:hover) {
+  background: #f9fafb;
 }
 
 /* Tag styling để hiển thị trạng thái */
 :deep(.success-tag) {
-  color: rgb(var(--success-6)) !important;
-  background: rgb(var(--success-1)) !important;
-  border-color: rgb(var(--success-1)) !important;
+  color: #059669 !important;
+  background: #d1fae5 !important;
+  border-color: #a7f3d0 !important;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
 }
 
 :deep(.info-tag) {
-  color: rgb(var(--primary-6)) !important;
-  background: rgb(var(--primary-1)) !important;
-  border-color: rgb(var(--primary-1)) !important;
+  color: #2563eb !important;
+  background: #dbeafe !important;
+  border-color: #bfdbfe !important;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
 }
 
 /* Button nhỏ gọn trong table */
 :deep(.arco-table .arco-btn) {
-  padding: 2px 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+:deep(.arco-table .arco-btn-text:hover) {
+  background: #f3f4f6;
 }
 
 /* Optional: căn chỉnh input, select filter */
 :deep(.filters-card .arco-form-item) {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+:deep(.filters-card .arco-form-item-label) {
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+:deep(.filters-card .arco-input),
+:deep(.filters-card .arco-select),
+:deep(.filters-card .arco-picker) {
+  border-radius: 6px;
+  border-color: #d1d5db;
+}
+
+:deep(.filters-card .arco-input:focus),
+:deep(.filters-card .arco-select:focus),
+:deep(.filters-card .arco-picker:focus) {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+:deep(.arco-radio-group-button) {
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+:deep(.arco-radio-button) {
+  border-radius: 4px;
+  margin: 0 2px;
+}
+
+:deep(.arco-radio-button-checked) {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 </style>
-

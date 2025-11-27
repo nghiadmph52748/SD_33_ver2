@@ -109,13 +109,16 @@ public class NhanVienService {
         nhanVienRepository.save(nv);
 
         try {
+            System.out.println("📧 Đang gửi email thông tin tài khoản đến: " + nv.getEmail());
             emailService.sendAccountInfo(
                     nv.getEmail(),
                     nv.getTenNhanVien(),
                     rawPassword // gửi mật khẩu gốc (chưa mã hóa)
             );
+            System.out.println("✅ Email đã được gửi thành công đến: " + nv.getEmail());
         } catch (Exception e) {
             System.err.println("❌ Gửi mail thất bại: " + e.getMessage());
+            e.printStackTrace();
         }
 
     }
@@ -198,9 +201,28 @@ public class NhanVienService {
             nv.setTenTaiKhoan(request.getTenTaiKhoan());
         }
 
-        // update mật khẩu
-        if (request.getMatKhau() != null) {
-            nv.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
+        // Track if password or email changed for email notification
+        boolean passwordChanged = false;
+        String rawPassword = null;
+        String oldEmail = nv.getEmail();
+        boolean emailChanged = false;
+        
+        // update mật khẩu - generate random password if not provided to always send email
+        if (request.getMatKhau() != null && !request.getMatKhau().isEmpty()) {
+            rawPassword = request.getMatKhau();
+            nv.setMatKhau(passwordEncoder.encode(rawPassword));
+            passwordChanged = true;
+        } else {
+            // Generate random password if not provided during update - always send email with new password
+            rawPassword = generateRandomPassword();
+            nv.setMatKhau(passwordEncoder.encode(rawPassword));
+            passwordChanged = true;
+            System.out.println("🔑 [updateNhanVien] Mật khẩu ngẫu nhiên đã được tạo: " + rawPassword);
+        }
+
+        // Check if email changed
+        if (request.getEmail() != null && !request.getEmail().equals(oldEmail)) {
+            emailChanged = true;
         }
 
         if (request.getCreateAt() != null) {
@@ -217,6 +239,35 @@ public class NhanVienService {
             nv.setUpdateBy(request.getUpdateBy());
         }
         nhanVienRepository.save(nv);
+        
+        // Always send email notification with password when updating employee
+        try {
+            if (passwordChanged && rawPassword != null) {
+                System.out.println("📧 [updateNhanVien] Đang gửi email thông tin tài khoản cập nhật đến: " + nv.getEmail());
+                emailService.sendAccountInfo(
+                        nv.getEmail(),
+                        nv.getTenNhanVien(),
+                        rawPassword
+                );
+                System.out.println("✅ [updateNhanVien] Email thông tin tài khoản đã được gửi thành công!");
+            }
+            
+            // Also send notification if email changed
+            if (emailChanged && oldEmail != null) {
+                System.out.println("📧 [updateNhanVien] Email đã được thay đổi. Gửi thông báo đến email mới: " + nv.getEmail());
+                String subject = "Thông báo thay đổi email tài khoản";
+                String body = "Xin chào " + nv.getTenNhanVien() + ",\n\n"
+                        + "Email tài khoản của bạn đã được cập nhật từ " + oldEmail + " thành " + nv.getEmail() + ".\n\n"
+                        + "Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ quản trị viên ngay lập tức.\n\n"
+                        + "Trân trọng,\nĐội ngũ hỗ trợ hệ thống.";
+                emailService.sendEmail(nv.getEmail(), subject, body);
+                System.out.println("✅ [updateNhanVien] Email thông báo thay đổi đã được gửi thành công!");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ [updateNhanVien] Gửi mail thất bại: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
         return new NhanVienResponse(nv);
     }
 

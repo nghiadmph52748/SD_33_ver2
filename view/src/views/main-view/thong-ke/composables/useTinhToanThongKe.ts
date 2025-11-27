@@ -165,9 +165,8 @@ export function useTinhToanThongKe(
     })
     const doanhThuHomQua = tinhDoanhThuThuc(hoaDonHomQua)
     const doanhThuHomNay = tinhDoanhThuThuc(hoaDonHomNay)
-    const tangTruong = doanhThuHomQua > 0 
-      ? Math.round(((doanhThuHomNay - doanhThuHomQua) / doanhThuHomQua) * 100 * 100) / 100
-      : (doanhThuHomNay > 0 ? 100 : 0)
+    const tangTruong =
+      doanhThuHomQua > 0 ? Math.round(((doanhThuHomNay - doanhThuHomQua) / doanhThuHomQua) * 100 * 100) / 100 : doanhThuHomNay > 0 ? 100 : 0
 
     return {
       orders: hoaDonHomNay,
@@ -203,9 +202,12 @@ export function useTinhToanThongKe(
     })
     const doanhThuTuanTruoc = tinhDoanhThuThuc(hoaDonTuanTruoc)
     const doanhThuTuan = tinhDoanhThuThuc(hoaDonTuan)
-    const tangTruong = doanhThuTuanTruoc > 0 
-      ? Math.round(((doanhThuTuan - doanhThuTuanTruoc) / doanhThuTuanTruoc) * 100 * 100) / 100
-      : (doanhThuTuan > 0 ? 100 : 0)
+    const tangTruong =
+      doanhThuTuanTruoc > 0
+        ? Math.round(((doanhThuTuan - doanhThuTuanTruoc) / doanhThuTuanTruoc) * 100 * 100) / 100
+        : doanhThuTuan > 0
+          ? 100
+          : 0
 
     return {
       orders: hoaDonTuan,
@@ -237,9 +239,12 @@ export function useTinhToanThongKe(
     })
     const doanhThuThangTruoc = tinhDoanhThuThuc(hoaDonThangTruoc)
     const doanhThuThang = tinhDoanhThuThuc(hoaDonThang)
-    const tangTruong = doanhThuThangTruoc > 0 
-      ? Math.round(((doanhThuThang - doanhThuThangTruoc) / doanhThuThangTruoc) * 100 * 100) / 100
-      : (doanhThuThang > 0 ? 100 : 0)
+    const tangTruong =
+      doanhThuThangTruoc > 0
+        ? Math.round(((doanhThuThang - doanhThuThangTruoc) / doanhThuThangTruoc) * 100 * 100) / 100
+        : doanhThuThang > 0
+          ? 100
+          : 0
 
     return {
       orders: hoaDonThang,
@@ -271,9 +276,8 @@ export function useTinhToanThongKe(
     })
     const doanhThuNamTruoc = tinhDoanhThuThuc(hoaDonNamTruoc)
     const doanhThuNam = tinhDoanhThuThuc(hoaDonNam)
-    const tangTruong = doanhThuNamTruoc > 0 
-      ? Math.round(((doanhThuNam - doanhThuNamTruoc) / doanhThuNamTruoc) * 100 * 100) / 100
-      : (doanhThuNam > 0 ? 100 : 0)
+    const tangTruong =
+      doanhThuNamTruoc > 0 ? Math.round(((doanhThuNam - doanhThuNamTruoc) / doanhThuNamTruoc) * 100 * 100) / 100 : doanhThuNam > 0 ? 100 : 0
 
     return {
       orders: hoaDonNam,
@@ -323,13 +327,13 @@ export function useTinhToanThongKe(
 
   const xayDungDuLieuSanPhamBanChay = (kyThongKe: string = 'month') => {
     console.log('🔍 Bắt đầu xây dựng dữ liệu sản phẩm bán chạy cho kỳ:', kyThongKe)
-    
+
     const map: Record<string, SanPhamBanChay> = {}
     const hienTai = new Date()
-    
+
     // Lọc hóa đơn theo kỳ thống kê
     let hoaDonLoc: HoaDon[] = []
-    
+
     switch (kyThongKe) {
       case 'week': {
         const dauTuan = new Date(hienTai)
@@ -364,11 +368,11 @@ export function useTinhToanThongKe(
         })
         break
       }
-      case 'quarter1': 
-      case 'quarter2': 
-      case 'quarter3': 
+      case 'quarter1':
+      case 'quarter2':
+      case 'quarter3':
       case 'quarter4': {
-        const quyMap = { 'quarter1': 0, 'quarter2': 3, 'quarter3': 6, 'quarter4': 9 }
+        const quyMap = { quarter1: 0, quarter2: 3, quarter3: 6, quarter4: 9 }
         const thangBatDau = quyMap[kyThongKe as keyof typeof quyMap]
         const dauQuy = new Date(hienTai.getFullYear(), thangBatDau, 1)
         dauQuy.setHours(0, 0, 0, 0)
@@ -390,30 +394,30 @@ export function useTinhToanThongKe(
         break
       }
     }
-    
+
     console.log('📊 Số hóa đơn đã thanh toán trong kỳ:', hoaDonLoc.length)
-    
+
     hoaDonLoc.forEach((hd) => {
       // Lấy chi tiết từ cả 2 nguồn: items và hoaDonChiTiets
       const chiTietItems = layChiTietHoaDon(hd)
-      
+
       console.log('🧾 Hóa đơn ID:', hd.id, 'có', chiTietItems.length, 'sản phẩm')
-      
+
       chiTietItems.forEach((item: any) => {
         // Lấy tên sản phẩm từ nhiều nguồn khác nhau
-        const tenSanPham = 
+        const tenSanPham =
           item?.tenSanPham ||
           item?.idChiTietSanPham?.idSanPham?.tenSanPham ||
           item?.sanPham?.tenSanPham ||
           item?.tenSanPhamChiTiet ||
           'Sản phẩm không xác định'
-        
+
         const soLuong = Number(item?.soLuong ?? 0)
         const giaBan = Number(item?.giaBan ?? item?.donGia ?? 0)
         const thanhTien = Number(item?.thanhTien ?? giaBan * soLuong)
-        
+
         console.log('🛍️ Sản phẩm:', tenSanPham, '- SL:', soLuong, '- Giá:', giaBan, '- Thành tiền:', thanhTien)
-        
+
         if (tenSanPham && tenSanPham !== 'Sản phẩm không xác định' && soLuong > 0) {
           if (!map[tenSanPham]) {
             map[tenSanPham] = { name: tenSanPham, value: 0, revenue: 0 }
@@ -425,12 +429,12 @@ export function useTinhToanThongKe(
     })
 
     const ketQua = Object.values(map)
-      .filter(sp => sp.value > 0) // Chỉ lấy sản phẩm đã bán
+      .filter((sp) => sp.value > 0) // Chỉ lấy sản phẩm đã bán
       .sort((a, b) => b.value - a.value || b.revenue - a.revenue)
       .slice(0, 5)
-    
+
     console.log('🏆 Top 5 sản phẩm bán chạy:', ketQua)
-    
+
     duLieuSanPhamBanChay.value = ketQua
   }
 
@@ -558,28 +562,25 @@ export function useTinhToanThongKe(
 
   const capNhatDuLieuDanhMuc = () => {
     console.log('🔍 Bắt đầu phân loại sản phẩm theo mức độ bán chạy')
-    
+
     // Tính tổng số lượng bán cho từng sản phẩm
     const sanPhamBanMap = new Map<string, number>()
-    
+
     danhSachHoaDon.value
       .filter((hd) => laHoaDonDaThanhToan(hd))
       .forEach((hd) => {
         const chiTiet = layChiTietHoaDon(hd)
         if (chiTiet.length === 0) return
-        
+
         chiTiet.forEach((item: any) => {
-          const tenSP = 
-            item?.tenSanPham ||
-            item?.idChiTietSanPham?.idSanPham?.tenSanPham ||
-            item?.sanPham?.tenSanPham ||
-            item?.tenSanPhamChiTiet
-          
+          const tenSP =
+            item?.tenSanPham || item?.idChiTietSanPham?.idSanPham?.tenSanPham || item?.sanPham?.tenSanPham || item?.tenSanPhamChiTiet
+
           if (!tenSP) return
-          
+
           const soLuong = Number(item?.soLuong || 0)
           const soLuongHopLe = Number.isNaN(soLuong) ? 0 : soLuong
-          
+
           if (soLuongHopLe > 0) {
             sanPhamBanMap.set(tenSP, (sanPhamBanMap.get(tenSP) || 0) + soLuongHopLe)
           }
@@ -587,51 +588,51 @@ export function useTinhToanThongKe(
       })
 
     console.log('📊 Đã tính toán số lượng bán cho', sanPhamBanMap.size, 'sản phẩm')
-    
+
     // Phân loại sản phẩm theo mức độ bán chạy và lưu chi tiết
-    const demMucDoBanChay = new Map<string, { count: number, products: Array<{name: string, quantity: number}> }>()
-    
+    const demMucDoBanChay = new Map<string, { count: number; products: Array<{ name: string; quantity: number }> }>()
+
     sanPhamBanMap.forEach((soLuongBan, tenSanPham) => {
       const mucDo = phanLoaiTheoBanChay(soLuongBan)
-      
+
       if (!demMucDoBanChay.has(mucDo)) {
         demMucDoBanChay.set(mucDo, { count: 0, products: [] })
       }
-      
+
       const data = demMucDoBanChay.get(mucDo)!
       data.count += 1
       data.products.push({ name: tenSanPham, quantity: soLuongBan })
-      
+
       console.log(`🛍️ ${tenSanPham}: ${soLuongBan} sản phẩm → ${mucDo}`)
     })
 
     const mauSac = ['#ff4d4f', '#faad14', '#52c41a', '#1890ff'] // Đỏ, Cam, Xanh lá, Xanh dương
     duLieuDanhMuc.value = [
-      { 
-        name: 'Bán cực chạy (50+ sản phẩm)', 
-        value: demMucDoBanChay.get('Bán cực chạy (50+ sản phẩm)')?.count || 0, 
+      {
+        name: 'Bán cực chạy (50+ sản phẩm)',
+        value: demMucDoBanChay.get('Bán cực chạy (50+ sản phẩm)')?.count || 0,
         color: mauSac[0],
-        products: demMucDoBanChay.get('Bán cực chạy (50+ sản phẩm)')?.products || []
+        products: demMucDoBanChay.get('Bán cực chạy (50+ sản phẩm)')?.products || [],
       },
-      { 
-        name: 'Bán chạy (20-49 sản phẩm)', 
-        value: demMucDoBanChay.get('Bán chạy (20-49 sản phẩm)')?.count || 0, 
+      {
+        name: 'Bán chạy (20-49 sản phẩm)',
+        value: demMucDoBanChay.get('Bán chạy (20-49 sản phẩm)')?.count || 0,
         color: mauSac[1],
-        products: demMucDoBanChay.get('Bán chạy (20-49 sản phẩm)')?.products || []
+        products: demMucDoBanChay.get('Bán chạy (20-49 sản phẩm)')?.products || [],
       },
-      { 
-        name: 'Bán vừa (5-19 sản phẩm)', 
-        value: demMucDoBanChay.get('Bán vừa (5-19 sản phẩm)')?.count || 0, 
+      {
+        name: 'Bán vừa (5-19 sản phẩm)',
+        value: demMucDoBanChay.get('Bán vừa (5-19 sản phẩm)')?.count || 0,
         color: mauSac[2],
-        products: demMucDoBanChay.get('Bán vừa (5-19 sản phẩm)')?.products || []
+        products: demMucDoBanChay.get('Bán vừa (5-19 sản phẩm)')?.products || [],
       },
-      { 
-        name: 'Bán ít (1-4 sản phẩm)', 
-        value: demMucDoBanChay.get('Bán ít (1-4 sản phẩm)')?.count || 0, 
+      {
+        name: 'Bán ít (1-4 sản phẩm)',
+        value: demMucDoBanChay.get('Bán ít (1-4 sản phẩm)')?.count || 0,
         color: mauSac[3],
-        products: demMucDoBanChay.get('Bán ít (1-4 sản phẩm)')?.products || []
+        products: demMucDoBanChay.get('Bán ít (1-4 sản phẩm)')?.products || [],
       },
-    ].filter(item => item.value > 0) // Chỉ hiển thị các mức có sản phẩm
+    ].filter((item) => item.value > 0) // Chỉ hiển thị các mức có sản phẩm
 
     console.log('📈 Kết quả phân loại theo mức độ bán chạy:', duLieuDanhMuc.value)
   }

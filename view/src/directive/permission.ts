@@ -12,8 +12,7 @@ function checkPermission(el: HTMLElement, binding: DirectiveBinding) {
   }
 
   // Nếu route/meta là '*' → luôn hiển thị
-  const hasPermission =
-    value.includes('*') || value.some(role => userRoles.includes(role))
+  const hasPermission = value.includes('*') || value.some((role) => userRoles.includes(role))
 
   if (!hasPermission && el.parentNode) {
     el.parentNode.removeChild(el)

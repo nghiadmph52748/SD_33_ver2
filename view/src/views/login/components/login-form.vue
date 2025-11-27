@@ -39,9 +39,9 @@
       </a-space>
     </a-form>
     <a-modal v-model:visible="showStartModal" title="Bắt đầu ca" width="420" @ok="confirmStartShift" @cancel="cancelStartShift">
-      <div style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display: flex; flex-direction: column; gap: 12px">
         <div>Vui lòng nhập số tiền mặt ban đầu để bắt đầu ca làm việc.</div>
-        <a-input-number v-model:value="startCash" :min="0" style="width:100%" placeholder="Số tiền mặt (VND)" />
+        <a-input-number v-model:value="startCash" :min="0" style="width: 100%" placeholder="Số tiền mặt (VND)" />
       </div>
     </a-modal>
   </div>
@@ -86,32 +86,9 @@ const handleSubmit = async ({ errors, values }: { errors: Record<string, Validat
     try {
       await userStore.login(values as LoginData)
 
-      // After login, check if this user has an assigned (pending) shift
-      try {
-        const res = await getGiaoCa()
-        const list = (res.data || res) || []
-        const userId = userStore.id
-        const pending = list.find((s: any) => {
-          const assignedId = (s.nguoiNhan && s.nguoiNhan.id) || s.nguoiNhanId
-          const started = s.thoiGianGiaoCa || s.trangThai === 'Đang hoạt động'
-          return assignedId === userId && !started
-        })
-
-        if (pending) {
-          // show modal to enter starting cash
-          showStartModal.value = true
-          assignedShift.value = pending
-          return
-        }
-
-        // No pending assigned shift -> normal flow
-        router.push('/ban-hang-tai-quay/index')
-        Message.success(t('login.form.login.success'))
-      } catch (err) {
-        // If check fails, proceed to normal flow but inform
-        router.push('/ban-hang-tai-quay/index')
-        Message.success(t('login.form.login.success'))
-      }
+      // Both admin and staff must go to shift handover page first
+      router.push('/lich-lam-viec/giao-ca')
+      Message.success(t('login.form.login.success'))
       const { rememberPassword } = loginConfig.value
       const { username, password } = values
       // 实际生产环境需要进行加密存储。

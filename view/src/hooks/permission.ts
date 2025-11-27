@@ -22,7 +22,6 @@ export default function usePermission() {
     return false
   }
 
-
   return {
     accessRouter(route: RouteLocationNormalized | RouteRecordRaw) {
       //  Nếu route KHÔNG yêu cầu đăng nhập thì cho phép luôn
@@ -41,10 +40,7 @@ export default function usePermission() {
       const cloneRouters = [..._routers]
       while (cloneRouters.length) {
         const firstElement = cloneRouters.shift()
-        if (
-          firstElement?.meta?.roles?.includes('*') ||
-          firstElement?.meta?.roles?.includes(role)
-        ) {
+        if (firstElement?.meta?.roles?.includes('*') || firstElement?.meta?.roles?.includes(role)) {
           return { name: firstElement.name }
         }
         if (firstElement?.children) {

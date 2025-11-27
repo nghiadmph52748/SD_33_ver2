@@ -15,6 +15,7 @@ export interface LoginRes {
   email: string
   idQuyenHan: number
   tenQuyenHan: string
+  anhNhanVien?: string | null
   accessToken: string
   refreshToken: string
 }

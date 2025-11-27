@@ -141,11 +141,7 @@
                 <!-- Preview ảnh đã chọn -->
                 <div v-if="previewUrl" class="image-preview">
                   <div class="preview-container">
-                    <img
-                      :src="previewUrl"
-                      alt="Ảnh nhân viên"
-                      class="preview-image"
-                    />
+                    <img :src="previewUrl" alt="Ảnh nhân viên" class="preview-image" />
                     <div class="image-overlay">
                       <a-button type="text" size="small" @click="removeImage" class="remove-button">
                         <template #icon>
@@ -671,10 +667,10 @@ const handleSubmit = async () => {
       const uploadFormData = new FormData()
       uploadFormData.append('file', selectedFiles.value[0])
       const uploadResponse = await (await import('axios')).default.post('/api/v1/upload-image/add', uploadFormData)
-      
+
       // Try multiple ways to access the URL
       let extractedUrl: string | null = null
-      
+
       // Method 1: If response.data is directly an array (Axios unwrapped ResponseObject)
       if (Array.isArray(uploadResponse.data) && uploadResponse.data.length > 0) {
         const firstItem = uploadResponse.data[0]
@@ -682,7 +678,7 @@ const handleSubmit = async () => {
           extractedUrl = firstItem.url as string
         }
       }
-      
+
       // Method 2: ResponseObject structure - data.data[0].url
       if (!extractedUrl && uploadResponse.data?.data && Array.isArray(uploadResponse.data.data) && uploadResponse.data.data.length > 0) {
         const firstItem = uploadResponse.data.data[0]
@@ -690,22 +686,28 @@ const handleSubmit = async () => {
           extractedUrl = firstItem.url as string
         }
       }
-      
+
       // Method 3: Direct data.data.url (if it's an object, not array)
-      if (!extractedUrl && uploadResponse.data?.data && typeof uploadResponse.data.data === 'object' && !Array.isArray(uploadResponse.data.data) && 'url' in uploadResponse.data.data) {
+      if (
+        !extractedUrl &&
+        uploadResponse.data?.data &&
+        typeof uploadResponse.data.data === 'object' &&
+        !Array.isArray(uploadResponse.data.data) &&
+        'url' in uploadResponse.data.data
+      ) {
         extractedUrl = (uploadResponse.data.data as any).url
       }
-      
+
       // Method 4: Top-level data.url
       if (!extractedUrl && uploadResponse.data?.url) {
         extractedUrl = uploadResponse.data.url as string
       }
-      
+
       // Method 5: Direct response.data if it's a string URL
       if (!extractedUrl && typeof uploadResponse.data === 'string') {
         extractedUrl = uploadResponse.data
       }
-      
+
       if (extractedUrl) {
         imageUrl = extractedUrl
       } else {

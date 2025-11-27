@@ -92,7 +92,7 @@ export interface DuLieuDanhMuc {
   name: string
   value: number
   color: string
-  products?: Array<{name: string, quantity: number}>
+  products?: Array<{ name: string; quantity: number }>
 }
 
 export interface SanPhamBanChayNhat {

@@ -48,9 +48,8 @@ function showConfirm(titleText, messageText, okButtonText = 'Xác nhận', cance
 }
 
 defineExpose({
-  showConfirm
+  showConfirm,
 })
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

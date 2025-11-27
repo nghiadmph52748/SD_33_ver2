@@ -6,11 +6,7 @@
           <!-- Nhân viên -->
           <a-col :span="12">
             <a-form-item label="Nhân viên" name="nhanVien" required>
-              <a-select
-                v-model="form.nhanVien"
-                placeholder="Chọn nhân viên"
-                allow-clear
-              >
+              <a-select v-model="form.nhanVien" placeholder="Chọn nhân viên" allow-clear>
                 <a-option v-for="nv in nhanViens" :key="nv.id" :value="nv.id">
                   {{ nv.tenNhanVien }}
                 </a-option>
@@ -21,11 +17,7 @@
           <!-- Ca làm việc -->
           <a-col :span="12">
             <a-form-item label="Ca làm việc" name="caLamViec" required>
-              <a-select
-                v-model="form.caLamViec"
-                placeholder="Chọn ca làm việc"
-                allow-clear
-              >
+              <a-select v-model="form.caLamViec" placeholder="Chọn ca làm việc" allow-clear>
                 <a-option v-for="ca in caLamViecs" :key="ca.id" :value="ca.id">
                   {{ ca.tenCa }}
                 </a-option>
@@ -36,23 +28,14 @@
           <!-- Ngày làm việc -->
           <a-col :span="12">
             <a-form-item label="Ngày làm việc" name="ngayLamViec" required>
-              <a-date-picker
-                v-model="form.ngayLamViec"
-                placeholder="Chọn ngày làm việc"
-                style="width: 100%"
-                format="DD/MM/YYYY"
-              />
+              <a-date-picker v-model="form.ngayLamViec" placeholder="Chọn ngày làm việc" style="width: 100%" format="DD/MM/YYYY" />
             </a-form-item>
           </a-col>
 
           <!-- Ghi chú -->
           <a-col :span="24">
             <a-form-item label="Ghi chú" name="ghiChu">
-              <a-textarea
-                v-model="form.ghiChu"
-                placeholder="Nhập ghi chú nếu có"
-                rows="3"
-              />
+              <a-textarea v-model="form.ghiChu" placeholder="Nhập ghi chú nếu có" rows="3" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -61,9 +44,7 @@
       <div class="actions-row">
         <a-space>
           <a-button @click="handleCancel">Hủy</a-button>
-          <a-button type="primary" @click="handleUpdate" :loading="loading">
-            Cập nhật
-          </a-button>
+          <a-button type="primary" @click="handleUpdate" :loading="loading">Cập nhật</a-button>
         </a-space>
       </div>
     </a-card>
@@ -74,7 +55,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { Message,Modal  } from '@arco-design/web-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 
 import { layDanhSachNhanVien } from '@/api/nhan-vien'
 import { getCaLamViec } from '@/api/ca-lam-viec'
@@ -93,18 +74,18 @@ const form = ref({
   nhanVien: null as number | null,
   caLamViec: null as number | null,
   ngayLamViec: null as any,
-  ghiChu: ''
+  ghiChu: '',
 })
 
 //  Dữ liệu select
-const nhanViens = ref<{id:number, tenNhanVien:string}[]>([])
-const caLamViecs = ref<{id:number, tenCa:string}[]>([])
+const nhanViens = ref<{ id: number; tenNhanVien: string }[]>([])
+const caLamViecs = ref<{ id: number; tenCa: string }[]>([])
 
 //  Quy tắc validate
 const rules = {
   nhanVien: [{ required: true, message: 'Vui lòng chọn nhân viên' }],
   caLamViec: [{ required: true, message: 'Vui lòng chọn ca làm việc' }],
-  ngayLamViec: [{ required: true, message: 'Vui lòng chọn ngày làm việc' }]
+  ngayLamViec: [{ required: true, message: 'Vui lòng chọn ngày làm việc' }],
 }
 
 // ===========================
@@ -117,7 +98,7 @@ const fetchNhanViens = async () => {
 
     nhanViens.value = list.map((nv: any) => ({
       id: nv.id,
-      tenNhanVien: nv.tenNhanVien || nv.tennhanvien || 'Không rõ'
+      tenNhanVien: nv.tenNhanVien || nv.tennhanvien || 'Không rõ',
     }))
     console.log(' Nhân viên list:', nhanViens.value)
   } catch (err) {
@@ -148,7 +129,7 @@ const fetchCaLamViecs = async () => {
 
     caLamViecs.value = list.map((ca: any) => ({
       id: ca.id,
-      tenCa: ca.tenCa || ca.tenca || 'Không rõ'
+      tenCa: ca.tenCa || ca.tenca || 'Không rõ',
     }))
 
     console.log(' Ca làm việc list:', caLamViecs.value)
@@ -174,8 +155,7 @@ const loadData = async () => {
 
     // Load dữ liệu lịch theo id
     const lichRes = await getLichLamViecById(id)
-    const lich = lichRes.data ?? lichRes; // lichRes.data mới chứa object từ backend
-
+    const lich = lichRes.data ?? lichRes // lichRes.data mới chứa object từ backend
 
     console.log(' Dữ liệu lịch:', lich)
 
@@ -215,7 +195,7 @@ const handleUpdate = async () => {
           caLamViecId: form.value.caLamViec,
           ngayLamViec: dayjs(form.value.ngayLamViec).format('YYYY-MM-DD'),
           ghiChu: form.value.ghiChu || null,
-          trangThai: true
+          trangThai: true,
         }
 
         try {
@@ -228,9 +208,8 @@ const handleUpdate = async () => {
         } finally {
           loading.value = false
         }
-      }
+      },
     })
-
   } catch (err) {
     console.error(' Lỗi validate form:', err)
   }
@@ -249,9 +228,6 @@ const handleCancel = () => {
 // ===========================
 onMounted(loadData)
 </script>
-
-
-
 
 <style scoped>
 .schedule-update-page {

@@ -206,7 +206,7 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
           walkInLocation.value.districts = [...districts]
 
           // Load wards for the selected district
-          const district = districts.find((d) => d.value === customer.addressInfo!.quan)
+          const district = districts.find((d: DistrictOption) => d.value === customer.addressInfo!.quan)
           if (district) {
             try {
               const wards = await fetchWardsByDistrictCode(district.code)
@@ -246,7 +246,7 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
 
   const updateInvoicePayment = async (invoiceId: number, paymentMethod: 'cash' | 'transfer' | 'both') => {
     try {
-      await svcUpdatePaymentMethod(invoiceId, paymentMethod, userStore.id)
+      await svcUpdatePaymentMethod(invoiceId, paymentMethod, userStore.id || 1)
       const methodName = paymentMethod === 'cash' ? 'Tiền mặt' : paymentMethod === 'transfer' ? 'Chuyển khoản' : 'Cả hai'
       Message.success(`Hình thức thanh toán (${methodName}) đã được cập nhật`)
     } catch (error: any) {
@@ -262,7 +262,7 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
         Message.info('Đơn hàng tại quầy, không cần cập nhật giao hàng')
         return
       }
-      await svcUpdateShippingMethod(invoiceId, userStore.id)
+      await svcUpdateShippingMethod(invoiceId, userStore.id || 1)
       Message.success('Hình thức giao hàng đã được cập nhật')
     } catch (error: any) {
       console.error('Lỗi cập nhật giao hàng:', error)
@@ -273,7 +273,7 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
 
   const updateInvoiceVoucher = async (invoiceId: number, voucherId: number) => {
     try {
-      await svcUpdateVoucher(invoiceId, voucherId, userStore.id)
+      await svcUpdateVoucher(invoiceId, voucherId, userStore.id || 1)
       Message.success('Voucher đã được áp dụng')
     } catch (error: any) {
       console.error('Lỗi cập nhật voucher:', error)

@@ -166,14 +166,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import {
-  IconCheckCircle,
-  IconUser,
-  IconFile,
-  IconInfoCircle,
-  IconGift,
-  IconCheck,
-} from '@arco-design/web-vue/es/icon'
+import { IconCheckCircle, IconUser, IconFile, IconInfoCircle, IconGift, IconCheck } from '@arco-design/web-vue/es/icon'
 import type { CouponApiModel } from '@/api/discount-management'
 
 interface CartItem {
@@ -553,4 +546,3 @@ function getPaymentMethodColor(method: string) {
   background: #a8a8a8;
 }
 </style>
-

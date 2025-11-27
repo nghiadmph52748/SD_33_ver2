@@ -252,9 +252,7 @@
 
             <!-- Selection Controls -->
             <div class="selection-controls">
-              <a-checkbox :model-value="isAllCustomersSelected" @change="toggleAllCustomers">
-                Chọn tất cả trong trang
-              </a-checkbox>
+              <a-checkbox :model-value="isAllCustomersSelected" @change="toggleAllCustomers">Chọn tất cả trong trang</a-checkbox>
               <a-button size="small" @click="selectAllResults" type="text">Chọn tất cả kết quả</a-button>
               <a-button size="small" @click="formState.selectedCustomerIds = []" type="text">Xóa chọn</a-button>
             </div>
@@ -295,7 +293,9 @@
             <!-- Footer -->
             <div class="selection-footer">
               <div class="selection-summary">
-                Đã chọn: <strong>{{ formState.selectedCustomerIds.length }}</strong> khách hàng
+                Đã chọn:
+                <strong>{{ formState.selectedCustomerIds.length }}</strong>
+                khách hàng
               </div>
             </div>
           </div>
@@ -386,12 +386,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { createCoupon, fetchCoupons, fetchCustomers, fetchCustomersBySegment, type CustomerApiModel } from '@/api/discount-management'
 import dayjs from 'dayjs'
-import {
-  couponTemplateOptions,
-  buildTemplatePayload,
-  type CouponTemplateOption,
-  type CouponTemplateIcon,
-} from './coupon-template-options'
+import { couponTemplateOptions, buildTemplatePayload, type CouponTemplateOption, type CouponTemplateIcon } from './coupon-template-options'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -1114,7 +1109,17 @@ const scrollToTop = () => {
 }
 
 onMounted(async () => {
-  formState.code = await generateNextCode()
+  try {
+    const code = await generateNextCode()
+    if (code) {
+      formState.code = code
+    } else {
+      formState.code = 'PGG000001'
+    }
+  } catch (error) {
+    console.error('Error generating coupon code:', error)
+    formState.code = 'PGG000001'
+  }
   window.addEventListener('scroll', handleScroll)
 })
 
@@ -1271,10 +1276,7 @@ const confirmSave = async () => {
     soLuongDung: quantityValue,
     ngayBatDau: toBackendDateTime(formState.dateRange[0]),
     ngayKetThuc: toBackendDateTime(formState.dateRange[1]),
-    trangThai: calculateStatus(
-      toBackendDateTime(formState.dateRange[0]),
-      toBackendDateTime(formState.dateRange[1])
-    ),
+    trangThai: calculateStatus(toBackendDateTime(formState.dateRange[0]), toBackendDateTime(formState.dateRange[1])),
     moTa: formState.description.trim() || null,
     deleted: false,
     idKhachHang: formState.featured ? formState.selectedCustomerIds : [],
@@ -1345,7 +1347,10 @@ const confirmSave = async () => {
   display: flex;
   gap: 12px;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
   background: var(--color-bg-1);
 }
 
@@ -1465,7 +1470,6 @@ const confirmSave = async () => {
   text-align: center;
 }
 
-
 .customer-selection-section :deep(.arco-table) {
   border-radius: 4px;
 }
@@ -1506,6 +1510,13 @@ const confirmSave = async () => {
   border-right: 1px solid var(--color-border-2);
   overflow-y: auto;
   max-height: 72vh;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.left-column::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .right-column {

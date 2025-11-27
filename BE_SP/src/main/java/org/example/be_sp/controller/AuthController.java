@@ -76,6 +76,7 @@ public class AuthController {
                 responseData.setEmail("admin@gearup.vn");
                 responseData.setIdQuyenHan(1);
                 responseData.setTenQuyenHan("Quản trị viên");
+                responseData.setAnhNhanVien(null);
                 responseData.setAccessToken(jwtUtils.generateToken("admin", List.of("admin")));
                 responseData.setRefreshToken(jwtUtils.generateRefreshToken("admin"));
                 return new ResponseObject<>(true, responseData, "Đăng nhập thành công");
@@ -134,6 +135,7 @@ public class AuthController {
             responseData.setEmail(nhanVien.getEmail());
             responseData.setIdQuyenHan(nhanVien.getIdQuyenHan().getId());
             responseData.setTenQuyenHan(nhanVien.getIdQuyenHan().getTenQuyenHan());
+            responseData.setAnhNhanVien(nhanVien.getAnhNhanVien());
             responseData.setAccessToken(accessToken);
             responseData.setRefreshToken(refreshToken);
 
@@ -155,6 +157,7 @@ public class AuthController {
         private String email;
         private Integer idQuyenHan;
         private String tenQuyenHan;
+        private String anhNhanVien;
         private String accessToken;
         private String refreshToken;
 
@@ -213,6 +216,14 @@ public class AuthController {
 
         public void setTenQuyenHan(String tenQuyenHan) {
             this.tenQuyenHan = tenQuyenHan;
+        }
+
+        public String getAnhNhanVien() {
+            return anhNhanVien;
+        }
+
+        public void setAnhNhanVien(String anhNhanVien) {
+            this.anhNhanVien = anhNhanVien;
         }
 
         public String getAccessToken() {
@@ -331,6 +342,7 @@ public class AuthController {
             responseData.setTenNhanVien(nhanVien.getTenNhanVien());
             responseData.setTenTaiKhoan(nhanVien.getTenTaiKhoan());
             responseData.setEmail(nhanVien.getEmail());
+            responseData.setAnhNhanVien(nhanVien.getAnhNhanVien());
             if (nhanVien.getIdQuyenHan() != null) {
                 responseData.setIdQuyenHan(nhanVien.getIdQuyenHan().getId());
                 responseData.setTenQuyenHan(nhanVien.getIdQuyenHan().getTenQuyenHan());

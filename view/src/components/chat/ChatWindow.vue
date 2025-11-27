@@ -28,7 +28,7 @@
       <div v-if="isCustomerConversation && aiHistory.length > 0" class="ai-history-section">
         <div class="ai-history-header">
           <span class="ai-history-title">
-            <icon-robot :size="16" style="margin-right: 6px; vertical-align: middle;" />
+            <icon-robot :size="16" style="margin-right: 6px; vertical-align: middle" />
             Lịch sử AI Chat trước khi nhân viên tham gia
           </span>
           <a-button type="text" size="small" @click="loadAiHistory">
@@ -40,11 +40,7 @@
         </div>
         <div class="ai-history-content">
           <div class="ai-history-messages">
-            <div
-              v-for="(msg, index) in aiHistory"
-              :key="index"
-              :class="['ai-history-message', msg.role]"
-            >
+            <div v-for="(msg, index) in aiHistory" :key="index" :class="['ai-history-message', msg.role]">
               <div class="ai-message-role">{{ msg.role === 'user' ? 'Khách hàng' : 'AI' }}</div>
               <div class="ai-message-content" v-html="formatAiMessage(msg.content)"></div>
               <div class="ai-message-time">{{ formatTime(msg.timestamp) }}</div>
@@ -130,7 +126,7 @@ const otherUserName = computed(() => {
   if (!activeConversation.value) return ''
   const conv = activeConversation.value
   const currentUserId = userStore.id
-  
+
   // Handle customer-staff conversations
   if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
     if (currentUserId === conv.nhanVienId) {
@@ -139,7 +135,7 @@ const otherUserName = computed(() => {
       return conv.nhanVienName || 'Nhân viên'
     }
   }
-  
+
   // Handle staff-staff conversations
   if (currentUserId === conv.nhanVien1Id) {
     return conv.nhanVien2Name || ''
@@ -154,7 +150,7 @@ const otherUserId = computed(() => {
   if (!activeConversation.value) return null
   const conv = activeConversation.value
   const currentUserId = userStore.id
-  
+
   // Handle customer-staff conversations
   if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
     if (currentUserId === conv.khachHangId) {
@@ -163,7 +159,7 @@ const otherUserId = computed(() => {
       return conv.khachHangId || null
     }
   }
-  
+
   // Handle staff-staff conversations
   if (currentUserId === conv.nhanVien1Id) {
     return conv.nhanVien2Id || null
@@ -184,8 +180,7 @@ const isOtherUserOnline = computed(() => {
  */
 const isCustomerConversation = computed(() => {
   if (!activeConversation.value) return false
-  return activeConversation.value.loaiCuocTraoDoi === 'CUSTOMER_STAFF' && 
-         activeConversation.value.khachHangId !== null
+  return activeConversation.value.loaiCuocTraoDoi === 'CUSTOMER_STAFF' && activeConversation.value.khachHangId !== null
 })
 
 /**
@@ -306,7 +301,7 @@ async function loadAiHistory() {
     aiHistory.value = []
     return
   }
-  
+
   loadingAiHistory.value = true
   try {
     const customerId = activeConversation.value.khachHangId

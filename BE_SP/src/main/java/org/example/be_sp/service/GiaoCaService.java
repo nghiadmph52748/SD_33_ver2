@@ -65,6 +65,9 @@ public class GiaoCaService {
         }
 
         // 4. Chuẩn hóa ngày giao ca (lấy ngày, bỏ giờ/phút/giây)
+        if (req.getThoiGianGiaoCa() == null) {
+            throw new IllegalArgumentException("thoiGianGiaoCa must not be null");
+        }
         LocalDate ngayGiaoCa = req.getThoiGianGiaoCa().toLocalDate();
 
         // 5. Kiểm tra trùng ca cho người nhận
@@ -147,6 +150,11 @@ public class GiaoCaService {
         giaoCa.setChenhLech(req.getChenhlech());
         giaoCa.setTienMatNopLai(req.getTienMatNopLai());
         giaoCa.setGhiChu(req.getGhiChu());
+        
+        // Cập nhật trạng thái ca nếu có trong request
+        if (req.getTrangThaiCa() != null) {
+            giaoCa.setTrangThaiCa(req.getTrangThaiCa());
+        }
 
         return giaoCaRepository.save(giaoCa);
     }

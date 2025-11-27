@@ -18,9 +18,9 @@
         <h1 class="company-name">GearUp</h1>
         <p class="company-subtitle">Cửa hàng giày thể thao</p>
         <div class="company-details">
-          <p> Địa chỉ: FPT polytechnic, Hà Nội</p>
-          <p> Hotline: 0559 849 124</p>
-          <p> Email: truongtqph50260@gearup.com</p>
+          <p>Địa chỉ: FPT polytechnic, Hà Nội</p>
+          <p>Hotline: 0559 849 124</p>
+          <p>Email: truongtqph50260@gearup.com</p>
         </div>
       </div>
       <div class="invoice-title">
@@ -40,7 +40,7 @@
 
     <!-- Thông tin đơn hàng -->
     <div class="invoice-section">
-      <h3 class="section-title"> THÔNG TIN ĐƠN HÀNG</h3>
+      <h3 class="section-title">THÔNG TIN ĐƠN HÀNG</h3>
       <div class="info-grid">
         <div class="info-column">
           <h4>Thông tin khách hàng</h4>
@@ -85,7 +85,7 @@
 
     <!-- Danh sách sản phẩm -->
     <div class="invoice-section">
-      <h3 class="section-title"> DANH SÁCH SẢN PHẨM ĐÃ BÁN</h3>
+      <h3 class="section-title">DANH SÁCH SẢN PHẨM ĐÃ BÁN</h3>
       <div class="products-table">
         <table>
           <thead>
@@ -119,7 +119,7 @@
 
     <!-- Tổng kết đơn hàng -->
     <div class="invoice-section">
-      <h3 class="section-title"> TỔNG KẾT ĐƠN HÀNG</h3>
+      <h3 class="section-title">TỔNG KẾT ĐƠN HÀNG</h3>
       <div class="summary-table">
         <table>
           <tbody>

@@ -2,7 +2,7 @@
   <a-modal :visible="visible" title="Có Phiếu Giảm Giá Tốt Hơn" width="600px" :footer="null" @cancel="$emit('cancel')">
     <div style="padding: 20px 0">
       <div style="margin-bottom: 24px; padding: 12px 16px; background: #fff7e6; border-left: 4px solid #faad14; border-radius: 4px">
-        <div style="color: #faad14; font-weight: 600; margin-bottom: 8px"> Gợi ý</div>
+        <div style="color: #faad14; font-weight: 600; margin-bottom: 8px">Gợi ý</div>
         <div style="color: #666; line-height: 1.6">
           Chúng tôi tìm thấy phiếu giảm giá với mức giảm cao hơn. Bạn có muốn quay lại để chọn phiếu tốt nhất không?
         </div>

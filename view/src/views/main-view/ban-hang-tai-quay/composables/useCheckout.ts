@@ -154,9 +154,9 @@ export default function useCheckout(params: {
         idPTTT: paymentMethodId,
         idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id, 10) : null,
         idNhanVien: userId,
-        tienMat: tienMat,
-        tienChuyenKhoan: tienChuyenKhoan,
-        soTienConLai: soTienConLai,
+        tienMat,
+        tienChuyenKhoan,
+        soTienConLai,
         trangThaiThanhToan: totalReceived >= finalPrice.value,
         tongTien: subtotal.value,
         tongTienSauGiam: finalPrice.value,
@@ -183,13 +183,17 @@ export default function useCheckout(params: {
       try {
         const validationResult = await validateInvoiceBeforeConfirm(invoiceId)
         if (!validationResult.isValid && validationResult.inactiveVariants.length > 0) {
-          const variantNames = validationResult.inactiveVariants.map((v) => {
-            const parts = [v.tenSanPham]
-            if (v.mauSac) parts.push(`Màu: ${v.mauSac}`)
-            if (v.kichThuoc) parts.push(`Size: ${v.kichThuoc}`)
-            return parts.join(' - ')
-          }).join(', ')
-          throw new Error(`Không thể xác nhận đơn hàng. Các sản phẩm sau đã bị vô hiệu hóa: ${variantNames}. Vui lòng xóa các sản phẩm này khỏi đơn hàng.`)
+          const variantNames = validationResult.inactiveVariants
+            .map((v) => {
+              const parts = [v.tenSanPham]
+              if (v.mauSac) parts.push(`Màu: ${v.mauSac}`)
+              if (v.kichThuoc) parts.push(`Size: ${v.kichThuoc}`)
+              return parts.join(' - ')
+            })
+            .join(', ')
+          throw new Error(
+            `Không thể xác nhận đơn hàng. Các sản phẩm sau đã bị vô hiệu hóa: ${variantNames}. Vui lòng xóa các sản phẩm này khỏi đơn hàng.`
+          )
         }
       } catch (validationError: any) {
         // If validation fails, show error and stop

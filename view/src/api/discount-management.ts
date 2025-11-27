@@ -230,7 +230,7 @@ export const fetchCustomersBySegment = (params?: FetchCustomersBySegmentParams) 
   if (params?.page !== undefined) queryParams.append('page', String(params.page))
   if (params?.pageSize !== undefined) queryParams.append('pageSize', String(params.pageSize))
   if (params?.birthdayDays !== undefined) queryParams.append('birthdayDays', String(params.birthdayDays))
-  
+
   const queryString = queryParams.toString()
   return requestJson<PagedResponse<CustomerApiModel>>(`/khach-hang-management/segment${queryString ? `?${queryString}` : ''}`)
 }

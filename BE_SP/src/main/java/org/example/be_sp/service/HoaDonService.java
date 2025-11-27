@@ -1617,6 +1617,7 @@ public class HoaDonService {
         HoaDon hoaDon = hoaDonRepository.findById(orderId)
                 .orElseThrow(() -> new ApiException("404", "Không tìm thấy đơn hàng"));
         BigDecimal originalTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+        BigDecimal updatedTotal = originalTotal;
         BigDecimal recordedRefundAmount = BigDecimal.ZERO;
         boolean customerPaidFullBeforeChange = false;
 
@@ -1682,7 +1683,7 @@ public class HoaDonService {
                     hoaDon.setHoanPhi(BigDecimal.ZERO);
 
                     BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-                    BigDecimal updatedTotal = currentTotal.add(extraFee);
+                    updatedTotal = currentTotal.add(extraFee);
                     hoaDon.setTongTien(updatedTotal);
                     hoaDon.setTongTienSauGiam(updatedTotal);
 
@@ -1707,6 +1708,7 @@ public class HoaDonService {
 
                     if (daTraDuTien) {
                         BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+                        updatedTotal = currentTotal;
                         hoaDon.setTongTienSauGiam(currentTotal);
                         hoaDon.setSoTienConLai(BigDecimal.ZERO);
                     } else {
@@ -1714,6 +1716,7 @@ public class HoaDonService {
                         if (newTotal.compareTo(BigDecimal.ZERO) < 0) {
                             newTotal = BigDecimal.ZERO;
                         }
+                        updatedTotal = newTotal;
                         hoaDon.setTongTien(newTotal);
                         hoaDon.setTongTienSauGiam(newTotal);
 
@@ -1748,6 +1751,7 @@ public class HoaDonService {
 
         // Xử lý thông báo về phụ phí/hoàn phí cho khách hàng
         AddressChangeNotificationRequest.ShippingFeeChange feeChange = request != null ? request.getShippingFeeChange() : null;
+        BigDecimal finalUpdatedTotal = savedHoaDon.getTongTien() != null ? savedHoaDon.getTongTien() : BigDecimal.ZERO;
         handleSurchargeRefundNotification(
                 savedHoaDon,
                 feeChange,
@@ -1756,7 +1760,7 @@ public class HoaDonService {
                 recordedRefundAmount,
                 customerPaidFullBeforeChange,
                 originalTotal,
-                savedHoaDon.getTongTien() != null ? savedHoaDon.getTongTien() : BigDecimal.ZERO);
+                finalUpdatedTotal);
 
         BigDecimal loggedSurcharge = (request != null && request.getSurcharge() != null)
                 ? request.getSurcharge()
@@ -1769,7 +1773,8 @@ public class HoaDonService {
      * lại
      */
     private void handleSurchargeRefundNotification(HoaDon hoaDon,
-            AddressChangeNotificationRequest.ShippingFeeChange feeChange, String customerEmail, String customerName) {
+            AddressChangeNotificationRequest.ShippingFeeChange feeChange, String customerEmail, String customerName,
+            BigDecimal recordedRefundAmount, boolean customerPaidFullBeforeChange, BigDecimal originalTotal, BigDecimal updatedTotal) {
         if (feeChange == null || feeChange.getDifference() == null
                 || feeChange.getDifference().compareTo(BigDecimal.ZERO) == 0) {
             return;

@@ -81,7 +81,6 @@ export function suaLichLamViec(id: number, data: Partial<ApiLichLamViec>) {
   return axios.put<ApiLichLamViec>(`/api/lich-lam-viec/${id}`, data)
 }
 
-
 export function timKiemLichLamViec(params: { ngayLamViec?: string; nhanVienId?: number }) {
   // Nếu backend thực sự có endpoint /search, giữ; nếu không, đổi thành query trên /api/lich-lam-viec
   return axios.get<ApiLichLamViec[]>('/api/lich-lam-viec/search', { params })

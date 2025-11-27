@@ -1,56 +1,185 @@
 <template>
-  <div class="giao-ca-card">
+  <div class="giao-ca-container">
     <ConfirmModal ref="confirmModal" />
-    <h3>Ca Làm Việc</h3>
 
-    <div v-if="lastShift">
-      <div class="previous-shift">
-        <strong>Thông tin ca trước (Bàn giao)</strong>
-        <div>Người giao ca: <strong>{{ lastShift.nguoiGiao?.tenNhanVien || lastShift.nguoiGiao?.name || 'N/A' }}</strong></div>
-        <div>Tiền mặt cuối ca trước: <strong>{{ formatCurrency(lastShift.tongTienCuoiCa) }}</strong></div>
-        <div>Số đơn hàng chờ xử lý: <strong>{{ lastShift.soDonChoXuLy || 0 }}</strong></div>
+    <div v-if="lastShift" class="previous-shift-card">
+      <div class="card-header">
+        <div class="header-icon-wrapper amber">
+          <icon-calendar />
+        </div>
+        <div class="header-title">
+          <h3>Ca trước (Bàn giao)</h3>
+          <span class="subtitle">Thông tin từ ca làm việc trước</span>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-icon">
+            <icon-user />
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Người giao ca</span>
+            <span class="stat-value">{{ lastShift.nguoiGiao?.tenNhanVien || lastShift.nguoiGiao?.name || 'N/A' }}</span>
+          </div>
+        </div>
+        <div class="stat-item highlight">
+          <div class="stat-icon">
+            <icon-star />
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Tiền mặt cuối ca</span>
+            <span class="stat-value">{{ formatCurrency(lastShift.tongTienCuoiCa) }}</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon">
+            <icon-file />
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Đơn hàng chờ xử lý</span>
+            <span class="stat-value">{{ lastShift.soDonChoXuLy || 0 }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div v-if="!activeShift">
-      <p>Chưa có ca nào đang hoạt động. Nhập số tiền mặt ban đầu rồi bắt đầu ca.</p>
-      <label>
-        Số tiền mặt ban đầu (VND)
-        <input type="number" v-model.number="initialCash" placeholder="Nhập số tiền mặt" />
-      </label>
-      <button class="btn-start" :disabled="loading" @click="startShift">
-        {{ loading ? 'Đang tạo...' : 'Bắt Đầu Ca' }}
-      </button>
+    <div v-if="!activeShift" class="start-shift-card">
+      <div class="card-header">
+        <div class="header-icon-wrapper blue">
+          <icon-play-arrow />
+        </div>
+        <div class="header-title">
+          <h3>Bắt đầu ca mới</h3>
+          <span class="subtitle">Nhập số tiền mặt ban đầu để bắt đầu ca làm việc</span>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <a-form-item label="Số tiền mặt ban đầu (VND)" class="cash-input-item">
+          <a-input-number v-model="initialCash" :min="0" :precision="0" placeholder="Nhập số tiền mặt" size="large" class="cash-input">
+            <template #prefix>
+              <icon-star />
+            </template>
+          </a-input-number>
+        </a-form-item>
+
+        <div class="button-wrapper">
+          <a-button type="primary" size="large" :loading="loading" @click="startShift" class="btn-start">
+            <template #icon>
+              <icon-check-circle />
+            </template>
+            {{ loading ? 'Đang tạo...' : 'Bắt Đầu Ca' }}
+          </a-button>
+        </div>
+      </div>
     </div>
 
-    <div v-else>
-      <p>Ca đang hoạt động từ: <strong>{{ formatDate(activeShift.thoiGianGiaoCa) }}</strong></p>
-      <div class="shift-info">
-        <p>Người giao ca: <strong class="amount">{{ activeShift.nguoiGiao?.tenNhanVien || activeShift.nguoiGiao?.name || 'N/A' }}</strong></p>
-        <p>Số tiền mặt ban đầu: <strong class="amount">{{ formatCurrency(activeShift.tongTienBanDau) }}</strong></p>
-        <p v-if="lastShift && lastShift.tongTienCuoiCa">Tiền mặt cuối ca trước: <strong class="amount">{{ formatCurrency(lastShift.tongTienCuoiCa) }}</strong></p>
+    <div v-else class="active-shift-card">
+      <div class="status-badge active">
+        <icon-check-circle-fill />
+        <span>Ca đang hoạt động</span>
       </div>
-      <div class="shift-sales">
-        <p>Số hóa đơn trong ca: <strong>{{ invoiceCount }}</strong></p>
-        <p>Tổng doanh thu (ước tính): <strong>{{ formatCurrency(invoiceTotal) }}</strong></p>
+
+      <div class="shift-time">
+        <icon-clock-circle />
+        <span>
+          Bắt đầu từ:
+          <strong>{{ formatDate(activeShift.thoiGianGiaoCa) }}</strong>
+        </span>
       </div>
-      <div class="actions">
-        <button class="btn-end" :disabled="loading" @click="endShift">
-          {{ loading ? 'Đang xử lý...' : 'Kết Thúc Ca' }}
-        </button>
+
+      <div class="info-cards-grid">
+        <div class="info-card shift-info-card">
+          <div class="card-icon blue">
+            <icon-info-circle />
+          </div>
+          <div class="card-content">
+            <h4>Thông tin ca</h4>
+            <div class="info-list">
+              <div class="info-item">
+                <span class="item-label">
+                  <icon-user />
+                  Người giao ca
+                </span>
+                <span class="item-value">{{ activeShift.nguoiGiao?.tenNhanVien || activeShift.nguoiGiao?.name || 'N/A' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="item-label">
+                  <icon-star />
+                  Tiền mặt ban đầu
+                </span>
+                <span class="item-value highlight">{{ formatCurrency(activeShift.tongTienBanDau) }}</span>
+              </div>
+              <div v-if="lastShift && lastShift.tongTienCuoiCa" class="info-item">
+                <span class="item-label">
+                  <icon-calendar />
+                  Tiền mặt ca trước
+                </span>
+                <span class="item-value highlight">{{ formatCurrency(lastShift.tongTienCuoiCa) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card sales-card">
+          <div class="card-icon green">
+            <icon-arrow-up />
+          </div>
+          <div class="card-content">
+            <h4>Thống kê doanh thu</h4>
+            <div class="sales-stats">
+              <div class="sales-item">
+                <div class="sales-label">
+                  <icon-file />
+                  Số hóa đơn
+                </div>
+                <div class="sales-value">{{ invoiceCount }}</div>
+              </div>
+              <div class="sales-item revenue">
+                <div class="sales-label">
+                  <icon-star />
+                  Tổng doanh thu
+                </div>
+                <div class="sales-value">{{ formatCurrency(invoiceTotal) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <a-button type="primary" status="danger" size="large" :loading="loading" @click="endShift" class="btn-end" block>
+        <template #icon>
+          <icon-close-circle />
+        </template>
+        {{ loading ? 'Đang xử lý...' : 'Kết Thúc Ca' }}
+      </a-button>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { themGiaoCa, suaGiaoCa, getGiaoCa } from '@/api/giao-ca'
 import { fetchHoaDonList } from '@/api/hoa-don'
+import { getCaLamViec } from '@/api/ca-lam-viec'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { Message } from '@arco-design/web-vue'
 import useUser from '@/hooks/user'
+import { useRouter } from 'vue-router'
+import {
+  IconClockCircle,
+  IconCalendar,
+  IconUser,
+  IconStar,
+  IconFile,
+  IconPlayArrow,
+  IconCheckCircle,
+  IconCheckCircleFill,
+  IconInfoCircle,
+  IconArrowUp,
+  IconCloseCircle,
+} from '@arco-design/web-vue/es/icon'
 
 const loading = ref(false)
 const activeShift = ref(null)
@@ -62,20 +191,29 @@ const invoiceTotal = ref(0)
 const invoiceIds = ref([])
 const confirmModal = ref(null)
 const { logout } = useUser()
+const router = useRouter()
 
 // Expose reload function to parent/navbar
 async function reloadShiftData() {
   try {
     const res = await getGiaoCa()
-    const list = (res.data || res) || []
-    const active = list.find((s) => s.trangThai === 'Đang hoạt động' || !s.thoiGianKetThuc)
+    const list = res.data || res || []
+    const active = list.find((s) => {
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      return trangThaiCa === 'Đang làm' || (trangThaiCa !== 'Hoàn tất' && !s.thoiGianKetThuc)
+    })
     if (active) {
       activeShift.value = active
       computeShiftSales(activeShift.value).catch((e) => console.warn(e))
     }
-    const ended = list
-      .filter((s) => s.thoiGianKetThuc)
-      .sort((a, b) => new Date(b.thoiGianKetThuc) - new Date(a.thoiGianKetThuc))
+    const ended = list.filter((s) => {
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
+    }).sort((a, b) => {
+      const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
+      const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
+      return dateB.getTime() - dateA.getTime()
+    })
     if (ended.length) {
       lastShift.value = ended[0]
       if (lastShift.value.tongTienCuoiCa != null) initialCash.value = Number(lastShift.value.tongTienCuoiCa)
@@ -195,23 +333,93 @@ async function startShift() {
     'Hủy'
   )
   if (!ok) return
+  
+  // Check if user already has an active shift
+  try {
+    const res = await getGiaoCa()
+    const list = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : []
+    const userId = userStore.id
+    const existingActive = list.find((s) => {
+      const assignedId = (s.nguoiNhan && s.nguoiNhan.id) || s.nguoiNhanId
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      const isActive = trangThaiCa === 'Đang làm' || (trangThaiCa !== 'Hoàn tất' && !s.thoiGianKetThuc && s.thoiGianGiaoCa)
+      return assignedId === userId && isActive
+    })
+    
+    if (existingActive) {
+      Message.warning('Bạn đã có ca làm việc đang hoạt động. Vui lòng kết thúc ca hiện tại trước khi bắt đầu ca mới.')
+      activeShift.value = existingActive
+      return
+    }
+  } catch (e) {
+    console.warn('Không thể kiểm tra ca hiện tại', e)
+  }
+  
   loading.value = true
   try {
-    const payload = {
-      nguoiGiaoId: (lastShift.value && lastShift.value.nguoiGiao && lastShift.value.nguoiGiao.id) || userStore.id,
-      nguoiNhanId: userStore.id,
-      caLamViecId: (lastShift.value && (lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id)) || 1,
-      thoiGianGiaoCa: toLocalDateTimeString(new Date()),
-      tongTienBanDau: Number(initialCash.value) || 0,
-      trangThai: 'Đang hoạt động'
+    const now = new Date()
+    // For first shift or self-started shift, nguoiGiaoId should be the same as nguoiNhanId
+    const nguoiGiaoId = (lastShift.value && lastShift.value.nguoiGiao && lastShift.value.nguoiGiao.id) || userStore.id
+    const nguoiNhanId = userStore.id
+    
+    if (!nguoiGiaoId || !nguoiNhanId) {
+      Message.error('Thông tin nhân viên không hợp lệ. Vui lòng đăng nhập lại.')
+      loading.value = false
+      return
     }
+    
+    // Get caLamViecId - try from lastShift first, then fetch from API
+    let caLamViecId = lastShift.value && (lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id)
+    
+    if (!caLamViecId) {
+      // Fetch available ca lam viec from API
+      try {
+        const caLamViecRes = await getCaLamViec()
+        const responseData = caLamViecRes.data?.data || caLamViecRes.data || caLamViecRes
+        const caLamViecList = Array.isArray(responseData) ? responseData : []
+        if (caLamViecList.length > 0) {
+          caLamViecId = caLamViecList[0].id
+          console.log('Using ca lam viec ID:', caLamViecId)
+        } else {
+          Message.error('Không tìm thấy ca làm việc nào. Vui lòng tạo ca làm việc trước.')
+          loading.value = false
+          return
+        }
+      } catch (err) {
+        console.error('Lỗi khi lấy danh sách ca làm việc:', err)
+        Message.error('Không thể lấy danh sách ca làm việc. Vui lòng thử lại.')
+        loading.value = false
+        return
+      }
+    }
+    
+    // Ensure IDs are numbers
+    const payload = {
+      nguoiGiaoId: Number(nguoiGiaoId),
+      nguoiNhanId: Number(nguoiNhanId),
+      caLamViecId: Number(caLamViecId),
+      thoiGianGiaoCa: toLocalDateTimeString(now),
+      tongTienBanDau: Number(initialCash.value) || 0,
+    }
+    
+    // Debug log
+    console.log('Creating shift with payload:', payload)
     const res = await themGiaoCa(payload)
     activeShift.value = res.data || res
     Message.success('Bắt đầu ca thành công')
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Lỗi khi bắt đầu ca', err)
-    Message.error('Bắt đầu ca thất bại')
+    let errorMsg = 'Bắt đầu ca thất bại'
+    try {
+      if (err && typeof err === 'object') {
+        // @ts-ignore
+        errorMsg = err?.response?.data?.message || err?.message || errorMsg
+      }
+    } catch {
+      // ignore
+    }
+    Message.error(errorMsg)
   } finally {
     loading.value = false
   }
@@ -221,18 +429,27 @@ async function startShift() {
 onMounted(async () => {
   try {
     const res = await getGiaoCa()
-    const list = (res.data || res) || []
-    // find active shift: trangThai === 'Đang hoạt động' or no thoiGianKetThuc
-    const active = list.find((s) => s.trangThai === 'Đang hoạt động' || !s.thoiGianKetThuc)
+    const list = res.data || res || []
+    // find active shift: trangThaiCa === 'Đang làm' and not 'Hoàn tất'
+    const active = list.find((s) => {
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      return trangThaiCa === 'Đang làm' || (trangThaiCa !== 'Hoàn tất' && !s.thoiGianKetThuc)
+    })
     if (active) {
       activeShift.value = active
       // compute sales for active shift
       computeShiftSales(activeShift.value).catch((e) => console.warn(e))
     }
-    // find last (most recent) ended shift
-    const ended = list
-      .filter((s) => s.thoiGianKetThuc)
-      .sort((a, b) => new Date(b.thoiGianKetThuc) - new Date(a.thoiGianKetThuc))
+    // find last (most recent) ended shift - check trangThaiCa === 'Hoàn tất' or has thoiGianKetThuc
+    const ended = list.filter((s) => {
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
+    }).sort((a, b) => {
+      // Sort by thoiGianKetThuc if available, otherwise by thoiGianGiaoCa
+      const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
+      const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
+      return dateB.getTime() - dateA.getTime()
+    })
     if (ended.length) {
       lastShift.value = ended[0]
       // prefill initial cash from previous shift's tongTienCuoiCa if available
@@ -247,31 +464,38 @@ onMounted(async () => {
 
 async function endShift() {
   if (!activeShift.value || !activeShift.value.id) return
-  const ok = await confirmModal.value.showConfirm(
-    'Kết Thúc Ca Làm Việc',
-    'Bạn có chắc muốn kết thúc ca hiện tại không?',
-    'Xác Nhận',
-    'Hủy'
-  )
+  const ok = await confirmModal.value.showConfirm('Kết Thúc Ca Làm Việc', 'Bạn có chắc muốn kết thúc ca hiện tại không?', 'Xác Nhận', 'Hủy')
   if (!ok) return
   loading.value = true
   try {
     const payload = {
-      thoiGianKetThuc: toLocalDateTimeString(new Date()),
-      trangThai: 'Đã kết thúc',
       // backend expects nguoiGiaoId (id of the person handing over)
       nguoiGiaoId: userStore.id,
       nguoiGiao: {
         id: userStore.id,
-        tenNhanVien: userStore.name || userStore.tenNhanVien || userStore.ten || ''
+        tenNhanVien: userStore.name || userStore.tenNhanVien || userStore.ten || '',
       },
       // include nguoiNhanId so backend validation won't fail (use activeShift's receiver if available)
-      nguoiNhanId: (activeShift.value && ((activeShift.value.nguoiNhan && activeShift.value.nguoiNhan.id) || activeShift.value.nguoiNhanId)) || userStore.id,
-      nguoiNhan: (activeShift.value && (activeShift.value.nguoiNhan || (activeShift.value.nguoiNhanId ? { id: activeShift.value.nguoiNhanId } : null))) || null,
-      // include caLamViecId (use active shift's working shift id or fallback to 1)
-      caLamViecId: (activeShift.value && ((activeShift.value.caLamViec && activeShift.value.caLamViec.id) || activeShift.value.ca_lam_viec_id || activeShift.value.caLamViecId)) || 1,
+      nguoiNhanId:
+        (activeShift.value && ((activeShift.value.nguoiNhan && activeShift.value.nguoiNhan.id) || activeShift.value.nguoiNhanId)) ||
+        userStore.id,
+      nguoiNhan:
+        (activeShift.value &&
+          (activeShift.value.nguoiNhan || (activeShift.value.nguoiNhanId ? { id: activeShift.value.nguoiNhanId } : null))) ||
+        null,
+      // include caLamViecId (use active shift's working shift id)
+      caLamViecId:
+        (activeShift.value &&
+          ((activeShift.value.caLamViec && activeShift.value.caLamViec.id) ||
+            activeShift.value.ca_lam_viec_id ||
+            activeShift.value.caLamViecId)) ||
+        null,
       // ensure thoiGianGiaoCa is sent (DB column is NOT NULL) - prefer the original value from activeShift
-      thoiGianGiaoCa: normalizeToLocalDateTime((activeShift.value && activeShift.value.thoiGianGiaoCa) || toLocalDateTimeString(new Date()))
+      thoiGianGiaoCa: normalizeToLocalDateTime(
+        (activeShift.value && activeShift.value.thoiGianGiaoCa) || toLocalDateTimeString(new Date())
+      ),
+      // Set trangThaiCa to indicate shift is ended
+      trangThaiCa: 'Hoàn tất',
     }
     // dùng endpoint PUT /api/giao-ca/{id} có sẵn trên backend
     await suaGiaoCa(activeShift.value.id, payload)
@@ -279,10 +503,15 @@ async function endShift() {
     // Refresh the giao-ca list so UI reflects the ended shift (lastShift etc.)
     try {
       const res = await getGiaoCa()
-      const list = (res.data || res) || []
-      const ended = list
-        .filter((s) => s.thoiGianKetThuc)
-        .sort((a, b) => new Date(b.thoiGianKetThuc) - new Date(a.thoiGianKetThuc))
+      const list = res.data || res || []
+      const ended = list.filter((s) => {
+        const trangThaiCa = s.trangThaiCa || s.trangThai
+        return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
+      }).sort((a, b) => {
+        const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
+        const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
+        return dateB.getTime() - dateA.getTime()
+      })
       if (ended.length) {
         lastShift.value = ended[0]
       }
@@ -293,13 +522,18 @@ async function endShift() {
     }
 
     activeShift.value = null
-    Message.success('Kết thúc ca thành công')
+    Message.success('Kết thúc ca thành công. Đang đăng xuất...')
+    
+    // Đợi một chút để user thấy thông báo thành công
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // Logout sau khi kết thúc ca thành công
     try {
       await logout()
     } catch (e) {
-      // ignore logout errors
-      // eslint-disable-next-line no-console
-      console.warn('Logout after endShift failed', e)
+      // Nếu logout có lỗi, vẫn cố gắng redirect về login
+      console.error('Logout after endShift failed', e)
+      router.push({ name: 'login' })
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -312,206 +546,357 @@ async function endShift() {
 </script>
 
 <style scoped>
-.giao-ca-card {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 40px;
+.giao-ca-container {
+  padding: 24px;
+  background: #f8fafc;
+  min-height: calc(100vh - 64px);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.previous-shift-card,
+.start-shift-card,
+.active-shift-card {
+  background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  max-width: 500px;
-  margin: 40px auto;
+  padding: 28px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.giao-ca-card h3 {
-  text-align: center;
-  color: #2c3e50;
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
   margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.header-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 24px;
+  flex-shrink: 0;
+}
+
+.header-icon-wrapper.amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.header-icon-wrapper.blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.header-title h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
   font-weight: 600;
+  color: #1e293b;
 }
 
-.previous-shift {
-  background: #fff;
-  padding: 18px;
-  border-radius: 8px;
-  margin-bottom: 30px;
-  border-left: 5px solid #f39c12;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.header-title .subtitle {
+  font-size: 13px;
+  color: #64748b;
 }
 
-.previous-shift strong {
-  display: block;
-  color: #2c3e50;
-  font-size: 15px;
-  margin-bottom: 14px;
-  font-weight: 600;
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
 }
 
-.previous-shift div {
+.stat-item {
   display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  font-size: 14px;
-  color: #555;
-  border-bottom: 1px solid #eee;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
 }
 
-.previous-shift div:last-child {
-  border-bottom: none;
+.stat-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
-.previous-shift div strong {
-  color: #f39c12;
-  margin-bottom: 0;
-  display: inline;
-  font-weight: 600;
+.stat-item.highlight {
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
-label {
-  display: block;
-  margin-bottom: 14px;
-  font-size: 14px;
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.stat-item.highlight .stat-icon {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.stat-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #64748b;
   font-weight: 500;
-  color: #2c3e50;
 }
 
-input[type="number"] {
+.stat-value {
+  font-size: 16px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.stat-item.highlight .stat-value {
+  color: #2563eb;
+  font-size: 18px;
+}
+
+.form-section {
+  margin-top: 8px;
+}
+
+.button-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.cash-input-item {
+  margin-bottom: 20px;
+}
+
+.cash-input-item :deep(.arco-form-item-label) {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.cash-input-item :deep(.arco-input-number) {
   width: 100%;
-  padding: 14px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-  margin-bottom: 24px;
 }
 
-input[type="number"]:focus {
-  outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
-}
-
-input[type="number"]::placeholder {
-  color: #999;
-}
-
-.shift-info {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  margin: 24px 0;
-  border-left: 5px solid #1890ff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.shift-info p {
-  margin: 14px 0;
-  font-size: 14px;
-  color: #555;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.shift-info p strong {
-  color: #2c3e50;
-  font-weight: 600;
-}
-
-.shift-sales {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  margin: 24px 0;
-  border-left: 5px solid #2ecc71;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.shift-sales p {
-  margin: 14px 0;
-  font-size: 14px;
-  color: #555;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.shift-sales p strong {
-  color: #2c3e50;
-  font-weight: 600;
-}
-
-.amount {
-  color: #1890ff;
+.cash-input-item :deep(.arco-input-number-input) {
   font-size: 16px;
   font-weight: 600;
 }
 
-.btn-start,
-.btn-end {
-  width: 100%;
-  padding: 14px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .btn-start {
-  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-  color: #fff;
-  margin-bottom: 14px;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  margin-top: 8px;
 }
 
-.btn-start:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
 }
 
-.btn-start:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.status-badge.active {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.shift-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.shift-time strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.info-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.info-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.info-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+.shift-info-card {
+  border-left: 4px solid #3b82f6;
+}
+
+.sales-card {
+  border-left: 4px solid #10b981;
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+.card-icon.blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.card-icon.green {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.card-content h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.item-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.item-value {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.item-value.highlight {
+  color: #2563eb;
+  font-size: 15px;
+}
+
+.sales-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sales-item {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.sales-item.revenue {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.sales-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.sales-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.sales-item.revenue .sales-value {
+  color: #059669;
+  font-size: 24px;
 }
 
 .btn-end {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: #fff;
-}
-
-.btn-end:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
-}
-
-.btn-end:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.actions {
-  margin-top: 28px;
-  display: flex;
-  gap: 14px;
-}
-
-.actions button {
-  flex: 1;
-}
-
-p {
-  text-align: center;
-  color: #2c3e50;
-  margin-bottom: 22px;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-p strong {
-  color: #1890ff;
+  height: 48px;
+  font-size: 16px;
   font-weight: 600;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .giao-ca-container {
+    padding: 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .info-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
 }
 </style>

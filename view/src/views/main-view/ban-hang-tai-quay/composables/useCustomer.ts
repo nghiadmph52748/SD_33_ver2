@@ -108,7 +108,7 @@ export default function useCustomer(params: { currentOrder: Ref<Order | null> })
         soDienThoai: selectedCustomer.value?.phone,
         diaChiKhachHang: selectedCustomer.value?.address || walkInAddress,
         emailKhachHang: selectedCustomer.value?.email,
-        idNhanVien: userStore.id,
+        idNhanVien: userStore.id || 1,
       }
 
       await updateCustomerForInvoice(updateCustomerRequest)

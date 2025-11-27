@@ -3,7 +3,7 @@
     <template #title>
       <div style="display: flex; justify-content: space-between; align-items: center">
         <span>Thanh Toán</span>
-        <span style="font-size:12px; color:#666">{{ orderType === 'delivery' ? 'Đơn giao hàng' : 'Đơn tại quầy' }}</span>
+        <span style="font-size: 12px; color: #666">{{ orderType === 'delivery' ? 'Đơn giao hàng' : 'Đơn tại quầy' }}</span>
       </div>
     </template>
 
@@ -224,7 +224,8 @@
           {{ qrSession ? 'Sẵn sàng mở QR cho khách quét.' : 'Hoàn tất giỏ hàng để tạo QR trước khi hiển thị.' }}
         </p>
         <p v-if="qrSyncError" class="qr-session-error">
-          <icon-info-circle style="margin-right: 4px" /> {{ qrSyncError }}
+          <icon-info-circle style="margin-right: 4px" />
+          {{ qrSyncError }}
         </p>
       </div>
 
@@ -300,7 +301,6 @@ defineEmits<{
   (e: 'update:walkin-ward', value: string): void
   (e: 'open-mobile'): void
 }>()
-
 </script>
 
 <style scoped lang="less">

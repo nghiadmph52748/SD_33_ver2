@@ -101,7 +101,7 @@ const activeConversationId = computed(() => chatStore.activeConversationId)
  */
 function getOtherUserName(conversation: Conversation): string {
   const currentUserId = userStore.id
-  
+
   // Handle customer-staff conversations
   if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
     if (currentUserId === conversation.nhanVienId) {
@@ -110,7 +110,7 @@ function getOtherUserName(conversation: Conversation): string {
       return conversation.nhanVienName || 'Nhân viên'
     }
   }
-  
+
   // Handle staff-staff conversations
   if (currentUserId === conversation.nhanVien1Id) {
     return conversation.nhanVien2Name || ''
@@ -230,7 +230,7 @@ function isLastMessageSeenByOther(conversation: Conversation): boolean {
       return conversation.unreadCountNv1 === 0
     }
   }
-  
+
   // Handle staff-staff conversations
   if (currentUserId === conversation.nhanVien1Id) {
     return conversation.unreadCountNv2 === 0
@@ -251,7 +251,7 @@ function isUserOnline(conversation: Conversation): boolean {
 
   // Xác định user còn lại (không phải mình)
   let otherUserId: number | undefined
-  
+
   // Handle customer-staff conversations
   if (conversation.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
     if (currentUserId === conversation.khachHangId) {
@@ -312,17 +312,11 @@ async function handleNewChat(userId: number) {
     const existingConv = (chatStore.conversations || []).find((c) => {
       // Check staff-staff conversations
       if (c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi) {
-        return (
-          (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
-          (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
-        )
+        return (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) || (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
       }
       // Check customer-staff conversations
       if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
-        return (
-          (c.nhanVienId === userStore.id && c.khachHangId === userId) ||
-          (c.khachHangId === userStore.id && c.nhanVienId === userId)
-        )
+        return (c.nhanVienId === userStore.id && c.khachHangId === userId) || (c.khachHangId === userStore.id && c.nhanVienId === userId)
       }
       return false
     })
@@ -354,16 +348,12 @@ async function handleNewChat(userId: number) {
         // Check staff-staff conversations
         if (c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi) {
           return (
-            (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
-            (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+            (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) || (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
           )
         }
         // Check customer-staff conversations
         if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
-          return (
-            (c.nhanVienId === userStore.id && c.khachHangId === userId) ||
-            (c.khachHangId === userStore.id && c.nhanVienId === userId)
-          )
+          return (c.nhanVienId === userStore.id && c.khachHangId === userId) || (c.khachHangId === userStore.id && c.nhanVienId === userId)
         }
         return false
       })
@@ -378,23 +368,21 @@ async function handleNewChat(userId: number) {
         // Try one more time after a longer delay
         await new Promise((resolve) => setTimeout(resolve, 500))
         await chatStore.fetchConversations()
-        
+
         const retryConv = (chatStore.conversations || []).find((c) => {
           if (c.loaiCuocTraoDoi === 'STAFF_STAFF' || !c.loaiCuocTraoDoi) {
             return (
-              (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) ||
-              (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
+              (c.nhanVien1Id === userStore.id && c.nhanVien2Id === userId) || (c.nhanVien2Id === userStore.id && c.nhanVien1Id === userId)
             )
           }
           if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
             return (
-              (c.nhanVienId === userStore.id && c.khachHangId === userId) ||
-              (c.khachHangId === userStore.id && c.nhanVienId === userId)
+              (c.nhanVienId === userStore.id && c.khachHangId === userId) || (c.khachHangId === userStore.id && c.nhanVienId === userId)
             )
           }
           return false
         })
-        
+
         if (retryConv) {
           chatStore.setActiveConversation(retryConv.id, { userInitiated: true })
           await chatStore.fetchMessages(userId)

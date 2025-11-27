@@ -47,11 +47,10 @@
 import { ref } from 'vue'
 import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
-import { Message , Modal  } from '@arco-design/web-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
 import { getCaLamViec, themCaLamViec } from '@/api/ca-lam-viec'
-
 
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
@@ -246,7 +245,10 @@ const onCancel = () => {
 }
 
 /* Fix nếu trước kia có opacity/filter làm mờ */
-.them-ca-page, .them-ca-card, .filters-card, .table-card {
+.them-ca-page,
+.them-ca-card,
+.filters-card,
+.table-card {
   opacity: 1 !important;
   filter: none !important;
 }

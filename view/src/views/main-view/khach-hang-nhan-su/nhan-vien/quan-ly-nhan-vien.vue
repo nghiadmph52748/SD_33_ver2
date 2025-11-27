@@ -377,10 +377,10 @@ const timKiemNhanVien = async () => {
           tenQuyenHan: tenQuyenHanMap,
           idQuyenHan: item.idQuyenHan,
           trangThai: Boolean(item.trangThai),
-          anhNhanVien: item.anhNhanVien 
-            ? (item.anhNhanVien.startsWith('http://') || item.anhNhanVien.startsWith('https://') 
-                ? item.anhNhanVien 
-                : `/uploads/${item.anhNhanVien}`)
+          anhNhanVien: item.anhNhanVien
+            ? item.anhNhanVien.startsWith('http://') || item.anhNhanVien.startsWith('https://')
+              ? item.anhNhanVien
+              : `/uploads/${item.anhNhanVien}`
             : null,
           updating: false,
         }
