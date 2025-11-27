@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String path = request.getServletPath();
 
-        // ✅ Bỏ qua filter cho các endpoint public (không yêu cầu đăng nhập)
+        //Bỏ qua filter cho các endpoint public (không yêu cầu đăng nhập)
         if (path.startsWith("/api/auth/")
                 || path.startsWith("/api/khach-hang/auth/")
                 || path.startsWith("/api/khach-hang/me")
@@ -63,7 +63,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt;
         final String username;
 
-        // ✅ Bỏ qua nếu không có header hoặc không bắt đầu bằng "Bearer "
+        //Bỏ qua nếu không có header hoặc không bắt đầu bằng "Bearer "
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;

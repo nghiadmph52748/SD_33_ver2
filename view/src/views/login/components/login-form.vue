@@ -38,6 +38,12 @@
         </a-button>
       </a-space>
     </a-form>
+    <a-modal v-model:visible="showStartModal" title="Bắt đầu ca" width="420" @ok="confirmStartShift" @cancel="cancelStartShift">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>Vui lòng nhập số tiền mặt ban đầu để bắt đầu ca làm việc.</div>
+        <a-input-number v-model:value="startCash" :min="0" style="width:100%" placeholder="Số tiền mặt (VND)" />
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -46,6 +52,7 @@ import type { LoginData } from '@/api/user'
 import useLoading from '@/hooks/loading'
 import { useUserStore } from '@/store'
 import { Message } from '@arco-design/web-vue'
+import { getGiaoCa, suaGiaoCa } from '@/api/giao-ca'
 import { ValidatedError } from '@arco-design/web-vue/es/form/interface'
 import { useStorage } from '@vueuse/core'
 import { reactive, ref } from 'vue'
@@ -79,9 +86,32 @@ const handleSubmit = async ({ errors, values }: { errors: Record<string, Validat
     try {
       await userStore.login(values as LoginData)
 
-      // Chuyển hướng đến trang bán hàng tại quầy
-      router.push('/ban-hang-tai-quay/index')
-      Message.success(t('login.form.login.success'))
+      // After login, check if this user has an assigned (pending) shift
+      try {
+        const res = await getGiaoCa()
+        const list = (res.data || res) || []
+        const userId = userStore.id
+        const pending = list.find((s: any) => {
+          const assignedId = (s.nguoiNhan && s.nguoiNhan.id) || s.nguoiNhanId
+          const started = s.thoiGianGiaoCa || s.trangThai === 'Đang hoạt động'
+          return assignedId === userId && !started
+        })
+
+        if (pending) {
+          // show modal to enter starting cash
+          showStartModal.value = true
+          assignedShift.value = pending
+          return
+        }
+
+        // No pending assigned shift -> normal flow
+        router.push('/ban-hang-tai-quay/index')
+        Message.success(t('login.form.login.success'))
+      } catch (err) {
+        // If check fails, proceed to normal flow but inform
+        router.push('/ban-hang-tai-quay/index')
+        Message.success(t('login.form.login.success'))
+      }
       const { rememberPassword } = loginConfig.value
       const { username, password } = values
       // 实际生产环境需要进行加密存储。
@@ -98,6 +128,52 @@ const handleSubmit = async ({ errors, values }: { errors: Record<string, Validat
 }
 const setRememberPassword = (value: boolean) => {
   loginConfig.value.rememberPassword = value
+}
+
+// Start-shift modal state & handlers
+const showStartModal = ref(false)
+const startCash = ref<number | null>(null)
+const assignedShift = ref<any>(null)
+
+async function confirmStartShift() {
+  if (!startCash.value && startCash.value !== 0) {
+    // If no money entered, log the user out per requirement
+    Message.error('Vui lòng nhập số tiền mặt để bắt đầu ca. Bạn sẽ bị đăng xuất nếu không nhập.')
+    try {
+      await userStore.logout()
+    } catch (_) {}
+    return
+  }
+
+  try {
+    const payload = {
+      thoiGianGiaoCa: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      tongTienBanDau: Number(startCash.value) || 0,
+      trangThai: 'Đang hoạt động',
+    }
+    if (assignedShift.value && assignedShift.value.id) {
+      await suaGiaoCa(assignedShift.value.id, payload)
+      Message.success('Bắt đầu ca thành công')
+      showStartModal.value = false
+      router.push('/ban-hang-tai-quay/index')
+    } else {
+      // fallback: just continue to sales
+      router.push('/ban-hang-tai-quay/index')
+    }
+  } catch (e) {
+    console.error('Lỗi khi bắt đầu ca (login flow)', e)
+    Message.error('Không thể bắt đầu ca. Bạn sẽ bị đăng xuất.')
+    try {
+      await userStore.logout()
+    } catch (_) {}
+  }
+}
+
+function cancelStartShift() {
+  // User cancelled -> logout
+  userStore.logout().finally(() => {
+    router.push('/login')
+  })
 }
 </script>
 

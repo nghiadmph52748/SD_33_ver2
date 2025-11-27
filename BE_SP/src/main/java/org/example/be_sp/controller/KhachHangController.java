@@ -3,10 +3,12 @@ package org.example.be_sp.controller;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import org.example.be_sp.model.request.CustomerSegmentFilter;
 import org.example.be_sp.model.request.KhachHangRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.KhachHangService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +20,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/khach-hang-management")
@@ -34,6 +39,43 @@ public class KhachHangController {
             return new ResponseObject<>(true, khachHangService.findAll(), "Lấy danh sách khách hàng thành công");
         } catch (Exception e) {
             return new ResponseObject<>(false, null, "Lỗi khi lấy danh sách khách hàng: " + e.getMessage());
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping("/segment")
+    public ResponseObject<?> getBySegment(
+            @RequestParam(value = "segmentType", required = false) String segmentType,
+            @RequestParam(value = "segmentKey", required = false) String segmentKey,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "minOrdersCount", required = false) Integer minOrders,
+            @RequestParam(value = "maxOrdersCount", required = false) Integer maxOrders,
+            @RequestParam(value = "minTotalSpent", required = false) Long minTotalSpent,
+            @RequestParam(value = "maxTotalSpent", required = false) Long maxTotalSpent,
+            @RequestParam(value = "lastOrderFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate lastOrderFrom,
+            @RequestParam(value = "lastOrderTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate lastOrderTo,
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "pageSize", required = false) Integer pageSize,
+            @RequestParam(value = "birthdayDays", required = false) Integer birthdayDays
+    ) {
+        try {
+            CustomerSegmentFilter filter = new CustomerSegmentFilter();
+            filter.setSegmentType(segmentType);
+            filter.setSegmentKey(segmentKey);
+            filter.setSearch(search);
+            filter.setMinOrdersCount(minOrders);
+            filter.setMaxOrdersCount(maxOrders);
+            filter.setMinTotalSpent(minTotalSpent);
+            filter.setMaxTotalSpent(maxTotalSpent);
+            filter.setLastOrderFrom(lastOrderFrom);
+            filter.setLastOrderTo(lastOrderTo);
+            filter.setPage(page);
+            filter.setPageSize(pageSize);
+            filter.setBirthdayDays(birthdayDays);
+
+            return new ResponseObject<>(true, khachHangService.getCustomersBySegment(filter), "Lấy danh sách khách hàng theo phân khúc thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy danh sách phân khúc khách hàng: " + e.getMessage());
         }
     }
 

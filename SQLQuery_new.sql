@@ -112,7 +112,7 @@ CREATE TABLE [dbo].[hoa_don](
 	[update_at] [datetime] NULL,
 	[update_by] [int] NULL,
 	[so_dien_thoai_nhan_vien] [varchar](12) NULL,
-	[mo_ta_loai_don] [nvarchar](100) NULL,
+	[mo_ta_loai_don]  AS (CASE WHEN [loai_don]=(1) THEN N'Bán hàng tại quầy' ELSE N'Bán hàng online' END) PERSISTED,
 	[thoi_gian_tao] [datetime] NULL,
 	[thoi_gian_cap_nhat] [datetime] NULL,
 	[ghi_chu_noi_bo] [nvarchar](500) NULL,
@@ -709,6 +709,54 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+/****** Object:  View [dbo].[vw_khach_hang_rfm]    Script Date: 11/12/2025 10:29:48 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- View để tính toán RFM metrics cho khách hàng
+-- RFM: Recency (days_since_last_order), Frequency (orders_count), Monetary (total_spent)
+CREATE VIEW [dbo].[vw_khach_hang_rfm] AS
+SELECT
+    kh.id,
+    kh.ma_khach_hang,
+    kh.ten_khach_hang,
+    kh.email,
+    kh.so_dien_thoai,
+    kh.ngay_sinh,
+    kh.phan_loai,
+    kh.trang_thai,
+    kh.create_at,
+    COUNT(hd.id) AS orders_count,
+    MIN(hd.ngay_thanh_toan) AS first_order_at,
+    MAX(hd.ngay_thanh_toan) AS last_order_at,
+    ISNULL(SUM(ISNULL(hd.tong_tien_sau_giam, hd.tong_tien)), 0) AS total_spent,
+    CASE 
+        WHEN MAX(hd.ngay_thanh_toan) IS NOT NULL 
+        THEN DATEDIFF(DAY, MAX(hd.ngay_thanh_toan), GETDATE())
+        ELSE NULL
+    END AS days_since_last_order
+FROM 
+    [dbo].[khach_hang] kh
+    LEFT JOIN [dbo].[hoa_don] hd ON hd.id_khach_hang = kh.id 
+        AND hd.deleted = 0 
+        AND hd.trang_thai_thanh_toan IN (1, 2)
+        AND hd.ngay_thanh_toan IS NOT NULL
+WHERE 
+    kh.deleted = 0
+GROUP BY 
+    kh.id, 
+    kh.ma_khach_hang, 
+    kh.ten_khach_hang, 
+    kh.email, 
+    kh.so_dien_thoai, 
+    kh.ngay_sinh, 
+    kh.phan_loai,
+    kh.trang_thai,
+    kh.create_at
+
+GO
 /****** Object:  Table [dbo].[kich_thuoc]    Script Date: 11/12/2025 10:29:48 AM ******/
 SET ANSI_NULLS ON
 GO
@@ -1008,6 +1056,31 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[qr_sessions]    Script Date: 11/12/2025 10:29:48 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[qr_sessions](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[session_id] [nvarchar](36) NOT NULL,
+	[order_code] [nvarchar](50) NOT NULL,
+	[id_hoa_don] [int] NULL,
+	[qr_code_url] [nvarchar](max) NULL,
+	[status] [nvarchar](20) NOT NULL,
+	[expires_at] [datetime2](7) NOT NULL,
+	[created_at] [datetime2](7) NOT NULL,
+	[cart_data_json] [nvarchar](max) NULL,
+	[subtotal] [decimal](18, 2) NOT NULL,
+	[discount_amount] [decimal](18, 2) NULL,
+	[shipping_fee] [decimal](18, 2) NULL,
+	[final_price] [decimal](18, 2) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
 /****** Object:  Table [dbo].[token_blacklist]    Script Date: 11/12/2025 10:29:48 AM ******/
 SET ANSI_NULLS ON
 GO
@@ -1256,6 +1329,16 @@ INSERT [dbo].[dia_chi_khach_hang] ([id], [id_khach_hang], [ten_dia_chi], [thanh_
 GO
 SET IDENTITY_INSERT [dbo].[dia_chi_khach_hang] OFF
 GO
+SET IDENTITY_INSERT [dbo].[dia_chi_khach_hang] ON 
+GO
+INSERT [dbo].[dia_chi_khach_hang] ([id], [id_khach_hang], [ten_dia_chi], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [mac_dinh], [trang_thai], [deleted]) VALUES (3, 3, N'Nhà riêng', N'Hà Nội', N'Cầu Giấy', N'Dịch Vọng', N'Số 15 Ngõ 68 Cầu Giấy', 1, 1, 0)
+GO
+INSERT [dbo].[dia_chi_khach_hang] ([id], [id_khach_hang], [ten_dia_chi], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [mac_dinh], [trang_thai], [deleted]) VALUES (4, 4, N'Công ty', N'Hà Nội', N'Hoàn Kiếm', N'Phan Chu Trinh', N'Phòng 1203, Tòa nhà Prime Center', 1, 1, 0)
+GO
+INSERT [dbo].[dia_chi_khach_hang] ([id], [id_khach_hang], [ten_dia_chi], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [mac_dinh], [trang_thai], [deleted]) VALUES (5, 5, N'Nhà riêng', N'Đà Nẵng', N'Hải Châu', N'Thanh Bình', N'23 Nguyễn Văn Linh', 1, 1, 0)
+GO
+SET IDENTITY_INSERT [dbo].[dia_chi_khach_hang] OFF
+GO
 SET IDENTITY_INSERT [dbo].[dot_giam_gia] ON 
 GO
 INSERT [dbo].[dot_giam_gia] ([id], [ma_dot_giam_gia], [ten_dot_giam_gia], [gia_tri_giam_gia], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'DGG000001', N'Khuyến mãi mùa thu', 15, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-13T14:42:01.027' AS DateTime), CAST(N'2025-10-13T14:42:01.027' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
@@ -1278,15 +1361,39 @@ INSERT [dbo].[hinh_thuc_thanh_toan] ([id], [id_hoa_don], [id_phuong_thuc_thanh_t
 GO
 SET IDENTITY_INSERT [dbo].[hinh_thuc_thanh_toan] OFF
 GO
+SET IDENTITY_INSERT [dbo].[hinh_thuc_thanh_toan] ON 
+GO
+INSERT [dbo].[hinh_thuc_thanh_toan] ([id], [id_hoa_don], [id_phuong_thuc_thanh_toan], [tien_chuyen_khoan], [tien_mat], [trang_thai], [deleted]) VALUES (3, 5, 2, CAST(3780000.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), 1, 0)
+GO
+INSERT [dbo].[hinh_thuc_thanh_toan] ([id], [id_hoa_don], [id_phuong_thuc_thanh_toan], [tien_chuyen_khoan], [tien_mat], [trang_thai], [deleted]) VALUES (4, 6, 1, CAST(0.00 AS Decimal(18, 2)), CAST(3000000.00 AS Decimal(18, 2)), 1, 0)
+GO
+INSERT [dbo].[hinh_thuc_thanh_toan] ([id], [id_hoa_don], [id_phuong_thuc_thanh_toan], [tien_chuyen_khoan], [tien_mat], [trang_thai], [deleted]) VALUES (5, 7, 3, CAST(2800000.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), 1, 0)
+GO
+INSERT [dbo].[hinh_thuc_thanh_toan] ([id], [id_hoa_don], [id_phuong_thuc_thanh_toan], [tien_chuyen_khoan], [tien_mat], [trang_thai], [deleted]) VALUES (6, 8, 1, CAST(0.00 AS Decimal(18, 2)), CAST(6000000.00 AS Decimal(18, 2)), 1, 0)
+GO
+SET IDENTITY_INSERT [dbo].[hinh_thuc_thanh_toan] OFF
+GO
 SET IDENTITY_INSERT [dbo].[hoa_don] ON 
 GO
-INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [mo_ta_loai_don], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (1, 1, 1, 2, NULL, N'Đơn hàng giày Nike mới', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(2500000.00 AS Decimal(18, 2)), CAST(2250000.00 AS Decimal(18, 2)), N'Giao hàng trong ngày', N'Phạm Văn A', N'Số 10 Ngõ ABC, Phúc Xá, Ba Đình, Hà Nội', N'0123456789', N'khachhang1@gmail.com', NULL, NULL, NULL, NULL, CAST(N'2025-09-27' AS Date), CAST(N'2025-09-27' AS Date), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'0978123456', N'Bán hàng online', CAST(N'2025-09-27T08:30:00.000' AS DateTime), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (1, 1, 1, 2, NULL, N'Đơn hàng giày Nike mới', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(2500000.00 AS Decimal(18, 2)), CAST(2250000.00 AS Decimal(18, 2)), N'Giao hàng trong ngày', N'Phạm Văn A', N'Số 10 Ngõ ABC, Phúc Xá, Ba Đình, Hà Nội', N'0123456789', N'khachhang1@gmail.com', NULL, NULL, NULL, NULL, CAST(N'2025-09-27' AS Date), CAST(N'2025-09-27' AS Date), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'0978123456', CAST(N'2025-09-27T08:30:00.000' AS DateTime), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 GO
-INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [mo_ta_loai_don], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (2, 2, 2, 2, NULL, N'Đơn hàng giày Adidas mới', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(3200000.00 AS Decimal(18, 2)), CAST(3000000.00 AS Decimal(18, 2)), N'Giao hàng sáng mai', N'Hoàng Thị B', N'Số 20 Đường XYZ, Bạch Mai, Hai Bà Trưng, Hà Nội', N'0987654321', N'khachhang2@gmail.com', NULL, NULL, NULL, NULL, CAST(N'2025-09-27' AS Date), CAST(N'2025-09-27' AS Date), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'0978123456', N'Bán hàng t?i qu?y', CAST(N'2025-09-27T14:15:00.000' AS DateTime), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (2, 2, 2, 2, NULL, N'Đơn hàng giày Adidas mới', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(3200000.00 AS Decimal(18, 2)), CAST(3000000.00 AS Decimal(18, 2)), N'Giao hàng sáng mai', N'Hoàng Thị B', N'Số 20 Đường XYZ, Bạch Mai, Hai Bà Trưng, Hà Nội', N'0987654321', N'khachhang2@gmail.com', NULL, NULL, NULL, NULL, CAST(N'2025-09-27' AS Date), CAST(N'2025-09-27' AS Date), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'0978123456', CAST(N'2025-09-27T14:15:00.000' AS DateTime), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 GO
-INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [mo_ta_loai_don], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (3, 1, 1, 1, N'HDZVSU3615', NULL, 1, CAST(30000.00 AS Decimal(18, 2)), CAST(5000000.00 AS Decimal(18, 2)), CAST(4500000.00 AS Decimal(18, 2)), N'Bán hàng tại quầy', N'Phạm Văn A', N'Số 10 Ngõ ABC, Phúc Xá, Ba Đình', N'0123456789', N'khachhang1@gmail.com', NULL, NULL, NULL, NULL, NULL, NULL, 1, 0, CAST(N'2025-11-12' AS Date), 1, CAST(N'2025-11-12' AS Date), 1, NULL, NULL, CAST(N'2025-11-12T10:21:23.167' AS DateTime), CAST(N'2025-11-12T10:21:23.167' AS DateTime), NULL, NULL, NULL, NULL, NULL, CAST(0.00 AS Decimal(18, 2)), NULL)
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (3, 1, 1, 1, N'HDZVSU3615', NULL, 1, CAST(30000.00 AS Decimal(18, 2)), CAST(5000000.00 AS Decimal(18, 2)), CAST(4500000.00 AS Decimal(18, 2)), N'Bán hàng tại quầy', N'Phạm Văn A', N'Số 10 Ngõ ABC, Phúc Xá, Ba Đình', N'0123456789', N'khachhang1@gmail.com', NULL, NULL, NULL, NULL, NULL, NULL, 1, 0, CAST(N'2025-11-12' AS Date), 1, CAST(N'2025-11-12' AS Date), 1, NULL, CAST(N'2025-11-12T10:21:23.167' AS DateTime), CAST(N'2025-11-12T10:21:23.167' AS DateTime), NULL, NULL, NULL, NULL, NULL, CAST(0.00 AS Decimal(18, 2)), NULL)
 GO
-INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [mo_ta_loai_don], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (4, NULL, 1, 1, N'HDUICO0132', NULL, 0, NULL, CAST(2500000.00 AS Decimal(18, 2)), CAST(2250000.00 AS Decimal(18, 2)), N'Bán hàng tại quầy', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 0, CAST(N'2025-11-12' AS Date), 1, CAST(N'2025-11-12' AS Date), 1, NULL, NULL, CAST(N'2025-11-12T10:23:09.243' AS DateTime), CAST(N'2025-11-12T10:23:09.243' AS DateTime), NULL, NULL, NULL, NULL, NULL, CAST(0.00 AS Decimal(18, 2)), NULL)
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (4, NULL, 1, 1, N'HDUICO0132', NULL, 0, NULL, CAST(2500000.00 AS Decimal(18, 2)), CAST(2250000.00 AS Decimal(18, 2)), N'Bán hàng tại quầy', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 0, CAST(N'2025-11-12' AS Date), 1, CAST(N'2025-11-12' AS Date), 1, NULL, CAST(N'2025-11-12T10:23:09.243' AS DateTime), CAST(N'2025-11-12T10:23:09.243' AS DateTime), NULL, NULL, NULL, NULL, NULL, CAST(0.00 AS Decimal(18, 2)), NULL)
+GO
+SET IDENTITY_INSERT [dbo].[hoa_don] OFF
+GO
+SET IDENTITY_INSERT [dbo].[hoa_don] ON 
+GO
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (5, 3, 1, 2, N'HDRECENT01', N'Đơn online khách 3', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(4200000.00 AS Decimal(18, 2)), CAST(3780000.00 AS Decimal(18, 2)), N'Giao tiêu chuẩn', N'Lê Thành C', N'Số 15 Ngõ 68 Cầu Giấy', N'0901122334', N'khachhang3@gmail.com', N'Trần Thị Em', N'NV00002', N'Giảm giá 10% cho đơn hàng đầu tiên', N'PGG00001', CAST(N'2025-11-20' AS Date), CAST(N'2025-11-20' AS Date), 1, 0, CAST(N'2025-11-20' AS Date), 2, CAST(N'2025-11-20' AS Date), 2, N'0978123456', CAST(N'2025-11-20T09:15:00.000' AS DateTime), CAST(N'2025-11-20T09:15:00.000' AS DateTime), NULL, NULL, N'Giao tiêu chuẩn', N'Số 15 Ngõ 68 Cầu Giấy, Hà Nội', 2, CAST(3780000.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)))
+GO
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (6, 3, 2, 2, N'HDRFMFREQ1', N'Đơn tại quầy khách 3', 1, CAST(0.00 AS Decimal(18, 2)), CAST(3200000.00 AS Decimal(18, 2)), CAST(3000000.00 AS Decimal(18, 2)), N'Thanh toán tại quầy', N'Lê Thành C', N'Số 15 Ngõ 68 Cầu Giấy', N'0901122334', N'khachhang3@gmail.com', N'Trần Thị Em', N'NV00002', N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', N'PGG00002', CAST(N'2025-11-05' AS Date), CAST(N'2025-11-05' AS Date), 1, 0, CAST(N'2025-11-05' AS Date), 2, CAST(N'2025-11-05' AS Date), 2, N'0978123456', CAST(N'2025-11-05T14:20:00.000' AS DateTime), CAST(N'2025-11-05T14:20:00.000' AS DateTime), NULL, NULL, N'Nhận tại cửa hàng', NULL, 2, CAST(3000000.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)))
+GO
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (7, 3, NULL, 2, N'HDRFMFREQ0', N'Đơn online khách 3 tháng 10', 0, CAST(30000.00 AS Decimal(18, 2)), CAST(2800000.00 AS Decimal(18, 2)), CAST(2800000.00 AS Decimal(18, 2)), N'Không áp dụng voucher', N'Lê Thành C', N'Số 15 Ngõ 68 Cầu Giấy', N'0901122334', N'khachhang3@gmail.com', N'Trần Thị Em', N'NV00002', NULL, NULL, CAST(N'2025-10-10' AS Date), CAST(N'2025-10-10' AS Date), 1, 0, CAST(N'2025-10-10' AS Date), 2, CAST(N'2025-10-10' AS Date), 2, N'0978123456', CAST(N'2025-10-10T11:05:00.000' AS DateTime), CAST(N'2025-10-10T11:05:00.000' AS DateTime), NULL, NULL, N'Giao tiêu chuẩn', N'Số 15 Ngõ 68 Cầu Giấy, Hà Nội', 2, CAST(2800000.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)))
+GO
+INSERT [dbo].[hoa_don] ([id], [id_khach_hang], [id_phieu_giam_gia], [id_nhan_vien], [ma_hoa_don], [ten_hoa_don], [loai_don], [phi_van_chuyen], [tong_tien], [tong_tien_sau_giam], [ghi_chu], [ten_khach_hang], [dia_chi_khach_hang], [so_dien_thoai_khach_hang], [email_khach_hang], [ten_nhan_vien], [ma_nhan_vien], [ten_phieu_giam_gia], [ma_phieu_giam_gia], [ngay_tao], [ngay_thanh_toan], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [so_dien_thoai_nhan_vien], [thoi_gian_tao], [thoi_gian_cap_nhat], [ghi_chu_noi_bo], [ma_van_don], [phuong_thuc_giao_hang], [dia_chi_giao_hang_chi_tiet], [trang_thai_thanh_toan], [so_tien_da_thanh_toan], [so_tien_con_lai]) VALUES (8, 5, NULL, 1, N'HDLAPSED01', N'Đơn khách quay lại', 0, CAST(40000.00 AS Decimal(18, 2)), CAST(6000000.00 AS Decimal(18, 2)), CAST(6000000.00 AS Decimal(18, 2)), N'Khách hàng lâu không mua', N'Nguyễn Minh E', N'23 Nguyễn Văn Linh, Hải Châu, Đà Nẵng', N'0933344556', N'khachhang5@gmail.com', N'Nguyễn Đại Ca', N'NV00001', NULL, NULL, CAST(N'2025-07-01' AS Date), CAST(N'2025-07-01' AS Date), 1, 0, CAST(N'2025-07-01' AS Date), 1, CAST(N'2025-07-01' AS Date), 1, N'0987654321', CAST(N'2025-07-01T10:45:00.000' AS DateTime), CAST(N'2025-07-01T10:45:00.000' AS DateTime), NULL, NULL, N'Giao tiêu chuẩn', N'23 Nguyễn Văn Linh, Hải Châu, Đà Nẵng', 2, CAST(6000000.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)))
 GO
 SET IDENTITY_INSERT [dbo].[hoa_don] OFF
 GO
@@ -1302,11 +1409,37 @@ INSERT [dbo].[hoa_don_chi_tiet] ([id], [id_hoa_don], [id_chi_tiet_san_pham], [so
 GO
 SET IDENTITY_INSERT [dbo].[hoa_don_chi_tiet] OFF
 GO
+SET IDENTITY_INSERT [dbo].[hoa_don_chi_tiet] ON 
+GO
+INSERT [dbo].[hoa_don_chi_tiet] ([id], [id_hoa_don], [id_chi_tiet_san_pham], [so_luong], [gia_ban], [thanh_tien], [trang_thai], [ghi_chu], [ten_san_pham_chi_tiet], [ma_san_pham_chi_tiet], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (5, 5, 1, 1, CAST(2500000.00 AS Decimal(18, 2)), CAST(2500000.00 AS Decimal(18, 2)), 1, NULL, NULL, NULL, 0, CAST(N'2025-11-20' AS Date), 2, NULL, NULL)
+GO
+INSERT [dbo].[hoa_don_chi_tiet] ([id], [id_hoa_don], [id_chi_tiet_san_pham], [so_luong], [gia_ban], [thanh_tien], [trang_thai], [ghi_chu], [ten_san_pham_chi_tiet], [ma_san_pham_chi_tiet], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (6, 5, 2, 1, CAST(1700000.00 AS Decimal(18, 2)), CAST(1700000.00 AS Decimal(18, 2)), 1, NULL, NULL, NULL, 0, CAST(N'2025-11-20' AS Date), 2, NULL, NULL)
+GO
+INSERT [dbo].[hoa_don_chi_tiet] ([id], [id_hoa_don], [id_chi_tiet_san_pham], [so_luong], [gia_ban], [thanh_tien], [trang_thai], [ghi_chu], [ten_san_pham_chi_tiet], [ma_san_pham_chi_tiet], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (7, 6, 3, 1, CAST(3200000.00 AS Decimal(18, 2)), CAST(3200000.00 AS Decimal(18, 2)), 1, NULL, NULL, NULL, 0, CAST(N'2025-11-05' AS Date), 2, NULL, NULL)
+GO
+INSERT [dbo].[hoa_don_chi_tiet] ([id], [id_hoa_don], [id_chi_tiet_san_pham], [so_luong], [gia_ban], [thanh_tien], [trang_thai], [ghi_chu], [ten_san_pham_chi_tiet], [ma_san_pham_chi_tiet], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (8, 7, 7, 1, CAST(1400000.00 AS Decimal(18, 2)), CAST(1400000.00 AS Decimal(18, 2)), 1, NULL, NULL, NULL, 0, CAST(N'2025-10-10' AS Date), 2, NULL, NULL)
+GO
+INSERT [dbo].[hoa_don_chi_tiet] ([id], [id_hoa_don], [id_chi_tiet_san_pham], [so_luong], [gia_ban], [thanh_tien], [trang_thai], [ghi_chu], [ten_san_pham_chi_tiet], [ma_san_pham_chi_tiet], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (9, 7, 8, 1, CAST(1400000.00 AS Decimal(18, 2)), CAST(1400000.00 AS Decimal(18, 2)), 1, NULL, NULL, NULL, 0, CAST(N'2025-10-10' AS Date), 2, NULL, NULL)
+GO
+INSERT [dbo].[hoa_don_chi_tiet] ([id], [id_hoa_don], [id_chi_tiet_san_pham], [so_luong], [gia_ban], [thanh_tien], [trang_thai], [ghi_chu], [ten_san_pham_chi_tiet], [ma_san_pham_chi_tiet], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (10, 8, 1, 2, CAST(3000000.00 AS Decimal(18, 2)), CAST(6000000.00 AS Decimal(18, 2)), 1, NULL, NULL, NULL, 0, CAST(N'2025-07-01' AS Date), 1, NULL, NULL)
+GO
+SET IDENTITY_INSERT [dbo].[hoa_don_chi_tiet] OFF
+GO
 SET IDENTITY_INSERT [dbo].[khach_hang] ON 
 GO
 INSERT [dbo].[khach_hang] ([id], [ten_khach_hang], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [gioi_tinh], [ngay_sinh], [phan_loai], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Phạm Văn A', N'khachhang1', N'$2b$10$0mtckgjPZO1VE87q/FbAK.P/m5sgMZpBvglzziHgAzuJwaQ1G4eum', N'khachhang1@gmail.com', N'0123456789', 1, CAST(N'1998-03-10' AS Date), NULL, 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 INSERT [dbo].[khach_hang] ([id], [ten_khach_hang], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [gioi_tinh], [ngay_sinh], [phan_loai], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Hoàng Thị B', N'khachhang2', N'$2a$10$moruvP4SlJifGfvkFTXuSuaXWQ58UlnCHWEc/PtmteILY9PeCUDU2', N'khachhang2@gmail.com', N'0987654321', 0, CAST(N'1996-07-25' AS Date), NULL, 1, 0, NULL, NULL, CAST(N'2025-10-13' AS Date), 1)
+GO
+SET IDENTITY_INSERT [dbo].[khach_hang] OFF
+GO
+SET IDENTITY_INSERT [dbo].[khach_hang] ON
+GO
+INSERT [dbo].[khach_hang] ([id], [ten_khach_hang], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [gioi_tinh], [ngay_sinh], [phan_loai], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, N'Lê Thành C', N'khachhang3', N'$2b$10$0mtckgjPZO1VE87q/FbAK.P/m5sgMZpBvglzziHgAzuJwaQ1G4eum', N'khachhang3@gmail.com', N'0901122334', 1, CAST(N'1993-05-20' AS Date), NULL, 1, 0, CAST(N'2025-09-15' AS Date), 1, NULL, NULL)
+GO
+INSERT [dbo].[khach_hang] ([id], [ten_khach_hang], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [gioi_tinh], [ngay_sinh], [phan_loai], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, N'Trần Quỳnh D', N'khachhang4', N'$2a$10$moruvP4SlJifGfvkFTXuSuaXWQ58UlnCHWEc/PtmteILY9PeCUDU2', N'khachhang4@gmail.com', N'0912233445', 0, CAST(N'1998-09-15' AS Date), NULL, 1, 0, CAST(N'2025-10-20' AS Date), 1, NULL, NULL)
+GO
+INSERT [dbo].[khach_hang] ([id], [ten_khach_hang], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [gioi_tinh], [ngay_sinh], [phan_loai], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (5, N'Nguyễn Minh E', N'khachhang5', N'$2b$10$0mtckgjPZO1VE87q/FbAK.P/m5sgMZpBvglzziHgAzuJwaQ1G4eum', N'khachhang5@gmail.com', N'0933344556', 1, CAST(N'1988-01-12' AS Date), NULL, 1, 0, CAST(N'2025-06-10' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[khach_hang] OFF
 GO
@@ -1373,6 +1506,16 @@ GO
 INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, N'Phiếu giảm giá cá nhân - Khách 1', CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-12-27T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 2, 2, N'Phiếu giảm giá cá nhân - Khách 2', CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-11-27T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+GO
+SET IDENTITY_INSERT [dbo].[phieu_giam_gia_ca_nhan] OFF
+GO
+SET IDENTITY_INSERT [dbo].[phieu_giam_gia_ca_nhan] ON 
+GO
+INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, 3, 1, N'Phiếu khách 3 - giảm 10%', CAST(N'2025-10-15T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-15' AS Date), 1, NULL, NULL)
+GO
+INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, 3, 2, N'Phiếu khách 3 - giảm 200k', CAST(N'2025-11-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-11-01' AS Date), 1, NULL, NULL)
+GO
+INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (5, 5, 1, N'Phiếu khách 5 - quay lại mua', CAST(N'2025-07-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-07-01' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia_ca_nhan] OFF
 GO
@@ -2014,6 +2157,28 @@ INCLUDE([trang_thai_moi],[ghi_chu])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
+/****** Object:  Index [UQ_qr_sessions_session]    Script Date: 11/12/2025 10:29:48 AM ******/
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_qr_sessions_session] ON [dbo].[qr_sessions]
+(
+	[session_id] ASC
+)
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_qr_sessions_status_expiry]    Script Date: 11/12/2025 10:29:48 AM ******/
+CREATE NONCLUSTERED INDEX [IX_qr_sessions_status_expiry] ON [dbo].[qr_sessions]
+(
+	[status] ASC,
+	[expires_at] DESC
+)
+INCLUDE([order_code],[final_price]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_qr_sessions_order_code]    Script Date: 11/12/2025 10:29:48 AM ******/
+CREATE NONCLUSTERED INDEX [IX_qr_sessions_order_code] ON [dbo].[qr_sessions]
+(
+	[order_code] ASC
+)
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
 /****** Object:  Index [IX_tin_nhan_chua_doc]    Script Date: 11/12/2025 10:29:48 AM ******/
 CREATE NONCLUSTERED INDEX [IX_tin_nhan_chua_doc] ON [dbo].[tin_nhan]
 (
@@ -2299,6 +2464,10 @@ ALTER TABLE [dbo].[timeline_don_hang] ADD  CONSTRAINT [DF_timeline_don_hang_tran
 GO
 ALTER TABLE [dbo].[timeline_don_hang] ADD  CONSTRAINT [DF_timeline_don_hang_deleted]  DEFAULT ((0)) FOR [deleted]
 GO
+ALTER TABLE [dbo].[qr_sessions] ADD  DEFAULT (sysdatetime()) FOR [created_at]
+GO
+ALTER TABLE [dbo].[qr_sessions] ADD  DEFAULT (N'PENDING') FOR [status]
+GO
 ALTER TABLE [dbo].[token_blacklist] ADD  DEFAULT (getdate()) FOR [created_at]
 GO
 ALTER TABLE [dbo].[trang_thai_don_hang] ADD  DEFAULT ((1)) FOR [trang_thai]
@@ -2353,6 +2522,12 @@ REFERENCES [dbo].[anh_san_pham] ([id])
 GO
 ALTER TABLE [dbo].[chi_tiet_san_pham_anh]  WITH CHECK ADD FOREIGN KEY([id_chi_tiet_san_pham])
 REFERENCES [dbo].[chi_tiet_san_pham] ([id])
+GO
+ALTER TABLE [dbo].[qr_sessions]  WITH CHECK ADD  CONSTRAINT [FK_qr_sessions_hoa_don] FOREIGN KEY([id_hoa_don])
+REFERENCES [dbo].[hoa_don] ([id])
+ON DELETE SET NULL
+GO
+ALTER TABLE [dbo].[qr_sessions] CHECK CONSTRAINT [FK_qr_sessions_hoa_don]
 GO
 ALTER TABLE [dbo].[cuoc_trao_doi]  WITH CHECK ADD  CONSTRAINT [FK_cuoc_trao_doi_nguoi_gui_cuoi] FOREIGN KEY([id_nguoi_gui_cuoi])
 REFERENCES [dbo].[nhan_vien] ([id])
@@ -2502,10 +2677,6 @@ ALTER TABLE [dbo].[hoa_don]  WITH CHECK ADD CHECK  (([tong_tien]>=(0)))
 GO
 ALTER TABLE [dbo].[hoa_don]  WITH CHECK ADD CHECK  (([tong_tien_sau_giam]>=(0)))
 GO
-ALTER TABLE [dbo].[hoa_don]  WITH CHECK ADD  CONSTRAINT [CK_hoa_don_mo_ta_loai_don] CHECK  (([mo_ta_loai_don]='Bán hàng online' OR [mo_ta_loai_don]='Bán hàng t?i qu?y'))
-GO
-ALTER TABLE [dbo].[hoa_don] CHECK CONSTRAINT [CK_hoa_don_mo_ta_loai_don]
-GO
 ALTER TABLE [dbo].[hoa_don]  WITH CHECK ADD  CONSTRAINT [CK_hoa_don_so_tien_con_lai] CHECK  (([so_tien_con_lai]>=(0)))
 GO
 ALTER TABLE [dbo].[hoa_don] CHECK CONSTRAINT [CK_hoa_don_so_tien_con_lai]
@@ -2550,6 +2721,11 @@ GO
 ALTER TABLE [dbo].[tin_nhan]  WITH CHECK ADD  CONSTRAINT [CHK_tin_nhan_noi_dung] CHECK  ((len(rtrim(ltrim([noi_dung])))>(0)))
 GO
 ALTER TABLE [dbo].[tin_nhan] CHECK CONSTRAINT [CHK_tin_nhan_noi_dung]
+GO
+/****** Check totals for qr_sessions ******/
+ALTER TABLE [dbo].[qr_sessions]  WITH CHECK ADD  CONSTRAINT [CHK_qr_sessions_amounts] CHECK  (([subtotal]>=(0) AND [final_price]>=(0) AND ([discount_amount] IS NULL OR [discount_amount]>=(0)) AND ([shipping_fee] IS NULL OR [shipping_fee]>=(0))))
+GO
+ALTER TABLE [dbo].[qr_sessions] CHECK CONSTRAINT [CHK_qr_sessions_amounts]
 GO
 /****** Object:  StoredProcedure [dbo].[sp_dem_tin_chua_doc]    Script Date: 11/12/2025 10:29:48 AM ******/
 SET ANSI_NULLS ON
