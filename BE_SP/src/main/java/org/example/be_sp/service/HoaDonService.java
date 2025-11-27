@@ -15,12 +15,14 @@ import org.example.be_sp.entity.HoaDonChiTiet;
 import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.entity.PhieuGiamGia;
+import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
 import org.example.be_sp.entity.PhuongThucThanhToan;
 import org.example.be_sp.entity.ThongTinDonHang;
 import org.example.be_sp.entity.TimelineDonHang;
 import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.email.OrderEmailData;
+import org.example.be_sp.model.email.RefundNotificationEmailData;
 import org.example.be_sp.model.request.AddressChangeNotificationRequest;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
 import org.example.be_sp.model.request.HoaDonChiTietRequest;
@@ -36,6 +38,8 @@ import org.example.be_sp.repository.PhuongThucThanhToanRepository;
 import org.example.be_sp.repository.ThongTinDonHangRepository;
 import org.example.be_sp.repository.TimelineDonHangRepository;
 import org.example.be_sp.repository.TrangThaiDonHangRepository;
+import org.example.be_sp.repository.PhieuGiamGiaRepository;
+import org.example.be_sp.repository.PhieuGiamGiaCaNhanRepository;
 import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -43,11 +47,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import lombok.extern.slf4j.Slf4j;
-
 @Service
-@Slf4j
 public class HoaDonService {
+
+    private static final BigDecimal REFUND_VOUCHER_THRESHOLD = new BigDecimal("50000");
 
     @Autowired
     private HoaDonRepository hoaDonRepository;
@@ -77,6 +80,10 @@ public class HoaDonService {
     private HinhThucThanhToanRepository hinhThucThanhToanRepository;
     @Autowired
     private PhuongThucThanhToanRepository phuongThucThanhToanRepository;
+    @Autowired
+    private PhieuGiamGiaRepository phieuGiamGiaRepository;
+    @Autowired
+    private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
 
     public List<HoaDonResponse> getAll() {
         return hoaDonRepository.findAll().stream().map(HoaDonResponse::new).toList();
@@ -165,13 +172,12 @@ public class HoaDonService {
                         idChiTietSanPhamValue = chiTietRequest.getIdBienThe();
                     }
                     if (idChiTietSanPhamValue == null) {
-                        log.warn("Skipping HoaDonChiTiet: missing idChiTietSanPham/idBienTheSanPham/idBienThe");
                         continue;
                     }
                     final Integer idChiTietSanPham = idChiTietSanPhamValue;
                     ChiTietSanPham chiTietSanPham = chiTietSanPhamRepository.findById(idChiTietSanPham)
                             .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + idChiTietSanPham,
-                            "404"));
+                                    "404"));
                     hoaDonChiTiet.setIdChiTietSanPham(chiTietSanPham);
                     hoaDonChiTiet.setSoLuong(chiTietRequest.getSoLuong() != null ? chiTietRequest.getSoLuong() : 1);
                     hoaDonChiTiet
@@ -188,8 +194,6 @@ public class HoaDonService {
                     hoaDonChiTiet.setGhiChu(chiTietRequest.getGhiChu());
                     hoaDonChiTiet.setDeleted(false);
                     hoaDonChiTietRepository.save(hoaDonChiTiet);
-                    log.info("Created HoaDonChiTiet for product variant ID: {}, quantity: {}", idChiTietSanPham,
-                            hoaDonChiTiet.getSoLuong());
                 }
                 // Update tongTien after creating all chi tiết
                 savedHoaDon = hoaDonRepository.findById(savedHoaDon.getId()).orElseThrow();
@@ -206,11 +210,8 @@ public class HoaDonService {
                     }
                     savedHoaDon = hoaDonRepository.save(savedHoaDon);
                 }
-                log.info("Created {} HoaDonChiTiet items for order ID: {}", request.getHoaDonChiTiet().size(),
-                        savedHoaDon.getId());
             } catch (Exception e) {
-                log.error("Failed to create HoaDonChiTiet for order ID: {}", savedHoaDon.getId(), e);
-                // Don't throw - order is already created, chi tiết can be added later
+                // Ignore detail creation errors; order creation should not stop here
             }
         }
         // Generate invoice code using stored procedure
@@ -224,15 +225,12 @@ public class HoaDonService {
             if (savedHoaDon.getHoaDonChiTiets() != null) {
                 savedHoaDon.getHoaDonChiTiets().size(); // Trigger lazy loading
             }
-            log.info("Generated invoice code: {} for order ID: {}", generatedMaHoaDon, savedHoaDon.getId());
         } catch (Exception e) {
-            log.error("Failed to generate invoice code for order ID: {}", savedHoaDon.getId(), e);
             // Fallback: generate temporary code if stored procedure fails
             if (savedHoaDon.getMaHoaDon() == null || savedHoaDon.getMaHoaDon().trim().isEmpty()) {
                 String tempCode = "HD" + String.format("%010d", savedHoaDon.getId());
                 savedHoaDon.setMaHoaDon(tempCode);
                 savedHoaDon = hoaDonRepository.save(savedHoaDon);
-                log.warn("Using temporary invoice code: {} for order ID: {}", tempCode, savedHoaDon.getId());
             }
         }
         // Ensure maHoaDon is set before creating response
@@ -269,13 +267,9 @@ public class HoaDonService {
                 timeline.setTrangThai(true);
                 timeline.setDeleted(false);
                 timelineDonHangRepository.save(timeline);
-                log.info("Created TimelineDonHang for order ID: {}", savedHoaDon.getId());
-            } else {
-                log.warn("No staff member found, skipping TimelineDonHang creation for order ID: {}", savedHoaDon.getId());
             }
         } catch (Exception e) {
-            log.error("Failed to create TimelineDonHang for order ID: {}", savedHoaDon.getId(), e);
-            // Don't throw - order creation should still succeed
+            // Ignore timeline creation failures; order creation should still succeed
         }
         // Create HinhThucThanhToan if payment method is provided
         if (request.getIdPhuongThucThanhToan() != null) {
@@ -309,12 +303,9 @@ public class HoaDonService {
                     hinhThucThanhToan.setTrangThai(true);
                     hinhThucThanhToan.setDeleted(false);
                     hinhThucThanhToanRepository.save(hinhThucThanhToan);
-                    log.info("Created HinhThucThanhToan for order ID: {} with payment method ID: {} (COD: {})",
-                            savedHoaDon.getId(), request.getIdPhuongThucThanhToan(), isCOD);
                 }
             } catch (Exception e) {
-                log.error("Failed to create HinhThucThanhToan for order ID: {}", savedHoaDon.getId(), e);
-                // Don't throw - order creation should still succeed
+                // Ignore payment method persistence errors to keep order flow intact
             }
         }
         // Final refresh to ensure all data is loaded before creating response
@@ -334,8 +325,7 @@ public class HoaDonService {
                 savedHoaDon.getTimelineDonHangs().size(); // Trigger lazy loading
             }
         } catch (Exception e) {
-            log.warn("Failed to force load lazy collections for order ID: {}", savedHoaDon.getId(), e);
-            // Continue - response will still be created
+            // Ignore lazy loading issues; response is still generated
         }
         // Send order confirmation email once invoice is persisted
         sendOrderConfirmationEmail(savedHoaDon);
@@ -349,12 +339,12 @@ public class HoaDonService {
                         "Đơn hàng mới #" + savedHoaDon.getMaHoaDon(),
                         "Chờ xử lý",
                         "Đơn hàng mới từ "
-                        + (savedHoaDon.getTenNguoiNhan() != null ? savedHoaDon.getTenNguoiNhan() : "khách hàng"),
+                                + (savedHoaDon.getTenNguoiNhan() != null ? savedHoaDon.getTenNguoiNhan() : "khách hàng"),
                         2 // in progress
                 );
             }
         } catch (Exception e) {
-            log.error("Failed to send order creation notification: {}", e.getMessage());
+            // Ignore notification errors; order persists regardless
         }
         ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
         thongTinDonHang.setIdHoaDon(savedHoaDon);
@@ -468,7 +458,6 @@ public class HoaDonService {
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to get original idTrangThaiDonHang from ThongTinDonHang: {}", e.getMessage());
         }
 
         // ✅ VALIDATE & DEDUCT INVENTORY when status changes to "Đã xác nhận" (idTrangThaiDonHang = 2)
@@ -548,7 +537,6 @@ public class HoaDonService {
                         trangThaiCu = originalStatus != null && originalStatus ? "Hoàn thành" : "Chờ xác nhận";
                     }
                 } catch (Exception e) {
-                    log.warn("Failed to get original status from ThongTinDonHang, using boolean: {}", e.getMessage());
                     trangThaiCu = originalStatus != null && originalStatus ? "Hoàn thành" : "Chờ xác nhận";
                 }
 
@@ -604,8 +592,6 @@ public class HoaDonService {
 
                     // Validate idTrangThaiDonHang exists
                     if (!trangThaiDonHangRepository.existsById(idTrangThaiDonHang)) {
-                        log.warn("Trạng thái đơn hàng với id: {} không tồn tại, bỏ qua tạo ThongTinDonHang",
-                                idTrangThaiDonHang);
                     } else {
                         // Create new ThongTinDonHang entry for status change
                         if (hd.getGiaoHang() && !hd.getGhiChu().contains("Bán hàng tại quầy")
@@ -617,20 +603,16 @@ public class HoaDonService {
                         newThongTin.setIdHoaDon(saved);
                         newThongTin.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(idTrangThaiDonHang)
                                 .orElseThrow(() -> new ApiException(
-                                "Không tìm thấy trạng thái đơn hàng với id: " + idTrangThaiDonHang, "404")));
+                                        "Không tìm thấy trạng thái đơn hàng với id: " + idTrangThaiDonHang, "404")));
                         newThongTin.setThoiGian(LocalDateTime.now());
                         newThongTin.setTrangThai(true);
                         newThongTin.setDeleted(false);
                         thongTinDonHangRepository.save(newThongTin);
-                        log.info("Created ThongTinDonHang entry with idTrangThaiDonHang: {} for invoice ID: {}",
-                                idTrangThaiDonHang, saved.getId());
                     }
                 } catch (Exception e) {
-                    log.error("Failed to update ThongTinDonHang for status update: {}", e.getMessage(), e);
                     // Don't throw - timeline is already created, main update should succeed
                 }
             } catch (Exception e) {
-                log.error("Failed to create timeline entry for status update: {}", e.getMessage());
             }
         }
 
@@ -656,10 +638,7 @@ public class HoaDonService {
                 timeline.setTrangThai(true);
                 timeline.setDeleted(false);
                 timelineDonHangRepository.save(timeline);
-                log.info("Created timeline entry for loaiDon update: {} -> {} for invoice ID: {}", loaiDonCu, loaiDonMoi,
-                        saved.getId());
             } catch (Exception e) {
-                log.error("Failed to create timeline entry for loaiDon update: {}", e.getMessage());
             }
         }
 
@@ -677,7 +656,7 @@ public class HoaDonService {
                         saved.getTrangThai() ? 1 : 2 // 1 = completed, 2 = in progress
                 );
             } catch (Exception e) {
-                log.error("Failed to send order update notification: {}", e.getMessage());
+
             }
         }
 
@@ -702,7 +681,6 @@ public class HoaDonService {
             List<HoaDonChiTiet> orderItems = hoaDonChiTietRepository.findAllByIdHoaDonAndTrangThai(hoaDon, true);
 
             if (orderItems == null || orderItems.isEmpty()) {
-                log.info("Order {} has no items, skipping inventory deduction", hoaDon.getId());
                 return;
             }
 
@@ -738,16 +716,12 @@ public class HoaDonService {
                             requiredQty,
                             availableQty
                     ));
-                    log.warn("❌ Insufficient inventory for product {}: need {}, available {}",
-                            product.getId(), requiredQty, availableQty);
                 }
             }
 
             // If any items have insufficient inventory, send notification email and throw error
             if (insufficientItems.length() > 0) {
                 String errorMessage = "Số lượng sản phẩm yêu cầu không đủ: " + insufficientItems.toString();
-                log.error("❌ {}", errorMessage);
-
                 // Send email notification to customer about inventory shortage
                 sendInventoryShortageNotificationEmail(hoaDon, insufficientItems.toString());
 
@@ -776,18 +750,11 @@ public class HoaDonService {
                 Integer afterQty = beforeQty - deductQty;
                 product.setSoLuong(afterQty);
                 chiTietSanPhamRepository.save(product);
-
-                log.info("✅ Product inventory deducted: {} - {} → {} (deducted: {})",
-                        product.getId(), beforeQty, afterQty, deductQty);
             }
-
-            log.info("✅ Successfully validated and deducted inventory for order {}", hoaDon.getId());
-
         } catch (ApiException ae) {
             // Re-throw API exceptions as-is
             throw ae;
         } catch (Exception e) {
-            log.error("❌ Error validating/deducting inventory: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi kiểm tra tồn kho: " + e.getMessage(), "INVENTORY_ERROR");
         }
     }
@@ -795,9 +762,9 @@ public class HoaDonService {
     /**
      * ✅ Handle order cancellation - restore inventory and remove revenue
      *
-     * @param hoaDon - The invoice/order to process
+     * @param hoaDon                     - The invoice/order to process
      * @param originalIdTrangThaiDonHang - The original status ID before
-     * cancellation
+     *                                   cancellation
      */
     private void handleOrderCancellation(HoaDon hoaDon, Integer originalIdTrangThaiDonHang) {
         try {
@@ -805,7 +772,6 @@ public class HoaDonService {
             List<HoaDonChiTiet> orderItems = hoaDonChiTietRepository.findAllByIdHoaDonAndTrangThai(hoaDon, true);
 
             if (orderItems == null || orderItems.isEmpty()) {
-                log.info("Order {} has no items, skipping inventory restoration", hoaDon.getId());
                 return;
             }
 
@@ -831,9 +797,6 @@ public class HoaDonService {
                 Integer afterQty = beforeQty + restoreQty;
                 product.setSoLuong(afterQty);
                 chiTietSanPhamRepository.save(product);
-
-                log.info("✅ Product inventory restored: {} - {} → {} (restored: {})",
-                        product.getId(), beforeQty, afterQty, restoreQty);
             }
 
             // Second pass: REMOVE revenue if original status was "Hoàn thành" (idTrangThaiDonHang = 7)
@@ -845,13 +808,8 @@ public class HoaDonService {
                 // Update total revenue in the system (e.g., subtract from total revenue)
                 // This is a placeholder - implement your own logic to update total revenue
                 // Example: totalRevenueService.subtractRevenue(totalRevenue);
-                log.info("✅ Revenue removed for cancelled order {}: {}", hoaDon.getId(), totalRevenue);
             }
-
-            log.info("✅ Successfully handled order cancellation for order {}", hoaDon.getId());
-
         } catch (Exception e) {
-            log.error("❌ Error handling order cancellation: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi xử lý hủy đơn hàng: " + e.getMessage(), "CANCELLATION_ERROR");
         }
     }
@@ -882,8 +840,6 @@ public class HoaDonService {
             }
 
             if (customerEmail == null || customerEmail.trim().isEmpty()) {
-                log.warn("Order {} has no email address, skipping order confirmation email",
-                        hoaDon.getMaHoaDon());
                 return;
             }
 
@@ -937,11 +893,7 @@ public class HoaDonService {
                     .build();
 
             emailService.sendOrderConfirmationEmail(emailData);
-            log.info("Order confirmation email sent for order: {}", hoaDon.getMaHoaDon());
-
         } catch (Exception e) {
-            log.error("Failed to send order confirmation email for order: {}",
-                    hoaDon.getMaHoaDon(), e);
             // Don't throw exception - we don't want to rollback the order creation
         }
     }
@@ -951,9 +903,9 @@ public class HoaDonService {
      * that store is trying to fulfill the order but some products are out of
      * stock
      *
-     * @param hoaDon The order with insufficient inventory
+     * @param hoaDon                     The order with insufficient inventory
      * @param insufficientProductDetails Details of products with insufficient
-     * stock
+     *                                   stock
      */
     private void sendInventoryShortageNotificationEmail(HoaDon hoaDon, String insufficientProductDetails) {
         try {
@@ -966,8 +918,6 @@ public class HoaDonService {
             }
 
             if (customerEmail == null || customerEmail.trim().isEmpty()) {
-                log.warn("Order {} has no email address, skipping inventory shortage notification",
-                        hoaDon.getMaHoaDon());
                 return;
             }
 
@@ -986,16 +936,9 @@ public class HoaDonService {
                     .deliveryAddress(hoaDon.getDiaChiNguoiNhan() != null ? hoaDon.getDiaChiNguoiNhan() : "")
                     .phoneNumber(hoaDon.getSoDienThoaiNguoiNhan() != null ? hoaDon.getSoDienThoaiNguoiNhan() : "")
                     .build();
-
             // Send email notification asynchronously
             emailService.sendInventoryShortageNotificationEmail(emailData);
-
-            log.info("✅ Inventory shortage notification email sent to: {} for order: {}",
-                    customerEmail, hoaDon.getMaHoaDon());
-
         } catch (Exception e) {
-            log.error("❌ Failed to send inventory shortage notification email for order: {}",
-                    hoaDon.getMaHoaDon(), e);
             // Don't throw exception - we still want to reject the order even if email fails
         }
     }
@@ -1005,8 +948,6 @@ public class HoaDonService {
      */
     public void addSampleData() {
         try {
-            log.info("Bắt đầu thêm dữ liệu mẫu...");
-
             // Lấy nhân viên đầu tiên
             NhanVien nhanVien = nhanVienRepository.findAll().stream().findFirst()
                     .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên", "404"));
@@ -1049,16 +990,10 @@ public class HoaDonService {
                 hoaDonChiTiet.setTrangThai(true);
                 hoaDonChiTiet.setGhiChu("Sản phẩm mẫu " + i + " - Màu đen - Size 42");
                 hoaDonChiTiet.setDeleted(false);
-
                 hoaDonChiTietRepository.save(hoaDonChiTiet);
-
-                log.info("Đã tạo hóa đơn mẫu {} với ID: {}", i, savedHoaDon.getId());
             }
 
-            log.info("Hoàn thành thêm dữ liệu mẫu!");
-
         } catch (Exception e) {
-            log.error("Lỗi khi thêm dữ liệu mẫu: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi thêm dữ liệu mẫu: " + e.getMessage(), "500");
         }
     }
@@ -1170,11 +1105,9 @@ public class HoaDonService {
             response.put("endDate", endDate);
             response.put("totalRecords", results.size());
 
-            log.info("Lấy thống kê doanh thu hoàn thành (trạng thái cuối cùng): {} records, groupBy: {}", results.size(), groupBy);
             return response;
 
         } catch (Exception e) {
-            log.error("Lỗi khi lấy thống kê doanh thu: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi lấy thống kê doanh thu: " + e.getMessage(), "500");
         }
     }
@@ -1189,87 +1122,87 @@ public class HoaDonService {
 
             // Tổng doanh thu từ đơn hàng có trạng thái cuối cùng là hoàn thành
             String totalRevenueSQL = """
-                SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as total_revenue
-                FROM hoa_don hd 
-                WHERE hd.id IN (
-                    SELECT DISTINCT ttdh.id_hoa_don
-                    FROM thong_tin_don_hang ttdh
-                    INNER JOIN (
-                        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian
-                        FROM thong_tin_don_hang
-                        WHERE deleted = 0
-                        GROUP BY id_hoa_don
-                    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian
-                    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0
-                )
-                AND hd.deleted = 0
-                """;
+                    SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as total_revenue
+                    FROM hoa_don hd 
+                    WHERE hd.id IN (
+                        SELECT DISTINCT ttdh.id_hoa_don
+                        FROM thong_tin_don_hang ttdh
+                        INNER JOIN (
+                            SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian
+                            FROM thong_tin_don_hang
+                            WHERE deleted = 0
+                            GROUP BY id_hoa_don
+                        ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian
+                        WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0
+                    )
+                    AND hd.deleted = 0
+                    """;
 
             BigDecimal totalRevenue = jdbcTemplate.queryForObject(totalRevenueSQL, BigDecimal.class);
             dashboard.put("totalRevenue", totalRevenue);
 
             // Số đơn hàng có trạng thái cuối cùng là hoàn thành
             String completedOrdersSQL = """
-                SELECT COUNT(*) as completed_orders
-                FROM hoa_don hd 
-                WHERE hd.id IN (
-                    SELECT DISTINCT ttdh.id_hoa_don
-                    FROM thong_tin_don_hang ttdh
-                    INNER JOIN (
-                        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian
-                        FROM thong_tin_don_hang
-                        WHERE deleted = 0
-                        GROUP BY id_hoa_don
-                    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian
-                    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0
-                )
-                AND hd.deleted = 0
-                """;
+                    SELECT COUNT(*) as completed_orders
+                    FROM hoa_don hd 
+                    WHERE hd.id IN (
+                        SELECT DISTINCT ttdh.id_hoa_don
+                        FROM thong_tin_don_hang ttdh
+                        INNER JOIN (
+                            SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian
+                            FROM thong_tin_don_hang
+                            WHERE deleted = 0
+                            GROUP BY id_hoa_don
+                        ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian
+                        WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0
+                    )
+                    AND hd.deleted = 0
+                    """;
 
             Integer completedOrders = jdbcTemplate.queryForObject(completedOrdersSQL, Integer.class);
             dashboard.put("completedOrders", completedOrders);
 
             // Doanh thu hôm nay (chỉ đơn có trạng thái cuối cùng là hoàn thành)
             String todayRevenueSQL = """
-                SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as today_revenue
-                FROM hoa_don hd 
-                WHERE hd.id IN (
-                    SELECT DISTINCT ttdh.id_hoa_don
-                    FROM thong_tin_don_hang ttdh
-                    INNER JOIN (
-                        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian
-                        FROM thong_tin_don_hang
-                        WHERE deleted = 0
-                        GROUP BY id_hoa_don
-                    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian
-                    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0
-                )
-                AND CONVERT(DATE, hd.ngay_tao) = CONVERT(DATE, GETDATE())
-                AND hd.deleted = 0
-                """;
+                    SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as today_revenue
+                    FROM hoa_don hd 
+                    WHERE hd.id IN (
+                        SELECT DISTINCT ttdh.id_hoa_don
+                        FROM thong_tin_don_hang ttdh
+                        INNER JOIN (
+                            SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian
+                            FROM thong_tin_don_hang
+                            WHERE deleted = 0
+                            GROUP BY id_hoa_don
+                        ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian
+                        WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0
+                    )
+                    AND CONVERT(DATE, hd.ngay_tao) = CONVERT(DATE, GETDATE())
+                    AND hd.deleted = 0
+                    """;
 
             BigDecimal todayRevenue = jdbcTemplate.queryForObject(todayRevenueSQL, BigDecimal.class);
             dashboard.put("todayRevenue", todayRevenue);
 
             // Doanh thu tháng này (chỉ đơn có trạng thái cuối cùng là hoàn thành)
             String monthRevenueSQL = """
-                SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as month_revenue
-                FROM hoa_don hd 
-                WHERE hd.id IN (
-                    SELECT DISTINCT ttdh.id_hoa_don
-                    FROM thong_tin_don_hang ttdh
-                    INNER JOIN (
-                        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian
-                        FROM thong_tin_don_hang
-                        WHERE deleted = 0
-                        GROUP BY id_hoa_don
-                    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian
-                    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0
-                )
-                AND YEAR(hd.ngay_tao) = YEAR(GETDATE())
-                AND MONTH(hd.ngay_tao) = MONTH(GETDATE())
-                AND hd.deleted = 0
-                """;
+                    SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as month_revenue
+                    FROM hoa_don hd 
+                    WHERE hd.id IN (
+                        SELECT DISTINCT ttdh.id_hoa_don
+                        FROM thong_tin_don_hang ttdh
+                        INNER JOIN (
+                            SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian
+                            FROM thong_tin_don_hang
+                            WHERE deleted = 0
+                            GROUP BY id_hoa_don
+                        ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian
+                        WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0
+                    )
+                    AND YEAR(hd.ngay_tao) = YEAR(GETDATE())
+                    AND MONTH(hd.ngay_tao) = MONTH(GETDATE())
+                    AND hd.deleted = 0
+                    """;
 
             BigDecimal monthRevenue = jdbcTemplate.queryForObject(monthRevenueSQL, BigDecimal.class);
             dashboard.put("monthRevenue", monthRevenue);
@@ -1280,13 +1213,9 @@ public class HoaDonService {
                 avgOrderValue = totalRevenue.divide(BigDecimal.valueOf(completedOrders), 2, java.math.RoundingMode.HALF_UP);
             }
             dashboard.put("avgOrderValue", avgOrderValue);
-
-            log.info("Lấy dashboard thống kê hoàn thành (trạng thái cuối cùng): {} đơn hàng, tổng doanh thu: {}",
-                    completedOrders, totalRevenue);
             return dashboard;
 
         } catch (Exception e) {
-            log.error("Lỗi khi lấy dashboard thống kê: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi lấy dashboard thống kê: " + e.getMessage(), "500");
         }
     }
@@ -1354,12 +1283,9 @@ public class HoaDonService {
             response.put("startDate", startDate);
             response.put("endDate", endDate);
             response.put("statistics", result);
-
-            log.info("Thống kê theo period {} (trạng thái cuối cùng hoàn thành): {} đơn hàng", period, result.get("so_don_hang"));
             return response;
 
         } catch (Exception e) {
-            log.error("Lỗi khi lấy thống kê theo period: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi lấy thống kê theo period: " + e.getMessage(), "500");
         }
     }
@@ -1409,13 +1335,9 @@ public class HoaDonService {
             comparison.put("status", status);
             comparison.put("actualData", actualRevenue);
             comparison.put("forecastData", forecastRevenue);
-
-            log.info("So sánh doanh thu: Thực tế {} vs Dự kiến {} ({}%)",
-                    actual, forecast, completionPercentage);
             return comparison;
 
         } catch (Exception e) {
-            log.error("Lỗi khi so sánh doanh thu dự kiến vs thực tế: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi so sánh doanh thu: " + e.getMessage(), "500");
         }
     }
@@ -1575,17 +1497,17 @@ public class HoaDonService {
             if (existingCount > 0) {
                 // Cập nhật mục tiêu hiện có
                 String updateSql = """
-                    UPDATE revenue_targets 
-                    SET target_amount = ?, updated_at = GETDATE() 
-                    WHERE period_type = ? AND target_period = ? AND deleted = 0
-                    """;
+                        UPDATE revenue_targets 
+                        SET target_amount = ?, updated_at = GETDATE() 
+                        WHERE period_type = ? AND target_period = ? AND deleted = 0
+                        """;
                 jdbcTemplate.update(updateSql, targetAmount, period.toLowerCase(), targetPeriod);
             } else {
                 // Tạo mục tiêu mới
                 String insertSql = """
-                    INSERT INTO revenue_targets (period_type, target_period, target_amount, created_at, updated_at, deleted)
-                    VALUES (?, ?, ?, GETDATE(), GETDATE(), 0)
-                    """;
+                        INSERT INTO revenue_targets (period_type, target_period, target_amount, created_at, updated_at, deleted)
+                        VALUES (?, ?, ?, GETDATE(), GETDATE(), 0)
+                        """;
                 jdbcTemplate.update(insertSql, period.toLowerCase(), targetPeriod, targetAmount);
             }
 
@@ -1595,11 +1517,9 @@ public class HoaDonService {
             result.put("targetAmount", targetAmount);
             result.put("action", existingCount > 0 ? "updated" : "created");
 
-            log.info("Cập nhật mục tiêu doanh thu: {} - {} = {}", period, targetPeriod, targetAmount);
             return result;
 
         } catch (Exception e) {
-            log.error("Lỗi khi cập nhật mục tiêu doanh thu: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi cập nhật mục tiêu doanh thu: " + e.getMessage(), "500");
         }
     }
@@ -1637,7 +1557,6 @@ public class HoaDonService {
             return result;
 
         } catch (Exception e) {
-            log.error("Lỗi khi lấy danh sách mục tiêu doanh thu: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi lấy danh sách mục tiêu doanh thu: " + e.getMessage(), "500");
         }
     }
@@ -1648,22 +1567,21 @@ public class HoaDonService {
     private void createRevenueTargetTableIfNotExists() {
         try {
             String createTableSql = """
-                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='revenue_targets' AND xtype='U')
-                CREATE TABLE revenue_targets (
-                    id INT IDENTITY(1,1) PRIMARY KEY,
-                    period_type VARCHAR(20) NOT NULL,
-                    target_period VARCHAR(20) NOT NULL,
-                    target_amount DECIMAL(15,2) NOT NULL,
-                    created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
-                    updated_at DATETIME2 NOT NULL DEFAULT GETDATE(),
-                    deleted BIT NOT NULL DEFAULT 0,
-                    UNIQUE(period_type, target_period)
-                )
-                """;
+                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='revenue_targets' AND xtype='U')
+                    CREATE TABLE revenue_targets (
+                        id INT IDENTITY(1,1) PRIMARY KEY,
+                        period_type VARCHAR(20) NOT NULL,
+                        target_period VARCHAR(20) NOT NULL,
+                        target_amount DECIMAL(15,2) NOT NULL,
+                        created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
+                        updated_at DATETIME2 NOT NULL DEFAULT GETDATE(),
+                        deleted BIT NOT NULL DEFAULT 0,
+                        UNIQUE(period_type, target_period)
+                    )
+                    """;
             jdbcTemplate.execute(createTableSql);
         } catch (Exception e) {
             // Bảng có thể đã tồn tại, bỏ qua lỗi
-            log.debug("Revenue targets table creation: {}", e.getMessage());
         }
     }
 
@@ -1698,22 +1616,13 @@ public class HoaDonService {
     public void sendAddressChangeNotification(Integer orderId, AddressChangeNotificationRequest request) {
         HoaDon hoaDon = hoaDonRepository.findById(orderId)
                 .orElseThrow(() -> new ApiException("404", "Không tìm thấy đơn hàng"));
+        BigDecimal originalTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+        BigDecimal recordedRefundAmount = BigDecimal.ZERO;
+        boolean customerPaidFullBeforeChange = false;
 
         // Kiểm tra xem đơn hàng đã được thay đổi địa chỉ giao hàng trước đây chưa
         // Nếu có record ThongTinDonHang với idTrangThaiDonHang = 8 thì không cho phép thay đổi lần thứ 2
         boolean alreadyAddressChanged = thongTinDonHangRepository.existsByHoaDonIdAndStatusId(hoaDon.getId(), 8);
-        if (alreadyAddressChanged) {
-            throw new ApiException("400",
-                    "Đơn hàng đã được thay đổi địa chỉ giao hàng trước đây. Chỉ được phép thay đổi địa chỉ 1 lần duy nhất.");
-        }
-
-        // Debug logging for shipping fee change (guard against null)
-        if (request.getShippingFeeChange() != null) {
-            System.out.println("[Loai]: " + (request.getShippingFeeChange().getIsExtra() ? "Phụ phí" : "Hoàn phí"));
-            System.out.println("[Phi]: " + request.getShippingFeeChange().getDifference());
-        } else {
-            System.out.println("[Loai]: (no shipping fee change info)");
-        }
         // Lấy thông tin khách hàng - ưu tiên từ hoaDon (cho khách lẻ), sau đó từ idKhachHang
         String customerEmail = null;
         String customerName = "Khách hàng";
@@ -1741,59 +1650,82 @@ public class HoaDonService {
 
         // Nếu vẫn không có email, log warning nhưng vẫn tiếp tục
         if (customerEmail == null || customerEmail.isEmpty()) {
-            log.warn("Order {} has no email address, skipping email notification", hoaDon.getMaHoaDon());
             customerEmail = "";
         }
 
         // Cập nhật phí phụ (hoặc ghi chú khi hoàn phí)
-        if (request.getSurcharge() != null && request.getSurcharge().compareTo(BigDecimal.ZERO) != 0) {
+        if (request != null && request.getSurcharge() != null && request.getSurcharge().compareTo(BigDecimal.ZERO) != 0) {
             hoaDon.setPhuPhi(request.getSurcharge());
         }
 
         // Xử lý từ shippingFeeChange (nếu có - ưu tiên hơn surcharge)
-        if (request.getShippingFeeChange() != null) {
-            if (request.getShippingFeeChange().getIsExtra()) {
-                // === PHỤ PHÍ: Tăng phí ===
-                BigDecimal extraFee = request.getShippingFeeChange().getDifference();
-                if (extraFee != null && extraFee.compareTo(BigDecimal.ZERO) > 0) {
-                    hoaDon.setPhuPhi(extraFee);
-                    hoaDon.setHoanPhi(BigDecimal.ZERO); // Không hoàn phí
+        if (request != null && request.getShippingFeeChange() != null) {
+            AddressChangeNotificationRequest.ShippingFeeChange feeChange = request.getShippingFeeChange();
+            BigDecimal rawDifference = feeChange.getDifference() != null ? feeChange.getDifference() : BigDecimal.ZERO;
+            Boolean isExtraProvided = feeChange.getIsExtra();
+            boolean inferredExtra = Boolean.TRUE.equals(isExtraProvided);
+            boolean inferredRefund = Boolean.FALSE.equals(isExtraProvided);
 
-                    // Cộng phụ phí vào tổng tiền
-                    BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-                    hoaDon.setTongTien(currentTotal.add(extraFee));
-
-                    System.out.println("[AddressChange] Extra fee (phụ phí): " + extraFee + ", new total: " + hoaDon.getTongTien());
+            if (!inferredExtra && !inferredRefund) {
+                if (rawDifference.compareTo(BigDecimal.ZERO) > 0) {
+                    inferredExtra = true;
+                } else if (rawDifference.compareTo(BigDecimal.ZERO) < 0) {
+                    inferredRefund = true;
                 }
-            } else {
+            }
+
+            if (inferredExtra) {
+                // === PHỤ PHÍ: Tăng phí ===
+                BigDecimal extraFee = rawDifference.abs();
+                if (extraFee.compareTo(BigDecimal.ZERO) > 0) {
+                    hoaDon.setPhuPhi(extraFee);
+                    hoaDon.setHoanPhi(BigDecimal.ZERO);
+
+                    BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+                    BigDecimal updatedTotal = currentTotal.add(extraFee);
+                    hoaDon.setTongTien(updatedTotal);
+                    hoaDon.setTongTienSauGiam(updatedTotal);
+
+                    BigDecimal soTienDaThanhToan = hoaDon.getSoTienDaThanhToan() != null ? hoaDon.getSoTienDaThanhToan() : BigDecimal.ZERO;
+                    BigDecimal soTienConLai = updatedTotal.subtract(soTienDaThanhToan);
+                    hoaDon.setSoTienConLai(soTienConLai.compareTo(BigDecimal.ZERO) > 0 ? soTienConLai : BigDecimal.ZERO);
+
+                }
+            } else if (inferredRefund) {
                 // === HOÀN PHÍ: Giảm phí ===
-                BigDecimal refundFee = request.getShippingFeeChange().getDifference().abs();
-                if (refundFee != null && refundFee.compareTo(BigDecimal.ZERO) > 0) {
-                    // Kiểm tra xem khách hàng đã trả đủ tiền chưa
+                BigDecimal refundFee = rawDifference.abs();
+                if (refundFee.compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal soTienDaThanhToan = hoaDon.getSoTienDaThanhToan() != null ? hoaDon.getSoTienDaThanhToan() : BigDecimal.ZERO;
                     BigDecimal tongTien = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
 
                     boolean daTraDuTien = soTienDaThanhToan.compareTo(tongTien) >= 0;
+                    recordedRefundAmount = refundFee;
+                    customerPaidFullBeforeChange = daTraDuTien;
+
+                    hoaDon.setPhuPhi(BigDecimal.ZERO);
+                    hoaDon.setHoanPhi(refundFee);
 
                     if (daTraDuTien) {
-                        // === TH2: Khách đã trả đủ tiền => giữ nguyên tổng tiền, lưu hoàn phí ===
-                        hoaDon.setPhuPhi(BigDecimal.ZERO);
-                        hoaDon.setHoanPhi(refundFee);
-                        System.out.println("[AddressChange] Case 2 - Refund fee (hoàn phí) - Already paid full: " + refundFee + ", kept total: " + tongTien);
+                        BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+                        hoaDon.setTongTienSauGiam(currentTotal);
+                        hoaDon.setSoTienConLai(BigDecimal.ZERO);
                     } else {
-                        // === TH1: Khách chưa trả đủ tiền => trừ hoàn phí khỏi tổng tiền ===
                         BigDecimal newTotal = tongTien.subtract(refundFee);
+                        if (newTotal.compareTo(BigDecimal.ZERO) < 0) {
+                            newTotal = BigDecimal.ZERO;
+                        }
                         hoaDon.setTongTien(newTotal);
-                        hoaDon.setPhuPhi(BigDecimal.ZERO);
-                        hoaDon.setHoanPhi(BigDecimal.ZERO); // Xóa hoàn phí cũ
-                        System.out.println("[AddressChange] Case 1 - Refund fee (hoàn phí) - Not paid full: " + refundFee + ", new total: " + newTotal);
+                        hoaDon.setTongTienSauGiam(newTotal);
+
+                        BigDecimal soTienConLai = newTotal.subtract(soTienDaThanhToan);
+                        hoaDon.setSoTienConLai(soTienConLai.compareTo(BigDecimal.ZERO) > 0 ? soTienConLai : BigDecimal.ZERO);
                     }
                 }
             }
         }
 
         // Lưu thay đổi phí phụ/hoàn phí và tổng tiền
-        hoaDonRepository.save(hoaDon);
+        HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
 
         // Cập nhật trạng thái đơn hàng thành id = 8 (Thay đổi địa chỉ giao hàng)
         try {
@@ -1808,23 +1740,27 @@ public class HoaDonService {
                 thongTinDonHang.setTrangThai(true);
                 thongTinDonHang.setThoiGian(LocalDateTime.now());
                 thongTinDonHang.setDeleted(false);
-
                 thongTinDonHangRepository.save(thongTinDonHang);
-
-                log.info("Updated order {} status to id = 8 (Address Change)", hoaDon.getMaHoaDon());
             }
         } catch (Exception e) {
-            log.error("Error updating order status to id = 8: {}", e.getMessage(), e);
+            throw new RuntimeException("Error updating order status to id = 8", e);
         }
 
-        // Ghép địa chỉ cũ và mới thành chuỗi
-        String oldAddress = buildAddressString(request.getOldAddress());
-        String newAddress = buildAddressString(request.getNewAddress());
-
         // Xử lý thông báo về phụ phí/hoàn phí cho khách hàng
-        handleSurchargeRefundNotification(hoaDon, request.getShippingFeeChange(), customerEmail, customerName);
+        AddressChangeNotificationRequest.ShippingFeeChange feeChange = request != null ? request.getShippingFeeChange() : null;
+        handleSurchargeRefundNotification(
+                savedHoaDon,
+                feeChange,
+                customerEmail,
+                customerName,
+                recordedRefundAmount,
+                customerPaidFullBeforeChange,
+                originalTotal,
+                savedHoaDon.getTongTien() != null ? savedHoaDon.getTongTien() : BigDecimal.ZERO);
 
-        log.info("Updated order {} - surcharge: {}, status: 8", hoaDon.getMaHoaDon(), request.getSurcharge());
+        BigDecimal loggedSurcharge = (request != null && request.getSurcharge() != null)
+                ? request.getSurcharge()
+                : BigDecimal.ZERO;
     }
 
     /**
@@ -1839,74 +1775,101 @@ public class HoaDonService {
             return;
         }
 
-        if (feeChange.getIsExtra()) {
+        BigDecimal rawDifference = feeChange.getDifference() != null ? feeChange.getDifference() : BigDecimal.ZERO;
+        if (rawDifference.compareTo(BigDecimal.ZERO) == 0 && recordedRefundAmount != null
+                && recordedRefundAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+
+        Boolean isExtraProvided = feeChange.getIsExtra();
+        boolean inferredExtra = Boolean.TRUE.equals(isExtraProvided);
+        boolean inferredRefund = Boolean.FALSE.equals(isExtraProvided);
+
+        if (!inferredExtra && !inferredRefund) {
+            if (rawDifference.compareTo(BigDecimal.ZERO) > 0) {
+                inferredExtra = true;
+            } else if (rawDifference.compareTo(BigDecimal.ZERO) < 0) {
+                inferredRefund = true;
+            }
+        }
+
+        boolean hasCustomerEmail = customerEmail != null && !customerEmail.isEmpty();
+
+        if (inferredExtra) {
             // === PHỤ PHÍ: Tăng phí ===
-            BigDecimal surcharge = feeChange.getDifference();
-            log.info("Handling surcharge of {} for order {}", surcharge, hoaDon.getMaHoaDon());
+            BigDecimal surcharge = rawDifference.abs();
 
             if (surcharge.compareTo(new BigDecimal("40000")) < 0) {
                 // Phụ phí < 40k: Gửi quà hiện vật
-                String giftMessage = String.format(
-                        "Cảm ơn bạn! Vì thay đổi địa chỉ giao hàng dẫn đến phí tăng thêm %,d đ, "
-                        + "cửa hàng xin gửi tặng bạn một phần quà hiện vật có giá trị tương ứng. "
-                        + "Vui lòng liên hệ nhân viên bán hàng để nhận quà tại cửa hàng.",
-                        surcharge.longValue()
-                );
-
-                // Gửi email với thông báo về quà hiện vật
-                if (!customerEmail.isEmpty()) {
+                if (hasCustomerEmail) {
                     emailService.sendAddressChangeNotificationEmail(
                             customerEmail, customerName, hoaDon.getMaHoaDon(),
                             null, null, surcharge
                     );
                 }
-                log.info("Surcharge < 40k ({}): Gift will be sent to customer {}", surcharge, customerName);
             } else {
                 // Phụ phí >= 40k: Tạo voucher tương ứng
-                String voucherCode = generateVoucherCode(hoaDon.getId());
+                String voucherCode = generateVoucherCode(hoaDon.getId(), "SURC");
 
                 try {
                     // Tạo PhieuGiamGia mới cho voucher
                     createSurchargeVoucher(hoaDon, surcharge, voucherCode, customerName);
 
-                    String voucherMessage = String.format(
-                            "Cảm ơn bạn! Vì thay đổi địa chỉ giao hàng dẫn đến phí tăng thêm %,d đ, "
-                            + "cửa hàng xin cấp tặng bạn voucher giảm giá trị %,d đ cho lần mua hàng tiếp theo. "
-                            + "Mã voucher: %s",
-                            surcharge.longValue(), surcharge.longValue(), voucherCode
-                    );
-
-                    log.info("Surcharge >= 40k ({}): Voucher {} created for customer {}",
-                            surcharge, voucherCode, customerName);
                 } catch (Exception e) {
-                    log.error("Error creating voucher for surcharge: {}", e.getMessage(), e);
+                    throw new RuntimeException("Failed to create voucher for surcharge", e);
                 }
 
                 // Gửi email với thông báo về voucher
-                if (!customerEmail.isEmpty()) {
+                if (hasCustomerEmail) {
                     emailService.sendAddressChangeNotificationEmail(
                             customerEmail, customerName, hoaDon.getMaHoaDon(),
                             null, null, surcharge
                     );
                 }
             }
-        } else {
+        } else if (inferredRefund) {
             // === HOÀN PHÍ: Giảm phí ===
-            BigDecimal refund = feeChange.getDifference().abs();
-            String refundMessage = String.format(
-                    "Cảm ơn bạn! Thay đổi địa chỉ giao hàng của bạn đã giúp giảm phí vận chuyển. "
-                    + "Hệ thống sẽ hoàn lại %,d đ cho bạn.",
-                    refund.longValue()
-            );
+            BigDecimal refund = (recordedRefundAmount != null && recordedRefundAmount.compareTo(BigDecimal.ZERO) > 0)
+                    ? recordedRefundAmount
+                    : rawDifference.abs();
 
-            log.info("Refund of {} for order {}", refund, hoaDon.getMaHoaDon());
+            if (refund == null || refund.compareTo(BigDecimal.ZERO) <= 0) {
+                return;
+            }
 
-            // Gửi email thông báo hoàn phí
-            if (!customerEmail.isEmpty()) {
-                emailService.sendAddressChangeNotificationEmail(
-                        customerEmail, customerName, hoaDon.getMaHoaDon(),
-                        null, null, refund.negate() // Âm để hiển thị hoàn lại
-                );
+            boolean appliedDirectlyToOrder = !customerPaidFullBeforeChange;
+            boolean rewardAsGift = false;
+            boolean rewardAsVoucher = false;
+            String voucherCode = null;
+            LocalDateTime voucherExpiry = null;
+
+            if (customerPaidFullBeforeChange) {
+                if (refund.compareTo(REFUND_VOUCHER_THRESHOLD) < 0) {
+                    rewardAsGift = true;
+                } else {
+                    rewardAsVoucher = true;
+                    VoucherInfo voucherInfo = createRefundVoucher(hoaDon, refund, customerName);
+                    voucherCode = voucherInfo.code();
+                    voucherExpiry = voucherInfo.expiry();
+                }
+            }
+
+            if (hasCustomerEmail) {
+                RefundNotificationEmailData emailData = RefundNotificationEmailData.builder()
+                        .customerName(customerName)
+                        .customerEmail(customerEmail)
+                        .orderCode(hoaDon.getMaHoaDon())
+                        .refundAmount(refund)
+                        .appliedToOrder(appliedDirectlyToOrder)
+                        .originalTotal(originalTotal)
+                        .newTotal(updatedTotal)
+                        .giftReward(rewardAsGift)
+                        .voucherReward(rewardAsVoucher)
+                        .voucherCode(voucherCode)
+                        .voucherExpiry(voucherExpiry)
+                        .build();
+
+                emailService.sendAddressChangeRefundNotificationEmail(emailData);
             }
         }
     }
@@ -1915,40 +1878,109 @@ public class HoaDonService {
      * Tạo voucher cho phụ phí >= 40k
      */
     private void createSurchargeVoucher(HoaDon hoaDon, BigDecimal voucherValue,
-            String voucherCode, String customerName) {
+                                        String voucherCode, String customerName) {
         try {
-            // Tạo PhieuGiamGia mới
-            PhieuGiamGia voucher = new PhieuGiamGia();
-            voucher.setMaPhieuGiamGia(voucherCode);
-            voucher.setTenPhieuGiamGia("Voucher Bù Phụ Phí - " + customerName);
-            voucher.setLoaiPhieuGiamGia(false); // false = voucher (not percentage)
-            // Thêm các trường khác nếu cần: giá trị, ngày hết hạn, v.v.
+            LocalDateTime issuedAt = LocalDateTime.now();
+            LocalDateTime expiry = issuedAt.plusMonths(3);
 
-            // Lưu voucher
-            // phieuGiamGiaService.save(voucher);
-            // Gán voucher cho khách hàng (nếu hệ thống hỗ trợ)
-            // PhieuGiamGiaCaNhan phieuGiamGiaCaNhan = new PhieuGiamGiaCaNhan();
-            // phieuGiamGiaCaNhan.setIdPhieuGiamGia(voucher);
-            // phieuGiamGiaCaNhan.setIdKhachHang(hoaDon.getIdKhachHang());
-            // phieuGiamGiaCaNhan.setTrangThai(true);
-            log.info("Created voucher {} with value {} for customer {}",
-                    voucherCode, voucherValue, customerName);
+            VoucherInfo info = persistVoucherForOrder(
+                    hoaDon,
+                    voucherValue,
+                    voucherCode,
+                    "Voucher Bù Phụ Phí - " + customerName,
+                    "Voucher bù phụ phí do thay đổi địa chỉ giao hàng",
+                    issuedAt,
+                    expiry);
         } catch (Exception e) {
-            log.error("Error creating voucher: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create voucher for surcharge", e);
+        }
+    }
+
+    private VoucherInfo createRefundVoucher(HoaDon hoaDon, BigDecimal voucherValue, String customerName) {
+        LocalDateTime issuedAt = LocalDateTime.now();
+        LocalDateTime expiry = issuedAt.plusMonths(3);
+        String voucherCode = generateVoucherCode(hoaDon.getId(), "REF");
+
+        return persistVoucherForOrder(
+                hoaDon,
+                voucherValue,
+                voucherCode,
+                "Voucher Hoàn Phí - " + customerName,
+                "Voucher hoàn phí phát sinh do thay đổi địa chỉ giao hàng",
+                issuedAt,
+                expiry);
+    }
+
+    private VoucherInfo persistVoucherForOrder(HoaDon hoaDon,
+                                               BigDecimal voucherValue,
+                                               String voucherCode,
+                                               String voucherName,
+                                               String description,
+                                               LocalDateTime issuedAt,
+                                               LocalDateTime expiry) {
+
+        PhieuGiamGia voucher = new PhieuGiamGia();
+        voucher.setMaPhieuGiamGia(voucherCode);
+        voucher.setTenPhieuGiamGia(voucherName);
+        voucher.setLoaiPhieuGiamGia(true);
+        voucher.setGiaTriGiamGia(voucherValue);
+        voucher.setHoaDonToiThieu(BigDecimal.ZERO);
+        voucher.setSoLuongDung(1);
+        voucher.setNgayBatDau(issuedAt);
+        voucher.setNgayKetThuc(expiry);
+        voucher.setTrangThai(true);
+        voucher.setDeleted(false);
+        voucher.setFeatured(hoaDon.getIdKhachHang() != null);
+        voucher.setMoTa(description);
+        voucher.setCreatedAt(issuedAt);
+        voucher.setUpdatedAt(issuedAt);
+
+        PhieuGiamGia savedVoucher = phieuGiamGiaRepository.save(voucher);
+
+        if (hoaDon.getIdKhachHang() != null) {
+            PhieuGiamGiaCaNhan personalVoucher = new PhieuGiamGiaCaNhan();
+            personalVoucher.setIdKhachHang(hoaDon.getIdKhachHang());
+            personalVoucher.setIdPhieuGiamGia(savedVoucher);
+            personalVoucher.setTenPhieuGiamGiaCaNhan(voucherName);
+            personalVoucher.setNgayNhan(issuedAt);
+            personalVoucher.setNgayHetHan(expiry);
+            personalVoucher.setTrangThai(true);
+            personalVoucher.setDeleted(false);
+            phieuGiamGiaCaNhanRepository.save(personalVoucher);
+        }
+        return new VoucherInfo(voucherCode, expiry);
+    }
+
+    private static final class VoucherInfo {
+        private final String code;
+        private final LocalDateTime expiry;
+
+        private VoucherInfo(String code, LocalDateTime expiry) {
+            this.code = code;
+            this.expiry = expiry;
+        }
+
+        private String code() {
+            return code;
+        }
+
+        private LocalDateTime expiry() {
+            return expiry;
         }
     }
 
     /**
      * Tạo mã voucher duy nhất
      */
-    private String generateVoucherCode(Integer hoaDonId) {
-        return String.format("SURC_%d_%d", hoaDonId, System.currentTimeMillis() % 100000);
+    private String generateVoucherCode(Integer hoaDonId, String prefix) {
+        String normalizedPrefix = (prefix != null && !prefix.isBlank()) ? prefix.toUpperCase() : "VCH";
+        return String.format("%s_%d_%d", normalizedPrefix, hoaDonId, System.currentTimeMillis() % 100000);
     }
 
     /**
      * Ghép các phần của địa chỉ thành chuỗi hoàn chỉnh
      */
+    @SuppressWarnings("unused")
     private String buildAddressString(AddressChangeNotificationRequest.AddressInfo address) {
         if (address == null) {
             return "";

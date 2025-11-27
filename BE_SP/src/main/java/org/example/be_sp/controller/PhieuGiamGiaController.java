@@ -73,4 +73,9 @@ public class PhieuGiamGiaController {
     public ResponseObject<?> getHistory(@PathVariable Integer id) {
         return new ResponseObject<>(service.getHistory(id), "Get history success");
     }
+
+    @GetMapping("/detail/code/{code}")
+    public ResponseObject<?> getByCode(@PathVariable String code) {
+        return new ResponseObject<>(service.getByCodeResponse(code));
+    }
 }

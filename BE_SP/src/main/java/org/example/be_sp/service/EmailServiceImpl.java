@@ -1,5 +1,7 @@
 package org.example.be_sp.service;
 
+import java.time.format.DateTimeFormatter;
+
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -7,8 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.be_sp.config.EmailConfig;
 import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.model.email.PromotionEmailData;
+import org.example.be_sp.model.email.RefundNotificationEmailData;
 import org.example.be_sp.model.email.VoucherEmailData;
-import org.example.be_sp.service.EmailService;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -30,6 +32,7 @@ public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
     private final EmailConfig emailConfig;
+        private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     @Override
     public void sendOrderConfirmationEmail(OrderEmailData orderData) {
@@ -251,6 +254,53 @@ public class EmailServiceImpl implements EmailService {
         } catch (MailException | MessagingException e) {
             log.error("[{}] Failed to send address change notification email to: {} for order: {} - Error: {}",
                     threadName, customerEmail, orderCode, e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Async("emailTaskExecutor")
+    public void sendAddressChangeRefundNotificationEmail(RefundNotificationEmailData data) {
+        String threadName = Thread.currentThread().getName();
+
+        if (!emailConfig.isEnabled()) {
+            log.info("[{}] Email disabled. Skipping address change refund notification for order: {}",
+                    threadName, data.getOrderCode());
+            return;
+        }
+
+        try {
+            log.info("[{}] Sending address change refund notification email to: {} for order: {}",
+                    threadName, data.getCustomerEmail(), data.getOrderCode());
+
+            Context context = new Context();
+            context.setVariable("customerName", data.getCustomerName());
+            context.setVariable("orderCode", data.getOrderCode());
+            context.setVariable("refundAmount", data.getRefundAmount());
+            context.setVariable("appliedToOrder", data.isAppliedToOrder());
+            context.setVariable("originalTotal", data.getOriginalTotal());
+            context.setVariable("newTotal", data.getNewTotal());
+            context.setVariable("giftReward", data.isGiftReward());
+            context.setVariable("voucherReward", data.isVoucherReward());
+            context.setVariable("voucherCode", data.getVoucherCode());
+            context.setVariable("voucherExpiry", data.getVoucherExpiry());
+            context.setVariable("voucherExpiryFormatted",
+                    data.getVoucherExpiry() != null ? data.getVoucherExpiry().format(DATE_FORMATTER) : null);
+            context.setVariable("baseUrl", emailConfig.getBaseUrl());
+
+            String htmlContent = templateEngine.process("email/address-change-refund-notification", context);
+
+            sendHtmlEmail(
+                    data.getCustomerEmail(),
+                    "📍 Thông báo hoàn phí thay đổi địa chỉ - Đơn hàng #" + data.getOrderCode(),
+                    htmlContent
+            );
+
+            log.info("[{}] Address change refund notification email sent successfully to: {}",
+                    threadName, data.getCustomerEmail());
+
+        } catch (MailException | MessagingException e) {
+            log.error("[{}] Failed to send address change refund notification email to: {} for order: {} - Error: {}",
+                    threadName, data.getCustomerEmail(), data.getOrderCode(), e.getMessage(), e);
         }
     }
 

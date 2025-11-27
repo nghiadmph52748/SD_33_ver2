@@ -1,5 +1,20 @@
 <template>
-  <a-card title="Thông Tin Khách Hàng" class="customer-card">
+  <a-card class="customer-card">
+    <template #title>
+      <div class="cust-header">
+        <span>Thông Tin Khách Hàng</span>
+        <a-select
+          :model-value="orderType"
+          placeholder="Loại đơn"
+          style="width: 140px"
+          @change="$emit('change:orderType', $event)"
+        >
+          <a-option value="counter">Tại quầy</a-option>
+          <a-option value="delivery">Giao hàng</a-option>
+        </a-select>
+      </div>
+    </template>
+
     <a-form :model="{}" layout="vertical">
       <a-form-item label="Chọn Khách Hàng">
         <a-select
@@ -31,11 +46,34 @@
         </template>
         Thêm Khách Hàng Mới
       </a-button>
+
+      <!-- Walk-in + Delivery: require contact info -->
+      <template v-if="isWalkIn && orderType === 'delivery'">
+        <a-divider style="margin: 12px 0">Thông tin người nhận (Khách lẻ)</a-divider>
+        <a-row :gutter="[12, 12]">
+          <a-col :span="12">
+            <a-form-item label="Tên người nhận" :validate-status="nameError ? 'error' : undefined" :help="nameError || ''" required>
+              <a-input :model-value="walkInName" placeholder="Nhập tên" @update:model-value="$emit('update:walkInName', $event)" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="Số điện thoại" :validate-status="phoneError ? 'error' : undefined" :help="phoneError || ''" required>
+              <a-input :model-value="walkInPhone" placeholder="Nhập số điện thoại" @update:model-value="$emit('update:walkInPhone', $event)" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="24">
+            <a-form-item label="Email" :validate-status="emailError ? 'error' : undefined" :help="emailError || ''" required>
+              <a-input :model-value="walkInEmail" placeholder="Nhập email" @update:model-value="$emit('update:walkInEmail', $event)" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </template>
     </a-form>
   </a-card>
 </template>
 
 <script setup lang="ts">
+import { computed, watch } from 'vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 
 interface Customer {
@@ -46,15 +84,73 @@ interface Customer {
   address?: string
 }
 
-defineProps<{
+const props = defineProps<{
   customerId: string
   customers: Customer[]
   selectedCustomer: Customer | null
+  orderType: 'counter' | 'delivery'
+  isWalkIn: boolean
+  walkInName?: string
+  walkInEmail?: string
+  walkInPhone?: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'update:customerId', value: string): void
   (e: 'change:customer', value: string): void
   (e: 'add-new'): void
+  (e: 'change:orderType', value: 'counter' | 'delivery'): void
+  (e: 'update:walkInName', value: string): void
+  (e: 'update:walkInEmail', value: string): void
+  (e: 'update:walkInPhone', value: string): void
+  (e: 'update:walkInDeliveryValid', value: boolean): void
 }>()
+
+const nameError = computed(() => {
+  if (!(props.isWalkIn && props.orderType === 'delivery')) return ''
+  const v = (props.walkInName || '').trim()
+  if (!v) return 'Vui lòng nhập tên'
+  if (v.length < 2) return 'Tên tối thiểu 2 ký tự'
+  return ''
+})
+
+const emailError = computed(() => {
+  if (!(props.isWalkIn && props.orderType === 'delivery')) return ''
+  const v = (props.walkInEmail || '').trim()
+  if (!v) return 'Vui lòng nhập email'
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!re.test(v)) return 'Email không hợp lệ'
+  return ''
+})
+
+const phoneError = computed(() => {
+  if (!(props.isWalkIn && props.orderType === 'delivery')) return ''
+  const v = (props.walkInPhone || '').trim()
+  if (!v) return 'Vui lòng nhập SĐT'
+  const re = /^\d{9,11}$/
+  if (!re.test(v)) return 'SĐT phải gồm 9-11 chữ số'
+  return ''
+})
+
+const isValid = computed(() => !nameError.value && !emailError.value && !phoneError.value)
+
+watch(
+  () => ({
+    ot: props.orderType,
+    iw: props.isWalkIn,
+    n: props.walkInName,
+    e: props.walkInEmail,
+    p: props.walkInPhone,
+  }),
+  () => emit('update:walkInDeliveryValid', isValid.value),
+  { deep: true, immediate: true }
+)
 </script>
+
+<style scoped>
+.cust-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+</style>

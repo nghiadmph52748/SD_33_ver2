@@ -178,14 +178,44 @@
             <!-- Voucher Section -->
             <div class="row muted voucher-section">
               <span>Phiếu giảm giá</span>
-              <button class="btn-select-voucher" @click="openVoucherModal">
-                {{
-                  selectedVoucher
-                    ? selectedVoucher.maPhieuGiamGia
-                    : "Chọn phiếu"
-                }}
+              <div class="voucher-actions">
+                <button class="btn-select-voucher" @click="openVoucherModal">
+                  {{
+                    selectedVoucher
+                      ? selectedVoucher.maPhieuGiamGia
+                      : "Chọn phiếu"
+                  }}
+                </button>
+                <button
+                  v-if="selectedVoucher"
+                  class="btn-clear-voucher"
+                  :aria-label="'Xoá voucher đã chọn'"
+                  :title="'Xoá voucher đã chọn'"
+                  :disabled="applyingVoucher"
+                  @click="clearVoucher"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div class="voucher-apply-row">
+              <input
+                  v-model.trim="voucherCode"
+                  type="text"
+                  class="voucher-input"
+                  placeholder="Nhập mã"
+                  :disabled="applyingVoucher || cartCount === 0"
+                  @keydown.enter.prevent="applyVoucherCode"
+              />
+              <button
+                  class="btn-apply-voucher"
+                  :disabled="!voucherCode || applyingVoucher || cartCount === 0"
+                  @click="applyVoucherCode"
+              >
+                {{ applyingVoucher ? "Đang kiểm tra..." : "Áp dụng" }}
               </button>
             </div>
+            <div v-if="voucherError" class="voucher-error">{{ voucherError }}</div>
 
             <!-- Voucher Details -->
             <div v-if="selectedVoucher" class="voucher-details-display">
@@ -298,6 +328,7 @@ import { calculateShippingFeeFromGHN } from "@/services/shippingFeeService";
 import {
   calculateVoucherDiscount,
   validateVoucherUsage,
+  getVoucherByCode,
   type Voucher,
 } from "@/api/vouchers";
 import VoucherModal from "@/components/VoucherModal.vue";
@@ -314,6 +345,9 @@ const { cartCount, cartTotal, cart } = storeToRefs(cartStore);
 const shippingFee = ref(0);
 const isCalculatingShipping = ref(false);
 const selectedVoucher = ref<Voucher | null>(null);
+const voucherCode = ref<string>("");
+const voucherError = ref<string>("");
+const applyingVoucher = ref(false);
 const voucherModalOpen = ref(false);
 const orderConfirmationOpen = ref(false);
 const orderConfirmationInfo = ref<any>({});
@@ -360,6 +394,37 @@ async function updateShippingFee() {
 }
 
 // Voucher functions
+async function applyVoucherCode() {
+  if (!voucherCode.value) return;
+  voucherError.value = '';
+  applyingVoucher.value = true;
+  try {
+    const code = voucherCode.value.trim();
+    if (!code) {
+      voucherError.value = 'Vui lòng nhập mã phiếu';
+      return;
+    }
+    const voucher = await getVoucherByCode(code);
+    if (!voucher) {
+      voucherError.value = 'Mã phiếu không hợp lệ hoặc đã hết hạn';
+      return;
+    }
+    const validation = validateVoucherUsage(voucher, cartTotal.value);
+    if (!validation.valid) {
+      voucherError.value = validation.reason || 'Không thể áp dụng mã này';
+      return;
+    }
+    selectedVoucher.value = voucher;
+    voucherCode.value = voucher.maPhieuGiamGia || code;
+    voucherError.value = '';
+  } catch (err: any) {
+    console.error('applyVoucherCode error:', err);
+    voucherError.value = err?.message || 'Không thể áp dụng mã';
+  } finally {
+    applyingVoucher.value = false;
+  }
+}
+
 function openVoucherModal() {
   voucherModalOpen.value = true;
 }
@@ -370,11 +435,15 @@ function closeVoucherModal() {
 
 function selectVoucher(voucher: Voucher) {
   selectedVoucher.value = voucher;
+  voucherCode.value = voucher?.maPhieuGiamGia || '';
+  voucherError.value = '';
   closeVoucherModal();
 }
 
 function clearVoucher() {
   selectedVoucher.value = null;
+  voucherCode.value = '';
+  voucherError.value = '';
 }
 
 function closeOrderConfirmation() {
@@ -1133,6 +1202,65 @@ async function handleVnpayCheckout() {
 .btn-select-voucher:hover {
   border-color: #f77234;
   background: #fef7f3;
+}
+.btn-clear-voucher {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 16px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+.btn-clear-voucher:hover:not(:disabled) {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: #fff7f7;
+}
+.btn-clear-voucher:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.voucher-apply-row{
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.voucher-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.voucher-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.btn-apply-voucher {
+  background: #111111;
+  color: #fff;
+  border: 1px solid #111111;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-apply-voucher:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.voucher-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: -6px;
+  margin-bottom: 6px;
 }
 .discount {
   color: #f77234 !important;

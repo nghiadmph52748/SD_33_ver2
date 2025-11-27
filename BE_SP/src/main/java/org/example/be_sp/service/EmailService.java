@@ -1,6 +1,7 @@
 package org.example.be_sp.service;
 
 import org.example.be_sp.model.email.OrderEmailData;
+import org.example.be_sp.model.email.RefundNotificationEmailData;
 import org.example.be_sp.model.email.VoucherEmailData;
 import org.example.be_sp.model.email.PromotionEmailData;
 import org.springframework.scheduling.annotation.Async;
@@ -77,4 +78,7 @@ public interface EmailService {
             String newAddress,
             java.math.BigDecimal surcharge
     );
+
+    @Async("emailTaskExecutor")
+    void sendAddressChangeRefundNotificationEmail(RefundNotificationEmailData data);
 }

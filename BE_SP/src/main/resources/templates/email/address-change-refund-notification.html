@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Thông báo hoàn phí thay đổi địa chỉ</title>
+	<style>
+		body {
+			font-family: 'Segoe UI', Arial, sans-serif;
+			background-color: #f4f4f4;
+			margin: 0;
+			padding: 0;
+			color: #333333;
+		}
+
+		.container {
+			max-width: 640px;
+			margin: 24px auto;
+			background-color: #ffffff;
+			border-radius: 8px;
+			overflow: hidden;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+		}
+
+		.header {
+			background: linear-gradient(135deg, #667eea, #764ba2);
+			color: #ffffff;
+			padding: 28px 24px;
+			text-align: center;
+		}
+
+		.header h1 {
+			margin: 0;
+			font-size: 22px;
+		}
+
+		.content {
+			padding: 28px 24px;
+		}
+
+		.section {
+			margin-bottom: 24px;
+			padding: 18px;
+			border-radius: 6px;
+			background-color: #f8f9ff;
+		}
+
+		.section h2 {
+			margin: 0 0 10px;
+			font-size: 16px;
+			color: #4a54e1;
+		}
+
+		.highlight {
+			font-size: 28px;
+			font-weight: bold;
+			color: #4a54e1;
+		}
+
+		.note {
+			margin-top: 16px;
+			padding: 14px;
+			background-color: #fff7e6;
+			border-left: 4px solid #ffa940;
+			border-radius: 4px;
+			font-size: 14px;
+			color: #ad6800;
+		}
+
+		ul {
+			padding-left: 20px;
+		}
+
+		.cta {
+			display: inline-block;
+			margin-top: 24px;
+			background: linear-gradient(135deg, #667eea, #764ba2);
+			color: #ffffff;
+			text-decoration: none;
+			padding: 12px 32px;
+			border-radius: 6px;
+			font-weight: 600;
+		}
+
+		.footer {
+			background-color: #f4f4f4;
+			text-align: center;
+			padding: 16px;
+			font-size: 12px;
+			color: #666666;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<div class="header">
+			<h1>Thông báo hoàn phí thay đổi địa chỉ</h1>
+			<p>Đơn hàng <strong th:text="${orderCode}">HD-0001</strong></p>
+		</div>
+		<div class="content">
+			<p>Xin chào <strong th:text="${customerName}">Khách hàng</strong>,</p>
+			<p>
+				Yêu cầu thay đổi địa chỉ giao hàng của bạn đã được xử lý thành công. Phí vận chuyển mới giúp giảm chi phí,
+				vì vậy chúng tôi sẽ hoàn lại cho bạn số tiền:
+			</p>
+			<div class="section">
+				<h2>Số tiền hoàn lại</h2>
+				<div class="highlight" th:text="${#numbers.formatDecimal(refundAmount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+					50,000 ₫</div>
+			</div>
+
+			<div class="section" th:if="${appliedToOrder}">
+				<h2>Hoàn phí đã trừ trực tiếp vào đơn hàng</h2>
+				<p>Đơn hàng của bạn chưa thanh toán đủ nên chúng tôi đã trừ trực tiếp phần hoàn phí vào giá trị đơn.</p>
+				<ul>
+					<li>Giá trị trước điều chỉnh: <strong
+							th:text="${#numbers.formatDecimal(originalTotal, 0, 'COMMA', 0, 'POINT')} + ' ₫'">1,000,000
+							₫</strong>
+					</li>
+					<li>Giá trị sau điều chỉnh: <strong
+							th:text="${#numbers.formatDecimal(newTotal, 0, 'COMMA', 0, 'POINT')} + ' ₫'">950,000 ₫</strong>
+					</li>
+				</ul>
+			</div>
+
+			<div class="section" th:if="${!appliedToOrder}">
+				<h2>Hoàn phí cho đơn hàng đã thanh toán đủ</h2>
+				<p>
+					Bạn đã thanh toán đủ giá trị đơn hàng, vì vậy phần hoàn phí sẽ được xử lý theo chính sách ưu đãi dành
+					riêng cho bạn:
+				</p>
+				<div class="note" th:if="${giftReward}">
+					🎁 Hoàn phí nhỏ hơn 50.000 ₫, cửa hàng sẽ gửi tặng bạn một phần quà hiện vật tương ứng kèm theo đơn giao
+					hàng kế tiếp.
+				</div>
+				<div class="note" th:if="${voucherReward}">
+					🎟️ Chúng tôi đã tạo tặng bạn voucher giảm giá mã <strong th:text="${voucherCode}">REF_12345</strong> trị
+					giá
+					đúng bằng số tiền hoàn lại. Voucher có hiệu lực đến <strong
+						th:text="${voucherExpiryFormatted}">31/12/2024</strong>.
+				</div>
+			</div>
+
+			<p>Nếu cần hỗ trợ thêm, bạn có thể phản hồi email này hoặc liên hệ tổng đài chăm sóc khách hàng bất cứ lúc nào.
+			</p>
+
+			<a class="cta" th:href="${baseUrl}">Xem đơn hàng</a>
+		</div>
+		<div class="footer">
+			© 2024 GearUp Shop. Cảm ơn bạn đã đồng hành cùng chúng tôi!
+		</div>
+	</div>
+</body>
+
+</html>
