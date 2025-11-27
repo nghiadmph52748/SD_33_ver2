@@ -3,6 +3,7 @@ package org.example.be_sp.repository;
 import java.util.List;
 
 import org.example.be_sp.entity.PhieuGiamGia;
+import org.example.be_sp.model.response.PhieuGiamGiaResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -20,4 +21,6 @@ public interface PhieuGiamGiaRepository extends JpaRepository<PhieuGiamGia, Inte
     
     @Query("select count(h) from HoaDon h where h.idPhieuGiamGia.id = ?1 and h.deleted = false")
     Long countUsageByPhieuGiamGiaId(Integer phieuGiamGiaId);
+
+    PhieuGiamGia findPhieuGiamGiaByMaPhieuGiamGia(String maPhieuGiamGia);
 }

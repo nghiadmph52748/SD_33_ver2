@@ -54,9 +54,19 @@
             :customer-id="currentOrder?.customerId || ''"
             :customers="filteredCustomers"
             :selected-customer="selectedCustomer"
+            :order-type="orderType as any"
+            :is-walk-in="isWalkIn"
+            :walk-in-name="walkInName"
+            :walk-in-email="walkInEmail"
+            :walk-in-phone="walkInPhone"
             @update:customerId="updateCustomerId"
             @change:customer="handleCustomerChange"
             @add-new="showAddCustomerModal = true"
+            @change:orderType="handleOrderTypeChange"
+            @update:walkInName="(v) => (walkInName = v)"
+            @update:walkInEmail="(v) => (walkInEmail = v)"
+            @update:walkInPhone="(v) => (walkInPhone = v)"
+            @update:walkInDeliveryValid="(v) => (walkInDeliveryValid = v)"
           />
           <!-- Payment Section -->
           <PaymentCard
@@ -248,6 +258,9 @@ import {
 import { type BienTheSanPham, type ChatLieu, type DeGiay, type MauSac, type KichThuoc } from '@/api/san-pham/bien-the'
 import { type CouponApiModel } from '@/api/discount-management'
 import { themKhachHangNhanh, type KhachHangResponse } from '@/api/khach-hang'
+import { Message, Modal } from '@arco-design/web-vue'
+import { useUserStore } from '@/store'
+import type { CreateQrSessionPayload } from '@/api/pos'
 import {
   createInvoice,
   deleteInvoice,
@@ -258,10 +271,7 @@ import {
   getPosActiveCoupons,
   getPosActiveCouponsForCustomer,
 } from './services/posService'
-import { type PhieuGiamGiaResponse, type ConfirmBanHangRequest } from '@/api/pos'
 import { calculateShippingFee, calculateShippingFeeFromGHN } from './services/shippingFeeService'
-import { Message, Modal } from '@arco-design/web-vue'
-import { useUserStore } from '@/store'
 import useVoucher from './composables/useVoucher'
 import { useQrScanner } from './composables/useQrScanner'
 import { useCart } from './composables/useCart'
@@ -273,7 +283,6 @@ import useCartActions from './composables/useCartActions'
 import { useOrdersManager } from './composables/useOrdersManager'
 import { useStock } from './composables/useStock'
 import useRealTimePriceSync from './composables/useRealTimePriceSync'
-import type { CreateQrSessionPayload } from '@/api/pos'
 import { createQrPaymentSession, updateQrPaymentSession, cancelQrPaymentSession, generateQrPayment } from './services/qrSessionService'
 import CartTable from './components/CartTable.vue'
 import CustomerCard from './components/CustomerCard.vue'
@@ -672,7 +681,7 @@ const selectVoucher = async (coupon: CouponApiModel) => {
       const couponBroadcastChannel = new BroadcastChannel('coupon-update-channel')
       couponBroadcastChannel.postMessage({
         type: 'COUPON_UPDATED',
-        voucherId: voucherId,
+        voucherId,
         couponCode: coupon.maPhieuGiamGia,
         timestamp: new Date().toISOString(),
       })

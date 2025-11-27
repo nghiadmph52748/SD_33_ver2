@@ -481,15 +481,6 @@ import { useUserStore } from '@/store'
 import { Message } from '@arco-design/web-vue'
 import { useOrderStatusNotification } from '@/composables/useOrderStatusNotification'
 import { useOrderStatusAsyncNotification } from '@/composables/useOrderStatusAsyncNotification'
-import { fetchProvinces, fetchDistrictsByProvinceCode, fetchWardsByDistrictCode } from '../ban-hang-tai-quay/services/locationService'
-import { calculateShippingFeeFromGHN, type ShippingLocation } from '../ban-hang-tai-quay/services/shippingFeeService'
-import {
-  calculateShippingFeeChange,
-  shouldUpdateShippingFee,
-  formatShippingFeeInfo,
-  createFeeUpdatePayload,
-  type ShippingFeeChangeResult,
-} from './services/shippingFeeService'
 import {
   IconArrowLeft,
   IconPrinter,
@@ -502,6 +493,15 @@ import {
   IconEdit,
   IconClose,
 } from '@arco-design/web-vue/es/icon'
+import { fetchProvinces, fetchDistrictsByProvinceCode, fetchWardsByDistrictCode } from '../ban-hang-tai-quay/services/locationService'
+import { calculateShippingFeeFromGHN, type ShippingLocation } from '../ban-hang-tai-quay/services/shippingFeeService'
+import {
+  calculateShippingFeeChange,
+  shouldUpdateShippingFee,
+  formatShippingFeeInfo,
+  createFeeUpdatePayload,
+  type ShippingFeeChangeResult,
+} from './services/shippingFeeService'
 
 const route = useRoute()
 const router = useRouter()
@@ -565,7 +565,7 @@ const isCalculatingShippingFee = ref(false)
 const calculatedShippingFee = ref<number | null>(null)
 const calculatedSurcharge = ref<number | null>(null) // Phụ phí phát sinh = phí mới - phí cũ
 const shippingFeeError = ref<string>('')
-const currentInvoiceLocation = ref<{ thanhPho: string; quan: string; phuong: string; diaChiCuThe: string }>({
+const originalInvoiceLocation = ref<{ thanhPho: string; quan: string; phuong: string; diaChiCuThe: string }>({
   thanhPho: '',
   quan: '',
   phuong: '',
@@ -626,7 +626,7 @@ const formatDateShort = (dateString?: string | Date) => {
     const dateStr = dateString.toString().trim()
     if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // LocalDate format: add time to make it a valid datetime
-      date = new Date(dateStr + 'T00:00:00')
+      date = new Date(`${dateStr}T00:00:00`)
     } else {
       date = new Date(dateString)
     }
@@ -1354,7 +1354,7 @@ const paymentHistory = computed(() => {
           method: 'Tiền mặt',
           amount: tienMat,
           code: paymentCode,
-          userCode: userCode,
+          userCode,
           date: paymentDate,
         })
       } else if (idPTTT === 2 && tienChuyenKhoan > 0) {
@@ -1363,7 +1363,7 @@ const paymentHistory = computed(() => {
           method: 'Chuyển khoản',
           amount: tienChuyenKhoan,
           code: paymentCode,
-          userCode: userCode,
+          userCode,
           date: paymentDate,
         })
       } else if (idPTTT === 3) {
@@ -1380,7 +1380,7 @@ const paymentHistory = computed(() => {
             method: 'Tiền mặt',
             amount: tienMat,
             code: paymentCodeTM,
-            userCode: userCode,
+            userCode,
             date: paymentDate,
           })
         }
@@ -1389,7 +1389,7 @@ const paymentHistory = computed(() => {
             method: 'Chuyển khoản',
             amount: tienChuyenKhoan,
             code: paymentCodeCK,
-            userCode: userCode,
+            userCode,
             date: paymentDate,
           })
         }
@@ -1412,7 +1412,7 @@ const paymentHistory = computed(() => {
     }
 
     history.push({
-      method: method,
+      method,
       amount: soTienDaThanhToan,
       code: `PTT${String(invoice.value.id || 0).padStart(5, '0')}`,
       userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
@@ -1445,7 +1445,21 @@ const invoiceHistory = computed(() => {
       }
     })
 
-    return history
+    // De-duplicate by action + userCode + timestamp to second
+    {
+      const seen = new Set<string>()
+      const deduped: Array<{ action: string; userCode: string; date: string }> = []
+      for (const h of history) {
+        const dt = h.date ? new Date(h.date) : null
+        const secondKey = dt && !isNaN(dt.getTime()) ? dt.toISOString().slice(0, 19) : String(h.date)
+        const key = `${h.action}|${h.userCode}|${secondKey}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          deduped.push(h)
+        }
+      }
+      return deduped
+    }
   }
 
   // Priority 2: Use timelineData from API (fallback)
@@ -1465,7 +1479,21 @@ const invoiceHistory = computed(() => {
       })
     })
 
-    return history
+    // De-duplicate as a safeguard (same key as above)
+    {
+      const seen = new Set<string>()
+      const deduped: Array<{ action: string; userCode: string; date: string }> = []
+      for (const h of history) {
+        const dt = h.date ? new Date(h.date) : null
+        const secondKey = dt && !isNaN(dt.getTime()) ? dt.toISOString().slice(0, 19) : String(h.date)
+        const key = `${h.action}|${h.userCode}|${secondKey}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          deduped.push(h)
+        }
+      }
+      return deduped
+    }
   }
 
   // Fallback: Use ngayTao and ngayThanhToan
@@ -1890,11 +1918,6 @@ const onProvinceChange = async () => {
   districtsList.value = []
   wardsList.value = []
 
-  // Update currentInvoiceLocation when province changes
-  currentInvoiceLocation.value.thanhPho = updateLocationForm.value.thanhPho
-  currentInvoiceLocation.value.quan = ''
-  currentInvoiceLocation.value.phuong = ''
-
   if (!updateLocationForm.value.thanhPho) return
 
   try {
@@ -1919,10 +1942,6 @@ const onProvinceChange = async () => {
 const onDistrictChange = async () => {
   updateLocationForm.value.phuong = ''
   wardsList.value = []
-
-  // Update currentInvoiceLocation when district changes
-  currentInvoiceLocation.value.quan = updateLocationForm.value.quan
-  currentInvoiceLocation.value.phuong = ''
 
   if (!updateLocationForm.value.quan) return
 
@@ -1957,9 +1976,10 @@ const recalculateShippingFee = async () => {
 
   // Don't recalculate if address hasn't changed significantly
   if (
-    updateLocationForm.value.thanhPho === currentInvoiceLocation.value.thanhPho &&
-    updateLocationForm.value.quan === currentInvoiceLocation.value.quan &&
-    updateLocationForm.value.phuong === currentInvoiceLocation.value.phuong
+    updateLocationForm.value.thanhPho === originalInvoiceLocation.value.thanhPho &&
+    updateLocationForm.value.quan === originalInvoiceLocation.value.quan &&
+    updateLocationForm.value.phuong === originalInvoiceLocation.value.phuong &&
+    updateLocationForm.value.diaChiCuThe === originalInvoiceLocation.value.diaChiCuThe
   ) {
     calculatedShippingFee.value = null
     calculatedSurcharge.value = null
@@ -2054,14 +2074,14 @@ const showUpdateModal = async () => {
 
   // Store the original location details for comparison
   // This is used to detect when user changes the address
-  currentInvoiceLocation.value = {
+  originalInvoiceLocation.value = {
     thanhPho: updateLocationForm.value.thanhPho,
     quan: updateLocationForm.value.quan,
     phuong: updateLocationForm.value.phuong,
     diaChiCuThe: updateLocationForm.value.diaChiCuThe,
   }
 
-  console.log('[Modal] Original location set:', currentInvoiceLocation.value)
+  console.log('[Modal] Original location set:', originalInvoiceLocation.value)
 }
 
 /**
@@ -2165,6 +2185,12 @@ const closeUpdateModal = () => {
     phuong: '',
     diaChiCuThe: '',
   }
+  originalInvoiceLocation.value = {
+    thanhPho: '',
+    quan: '',
+    phuong: '',
+    diaChiCuThe: '',
+  }
 }
 
 const handleSaveUpdate = async () => {
@@ -2225,7 +2251,9 @@ const handleSaveUpdate = async () => {
     }
 
     // Detect if address has changed
-    const originalAddress = currentInvoiceLocation.value
+    const normalizeLocationValue = (value?: string) => (value || '').trim()
+
+    const originalAddress = { ...originalInvoiceLocation.value }
     const newAddress = {
       thanhPho: updateLocationForm.value.thanhPho,
       quan: updateLocationForm.value.quan,
@@ -2234,10 +2262,10 @@ const handleSaveUpdate = async () => {
     }
 
     const addressChanged =
-      originalAddress.thanhPho !== newAddress.thanhPho ||
-      originalAddress.quan !== newAddress.quan ||
-      originalAddress.phuong !== newAddress.phuong ||
-      originalAddress.diaChiCuThe !== newAddress.diaChiCuThe
+      normalizeLocationValue(originalAddress.thanhPho) !== normalizeLocationValue(newAddress.thanhPho) ||
+      normalizeLocationValue(originalAddress.quan) !== normalizeLocationValue(newAddress.quan) ||
+      normalizeLocationValue(originalAddress.phuong) !== normalizeLocationValue(newAddress.phuong) ||
+      normalizeLocationValue(originalAddress.diaChiCuThe) !== normalizeLocationValue(newAddress.diaChiCuThe)
 
     // Validation: Check if address change is allowed based on order status
     if (addressChanged) {
@@ -2253,6 +2281,7 @@ const handleSaveUpdate = async () => {
 
     // If address changed, calculate new shipping fee and surcharge/refund
     let feeChangeResult: ShippingFeeChangeResult | null = null
+    let feePayload: ReturnType<typeof createFeeUpdatePayload> | null = null
     if (addressChanged) {
       try {
         const shippingLocation: ShippingLocation = {
@@ -2271,8 +2300,10 @@ const handleSaveUpdate = async () => {
 
         console.log('[AddressChange] Shipping fee change:', feeChangeResult)
 
-        // If address changed, automatically set status to 8 (Thay đổi địa chỉ giao hàng)
-        idTrangThaiDonHang = 8
+        // Address changed: do NOT force status id = 8 here.
+        // Backend endpoint `/send-address-change-notification` will append a single
+        // "Thay đổi địa chỉ giao hàng" record to history. Keeping the current
+        // `idTrangThaiDonHang` avoids creating duplicate history entries.
       } catch (error) {
         console.error('[AddressChange] Error calculating new shipping fee:', error)
         Message.error('Lỗi khi tính phí vận chuyển mới')
@@ -2281,12 +2312,17 @@ const handleSaveUpdate = async () => {
       }
     }
 
+    const statusChanged = (statusName !== currentStatusText)
+
     const updateData: any = {
       // Always include loaiDon and trangThai to ensure they are updated
       loaiDon: updateForm.value.loaiDon,
-      trangThai: trangThai,
-      // Include idTrangThaiDonHang for detailed status update
-      idTrangThaiDonHang: idTrangThaiDonHang,
+      trangThai,
+    }
+
+    // Only include idTrangThaiDonHang when the status actually changed to avoid duplicate history rows
+    if (statusChanged) {
+      updateData.idTrangThaiDonHang = idTrangThaiDonHang
     }
 
     // Only include idNhanVien if we have a valid value
@@ -2322,31 +2358,11 @@ const handleSaveUpdate = async () => {
     }
 
     // Add surcharge/refund info if address changed
-    if (addressChanged && feeChangeResult && shouldUpdateShippingFee(feeChangeResult)) {
-      const feePayload = createFeeUpdatePayload(feeChangeResult)
-
-      // Send both individual fields and complete shippingFeeChange object
-      if (feePayload.phuPhi !== undefined) {
-        updateData.phuPhi = feePayload.phuPhi
+    if (addressChanged && feeChangeResult) {
+      if (shouldUpdateShippingFee(feeChangeResult)) {
+        feePayload = createFeeUpdatePayload(feeChangeResult)
+        console.log('[FeeUpdate] Fee payload:', feePayload)
       }
-      if (feePayload.hoanPhi !== undefined) {
-        updateData.hoanPhi = feePayload.hoanPhi
-      }
-
-      // Also send the complete fee change result for backend processing
-      updateData.shippingFeeChange = {
-        feeChanged: feeChangeResult.feeChanged,
-        currentFee: feeChangeResult.currentFee,
-        newFee: feeChangeResult.newFee,
-        difference: feeChangeResult.difference,
-        isExtra: feeChangeResult.isExtra,
-        amountToUpdate: feeChangeResult.amountToUpdate,
-        description: feeChangeResult.description,
-      }
-
-      console.log('[FeeUpdate] Fee payload:', feePayload)
-      console.log('[FeeUpdate] Shipping fee change:', updateData.shippingFeeChange)
-      console.log('[FeeUpdate] Update data with fees:', updateData)
     }
 
     // Include payment amount when completing order for delivery (online)
@@ -2377,13 +2393,11 @@ const handleSaveUpdate = async () => {
     } catch (axiosError: any) {
       // Axios throws error for non-2xx responses or network errors
       console.error('Axios error:', axiosError)
-      console.error('Axios error response:', axiosError?.response)
-      console.error('Axios error response.data:', axiosError?.response?.data)
 
       // If axios got a response from server (even if error status)
       if (axiosError?.response) {
         const responseData = axiosError.response.data
-        const status = axiosError.response.status
+        const { status } = axiosError.response
 
         // Check if it's actually a success response wrapped in error
         // Backend may return success but axios throws error due to interceptor or other reasons
@@ -2416,6 +2430,60 @@ const handleSaveUpdate = async () => {
 
     // If update succeeded (either from try or catch), refresh data
     if (updateSucceeded) {
+      let addressChangeNotificationSent = false
+
+      if (addressChanged) {
+        const oldAddressPayload = {
+          thanhPho: normalizeLocationValue(originalAddress.thanhPho),
+          quan: normalizeLocationValue(originalAddress.quan),
+          phuong: normalizeLocationValue(originalAddress.phuong),
+          diaChiCuThe: normalizeLocationValue(originalAddress.diaChiCuThe),
+        }
+
+        const newAddressPayload = {
+          thanhPho: normalizeLocationValue(newAddress.thanhPho),
+          quan: normalizeLocationValue(newAddress.quan),
+          phuong: normalizeLocationValue(newAddress.phuong),
+          diaChiCuThe: normalizeLocationValue(newAddress.diaChiCuThe),
+        }
+
+        const shippingChangePayload = feeChangeResult
+          ? {
+              currentFee: Number(feeChangeResult.currentFee ?? invoice.value?.phiVanChuyen ?? 0),
+              newFee: Number(feeChangeResult.newFee ?? updateForm.value.phiGiaoHang ?? 0),
+              difference: Number(feeChangeResult.difference ?? 0),
+              isExtra: feeChangeResult.isExtra ?? (feeChangeResult.difference ?? 0) > 0,
+              description: feeChangeResult.description || 'Thay đổi địa chỉ giao hàng',
+            }
+          : {
+              currentFee: Number(invoice.value?.phiVanChuyen || 0),
+              newFee: Number(updateForm.value.phiGiaoHang || invoice.value?.phiVanChuyen || 0),
+              difference:
+                Number(updateForm.value.phiGiaoHang || invoice.value?.phiVanChuyen || 0) - Number(invoice.value?.phiVanChuyen || 0),
+              isExtra:
+                Number(updateForm.value.phiGiaoHang || invoice.value?.phiVanChuyen || 0) - Number(invoice.value?.phiVanChuyen || 0) > 0,
+              description: 'Thay đổi địa chỉ giao hàng',
+            }
+
+        const addressChangePayload = {
+          oldAddress: oldAddressPayload,
+          newAddress: newAddressPayload,
+          surcharge: feePayload?.phuPhi ?? (shippingChangePayload.isExtra ? shippingChangePayload.difference : 0),
+          shippingFeeChange: shippingChangePayload,
+        }
+        console.log('[AddressChange] Notification payload to send:', addressChangePayload)
+        try {
+          await axios.post(`/api/hoa-don-management/send-address-change-notification/${invoice.value.id}`, addressChangePayload)
+          addressChangeNotificationSent = true
+          console.log('[AddressChange] Notification payload sent:', addressChangePayload)
+        } catch (notificationError: any) {
+          console.error('[AddressChange] Failed to send backend notification:', notificationError)
+          Message.error(
+            notificationError?.response?.data?.message || 'Không thể gửi thông báo thay đổi địa chỉ. Vui lòng thử lại hoặc kiểm tra log.'
+          )
+        }
+      }
+
       // Show loading notification
       const loadingMessage = asyncNotification.showLoadingNotification('Đang cập nhật trạng thái đơn hàng...')
 
@@ -2437,9 +2505,7 @@ const handleSaveUpdate = async () => {
         }
       }
 
-      // Note: Email notification is now handled by backend in the main update process
-      // No need to call it separately here
-      // The backend HoaDonService.sendAddressChangeNotification() handles the email
+      // Email notification + voucher/refund logic handled by backend via the API call above
 
       closeUpdateModal()
 
@@ -2450,7 +2516,7 @@ const handleSaveUpdate = async () => {
 
       // Show appropriate success message based on whether address changed
       let successMessage = `Cập nhật trạng thái thành công: ${updateForm.value.trangThaiText}`
-      if (addressChangeStatusCreated && feeChangeResult) {
+      if (addressChangeStatusCreated && addressChangeNotificationSent && feeChangeResult) {
         const feeInfo = formatShippingFeeInfo(feeChangeResult)
         successMessage = `Cập nhật thành công! ${feeInfo.icon} ${feeInfo.description}. Khách hàng sẽ nhận được thông báo qua email.`
       }

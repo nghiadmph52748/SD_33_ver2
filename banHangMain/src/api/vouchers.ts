@@ -205,3 +205,24 @@ export function getVoucherDetailedInfo(voucher: Voucher): {
     conditions,
   };
 }
+
+
+/**
+ * Get voucher by code
+ * Backend: GET /api/phieu-giam-gia-management/detail/code/{code}
+ */
+export async function getVoucherByCode(code: string): Promise<Voucher | null> {
+  try {
+    if (!code || !code.trim()) return null;
+    const res = await axios.get<HttpResponse<Voucher>>(
+      `/api/phieu-giam-gia-management/detail/code/${encodeURIComponent(
+        code.trim()
+      )}`
+    );
+    const data = (res.data as any)?.data ?? (res.data as any);
+    return (data as Voucher) || null;
+  } catch (error) {
+    console.error("Error fetching voucher by code:", error);
+    return null;
+  }
+}

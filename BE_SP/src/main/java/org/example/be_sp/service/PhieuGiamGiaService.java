@@ -614,4 +614,8 @@ public class PhieuGiamGiaService {
         }
         return null;
     }
+
+    public PhieuGiamGiaResponse getByCodeResponse(String code) {
+        return new PhieuGiamGiaResponse(phieuGiamGiaRepository.findPhieuGiamGiaByMaPhieuGiamGia(code));
+    }
 }
