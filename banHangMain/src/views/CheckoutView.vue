@@ -909,10 +909,8 @@ async function handleCODCheckout() {
               const variantSize = (v.tenKichThuoc || "").trim();
               const itemColor = (item.color || "").trim().toLowerCase();
               const itemSize = item.size?.trim();
-
               return variantColor === itemColor && variantSize === itemSize;
             });
-
             if (matchingVariant?.id) {
               return { ...item, idBienThe: matchingVariant.id };
             }
@@ -920,7 +918,6 @@ async function handleCODCheckout() {
         } catch (error) {
           console.warn("Failed to fetch variant for item:", item.id, error);
         }
-
         // Return item as-is if variant not found (backend may handle it)
         return item;
       })
@@ -933,9 +930,7 @@ async function handleCODCheckout() {
     // Create order with COD payment method (typically ID 1 or 2, adjust based on your backend)
     // COD payment method ID is usually 1 or 2, VNPAY might be 2 or 3
     const codPaymentMethodId = 1; // Adjust this based on your backend
-
-    const orderNotes = `Giao hàng đến: ${deliveryAddress}\nNgười nhận: ${contact.value.fullName}\nSĐT: ${contact.value.phone}\nEmail: ${contact.value.email}`;
-
+    const orderNotes = `Đơn hàng online - Thanh toán COD`;
     const order = await createOrderFromCart(plainCartItems, {
       customerId: userStore.id || undefined,
       paymentMethodId: codPaymentMethodId,
@@ -951,14 +946,11 @@ async function handleCODCheckout() {
         address: deliveryAddress,
       },
     });
-
     if (!order) {
       throw new Error("Không thể tạo đơn hàng");
     }
-
     // Clear cart after successful order
     cartStore.clearCart();
-
     // Redirect to COD success page
     router.push({
       path: "/payment/cod/result",

@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.example.be_sp.entity.HoaDon;
-import org.example.be_sp.entity.ThongTinDonHang;
-import org.example.be_sp.entity.TrangThaiDonHang;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -44,6 +42,7 @@ public class HoaDonResponse {
     private String emailNguoiNhan;
     private LocalDateTime ngayTao;
     private LocalDateTime ngayThanhToan;
+    private BigDecimal phuPhi;
     private Boolean trangThai;
     private Boolean deleted;
     private LocalDateTime createAt;
@@ -94,6 +93,7 @@ public class HoaDonResponse {
         this.emailNguoiNhan = hd.getEmailNguoiNhan();
         this.ngayTao = hd.getNgayTao();
         this.ngayThanhToan = hd.getNgayThanhToan();
+        this.phuPhi = hd.getPhuPhi();
         this.trangThai = hd.getTrangThai();
         this.deleted = hd.getDeleted();
         this.createAt = hd.getCreateAt();
@@ -101,10 +101,10 @@ public class HoaDonResponse {
         this.updateAt = hd.getUpdateAt();
         this.updateBy = hd.getUpdateBy();
         this.soTienDaThanhToan = hd.getSoTienDaThanhToan();
-		  this.thongTinDonHangs = hd.getThongTinDonHangs() != null ? hd.getThongTinDonHangs()
-					 .stream()
-					 .map(ThongTinDonHangResponse::new)
-					 .toList() : new ArrayList<>();
+        this.thongTinDonHangs = hd.getThongTinDonHangs() != null ? hd.getThongTinDonHangs()
+                .stream()
+                .map(ThongTinDonHangResponse::new)
+                .toList() : new ArrayList<>();
         // Mapping chi tiết sản phẩm
         // Mapping danh sách sản phẩm (items cho frontend)
 //        if (hd.getHoaDonChiTiets() != null) {

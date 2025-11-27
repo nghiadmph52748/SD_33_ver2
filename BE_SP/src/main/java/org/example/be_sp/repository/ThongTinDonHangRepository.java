@@ -39,4 +39,10 @@ public interface ThongTinDonHangRepository extends JpaRepository<ThongTinDonHang
         List<ThongTinDonHang> results = findLatestByHoaDonId(hoaDonId, Pageable.ofSize(1));
         return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
     }
+
+    /**
+     * Kiểm tra xem đơn hàng đã có record với trạng thái thay đổi địa chỉ (id = 8) chưa
+     */
+    @Query("SELECT COUNT(t) > 0 FROM ThongTinDonHang t WHERE t.idHoaDon.id = :hoaDonId AND t.idTrangThaiDonHang.id = :statusId AND t.deleted = false")
+    boolean existsByHoaDonIdAndStatusId(@Param("hoaDonId") Integer hoaDonId, @Param("statusId") Integer statusId);
 }

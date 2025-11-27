@@ -123,10 +123,19 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-secondary" @click="emit('close')">
+        <button
+          class="btn btn-secondary"
+          @click="emit('close')"
+          :disabled="props.loading"
+        >
           {{ $t("checkout.cancel") || "Hủy" }}
         </button>
-        <button class="btn btn-primary" @click="emit('confirm')">
+        <button
+          class="btn btn-primary"
+          @click="emit('confirm')"
+          :disabled="props.loading"
+        >
+          <span v-if="props.loading" class="loading-spinner"></span>
           {{ confirmButtonText }}
         </button>
       </div>
@@ -534,6 +543,24 @@ const paymentMethod = computed(() => {
   &:hover:not(:disabled) {
     background: #f5f5f5;
     border-color: #d0d0d0;
+  }
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

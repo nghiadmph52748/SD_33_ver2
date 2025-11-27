@@ -1,5 +1,6 @@
 package org.example.be_sp.controller;
 
+import org.example.be_sp.model.request.AddressChangeNotificationRequest;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
 import org.example.be_sp.model.response.HoaDonResponse;
 import org.example.be_sp.model.response.ResponseObject;
@@ -127,14 +128,14 @@ public class HoaDonController {
     }
 
     /**
-     * API lấy danh sách mục tiêu doanh thu
+     * API gửi thông báo thay đổi địa chỉ giao hàng
      */
-    @GetMapping("/statistics/targets")
-    public ResponseObject<?> getRevenueTargets(
-            @RequestParam(defaultValue = "month") String period,
-            @RequestParam(required = false) String year) {
-        return new ResponseObject<>(hoaDonService.getRevenueTargets(period, year), 
-                                   "Lấy danh sách mục tiêu doanh thu thành công");
+    @PostMapping("/send-address-change-notification/{id}")
+    public ResponseObject<?> sendAddressChangeNotification(
+            @PathVariable Integer id,
+            @RequestBody AddressChangeNotificationRequest request) {
+        hoaDonService.sendAddressChangeNotification(id, request);
+        return new ResponseObject<>(true, null, "Gửi thông báo thay đổi địa chỉ thành công");
     }
 
 }

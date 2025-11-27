@@ -14,11 +14,14 @@ import org.example.be_sp.entity.HoaDon;
 import org.example.be_sp.entity.HoaDonChiTiet;
 import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.NhanVien;
+import org.example.be_sp.entity.PhieuGiamGia;
 import org.example.be_sp.entity.PhuongThucThanhToan;
 import org.example.be_sp.entity.ThongTinDonHang;
 import org.example.be_sp.entity.TimelineDonHang;
+import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.email.OrderEmailData;
+import org.example.be_sp.model.request.AddressChangeNotificationRequest;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
 import org.example.be_sp.model.request.HoaDonChiTietRequest;
 import org.example.be_sp.model.response.HoaDonResponse;
@@ -473,7 +476,7 @@ public class HoaDonService {
             // Status is changing to "Đã xác nhận" - validate and deduct inventory
             validateAndDeductInventory(saved);
         }
-        
+
         // ✅ RESTORE INVENTORY when status changes to "Đã hủy" (idTrangThaiDonHang = 6)
         if (request.getIdTrangThaiDonHang() != null && request.getIdTrangThaiDonHang() == 6) {
             // Status is changing to "Đã hủy" - restore inventory and handle cancellation
@@ -793,7 +796,8 @@ public class HoaDonService {
      * ✅ Handle order cancellation - restore inventory and remove revenue
      *
      * @param hoaDon - The invoice/order to process
-     * @param originalIdTrangThaiDonHang - The original status ID before cancellation
+     * @param originalIdTrangThaiDonHang - The original status ID before
+     * cancellation
      */
     private void handleOrderCancellation(HoaDon hoaDon, Integer originalIdTrangThaiDonHang) {
         try {
@@ -841,7 +845,6 @@ public class HoaDonService {
                 // Update total revenue in the system (e.g., subtract from total revenue)
                 // This is a placeholder - implement your own logic to update total revenue
                 // Example: totalRevenueService.subtractRevenue(totalRevenue);
-
                 log.info("✅ Revenue removed for cancelled order {}: {}", hoaDon.getId(), totalRevenue);
             }
 
@@ -1063,71 +1066,71 @@ public class HoaDonService {
     /**
      * Helper method to send order confirmation email
      */
-    
     /**
-     * Thống kê doanh thu chỉ từ các đơn hàng có trạng thái CUỐI CÙNG là hoàn thành (idTrangThaiDonHang = 7)
+     * Thống kê doanh thu chỉ từ các đơn hàng có trạng thái CUỐI CÙNG là hoàn
+     * thành (idTrangThaiDonHang = 7)
      */
     public Map<String, Object> getCompletedOrderRevenue(String startDate, String endDate, String groupBy) {
         try {
             StringBuilder sql = new StringBuilder();
-            
+
             if ("day".equals(groupBy)) {
                 sql.append("SELECT ")
-                   .append("CONVERT(DATE, hd.ngay_tao) as ngay, ")
-                   .append("COUNT(*) as so_don_hang, ")
-                   .append("SUM(hd.tong_tien_sau_giam) as doanh_thu ")
-                   .append("FROM hoa_don hd ")
-                   .append("WHERE hd.id IN ( ")
-                   .append("    SELECT DISTINCT ttdh.id_hoa_don ")
-                   .append("    FROM thong_tin_don_hang ttdh ")
-                   .append("    INNER JOIN ( ")
-                   .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
-                   .append("        FROM thong_tin_don_hang ")
-                   .append("        WHERE deleted = 0 ")
-                   .append("        GROUP BY id_hoa_don ")
-                   .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
-                   .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
-                   .append(") ")
-                   .append("AND hd.deleted = 0 ");
+                        .append("CONVERT(DATE, hd.ngay_tao) as ngay, ")
+                        .append("COUNT(*) as so_don_hang, ")
+                        .append("SUM(hd.tong_tien_sau_giam) as doanh_thu ")
+                        .append("FROM hoa_don hd ")
+                        .append("WHERE hd.id IN ( ")
+                        .append("    SELECT DISTINCT ttdh.id_hoa_don ")
+                        .append("    FROM thong_tin_don_hang ttdh ")
+                        .append("    INNER JOIN ( ")
+                        .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
+                        .append("        FROM thong_tin_don_hang ")
+                        .append("        WHERE deleted = 0 ")
+                        .append("        GROUP BY id_hoa_don ")
+                        .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
+                        .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
+                        .append(") ")
+                        .append("AND hd.deleted = 0 ");
             } else if ("month".equals(groupBy)) {
                 sql.append("SELECT ")
-                   .append("YEAR(hd.ngay_tao) as nam, ")
-                   .append("MONTH(hd.ngay_tao) as thang, ")
-                   .append("COUNT(*) as so_don_hang, ")
-                   .append("SUM(hd.tong_tien_sau_giam) as doanh_thu ")
-                   .append("FROM hoa_don hd ")
-                   .append("WHERE hd.id IN ( ")
-                   .append("    SELECT DISTINCT ttdh.id_hoa_don ")
-                   .append("    FROM thong_tin_don_hang ttdh ")
-                   .append("    INNER JOIN ( ")
-                   .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
-                   .append("        FROM thong_tin_don_hang ")
-                   .append("        WHERE deleted = 0 ")
-                   .append("        GROUP BY id_hoa_don ")
-                   .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
-                   .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
-                   .append(") ")
-                   .append("AND hd.deleted = 0 ");
+                        .append("YEAR(hd.ngay_tao) as nam, ")
+                        .append("MONTH(hd.ngay_tao) as thang, ")
+                        .append("COUNT(*) as so_don_hang, ")
+                        .append("SUM(hd.tong_tien_sau_giam) as doanh_thu ")
+                        .append("FROM hoa_don hd ")
+                        .append("WHERE hd.id IN ( ")
+                        .append("    SELECT DISTINCT ttdh.id_hoa_don ")
+                        .append("    FROM thong_tin_don_hang ttdh ")
+                        .append("    INNER JOIN ( ")
+                        .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
+                        .append("        FROM thong_tin_don_hang ")
+                        .append("        WHERE deleted = 0 ")
+                        .append("        GROUP BY id_hoa_don ")
+                        .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
+                        .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
+                        .append(") ")
+                        .append("AND hd.deleted = 0 ");
             } else { // year
                 sql.append("SELECT ")
-                   .append("YEAR(hd.ngay_tao) as nam, ")
-                   .append("COUNT(*) as so_don_hang, ")
-                   .append("SUM(hd.tong_tien_sau_giam) as doanh_thu ")
-                   .append("FROM hoa_don hd ")
-                   .append("WHERE hd.id IN ( ")
-                   .append("    SELECT DISTINCT ttdh.id_hoa_don ")
-                   .append("    FROM thong_tin_don_hang ttdh ")
-                   .append("    INNER JOIN ( ")
-                   .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
-                   .append("        FROM thong_tin_don_hang ")
-                   .append("        WHERE deleted = 0 ")
-                   .append("        GROUP BY id_hoa_don ")
-                   .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
-                   .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
-                   .append(") ")
-                   .append("AND hd.deleted = 0 ");
+                        .append("YEAR(hd.ngay_tao) as nam, ")
+                        .append("COUNT(*) as so_don_hang, ")
+                        .append("SUM(hd.tong_tien_sau_giam) as doanh_thu ")
+                        .append("FROM hoa_don hd ")
+                        .append("WHERE hd.id IN ( ")
+                        .append("    SELECT DISTINCT ttdh.id_hoa_don ")
+                        .append("    FROM thong_tin_don_hang ttdh ")
+                        .append("    INNER JOIN ( ")
+                        .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
+                        .append("        FROM thong_tin_don_hang ")
+                        .append("        WHERE deleted = 0 ")
+                        .append("        GROUP BY id_hoa_don ")
+                        .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
+                        .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
+                        .append(") ")
+                        .append("AND hd.deleted = 0 ");
             }
-            
+
             // Thêm điều kiện thời gian nếu có
             if (startDate != null && !startDate.trim().isEmpty()) {
                 sql.append("AND hd.ngay_tao >= ? ");
@@ -1135,20 +1138,20 @@ public class HoaDonService {
             if (endDate != null && !endDate.trim().isEmpty()) {
                 sql.append("AND hd.ngay_tao <= ? ");
             }
-            
+
             if ("day".equals(groupBy)) {
                 sql.append("GROUP BY CONVERT(DATE, hd.ngay_tao) ")
-                   .append("ORDER BY CONVERT(DATE, hd.ngay_tao) DESC");
+                        .append("ORDER BY CONVERT(DATE, hd.ngay_tao) DESC");
             } else if ("month".equals(groupBy)) {
                 sql.append("GROUP BY YEAR(hd.ngay_tao), MONTH(hd.ngay_tao) ")
-                   .append("ORDER BY YEAR(hd.ngay_tao) DESC, MONTH(hd.ngay_tao) DESC");
+                        .append("ORDER BY YEAR(hd.ngay_tao) DESC, MONTH(hd.ngay_tao) DESC");
             } else {
                 sql.append("GROUP BY YEAR(hd.ngay_tao) ")
-                   .append("ORDER BY YEAR(hd.ngay_tao) DESC");
+                        .append("ORDER BY YEAR(hd.ngay_tao) DESC");
             }
-            
+
             List<Map<String, Object>> results;
-            
+
             // Thực hiện query với parameters
             if (startDate != null && !startDate.trim().isEmpty() && endDate != null && !endDate.trim().isEmpty()) {
                 results = jdbcTemplate.queryForList(sql.toString(), startDate, endDate);
@@ -1159,30 +1162,31 @@ public class HoaDonService {
             } else {
                 results = jdbcTemplate.queryForList(sql.toString());
             }
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("data", results);
             response.put("groupBy", groupBy);
             response.put("startDate", startDate);
             response.put("endDate", endDate);
             response.put("totalRecords", results.size());
-            
+
             log.info("Lấy thống kê doanh thu hoàn thành (trạng thái cuối cùng): {} records, groupBy: {}", results.size(), groupBy);
             return response;
-            
+
         } catch (Exception e) {
             log.error("Lỗi khi lấy thống kê doanh thu: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi lấy thống kê doanh thu: " + e.getMessage(), "500");
         }
     }
-    
+
     /**
-     * Thống kê dashboard tổng quan chỉ tính đơn hàng có trạng thái CUỐI CÙNG là hoàn thành
+     * Thống kê dashboard tổng quan chỉ tính đơn hàng có trạng thái CUỐI CÙNG là
+     * hoàn thành
      */
     public Map<String, Object> getCompletedOrderDashboard() {
         try {
             Map<String, Object> dashboard = new HashMap<>();
-            
+
             // Tổng doanh thu từ đơn hàng có trạng thái cuối cùng là hoàn thành
             String totalRevenueSQL = """
                 SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as total_revenue
@@ -1200,10 +1204,10 @@ public class HoaDonService {
                 )
                 AND hd.deleted = 0
                 """;
-            
+
             BigDecimal totalRevenue = jdbcTemplate.queryForObject(totalRevenueSQL, BigDecimal.class);
             dashboard.put("totalRevenue", totalRevenue);
-            
+
             // Số đơn hàng có trạng thái cuối cùng là hoàn thành
             String completedOrdersSQL = """
                 SELECT COUNT(*) as completed_orders
@@ -1221,10 +1225,10 @@ public class HoaDonService {
                 )
                 AND hd.deleted = 0
                 """;
-            
+
             Integer completedOrders = jdbcTemplate.queryForObject(completedOrdersSQL, Integer.class);
             dashboard.put("completedOrders", completedOrders);
-            
+
             // Doanh thu hôm nay (chỉ đơn có trạng thái cuối cùng là hoàn thành)
             String todayRevenueSQL = """
                 SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as today_revenue
@@ -1243,10 +1247,10 @@ public class HoaDonService {
                 AND CONVERT(DATE, hd.ngay_tao) = CONVERT(DATE, GETDATE())
                 AND hd.deleted = 0
                 """;
-                
+
             BigDecimal todayRevenue = jdbcTemplate.queryForObject(todayRevenueSQL, BigDecimal.class);
             dashboard.put("todayRevenue", todayRevenue);
-            
+
             // Doanh thu tháng này (chỉ đơn có trạng thái cuối cùng là hoàn thành)
             String monthRevenueSQL = """
                 SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as month_revenue
@@ -1266,53 +1270,54 @@ public class HoaDonService {
                 AND MONTH(hd.ngay_tao) = MONTH(GETDATE())
                 AND hd.deleted = 0
                 """;
-                
+
             BigDecimal monthRevenue = jdbcTemplate.queryForObject(monthRevenueSQL, BigDecimal.class);
             dashboard.put("monthRevenue", monthRevenue);
-            
+
             // Giá trị trung bình đơn hàng hoàn thành
             BigDecimal avgOrderValue = BigDecimal.ZERO;
             if (completedOrders != null && completedOrders > 0) {
                 avgOrderValue = totalRevenue.divide(BigDecimal.valueOf(completedOrders), 2, java.math.RoundingMode.HALF_UP);
             }
             dashboard.put("avgOrderValue", avgOrderValue);
-            
-            log.info("Lấy dashboard thống kê hoàn thành (trạng thái cuối cùng): {} đơn hàng, tổng doanh thu: {}", 
+
+            log.info("Lấy dashboard thống kê hoàn thành (trạng thái cuối cùng): {} đơn hàng, tổng doanh thu: {}",
                     completedOrders, totalRevenue);
             return dashboard;
-            
+
         } catch (Exception e) {
             log.error("Lỗi khi lấy dashboard thống kê: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi lấy dashboard thống kê: " + e.getMessage(), "500");
         }
     }
-    
+
     /**
-     * Thống kê theo khoảng thời gian cụ thể chỉ tính đơn hàng có trạng thái CUỐI CÙNG là hoàn thành
+     * Thống kê theo khoảng thời gian cụ thể chỉ tính đơn hàng có trạng thái
+     * CUỐI CÙNG là hoàn thành
      */
     public Map<String, Object> getCompletedOrderStatisticsByPeriod(String period, String startDate, String endDate) {
         try {
             StringBuilder sql = new StringBuilder();
             List<Object> params = new ArrayList<>();
-            
+
             sql.append("SELECT ")
-               .append("COUNT(*) as so_don_hang, ")
-               .append("SUM(hd.tong_tien_sau_giam) as doanh_thu, ")
-               .append("AVG(hd.tong_tien_sau_giam) as doanh_thu_trung_binh ")
-               .append("FROM hoa_don hd ")
-               .append("WHERE hd.id IN ( ")
-               .append("    SELECT DISTINCT ttdh.id_hoa_don ")
-               .append("    FROM thong_tin_don_hang ttdh ")
-               .append("    INNER JOIN ( ")
-               .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
-               .append("        FROM thong_tin_don_hang ")
-               .append("        WHERE deleted = 0 ")
-               .append("        GROUP BY id_hoa_don ")
-               .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
-               .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
-               .append(") ")
-               .append("AND hd.deleted = 0 ");
-            
+                    .append("COUNT(*) as so_don_hang, ")
+                    .append("SUM(hd.tong_tien_sau_giam) as doanh_thu, ")
+                    .append("AVG(hd.tong_tien_sau_giam) as doanh_thu_trung_binh ")
+                    .append("FROM hoa_don hd ")
+                    .append("WHERE hd.id IN ( ")
+                    .append("    SELECT DISTINCT ttdh.id_hoa_don ")
+                    .append("    FROM thong_tin_don_hang ttdh ")
+                    .append("    INNER JOIN ( ")
+                    .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
+                    .append("        FROM thong_tin_don_hang ")
+                    .append("        WHERE deleted = 0 ")
+                    .append("        GROUP BY id_hoa_don ")
+                    .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
+                    .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
+                    .append(") ")
+                    .append("AND hd.deleted = 0 ");
+
             // Xử lý các loại period khác nhau
             switch (period.toLowerCase()) {
                 case "today":
@@ -1323,7 +1328,7 @@ public class HoaDonService {
                     break;
                 case "month":
                     sql.append("AND YEAR(hd.ngay_tao) = YEAR(GETDATE()) ")
-                       .append("AND MONTH(hd.ngay_tao) = MONTH(GETDATE()) ");
+                            .append("AND MONTH(hd.ngay_tao) = MONTH(GETDATE()) ");
                     break;
                 case "year":
                     sql.append("AND YEAR(hd.ngay_tao) = YEAR(GETDATE()) ");
@@ -1341,18 +1346,18 @@ public class HoaDonService {
                 default:
                     throw new ApiException("Period không hợp lệ: " + period, "400");
             }
-            
+
             Map<String, Object> result = jdbcTemplate.queryForMap(sql.toString(), params.toArray());
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("period", period);
             response.put("startDate", startDate);
             response.put("endDate", endDate);
             response.put("statistics", result);
-            
+
             log.info("Thống kê theo period {} (trạng thái cuối cùng hoàn thành): {} đơn hàng", period, result.get("so_don_hang"));
             return response;
-            
+
         } catch (Exception e) {
             log.error("Lỗi khi lấy thống kê theo period: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi lấy thống kê theo period: " + e.getMessage(), "500");
@@ -1365,26 +1370,26 @@ public class HoaDonService {
     public Map<String, Object> getRevenueForecastComparison(String period, String startDate, String endDate) {
         try {
             Map<String, Object> comparison = new HashMap<>();
-            
+
             // Lấy doanh thu thực tế
             Map<String, Object> actualRevenue = getActualRevenueByPeriod(period, startDate, endDate);
-            
+
             // Lấy doanh thu dự kiến
             Map<String, Object> forecastRevenue = getForecastRevenueByPeriod(period, startDate, endDate);
-            
+
             // Tính toán phần trăm hoàn thành
             BigDecimal actual = (BigDecimal) actualRevenue.get("totalRevenue");
             BigDecimal forecast = (BigDecimal) forecastRevenue.get("totalTarget");
-            
+
             BigDecimal completionPercentage = BigDecimal.ZERO;
             BigDecimal difference = BigDecimal.ZERO;
             String status = "Chưa có mục tiêu";
-            
+
             if (forecast != null && forecast.compareTo(BigDecimal.ZERO) > 0) {
                 completionPercentage = actual.divide(forecast, 4, java.math.RoundingMode.HALF_UP)
-                                           .multiply(BigDecimal.valueOf(100));
+                        .multiply(BigDecimal.valueOf(100));
                 difference = actual.subtract(forecast);
-                
+
                 if (completionPercentage.compareTo(BigDecimal.valueOf(100)) >= 0) {
                     status = "Đạt mục tiêu";
                 } else if (completionPercentage.compareTo(BigDecimal.valueOf(80)) >= 0) {
@@ -1393,7 +1398,7 @@ public class HoaDonService {
                     status = "Chưa đạt mục tiêu";
                 }
             }
-            
+
             comparison.put("period", period);
             comparison.put("startDate", startDate);
             comparison.put("endDate", endDate);
@@ -1404,74 +1409,74 @@ public class HoaDonService {
             comparison.put("status", status);
             comparison.put("actualData", actualRevenue);
             comparison.put("forecastData", forecastRevenue);
-            
-            log.info("So sánh doanh thu: Thực tế {} vs Dự kiến {} ({}%)", 
+
+            log.info("So sánh doanh thu: Thực tế {} vs Dự kiến {} ({}%)",
                     actual, forecast, completionPercentage);
             return comparison;
-            
+
         } catch (Exception e) {
             log.error("Lỗi khi so sánh doanh thu dự kiến vs thực tế: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi so sánh doanh thu: " + e.getMessage(), "500");
         }
     }
-    
+
     /**
      * Lấy doanh thu thực tế theo period
      */
     private Map<String, Object> getActualRevenueByPeriod(String period, String startDate, String endDate) {
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
-        
+
         sql.append("SELECT ")
-           .append("COUNT(*) as totalOrders, ")
-           .append("COALESCE(SUM(hd.tong_tien_sau_giam), 0) as totalRevenue, ")
-           .append("COALESCE(AVG(hd.tong_tien_sau_giam), 0) as avgOrderValue ")
-           .append("FROM hoa_don hd ")
-           .append("WHERE hd.id IN ( ")
-           .append("    SELECT DISTINCT ttdh.id_hoa_don ")
-           .append("    FROM thong_tin_don_hang ttdh ")
-           .append("    INNER JOIN ( ")
-           .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
-           .append("        FROM thong_tin_don_hang ")
-           .append("        WHERE deleted = 0 ")
-           .append("        GROUP BY id_hoa_don ")
-           .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
-           .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
-           .append(") ")
-           .append("AND hd.deleted = 0 ");
-        
+                .append("COUNT(*) as totalOrders, ")
+                .append("COALESCE(SUM(hd.tong_tien_sau_giam), 0) as totalRevenue, ")
+                .append("COALESCE(AVG(hd.tong_tien_sau_giam), 0) as avgOrderValue ")
+                .append("FROM hoa_don hd ")
+                .append("WHERE hd.id IN ( ")
+                .append("    SELECT DISTINCT ttdh.id_hoa_don ")
+                .append("    FROM thong_tin_don_hang ttdh ")
+                .append("    INNER JOIN ( ")
+                .append("        SELECT id_hoa_don, MAX(thoi_gian) as max_thoi_gian ")
+                .append("        FROM thong_tin_don_hang ")
+                .append("        WHERE deleted = 0 ")
+                .append("        GROUP BY id_hoa_don ")
+                .append("    ) latest ON ttdh.id_hoa_don = latest.id_hoa_don AND ttdh.thoi_gian = latest.max_thoi_gian ")
+                .append("    WHERE ttdh.id_trang_thai_don_hang = 7 AND ttdh.deleted = 0 ")
+                .append(") ")
+                .append("AND hd.deleted = 0 ");
+
         // Thêm điều kiện thời gian dựa trên period
         addPeriodConditions(sql, params, period, startDate, endDate);
-        
+
         Map<String, Object> result = jdbcTemplate.queryForMap(sql.toString(), params.toArray());
         result.put("type", "actual");
         return result;
     }
-    
+
     /**
      * Lấy doanh thu dự kiến theo period
      */
     private Map<String, Object> getForecastRevenueByPeriod(String period, String startDate, String endDate) {
         // Tạo bảng tạm để lưu mục tiêu nếu chưa có
         createRevenueTargetTableIfNotExists();
-        
+
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
-        
+
         sql.append("SELECT ")
-           .append("COALESCE(SUM(target_amount), 0) as totalTarget, ")
-           .append("COUNT(*) as targetCount ")
-           .append("FROM revenue_targets ")
-           .append("WHERE deleted = 0 ");
-        
+                .append("COALESCE(SUM(target_amount), 0) as totalTarget, ")
+                .append("COUNT(*) as targetCount ")
+                .append("FROM revenue_targets ")
+                .append("WHERE deleted = 0 ");
+
         // Thêm điều kiện thời gian cho targets
         addTargetPeriodConditions(sql, params, period, startDate, endDate);
-        
+
         Map<String, Object> result = jdbcTemplate.queryForMap(sql.toString(), params.toArray());
         result.put("type", "forecast");
         return result;
     }
-    
+
     /**
      * Thêm điều kiện thời gian cho query
      */
@@ -1491,12 +1496,12 @@ public class HoaDonService {
                     params.add(Integer.parseInt(parts[1])); // month
                 } else {
                     sql.append("AND YEAR(hd.ngay_tao) = YEAR(GETDATE()) ")
-                       .append("AND MONTH(hd.ngay_tao) = MONTH(GETDATE()) ");
+                            .append("AND MONTH(hd.ngay_tao) = MONTH(GETDATE()) ");
                 }
                 break;
             case "quarter":
                 sql.append("AND YEAR(hd.ngay_tao) = YEAR(GETDATE()) ")
-                   .append("AND DATEPART(QUARTER, hd.ngay_tao) = DATEPART(QUARTER, GETDATE()) ");
+                        .append("AND DATEPART(QUARTER, hd.ngay_tao) = DATEPART(QUARTER, GETDATE()) ");
                 break;
             case "year":
                 if (startDate != null && !startDate.trim().isEmpty()) {
@@ -1518,14 +1523,14 @@ public class HoaDonService {
                 break;
         }
     }
-    
+
     /**
      * Thêm điều kiện thời gian cho targets
      */
     private void addTargetPeriodConditions(StringBuilder sql, List<Object> params, String period, String startDate, String endDate) {
         sql.append("AND period_type = ? ");
         params.add(period.toLowerCase());
-        
+
         switch (period.toLowerCase()) {
             case "month":
                 if (startDate != null && !startDate.trim().isEmpty()) {
@@ -1553,20 +1558,20 @@ public class HoaDonService {
                 break;
         }
     }
-    
+
     /**
      * Cập nhật mục tiêu doanh thu
      */
     public Map<String, Object> setRevenueTarget(String period, String targetDate, BigDecimal targetAmount) {
         try {
             createRevenueTargetTableIfNotExists();
-            
+
             String targetPeriod = formatTargetPeriod(period, targetDate);
-            
+
             // Kiểm tra xem đã có mục tiêu cho period này chưa
             String checkSql = "SELECT COUNT(*) FROM revenue_targets WHERE period_type = ? AND target_period = ? AND deleted = 0";
             Integer existingCount = jdbcTemplate.queryForObject(checkSql, Integer.class, period.toLowerCase(), targetPeriod);
-            
+
             if (existingCount > 0) {
                 // Cập nhật mục tiêu hiện có
                 String updateSql = """
@@ -1583,60 +1588,60 @@ public class HoaDonService {
                     """;
                 jdbcTemplate.update(insertSql, period.toLowerCase(), targetPeriod, targetAmount);
             }
-            
+
             Map<String, Object> result = new HashMap<>();
             result.put("period", period);
             result.put("targetPeriod", targetPeriod);
             result.put("targetAmount", targetAmount);
             result.put("action", existingCount > 0 ? "updated" : "created");
-            
+
             log.info("Cập nhật mục tiêu doanh thu: {} - {} = {}", period, targetPeriod, targetAmount);
             return result;
-            
+
         } catch (Exception e) {
             log.error("Lỗi khi cập nhật mục tiêu doanh thu: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi cập nhật mục tiêu doanh thu: " + e.getMessage(), "500");
         }
     }
-    
+
     /**
      * Lấy danh sách mục tiêu doanh thu
      */
     public Map<String, Object> getRevenueTargets(String period, String year) {
         try {
             createRevenueTargetTableIfNotExists();
-            
+
             StringBuilder sql = new StringBuilder();
             sql.append("SELECT period_type, target_period, target_amount, created_at, updated_at ")
-               .append("FROM revenue_targets ")
-               .append("WHERE period_type = ? AND deleted = 0 ");
-            
+                    .append("FROM revenue_targets ")
+                    .append("WHERE period_type = ? AND deleted = 0 ");
+
             List<Object> params = new ArrayList<>();
             params.add(period.toLowerCase());
-            
+
             if (year != null && !year.trim().isEmpty()) {
                 sql.append("AND target_period LIKE ? ");
                 params.add(year + "%");
             }
-            
+
             sql.append("ORDER BY target_period DESC");
-            
+
             List<Map<String, Object>> targets = jdbcTemplate.queryForList(sql.toString(), params.toArray());
-            
+
             Map<String, Object> result = new HashMap<>();
             result.put("period", period);
             result.put("year", year);
             result.put("targets", targets);
             result.put("totalTargets", targets.size());
-            
+
             return result;
-            
+
         } catch (Exception e) {
             log.error("Lỗi khi lấy danh sách mục tiêu doanh thu: {}", e.getMessage(), e);
             throw new ApiException("Lỗi khi lấy danh sách mục tiêu doanh thu: " + e.getMessage(), "500");
         }
     }
-    
+
     /**
      * Tạo bảng revenue_targets nếu chưa có
      */
@@ -1661,7 +1666,7 @@ public class HoaDonService {
             log.debug("Revenue targets table creation: {}", e.getMessage());
         }
     }
-    
+
     /**
      * Format target period theo định dạng chuẩn
      */
@@ -1684,5 +1689,297 @@ public class HoaDonService {
             default:
                 return targetDate;
         }
+    }
+
+    /**
+     * Gửi thông báo thay đổi địa chỉ giao hàng cho khách hàng Hỗ trợ cả khách
+     * hàng đã đăng ký và khách lẻ
+     */
+    public void sendAddressChangeNotification(Integer orderId, AddressChangeNotificationRequest request) {
+        HoaDon hoaDon = hoaDonRepository.findById(orderId)
+                .orElseThrow(() -> new ApiException("404", "Không tìm thấy đơn hàng"));
+
+        // Kiểm tra xem đơn hàng đã được thay đổi địa chỉ giao hàng trước đây chưa
+        // Nếu có record ThongTinDonHang với idTrangThaiDonHang = 8 thì không cho phép thay đổi lần thứ 2
+        boolean alreadyAddressChanged = thongTinDonHangRepository.existsByHoaDonIdAndStatusId(hoaDon.getId(), 8);
+        if (alreadyAddressChanged) {
+            throw new ApiException("400",
+                    "Đơn hàng đã được thay đổi địa chỉ giao hàng trước đây. Chỉ được phép thay đổi địa chỉ 1 lần duy nhất.");
+        }
+
+        // Debug logging for shipping fee change (guard against null)
+        if (request.getShippingFeeChange() != null) {
+            System.out.println("[Loai]: " + (request.getShippingFeeChange().getIsExtra() ? "Phụ phí" : "Hoàn phí"));
+            System.out.println("[Phi]: " + request.getShippingFeeChange().getDifference());
+        } else {
+            System.out.println("[Loai]: (no shipping fee change info)");
+        }
+        // Lấy thông tin khách hàng - ưu tiên từ hoaDon (cho khách lẻ), sau đó từ idKhachHang
+        String customerEmail = null;
+        String customerName = "Khách hàng";
+
+        // Thử lấy email từ hoaDon trước (cho khách lẻ)
+        if (hoaDon.getEmailNguoiNhan() != null && !hoaDon.getEmailNguoiNhan().isEmpty()) {
+            customerEmail = hoaDon.getEmailNguoiNhan();
+        }
+
+        // Lấy tên từ hoaDon (cho khách lẻ)
+        if (hoaDon.getTenNguoiNhan() != null && !hoaDon.getTenNguoiNhan().isEmpty()) {
+            customerName = hoaDon.getTenNguoiNhan();
+        }
+
+        // Fallback: Nếu không có email từ hoaDon, thử từ idKhachHang
+        if ((customerEmail == null || customerEmail.isEmpty()) && hoaDon.getIdKhachHang() != null) {
+            KhachHang khachHang = hoaDon.getIdKhachHang();
+            if (khachHang.getEmail() != null && !khachHang.getEmail().isEmpty()) {
+                customerEmail = khachHang.getEmail();
+            }
+            if ((customerName.equals("Khách hàng")) && khachHang.getTenKhachHang() != null) {
+                customerName = khachHang.getTenKhachHang();
+            }
+        }
+
+        // Nếu vẫn không có email, log warning nhưng vẫn tiếp tục
+        if (customerEmail == null || customerEmail.isEmpty()) {
+            log.warn("Order {} has no email address, skipping email notification", hoaDon.getMaHoaDon());
+            customerEmail = "";
+        }
+
+        // Cập nhật phí phụ (hoặc ghi chú khi hoàn phí)
+        if (request.getSurcharge() != null && request.getSurcharge().compareTo(BigDecimal.ZERO) != 0) {
+            hoaDon.setPhuPhi(request.getSurcharge());
+        }
+
+        // Xử lý từ shippingFeeChange (nếu có - ưu tiên hơn surcharge)
+        if (request.getShippingFeeChange() != null) {
+            if (request.getShippingFeeChange().getIsExtra()) {
+                // === PHỤ PHÍ: Tăng phí ===
+                BigDecimal extraFee = request.getShippingFeeChange().getDifference();
+                if (extraFee != null && extraFee.compareTo(BigDecimal.ZERO) > 0) {
+                    hoaDon.setPhuPhi(extraFee);
+                    hoaDon.setHoanPhi(BigDecimal.ZERO); // Không hoàn phí
+
+                    // Cộng phụ phí vào tổng tiền
+                    BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+                    hoaDon.setTongTien(currentTotal.add(extraFee));
+
+                    System.out.println("[AddressChange] Extra fee (phụ phí): " + extraFee + ", new total: " + hoaDon.getTongTien());
+                }
+            } else {
+                // === HOÀN PHÍ: Giảm phí ===
+                BigDecimal refundFee = request.getShippingFeeChange().getDifference().abs();
+                if (refundFee != null && refundFee.compareTo(BigDecimal.ZERO) > 0) {
+                    // Kiểm tra xem khách hàng đã trả đủ tiền chưa
+                    BigDecimal soTienDaThanhToan = hoaDon.getSoTienDaThanhToan() != null ? hoaDon.getSoTienDaThanhToan() : BigDecimal.ZERO;
+                    BigDecimal tongTien = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+
+                    boolean daTraDuTien = soTienDaThanhToan.compareTo(tongTien) >= 0;
+
+                    if (daTraDuTien) {
+                        // === TH2: Khách đã trả đủ tiền => giữ nguyên tổng tiền, lưu hoàn phí ===
+                        hoaDon.setPhuPhi(BigDecimal.ZERO);
+                        hoaDon.setHoanPhi(refundFee);
+                        System.out.println("[AddressChange] Case 2 - Refund fee (hoàn phí) - Already paid full: " + refundFee + ", kept total: " + tongTien);
+                    } else {
+                        // === TH1: Khách chưa trả đủ tiền => trừ hoàn phí khỏi tổng tiền ===
+                        BigDecimal newTotal = tongTien.subtract(refundFee);
+                        hoaDon.setTongTien(newTotal);
+                        hoaDon.setPhuPhi(BigDecimal.ZERO);
+                        hoaDon.setHoanPhi(BigDecimal.ZERO); // Xóa hoàn phí cũ
+                        System.out.println("[AddressChange] Case 1 - Refund fee (hoàn phí) - Not paid full: " + refundFee + ", new total: " + newTotal);
+                    }
+                }
+            }
+        }
+
+        // Lưu thay đổi phí phụ/hoàn phí và tổng tiền
+        hoaDonRepository.save(hoaDon);
+
+        // Cập nhật trạng thái đơn hàng thành id = 8 (Thay đổi địa chỉ giao hàng)
+        try {
+            TrangThaiDonHang trangThaiAddressChange = trangThaiDonHangRepository.findById(8)
+                    .orElse(null);
+
+            if (trangThaiAddressChange != null) {
+                // Tạo bản ghi ThongTinDonHang mới với trạng thái 8
+                ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
+                thongTinDonHang.setIdHoaDon(hoaDon);
+                thongTinDonHang.setIdTrangThaiDonHang(trangThaiAddressChange);
+                thongTinDonHang.setTrangThai(true);
+                thongTinDonHang.setThoiGian(LocalDateTime.now());
+                thongTinDonHang.setDeleted(false);
+
+                thongTinDonHangRepository.save(thongTinDonHang);
+
+                log.info("Updated order {} status to id = 8 (Address Change)", hoaDon.getMaHoaDon());
+            }
+        } catch (Exception e) {
+            log.error("Error updating order status to id = 8: {}", e.getMessage(), e);
+        }
+
+        // Ghép địa chỉ cũ và mới thành chuỗi
+        String oldAddress = buildAddressString(request.getOldAddress());
+        String newAddress = buildAddressString(request.getNewAddress());
+
+        // Xử lý thông báo về phụ phí/hoàn phí cho khách hàng
+        handleSurchargeRefundNotification(hoaDon, request.getShippingFeeChange(), customerEmail, customerName);
+
+        log.info("Updated order {} - surcharge: {}, status: 8", hoaDon.getMaHoaDon(), request.getSurcharge());
+    }
+
+    /**
+     * Xử lý thông báo về phụ phí/hoàn phí cho khách hàng - Phụ phí < 40k: Gửi quà hiện vật
+     * - Phụ phí >= 40k: Tạo voucher tương ứng - Hoàn phí: Gửi thông báo hoàn
+     * lại
+     */
+    private void handleSurchargeRefundNotification(HoaDon hoaDon,
+            AddressChangeNotificationRequest.ShippingFeeChange feeChange, String customerEmail, String customerName) {
+        if (feeChange == null || !feeChange.getFeeChanged()) {
+            return;
+        }
+
+        if (feeChange.getIsExtra()) {
+            // === PHỤ PHÍ: Tăng phí ===
+            BigDecimal surcharge = feeChange.getDifference();
+            log.info("Handling surcharge of {} for order {}", surcharge, hoaDon.getMaHoaDon());
+
+            if (surcharge.compareTo(new BigDecimal("40000")) < 0) {
+                // Phụ phí < 40k: Gửi quà hiện vật
+                String giftMessage = String.format(
+                        "Cảm ơn bạn! Vì thay đổi địa chỉ giao hàng dẫn đến phí tăng thêm %,d đ, "
+                        + "cửa hàng xin gửi tặng bạn một phần quà hiện vật có giá trị tương ứng. "
+                        + "Vui lòng liên hệ nhân viên bán hàng để nhận quà tại cửa hàng.",
+                        surcharge.longValue()
+                );
+
+                // Gửi email với thông báo về quà hiện vật
+                if (!customerEmail.isEmpty()) {
+                    emailService.sendAddressChangeNotificationEmail(
+                            customerEmail, customerName, hoaDon.getMaHoaDon(),
+                            null, null, surcharge
+                    );
+                }
+                log.info("Surcharge < 40k ({}): Gift will be sent to customer {}", surcharge, customerName);
+            } else {
+                // Phụ phí >= 40k: Tạo voucher tương ứng
+                String voucherCode = generateVoucherCode(hoaDon.getId());
+
+                try {
+                    // Tạo PhieuGiamGia mới cho voucher
+                    createSurchargeVoucher(hoaDon, surcharge, voucherCode, customerName);
+
+                    String voucherMessage = String.format(
+                            "Cảm ơn bạn! Vì thay đổi địa chỉ giao hàng dẫn đến phí tăng thêm %,d đ, "
+                            + "cửa hàng xin cấp tặng bạn voucher giảm giá trị %,d đ cho lần mua hàng tiếp theo. "
+                            + "Mã voucher: %s",
+                            surcharge.longValue(), surcharge.longValue(), voucherCode
+                    );
+
+                    log.info("Surcharge >= 40k ({}): Voucher {} created for customer {}",
+                            surcharge, voucherCode, customerName);
+                } catch (Exception e) {
+                    log.error("Error creating voucher for surcharge: {}", e.getMessage(), e);
+                }
+
+                // Gửi email với thông báo về voucher
+                if (!customerEmail.isEmpty()) {
+                    emailService.sendAddressChangeNotificationEmail(
+                            customerEmail, customerName, hoaDon.getMaHoaDon(),
+                            null, null, surcharge
+                    );
+                }
+            }
+        } else {
+            // === HOÀN PHÍ: Giảm phí ===
+            BigDecimal refund = feeChange.getDifference().abs();
+            String refundMessage = String.format(
+                    "Cảm ơn bạn! Thay đổi địa chỉ giao hàng của bạn đã giúp giảm phí vận chuyển. "
+                    + "Hệ thống sẽ hoàn lại %,d đ cho bạn.",
+                    refund.longValue()
+            );
+
+            log.info("Refund of {} for order {}", refund, hoaDon.getMaHoaDon());
+
+            // Gửi email thông báo hoàn phí
+            if (!customerEmail.isEmpty()) {
+                emailService.sendAddressChangeNotificationEmail(
+                        customerEmail, customerName, hoaDon.getMaHoaDon(),
+                        null, null, refund.negate() // Âm để hiển thị hoàn lại
+                );
+            }
+        }
+    }
+
+    /**
+     * Tạo voucher cho phụ phí >= 40k
+     */
+    private void createSurchargeVoucher(HoaDon hoaDon, BigDecimal voucherValue,
+            String voucherCode, String customerName) {
+        try {
+            // Tạo PhieuGiamGia mới
+            PhieuGiamGia voucher = new PhieuGiamGia();
+            voucher.setMaPhieuGiamGia(voucherCode);
+            voucher.setTenPhieuGiamGia("Voucher Bù Phụ Phí - " + customerName);
+            voucher.setLoaiPhieuGiamGia(false); // false = voucher (not percentage)
+            // Thêm các trường khác nếu cần: giá trị, ngày hết hạn, v.v.
+
+            // Lưu voucher
+            // phieuGiamGiaService.save(voucher);
+            // Gán voucher cho khách hàng (nếu hệ thống hỗ trợ)
+            // PhieuGiamGiaCaNhan phieuGiamGiaCaNhan = new PhieuGiamGiaCaNhan();
+            // phieuGiamGiaCaNhan.setIdPhieuGiamGia(voucher);
+            // phieuGiamGiaCaNhan.setIdKhachHang(hoaDon.getIdKhachHang());
+            // phieuGiamGiaCaNhan.setTrangThai(true);
+            log.info("Created voucher {} with value {} for customer {}",
+                    voucherCode, voucherValue, customerName);
+        } catch (Exception e) {
+            log.error("Error creating voucher: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create voucher for surcharge", e);
+        }
+    }
+
+    /**
+     * Tạo mã voucher duy nhất
+     */
+    private String generateVoucherCode(Integer hoaDonId) {
+        return String.format("SURC_%d_%d", hoaDonId, System.currentTimeMillis() % 100000);
+    }
+
+    /**
+     * Ghép các phần của địa chỉ thành chuỗi hoàn chỉnh
+     */
+    private String buildAddressString(AddressChangeNotificationRequest.AddressInfo address) {
+        if (address == null) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        if (address.getDiaChiCuThe() != null && !address.getDiaChiCuThe().isEmpty()) {
+            sb.append(address.getDiaChiCuThe());
+        }
+
+        if (address.getPhuong() != null && !address.getPhuong().isEmpty()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(address.getPhuong());
+        }
+
+        if (address.getQuan() != null && !address.getQuan().isEmpty()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(address.getQuan());
+        }
+
+        if (address.getThanhPho() != null && !address.getThanhPho().isEmpty()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(address.getThanhPho());
+        }
+
+        return sb.toString();
     }
 }

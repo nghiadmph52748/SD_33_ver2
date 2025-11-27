@@ -206,6 +206,54 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    @Async("emailTaskExecutor")
+    public void sendAddressChangeNotificationEmail(
+            String customerEmail,
+            String customerName,
+            String orderCode,
+            String oldAddress,
+            String newAddress,
+            java.math.BigDecimal surcharge) {
+        
+        String threadName = Thread.currentThread().getName();
+
+        if (!emailConfig.isEnabled()) {
+            log.info("[{}] Email disabled. Skipping address change notification for order: {}",
+                    threadName, orderCode);
+            return;
+        }
+
+        try {
+            log.info("[{}] Sending address change notification email to: {} for order: {}",
+                    threadName, customerEmail, orderCode);
+
+            Context context = new Context();
+            context.setVariable("customerName", customerName);
+            context.setVariable("orderCode", orderCode);
+            context.setVariable("oldAddress", oldAddress);
+            context.setVariable("newAddress", newAddress);
+            context.setVariable("surcharge", surcharge);
+            context.setVariable("surchargeFormatted", String.format("%,d", surcharge.toBigInteger()));
+            context.setVariable("baseUrl", emailConfig.getBaseUrl());
+
+            String htmlContent = templateEngine.process("email/address-change-notification", context);
+
+            sendHtmlEmail(
+                    customerEmail,
+                    "📍 Thông báo thay đổi địa chỉ giao hàng - Đơn hàng #" + orderCode,
+                    htmlContent
+            );
+
+            log.info("[{}] Address change notification email sent successfully to: {}",
+                    threadName, customerEmail);
+
+        } catch (MailException | MessagingException e) {
+            log.error("[{}] Failed to send address change notification email to: {} for order: {} - Error: {}",
+                    threadName, customerEmail, orderCode, e.getMessage(), e);
+        }
+    }
+
     /**
      * Helper method to send HTML email
      *

@@ -55,4 +55,26 @@ public interface EmailService {
      */
     @Async("emailTaskExecutor")
     void sendInventoryShortageNotificationEmail(OrderEmailData orderData);
+
+    /**
+     * Send address change notification email to customer
+     * Informs customer about address change and surcharge amount
+     * Executes asynchronously to avoid blocking the API response
+     *
+     * @param customerEmail Customer email address
+     * @param customerName Customer name
+     * @param orderCode Order code/ID
+     * @param oldAddress Old delivery address
+     * @param newAddress New delivery address
+     * @param surcharge Surcharge amount in VND
+     */
+    @Async("emailTaskExecutor")
+    void sendAddressChangeNotificationEmail(
+            String customerEmail,
+            String customerName,
+            String orderCode,
+            String oldAddress,
+            String newAddress,
+            java.math.BigDecimal surcharge
+    );
 }

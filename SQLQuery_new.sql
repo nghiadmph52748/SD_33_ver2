@@ -122,6 +122,8 @@ CREATE TABLE [dbo].[hoa_don](
 	[trang_thai_thanh_toan] [int] NULL,
 	[so_tien_da_thanh_toan] [decimal](18, 2) NULL,
 	[so_tien_con_lai] [decimal](18, 2) NULL,
+	[phu_phi] [decimal](18, 2) NULL DEFAULT 0,
+	[hoan_phi] [decimal](18, 2) NULL DEFAULT 0,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
@@ -148,6 +150,8 @@ SELECT
     hd.tong_tien,
     hd.tong_tien_sau_giam,
     hd.phi_van_chuyen,
+    hd.phu_phi,
+	 hd.hoan_phi,
     hd.ghi_chu,
     hd.trang_thai,
     hd.deleted,
@@ -1489,6 +1493,8 @@ GO
 INSERT [dbo].[trang_thai_don_hang] ([id], [ten_trang_thai_don_hang], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (6, N'Đã huỷ', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 INSERT [dbo].[trang_thai_don_hang] ([id], [ten_trang_thai_don_hang], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (7, N'Hoàn thành', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+GO
+INSERT [dbo].[trang_thai_don_hang] ([id], [ten_trang_thai_don_hang], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (8, N'Thay đổi địa chỉ giao hàng', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[trang_thai_don_hang] OFF
 GO

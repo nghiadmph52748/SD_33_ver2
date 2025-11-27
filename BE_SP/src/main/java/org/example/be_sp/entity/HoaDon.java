@@ -133,6 +133,12 @@ public class HoaDon {
     @Column(name = "so_tien_con_lai", precision = 18, scale = 2)
     private BigDecimal soTienConLai;
 
+    @Column(name = "phu_phi", precision = 18, scale = 2)
+    private BigDecimal phuPhi;
+
+    @Column(name = "hoan_phi", precision = 18, scale = 2)
+    private BigDecimal hoanPhi;
+
     @OneToMany(mappedBy = "idHoaDon")
     @JsonManagedReference
     private Set<HinhThucThanhToan> hinhThucThanhToans;

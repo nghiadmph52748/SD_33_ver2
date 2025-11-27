@@ -249,6 +249,27 @@
                   </div>
                   <span class="summary-value discount">-{{ formatCurrency(calculatedDiscountAmount) }}</span>
                 </div>
+                <div class="summary-row" v-if="invoice?.phiVanChuyen || 0 > 0">
+                  <div class="summary-label-wrapper">
+                    <icon-send class="summary-icon" />
+                    <span class="summary-label">Phí giao hàng:</span>
+                  </div>
+                  <span class="summary-value">{{ formatCurrency(invoice?.phiVanChuyen || 0) }}</span>
+                </div>
+                <div class="summary-row" v-if="(invoice?.phuPhi || 0) > 0">
+                  <div class="summary-label-wrapper">
+                    <icon-send class="summary-icon" />
+                    <span class="summary-label">Phụ phí phát sinh:</span>
+                  </div>
+                  <span class="summary-value surcharge">+{{ formatCurrency(invoice?.phuPhi || 0) }}</span>
+                </div>
+                <div class="summary-row" v-if="(invoice?.hoanPhi || 0) > 0">
+                  <div class="summary-label-wrapper">
+                    <icon-send class="summary-icon" />
+                    <span class="summary-label">Hoàn phí:</span>
+                  </div>
+                  <span class="summary-value refund">-{{ formatCurrency(invoice?.hoanPhi || 0) }}</span>
+                </div>
                 <div class="summary-row total-row">
                   <div class="summary-label-wrapper">
                     <icon-check-circle class="summary-icon" />
@@ -327,7 +348,20 @@
             <a-form-item label="Số điện thoại">
               <a-input v-model="updateForm.soDienThoaiNguoiNhan" placeholder="Nhập số điện thoại" />
             </a-form-item>
-            <a-divider orientation="left">Địa chỉ giao hàng</a-divider>
+            <a-form-item label="Email">
+              <a-input v-model="updateForm.emailNguoiNhan" placeholder="Nhập email" type="email" />
+            </a-form-item>
+            <a-form-item label="Ghi chú">
+              <a-textarea v-model="updateForm.ghiChu" placeholder="Nhập ghi chú (nếu có)" :auto-size="{ minRows: 2, maxRows: 4 }" />
+            </a-form-item>
+          </a-form>
+        </a-tab-pane>
+        <a-tab-pane key="address" title="Địa Chỉ Giao Hàng">
+          <a-form :model="updateForm" layout="vertical" class="update-form">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px">
+              <span style="font-weight: 500">Thông tin địa chỉ</span>
+              <a-tag v-if="addressAlreadyChanged" color="red">{{ addressDisableReason }}</a-tag>
+            </div>
             <a-row :gutter="[12, 12]">
               <a-col :span="12">
                 <a-form-item label="Tỉnh/Thành phố" required>
@@ -339,6 +373,7 @@
                     option-label-prop="label"
                     allow-search
                     allow-clear
+                    :disabled="addressAlreadyChanged"
                   />
                 </a-form-item>
               </a-col>
@@ -352,7 +387,7 @@
                     option-label-prop="label"
                     allow-search
                     allow-clear
-                    :disabled="!updateLocationForm.thanhPho"
+                    :disabled="!updateLocationForm.thanhPho || addressAlreadyChanged"
                   />
                 </a-form-item>
               </a-col>
@@ -365,47 +400,63 @@
                     option-label-prop="label"
                     allow-search
                     allow-clear
-                    :disabled="!updateLocationForm.quan"
+                    :disabled="!updateLocationForm.quan || addressAlreadyChanged"
                   />
                 </a-form-item>
               </a-col>
               <a-col :span="12">
                 <a-form-item label="Địa chỉ cụ thể" required>
-                  <a-input v-model="updateLocationForm.diaChiCuThe" placeholder="Số nhà, đường..." />
-                </a-form-item>
-              </a-col>
-              <a-col :span="24">
-                <a-form-item label="Phí giao hàng (VNĐ)" v-if="calculatedShippingFee !== null">
-                  <a-space direction="vertical" fill>
-                    <div v-if="isCalculatingShippingFee" class="shipping-fee-loading">
-                      <a-spin size="small" />
-                      <span style="margin-left: 8px">Đang tính phí giao hàng...</span>
-                    </div>
-                    <div v-else-if="shippingFeeError" class="shipping-fee-error">
-                      <span style="color: #f53f3f">{{ shippingFeeError }}</span>
-                    </div>
-                    <div v-else class="shipping-fee-info">
-                      <a-input-number
-                        v-model="updateForm.phiGiaoHang"
-                        :min="0"
-                        :step="1000"
-                        :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
-                        :parser="(value) => value?.replace(/[^\d]/g, '') as any"
-                        style="width: 100%"
-                      />
-                      <div style="font-size: 12px; color: #86909c; margin-top: 4px">
-                        Giá được tính từ {{ currentInvoiceLocation.thanhPho }}, {{ currentInvoiceLocation.quan }} đến địa chỉ mới
-                      </div>
-                    </div>
-                  </a-space>
+                  <a-input v-model="updateLocationForm.diaChiCuThe" placeholder="Số nhà, đường..." :disabled="addressAlreadyChanged" />
                 </a-form-item>
               </a-col>
             </a-row>
-            <a-form-item label="Email">
-              <a-input v-model="updateForm.emailNguoiNhan" placeholder="Nhập email" type="email" />
+            <a-divider />
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px">
+              <span style="font-weight: 500">Phí giao hàng</span>
+            </div>
+            <a-form-item label="Phí giao hàng (VNĐ)" v-if="calculatedShippingFee !== null">
+              <a-space direction="vertical" fill>
+                <div v-if="isCalculatingShippingFee" class="shipping-fee-loading">
+                  <a-spin size="small" />
+                  <span style="margin-left: 8px">Đang tính phí giao hàng...</span>
+                </div>
+                <div v-else-if="shippingFeeError" class="shipping-fee-error">
+                  <span style="color: #f53f3f">{{ shippingFeeError }}</span>
+                </div>
+                <div v-else class="shipping-fee-info">
+                  <a-input-number
+                    v-model="updateForm.phiGiaoHang"
+                    :min="0"
+                    :step="1000"
+                    :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
+                    :parser="(value) => value?.replace(/[^\d]/g, '') as any"
+                    style="width: 100%"
+                  />
+                </div>
+              </a-space>
             </a-form-item>
-            <a-form-item label="Ghi chú">
-              <a-textarea v-model="updateForm.ghiChu" placeholder="Nhập ghi chú (nếu có)" :auto-size="{ minRows: 2, maxRows: 4 }" />
+            <a-form-item label="Phụ phí phát sinh (VNĐ)" v-if="calculatedSurcharge !== null">
+              <a-input-number
+                v-model="calculatedSurcharge"
+                disabled
+                :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
+                :parser="(value) => value?.replace(/[^\d]/g, '') as any"
+                :style="{
+                  width: '100%',
+                  color: calculatedSurcharge > 0 ? '#f53f3f' : '#86909c',
+                  fontWeight: calculatedSurcharge > 0 ? 'bold' : 'normal',
+                }"
+              />
+              <div
+                :style="{
+                  fontSize: '12px',
+                  color: calculatedSurcharge > 0 ? '#f53f3f' : '#86909c',
+                  marginTop: '4px',
+                }"
+              >
+                <span v-if="calculatedSurcharge > 0">Phí phát sinh do thay đổi địa chỉ giao hàng (sẽ được cộng vào hóa đơn)</span>
+                <span v-else-if="calculatedSurcharge < 0">Hoàn lại phí do thay đổi địa chỉ giao hàng (sẽ trừ khỏi hóa đơn)</span>
+              </div>
             </a-form-item>
           </a-form>
         </a-tab-pane>
@@ -432,6 +483,13 @@ import { useOrderStatusNotification } from '@/composables/useOrderStatusNotifica
 import { useOrderStatusAsyncNotification } from '@/composables/useOrderStatusAsyncNotification'
 import { fetchProvinces, fetchDistrictsByProvinceCode, fetchWardsByDistrictCode } from '../ban-hang-tai-quay/services/locationService'
 import { calculateShippingFeeFromGHN, type ShippingLocation } from '../ban-hang-tai-quay/services/shippingFeeService'
+import {
+  calculateShippingFeeChange,
+  shouldUpdateShippingFee,
+  formatShippingFeeInfo,
+  createFeeUpdatePayload,
+  type ShippingFeeChangeResult,
+} from './services/shippingFeeService'
 import {
   IconArrowLeft,
   IconPrinter,
@@ -505,11 +563,26 @@ const wardsList = ref<any[]>([])
 const isLoadingAddress = ref(false)
 const isCalculatingShippingFee = ref(false)
 const calculatedShippingFee = ref<number | null>(null)
+const calculatedSurcharge = ref<number | null>(null) // Phụ phí phát sinh = phí mới - phí cũ
 const shippingFeeError = ref<string>('')
-const currentInvoiceLocation = ref<{ thanhPho: string; quan: string; phuong: string }>({
+const currentInvoiceLocation = ref<{ thanhPho: string; quan: string; phuong: string; diaChiCuThe: string }>({
   thanhPho: '',
   quan: '',
   phuong: '',
+  diaChiCuThe: '',
+})
+// Track if address has already been changed
+const addressAlreadyChanged = ref(false)
+
+// Computed property to show why address is disabled
+const addressDisableReason = computed(() => {
+  if (!addressAlreadyChanged.value) return null
+  
+  const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
+  if (currentStatusText === 'Đã huỷ' || currentStatusText === 'Hoàn thành') {
+    return `Đơn hàng ở trạng thái "${currentStatusText}" - Không thể thay đổi`
+  }
+  return 'Đã thay đổi - Không thể chỉnh sửa'
 })
 
 // Helper functions
@@ -1540,6 +1613,7 @@ const fetchInvoiceDetail = async () => {
       if (orderInfoResponse.data && orderInfoResponse.data.data) {
         const orderInfo = orderInfoResponse.data.data
         invoice.value = orderInfo.idHoaDon
+        console.log('[InvoiceData] Loaded from orderInfo:', invoice.value)
         loading.value = false
         return // Thành công, không cần fallback
       }
@@ -1552,6 +1626,7 @@ const fetchInvoiceDetail = async () => {
 
     if (invoiceResponse.data && invoiceResponse.data.data) {
       invoice.value = invoiceResponse.data.data
+      console.log('[InvoiceData] Loaded from hoa-don API:', invoice.value)
 
       // Thử lấy thông tin đơn hàng từ API thông tin đơn hàng mới (không bắt buộc)
       try {
@@ -1635,6 +1710,12 @@ const fetchInvoiceDetail = async () => {
         ],
       }
     }
+
+    // Don't need to fetch thongTinDonHangs separately - we use timelineData instead
+    // The timeline already contains status change information including address changes (status id = 8)
+
+    // Check if address has already been changed when loading the invoice
+    checkAddressChangeStatus()
   } catch (error: any) {
     // Use sample data on error
     invoice.value = {
@@ -1666,6 +1747,9 @@ const fetchInvoiceDetail = async () => {
         },
       ],
     }
+
+    // Check if address has already been changed
+    checkAddressChangeStatus()
   } finally {
     loading.value = false
   }
@@ -1681,6 +1765,52 @@ const formatDate = (dateString: string) => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+/**
+ * Check if the delivery address has already been changed
+ * Sets addressAlreadyChanged ref to true if address change is detected
+ * Also checks if order is in a status where address change is not allowed
+ */
+const checkAddressChangeStatus = () => {
+  addressAlreadyChanged.value = false
+  
+  console.log('[AddressCheck] Starting check...')
+  console.log('[AddressCheck] invoice.thongTinDonHangs:', invoice.value?.thongTinDonHangs)
+  console.log('[AddressCheck] Current highest priority status:', getHighestPriorityStatusFromInvoice())
+
+  // Check 1: Order status restrictions - cannot change address if Cancelled (id=6) or Completed (id=7)
+  const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
+  if (currentStatusText === 'Đã huỷ' || currentStatusText === 'Hoàn thành') {
+    console.log('[AddressCheck] ✗ Order is in final status (Cancelled or Completed), address changes not allowed')
+    addressAlreadyChanged.value = true
+    return
+  }
+
+  // Check 2: Check invoice.thongTinDonHangs if available
+  // Look for tenTrangThaiDonHang field containing "Thay đổi địa chỉ giao hàng"
+  if (invoice.value?.thongTinDonHangs && Array.isArray(invoice.value.thongTinDonHangs)) {
+    console.log('[AddressCheck] Found thongTinDonHangs, checking...')
+    
+    // Check each item for address change status
+    for (let i = 0; i < invoice.value.thongTinDonHangs.length; i++) {
+      const item = invoice.value.thongTinDonHangs[i]
+      const statusName = item.tenTrangThaiDonHang || ''
+      const statusId = item.idTrangThaiDonHang?.id
+      
+      console.log(`[AddressCheck] Item ${i}: statusName="${statusName}", statusId=${statusId}`)
+      
+      // Check if status is address change (either by id=8 or by name)
+      if (statusId === 8 || statusName === 'Thay đổi địa chỉ giao hàng' || statusName.includes('Thay đổi địa chỉ')) {
+        console.log('[AddressCheck] ✓ Address change detected!', { statusId, statusName })
+        addressAlreadyChanged.value = true
+        return
+      }
+    }
+    console.log('[AddressCheck] ✗ No address change found in thongTinDonHangs')
+  }
+
+  console.log('[AddressCheck] Final result:', addressAlreadyChanged.value ? '✓ DISABLED' : '✗ ENABLED')
 }
 
 const formatCurrency = (amount: number) => {
@@ -1760,6 +1890,11 @@ const onProvinceChange = async () => {
   districtsList.value = []
   wardsList.value = []
 
+  // Update currentInvoiceLocation when province changes
+  currentInvoiceLocation.value.thanhPho = updateLocationForm.value.thanhPho
+  currentInvoiceLocation.value.quan = ''
+  currentInvoiceLocation.value.phuong = ''
+
   if (!updateLocationForm.value.thanhPho) return
 
   try {
@@ -1784,6 +1919,10 @@ const onProvinceChange = async () => {
 const onDistrictChange = async () => {
   updateLocationForm.value.phuong = ''
   wardsList.value = []
+
+  // Update currentInvoiceLocation when district changes
+  currentInvoiceLocation.value.quan = updateLocationForm.value.quan
+  currentInvoiceLocation.value.phuong = ''
 
   if (!updateLocationForm.value.quan) return
 
@@ -1823,6 +1962,7 @@ const recalculateShippingFee = async () => {
     updateLocationForm.value.phuong === currentInvoiceLocation.value.phuong
   ) {
     calculatedShippingFee.value = null
+    calculatedSurcharge.value = null
     shippingFeeError.value = ''
     return
   }
@@ -1842,8 +1982,13 @@ const recalculateShippingFee = async () => {
     const result = await calculateShippingFeeFromGHN(newLocation)
 
     if (result && result.fee) {
-      calculatedShippingFee.value = result.fee
-      updateForm.value.phiGiaoHang = result.fee
+      const newFee = result.fee
+      const currentFee = invoice.value.phiVanChuyen || 0
+      const difference = newFee - currentFee // Có thể là dương (phụ phí) hoặc âm (hoàn phí)
+
+      calculatedShippingFee.value = newFee
+      calculatedSurcharge.value = difference // Lưu giá trị thực tế (có thể âm)
+      updateForm.value.phiGiaoHang = newFee
     } else {
       throw new Error('Invalid shipping fee response')
     }
@@ -1851,6 +1996,7 @@ const recalculateShippingFee = async () => {
     console.error('Error calculating shipping fee:', error)
     shippingFeeError.value = error?.message || 'Không thể tính phí giao hàng. Vui lòng thử lại.'
     calculatedShippingFee.value = null
+    calculatedSurcharge.value = null
     updateForm.value.phiGiaoHang = 0
   } finally {
     isCalculatingShippingFee.value = false
@@ -1859,6 +2005,9 @@ const recalculateShippingFee = async () => {
 
 const showUpdateModal = async () => {
   if (!invoice.value) return
+
+  // Check if address has already been changed
+  checkAddressChangeStatus()
 
   // Get current status text from trangThaiDonHang (from getHighestPriorityStatusFromInvoice)
   const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
@@ -1875,6 +2024,7 @@ const showUpdateModal = async () => {
     emailNguoiNhan: invoice.value.emailNguoiNhan || invoice.value.email || '',
     ghiChu: invoice.value.ghiChu || '',
     soTienDaThanhToan: invoice.value.tongTienSauGiam || invoice.value.tongTien || 0, // Default payment amount
+    phiGiaoHang: invoice.value.phiVanChuyen || 0, // Current shipping fee
   }
 
   // Reset location form
@@ -1895,7 +2045,23 @@ const showUpdateModal = async () => {
   const currentAddress = updateForm.value.diaChiNhanHang
   if (currentAddress) {
     await parseAndFillAddress(currentAddress)
+    // After parsing address, display current shipping fee
+    calculatedShippingFee.value = invoice.value.phiVanChuyen || 0
   }
+
+  // Reset surcharge when modal opens
+  calculatedSurcharge.value = null
+
+  // Store the original location details for comparison
+  // This is used to detect when user changes the address
+  currentInvoiceLocation.value = {
+    thanhPho: updateLocationForm.value.thanhPho,
+    quan: updateLocationForm.value.quan,
+    phuong: updateLocationForm.value.phuong,
+    diaChiCuThe: updateLocationForm.value.diaChiCuThe,
+  }
+
+  console.log('[Modal] Original location set:', currentInvoiceLocation.value)
 }
 
 /**
@@ -1925,8 +2091,6 @@ const parseAndFillAddress = async (addressString: string) => {
     )
     if (province) {
       updateLocationForm.value.thanhPho = province.value
-      // Store original location for shipping fee calculation
-      currentInvoiceLocation.value.thanhPho = province.value
 
       // Load districts for this province
       try {
@@ -1941,8 +2105,6 @@ const parseAndFillAddress = async (addressString: string) => {
           )
           if (district) {
             updateLocationForm.value.quan = district.value
-            // Store original location
-            currentInvoiceLocation.value.quan = district.value
 
             // Load wards for this district
             try {
@@ -1958,8 +2120,6 @@ const parseAndFillAddress = async (addressString: string) => {
                 )
                 if (ward) {
                   updateLocationForm.value.phuong = ward.value
-                  // Store original location
-                  currentInvoiceLocation.value.phuong = ward.value
                 }
               }
             } catch (error) {
@@ -1974,7 +2134,8 @@ const parseAndFillAddress = async (addressString: string) => {
       // Set địa chỉ cụ thể (first part or first few parts)
       if (parts.length >= 3) {
         // Join all parts except last 3 (tỉnh, quận, phường)
-        updateLocationForm.value.diaChiCuThe = parts.slice(0, parts.length - 3).join(', ')
+        const diaChiCuThe = parts.slice(0, parts.length - 3).join(', ')
+        updateLocationForm.value.diaChiCuThe = diaChiCuThe
       } else if (parts.length > 1) {
         // If we have less parts, use the first part as địa chỉ cụ thể
         updateLocationForm.value.diaChiCuThe = parts[0]
@@ -2063,6 +2224,61 @@ const handleSaveUpdate = async () => {
       idNhanVienValue = invoice.value.createBy
     }
 
+    // Detect if address has changed
+    const originalAddress = currentInvoiceLocation.value
+    const newAddress = {
+      thanhPho: updateLocationForm.value.thanhPho,
+      quan: updateLocationForm.value.quan,
+      phuong: updateLocationForm.value.phuong,
+      diaChiCuThe: updateLocationForm.value.diaChiCuThe,
+    }
+
+    const addressChanged =
+      originalAddress.thanhPho !== newAddress.thanhPho ||
+      originalAddress.quan !== newAddress.quan ||
+      originalAddress.phuong !== newAddress.phuong ||
+      originalAddress.diaChiCuThe !== newAddress.diaChiCuThe
+
+    // Validation: Check if address change is allowed based on order status
+    if (addressChanged) {
+      const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
+      if (currentStatusText === 'Đã huỷ' || currentStatusText === 'Hoàn thành') {
+        Message.error(`Không thể thay đổi địa chỉ khi đơn hàng ở trạng thái "${currentStatusText}". Chỉ có thể thay đổi địa chỉ trước khi đơn hàng bị huỷ hoặc hoàn thành.`)
+        saving.value = false
+        return
+      }
+    }
+
+    // If address changed, calculate new shipping fee and surcharge/refund
+    let feeChangeResult: ShippingFeeChangeResult | null = null
+    if (addressChanged) {
+      try {
+        const shippingLocation: ShippingLocation = {
+          thanhPho: newAddress.thanhPho,
+          quan: newAddress.quan,
+          phuong: newAddress.phuong,
+          diaChiCuThe: updateLocationForm.value.diaChiCuThe,
+        }
+
+        const newFeeResponse = await calculateShippingFeeFromGHN(shippingLocation)
+        const newShippingFee = newFeeResponse.fee
+        const currentShippingFee = invoice.value.phiVanChuyen || 0
+
+        // Sử dụng service để tính toán phụ phí/hoàn phí
+        feeChangeResult = calculateShippingFeeChange(currentShippingFee, newShippingFee)
+
+        console.log('[AddressChange] Shipping fee change:', feeChangeResult)
+
+        // If address changed, automatically set status to 8 (Thay đổi địa chỉ giao hàng)
+        idTrangThaiDonHang = 8
+      } catch (error) {
+        console.error('[AddressChange] Error calculating new shipping fee:', error)
+        Message.error('Lỗi khi tính phí vận chuyển mới')
+        saving.value = false
+        return
+      }
+    }
+
     const updateData: any = {
       // Always include loaiDon and trangThai to ensure they are updated
       loaiDon: updateForm.value.loaiDon,
@@ -2102,10 +2318,41 @@ const handleSaveUpdate = async () => {
     if (updateForm.value.ghiChu !== undefined && updateForm.value.ghiChu !== null) {
       updateData.ghiChu = updateForm.value.ghiChu
     }
+
+    // Add surcharge/refund info if address changed
+    if (addressChanged && feeChangeResult && shouldUpdateShippingFee(feeChangeResult)) {
+      const feePayload = createFeeUpdatePayload(feeChangeResult)
+      
+      // Send both individual fields and complete shippingFeeChange object
+      if (feePayload.phuPhi !== undefined) {
+        updateData.phuPhi = feePayload.phuPhi
+      }
+      if (feePayload.hoanPhi !== undefined) {
+        updateData.hoanPhi = feePayload.hoanPhi
+      }
+      
+      // Also send the complete fee change result for backend processing
+      updateData.shippingFeeChange = {
+        feeChanged: feeChangeResult.feeChanged,
+        currentFee: feeChangeResult.currentFee,
+        newFee: feeChangeResult.newFee,
+        difference: feeChangeResult.difference,
+        isExtra: feeChangeResult.isExtra,
+        amountToUpdate: feeChangeResult.amountToUpdate,
+        description: feeChangeResult.description,
+      }
+      
+      console.log('[FeeUpdate] Fee payload:', feePayload)
+      console.log('[FeeUpdate] Shipping fee change:', updateData.shippingFeeChange)
+      console.log('[FeeUpdate] Update data with fees:', updateData)
+    }
+
     // Include payment amount when completing order for delivery (online)
     if (showPaymentInput.value && updateForm.value.soTienDaThanhToan > 0) {
       updateData.soTienDaThanhToan = updateForm.value.soTienDaThanhToan
     }
+
+    console.log('[SaveUpdate] Final update data:', updateData)
 
     // Call API to update invoice
     let updateSucceeded = false
@@ -2176,19 +2423,43 @@ const handleSaveUpdate = async () => {
       await new Promise((resolve) => setTimeout(resolve, 300))
       await fetchTimeline()
 
+      // Check if address change status was actually created in backend (after refresh)
+      let addressChangeStatusCreated = false
+      if (addressChanged && invoice.value?.thongTinDonHangs) {
+        for (const item of invoice.value.thongTinDonHangs) {
+          const statusName = item.tenTrangThaiDonHang || ''
+          if (statusName === 'Thay đổi địa chỉ giao hàng' || statusName.includes('Thay đổi địa chỉ')) {
+            addressChangeStatusCreated = true
+            break
+          }
+        }
+      }
+
+      // Note: Email notification is now handled by backend in the main update process
+      // No need to call it separately here
+      // The backend HoaDonService.sendAddressChangeNotification() handles the email
+
       closeUpdateModal()
 
       // Hide loader and show success notification
       if (loadingMessage?.close) {
         loadingMessage.close()
       }
+
+      // Show appropriate success message based on whether address changed
+      let successMessage = `Cập nhật trạng thái thành công: ${updateForm.value.trangThaiText}`
+      if (addressChangeStatusCreated && feeChangeResult) {
+        const feeInfo = formatShippingFeeInfo(feeChangeResult)
+        successMessage = `Cập nhật thành công! ${feeInfo.icon} ${feeInfo.description}. Khách hàng sẽ nhận được thông báo qua email.`
+      }
+
       asyncNotification.showSuccessNotification(
         {
           orderId: invoice.value.id,
           orderCode: invoice.value.maHoaDon,
           oldStatus: getStatusText(currentTrangThai),
           newStatus: updateForm.value.trangThaiText,
-          message: `Cập nhật trạng thái thành công: ${updateForm.value.trangThaiText}`,
+          message: successMessage,
         },
         5
       )
@@ -2200,12 +2471,28 @@ const handleSaveUpdate = async () => {
 
     // Handle different error types
     let errorMessage = 'Có lỗi xảy ra khi cập nhật'
-    if (error?.message) {
+    if (error?.response?.data?.code) {
+      errorMessage = error.response.data.code
+    } else if (error?.message) {
       errorMessage = error.message
     }
 
-    // Show different notification based on error type
-    if (errorMessage.includes('Số lượng sản phẩm')) {
+    // Check if this is an address change error
+    if (errorMessage.includes('Chỉ được phép thay đổi địa chỉ 1 lần')) {
+      // Refresh the page to ensure addressAlreadyChanged is set correctly
+      await fetchInvoiceDetail()
+      checkAddressChangeStatus()
+      // Close the modal so user sees the updated state
+      closeUpdateModal()
+      asyncNotification.showErrorNotification(
+        {
+          orderId: invoice.value?.id,
+          orderCode: invoice.value?.maHoaDon,
+          message: 'Đơn hàng này đã được thay đổi địa chỉ trước đó. Không thể thay đổi lần nữa!',
+        },
+        5
+      )
+    } else if (errorMessage.includes('Số lượng sản phẩm')) {
       asyncNotification.showInventoryShortageNotification(errorMessage.replace('Số lượng sản phẩm yêu cầu không đủ: ', ''), 8)
     } else {
       asyncNotification.showErrorNotification(
@@ -2270,20 +2557,42 @@ watch(
 watch(
   () => updateLocationForm.value.phuong,
   async (newWard) => {
-    console.log('[AddressWatch] Ward changed to:', newWard)
+    console.log('[AddressWatch] Ward changed to:', newWard, {
+      quan: updateLocationForm.value.quan,
+      thanhPho: updateLocationForm.value.thanhPho,
+      diaChiCuThe: updateLocationForm.value.diaChiCuThe,
+    })
     if (newWard && updateLocationForm.value.quan && updateLocationForm.value.thanhPho) {
+      console.log('[AddressWatch] Calling recalculateShippingFee from Ward watch')
       await recalculateShippingFee()
+    } else {
+      console.warn('[AddressWatch] Ward watch conditions not met for recalculation')
     }
   }
 )
 
-// Watch for diaChiCuThe change to recalculate shipping fee
+// Watch for address detail change
+watch(
+  () => updateLocationForm.value.diaChiCuThe,
+  (newDetail) => {
+    console.log('[AddressWatch] Address detail changed to:', newDetail)
+  }
+)
+
+// Watch for address detail change to recalculate shipping fee
 watch(
   () => updateLocationForm.value.diaChiCuThe,
   async (newAddress) => {
-    console.log('[AddressWatch] Address detail changed to:', newAddress)
+    console.log('[AddressWatch] Address detail changed to:', newAddress, {
+      phuong: updateLocationForm.value.phuong,
+      quan: updateLocationForm.value.quan,
+      thanhPho: updateLocationForm.value.thanhPho,
+    })
     if (newAddress && updateLocationForm.value.phuong && updateLocationForm.value.quan && updateLocationForm.value.thanhPho) {
+      console.log('[AddressWatch] Calling recalculateShippingFee from address detail watch')
       await recalculateShippingFee()
+    } else {
+      console.warn('[AddressWatch] Address detail watch conditions not met for recalculation')
     }
   }
 )
@@ -2655,6 +2964,10 @@ onMounted(() => {
   color: #00b42a;
 }
 
+:deep(.arco-form-item-content-flex) {
+  display: block;
+}
+
 /* Update Modal */
 .update-modal :deep(.arco-modal-header) {
   padding: 20px 24px;
@@ -2911,6 +3224,16 @@ onMounted(() => {
 
 .summary-value.discount {
   color: #f53f3f;
+}
+
+.summary-value.surcharge {
+  color: #f53f3f;
+  font-weight: 500;
+}
+
+.summary-value.refund {
+  color: #13c2c2;
+  font-weight: 500;
 }
 
 .summary-item.final-total {
