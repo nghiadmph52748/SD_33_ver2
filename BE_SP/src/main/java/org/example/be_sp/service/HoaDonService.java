@@ -1769,14 +1769,9 @@ public class HoaDonService {
      * lại
      */
     private void handleSurchargeRefundNotification(HoaDon hoaDon,
-                                                   AddressChangeNotificationRequest.ShippingFeeChange feeChange,
-                                                   String customerEmail,
-                                                   String customerName,
-                                                   BigDecimal recordedRefundAmount,
-                                                   boolean customerPaidFullBeforeChange,
-                                                   BigDecimal originalTotal,
-                                                   BigDecimal updatedTotal) {
-        if (feeChange == null) {
+            AddressChangeNotificationRequest.ShippingFeeChange feeChange, String customerEmail, String customerName) {
+        if (feeChange == null || feeChange.getDifference() == null
+                || feeChange.getDifference().compareTo(BigDecimal.ZERO) == 0) {
             return;
         }
 

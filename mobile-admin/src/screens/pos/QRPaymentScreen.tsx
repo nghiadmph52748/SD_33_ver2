@@ -38,6 +38,7 @@ export default function QRPaymentScreen() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [initializing, setInitializing] = useState(!route.params?.sessionId)
+  const [countdown, setCountdown] = useState<string | null>(null)
 
   const wsUrl = useMemo(() => {
     try {
@@ -246,18 +247,46 @@ export default function QRPaymentScreen() {
     }
   }, [session?.createdAt])
 
+  useEffect(() => {
+    const canShowCountdown = Boolean(session?.qrCodeUrl) && session?.status === 'PENDING' && session?.expiresAt
+    if (!canShowCountdown) {
+      setCountdown(null)
+      return
+    }
+
+    const updateCountdown = () => {
+      try {
+        const expires = new Date(session.expiresAt).getTime()
+        const diff = expires - Date.now()
+        if (diff <= 0) {
+          setCountdown('00:00')
+          return
+        }
+        const minutes = Math.floor(diff / 60000)
+        const seconds = Math.floor((diff % 60000) / 1000)
+        setCountdown(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
+      } catch {
+        setCountdown(null)
+      }
+    }
+
+    updateCountdown()
+    const timer = setInterval(updateCountdown, 1000)
+    return () => clearInterval(timer)
+  }, [session?.expiresAt, session?.status, session?.qrCodeUrl])
+
   const qrImageUrl = useMemo(() => {
-    // Only build QR when backend says staff has chosen to display it (qrCodeUrl present)
-    if (!session?.finalPrice || !session.orderCode || !session.qrCodeUrl) return null
+    if (!session?.qrCodeUrl || !session?.finalPrice || !session.orderCode) {
+      return null
+    }
     try {
       const amount = Math.round(session.finalPrice)
       const info = encodeURIComponent(`${session.orderCode}`)
-      // VietQR static image for MB Bank account
       return `https://img.vietqr.io/image/${BANK_SHORT_CODE}-${BANK_ACCOUNT_NUMBER}-qr_only.png?amount=${amount}&addInfo=${info}`
     } catch {
       return null
     }
-  }, [session?.finalPrice, session?.orderCode, session?.qrCodeUrl])
+  }, [session?.qrCodeUrl, session?.finalPrice, session?.orderCode])
 
   if (loading && !session) {
     return (
@@ -299,81 +328,49 @@ export default function QRPaymentScreen() {
     return renderWelcome(error || 'Không tìm thấy phiên VietQR đang hoạt động')
   }
 
-  const hasQrCode = Boolean(qrImageUrl)
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {hasQrCode ? (
-        <Card style={styles.qrCard}>
-          <Card.Content style={styles.qrContent}>
-            <Text style={styles.title}>Thanh toán</Text>
-            <Text style={styles.subtitle}>Quét bằng app ngân hàng để hoàn tất giao dịch</Text>
+      <Card style={styles.qrCard}>
+        <Card.Content style={styles.qrContent}>
+          {qrImageUrl ? (
+            <Image source={{ uri: qrImageUrl }} style={styles.qrImage} resizeMode="contain" />
+          ) : (
+            <Text style={styles.placeholderText}>Nhân viên sẽ hiển thị mã QR ngay khi sẵn sàng</Text>
+          )}
+        </Card.Content>
+      </Card>
 
-            <View style={styles.qrContainer}>
-              {qrImageUrl ? (
-                <Image source={{ uri: qrImageUrl }} style={styles.qrImage} resizeMode="contain" />
-              ) : (
-                <Text style={styles.errorText}>Không thể tạo mã QR thanh toán</Text>
-              )}
-            </View>
-
-            <Text style={styles.amount}>{currencyFormatter.format(session.finalPrice)}</Text>
-            <Text style={styles.orderCode}>Mã đơn hàng: {session.orderCode}</Text>
-            {session.status === 'PENDING' ? (
-              <View style={styles.statusContainer}>
-                <ActivityIndicator size="small" style={styles.statusIndicator} />
-                <Text style={styles.statusText}>Đang chờ khách thanh toán</Text>
-              </View>
-            ) : (
-              <Text
-                style={[
-                  styles.statusBadge,
-                  session.status === 'PAID'
-                    ? styles.statusPaid
-                    : session.status === 'EXPIRED'
-                      ? styles.statusExpired
-                      : styles.statusPending,
-                ]}
-              >
-                {session.status}
-              </Text>
-            )}
-            <Text style={styles.createdText}>Tạo lúc: {formattedDate}</Text>
-          </Card.Content>
-        </Card>
-      ) : (
-        <Card style={styles.qrPlaceholderCard}>
-          <Card.Content style={styles.qrPlaceholderContent}>
-            <Text style={styles.placeholderTitle}>Vui lòng chờ mã QR từ nhân viên...</Text>
-          </Card.Content>
-        </Card>
-      )}
+      <View style={styles.customerHeader}>
+        <Text style={styles.customerGreeting}>GearUp Store</Text>
+        <Text style={styles.customerSubtext}>Quý khách vui lòng kiểm tra giỏ hàng bên dưới</Text>
+        <View style={styles.sessionPills}>
+          <Text style={styles.sessionChip}>Đơn hàng: {session.orderCode}</Text>
+          {session.qrCodeUrl && countdown ? (
+            <Text style={styles.sessionChip}>QR hết hạn sau {countdown}</Text>
+          ) : null}
+        </View>
+        <Text style={styles.amountLarge}>{currencyFormatter.format(session.finalPrice)}</Text>
+      </View>
 
       <Card style={styles.itemsCard}>
         <Card.Title title="Giỏ hàng tại quầy" />
         <Card.Content>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.cellProduct, styles.tableHeaderText]}>Sản phẩm</Text>
-            <Text style={[styles.cellQty, styles.tableHeaderText]}>SL</Text>
-            <Text style={[styles.cellPrice, styles.tableHeaderText]}>Đơn giá</Text>
-            <Text style={[styles.cellTotal, styles.tableHeaderText]}>Thành tiền</Text>
-          </View>
           {session.items && session.items.length > 0 ? (
             session.items.map((item, index) => {
               const unitPrice = getUnitPrice(item)
               const lineTotal = unitPrice * item.quantity
               return (
-                <View key={`${item.productId}-${index}`} style={styles.tableRow}>
-                  <View style={styles.cellProduct}>
+                <View key={`${item.productId}-${index}`} style={styles.itemCard}>
+                  <View style={styles.itemHeader}>
                     <Text style={styles.itemName}>{getProductDisplayName(item)}</Text>
-                    {getVariantText(item) ? <Text style={styles.variantText}>{getVariantText(item)}</Text> : null}
-                    {item.discount ? (
-                      <Text style={styles.discountTag}>Giảm {item.discount}%</Text>
-                    ) : null}
+                    <Text style={styles.lineTotal}>{currencyFormatter.format(lineTotal)}</Text>
                   </View>
-                  <Text style={[styles.cellQty, styles.tableCellText]}>x{item.quantity}</Text>
-                  <Text style={[styles.cellPrice, styles.tableCellText]}>{currencyFormatter.format(unitPrice)}</Text>
-                  <Text style={[styles.cellTotal, styles.tableCellText]}>{currencyFormatter.format(lineTotal)}</Text>
+                    {getVariantText(item) ? <Text style={styles.variantText}>{getVariantText(item)}</Text> : null}
+                  <View style={styles.itemMetaRow}>
+                    <Text style={styles.metaText}>Đơn giá: {currencyFormatter.format(unitPrice)}</Text>
+                    <Text style={styles.quantityChip}>x{item.quantity}</Text>
+                  </View>
+                  {item.discount ? <Text style={styles.discountTag}>Giảm {item.discount}%</Text> : null}
                 </View>
               )
             })
@@ -395,10 +392,6 @@ export default function QRPaymentScreen() {
             <Text style={[styles.summaryValue, session.discountAmount > 0 ? styles.negativeValue : null]}>
               {session.discountAmount > 0 ? `- ${currencyFormatter.format(session.discountAmount)}` : '0₫'}
             </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Phí vận chuyển</Text>
-            <Text style={styles.summaryValue}>{currencyFormatter.format(session.shippingFee)}</Text>
           </View>
           <Divider style={styles.horizontalDivider} />
           <View style={[styles.summaryRow, styles.totalRow]}>
@@ -492,175 +485,78 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
+  customerHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 12,
+  },
   qrCard: {
     marginBottom: 16,
     elevation: 2,
   },
   qrContent: {
-    paddingVertical: 24,
+    paddingVertical: 16,
     alignItems: 'center',
-  },
-  panelTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
-    color: '#111',
-  },
-  infoRow: {
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 15,
-    color: '#111',
-    fontWeight: '500',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 24,
-  },
-  createdText: {
-    marginTop: 12,
-    fontSize: 13,
-    color: '#777',
-  },
-  qrContainer: {
-    width: 280,
-    height: 280,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   qrImage: {
-    width: '100%',
-    height: '100%',
+    width: 260,
+    height: 260,
   },
-  qrPlaceholder: {
-    alignItems: 'center',
-  },
-  qrPlaceholderCard: {
-    marginBottom: 16,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderColor: '#d6d3d1',
-    backgroundColor: '#fafafa',
-  },
-  qrPlaceholderContent: {
-    paddingVertical: 24,
-  },
-  placeholderTitle: {
-    fontSize: 16,
+  customerGreeting: {
+    fontSize: 24,
     fontWeight: '700',
-    color: '#444',
-    marginBottom: 8,
+    color: '#0f172a',
+  },
+  customerSubtext: {
+    fontSize: 15,
+    color: '#475569',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  sessionPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+    justifyContent: 'center',
+  },
+  sessionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f172a',
   },
   placeholderText: {
     fontSize: 14,
-    color: '#777',
-    lineHeight: 20,
+    color: '#475569',
+    textAlign: 'center',
   },
-  qrPlaceholderText: {
+  amountLarge: {
     marginTop: 12,
-    fontSize: 14,
-    color: '#666',
-  },
-  orderCode: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  amount: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#2563eb',
-    marginBottom: 16,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  statusIndicator: {
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    color: '#ff9800',
-    fontWeight: '500',
-  },
-  statusBadge: {
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  statusPaid: {
-    color: '#2e7d32',
-  },
-  statusExpired: {
-    color: '#f57c00',
-  },
-  statusPending: {
-    color: '#0d47a1',
   },
   itemsCard: {
     marginBottom: 16,
     elevation: 2,
   },
-  tableHeader: {
+  itemCard: {
+    borderWidth: 1,
+    borderColor: '#ececec',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: '#fff',
+  },
+  itemHeader: {
     flexDirection: 'row',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ececec',
-  },
-  tableHeaderText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    textTransform: 'uppercase',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f4f4f4',
-  },
-  tableCellText: {
-    fontSize: 14,
-    color: '#111',
-  },
-  cellProduct: {
-    flex: 2.6,
-    paddingRight: 8,
-  },
-  cellQty: {
-    flex: 0.5,
-    textAlign: 'center',
-  },
-  cellPrice: {
-    flex: 1,
-    textAlign: 'right',
-  },
-  cellTotal: {
-    flex: 1,
-    textAlign: 'right',
-    fontWeight: '600',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   itemName: {
     fontSize: 15,
@@ -671,6 +567,30 @@ const styles = StyleSheet.create({
   variantText: {
     fontSize: 12,
     color: '#777',
+  },
+  lineTotal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111',
+  },
+  itemMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  metaText: {
+    fontSize: 13,
+    color: '#555',
+  },
+  quantityChip: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
   discountTag: {
     marginTop: 6,

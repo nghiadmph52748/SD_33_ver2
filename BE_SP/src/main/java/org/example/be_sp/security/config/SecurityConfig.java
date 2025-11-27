@@ -33,7 +33,7 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // Allow login and logout endpoints
+                .requestMatchers("/api/auth/**").permitAll() // Allow login and logout endpoints (including reset-admin-password)
                 .requestMatchers("/api/khach-hang/auth/**").permitAll() // Allow storefront customer auth
                 .requestMatchers("/api/ca-lam-viec/**").permitAll()
                 .requestMatchers("/api/lich-lam-viec/**").permitAll()
@@ -51,6 +51,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/pos/**").permitAll() // Allow POS endpoints without auth for testing
                 .requestMatchers("/api/test/**").permitAll() // Allow test endpoints without auth
                 .requestMatchers("/api/email-test/**").permitAll() // Allow email test endpoints without auth
+                .requestMatchers("/api/nhan-vien-management/**").permitAll() // Allow employee management without auth for testing
                 .requestMatchers("/api/dot-giam-gia-management/**").permitAll() // Allow discount management without auth for testing
                 .requestMatchers("/api/phieu-giam-gia-management/**").permitAll() // Allow coupon management without auth for testing
                 .requestMatchers("/api/chi-tiet-phieu-giam-gia-management/**").permitAll() // Allow coupon detail management without auth for testing

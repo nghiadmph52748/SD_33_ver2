@@ -5,7 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.example.be_sp.exception.ApiException;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,20 +22,23 @@ import lombok.Setter;
 @Service
 public class UploadImageToCloudinary {
 
-    @Value("${cloudinary.cloud-name:}")
-    private String CLOUD_NAME;
-    @Value("${cloudinary.api-key:}")
-    private String API_KEY;
-    @Value("${cloudinary.api-secret:}")
-    private String API_SECRET;
+    @Autowired
+    private Environment environment;
 
     private Cloudinary cloudinary;
 
     private Cloudinary getCloudinary() {
         if (this.cloudinary == null) {
-            String cloudName = (CLOUD_NAME != null && !CLOUD_NAME.isBlank()) ? CLOUD_NAME : System.getenv("CLOUDINARY_CLOUD_NAME");
-            String apiKey = (API_KEY != null && !API_KEY.isBlank()) ? API_KEY : System.getenv("CLOUDINARY_API_KEY");
-            String apiSecret = (API_SECRET != null && !API_SECRET.isBlank()) ? API_SECRET : System.getenv("CLOUDINARY_API_SECRET");
+            // Try multiple sources: Spring properties, environment variables, system properties
+            String cloudName = environment.getProperty("cloudinary.cloud-name", 
+                    environment.getProperty("CLOUDINARY_CLOUD_NAME",
+                    System.getenv("CLOUDINARY_CLOUD_NAME")));
+            String apiKey = environment.getProperty("cloudinary.api-key",
+                    environment.getProperty("CLOUDINARY_API_KEY",
+                    System.getenv("CLOUDINARY_API_KEY")));
+            String apiSecret = environment.getProperty("cloudinary.api-secret",
+                    environment.getProperty("CLOUDINARY_API_SECRET",
+                    System.getenv("CLOUDINARY_API_SECRET")));
             if (cloudName == null || cloudName.isBlank() || apiKey == null || apiKey.isBlank() || apiSecret == null || apiSecret.isBlank()) {
                 throw new ApiException("Cloudinary configuration is missing. Please set properties cloudinary.cloud-name, cloudinary.api-key, cloudinary.api-secret or corresponding environment variables.", "CLOUDINARY_CONFIG_MISSING");
             }

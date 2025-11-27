@@ -141,8 +141,6 @@
                       :src="previewUrl || formData.anhNhanVien"
                       alt="Ảnh nhân viên"
                       class="preview-image"
-                      @load="console.log('✅ Ảnh đã load thành công')"
-                      @error="console.error('❌ Lỗi load ảnh:', $event)"
                     />
                     <div class="image-overlay">
                       <a-button type="text" size="small" @click="removeImage" class="remove-button">
@@ -440,8 +438,7 @@ const handleNativeFileChange = async (event: Event) => {
       await nextTick()
     }
 
-    reader.onerror = (error) => {
-      console.error('❌ FileReader error:', error)
+    reader.onerror = () => {
       Message.error('Không thể đọc file ảnh!')
       selectedFiles.value = []
       previewUrl.value = ''
@@ -450,7 +447,6 @@ const handleNativeFileChange = async (event: Event) => {
 
     reader.readAsDataURL(file)
   } catch (error) {
-    console.error('❌ Lỗi khi xử lý file:', error)
     Message.error('Lỗi khi xử lý file ảnh!')
     selectedFiles.value = []
     previewUrl.value = ''
@@ -474,18 +470,9 @@ const removeImage = () => {
 // load dữ liệu nhân viên
 onMounted(async () => {
   try {
-    console.log('🔍 Loading nhân viên với ID:', id)
     const res = await layChiTietNhanVien(id)
-    console.log('📦 Response từ API:', res)
-    console.log('👤 Data nhân viên:', res.data)
-    console.log('🖼️ Ảnh nhân viên từ API:', res.data.anhNhanVien)
-
     formData.value = res.data
-
-    console.log('✅ FormData sau khi set:', formData.value)
-    console.log('🖼️ Ảnh trong formData:', formData.value.anhNhanVien)
   } catch (error) {
-    console.error('❌ Lỗi load nhân viên:', error)
     Message.error('Không thể tải dữ liệu nhân viên')
   }
 })
@@ -550,37 +537,97 @@ const handleSubmit = async () => {
       const emailUsername = formData.value.email.split('@')[0]
       formData.value.tenTaiKhoan = emailUsername
 
-      // ✅ Tạo FormData để gửi file giống như component thêm
-      const submitFormData = new FormData()
-
-      console.log('🔄 Updating:', formData.value.tenNhanVien, '- Files:', selectedFiles.value.length)
-
-      // Thêm thông tin nhân viên
-      Object.keys(formData.value).forEach((key) => {
-        const value = formData.value[key as keyof typeof formData.value]
-        if (value !== null && value !== undefined && key !== 'id') {
-          submitFormData.append(key, value.toString())
-        }
-      })
-
-      // Thêm author (ID của user hiện tại)
-      if (userStore.id) {
-        submitFormData.append('createBy', userStore.id.toString())
-      }
-
-      // Thêm deleted và createAt
-      submitFormData.append('deleted', 'false')
-      submitFormData.append('createAt', new Date().toISOString().split('T')[0])
-
-      // Thêm file ảnh nếu có
+      // ✅ Upload ảnh trước nếu có file mới
+      let imageUrl: string | null = formData.value.anhNhanVien || null
       if (selectedFiles.value.length > 0) {
-        selectedFiles.value.forEach((file) => {
-          submitFormData.append('file', file)
-        })
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', selectedFiles.value[0])
+        try {
+          const uploadResponse = await (await import('axios')).default.post('/api/v1/upload-image/add', uploadFormData)
+          
+          // Try multiple ways to access the URL
+          let extractedUrl: string | null = null
+          
+          // Method 1: If response.data is directly an array (Axios unwrapped ResponseObject)
+          if (Array.isArray(uploadResponse.data) && uploadResponse.data.length > 0) {
+            const firstItem = uploadResponse.data[0]
+            if (firstItem && typeof firstItem === 'object' && 'url' in firstItem) {
+              extractedUrl = firstItem.url as string
+            }
+          }
+          
+          // Method 2: ResponseObject structure - data.data[0].url
+          if (!extractedUrl && uploadResponse.data?.data && Array.isArray(uploadResponse.data.data) && uploadResponse.data.data.length > 0) {
+            const firstItem = uploadResponse.data.data[0]
+            if (firstItem && typeof firstItem === 'object' && 'url' in firstItem) {
+              extractedUrl = firstItem.url as string
+            }
+          }
+          
+          // Method 3: Direct data.data.url (if it's an object, not array)
+          if (!extractedUrl && uploadResponse.data?.data && typeof uploadResponse.data.data === 'object' && !Array.isArray(uploadResponse.data.data) && 'url' in uploadResponse.data.data) {
+            extractedUrl = (uploadResponse.data.data as any).url
+          }
+          
+          // Method 4: Top-level data.url
+          if (!extractedUrl && uploadResponse.data?.url) {
+            extractedUrl = uploadResponse.data.url as string
+          }
+          
+          // Method 5: Direct response.data if it's a string URL
+          if (!extractedUrl && typeof uploadResponse.data === 'string') {
+            extractedUrl = uploadResponse.data
+          }
+          
+          if (extractedUrl) {
+            imageUrl = extractedUrl
+          } else {
+            throw new Error('Không thể lấy URL ảnh từ phản hồi upload. Vui lòng thử lại.')
+          }
+        } catch (uploadError) {
+          throw uploadError
+        }
       }
 
-      // ✅ Gửi request với FormData giống như component thêm
-      await capNhatNhanVien(formData.value.id, submitFormData)
+      // ✅ Validate imageUrl before creating payload
+      if (selectedFiles.value.length > 0 && !imageUrl) {
+        Message.error('Không thể lấy URL ảnh sau khi upload. Vui lòng thử lại.')
+        return
+      }
+
+      // ✅ Tạo payload JSON với URL ảnh
+      const payload: NhanVienRequest = {
+        maNhanVien: formData.value.maNhanVien,
+        tenNhanVien: formData.value.tenNhanVien,
+        tenTaiKhoan: formData.value.tenTaiKhoan,
+        matKhau: formData.value.matKhau,
+        ngaySinh: formData.value.ngaySinh,
+        cccd: formData.value.cccd,
+        email: formData.value.email,
+        soDienThoai: formData.value.soDienThoai,
+        thanhPho: formData.value.thanhPho,
+        quan: formData.value.quan,
+        phuong: formData.value.phuong,
+        gioiTinh: formData.value.gioiTinh,
+        diaChiCuThe: formData.value.diaChiCuThe,
+        idQuyenHan: formData.value.idQuyenHan as number,
+        trangThai: formData.value.trangThai,
+        anhNhanVien: imageUrl,
+        deleted: false,
+      }
+      
+      // Final validation: ensure URL is present if file was uploaded
+      if (selectedFiles.value.length > 0 && (!payload.anhNhanVien || payload.anhNhanVien.trim() === '')) {
+        Message.error('Lỗi: URL ảnh không được lưu. Vui lòng thử lại.')
+        return
+      }
+
+      // Ensure imageUrl is not null/undefined before sending
+      if (!payload.anhNhanVien && imageUrl) {
+        payload.anhNhanVien = imageUrl
+      }
+
+      await capNhatNhanVien(formData.value.id, payload)
 
       Message.success('Cập nhật nhân viên thành công!')
       router.push({ name: 'QuanLyNhanVien' }) // ✅ SPA routing với route name
@@ -589,7 +636,6 @@ const handleSubmit = async () => {
     }
   } catch (error) {
     Message.error('Cập nhật nhân viên thất bại. Vui lòng kiểm tra lại thông tin.')
-    console.error(error)
   } finally {
     loading.value = false
   }

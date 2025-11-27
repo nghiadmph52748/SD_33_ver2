@@ -1,5 +1,8 @@
 package org.example.be_sp.model.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,13 +13,21 @@ import org.springframework.web.multipart.MultipartFile;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class NhanVienRequest {
     private String tenNhanVien;
     private String tenTaiKhoan;
     private String matKhau;
     private String email;
     private String soDienThoai;
+    @JsonIgnore
     private MultipartFile[] anhNhanVien;
+    private String anhNhanVienUrl;
+    
+    @JsonSetter("anhNhanVien")
+    public void setAnhNhanVienFromJson(String url) {
+        this.anhNhanVienUrl = url;
+    }
     private LocalDate ngaySinh;
     private String thanhPho;
     private String quan;

@@ -86,3 +86,12 @@ export const xuatExcelNhanVien = (data: NhanVienResponse[]) => {
   // This function will be handled in the component using XLSX
   return data
 }
+
+/**
+ * Upload ảnh lên Cloudinary
+ */
+export const uploadImage = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return axios.post<{ data: Array<{ url: string }> }>('/api/v1/upload-image/add', formData)
+}
