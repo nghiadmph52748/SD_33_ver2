@@ -2,15 +2,15 @@
   <div class="order-lookup">
     <div class="container narrow">
       <header class="lookup-hero">
-        <p class="eyebrow">{{ $t('orderLookup.eyebrow') }}</p>
-        <h1>{{ $t('orderLookup.title') }}</h1>
-        <p class="lead">{{ $t('orderLookup.subtitle') }}</p>
+        <p class="eyebrow">{{ $t("orderLookup.eyebrow") }}</p>
+        <h1>{{ $t("orderLookup.title") }}</h1>
+        <p class="lead">{{ $t("orderLookup.subtitle") }}</p>
       </header>
 
       <div class="lookup-grid">
         <form class="lookup-form" @submit.prevent="lookupOrder">
           <label class="field">
-            <span>{{ $t('orderLookup.form.codeLabel') }}</span>
+            <span>{{ $t("orderLookup.form.codeLabel") }}</span>
             <input
               v-model.trim="orderCode"
               type="text"
@@ -19,11 +19,13 @@
               inputmode="text"
               @blur="orderCode = orderCode.toUpperCase()"
             />
-            <small v-if="formErrors.code" class="field-error">{{ formErrors.code }}</small>
+            <small v-if="formErrors.code" class="field-error">{{
+              formErrors.code
+            }}</small>
           </label>
 
           <label class="field" v-if="isAuthenticated">
-            <span>{{ $t('orderLookup.form.contactLabel') }}</span>
+            <span>{{ $t("orderLookup.form.contactLabel") }}</span>
             <input
               v-model.trim="contactValue"
               type="text"
@@ -31,20 +33,30 @@
               autocomplete="off"
               inputmode="text"
             />
-            <small v-if="formErrors.contact" class="field-error">{{ formErrors.contact }}</small>
+            <small v-if="formErrors.contact" class="field-error">{{
+              formErrors.contact
+            }}</small>
           </label>
           <p v-else class="form-hint">
-            {{ $t('orderLookup.form.guestHint') }}
+            {{ $t("orderLookup.form.guestHint") }}
           </p>
 
           <button class="submit-btn" type="submit" :disabled="isLoading">
             <span class="btn-content">
-              <span v-if="isLoading" class="inline-spinner" aria-hidden="true"></span>
-              {{ isLoading ? $t('orderLookup.form.checking') : $t('orderLookup.form.submit') }}
+              <span
+                v-if="isLoading"
+                class="inline-spinner"
+                aria-hidden="true"
+              ></span>
+              {{
+                isLoading
+                  ? $t("orderLookup.form.checking")
+                  : $t("orderLookup.form.submit")
+              }}
             </span>
           </button>
 
-          <p class="form-hint">{{ $t('orderLookup.form.hint') }}</p>
+          <p class="form-hint">{{ $t("orderLookup.form.hint") }}</p>
         </form>
 
         <div class="result-card" :class="resultCardClass">
@@ -54,99 +66,119 @@
                 {{ currentStatusLabel }}
               </div>
               <p class="muted">
-                {{ $t('orderLookup.status.updated') }}
+                {{ $t("orderLookup.status.updated") }}
                 <strong>{{ statusUpdatedLabel }}</strong>
               </p>
             </div>
             <dl class="result-grid">
               <div>
-                <dt>{{ $t('orderLookup.results.orderCode') }}</dt>
+                <dt>{{ $t("orderLookup.results.orderCode") }}</dt>
                 <dd>{{ orderCodeDisplay }}</dd>
               </div>
               <div>
-                <dt>{{ $t('orderLookup.results.placedOn') }}</dt>
+                <dt>{{ $t("orderLookup.results.placedOn") }}</dt>
                 <dd>{{ placedOnLabel }}</dd>
               </div>
               <div>
-                <dt>{{ $t('orderLookup.results.total') }}</dt>
+                <dt>{{ $t("orderLookup.results.total") }}</dt>
                 <dd>{{ totalLabel }}</dd>
               </div>
               <div>
-                <dt>{{ $t('orderLookup.results.shippingTo') }}</dt>
-                <dd>{{ shippingAddress || '—' }}</dd>
+                <dt>{{ $t("orderLookup.results.shippingTo") }}</dt>
+                <dd>{{ shippingAddress || "—" }}</dd>
               </div>
               <div v-if="isAuthenticated">
-                <dt>{{ $t('orderLookup.results.contact') }}</dt>
+                <dt>{{ $t("orderLookup.results.contact") }}</dt>
                 <dd>{{ contactSummary }}</dd>
               </div>
             </dl>
           </template>
 
           <template v-else-if="state === 'error'">
-            <h3>{{ $t('orderLookup.error.title') }}</h3>
-            <p class="muted">{{ errorMessage || $t('orderLookup.error.generic') }}</p>
-            <RouterLink to="/" class="text-link">{{ $t('orderLookup.help') }}</RouterLink>
+            <h3>{{ $t("orderLookup.error.title") }}</h3>
+            <p class="muted">
+              {{ errorMessage || $t("orderLookup.error.generic") }}
+            </p>
+            <RouterLink to="/" class="text-link">{{
+              $t("orderLookup.help")
+            }}</RouterLink>
           </template>
 
           <template v-else>
-            <h3>{{ $t('orderLookup.empty.title') }}</h3>
-            <p class="muted">{{ $t('orderLookup.empty.subtitle') }}</p>
-            <RouterLink to="/" class="text-link">{{ $t('orderLookup.help') }}</RouterLink>
+            <h3>{{ $t("orderLookup.empty.title") }}</h3>
+            <p class="muted">{{ $t("orderLookup.empty.subtitle") }}</p>
+            <RouterLink to="/" class="text-link">{{
+              $t("orderLookup.help")
+            }}</RouterLink>
           </template>
         </div>
       </div>
 
       <section class="timeline-section" v-if="state === 'success'">
         <div class="section-heading">
-          <h2>{{ $t('orderLookup.timeline.heading') }}</h2>
-          <span class="muted">{{ timelineEvents.length }} updates</span>
+          <h2>{{ $t("orderLookup.timeline.heading") }}</h2>
+          <span class="muted"
+            >{{ timelineEvents.length }}
+            {{ $t("orderLookup.timeline.updates") }}</span
+          >
         </div>
 
         <div v-if="timelineEvents.length" class="timeline-list">
-          <article v-for="item in timelineEvents" :key="item.id" class="timeline-item">
+          <article
+            v-for="item in timelineEvents"
+            :key="item.id"
+            class="timeline-item"
+          >
             <div class="timeline-marker"></div>
             <div class="timeline-body">
               <div class="timeline-meta">
-                <span class="time">{{ formatDateTime(item.thoiGian) }}</span>
-                <span class="actor" v-if="item.tenNhanVien">{{ item.tenNhanVien }}</span>
+                <span class="time">{{ formatDateTimeVN(item.thoiGian) }}</span>
               </div>
-              <h3>{{ item.trangThaiMoi }}</h3>
-              <p class="muted">{{ item.hanhDong }}</p>
-              <p v-if="item.moTa" class="note">{{ item.moTa }}</p>
-              <p v-if="item.ghiChu" class="note">{{ item.ghiChu }}</p>
+              <h3>{{ item.tenTrangThaiDonHang }}</h3>
+              <p v-if="item.ghiChu" class="muted">{{ item.ghiChu }}</p>
             </div>
           </article>
         </div>
         <div v-else class="timeline-empty">
-          <p class="muted">{{ $t('orderLookup.timeline.emptyTitle') }}</p>
-          <p>{{ $t('orderLookup.timeline.emptySubtitle') }}</p>
+          <p class="muted">{{ $t("orderLookup.timeline.emptyTitle") }}</p>
+          <p>{{ $t("orderLookup.timeline.emptySubtitle") }}</p>
         </div>
       </section>
 
       <section class="items-section" v-if="state === 'success'">
         <div class="section-heading">
-          <h2>{{ $t('orderLookup.items.heading') }}</h2>
-          <span class="muted" v-if="orderItems.length">{{ orderItems.length }} items</span>
+          <h2>{{ $t("orderLookup.items.heading") }}</h2>
+          <span class="muted" v-if="orderItems.length"
+            >{{ orderItems.length }}
+            {{ $t("orderLookup.items.itemsCount") }}</span
+          >
         </div>
 
         <div v-if="orderItems.length" class="items-table">
           <div class="items-header">
-            <span>{{ $t('orderLookup.items.product') }}</span>
-            <span>{{ $t('orderLookup.items.variant') }}</span>
-            <span>{{ $t('orderLookup.items.quantity') }}</span>
-            <span>{{ $t('orderLookup.items.price') }}</span>
-            <span>{{ $t('orderLookup.items.subtotal') }}</span>
+            <span>{{ $t("orderLookup.items.product") }}</span>
+            <span>{{ $t("orderLookup.items.quantity") }}</span>
+            <span>{{ $t("orderLookup.items.price") }}</span>
+            <span>{{ $t("orderLookup.items.subtotal") }}</span>
           </div>
           <div v-for="item in orderItems" :key="item.id" class="items-row">
-            <span class="product-name">{{ item.name }}</span>
-            <span class="product-variant">{{ item.variant }}</span>
+            <div class="product-details">
+              <div class="product-main">
+                {{ item.productName
+                }}<span v-if="item.color"> - {{ item.color }}</span
+                ><span v-if="item.size"> - {{ item.size }}</span>
+              </div>
+              <div v-if="item.productCode" class="product-code">
+                {{ item.productCode }}
+              </div>
+            </div>
             <span>{{ item.quantity }}</span>
             <span>{{ formatCurrency(item.price) }}</span>
             <span>{{ formatCurrency(item.subtotal) }}</span>
           </div>
         </div>
         <div v-else class="items-empty">
-          <p>{{ $t('orderLookup.items.empty') }}</p>
+          <p>{{ $t("orderLookup.items.empty") }}</p>
         </div>
       </section>
     </div>
@@ -154,8 +186,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, reactive, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   fetchLatestOrderStatus,
   fetchOrderById,
@@ -164,308 +196,410 @@ import {
   type OrderStatusSnapshot,
   type OrderTimelineEntry,
   type OrderTrackingDetail,
-} from '@/api/orders'
-import { formatCurrency } from '@/utils/currency'
-import { useUserStore } from '@/stores/user'
+} from "@/api/orders";
+import { formatCurrency } from "@/utils/currency";
+import { useUserStore } from "@/stores/user";
 
-type LookupState = 'idle' | 'loading' | 'success' | 'error'
+type LookupState = "idle" | "loading" | "success" | "error";
 
-const orderCode = ref('')
-const contactValue = ref('')
-const state = ref<LookupState>('idle')
-const errorMessage = ref('')
-const order = ref<OrderTrackingDetail | null>(null)
-const timeline = ref<OrderTimelineEntry[]>([])
-const snapshot = ref<OrderStatusSnapshot | null>(null)
-const formErrors = reactive<{ code?: string; contact?: string }>({})
-const { t } = useI18n()
-const userStore = useUserStore()
-const isAuthenticated = computed(() => userStore.isAuthenticated)
+const orderCode = ref("");
+const contactValue = ref("");
+const state = ref<LookupState>("idle");
+const errorMessage = ref("");
+const order = ref<OrderTrackingDetail | null>(null);
+const timeline = ref<OrderTimelineEntry[]>([]);
+const snapshot = ref<OrderStatusSnapshot | null>(null);
+const formErrors = reactive<{ code?: string; contact?: string }>({});
+const { t } = useI18n();
+const userStore = useUserStore();
+const isAuthenticated = computed(() => userStore.isAuthenticated);
 
 function hydrateContactFromProfile() {
-  if (!isAuthenticated.value) return
-  if (contactValue.value) return
-  const profile = userStore.profile
-  contactValue.value = profile?.email || profile?.soDienThoai || ''
+  if (!isAuthenticated.value) return;
+  if (contactValue.value) return;
+  const profile = userStore.profile;
+  contactValue.value = profile?.email || profile?.soDienThoai || "";
 }
 
-hydrateContactFromProfile()
+hydrateContactFromProfile();
 
 watch(isAuthenticated, (loggedIn) => {
   if (loggedIn) {
-    hydrateContactFromProfile()
+    hydrateContactFromProfile();
   } else {
-    contactValue.value = ''
-    formErrors.contact = undefined
+    contactValue.value = "";
+    formErrors.contact = undefined;
   }
-})
+});
 
-const isLoading = computed(() => state.value === 'loading')
+const isLoading = computed(() => state.value === "loading");
 
 const orderCodeDisplay = computed(() => {
-  if (!order.value) return '—'
-  if (order.value.maHoaDon) return order.value.maHoaDon
-  if (order.value.id) return `HD${String(order.value.id).padStart(6, '0')}`
-  return '—'
-})
+  if (!order.value) return "—";
+  if (order.value.maHoaDon) return order.value.maHoaDon;
+  if (order.value.id) return `HD${String(order.value.id).padStart(6, "0")}`;
+  return "—";
+});
 
-const placedOnLabel = computed(() => formatDateTime(order.value?.ngayTao || order.value?.createAt))
+const placedOnLabel = computed(() =>
+  formatDateTimeVN(order.value?.ngayTao || order.value?.createAt)
+);
 
 const totalLabel = computed(() => {
-  const amount = order.value?.tongTienSauGiam ?? order.value?.tongTien ?? 0
-  return formatCurrency(amount)
-})
+  const amount = order.value?.tongTienSauGiam ?? order.value?.tongTien ?? 0;
+  return formatCurrency(amount);
+});
 
 const shippingAddress = computed(() => {
   return (
     order.value?.diaChiNhanHang ||
     order.value?.diaChiNguoiNhan ||
     order.value?.diaChi ||
-    ''
-  )
-})
+    ""
+  );
+});
 
 const contactSummary = computed(() => {
-  const email = order.value?.emailNguoiNhan || order.value?.email || order.value?.emailKhachHang
+  const email =
+    order.value?.emailNguoiNhan ||
+    order.value?.email ||
+    order.value?.emailKhachHang;
   const phone =
     order.value?.soDienThoaiNguoiNhan ||
     order.value?.soDienThoai ||
-    order.value?.soDienThoaiKhachHang
-  if (email && phone) return `${email} · ${phone}`
-  return email || phone || '—'
-})
+    order.value?.soDienThoaiKhachHang;
+  if (email && phone) return `${email} · ${phone}`;
+  return email || phone || "—";
+});
 
 const statusUpdatedLabel = computed(() => {
+  // Prioritize thongTinDonHang's thoiGian (latest update time)
   const source =
     snapshot.value?.thoiGian ||
     timeline.value.at(-1)?.thoiGian ||
     order.value?.ngayTao ||
-    null
-  return formatDateTime(source)
-})
+    null;
+  return formatDateTimeVN(source);
+});
 
 const currentStatusLabel = computed(() => {
   return (
     snapshot.value?.tenTrangThaiDonHang ||
     timeline.value.at(-1)?.trangThaiMoi ||
-    t('orderLookup.status.unknown')
-  )
-})
+    t("orderLookup.status.unknown")
+  );
+});
 
 const statusTone = computed(() => {
-  const key = (currentStatusLabel.value || '').toLowerCase()
-  if (key.includes('hủy') || key.includes('cancel')) return 'tone-danger'
-  if (key.includes('giao') || key.includes('delivered')) return 'tone-success'
-  if (key.includes('chuẩn') || key.includes('processing')) return 'tone-warn'
-  return 'tone-neutral'
-})
+  const key = (currentStatusLabel.value || "").toLowerCase();
+  if (key.includes("hủy") || key.includes("cancel")) return "tone-danger";
+  if (key.includes("giao") || key.includes("delivered")) return "tone-success";
+  if (key.includes("chuẩn") || key.includes("processing")) return "tone-warn";
+  return "tone-neutral";
+});
 
 const orderItems = computed(() => {
-  if (!order.value?.hoaDonChiTiets?.length) return []
-  return order.value.hoaDonChiTiets.map((item, index) => {
+  // Support both 'hoaDonChiTiets' and 'items' field names
+  const items = order.value?.hoaDonChiTiets || order.value?.items;
+
+  if (!items?.length) {
+    console.warn("[OrderLookup] No order items found in order:", order.value);
+    return [];
+  }
+
+  return items.map((item, index) => {
+
+    // Tên sản phẩm - từ nhiều nguồn khác nhau
     const productName =
       item.tenSanPhamChiTiet ||
+      item.tenSanPham ||
       item.idChiTietSanPham?.idSanPham?.tenSanPham ||
-      t('orderLookup.items.product')
+      t("orderLookup.items.product");
+
+    // Mã sản phẩm chi tiết
+    const productCode =
+      item.maSanPham ||
+      item.maHoaDonChiTiet ||
+      item.idChiTietSanPham?.maChiTietSanPham ||
+      "";
+
+    // Màu sắc - trực tiếp hoặc nested
     const color =
+      item.tenMauSac ||
       item.idChiTietSanPham?.idMauSac?.tenMauSac ||
-      item.idChiTietSanPham?.idMauSac?.tenMau
+      item.idChiTietSanPham?.idMauSac?.tenMau ||
+      "";
+
+    // Kích thước - trực tiếp hoặc nested
     const size =
+      item.tenKichThuoc ||
       item.idChiTietSanPham?.idKichThuoc?.tenKichThuoc ||
-      item.idChiTietSanPham?.idKichThuoc?.kichThuoc
-    const variantParts = [color, size].filter(Boolean)
-    const variant = variantParts.length ? variantParts.join(' · ') : t('orderLookup.items.variant')
-    const quantity = item.soLuong ?? 0
-    const price = item.giaBan ?? 0
-    const subtotal = item.thanhTien ?? quantity * price
-    return {
+      item.idChiTietSanPham?.idKichThuoc?.kichThuoc ||
+      "";
+
+    const quantity = item.soLuong ?? 0;
+    const price = item.giaBan ?? 0;
+    const subtotal = item.thanhTien ?? quantity * price;
+
+    const processedItem = {
       id: item.id ?? index,
-      name: productName,
-      variant,
+      productName,
+      productCode,
+      color,
+      size,
       quantity,
       price,
       subtotal,
-    }
-  })
-})
+    };
+    return processedItem;
+  });
+});
 
 const timelineEvents = computed(() => {
+  // Sort by thoiGian descending (newest first)
   return [...timeline.value].sort((a, b) => {
-    const timeA = Date.parse(a.thoiGian || '')
-    const timeB = Date.parse(b.thoiGian || '')
-    return timeA - timeB
-  })
-})
+    const timeA = Date.parse(a.thoiGian || "");
+    const timeB = Date.parse(b.thoiGian || "");
+    return timeB - timeA; // DESC order (newest first)
+  });
+});
 
 const resultCardClass = computed(() => {
-  if (state.value === 'success') return 'result-card--success'
-  if (state.value === 'error') return 'result-card--error'
-  return 'result-card--idle'
-})
+  if (state.value === "success") return "result-card--success";
+  if (state.value === "error") return "result-card--error";
+  return "result-card--idle";
+});
 
 async function lookupOrder() {
-  resetState()
+  resetState();
   if (!validateForm()) {
-    state.value = 'idle'
-    return
+    state.value = "idle";
+    return;
   }
 
-  const code = orderCode.value.trim().toUpperCase()
+  const code = orderCode.value.trim().toUpperCase();
   if (!code) {
-    formErrors.code = t('orderLookup.error.invalidCode')
-    state.value = 'idle'
-    return
+    formErrors.code = t("orderLookup.error.invalidCode");
+    state.value = "idle";
+    return;
   }
 
-  const hasLetters = /[A-Za-z]/.test(code)
-  const extractedId = extractOrderId(code)
+  const hasLetters = /[A-Za-z]/.test(code);
+  const extractedId = extractOrderId(code);
   if (!hasLetters && !extractedId) {
-    formErrors.code = t('orderLookup.error.invalidCode')
-    state.value = 'idle'
-    return
+    formErrors.code = t("orderLookup.error.invalidCode");
+    state.value = "idle";
+    return;
   }
 
-  state.value = 'loading'
+  state.value = "loading";
   try {
     const orderRequest = hasLetters
       ? fetchOrderByCode(code)
-      : fetchOrderById(extractedId as number)
-    const orderRes = await orderRequest
-    const orderData = orderRes.data
+      : fetchOrderById(extractedId as number);
+    const orderRes = await orderRequest;
+    const orderData = orderRes.data;
     if (!orderData) {
-      throw new Error(t('orderLookup.error.notFound'))
+      throw new Error(t("orderLookup.error.notFound"));
     }
-    if (isAuthenticated.value && !matchesContact(orderData, contactValue.value)) {
-      throw new Error(t('orderLookup.error.contactMismatch'))
+    if (
+      isAuthenticated.value &&
+      !matchesContact(orderData, contactValue.value)
+    ) {
+      throw new Error(t("orderLookup.error.contactMismatch"));
     }
 
-    order.value = orderData
+    order.value = orderData;
 
-    const orderIdForTimeline = orderData.id ?? extractedId ?? null
+    const orderIdForTimeline = orderData.id ?? extractedId ?? null;
     if (orderIdForTimeline) {
+      // Fetch all timeline events from timeline_don_hang table
+      // Each event has thoiGian (time) and hanhDong (action/activity)
       const [timelineRes, statusRes] = await Promise.allSettled([
         fetchOrderTimeline(orderIdForTimeline),
         fetchLatestOrderStatus(orderIdForTimeline),
-      ])
-      if (timelineRes.status === 'fulfilled' && Array.isArray(timelineRes.value.data)) {
-        timeline.value = timelineRes.value.data
+      ]);
+      if (timelineRes.status === "fulfilled" && timelineRes.value.data) {
+        const timelineData = timelineRes.value.data;
+
+        // Handle both array and single object responses
+        if (Array.isArray(timelineData)) {
+          timeline.value = timelineData;
+        } else if (timelineData && typeof timelineData === "object") {
+          timeline.value = [timelineData];
+        } else {
+          timeline.value = [];
+        }
       } else {
-        timeline.value = []
+        console.warn(
+          "[OrderLookup] Timeline fetch failed:",
+          timelineRes.status,
+          timelineRes
+        );
+        timeline.value = [];
       }
-      if (statusRes.status === 'fulfilled') {
-        snapshot.value = statusRes.value.data
+      if (statusRes.status === "fulfilled") {
+        snapshot.value = statusRes.value.data;
       } else {
-        snapshot.value = null
+        console.warn(
+          "[OrderLookup] Status fetch failed:",
+          statusRes.status,
+          statusRes
+        );
+        snapshot.value = null;
       }
     } else {
-      timeline.value = []
-      snapshot.value = null
+      timeline.value = [];
+      snapshot.value = null;
     }
-
-    errorMessage.value = ''
-    state.value = 'success'
+    errorMessage.value = "";
+    state.value = "success";
   } catch (error: any) {
-    console.warn('Order lookup failed', error)
-    errorMessage.value =
-      error?.message ?? t('orderLookup.error.generic')
-    order.value = null
-    timeline.value = []
-    snapshot.value = null
-    state.value = 'error'
+    console.warn("Order lookup failed", error);
+    errorMessage.value = error?.message ?? t("orderLookup.error.generic");
+    order.value = null;
+    timeline.value = [];
+    snapshot.value = null;
+    state.value = "error";
   }
 }
 
 function resetState() {
-  formErrors.code = undefined
-  formErrors.contact = undefined
-  errorMessage.value = ''
-  if (state.value !== 'loading') {
-    order.value = null
-    timeline.value = []
-    snapshot.value = null
+  formErrors.code = undefined;
+  formErrors.contact = undefined;
+  errorMessage.value = "";
+  if (state.value !== "loading") {
+    order.value = null;
+    timeline.value = [];
+    snapshot.value = null;
   }
 }
 
 function validateForm() {
-  const code = orderCode.value.trim()
-  const contact = contactValue.value.trim()
+  const code = orderCode.value.trim();
+  const contact = contactValue.value.trim();
   if (!code) {
-    formErrors.code = t('orderLookup.form.codeError')
+    formErrors.code = t("orderLookup.form.codeError");
   }
   if (isAuthenticated.value) {
     if (!contact) {
-      formErrors.contact = t('orderLookup.form.contactError')
+      formErrors.contact = t("orderLookup.form.contactError");
     } else if (!isEmail(contact) && !isPhone(contact)) {
-      formErrors.contact = t('orderLookup.form.contactFormatError')
+      formErrors.contact = t("orderLookup.form.contactFormatError");
     }
   }
-  return !formErrors.code && (!isAuthenticated.value || !formErrors.contact)
+  return !formErrors.code && (!isAuthenticated.value || !formErrors.contact);
 }
 
 function extractOrderId(code: string) {
-  const digits = code.replace(/\D/g, '')
-  if (!digits) return null
-  const parsed = Number(digits)
-  if (!Number.isFinite(parsed) || parsed <= 0) return null
-  return parsed
+  const digits = code.replace(/\D/g, "");
+  if (!digits) return null;
+  const parsed = Number(digits);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
 }
 
 function matchesContact(orderData: OrderTrackingDetail, input: string) {
-  if (!isAuthenticated.value) return true
-  const trimmed = input.trim()
-  if (!trimmed) return false
+  if (!isAuthenticated.value) return true;
+  const trimmed = input.trim();
+  if (!trimmed) return false;
   if (isEmail(trimmed)) {
-    const normalizedInput = trimmed.toLowerCase()
+    const normalizedInput = trimmed.toLowerCase();
     const candidate =
-      orderData.emailNguoiNhan || orderData.email || orderData.emailKhachHang || ''
-    return candidate.toLowerCase() === normalizedInput
+      orderData.emailNguoiNhan ||
+      orderData.email ||
+      orderData.emailKhachHang ||
+      "";
+    return candidate.toLowerCase() === normalizedInput;
   }
 
-  const normalizedInput = normalizePhone(trimmed)
-  if (!normalizedInput) return false
+  const normalizedInput = normalizePhone(trimmed);
+  if (!normalizedInput) return false;
   const candidates = [
     orderData.soDienThoaiNguoiNhan,
     orderData.soDienThoai,
     orderData.soDienThoaiKhachHang,
-  ]
+  ];
   return candidates.some((value) => {
-    const phone = normalizePhone(value || '')
-    return phone && (phone === normalizedInput || phone.endsWith(normalizedInput))
-  })
+    const phone = normalizePhone(value || "");
+    return (
+      phone && (phone === normalizedInput || phone.endsWith(normalizedInput))
+    );
+  });
 }
 
 function normalizePhone(value: string) {
-  const digits = value.replace(/\D/g, '')
-  return digits.startsWith('0') ? digits.slice(1) : digits
+  const digits = value.replace(/\D/g, "");
+  return digits.startsWith("0") ? digits.slice(1) : digits;
 }
 
 function isEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.toLowerCase())
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.toLowerCase());
 }
 
 function isPhone(value: string) {
-  return /\d{6,}/.test(value.replace(/\D/g, ''))
+  return /\d{6,}/.test(value.replace(/\D/g, ""));
+}
+
+function formatDateTimeVN(value?: string | null) {
+  if (!value) return "—";
+
+  try {
+    // Handle both ISO 8601 formats from Java:
+    // 1. LocalDateTime format: 2025-01-15T10:30:45
+    // 2. Instant format: 2025-01-15T10:30:45Z or 2025-01-15T10:30:45.123Z
+    let dateStr = String(value).trim();
+
+    // If it contains space, replace with T for ISO format
+    if (dateStr.includes(" ") && !dateStr.includes("T")) {
+      dateStr = dateStr.replace(" ", "T");
+    }
+
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) {
+      console.warn("[OrderLookup] Invalid date format:", value);
+      return "—";
+    }
+
+    // Format with Vietnam timezone (Asia/Ho_Chi_Minh - UTC+7)
+    return new Intl.DateTimeFormat("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(date);
+  } catch (error) {
+    console.error("[OrderLookup] Error formatting date:", value, error);
+    return "—";
+  }
 }
 
 function formatDateTime(value?: string | null) {
-  if (!value) return '—'
-  const normalized = value.includes('T') ? value : value.replace(' ', 'T')
-  const date = new Date(normalized)
-  if (Number.isNaN(date.getTime())) return '—'
+  if (!value) return "—";
+  const normalized = value.includes("T") ? value : value.replace(" ", "T");
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat(undefined, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 </script>
 
 <style scoped lang="scss">
 .order-lookup {
-  padding: clamp(32px, 6vw, 96px) 0 clamp(48px, 8vw, 120px);
-  background: linear-gradient(180deg, rgba(17, 17, 17, 0.02), rgba(17, 17, 17, 0));
+  padding: clamp(12px, 6vw, 12px) 0 clamp(12px, 8vw, 12px);
+  background: linear-gradient(
+    180deg,
+    rgba(17, 17, 17, 0.02),
+    rgba(17, 17, 17, 0)
+  );
 }
 
 .lookup-hero {
@@ -719,7 +853,7 @@ function formatDateTime(value?: string | null) {
 }
 
 .timeline-marker::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 2px;
   height: calc(100% + 20px);
@@ -768,7 +902,7 @@ function formatDateTime(value?: string | null) {
 .items-header,
 .items-row {
   display: grid;
-  grid-template-columns: 1.8fr 1.2fr 0.6fr 0.8fr 0.8fr;
+  grid-template-columns: 2fr 0.6fr 0.8fr 0.8fr;
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid rgba(17, 17, 17, 0.08);
@@ -786,12 +920,24 @@ function formatDateTime(value?: string | null) {
   align-items: center;
 }
 
-.product-name {
+.product-details {
   font-weight: 600;
+  color: #111;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.product-variant {
-  color: rgba(17, 17, 17, 0.6);
+.product-main {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+}
+
+.product-code {
+  font-size: 11px;
+  color: rgba(17, 17, 17, 0.5);
+  font-weight: 400;
 }
 
 .items-empty {
@@ -816,33 +962,29 @@ function formatDateTime(value?: string | null) {
 
   .items-header,
   .items-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     grid-template-areas:
-      'name price'
-      'variant qty'
-      'subtotal subtotal';
+      "details"
+      "qty"
+      "price"
+      "subtotal";
   }
 
-  .items-row span:nth-child(1) {
-    grid-area: name;
+  .items-row > div:nth-child(1) {
+    grid-area: details;
   }
 
-  .items-row span:nth-child(2) {
-    grid-area: variant;
-  }
-
-  .items-row span:nth-child(3) {
+  .items-row > span:nth-child(2) {
     grid-area: qty;
   }
 
-  .items-row span:nth-child(4) {
+  .items-row > span:nth-child(3) {
     grid-area: price;
   }
 
-  .items-row span:nth-child(5) {
+  .items-row > span:nth-child(4) {
     grid-area: subtotal;
     font-weight: 600;
   }
 }
 </style>
-

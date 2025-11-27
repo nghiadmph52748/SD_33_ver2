@@ -68,49 +68,61 @@ export interface OrderTrackingDetail extends Partial<OrderResponse> {
   createAt?: string;
   loaiDon?: boolean;
   ghiChu?: string;
-  hoaDonChiTiets?: Array<{
+  // Support both field names from different API versions
+  hoaDonChiTiets?: Array<HoaDonChiTietItem>;
+  items?: Array<HoaDonChiTietItem>;
+}
+
+export interface HoaDonChiTietItem {
+  id?: number;
+  soLuong?: number;
+  giaBan?: number;
+  thanhTien?: number;
+  tenSanPhamChiTiet?: string;
+  tenSanPham?: string;
+  maHoaDonChiTiet?: string;
+  maSanPhamChiTiet?: string;
+  // Flat structure from HoaDonChiTietResponse
+  tenMauSac?: string;
+  tenKichThuoc?: string;
+  // Nested structure for backward compatibility
+  idChiTietSanPham?: {
     id?: number;
-    soLuong?: number;
-    giaBan?: number;
-    thanhTien?: number;
-    tenSanPhamChiTiet?: string;
-    maHoaDonChiTiet?: string;
-    idChiTietSanPham?: {
-      id?: number;
-      maChiTietSanPham?: string;
-      idSanPham?: {
-        tenSanPham?: string;
-        maSanPham?: string;
-      };
-      idMauSac?: {
-        tenMauSac?: string;
-        tenMau?: string;
-      };
-      idKichThuoc?: {
-        tenKichThuoc?: string;
-        kichThuoc?: string;
-      };
+    maChiTietSanPham?: string;
+    idSanPham?: {
+      tenSanPham?: string;
+      maSanPham?: string;
     };
-  }>;
+    idMauSac?: {
+      tenMauSac?: string;
+      tenMau?: string;
+    };
+    idKichThuoc?: {
+      tenKichThuoc?: string;
+      kichThuoc?: string;
+    };
+  };
 }
 
 export interface OrderTimelineEntry {
   id: number;
   idHoaDon: number;
-  trangThaiMoi: string;
-  hanhDong: string;
-  moTa?: string;
-  ghiChu?: string;
-  thoiGian: string;
-  tenNhanVien?: string;
+  idTrangThaiDonHang?: number;
+  tenTrangThaiDonHang?: string; // Status/Action name
+  maTrangThaiDonHang?: string;
+  maThongTinDonHang?: string;
+  thoiGian: string; // Time when this status was recorded
+  ghiChu?: string; // Notes
+  trangThai?: boolean;
+  deleted?: boolean;
 }
 
 export interface OrderStatusSnapshot {
   id?: number;
   maDonHang?: string;
-  tenTrangThaiDonHang?: string;
   maThongTinDonHang?: string;
-  thoiGian?: string;
+  tenTrangThaiDonHang?: string;
+  thoiGian?: string; // Latest update time from thongTinDonHang table
   ghiChu?: string;
 }
 
@@ -201,12 +213,22 @@ export function fetchOrderByCode(
 export function fetchOrderTimeline(
   orderId: number
 ): Promise<HttpResponse<OrderTimelineEntry[]>> {
-  return axios.get(`/api/timeline-don-hang/${orderId}`);
+  // Fetch all order timeline from thong_tin_don_hang table
+  // Each entry has thoiGian (time) and tenTrangThaiDonHang (status/action)
+  return axios.get(`/api/thong-tin-hoa-don-management/by-hoa-don/${orderId}`);
+}
+
+export function fetchOrderHistory(
+  orderId: number
+): Promise<HttpResponse<OrderTimelineEntry[]>> {
+  // Fetch all order history from thongTinDonHang (not just latest)
+  return axios.get(`/api/thong-tin-hoa-don-management/by-hoa-don/${orderId}`);
 }
 
 export function fetchLatestOrderStatus(
   orderId: number
 ): Promise<HttpResponse<OrderStatusSnapshot | null>> {
+  // Fetch latest status from thongTinDonHang table
   return axios.get(
     `/api/thong-tin-hoa-don-management/latest-by-hoa-don/${orderId}`
   );
@@ -290,12 +312,6 @@ export async function createOrderFromCart(
           deleted: false,
           createAt: createdAt,
         };
-        console.log("[ORDER] Cart item:", {
-          name: item.name,
-          idBienThe: idChiTietSanPham,
-          quantity: item.quantity,
-          price: item.price,
-        });
         return request;
       }),
       loaiDon: true,
@@ -307,11 +323,6 @@ export async function createOrderFromCart(
       deleted: false,
       createAt: createdAt,
     };
-
-    console.log(
-      "[ORDER] Creating order with request:",
-      JSON.stringify(orderRequest, null, 2)
-    );
 
     const response = await createOrder(orderRequest);
     const order = response.data as OrderResponse;

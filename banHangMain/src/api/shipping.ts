@@ -324,6 +324,38 @@ function calculateLocalShippingFee(
 }
 
 /**
+ * Helper function to call GHN fee API with fallback to dev server
+ */
+async function callGHNFeeAPI(
+  feePayload: any,
+  prodToken: string,
+  devToken: string,
+  isRetry: boolean = false
+): Promise<{ ok: boolean; status: number; data: any }> {
+  const apiUrl = isRetry
+    ? "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee"
+    : "https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee";
+
+  const token = isRetry ? devToken : prodToken;
+
+  const feeRes = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Token: token,
+    },
+    body: JSON.stringify(feePayload),
+  });
+  const feeData = await feeRes.json();
+
+  return {
+    ok: feeRes.ok,
+    status: feeRes.status,
+    data: feeData,
+  };
+}
+
+/**
  * Calculate shipping fee from GHN API
  * Falls back to local calculation if GHN is not configured or fails
  */
@@ -350,6 +382,8 @@ async function calculateShippingFeeFromGHN(
     }
 
     const GHN_TOKEN = import.meta.env.VITE_GHN_TOKEN?.trim();
+    const GHN_DEV_TOKEN =
+      import.meta.env.VITE_GHN_DEV_TOKEN?.trim() || GHN_TOKEN;
 
     // Store location - hardcoded for GHN API
     // IMPORTANT: These IDs must match the shop's actual location in GHN portal
@@ -403,11 +437,15 @@ async function calculateShippingFeeFromGHN(
 
       toDistrictId = targetDistrict.DistrictID;
     } catch (error) {
-      console.warn("[Shipping] Failed to get district from GHN:", error);
+      console.error(
+        "[Shipping] Error getting district:",
+        error instanceof Error ? error.message : String(error)
+      );
       const localFee = calculateLocalShippingFee(location, subtotal);
       return {
         fee: localFee,
-        message: "Không thể lấy thông tin từ GHN, sử dụng giá mặc định",
+        message:
+          "Không thể lấy thông tin quận/huyện từ GHN, sử dụng giá mặc định",
         estimatedDays: "3-5 ngày",
       };
     }
@@ -444,11 +482,15 @@ async function calculateShippingFeeFromGHN(
 
       toWardId = targetWard.WardCode;
     } catch (error) {
-      console.warn("[Shipping] Failed to get ward from GHN:", error);
+      console.error(
+        "[Shipping] Error getting ward:",
+        error instanceof Error ? error.message : String(error)
+      );
       const localFee = calculateLocalShippingFee(location, subtotal);
       return {
         fee: localFee,
-        message: "Không thể lấy thông tin từ GHN, sử dụng giá mặc định",
+        message:
+          "Không thể lấy thông tin phường/xã từ GHN, sử dụng giá mặc định",
         estimatedDays: "3-5 ngày",
       };
     }
@@ -468,26 +510,41 @@ async function calculateShippingFeeFromGHN(
       coupon: null,
     };
 
-    const feeRes = await fetch(
-      "https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Token: GHN_TOKEN,
-        },
-        body: JSON.stringify(feePayload),
-      }
+    // Try production API first
+    let feeResult = await callGHNFeeAPI(
+      feePayload,
+      GHN_TOKEN,
+      GHN_DEV_TOKEN,
+      false
     );
 
-    const feeData = await feeRes.json();
+    // If production fails, retry with dev server
+    if (!feeResult.ok) {
+      feeResult = await callGHNFeeAPI(
+        feePayload,
+        GHN_TOKEN,
+        GHN_DEV_TOKEN,
+        true
+      );
+    }
 
-    if (!feeData.data || typeof feeData.data.total !== "number") {
+    if (!feeResult.ok) {
+      console.error("[Shipping] GHN Fee API Error:", {
+        status: feeResult.status,
+        payload: feePayload,
+        response: feeResult.data,
+      });
+      throw new Error(
+        `GHN API error: ${feeResult.status} - ${JSON.stringify(feeResult.data)}`
+      );
+    }
+
+    if (!feeResult.data.data || typeof feeResult.data.data.total !== "number") {
       throw new Error("Invalid fee response format");
     }
 
     // Ensure fee is integer
-    const shippingFeeInt = Math.round(feeData.data.total);
+    const shippingFeeInt = Math.round(feeResult.data.data.total);
 
     return {
       fee: shippingFeeInt,
@@ -496,6 +553,10 @@ async function calculateShippingFeeFromGHN(
     };
   } catch (error) {
     const { location, subtotal = 0 } = payload;
+    console.error(
+      "[Shipping] Error calculating fee:",
+      error instanceof Error ? error.message : String(error)
+    );
     const localFee = calculateLocalShippingFee(location, subtotal);
     return {
       fee: localFee,

@@ -256,6 +256,7 @@ export async function calculateShippingFeeFromGHN(
     }
 
     const GHN_TOKEN = import.meta.env.VITE_GHN_TOKEN || ''
+    const GHN_DEV_TOKEN = import.meta.env.VITE_GHN_DEV_TOKEN || GHN_TOKEN
     if (!GHN_TOKEN) {
       // Fallback to local calculation if GHN token not configured
       const fallbackFee = calculateShippingFee(location, 0)
@@ -313,33 +314,54 @@ export async function calculateShippingFeeFromGHN(
     }
 
     // Call GHN shipping fee calculation API
-    const feeRes = await fetch('https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee', {
+    const feePayload = {
+      from_district_id: 1, // Hà Nội
+      from_ward_id: 1442, // Bắc Từ Liêm
+      to_district_id: destinationDistrict.DistrictID,
+      to_ward_id: destinationWard.WardCode,
+      height: height,
+      length: length,
+      weight: weight,
+      width: width,
+      insurance_value: 0,
+      cod_failed_amount: 0,
+      coupon: null,
+    }
+
+    // Try production API first
+    let feeRes = await fetch('https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Token: GHN_TOKEN,
       },
-      body: JSON.stringify({
-        from_district_id: 1, // Hà Nội
-        from_ward_id: 1442, // Bắc Từ Liêm
-        to_district_id: destinationDistrict.DistrictID,
-        to_ward_id: destinationWard.WardCode,
-        height: height,
-        length: length,
-        weight: weight,
-        width: width,
-        insurance_value: 0,
-        cod_failed_amount: 0,
-        coupon: null,
-      }),
+      body: JSON.stringify(feePayload),
     })
 
+    // If production fails, retry with dev server
     if (!feeRes.ok) {
-      const fallbackFee = calculateShippingFee(location, 0)
-      return { fee: fallbackFee, message: 'Không thể lấy phí vận chuyển từ GHN' }
+      feeRes = await fetch('https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Token: GHN_DEV_TOKEN,
+        },
+        body: JSON.stringify(feePayload),
+      })
     }
 
     const feeData = await feeRes.json()
+
+    if (!feeRes.ok) {
+      console.error('[ShippingFee] GHN API Error:', {
+        status: feeRes.status,
+        payload: feePayload,
+        response: feeData,
+        tokenExists: !!GHN_TOKEN,
+      })
+      const fallbackFee = calculateShippingFee(location, 0)
+      return { fee: fallbackFee, message: 'Không thể lấy phí vận chuyển từ GHN' }
+    }
 
     if (!feeData.data || typeof feeData.data.total !== 'number') {
       const fallbackFee = calculateShippingFee(location, 0)

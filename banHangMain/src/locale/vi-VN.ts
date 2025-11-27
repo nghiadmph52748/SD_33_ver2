@@ -19,25 +19,34 @@ export default {
   "nav.favorites": "Yêu thích",
   "orderLookup.eyebrow": "Hỗ trợ đơn hàng",
   "orderLookup.title": "Tra cứu hoá đơn",
-  "orderLookup.subtitle": "Nhập mã hoá đơn cùng email hoặc số điện thoại đã dùng khi đặt hàng để xem trạng thái mới nhất.",
+  "orderLookup.subtitle":
+    "Nhập mã hoá đơn cùng email hoặc số điện thoại đã dùng khi đặt hàng để xem trạng thái mới nhất.",
   "orderLookup.form.codeLabel": "Mã hoá đơn",
   "orderLookup.form.codePlaceholder": "Ví dụ: HD000001234",
   "orderLookup.form.contactLabel": "Email hoặc số điện thoại",
-  "orderLookup.form.contactPlaceholder": "Nhập email hoặc số điện thoại trên đơn hàng",
+  "orderLookup.form.contactPlaceholder":
+    "Nhập email hoặc số điện thoại trên đơn hàng",
   "orderLookup.form.submit": "Kiểm tra trạng thái",
   "orderLookup.form.checking": "Đang kiểm tra…",
-  "orderLookup.form.hint": "Thông tin này chỉ dùng để xác thực đơn hàng của bạn.",
-  "orderLookup.form.guestHint": "Khách chưa đăng nhập chỉ có thể tra cứu bằng mã hoá đơn. Đăng nhập để xác thực bằng email hoặc số điện thoại đã lưu.",
+  "orderLookup.form.hint":
+    "Thông tin này chỉ dùng để xác thực đơn hàng của bạn.",
+  "orderLookup.form.guestHint":
+    "Khách chưa đăng nhập chỉ có thể tra cứu bằng mã hoá đơn. Đăng nhập để xác thực bằng email hoặc số điện thoại đã lưu.",
   "orderLookup.form.codeError": "Vui lòng nhập mã hoá đơn",
-  "orderLookup.form.contactError": "Vui lòng nhập email hoặc số điện thoại trên đơn hàng",
-  "orderLookup.form.contactFormatError": "Sử dụng email hợp lệ hoặc ít nhất 6 chữ số",
+  "orderLookup.form.contactError":
+    "Vui lòng nhập email hoặc số điện thoại trên đơn hàng",
+  "orderLookup.form.contactFormatError":
+    "Sử dụng email hợp lệ hoặc ít nhất 6 chữ số",
   "orderLookup.error.title": "Không tìm thấy hoá đơn",
   "orderLookup.error.generic": "Hãy kiểm tra lại thông tin và thử lại.",
-  "orderLookup.error.notFound": "Không có hoá đơn nào khớp với thông tin bạn cung cấp.",
-  "orderLookup.error.contactMismatch": "Thông tin liên hệ không trùng khớp với hoá đơn này.",
+  "orderLookup.error.notFound":
+    "Không có hoá đơn nào khớp với thông tin bạn cung cấp.",
+  "orderLookup.error.contactMismatch":
+    "Thông tin liên hệ không trùng khớp với hoá đơn này.",
   "orderLookup.error.invalidCode": "Mã hoá đơn chưa đúng định dạng.",
   "orderLookup.empty.title": "Nhập thông tin để bắt đầu",
-  "orderLookup.empty.subtitle": "Bạn có thể tìm mã hoá đơn trong email hoặc tin nhắn xác nhận.",
+  "orderLookup.empty.subtitle":
+    "Bạn có thể tìm mã hoá đơn trong email hoặc tin nhắn xác nhận.",
   "orderLookup.status.updated": "Cập nhật gần nhất:",
   "orderLookup.status.unknown": "Chưa có trạng thái",
   "orderLookup.results.orderCode": "Mã hoá đơn",
@@ -47,15 +56,19 @@ export default {
   "orderLookup.results.contact": "Liên hệ",
   "orderLookup.results.lastChecked": "Lần tra cứu gần nhất",
   "orderLookup.timeline.heading": "Dòng thời gian đơn hàng",
+  "orderLookup.timeline.updates": "cập nhật",
   "orderLookup.timeline.emptyTitle": "Chưa có lịch sử trạng thái",
-  "orderLookup.timeline.emptySubtitle": "Các cập nhật sẽ xuất hiện tại đây khi đơn hàng được xử lý.",
+  "orderLookup.timeline.emptySubtitle":
+    "Các cập nhật sẽ xuất hiện tại đây khi đơn hàng được xử lý.",
   "orderLookup.items.heading": "Sản phẩm trong đơn",
+  "orderLookup.items.itemsCount": "sản phẩm",
   "orderLookup.items.product": "Sản phẩm",
   "orderLookup.items.variant": "Phiên bản",
   "orderLookup.items.quantity": "SL",
   "orderLookup.items.price": "Đơn giá",
   "orderLookup.items.subtotal": "Thành tiền",
-  "orderLookup.items.empty": "Chúng tôi chưa thể tải danh sách sản phẩm của hoá đơn này.",
+  "orderLookup.items.empty":
+    "Chúng tôi chưa thể tải danh sách sản phẩm của hoá đơn này.",
   "orderLookup.help": "Cần hỗ trợ? Liên hệ đội ngũ CSKH",
   "product.addToCart": "Thêm vào giỏ",
   "product.selectSize": "Chọn kích thước",

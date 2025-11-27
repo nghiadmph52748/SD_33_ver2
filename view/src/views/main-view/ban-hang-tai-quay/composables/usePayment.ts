@@ -7,6 +7,7 @@ import {
   updateVoucher as svcUpdateVoucher,
 } from '../services/posService'
 import { fetchProvinces, fetchDistrictsByProvinceCode, fetchWardsByDistrictCode } from '../services/locationService'
+import { calculateShippingFeeFromGHN } from '../services/shippingFeeService'
 
 interface Customer {
   id: string
@@ -112,6 +113,9 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
         // District loading failed
       }
     }
+
+    // Reset shipping fee when province changes
+    shippingFee.value = 0
   }
 
   const onWalkInDistrictChange = async (value: string) => {
@@ -127,6 +131,25 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
       } catch {
         // Ward loading failed
       }
+    }
+
+    // Recalculate shipping fee when district changes
+    await recalculateShippingFee()
+  }
+
+  const recalculateShippingFee = async () => {
+    try {
+      if (!walkInLocation.value.thanhPho || !walkInLocation.value.quan || !walkInLocation.value.phuong) {
+        console.log('[Payment] Address incomplete for shipping calculation')
+        return
+      }
+
+      console.log('[Payment] Recalculating shipping fee for address:', walkInLocation.value)
+      const result = await calculateShippingFeeFromGHN(walkInLocation.value)
+      console.log('[Payment] Shipping fee calculated:', result)
+      shippingFee.value = result.fee
+    } catch (error) {
+      console.error('[Payment] Error recalculating shipping fee:', error)
     }
   }
 

@@ -13,6 +13,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class HoaDonChiTietResponse {
+
     private Integer id;
     private String idmaKhachHang;
     private String idtenKhachHang;
@@ -66,9 +67,10 @@ public class HoaDonChiTietResponse {
     private BigDecimal giaBanSanPham;
     private List<String> anhSanPham;
     private ChiTietSanPhamFullResponse sanPham;
+
     public HoaDonChiTietResponse(HoaDonChiTiet d) {
         this.id = d.getId();
-        
+
         // Hóa đơn thông tin
         if (d.getIdHoaDon() != null) {
             this.maHoaDon = d.getIdHoaDon().getMaHoaDon();
@@ -81,36 +83,51 @@ public class HoaDonChiTietResponse {
             this.diaChiNguoiNhan = d.getIdHoaDon().getDiaChiNguoiNhan();
             this.sdtNguoiNhan = d.getIdHoaDon().getSoDienThoaiNguoiNhan();
             this.emailNguoiNhan = d.getIdHoaDon().getEmailNguoiNhan();
-            
+
             // Khách hàng
             if (d.getIdHoaDon().getIdKhachHang() != null) {
                 this.idmaKhachHang = d.getIdHoaDon().getIdKhachHang().getMaKhachHang();
                 this.idtenKhachHang = d.getIdHoaDon().getIdKhachHang().getTenKhachHang();
             }
-            
+
             // Phiếu giảm giá
             if (d.getIdHoaDon().getIdPhieuGiamGia() != null) {
                 this.idmaPhieuGiamGia = d.getIdHoaDon().getIdPhieuGiamGia().getMaPhieuGiamGia();
                 this.idtenPhieuGiamGia = d.getIdHoaDon().getIdPhieuGiamGia().getTenPhieuGiamGia();
             }
-            
+
             // Nhân viên
             if (d.getIdHoaDon().getIdNhanVien() != null) {
                 this.idmaNhanVien = d.getIdHoaDon().getIdNhanVien().getMaNhanVien();
                 this.idtenNhanVien = d.getIdHoaDon().getIdNhanVien().getTenNhanVien();
             }
         }
-        
+
         // Chi tiết sản phẩm - lấy tên từ ghi chú
-        if (d.getIdChiTietSanPham() != null && d.getIdChiTietSanPham().getIdSanPham() != null) {
-            this.tenSanPham = d.getIdChiTietSanPham().getIdSanPham().getTenSanPham();
+        if (d.getIdChiTietSanPham() != null) {
+            if (d.getIdChiTietSanPham().getIdSanPham() != null) {
+                this.tenSanPham = d.getIdChiTietSanPham().getIdSanPham().getTenSanPham();
+                this.maSanPham = d.getIdChiTietSanPham().getIdSanPham().getMaSanPham();
+            }
+
+            // Lấy thông tin màu sắc
+            if (d.getIdChiTietSanPham().getIdMauSac() != null) {
+                this.tenMauSac = d.getIdChiTietSanPham().getIdMauSac().getTenMauSac();
+                this.maMauSac = d.getIdChiTietSanPham().getIdMauSac().getMaMauSac();
+            }
+
+            // Lấy thông tin kích thước
+            if (d.getIdChiTietSanPham().getIdKichThuoc() != null) {
+                this.tenKichThuoc = d.getIdChiTietSanPham().getIdKichThuoc().getTenKichThuoc();
+                this.maKichThuoc = d.getIdChiTietSanPham().getIdKichThuoc().getMaKichThuoc();
+            }
         }
-        
+
         // Ưu tiên lấy tên từ ghi chú nếu có
         if (d.getGhiChu() != null && !d.getGhiChu().trim().isEmpty()) {
             this.tenSanPham = d.getGhiChu();
         }
-        
+
         // Thông tin chi tiết hóa đơn
         this.soLuong = d.getSoLuong();
         this.giaBan = d.getGiaBan();

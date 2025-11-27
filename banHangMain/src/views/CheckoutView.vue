@@ -289,12 +289,12 @@ import { createOrderFromCart } from "@/api/orders";
 import { fetchVariantsByProduct } from "@/api/variants";
 import { Select as ASelect } from "@arco-design/web-vue";
 import {
-  calculateShippingFee,
   fetchGHNDistrictsByProvince,
   fetchGHNWards,
   fetchGHNProvinces,
   type ShippingLocation,
 } from "@/api/shipping";
+import { calculateShippingFeeFromGHN } from "@/services/shippingFeeService";
 import {
   calculateVoucherDiscount,
   validateVoucherUsage,
@@ -343,14 +343,11 @@ async function updateShippingFee() {
 
   isCalculatingShipping.value = true;
   try {
-    const result = await calculateShippingFee({
-      location: {
-        thanhPho: address.value.province,
-        quan: address.value.district,
-        phuong: address.value.ward,
-        diaChiCuThe: address.value.street,
-      },
-      subtotal: cartTotal.value,
+    const result = await calculateShippingFeeFromGHN({
+      thanhPho: address.value.province,
+      quan: address.value.district,
+      phuong: address.value.ward,
+      diaChiCuThe: address.value.street,
     });
     shippingFee.value = result.fee;
   } catch (err) {
@@ -409,10 +406,7 @@ function openOrderConfirmation() {
     total: orderTotal.value,
     voucher: selectedVoucher.value ? { ...selectedVoucher.value } : null,
   };
-
-  console.log("Opening order confirmation modal", orderConfirmationInfo.value);
   orderConfirmationOpen.value = true;
-  console.log("Modal state:", orderConfirmationOpen.value);
 }
 
 async function finalizeOrder() {
@@ -850,25 +844,15 @@ async function onDistrictChange() {
 }
 
 async function handleCheckout() {
-  console.log("handleCheckout called");
-  console.log("Conditions:", {
-    cartCount: cartCount.value,
-    paying: paying.value,
-    paymentMethod: paymentMethod.value,
-    orderConfirmationOpen: orderConfirmationOpen.value,
-  });
-
   if (
     cartCount.value === 0 ||
     paying.value ||
     !paymentMethod.value ||
     orderConfirmationOpen.value
   ) {
-    console.log("Early return due to conditions");
     return;
   }
 
-  console.log("Validating details...");
   if (!validateDetails()) {
     // Check if all fields are empty to show a global alert
     const allEmpty =
@@ -885,10 +869,8 @@ async function handleCheckout() {
       ".details .invalid"
     ) as HTMLElement | null;
     if (first?.focus) first.focus();
-    console.log("Validation failed");
     return;
   }
-  console.log("Validation passed, opening confirmation modal");
   showAllEmptyAlert.value = false;
   error.value = "";
 
