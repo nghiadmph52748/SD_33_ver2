@@ -275,10 +275,17 @@ const useChatStore = defineStore('chat', {
       this.sendingMessage = true
       try {
         const response = await guiTinNhan(request)
-        const message = response.data.data
+        const message = (response?.data as ChatMessage) || (response as unknown as ChatMessage | undefined)
+
+        if (!message || typeof message !== 'object' || typeof message.senderId !== 'number') {
+          console.warn('Send message API returned unexpected payload, syncing state from backend instead', response)
+          await this.fetchConversations()
+          return null
+        }
 
         // Thêm tin nhắn vào state
         this.addMessageToState(message)
+        this.updateConversationWithNewMessage(message)
 
         return message
       } catch (error: any) {
