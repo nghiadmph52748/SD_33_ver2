@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, Integer> {
 
-
     ArrayList<HoaDonChiTiet> findAllByIdHoaDonAndTrangThai(HoaDon idHoaDon, Boolean trangThai);
 
     Optional<HoaDonChiTiet> findFirstByIdHoaDonAndIdChiTietSanPhamAndDeletedFalse(HoaDon idHoaDon,

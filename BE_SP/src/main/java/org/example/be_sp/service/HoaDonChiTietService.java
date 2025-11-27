@@ -249,11 +249,11 @@ public class HoaDonChiTietService {
 
         String action = isNewDetail ? "Created" : "Updated";
         log.info("[CartItem] {} detail id={} for invoice id={}, soLuong={}, thanhTien={}",
-            action,
-            savedDetail.getId(),
-            hoaDon.getId(),
-            savedDetail.getSoLuong(),
-            savedDetail.getThanhTien());
+                action,
+                savedDetail.getId(),
+                hoaDon.getId(),
+                savedDetail.getSoLuong(),
+                savedDetail.getThanhTien());
 
         AddProductToCartResponse response = new AddProductToCartResponse();
         response.setIdHoaDon(hoaDon.getId());
