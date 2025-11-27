@@ -200,37 +200,67 @@ public class HoaDonChiTietService {
             throw new ApiException("Số lượng tồn kho không đủ", "400");
         }
 
-        // Create invoice detail
-        HoaDonChiTiet hdct = new HoaDonChiTiet();
-        hdct.setIdHoaDon(hoaDon);
-        hdct.setIdChiTietSanPham(ctsp);
-        hdct.setSoLuong(request.getSoLuong());
-        hdct.setGiaBan(request.getGiaBan());
-        hdct.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : Boolean.TRUE);
-        hdct.setDeleted(request.getDeleted() != null ? request.getDeleted() : Boolean.FALSE);
-        LocalDateTime createdAt = LocalDateTime.now();
-        hdct.setCreateAt(createdAt);
+        var existingDetailOpt = hoaDonChiTietRepository
+                .findFirstByIdHoaDonAndIdChiTietSanPhamAndDeletedFalse(hoaDon, ctsp);
 
-        // Calculate thanhTien
-        hdct.setThanhTien(request.getGiaBan().multiply(new java.math.BigDecimal(request.getSoLuong())));
+        HoaDonChiTiet targetDetail;
+        boolean isNewDetail = false;
 
-        // Set product detail name and code
-        String tenSanPhamChiTiet = buildTenSanPhamChiTiet(ctsp);
-        hdct.setTenSanPhamChiTiet(tenSanPhamChiTiet);
-        hdct.setMaSanPhamChiTiet(ctsp.getMaChiTietSanPham());
+        if (existingDetailOpt.isPresent()) {
+            targetDetail = existingDetailOpt.get();
 
-        var savedDetail = hoaDonChiTietRepository.save(hdct);
+            int currentQty = targetDetail.getSoLuong() != null ? targetDetail.getSoLuong() : 0;
+            int newQty = currentQty + request.getSoLuong();
 
-        // Return response
+            targetDetail.setSoLuong(newQty);
+            targetDetail.setGiaBan(request.getGiaBan());
+            targetDetail.setThanhTien(request.getGiaBan().multiply(new java.math.BigDecimal(newQty)));
+            targetDetail.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : targetDetail.getTrangThai());
+            targetDetail.setDeleted(request.getDeleted() != null ? request.getDeleted() : targetDetail.getDeleted());
+            targetDetail.setUpdateAt(LocalDateTime.now());
+
+            if (targetDetail.getTenSanPhamChiTiet() == null || targetDetail.getTenSanPhamChiTiet().isBlank()) {
+                targetDetail.setTenSanPhamChiTiet(buildTenSanPhamChiTiet(ctsp));
+            }
+            if (targetDetail.getMaSanPhamChiTiet() == null || targetDetail.getMaSanPhamChiTiet().isBlank()) {
+                targetDetail.setMaSanPhamChiTiet(ctsp.getMaChiTietSanPham());
+            }
+        } else {
+            targetDetail = new HoaDonChiTiet();
+            isNewDetail = true;
+
+            targetDetail.setIdHoaDon(hoaDon);
+            targetDetail.setIdChiTietSanPham(ctsp);
+            targetDetail.setSoLuong(request.getSoLuong());
+            targetDetail.setGiaBan(request.getGiaBan());
+            targetDetail.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : Boolean.TRUE);
+            targetDetail.setDeleted(request.getDeleted() != null ? request.getDeleted() : Boolean.FALSE);
+            LocalDateTime createdAt = LocalDateTime.now();
+            targetDetail.setCreateAt(createdAt);
+
+            targetDetail.setThanhTien(request.getGiaBan().multiply(new java.math.BigDecimal(request.getSoLuong())));
+
+            String tenSanPhamChiTiet = buildTenSanPhamChiTiet(ctsp);
+            targetDetail.setTenSanPhamChiTiet(tenSanPhamChiTiet);
+            targetDetail.setMaSanPhamChiTiet(ctsp.getMaChiTietSanPham());
+        }
+
+        var savedDetail = hoaDonChiTietRepository.save(targetDetail);
+
+        String action = isNewDetail ? "Created" : "Updated";
+        log.info("[CartItem] {} detail id={} for invoice id={}, soLuong={}, thanhTien={}",
+            action,
+            savedDetail.getId(),
+            hoaDon.getId(),
+            savedDetail.getSoLuong(),
+            savedDetail.getThanhTien());
+
         AddProductToCartResponse response = new AddProductToCartResponse();
         response.setIdHoaDon(hoaDon.getId());
         response.setIdChiTietHoaDon(savedDetail.getId());
-        response.setSoLuong(request.getSoLuong());
-        response.setGiaBan(request.getGiaBan());
+        response.setSoLuong(savedDetail.getSoLuong());
+        response.setGiaBan(savedDetail.getGiaBan());
         response.setThanhTien(savedDetail.getThanhTien());
-
-        log.info("[CartItem] Added detail id={} to invoice id={}, thanhTien={}",
-                response.getIdChiTietHoaDon(), response.getIdHoaDon(), response.getThanhTien());
 
         return response;
     }

@@ -5,4 +5,3 @@ declare module '@arco-design/web-vue/es/form' {
   export type FormRules = Record<string, FormItemRule[]>
   export type FormItem = FormItemInstance
 }
-

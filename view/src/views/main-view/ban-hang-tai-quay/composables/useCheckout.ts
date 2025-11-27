@@ -52,6 +52,10 @@ export default function useCheckout(params: {
     districts: Array<{ value: string; label: string; code: number }>
     wards: Array<{ value: string; label: string }>
   }>
+  walkInName: Ref<string>
+  walkInEmail: Ref<string>
+  walkInPhone: Ref<string>
+  walkInDeliveryValid: Ref<boolean>
   confirmPosOrder: (req: ConfirmBanHangRequest) => Promise<any>
 }) {
   const {
@@ -70,6 +74,10 @@ export default function useCheckout(params: {
     currentOrderIndex,
     shippingFee,
     walkInLocation,
+    walkInName,
+    walkInEmail,
+    walkInPhone,
+    walkInDeliveryValid,
     confirmPosOrder,
   } = params
 
@@ -112,10 +120,12 @@ export default function useCheckout(params: {
         throw new Error('Vui lòng tạo hóa đơn trước')
       }
       const invoiceId = parseInt(currentOrder.value.id, 10)
+      const rawCustomerId = currentOrder.value.customerId
+      const isWalkIn = !selectedCustomer.value && (rawCustomerId === '' || rawCustomerId === null || rawCustomerId === undefined)
 
       // Prepare order request data
       let walkInAddress = ''
-      if (!selectedCustomer.value && currentOrder.value!.customerId === '') {
+      if (isWalkIn) {
         const addressParts = [
           walkInLocation.value.diaChiCuThe,
           walkInLocation.value.phuong,
@@ -124,6 +134,10 @@ export default function useCheckout(params: {
         ].filter(Boolean)
         walkInAddress = addressParts.join(', ')
       }
+
+      const walkInNameValue = walkInName.value.trim()
+      const walkInPhoneValue = walkInPhone.value.trim()
+      const walkInEmailValue = walkInEmail.value.trim()
 
       const customerId = selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id, 10) : undefined
       // eslint-disable-next-line no-nested-ternary
@@ -146,17 +160,17 @@ export default function useCheckout(params: {
 
       const req: ConfirmBanHangRequest = {
         idHoaDon: invoiceId,
-        idKhachHang: customerId || null,
-        tenKhachHang: selectedCustomer.value?.name || 'Khách lẻ',
-        soDienThoai: selectedCustomer.value?.phone || null,
-        diaChiKhachHang: selectedCustomer.value?.address || walkInAddress || null,
-        emailKhachHang: selectedCustomer.value?.email || null,
+        idKhachHang: customerId ?? null,
+        tenKhachHang: selectedCustomer.value?.name || walkInNameValue || 'Khách lẻ',
+        soDienThoai: selectedCustomer.value?.phone ?? (isWalkIn ? walkInPhoneValue || null : null),
+        diaChiKhachHang: selectedCustomer.value?.address || (isWalkIn ? walkInAddress || null : null),
+        emailKhachHang: selectedCustomer.value?.email ?? (isWalkIn ? walkInEmailValue || null : null),
         idPTTT: paymentMethodId,
         idPhieuGiamGia: selectedCoupon.value?.id ? parseInt(selectedCoupon.value.id, 10) : null,
         idNhanVien: userId,
-        tienMat: tienMat,
-        tienChuyenKhoan: tienChuyenKhoan,
-        soTienConLai: soTienConLai,
+        tienMat,
+        tienChuyenKhoan,
+        soTienConLai,
         trangThaiThanhToan: totalReceived >= finalPrice.value,
         tongTien: subtotal.value,
         tongTienSauGiam: finalPrice.value,
@@ -183,13 +197,17 @@ export default function useCheckout(params: {
       try {
         const validationResult = await validateInvoiceBeforeConfirm(invoiceId)
         if (!validationResult.isValid && validationResult.inactiveVariants.length > 0) {
-          const variantNames = validationResult.inactiveVariants.map((v) => {
-            const parts = [v.tenSanPham]
-            if (v.mauSac) parts.push(`Màu: ${v.mauSac}`)
-            if (v.kichThuoc) parts.push(`Size: ${v.kichThuoc}`)
-            return parts.join(' - ')
-          }).join(', ')
-          throw new Error(`Không thể xác nhận đơn hàng. Các sản phẩm sau đã bị vô hiệu hóa: ${variantNames}. Vui lòng xóa các sản phẩm này khỏi đơn hàng.`)
+          const variantNames = validationResult.inactiveVariants
+            .map((v) => {
+              const parts = [v.tenSanPham]
+              if (v.mauSac) parts.push(`Màu: ${v.mauSac}`)
+              if (v.kichThuoc) parts.push(`Size: ${v.kichThuoc}`)
+              return parts.join(' - ')
+            })
+            .join(', ')
+          throw new Error(
+            `Không thể xác nhận đơn hàng. Các sản phẩm sau đã bị vô hiệu hóa: ${variantNames}. Vui lòng xóa các sản phẩm này khỏi đơn hàng.`
+          )
         }
       } catch (validationError: any) {
         // If validation fails, show error and stop
@@ -237,6 +255,10 @@ export default function useCheckout(params: {
       shippingFee.value = 0
       orderType.value = 'counter'
       walkInLocation.value = { thanhPho: '', quan: '', phuong: '', diaChiCuThe: '', districts: [], wards: [] }
+      walkInName.value = ''
+      walkInEmail.value = ''
+      walkInPhone.value = ''
+      walkInDeliveryValid.value = false
 
       showConfirmOrderModal.value = false
     } catch (error: any) {

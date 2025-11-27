@@ -319,10 +319,10 @@ export async function calculateShippingFeeFromGHN(
       from_ward_id: 1442, // Bắc Từ Liêm
       to_district_id: destinationDistrict.DistrictID,
       to_ward_id: destinationWard.WardCode,
-      height: height,
-      length: length,
-      weight: weight,
-      width: width,
+      height,
+      length,
+      weight,
+      width,
       service_type_id: 2, // Standard service
       insurance_value: 0,
       cod_failed_amount: 0,

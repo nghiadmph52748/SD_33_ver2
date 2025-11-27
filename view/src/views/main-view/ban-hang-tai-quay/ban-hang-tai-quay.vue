@@ -63,10 +63,10 @@
             @change:customer="handleCustomerChange"
             @add-new="showAddCustomerModal = true"
             @change:orderType="handleOrderTypeChange"
-            @update:walkInName="(v) => (walkInName = v)"
-            @update:walkInEmail="(v) => (walkInEmail = v)"
-            @update:walkInPhone="(v) => (walkInPhone = v)"
-            @update:walkInDeliveryValid="(v) => (walkInDeliveryValid = v)"
+            @update:walkInName="walkInName = $event"
+            @update:walkInEmail="walkInEmail = $event"
+            @update:walkInPhone="walkInPhone = $event"
+            @update:walkInDeliveryValid="walkInDeliveryValid = $event"
           />
           <!-- Payment Section -->
           <PaymentCard
@@ -206,8 +206,8 @@
       :visible="showConfirmOrderModal"
       :order-code="currentOrder?.orderCode || ''"
       :order-type="orderType as any"
-      :customer-name="selectedCustomer?.name || 'Khách lẻ'"
-      :customer-phone="selectedCustomer?.phone"
+      :customer-name="selectedCustomer?.name || walkInName || 'Khách lẻ'"
+      :customer-phone="selectedCustomer?.phone || walkInPhone || ''"
       :customer-address="getCustomerAddress()"
       :items="currentOrder?.items || []"
       :subtotal="subtotal"
@@ -363,6 +363,10 @@ const showVoucherModal = ref(false)
 const qrSessions = ref<Record<string, QrSessionState>>({})
 const qrSyncing = ref(false)
 const qrSyncError = ref<string | null>(null)
+const walkInName = ref('')
+const walkInEmail = ref('')
+const walkInPhone = ref('')
+const walkInDeliveryValid = ref(false)
 const QR_SYNC_DEBOUNCE_MS = 200
 let qrSyncTimeout: number | null = null
 
@@ -555,7 +559,11 @@ const handleCustomerChange = async (customerId: string) => {
     await nextTick()
 
     // Call API to update customer - pass walkInLocation for walk-in customers
-    await updateInvoiceCustomer(invoiceId, walkInLocation)
+    await updateInvoiceCustomer(invoiceId, walkInLocation, {
+      name: walkInName.value,
+      phone: walkInPhone.value,
+      email: walkInEmail.value,
+    })
 
     Message.success('Khách hàng đã được cập nhật')
   } catch (error: any) {
@@ -591,7 +599,11 @@ const addNewCustomer = async () => {
       currentOrder.value.customerId = newCustomer.id
       const invoiceId = parseInt(currentOrder.value.id)
       if (!isNaN(invoiceId)) {
-        await updateInvoiceCustomer(invoiceId, walkInLocation)
+        await updateInvoiceCustomer(invoiceId, walkInLocation, {
+          name: walkInName.value,
+          phone: walkInPhone.value,
+          email: walkInEmail.value,
+        })
       }
     }
 
@@ -723,6 +735,10 @@ const selectPaymentMethod = (method: 'cash' | 'transfer' | 'both') => {
 // Watch for customer selection change - load customer-specific vouchers
 watch(selectedCustomer, async (newCustomer) => {
   if (newCustomer && newCustomer.id) {
+    walkInName.value = ''
+    walkInEmail.value = ''
+    walkInPhone.value = ''
+    walkInDeliveryValid.value = false
     const idKhachHang = parseInt(newCustomer.id)
 
     // Add small delay to ensure state is fully updated
@@ -738,6 +754,18 @@ watch(selectedCustomer, async (newCustomer) => {
     await refreshVouchers()
   }
 })
+
+watch(
+  () => orders.value.length,
+  (newLength, oldLength) => {
+    if (newLength > oldLength) {
+      walkInName.value = ''
+      walkInEmail.value = ''
+      walkInPhone.value = ''
+      walkInDeliveryValid.value = false
+    }
+  }
+)
 
 watch(
   () => ({
@@ -1333,6 +1361,10 @@ const {
   currentOrderIndex,
   shippingFee,
   walkInLocation,
+  walkInName,
+  walkInEmail,
+  walkInPhone,
+  walkInDeliveryValid,
   confirmPosOrder,
 })
 

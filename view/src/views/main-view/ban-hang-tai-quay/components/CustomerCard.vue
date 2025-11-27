@@ -3,12 +3,7 @@
     <template #title>
       <div class="cust-header">
         <span>Thông Tin Khách Hàng</span>
-        <a-select
-          :model-value="orderType"
-          placeholder="Loại đơn"
-          style="width: 140px"
-          @change="$emit('change:orderType', $event)"
-        >
+        <a-select :model-value="orderType" placeholder="Loại đơn" style="width: 140px" @change="$emit('change:orderType', $event)">
           <a-option value="counter">Tại quầy</a-option>
           <a-option value="delivery">Giao hàng</a-option>
         </a-select>
@@ -47,22 +42,26 @@
         Thêm Khách Hàng Mới
       </a-button>
 
-      <!-- Walk-in + Delivery: require contact info -->
-      <template v-if="isWalkIn && orderType === 'delivery'">
-        <a-divider style="margin: 12px 0">Thông tin người nhận (Khách lẻ)</a-divider>
+      <!-- Walk-in: contact info -->
+      <template v-if="isWalkIn">
+        <hr />
         <a-row :gutter="[12, 12]">
           <a-col :span="12">
-            <a-form-item label="Tên người nhận" :validate-status="nameError ? 'error' : undefined" :help="nameError || ''" required>
+            <a-form-item label="Tên" :validate-status="nameError ? 'error' : undefined" :help="nameError || ''">
               <a-input :model-value="walkInName" placeholder="Nhập tên" @update:model-value="$emit('update:walkInName', $event)" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="Số điện thoại" :validate-status="phoneError ? 'error' : undefined" :help="phoneError || ''" required>
-              <a-input :model-value="walkInPhone" placeholder="Nhập số điện thoại" @update:model-value="$emit('update:walkInPhone', $event)" />
+            <a-form-item label="Số điện thoại" :validate-status="phoneError ? 'error' : undefined" :help="phoneError || ''">
+              <a-input
+                :model-value="walkInPhone"
+                placeholder="Nhập số điện thoại"
+                @update:model-value="$emit('update:walkInPhone', $event)"
+              />
             </a-form-item>
           </a-col>
           <a-col :span="24">
-            <a-form-item label="Email" :validate-status="emailError ? 'error' : undefined" :help="emailError || ''" required>
+            <a-form-item label="Email" :validate-status="emailError ? 'error' : undefined" :help="emailError || ''">
               <a-input :model-value="walkInEmail" placeholder="Nhập email" @update:model-value="$emit('update:walkInEmail', $event)" />
             </a-form-item>
           </a-col>
@@ -107,26 +106,29 @@ const emit = defineEmits<{
 }>()
 
 const nameError = computed(() => {
-  if (!(props.isWalkIn && props.orderType === 'delivery')) return ''
+  if (props.orderType !== 'delivery') return ''
+  if (!props.isWalkIn) return ''
   const v = (props.walkInName || '').trim()
-  if (!v) return 'Vui lòng nhập tên'
+  if (!v) return ''
   if (v.length < 2) return 'Tên tối thiểu 2 ký tự'
   return ''
 })
 
 const emailError = computed(() => {
-  if (!(props.isWalkIn && props.orderType === 'delivery')) return ''
+  if (props.orderType !== 'delivery') return ''
+  if (!props.isWalkIn) return ''
   const v = (props.walkInEmail || '').trim()
-  if (!v) return 'Vui lòng nhập email'
+  if (!v) return ''
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!re.test(v)) return 'Email không hợp lệ'
   return ''
 })
 
 const phoneError = computed(() => {
-  if (!(props.isWalkIn && props.orderType === 'delivery')) return ''
+  if (props.orderType !== 'delivery') return ''
+  if (!props.isWalkIn) return ''
   const v = (props.walkInPhone || '').trim()
-  if (!v) return 'Vui lòng nhập SĐT'
+  if (!v) return ''
   const re = /^\d{9,11}$/
   if (!re.test(v)) return 'SĐT phải gồm 9-11 chữ số'
   return ''

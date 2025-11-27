@@ -23,6 +23,7 @@ import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.model.email.RefundNotificationEmailData;
+import org.example.be_sp.model.email.VoucherEmailData;
 import org.example.be_sp.model.request.AddressChangeNotificationRequest;
 import org.example.be_sp.model.request.BanHangTaiQuayRequest;
 import org.example.be_sp.model.request.HoaDonChiTietRequest;
@@ -177,7 +178,7 @@ public class HoaDonService {
                     final Integer idChiTietSanPham = idChiTietSanPhamValue;
                     ChiTietSanPham chiTietSanPham = chiTietSanPhamRepository.findById(idChiTietSanPham)
                             .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + idChiTietSanPham,
-                                    "404"));
+                            "404"));
                     hoaDonChiTiet.setIdChiTietSanPham(chiTietSanPham);
                     hoaDonChiTiet.setSoLuong(chiTietRequest.getSoLuong() != null ? chiTietRequest.getSoLuong() : 1);
                     hoaDonChiTiet
@@ -339,7 +340,7 @@ public class HoaDonService {
                         "Đơn hàng mới #" + savedHoaDon.getMaHoaDon(),
                         "Chờ xử lý",
                         "Đơn hàng mới từ "
-                                + (savedHoaDon.getTenNguoiNhan() != null ? savedHoaDon.getTenNguoiNhan() : "khách hàng"),
+                        + (savedHoaDon.getTenNguoiNhan() != null ? savedHoaDon.getTenNguoiNhan() : "khách hàng"),
                         2 // in progress
                 );
             }
@@ -603,7 +604,7 @@ public class HoaDonService {
                         newThongTin.setIdHoaDon(saved);
                         newThongTin.setIdTrangThaiDonHang(trangThaiDonHangRepository.findById(idTrangThaiDonHang)
                                 .orElseThrow(() -> new ApiException(
-                                        "Không tìm thấy trạng thái đơn hàng với id: " + idTrangThaiDonHang, "404")));
+                                "Không tìm thấy trạng thái đơn hàng với id: " + idTrangThaiDonHang, "404")));
                         newThongTin.setThoiGian(LocalDateTime.now());
                         newThongTin.setTrangThai(true);
                         newThongTin.setDeleted(false);
@@ -762,9 +763,9 @@ public class HoaDonService {
     /**
      * ✅ Handle order cancellation - restore inventory and remove revenue
      *
-     * @param hoaDon                     - The invoice/order to process
+     * @param hoaDon - The invoice/order to process
      * @param originalIdTrangThaiDonHang - The original status ID before
-     *                                   cancellation
+     * cancellation
      */
     private void handleOrderCancellation(HoaDon hoaDon, Integer originalIdTrangThaiDonHang) {
         try {
@@ -809,9 +810,165 @@ public class HoaDonService {
                 // This is a placeholder - implement your own logic to update total revenue
                 // Example: totalRevenueService.subtractRevenue(totalRevenue);
             }
+
+            String customerEmail = resolveCustomerEmail(hoaDon);
+            String customerName = resolveCustomerName(hoaDon);
+
+            if (customerEmail != null && !customerEmail.trim().isEmpty()) {
+                OrderEmailData cancellationEmail = buildOrderStatusEmailData(hoaDon, orderItems, "Đã hủy",
+                        customerName, customerEmail);
+                emailService.sendOrderStatusUpdateEmail(cancellationEmail);
+            }
+
+            BigDecimal voucherValue = hoaDon.getTongTienSauGiam() != null
+                    ? hoaDon.getTongTienSauGiam()
+                    : (hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO);
+
+            if (isOrderPaid(hoaDon) && voucherValue.compareTo(BigDecimal.ZERO) > 0) {
+                VoucherInfo voucherInfo = createCancellationVoucher(hoaDon, voucherValue, customerName);
+
+                if (customerEmail != null && !customerEmail.trim().isEmpty()) {
+                    VoucherEmailData voucherEmail = VoucherEmailData.builder()
+                            .customerName(customerName)
+                            .customerEmail(customerEmail)
+                            .voucherCode(voucherInfo.code())
+                            .voucherName("Voucher Bồi Hoàn Hủy Đơn")
+                            .voucherType("FIXED_AMOUNT")
+                            .discountValue(voucherValue)
+                            .maxDiscount(voucherValue)
+                            .minOrderValue(BigDecimal.ZERO)
+                            .validFrom(voucherInfo.issuedAt())
+                            .validUntil(voucherInfo.expiry())
+                            .usageLimit(1)
+                            .description("Voucher bồi hoàn cho đơn hàng đã thanh toán bị hủy")
+                            .build();
+                    emailService.sendVoucherAssignmentEmail(voucherEmail);
+                }
+            }
         } catch (Exception e) {
             throw new ApiException("Lỗi khi xử lý hủy đơn hàng: " + e.getMessage(), "CANCELLATION_ERROR");
         }
+    }
+
+    private String resolveCustomerEmail(HoaDon hoaDon) {
+        if (hoaDon.getEmailNguoiNhan() != null && !hoaDon.getEmailNguoiNhan().trim().isEmpty()) {
+            return hoaDon.getEmailNguoiNhan().trim();
+        }
+
+        if (hoaDon.getIdKhachHang() != null && hoaDon.getIdKhachHang().getEmail() != null
+                && !hoaDon.getIdKhachHang().getEmail().trim().isEmpty()) {
+            return hoaDon.getIdKhachHang().getEmail().trim();
+        }
+
+        return null;
+    }
+
+    private String resolveCustomerName(HoaDon hoaDon) {
+        if (hoaDon.getTenNguoiNhan() != null && !hoaDon.getTenNguoiNhan().trim().isEmpty()) {
+            return hoaDon.getTenNguoiNhan().trim();
+        }
+
+        if (hoaDon.getIdKhachHang() != null && hoaDon.getIdKhachHang().getTenKhachHang() != null
+                && !hoaDon.getIdKhachHang().getTenKhachHang().trim().isEmpty()) {
+            return hoaDon.getIdKhachHang().getTenKhachHang().trim();
+        }
+
+        return "Khách hàng";
+    }
+
+    private boolean isOrderPaid(HoaDon hoaDon) {
+        if (hoaDon == null) {
+            return false;
+        }
+
+        if (Boolean.TRUE.equals(hoaDon.getTrangThaiThanhToan())) {
+            return true;
+        }
+
+        BigDecimal soTienDaThanhToan = hoaDon.getSoTienDaThanhToan();
+        BigDecimal soTienConLai = hoaDon.getSoTienConLai();
+
+        if (soTienDaThanhToan != null && soTienDaThanhToan.compareTo(BigDecimal.ZERO) > 0) {
+            return soTienConLai == null || soTienConLai.compareTo(BigDecimal.ZERO) <= 0;
+        }
+
+        return false;
+    }
+
+    private OrderEmailData buildOrderStatusEmailData(HoaDon hoaDon, List<HoaDonChiTiet> orderItems, String statusName,
+            String customerName, String customerEmail) {
+
+        String resolvedStatus = (statusName != null && !statusName.isBlank()) ? statusName : "Cập nhật đơn hàng";
+
+        List<OrderEmailData.OrderItemData> items = new ArrayList<>();
+        if (orderItems != null && !orderItems.isEmpty()) {
+            for (HoaDonChiTiet item : orderItems) {
+                if (item == null) {
+                    continue;
+                }
+
+                String productName = "Sản phẩm";
+                BigDecimal price = item.getGiaBan() != null ? item.getGiaBan() : BigDecimal.ZERO;
+                Integer quantity = item.getSoLuong() != null ? item.getSoLuong() : 0;
+
+                if (item.getIdChiTietSanPham() != null && item.getIdChiTietSanPham().getIdSanPham() != null
+                        && item.getIdChiTietSanPham().getIdSanPham().getTenSanPham() != null) {
+                    productName = item.getIdChiTietSanPham().getIdSanPham().getTenSanPham();
+                }
+
+                BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity.longValue()));
+
+                items.add(OrderEmailData.OrderItemData.builder()
+                        .productName(productName)
+                        .quantity(quantity)
+                        .price(price)
+                        .subtotal(subtotal)
+                        .build());
+            }
+        }
+
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (hoaDon.getTongTien() != null && hoaDon.getTongTienSauGiam() != null) {
+            discountAmount = hoaDon.getTongTien().subtract(hoaDon.getTongTienSauGiam());
+            if (hoaDon.getPhiVanChuyen() != null) {
+                discountAmount = discountAmount.subtract(hoaDon.getPhiVanChuyen());
+            }
+        }
+
+        BigDecimal shippingFee = hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO;
+        BigDecimal totalAmount = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+        BigDecimal finalAmount = hoaDon.getTongTienSauGiam() != null ? hoaDon.getTongTienSauGiam() : totalAmount;
+
+        return OrderEmailData.builder()
+                .orderCode(hoaDon.getMaHoaDon())
+                .customerName(customerName != null ? customerName : "Khách hàng")
+                .customerEmail(customerEmail)
+                .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
+                .orderStatus(resolvedStatus)
+                .totalAmount(totalAmount)
+                .discountAmount(discountAmount)
+                .shippingFee(shippingFee)
+                .finalAmount(finalAmount)
+                .deliveryAddress(hoaDon.getDiaChiNguoiNhan() != null ? hoaDon.getDiaChiNguoiNhan() : "")
+                .phoneNumber(hoaDon.getSoDienThoaiNguoiNhan() != null ? hoaDon.getSoDienThoaiNguoiNhan() : "")
+                .items(items)
+                .build();
+    }
+
+    private VoucherInfo createCancellationVoucher(HoaDon hoaDon, BigDecimal voucherValue, String customerName) {
+        LocalDateTime issuedAt = LocalDateTime.now();
+        LocalDateTime expiry = issuedAt.plusMonths(3);
+        String voucherCode = generateVoucherCode(hoaDon.getId(), "CAN");
+        String resolvedName = customerName != null ? customerName : "Khách hàng";
+
+        return persistVoucherForOrder(
+                hoaDon,
+                voucherValue,
+                voucherCode,
+                "Voucher Hoàn Tiền Hủy Đơn - " + resolvedName,
+                "Voucher bồi hoàn cho đơn hàng đã thanh toán bị hủy.",
+                issuedAt,
+                expiry);
     }
 
     /**
@@ -903,9 +1060,9 @@ public class HoaDonService {
      * that store is trying to fulfill the order but some products are out of
      * stock
      *
-     * @param hoaDon                     The order with insufficient inventory
+     * @param hoaDon The order with insufficient inventory
      * @param insufficientProductDetails Details of products with insufficient
-     *                                   stock
+     * stock
      */
     private void sendInventoryShortageNotificationEmail(HoaDon hoaDon, String insufficientProductDetails) {
         try {
@@ -1619,6 +1776,7 @@ public class HoaDonService {
         BigDecimal originalTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
         BigDecimal recordedRefundAmount = BigDecimal.ZERO;
         boolean customerPaidFullBeforeChange = false;
+        BigDecimal updatedTotal = BigDecimal.ZERO;
 
         // Kiểm tra xem đơn hàng đã được thay đổi địa chỉ giao hàng trước đây chưa
         // Nếu có record ThongTinDonHang với idTrangThaiDonHang = 8 thì không cho phép thay đổi lần thứ 2
@@ -1682,7 +1840,7 @@ public class HoaDonService {
                     hoaDon.setHoanPhi(BigDecimal.ZERO);
 
                     BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-                    BigDecimal updatedTotal = currentTotal.add(extraFee);
+                    updatedTotal = currentTotal.add(extraFee);
                     hoaDon.setTongTien(updatedTotal);
                     hoaDon.setTongTienSauGiam(updatedTotal);
 
@@ -1769,7 +1927,8 @@ public class HoaDonService {
      * lại
      */
     private void handleSurchargeRefundNotification(HoaDon hoaDon,
-            AddressChangeNotificationRequest.ShippingFeeChange feeChange, String customerEmail, String customerName) {
+            AddressChangeNotificationRequest.ShippingFeeChange feeChange, String customerEmail, String customerName,
+            BigDecimal recordedRefundAmount, boolean customerPaidFullBeforeChange, BigDecimal originalTotal, BigDecimal updatedTotal) {
         if (feeChange == null || feeChange.getDifference() == null
                 || feeChange.getDifference().compareTo(BigDecimal.ZERO) == 0) {
             return;
@@ -1833,6 +1992,10 @@ public class HoaDonService {
                     ? recordedRefundAmount
                     : rawDifference.abs();
 
+            // Store original and updated totals from parameters
+            BigDecimal storedOriginalTotal = originalTotal != null ? originalTotal : BigDecimal.ZERO;
+            BigDecimal storedUpdatedTotal = updatedTotal != null ? updatedTotal : hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+
             if (refund == null || refund.compareTo(BigDecimal.ZERO) <= 0) {
                 return;
             }
@@ -1861,8 +2024,8 @@ public class HoaDonService {
                         .orderCode(hoaDon.getMaHoaDon())
                         .refundAmount(refund)
                         .appliedToOrder(appliedDirectlyToOrder)
-                        .originalTotal(originalTotal)
-                        .newTotal(updatedTotal)
+                        .originalTotal(storedOriginalTotal)
+                        .newTotal(storedUpdatedTotal)
                         .giftReward(rewardAsGift)
                         .voucherReward(rewardAsVoucher)
                         .voucherCode(voucherCode)
@@ -1878,7 +2041,7 @@ public class HoaDonService {
      * Tạo voucher cho phụ phí >= 40k
      */
     private void createSurchargeVoucher(HoaDon hoaDon, BigDecimal voucherValue,
-                                        String voucherCode, String customerName) {
+            String voucherCode, String customerName) {
         try {
             LocalDateTime issuedAt = LocalDateTime.now();
             LocalDateTime expiry = issuedAt.plusMonths(3);
@@ -1912,12 +2075,12 @@ public class HoaDonService {
     }
 
     private VoucherInfo persistVoucherForOrder(HoaDon hoaDon,
-                                               BigDecimal voucherValue,
-                                               String voucherCode,
-                                               String voucherName,
-                                               String description,
-                                               LocalDateTime issuedAt,
-                                               LocalDateTime expiry) {
+            BigDecimal voucherValue,
+            String voucherCode,
+            String voucherName,
+            String description,
+            LocalDateTime issuedAt,
+            LocalDateTime expiry) {
 
         PhieuGiamGia voucher = new PhieuGiamGia();
         voucher.setMaPhieuGiamGia(voucherCode);
@@ -1948,20 +2111,27 @@ public class HoaDonService {
             personalVoucher.setDeleted(false);
             phieuGiamGiaCaNhanRepository.save(personalVoucher);
         }
-        return new VoucherInfo(voucherCode, expiry);
+        return new VoucherInfo(voucherCode, issuedAt, expiry);
     }
 
     private static final class VoucherInfo {
+
         private final String code;
+        private final LocalDateTime issuedAt;
         private final LocalDateTime expiry;
 
-        private VoucherInfo(String code, LocalDateTime expiry) {
+        private VoucherInfo(String code, LocalDateTime issuedAt, LocalDateTime expiry) {
             this.code = code;
+            this.issuedAt = issuedAt;
             this.expiry = expiry;
         }
 
         private String code() {
             return code;
+        }
+
+        private LocalDateTime issuedAt() {
+            return issuedAt;
         }
 
         private LocalDateTime expiry() {

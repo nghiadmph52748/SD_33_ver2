@@ -75,7 +75,7 @@ export default function useCartActions(params: {
         throw new Error('Dữ liệu sản phẩm hoặc đơn hàng không hợp lệ')
       }
 
-      let invoiceId = parseInt(currentOrder.value.id, 10)
+      const invoiceId = parseInt(currentOrder.value.id, 10)
       const quantity = productQuantityInput.value
       const productId = selectedProductForAdd.value.id
 

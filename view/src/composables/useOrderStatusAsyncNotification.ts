@@ -40,13 +40,13 @@ export function useOrderStatusAsyncNotification() {
 
     Message.success({
       content: `✅ ${notification.message}`,
-      duration: duration,
+      duration,
     })
 
     Notification.success({
       title: '✅ Cập nhật thành công',
       content: notification.message,
-      duration: duration,
+      duration,
       closable: true,
     })
   }
@@ -65,13 +65,13 @@ export function useOrderStatusAsyncNotification() {
 
     Message.error({
       content: `❌ ${notification.message}`,
-      duration: duration,
+      duration,
     })
 
     Notification.error({
       title: '❌ Cập nhật thất bại',
       content: notification.message,
-      duration: duration,
+      duration,
       closable: true,
     })
   }
@@ -79,13 +79,13 @@ export function useOrderStatusAsyncNotification() {
   const showWarningNotification = (message: string, details?: string, duration: number = 5) => {
     Message.warning({
       content: `⚠️ ${message}`,
-      duration: duration,
+      duration,
     })
 
     Notification.warning({
       title: '⚠️ Cảnh báo',
       content: details || message,
-      duration: duration,
+      duration,
       closable: true,
     })
   }
@@ -93,13 +93,13 @@ export function useOrderStatusAsyncNotification() {
   const showInfoNotification = (message: string, details?: string, duration: number = 4) => {
     Message.info({
       content: `ℹ️ ${message}`,
-      duration: duration,
+      duration,
     })
 
     Notification.info({
       title: 'ℹ️ Thông báo',
       content: details || message,
-      duration: duration,
+      duration,
       closable: true,
     })
   }
@@ -107,13 +107,13 @@ export function useOrderStatusAsyncNotification() {
   const showInventoryShortageNotification = (insufficientProducts: string, duration: number = 8) => {
     Message.warning({
       content: '⚠️ Sự cố về số lượng sản phẩm',
-      duration: duration,
+      duration,
     })
 
     Notification.warning({
       title: '⚠️ Sự cố về số lượng sản phẩm',
       content: `Các sản phẩm sau không đủ số lượng: ${insufficientProducts}. Cửa hàng đang cố gắng nhập hàng để hoàn thành đơn.`,
-      duration: duration,
+      duration,
       closable: true,
     })
   }

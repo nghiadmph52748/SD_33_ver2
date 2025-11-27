@@ -131,11 +131,11 @@ export const deleteProductsFromInvoice = (idHoaDonChiTiet: number[], idNhanVien:
 /** Update customer info for invoice */
 export interface UpdateCustomerRequest {
   idHoaDon: number
-  idKhachHang?: number
-  tenKhachHang?: string
-  soDienThoai?: string
-  diaChiKhachHang?: string
-  emailKhachHang?: string
+  idKhachHang?: number | null
+  tenKhachHang?: string | null
+  soDienThoai?: string | null
+  diaChiKhachHang?: string | null
+  emailKhachHang?: string | null
   idNhanVien: number
 }
 
@@ -181,13 +181,13 @@ export const updateVoucher = (data: UpdateVoucherRequest) =>
 /** Confirm and complete the entire order */
 export interface ConfirmBanHangRequest {
   idHoaDon: number
-  idKhachHang?: number
-  tenKhachHang?: string
-  soDienThoai?: string
-  diaChiKhachHang?: string
-  emailKhachHang?: string
+  idKhachHang?: number | null
+  tenKhachHang?: string | null
+  soDienThoai?: string | null
+  diaChiKhachHang?: string | null
+  emailKhachHang?: string | null
   idPTTT?: number
-  idPhieuGiamGia?: number
+  idPhieuGiamGia?: number | null
   idNhanVien: number
   tienMat?: number
   tienChuyenKhoan?: number

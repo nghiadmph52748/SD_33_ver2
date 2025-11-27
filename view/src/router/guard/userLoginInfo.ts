@@ -19,7 +19,7 @@ export default function setupUserLoginInfoGuard(router: Router) {
 
         //  Dùng getter normalizedRoles
         const userRoles = userStore.normalizedRoles
-        const routeRoles: string[] = (to.meta?.roles || []).map(r => r.toLowerCase())
+        const routeRoles: string[] = (to.meta?.roles || []).map((r) => r.toLowerCase())
 
         console.log(' Roles hiện tại (user):', userRoles)
         console.log(' Roles được yêu cầu (route):', routeRoles)
@@ -31,16 +31,15 @@ export default function setupUserLoginInfoGuard(router: Router) {
           return
         }
 
-       //  Kiểm tra quyền truy cập
-if (routeRoles.length > 0) {
-  const hasAccess = routeRoles.includes('*') || routeRoles.some(r => userRoles.includes(r))
-  if (!hasAccess) {
-    console.warn(' Truy cập bị chặn — không đủ quyền!')
-    next({ name: '403' })
-    return
-  }
-}
-
+        //  Kiểm tra quyền truy cập
+        if (routeRoles.length > 0) {
+          const hasAccess = routeRoles.includes('*') || routeRoles.some((r) => userRoles.includes(r))
+          if (!hasAccess) {
+            console.warn(' Truy cập bị chặn — không đủ quyền!')
+            next({ name: '403' })
+            return
+          }
+        }
 
         next()
         return

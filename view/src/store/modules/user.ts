@@ -25,19 +25,17 @@ const useUserStore = defineStore('user', {
   }),
 
   getters: {
-  userInfo(state: UserState): UserState {
-    return { ...state }
+    userInfo(state: UserState): UserState {
+      return { ...state }
+    },
+    primaryRole(state: UserState): string {
+      return state.roles[0] || ''
+    },
+    normalizedRoles(state): string[] {
+      // Luôn trả về array thuần, lowercase
+      return (state.roles || []).map((r) => r.toLowerCase())
+    },
   },
-  primaryRole(state: UserState): string {
-    return state.roles[0] || ''
-  },
-  normalizedRoles(state): string[] {
-    // Luôn trả về array thuần, lowercase
-    return (state.roles || []).map(r => r.toLowerCase())
-  },
-}
-,
-
   actions: {
     setInfo(partial: Partial<UserState>) {
       this.$patch(partial)
@@ -82,62 +80,60 @@ const useUserStore = defineStore('user', {
     // Login
     // Trong phần actions của useUserStore
 
-async login(loginForm: LoginData) {
-  try {
-    const res = await userLogin(loginForm)
+    async login(loginForm: LoginData) {
+      try {
+        const res = await userLogin(loginForm)
 
-    if (res.data.accessToken) {
-      setToken(res.data.accessToken)
-    }
+        if (res.data.accessToken) {
+          setToken(res.data.accessToken)
+        }
 
-    const employeeId = res.data.id
-    localStorage.setItem(USER_ID_STORAGE_KEY, employeeId.toString())
+        const employeeId = res.data.id
+        localStorage.setItem(USER_ID_STORAGE_KEY, employeeId.toString())
 
-    //  Mapping idQuyenHan thành RoleType chính xác
-    const roleMap: Record<number, RoleType> = {
-      1: 'admin', // idQuyenHan = 1 là admin
-      2: 'user',  // idQuyenHan = 2 là nhân viên
-    }
+        //  Mapping idQuyenHan thành RoleType chính xác
+        const roleMap: Record<number, RoleType> = {
+          1: 'admin', // idQuyenHan = 1 là admin
+          2: 'user', // idQuyenHan = 2 là nhân viên
+        }
 
-    const userRoles: RoleType[] = [roleMap[res.data.idQuyenHan] || 'user']
-    localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(userRoles))
+        const userRoles: RoleType[] = [roleMap[res.data.idQuyenHan] || 'user']
+        localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(userRoles))
 
-    const userInfo = {
-      id: employeeId,
-      maNhanVien: res.data.maNhanVien,
-      name: res.data.tenNhanVien,
-      tenTaiKhoan: res.data.tenTaiKhoan,
-      email: res.data.email,
-      idQuyenHan: res.data.idQuyenHan,
-      tenQuyenHan: res.data.tenQuyenHan,
-      accessToken: res.data.accessToken,
-      refreshToken: res.data.refreshToken,
-      roles: userRoles,
-    }
+        const userInfo = {
+          id: employeeId,
+          maNhanVien: res.data.maNhanVien,
+          name: res.data.tenNhanVien,
+          tenTaiKhoan: res.data.tenTaiKhoan,
+          email: res.data.email,
+          idQuyenHan: res.data.idQuyenHan,
+          tenQuyenHan: res.data.tenQuyenHan,
+          accessToken: res.data.accessToken,
+          refreshToken: res.data.refreshToken,
+          roles: userRoles,
+        }
 
-    const storedProfile = {
-      id: employeeId,
-      maNhanVien: res.data.maNhanVien,
-      name: res.data.tenNhanVien,
-      tenTaiKhoan: res.data.tenTaiKhoan,
-      email: res.data.email,
-      idQuyenHan: res.data.idQuyenHan,
-      tenQuyenHan: res.data.tenQuyenHan,
-    }
+        const storedProfile = {
+          id: employeeId,
+          maNhanVien: res.data.maNhanVien,
+          name: res.data.tenNhanVien,
+          tenTaiKhoan: res.data.tenTaiKhoan,
+          email: res.data.email,
+          idQuyenHan: res.data.idQuyenHan,
+          tenQuyenHan: res.data.tenQuyenHan,
+        }
 
-    localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify(storedProfile))
+        localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify(storedProfile))
 
-    this.setInfo(userInfo)
-  } catch (err) {
-    clearToken()
-    localStorage.removeItem(USER_ID_STORAGE_KEY)
-    localStorage.removeItem(ROLES_STORAGE_KEY)
-    localStorage.removeItem(USER_INFO_STORAGE_KEY)
-    throw err
-  }
-}
-,
-
+        this.setInfo(userInfo)
+      } catch (err) {
+        clearToken()
+        localStorage.removeItem(USER_ID_STORAGE_KEY)
+        localStorage.removeItem(ROLES_STORAGE_KEY)
+        localStorage.removeItem(USER_INFO_STORAGE_KEY)
+        throw err
+      }
+    },
     // Logout
     async logout() {
       try {
