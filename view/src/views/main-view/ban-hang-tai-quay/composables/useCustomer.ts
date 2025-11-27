@@ -25,6 +25,12 @@ interface Order {
   customerId: string | null
 }
 
+interface WalkInContact {
+  name?: string
+  phone?: string
+  email?: string
+}
+
 export default function useCustomer(params: { currentOrder: Ref<Order | null> }) {
   const { currentOrder } = params
   const userStore = useUserStore()
@@ -86,11 +92,14 @@ export default function useCustomer(params: { currentOrder: Ref<Order | null> })
 
   const updateInvoiceCustomer = async (
     invoiceId: number,
-    walkInLocation?: Ref<{ thanhPho: string; quan: string; phuong: string; diaChiCuThe: string }>
+    walkInLocation?: Ref<{ thanhPho: string; quan: string; phuong: string; diaChiCuThe: string }>,
+    walkInContact?: WalkInContact
   ) => {
     try {
       let walkInAddress = ''
-      if (!selectedCustomer.value && currentOrder.value?.customerId === '' && walkInLocation) {
+      const rawCustomerId = currentOrder.value?.customerId
+      const isWalkIn = !selectedCustomer.value && (rawCustomerId === '' || rawCustomerId === null || rawCustomerId === undefined)
+      if (isWalkIn && walkInLocation) {
         const addressParts = [
           walkInLocation.value.diaChiCuThe,
           walkInLocation.value.phuong,
@@ -101,14 +110,17 @@ export default function useCustomer(params: { currentOrder: Ref<Order | null> })
       }
 
       const customerId = selectedCustomer.value?.id ? parseInt(selectedCustomer.value.id) : undefined
+      const contactName = (walkInContact?.name ?? '').trim()
+      const contactPhone = (walkInContact?.phone ?? '').trim()
+      const contactEmail = (walkInContact?.email ?? '').trim()
       const updateCustomerRequest: UpdateCustomerRequest = {
         idHoaDon: invoiceId,
         idKhachHang: customerId,
-        tenKhachHang: selectedCustomer.value?.name || 'Khách lẻ',
-        soDienThoai: selectedCustomer.value?.phone,
-        diaChiKhachHang: selectedCustomer.value?.address || walkInAddress,
-        emailKhachHang: selectedCustomer.value?.email,
-        idNhanVien: userStore.id || 1,
+        tenKhachHang: selectedCustomer.value?.name || (isWalkIn ? contactName || 'Khách lẻ' : 'Khách lẻ'),
+        soDienThoai: selectedCustomer.value?.phone ?? (isWalkIn ? contactPhone || null : null),
+        diaChiKhachHang: selectedCustomer.value?.address || walkInAddress || null,
+        emailKhachHang: selectedCustomer.value?.email ?? (isWalkIn ? contactEmail || null : null),
+        idNhanVien: userStore.id,
       }
 
       await updateCustomerForInvoice(updateCustomerRequest)

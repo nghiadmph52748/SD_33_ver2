@@ -566,6 +566,12 @@ public class BanHangService {
 
         kiemTra(danhSachSanPham, request.getIdPhieuGiamGia(), request.getIdNhanVien(), request.getIdKhachHang(),
                 request.getIdPTTT());
+
+        // Update customer information (both registered and walk-in customers)
+        updateKhachHang(request.getIdHoaDon(), request.getIdKhachHang(), request.getTenKhachHang(),
+                request.getSoDienThoai(), request.getDiaChiKhachHang(), request.getEmailKhachHang(),
+                request.getIdNhanVien());
+
         hoaDon.setId(request.getIdHoaDon());
         hoaDon.setTrangThaiThanhToan(request.getTrangThaiThanhToan());
         // Default tienMat and tienChuyenKhoan to 0 if null
