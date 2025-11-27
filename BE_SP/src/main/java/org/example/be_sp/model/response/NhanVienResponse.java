@@ -36,7 +36,8 @@ public class NhanVienResponse {
         this.maNhanVien = c.getMaNhanVien();
         this.tenNhanVien = c.getTenNhanVien();
         this.tenTaiKhoan = c.getTenTaiKhoan();
-        this.matKhau = c.getMatKhau();
+        // Không trả về password trong response để bảo mật
+        this.matKhau = null;
         this.ngaySinh = c.getNgaySinh();
         this.cccd = c.getCccd();
         this.email = c.getEmail();

@@ -137,7 +137,7 @@
                 <!-- Preview ảnh đã chọn hoặc ảnh hiện tại -->
                 <div v-if="previewUrl || formData.anhNhanVien" class="image-preview">
                   <div class="preview-container">
-                    <img :src="previewUrl || formData.anhNhanVien" alt="Ảnh nhân viên" class="preview-image" />
+                    <img :src="previewUrl || formData.anhNhanVien || ''" alt="Ảnh nhân viên" class="preview-image" />
                     <div class="image-overlay">
                       <a-button type="text" size="small" @click="removeImage" class="remove-button">
                         <template #icon>
@@ -290,7 +290,7 @@ const router = useRouter()
 const { breadcrumbItems } = useBreadcrumb()
 const userStore = useUserStore()
 const loading = ref(false)
-const formRef = ref(null)
+const formRef = ref<any>(null)
 const selectedFiles = ref<File[]>([])
 const previewUrl = ref<string>('')
 const fileInputRef = ref<HTMLInputElement>()
@@ -302,7 +302,7 @@ const wards = ref<{ value: string; label: string }[]>([])
 const { id } = route.params
 
 const formData = ref({
-  id: null,
+  id: null as number | null,
   tenNhanVien: '',
   cccd: '',
   ngaySinh: '',
@@ -314,12 +314,12 @@ const formData = ref({
   phuong: '',
   diaChiCuThe: '',
   tenQuyenHan: '',
-  idQuyenHan: null,
+  idQuyenHan: null as number | null,
   trangThai: true,
   delete: false,
   tenTaiKhoan: '',
   matKhau: '',
-  anhNhanVien: null,
+  anhNhanVien: null as string | null,
 })
 
 // Validation rules
@@ -466,8 +466,32 @@ const removeImage = () => {
 // load dữ liệu nhân viên
 onMounted(async () => {
   try {
-    const res = await layChiTietNhanVien(id)
-    formData.value = res.data
+    const employeeId = Array.isArray(id) ? String(id[0]) : String(id)
+    const res = await layChiTietNhanVien(employeeId)
+    const data = (res.data?.data || res.data) as any
+    // Không load password từ response (bảo mật và tránh gửi bcrypt hash)
+    if (data) {
+      formData.value = {
+        id: data.id || null,
+        tenNhanVien: data.tenNhanVien || '',
+        cccd: data.cccd || '',
+        ngaySinh: data.ngaySinh || '',
+        gioiTinh: data.gioiTinh ?? true,
+        email: data.email || '',
+        soDienThoai: data.soDienThoai || '',
+        thanhPho: data.thanhPho || '',
+        quan: data.quan || '',
+        phuong: data.phuong || '',
+        diaChiCuThe: data.diaChiCuThe || '',
+        tenQuyenHan: data.tenQuyenHan || '',
+        idQuyenHan: data.idQuyenHan || null,
+        trangThai: data.trangThai ?? true,
+        delete: false,
+        tenTaiKhoan: data.tenTaiKhoan || '',
+        matKhau: '', // Reset password field, không dùng password từ database
+        anhNhanVien: data.anhNhanVien || null,
+      }
+    }
   } catch (error) {
     Message.error('Không thể tải dữ liệu nhân viên')
   }
@@ -476,8 +500,16 @@ onMounted(async () => {
 const handleSubmit = async () => {
   try {
     loading.value = true
+    
+    // Validate form ref
+    if (!formRef.value) {
+      Message.error('Form không hợp lệ')
+      loading.value = false
+      return
+    }
+    
     await formRef.value.validate()
-
+    
     // Validate tất cả các trường
     if (!formData.value.tenNhanVien) {
       Message.error('Vui lòng nhập tên nhân viên.')
@@ -603,11 +635,18 @@ const handleSubmit = async () => {
       }
 
       // ✅ Tạo payload JSON với URL ảnh
+      // Chỉ gửi password nếu user nhập password mới (không rỗng)
+      // Nếu password rỗng, backend sẽ tự động generate password mới
+      const passwordValue = formData.value.matKhau?.trim() || ''
+      const isBcryptHash = passwordValue.startsWith('$2a$') || 
+                          passwordValue.startsWith('$2b$') || 
+                          passwordValue.startsWith('$2y$')
+      
       const payload: NhanVienRequest = {
-        maNhanVien: formData.value.maNhanVien,
         tenNhanVien: formData.value.tenNhanVien,
         tenTaiKhoan: formData.value.tenTaiKhoan,
-        matKhau: formData.value.matKhau,
+        // Chỉ gửi password nếu user nhập password mới (không rỗng và không phải bcrypt hash)
+        matKhau: passwordValue && !isBcryptHash ? passwordValue : undefined,
         ngaySinh: formData.value.ngaySinh,
         cccd: formData.value.cccd,
         email: formData.value.email,
@@ -619,7 +658,7 @@ const handleSubmit = async () => {
         diaChiCuThe: formData.value.diaChiCuThe,
         idQuyenHan: formData.value.idQuyenHan as number,
         trangThai: formData.value.trangThai,
-        anhNhanVien: imageUrl,
+        anhNhanVien: imageUrl || undefined,
         deleted: false,
       }
 

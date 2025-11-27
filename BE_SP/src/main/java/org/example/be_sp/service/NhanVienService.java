@@ -209,9 +209,28 @@ public class NhanVienService {
         
         // update mật khẩu - generate random password if not provided to always send email
         if (request.getMatKhau() != null && !request.getMatKhau().isEmpty()) {
-            rawPassword = request.getMatKhau();
-            nv.setMatKhau(passwordEncoder.encode(rawPassword));
-            passwordChanged = true;
+            String inputPassword = request.getMatKhau();
+            
+            // Kiểm tra xem password có phải là bcrypt hash không (bcrypt hash luôn bắt đầu bằng $2a$, $2b$, hoặc $2y$)
+            boolean isBcryptHash = inputPassword.startsWith("$2a$") || 
+                                   inputPassword.startsWith("$2b$") || 
+                                   inputPassword.startsWith("$2y$");
+            
+            if (isBcryptHash) {
+                // Nếu là bcrypt hash, có nghĩa là frontend gửi lại password từ database
+                // Không cập nhật password, chỉ generate password mới để gửi email
+                System.out.println("⚠️ [updateNhanVien] Phát hiện password đã mã hóa từ frontend, bỏ qua và tạo password mới");
+                rawPassword = generateRandomPassword();
+                nv.setMatKhau(passwordEncoder.encode(rawPassword));
+                passwordChanged = true;
+                System.out.println("🔑 [updateNhanVien] Mật khẩu ngẫu nhiên đã được tạo: " + rawPassword);
+            } else {
+                // Nếu là plain text, đây là password mới từ user
+                rawPassword = inputPassword;
+                nv.setMatKhau(passwordEncoder.encode(rawPassword));
+                passwordChanged = true;
+                System.out.println("🔑 [updateNhanVien] Mật khẩu mới đã được cập nhật");
+            }
         } else {
             // Generate random password if not provided during update - always send email with new password
             rawPassword = generateRandomPassword();

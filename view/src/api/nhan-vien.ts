@@ -26,18 +26,20 @@ export interface NhanVienRequest {
 
 export interface NhanVienResponse {
   id: number
-  maNhanVien: string
+  maNhanVien?: string
   tenNhanVien: string
   tenTaiKhoan: string
   email: string
   soDienThoai: string
   ngaySinh: string
+  cccd?: string
   gioiTinh: boolean
   thanhPho: string
   quan: string
   phuong: string
   diaChiCuThe: string
   tenQuyenHan: string
+  idQuyenHan?: number
   trangThai: boolean
   anhNhanVien: string | null
 }
