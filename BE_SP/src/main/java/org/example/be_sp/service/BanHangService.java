@@ -87,7 +87,8 @@ public class BanHangService {
             String hanhDong, String moTa, Integer idNhanVien) {
         TimelineDonHang timeline = new TimelineDonHang();
         timeline.setIdHoaDon(hoaDon);
-        timeline.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
+        timeline.setIdNhanVien(nvRepository.findById(idNhanVien)
+                .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên với id: " + idNhanVien, "404")));
         timeline.setTrangThaiCu(trangThaiCu != null ? trangThaiCu : "");
         timeline.setTrangThaiMoi(trangThaiMoi != null ? trangThaiMoi : "");
         timeline.setHanhDong(hanhDong != null ? hanhDong : "");
@@ -151,7 +152,8 @@ public class BanHangService {
 
     public Object taoHoaDon(Integer idNhanVien) {
         HoaDon hd = new HoaDon();
-        hd.setIdNhanVien(nvRepository.findById(idNhanVien).orElseThrow());
+        hd.setIdNhanVien(nvRepository.findById(idNhanVien)
+                .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên với id: " + idNhanVien, "404")));
         LocalDateTime now = LocalDateTime.now();
         hd.setCreateAt(now);
         hd.setNgayTao(now);
@@ -173,15 +175,16 @@ public class BanHangService {
         String maHoaDon = generateInvoiceCode(saved.getId());
 
         // Refresh entity to get updated ma_hoa_don from database
-        saved = hdRepository.findById(saved.getId()).orElseThrow();
+        HoaDon refreshedHoaDon = hdRepository.findById(saved.getId())
+                .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn vừa tạo với id: " + saved.getId(), "404"));
         ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
-        thongTinDonHang.setIdHoaDon(saved);
+        thongTinDonHang.setIdHoaDon(refreshedHoaDon);
         thongTinDonHang.setIdTrangThaiDonHang(getOrderStatus(1));
         thongTinDonHang.setThoiGian(LocalDateTime.now());
         thongTinDonHang.setTrangThai(true);
         thongTinDonHang.setDeleted(false);
         ttDhRepository.save(thongTinDonHang);
-        return new CreateInvoiceResponse(saved.getId(), maHoaDon);
+        return new CreateInvoiceResponse(refreshedHoaDon.getId(), maHoaDon);
     }
 
     private String generateInvoiceCode(Integer idHoaDon) {

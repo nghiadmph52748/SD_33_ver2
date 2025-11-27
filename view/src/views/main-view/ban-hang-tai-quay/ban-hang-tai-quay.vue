@@ -487,7 +487,7 @@ const {
   currentOrder,
   allProductVariants,
   cartTableKey,
-  userId: userStoreInstance.id || 0,
+  userId: userStoreInstance.id || 1,
   refreshProductStock,
 })
 
@@ -497,7 +497,7 @@ const { showDeleteConfirmModal, showDeleteConfirm, confirmDeleteOrder, createNew
   allProductVariants,
   soldQuantitiesByProductId,
   cartPagination,
-  userId: userStoreInstance.id || 0,
+  userId: userStoreInstance.id || 1,
 })
 
 const { insufficientStockItems, overStockItems } = useStock({ currentOrder, allProductVariants })
@@ -1355,7 +1355,7 @@ const {
   selectedCoupon,
   calculateVoucherDiscount,
   coupons,
-  userId: userStoreInstance.id || 0,
+  userId: userStoreInstance.id || 1,
   userName: userStoreInstance.name,
   orders,
   currentOrderIndex,
