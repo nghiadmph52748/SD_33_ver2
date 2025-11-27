@@ -11,7 +11,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AddressChangeNotificationRequest {
-    
+
     private AddressInfo oldAddress;
     private AddressInfo newAddress;
     private BigDecimal surcharge; // Keep for backward compatibility
@@ -22,6 +22,7 @@ public class AddressChangeNotificationRequest {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class AddressInfo {
+
         private String thanhPho;
         private String quan;
         private String phuong;
@@ -33,6 +34,7 @@ public class AddressChangeNotificationRequest {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class ShippingFeeChange {
+
         private BigDecimal currentFee; // Phí giao hàng cũ
         private BigDecimal newFee; // Phí giao hàng mới
         private BigDecimal difference; // Chênh lệch (âm = hoàn phí, dương = phụ phí)
@@ -40,4 +42,3 @@ public class AddressChangeNotificationRequest {
         private String description; // Mô tả chi tiết
     }
 }
-

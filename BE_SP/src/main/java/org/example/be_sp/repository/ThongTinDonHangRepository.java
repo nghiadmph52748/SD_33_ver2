@@ -13,25 +13,25 @@ import java.util.Optional;
 
 @Repository
 public interface ThongTinDonHangRepository extends JpaRepository<ThongTinDonHang, Integer> {
-    
+
     /**
      * Tìm thông tin đơn hàng theo ID hóa đơn
      */
     @Query("SELECT t FROM ThongTinDonHang t WHERE t.idHoaDon.id = :hoaDonId AND t.deleted = false ORDER BY t.thoiGian DESC")
     List<ThongTinDonHang> findByHoaDonId(@Param("hoaDonId") Integer hoaDonId);
-    
+
     /**
      * Tìm thông tin đơn hàng mới nhất theo ID hóa đơn
      */
     @Query("SELECT t FROM ThongTinDonHang t WHERE t.idHoaDon.id = :hoaDonId AND t.deleted = false ORDER BY t.thoiGian DESC")
     List<ThongTinDonHang> findLatestByHoaDonId(@Param("hoaDonId") Integer hoaDonId, Pageable pageable);
-    
+
     /**
      * Tìm thông tin đơn hàng mới nhất theo ID hóa đơn (không dùng Pageable)
      */
     @Query("SELECT t FROM ThongTinDonHang t WHERE t.idHoaDon.id = :hoaDonId AND t.deleted = false ORDER BY t.thoiGian DESC")
     List<ThongTinDonHang> findByHoaDonIdOrderByThoiGianDesc(@Param("hoaDonId") Integer hoaDonId);
-    
+
     /**
      * Tìm thông tin đơn hàng mới nhất theo ID hóa đơn (chỉ lấy 1 record)
      */
@@ -41,7 +41,8 @@ public interface ThongTinDonHangRepository extends JpaRepository<ThongTinDonHang
     }
 
     /**
-     * Kiểm tra xem đơn hàng đã có record với trạng thái thay đổi địa chỉ (id = 8) chưa
+     * Kiểm tra xem đơn hàng đã có record với trạng thái thay đổi địa chỉ (id =
+     * 8) chưa
      */
     @Query("SELECT COUNT(t) > 0 FROM ThongTinDonHang t WHERE t.idHoaDon.id = :hoaDonId AND t.idTrangThaiDonHang.id = :statusId AND t.deleted = false")
     boolean existsByHoaDonIdAndStatusId(@Param("hoaDonId") Integer hoaDonId, @Param("statusId") Integer statusId);

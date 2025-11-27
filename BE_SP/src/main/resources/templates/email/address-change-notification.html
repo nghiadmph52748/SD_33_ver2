@@ -1,295 +1,299 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thông báo thay đổi địa chỉ giao hàng</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f4f4f4;
-        }
-        
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #ffffff;
-            padding: 30px 20px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-        
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .content {
-            padding: 30px 20px;
-        }
-        
-        .greeting {
-            margin-bottom: 20px;
-            font-size: 16px;
-        }
-        
-        .greeting strong {
-            color: #667eea;
-        }
-        
-        .order-info {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 25px;
-            border-left: 4px solid #667eea;
-        }
-        
-        .order-code {
-            font-weight: bold;
-            color: #333;
-            font-size: 15px;
-        }
-        
-        .address-section {
-            margin-bottom: 25px;
-        }
-        
-        .address-section h3 {
-            color: #667eea;
-            font-size: 15px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .address-box {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #e0e0e0;
-            margin-bottom: 15px;
-        }
-        
-        .address-box p {
-            margin: 5px 0;
-            line-height: 1.6;
-            color: #555;
-        }
-        
-        .address-label {
-            font-size: 12px;
-            color: #999;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-        
-        .surcharge-info {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 25px;
-        }
-        
-        .surcharge-info h4 {
-            color: #856404;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        
-        .surcharge-amount {
-            font-size: 18px;
-            font-weight: bold;
-            color: #d39e00;
-        }
-        
-        .surcharge-note {
-            font-size: 13px;
-            color: #856404;
-            margin-top: 8px;
-            line-height: 1.5;
-        }
-        
-        .note-section {
-            background-color: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 25px;
-        }
-        
-        .note-section h4 {
-            color: #1565c0;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        
-        .note-section p {
-            font-size: 14px;
-            color: #1565c0;
-            line-height: 1.6;
-        }
-        
-        .cta-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #ffffff;
-            text-decoration: none;
-            padding: 12px 30px;
-            border-radius: 5px;
-            font-weight: bold;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-        
-        .footer {
-            background-color: #f4f4f4;
-            padding: 20px;
-            text-align: center;
-            border-top: 1px solid #e0e0e0;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .footer p {
-            margin: 5px 0;
-        }
-        
-        .divider {
-            height: 2px;
-            background: linear-gradient(to right, transparent, #667eea, transparent);
-            margin: 20px 0;
-        }
-        
-        @media (max-width: 600px) {
-            .email-container {
-                border-radius: 0;
-            }
-            
-            .header {
-                padding: 20px 15px;
-            }
-            
-            .header h1 {
-                font-size: 20px;
-            }
-            
-            .content {
-                padding: 20px 15px;
-            }
-            
-            .address-box {
-                font-size: 14px;
-            }
-        }
-    </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Thông báo thay đổi địa chỉ giao hàng</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			line-height: 1.6;
+			color: #333;
+			background-color: #f4f4f4;
+		}
+
+		.email-container {
+			max-width: 600px;
+			margin: 0 auto;
+			background-color: #ffffff;
+			border-radius: 8px;
+			overflow: hidden;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		}
+
+		.header {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: #ffffff;
+			padding: 30px 20px;
+			text-align: center;
+		}
+
+		.header h1 {
+			font-size: 24px;
+			margin-bottom: 5px;
+		}
+
+		.header p {
+			font-size: 14px;
+			opacity: 0.9;
+		}
+
+		.content {
+			padding: 30px 20px;
+		}
+
+		.greeting {
+			margin-bottom: 20px;
+			font-size: 16px;
+		}
+
+		.greeting strong {
+			color: #667eea;
+		}
+
+		.order-info {
+			background-color: #f9f9f9;
+			padding: 15px;
+			border-radius: 5px;
+			margin-bottom: 25px;
+			border-left: 4px solid #667eea;
+		}
+
+		.order-code {
+			font-weight: bold;
+			color: #333;
+			font-size: 15px;
+		}
+
+		.address-section {
+			margin-bottom: 25px;
+		}
+
+		.address-section h3 {
+			color: #667eea;
+			font-size: 15px;
+			margin-bottom: 10px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.address-box {
+			background-color: #f9f9f9;
+			padding: 15px;
+			border-radius: 5px;
+			border: 1px solid #e0e0e0;
+			margin-bottom: 15px;
+		}
+
+		.address-box p {
+			margin: 5px 0;
+			line-height: 1.6;
+			color: #555;
+		}
+
+		.address-label {
+			font-size: 12px;
+			color: #999;
+			text-transform: uppercase;
+			margin-bottom: 5px;
+		}
+
+		.surcharge-info {
+			background-color: #fff3cd;
+			border-left: 4px solid #ffc107;
+			padding: 15px;
+			border-radius: 5px;
+			margin-bottom: 25px;
+		}
+
+		.surcharge-info h4 {
+			color: #856404;
+			font-size: 14px;
+			margin-bottom: 8px;
+		}
+
+		.surcharge-amount {
+			font-size: 18px;
+			font-weight: bold;
+			color: #d39e00;
+		}
+
+		.surcharge-note {
+			font-size: 13px;
+			color: #856404;
+			margin-top: 8px;
+			line-height: 1.5;
+		}
+
+		.note-section {
+			background-color: #e7f3ff;
+			border-left: 4px solid #2196F3;
+			padding: 15px;
+			border-radius: 5px;
+			margin-bottom: 25px;
+		}
+
+		.note-section h4 {
+			color: #1565c0;
+			font-size: 14px;
+			margin-bottom: 8px;
+		}
+
+		.note-section p {
+			font-size: 14px;
+			color: #1565c0;
+			line-height: 1.6;
+		}
+
+		.cta-button {
+			display: inline-block;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: #ffffff;
+			text-decoration: none;
+			padding: 12px 30px;
+			border-radius: 5px;
+			font-weight: bold;
+			margin-bottom: 25px;
+			text-align: center;
+		}
+
+		.footer {
+			background-color: #f4f4f4;
+			padding: 20px;
+			text-align: center;
+			border-top: 1px solid #e0e0e0;
+			font-size: 12px;
+			color: #666;
+		}
+
+		.footer p {
+			margin: 5px 0;
+		}
+
+		.divider {
+			height: 2px;
+			background: linear-gradient(to right, transparent, #667eea, transparent);
+			margin: 20px 0;
+		}
+
+		@media (max-width: 600px) {
+			.email-container {
+				border-radius: 0;
+			}
+
+			.header {
+				padding: 20px 15px;
+			}
+
+			.header h1 {
+				font-size: 20px;
+			}
+
+			.content {
+				padding: 20px 15px;
+			}
+
+			.address-box {
+				font-size: 14px;
+			}
+		}
+	</style>
 </head>
+
 <body>
-    <div class="email-container">
-        <!-- Header -->
-        <div class="header">
-            <h1>📍 Thay đổi địa chỉ giao hàng</h1>
-            <p>Chúng tôi đã tiếp nhận yêu cầu thay đổi địa chỉ của bạn</p>
-        </div>
+	<div class="email-container">
+		<!-- Header -->
+		<div class="header">
+			<h1>📍 Thay đổi địa chỉ giao hàng</h1>
+			<p>Chúng tôi đã tiếp nhận yêu cầu thay đổi địa chỉ của bạn</p>
+		</div>
 
-        <!-- Content -->
-        <div class="content">
-            <!-- Greeting -->
-            <div class="greeting">
-                Xin chào <strong th:text="${customerName}">Khách hàng</strong>,
-            </div>
+		<!-- Content -->
+		<div class="content">
+			<!-- Greeting -->
+			<div class="greeting">
+				Xin chào <strong th:text="${customerName}">Khách hàng</strong>,
+			</div>
 
-            <!-- Order Info -->
-            <div class="order-info">
-                <span class="address-label">Mã đơn hàng:</span>
-                <p class="order-code" th:text="${orderCode}">ORD-123456</p>
-            </div>
+			<!-- Order Info -->
+			<div class="order-info">
+				<span class="address-label">Mã đơn hàng:</span>
+				<p class="order-code" th:text="${orderCode}">ORD-123456</p>
+			</div>
 
-            <p style="margin-bottom: 15px; color: #555;">
-                Chúng tôi xác nhận rằng địa chỉ giao hàng của đơn hàng của bạn đã được cập nhật thành công.
-            </p>
+			<p style="margin-bottom: 15px; color: #555;">
+				Chúng tôi xác nhận rằng địa chỉ giao hàng của đơn hàng của bạn đã được cập nhật thành công.
+			</p>
 
-            <div class="divider"></div>
+			<div class="divider"></div>
 
-            <!-- Old Address -->
-            <div class="address-section">
-                <h3>❌ Địa chỉ cũ</h3>
-                <div class="address-box">
-                    <div class="address-label">Địa chỉ giao hàng cũ:</div>
-                    <p th:text="${oldAddress}">
-                        123 Đường ABC, Phường XYZ, Quận ABC, TP. Hồ Chí Minh
-                    </p>
-                </div>
-            </div>
+			<!-- Old Address -->
+			<div class="address-section">
+				<h3>❌ Địa chỉ cũ</h3>
+				<div class="address-box">
+					<div class="address-label">Địa chỉ giao hàng cũ:</div>
+					<p th:text="${oldAddress}">
+						123 Đường ABC, Phường XYZ, Quận ABC, TP. Hồ Chí Minh
+					</p>
+				</div>
+			</div>
 
-            <!-- New Address -->
-            <div class="address-section">
-                <h3>✅ Địa chỉ mới</h3>
-                <div class="address-box">
-                    <div class="address-label">Địa chỉ giao hàng mới:</div>
-                    <p th:text="${newAddress}">
-                        456 Đường XYZ, Phường ABC, Quận XYZ, TP. Hà Nội
-                    </p>
-                </div>
-            </div>
+			<!-- New Address -->
+			<div class="address-section">
+				<h3>✅ Địa chỉ mới</h3>
+				<div class="address-box">
+					<div class="address-label">Địa chỉ giao hàng mới:</div>
+					<p th:text="${newAddress}">
+						456 Đường XYZ, Phường ABC, Quận XYZ, TP. Hà Nội
+					</p>
+				</div>
+			</div>
 
-            <!-- Surcharge Info -->
-            <div class="surcharge-info">
-                <h4>⚠️ Phí phụ thêm</h4>
-                <div class="surcharge-amount" th:text="${#numbers.formatInteger(surcharge.intValue(), 3, 'COMMA')} + ' ₫'">
-                    50,000 ₫
-                </div>
-                <p class="surcharge-note">
-                    Vì bạn yêu cầu thay đổi địa chỉ giao hàng sau khi đặt hàng, nên sẽ phát sinh phí phụ thêm như trên.
-                    Phí này sẽ được thanh toán cùng với đơn hàng.
-                </p>
-            </div>
+			<!-- Surcharge Info -->
+			<div class="surcharge-info">
+				<h4>⚠️ Phí phụ thêm</h4>
+				<div class="surcharge-amount" th:text="${#numbers.formatInteger(surcharge.intValue(), 3, 'COMMA')} + ' ₫'">
+					50,000 ₫
+				</div>
+				<p class="surcharge-note">
+					Vì bạn yêu cầu thay đổi địa chỉ giao hàng sau khi đặt hàng, nên sẽ phát sinh phí phụ thêm như trên.
+					Phí này sẽ được thanh toán cùng với đơn hàng.
+				</p>
+			</div>
 
-            <!-- Important Note -->
-            <div class="note-section">
-                <h4>ℹ️ Thông tin quan trọng</h4>
-                <p>
-                    ✓ Thay đổi địa chỉ giao hàng đã được cập nhật vào hệ thống<br>
-                    ✓ Phí phụ sẽ được cộng vào tổng giá trị đơn hàng<br>
-                    ✓ Đơn hàng sẽ được giao đến địa chỉ mới
-                </p>
-            </div>
+			<!-- Important Note -->
+			<div class="note-section">
+				<h4>ℹ️ Thông tin quan trọng</h4>
+				<p>
+					✓ Thay đổi địa chỉ giao hàng đã được cập nhật vào hệ thống<br>
+					✓ Phí phụ sẽ được cộng vào tổng giá trị đơn hàng<br>
+					✓ Đơn hàng sẽ được giao đến địa chỉ mới
+				</p>
+			</div>
 
-            <!-- Call to Action -->
-            <a href="#" class="cta-button" th:href="${baseUrl}">Xem chi tiết đơn hàng</a>
+			<!-- Call to Action -->
+			<a href="#" class="cta-button" th:href="${baseUrl}">Xem chi tiết đơn hàng</a>
 
-            <p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
-                Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với <strong>bộ phận Chăm sóc khách hàng</strong> của chúng tôi. Chúng tôi luôn sẵn sàng hỗ trợ!
-            </p>
-        </div>
+			<p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
+				Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với <strong>bộ phận Chăm sóc khách hàng</strong> của chúng
+				tôi. Chúng tôi luôn sẵn sàng hỗ trợ!
+			</p>
+		</div>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p><strong>Cảm ơn bạn đã tin tưởng chúng tôi!</strong></p>
-            <p>© 2024 Cửa hàng Nike. Tất cả quyền được bảo lưu.</p>
-            <p>Liên hệ: support@nike-vn.com | Hotline: 1900-1234</p>
-        </div>
-    </div>
+		<!-- Footer -->
+		<div class="footer">
+			<p><strong>Cảm ơn bạn đã tin tưởng chúng tôi!</strong></p>
+			<p>© 2024 Cửa hàng Nike. Tất cả quyền được bảo lưu.</p>
+			<p>Liên hệ: support@nike-vn.com | Hotline: 1900-1234</p>
+		</div>
+	</div>
 </body>
+
 </html>

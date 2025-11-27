@@ -71,15 +71,16 @@ public class HoaDonController {
     }
 
     /**
-     * API thống kê doanh thu chỉ tính các đơn hàng đã hoàn thành (idTrangThaiDonHang = 7)
+     * API thống kê doanh thu chỉ tính các đơn hàng đã hoàn thành
+     * (idTrangThaiDonHang = 7)
      */
     @GetMapping("/statistics/revenue")
     public ResponseObject<?> getRevenueStatistics(
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "day") String groupBy) {
-        return new ResponseObject<>(hoaDonService.getCompletedOrderRevenue(startDate, endDate, groupBy), 
-                                   "Lấy thống kê doanh thu thành công");
+        return new ResponseObject<>(hoaDonService.getCompletedOrderRevenue(startDate, endDate, groupBy),
+                "Lấy thống kê doanh thu thành công");
     }
 
     /**
@@ -87,8 +88,8 @@ public class HoaDonController {
      */
     @GetMapping("/statistics/dashboard")
     public ResponseObject<?> getDashboardStatistics() {
-        return new ResponseObject<>(hoaDonService.getCompletedOrderDashboard(), 
-                                   "Lấy thống kê dashboard thành công");
+        return new ResponseObject<>(hoaDonService.getCompletedOrderDashboard(),
+                "Lấy thống kê dashboard thành công");
     }
 
     /**
@@ -99,8 +100,8 @@ public class HoaDonController {
             @RequestParam String period, // "today", "week", "month", "year"
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-        return new ResponseObject<>(hoaDonService.getCompletedOrderStatisticsByPeriod(period, startDate, endDate), 
-                                   "Lấy thống kê theo thời gian thành công");
+        return new ResponseObject<>(hoaDonService.getCompletedOrderStatisticsByPeriod(period, startDate, endDate),
+                "Lấy thống kê theo thời gian thành công");
     }
 
     /**
@@ -111,8 +112,8 @@ public class HoaDonController {
             @RequestParam(defaultValue = "month") String period,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-        return new ResponseObject<>(hoaDonService.getRevenueForecastComparison(period, startDate, endDate), 
-                                   "Lấy so sánh doanh thu dự kiến vs thực tế thành công");
+        return new ResponseObject<>(hoaDonService.getRevenueForecastComparison(period, startDate, endDate),
+                "Lấy so sánh doanh thu dự kiến vs thực tế thành công");
     }
 
     /**
@@ -123,8 +124,8 @@ public class HoaDonController {
             @RequestParam String period, // "month", "quarter", "year"
             @RequestParam String targetDate, // YYYY-MM-DD hoặc YYYY-MM hoặc YYYY
             @RequestParam BigDecimal targetAmount) {
-        return new ResponseObject<>(hoaDonService.setRevenueTarget(period, targetDate, targetAmount), 
-                                   "Cập nhật mục tiêu doanh thu thành công");
+        return new ResponseObject<>(hoaDonService.setRevenueTarget(period, targetDate, targetAmount),
+                "Cập nhật mục tiêu doanh thu thành công");
     }
 
     /**

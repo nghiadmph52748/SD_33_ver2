@@ -57,9 +57,9 @@ public interface EmailService {
     void sendInventoryShortageNotificationEmail(OrderEmailData orderData);
 
     /**
-     * Send address change notification email to customer
-     * Informs customer about address change and surcharge amount
-     * Executes asynchronously to avoid blocking the API response
+     * Send address change notification email to customer Informs customer about
+     * address change and surcharge amount Executes asynchronously to avoid
+     * blocking the API response
      *
      * @param customerEmail Customer email address
      * @param customerName Customer name

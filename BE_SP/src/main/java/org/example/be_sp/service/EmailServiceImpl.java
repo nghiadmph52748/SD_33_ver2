@@ -215,7 +215,7 @@ public class EmailServiceImpl implements EmailService {
             String oldAddress,
             String newAddress,
             java.math.BigDecimal surcharge) {
-        
+
         String threadName = Thread.currentThread().getName();
 
         if (!emailConfig.isEnabled()) {

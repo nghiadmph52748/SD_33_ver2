@@ -577,7 +577,7 @@ const addressAlreadyChanged = ref(false)
 // Computed property to show why address is disabled
 const addressDisableReason = computed(() => {
   if (!addressAlreadyChanged.value) return null
-  
+
   const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
   if (currentStatusText === 'Đã huỷ' || currentStatusText === 'Hoàn thành') {
     return `Đơn hàng ở trạng thái "${currentStatusText}" - Không thể thay đổi`
@@ -1774,7 +1774,7 @@ const formatDate = (dateString: string) => {
  */
 const checkAddressChangeStatus = () => {
   addressAlreadyChanged.value = false
-  
+
   console.log('[AddressCheck] Starting check...')
   console.log('[AddressCheck] invoice.thongTinDonHangs:', invoice.value?.thongTinDonHangs)
   console.log('[AddressCheck] Current highest priority status:', getHighestPriorityStatusFromInvoice())
@@ -1791,15 +1791,15 @@ const checkAddressChangeStatus = () => {
   // Look for tenTrangThaiDonHang field containing "Thay đổi địa chỉ giao hàng"
   if (invoice.value?.thongTinDonHangs && Array.isArray(invoice.value.thongTinDonHangs)) {
     console.log('[AddressCheck] Found thongTinDonHangs, checking...')
-    
+
     // Check each item for address change status
     for (let i = 0; i < invoice.value.thongTinDonHangs.length; i++) {
       const item = invoice.value.thongTinDonHangs[i]
       const statusName = item.tenTrangThaiDonHang || ''
       const statusId = item.idTrangThaiDonHang?.id
-      
+
       console.log(`[AddressCheck] Item ${i}: statusName="${statusName}", statusId=${statusId}`)
-      
+
       // Check if status is address change (either by id=8 or by name)
       if (statusId === 8 || statusName === 'Thay đổi địa chỉ giao hàng' || statusName.includes('Thay đổi địa chỉ')) {
         console.log('[AddressCheck] ✓ Address change detected!', { statusId, statusName })
@@ -2243,7 +2243,9 @@ const handleSaveUpdate = async () => {
     if (addressChanged) {
       const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
       if (currentStatusText === 'Đã huỷ' || currentStatusText === 'Hoàn thành') {
-        Message.error(`Không thể thay đổi địa chỉ khi đơn hàng ở trạng thái "${currentStatusText}". Chỉ có thể thay đổi địa chỉ trước khi đơn hàng bị huỷ hoặc hoàn thành.`)
+        Message.error(
+          `Không thể thay đổi địa chỉ khi đơn hàng ở trạng thái "${currentStatusText}". Chỉ có thể thay đổi địa chỉ trước khi đơn hàng bị huỷ hoặc hoàn thành.`
+        )
         saving.value = false
         return
       }
@@ -2322,7 +2324,7 @@ const handleSaveUpdate = async () => {
     // Add surcharge/refund info if address changed
     if (addressChanged && feeChangeResult && shouldUpdateShippingFee(feeChangeResult)) {
       const feePayload = createFeeUpdatePayload(feeChangeResult)
-      
+
       // Send both individual fields and complete shippingFeeChange object
       if (feePayload.phuPhi !== undefined) {
         updateData.phuPhi = feePayload.phuPhi
@@ -2330,7 +2332,7 @@ const handleSaveUpdate = async () => {
       if (feePayload.hoanPhi !== undefined) {
         updateData.hoanPhi = feePayload.hoanPhi
       }
-      
+
       // Also send the complete fee change result for backend processing
       updateData.shippingFeeChange = {
         feeChanged: feeChangeResult.feeChanged,
@@ -2341,7 +2343,7 @@ const handleSaveUpdate = async () => {
         amountToUpdate: feeChangeResult.amountToUpdate,
         description: feeChangeResult.description,
       }
-      
+
       console.log('[FeeUpdate] Fee payload:', feePayload)
       console.log('[FeeUpdate] Shipping fee change:', updateData.shippingFeeChange)
       console.log('[FeeUpdate] Update data with fees:', updateData)
