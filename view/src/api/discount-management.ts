@@ -183,9 +183,57 @@ export interface CustomerApiModel {
   tongDon?: number | null
   createdAt?: string
   updatedAt?: string
+  // RFM fields from vw_khach_hang_rfm
+  ordersCount?: number
+  firstOrderAt?: string
+  lastOrderAt?: string
+  totalSpent?: number
+  daysSinceLastOrder?: number
 }
 
 export const fetchCustomers = () => requestJson<CustomerApiModel[]>('/khach-hang-management/playlist')
+
+export interface FetchCustomersBySegmentParams {
+  segmentType?: 'behavior' | 'rfm' | 'event' | 'all'
+  segmentKey?: string
+  search?: string
+  minOrdersCount?: number
+  maxOrdersCount?: number
+  minTotalSpent?: number
+  maxTotalSpent?: number
+  lastOrderFrom?: string
+  lastOrderTo?: string
+  page?: number
+  pageSize?: number
+  birthdayDays?: number
+}
+
+export interface PagedResponse<T> {
+  content: T[]
+  totalElements: number
+  page: number
+  size: number
+  totalPages?: number
+}
+
+export const fetchCustomersBySegment = (params?: FetchCustomersBySegmentParams) => {
+  const queryParams = new URLSearchParams()
+  if (params?.segmentType) queryParams.append('segmentType', params.segmentType)
+  if (params?.segmentKey) queryParams.append('segmentKey', params.segmentKey)
+  if (params?.search) queryParams.append('search', params.search)
+  if (params?.minOrdersCount !== undefined) queryParams.append('minOrdersCount', String(params.minOrdersCount))
+  if (params?.maxOrdersCount !== undefined) queryParams.append('maxOrdersCount', String(params.maxOrdersCount))
+  if (params?.minTotalSpent !== undefined) queryParams.append('minTotalSpent', String(params.minTotalSpent))
+  if (params?.maxTotalSpent !== undefined) queryParams.append('maxTotalSpent', String(params.maxTotalSpent))
+  if (params?.lastOrderFrom) queryParams.append('lastOrderFrom', params.lastOrderFrom)
+  if (params?.lastOrderTo) queryParams.append('lastOrderTo', params.lastOrderTo)
+  if (params?.page !== undefined) queryParams.append('page', String(params.page))
+  if (params?.pageSize !== undefined) queryParams.append('pageSize', String(params.pageSize))
+  if (params?.birthdayDays !== undefined) queryParams.append('birthdayDays', String(params.birthdayDays))
+  
+  const queryString = queryParams.toString()
+  return requestJson<PagedResponse<CustomerApiModel>>(`/khach-hang-management/segment${queryString ? `?${queryString}` : ''}`)
+}
 
 // Coupon Product Detail API
 export interface CouponProductDetailApiModel {

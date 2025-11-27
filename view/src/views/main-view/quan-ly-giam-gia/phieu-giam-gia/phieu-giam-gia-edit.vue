@@ -13,8 +13,38 @@
     <!-- Main Content -->
     <a-row :gutter="[16, 16]">
       <!-- Left Column: Form -->
-      <a-col :span="couponEditForm.featured ? 12 : 24">
+      <a-col :span="couponEditForm.featured ? 11 : 24">
         <a-card :title="t('discount.coupon.info')">
+          <div class="template-selection">
+            <div class="template-selection-header">
+              <div>
+                <div class="template-selection-title">Chọn mẫu phiếu</div>
+                <div class="template-selection-subtitle">Áp dụng nhanh cấu hình phổ biến</div>
+              </div>
+              <a-button type="text" size="mini" :disabled="!selectedTemplateId" @click="clearTemplateSelection">Bỏ chọn</a-button>
+            </div>
+            <div class="template-grid">
+              <div
+                v-for="template in couponTemplateOptions"
+                :key="template.id"
+                class="template-card"
+                :class="[{ 'template-card-selected': selectedTemplateId === template.id }, `accent-${template.accent}`]"
+                @click="applyTemplate(template)"
+              >
+                <div class="template-card-icon">
+                  <component :is="templateIconMap[template.icon]" />
+                </div>
+                <div class="template-card-body">
+                  <div class="template-card-title">{{ template.title }}</div>
+                  <div class="template-card-description">{{ template.description }}</div>
+                  <div class="template-card-tags">
+                    <a-tag v-for="tag in template.highlights" :key="tag" size="small" bordered>{{ tag }}</a-tag>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <a-form ref="couponEditFormRef" :model="couponEditForm" :rules="couponEditRules" layout="vertical">
             <a-form-item field="code" :label="t('discount.coupon.code')">
               <a-input v-model="couponEditForm.code" :placeholder="t('discount.coupon.codePlaceholder')" allow-clear />
@@ -139,51 +169,134 @@
       </a-col>
 
       <!-- Right Column: Customer Selection (only if featured) -->
-      <a-col :span="12" v-if="couponEditForm.featured">
+      <a-col :span="13" v-if="couponEditForm.featured">
         <a-card :title="t('discount.coupon.selectCustomers')">
           <div class="customer-selection-section">
-            <div class="segment-filter">
-              <div class="segment-filter__label">Tiêu chí phân loại</div>
-              <a-radio-group v-model="customerSegment" type="button" size="mini" class="segment-filter__radios">
-                <a-radio v-for="segment in customerSegments" :key="segment.key" :value="segment.key">
-                  {{ segment.label }}
-                </a-radio>
-              </a-radio-group>
-              <div class="segment-filter__hint">
-                {{ currentCustomerSegment?.description }}
-              </div>
-            </div>
-            <a-input-search
-              v-model="customerSearchQuery"
-              :placeholder="t('discount.coupon.searchCustomerPlaceholder')"
-              allow-clear
-              style="margin-bottom: 12px"
-            />
+            <!-- Segmentation Tabs -->
+            <a-tabs v-model:active-key="activeSegmentTab" type="card" class="segment-tabs">
+              <a-tab-pane key="behavior" title="Hành vi">
+                <div class="segment-options">
+                  <a-radio-group v-model="behaviorSegment" @change="handleSegmentChange" type="button" size="small">
+                    <a-radio value="new_customers">Khách chưa mua hàng</a-radio>
+                    <a-radio value="first_order">Khách đã mua 1 đơn</a-radio>
+                    <a-radio value="repeat_customers">Khách mua lặp lại</a-radio>
+                    <a-radio value="high_frequency">Khách mua thường xuyên (30 ngày)</a-radio>
+                    <a-radio value="inactive_30">Không mua 30 ngày</a-radio>
+                    <a-radio value="inactive_60">Không mua 60 ngày</a-radio>
+                    <a-radio value="inactive_90">Không mua 90 ngày</a-radio>
+                  </a-radio-group>
+                </div>
+              </a-tab-pane>
+              <a-tab-pane key="rfm" title="RFM">
+                <div class="segment-options">
+                  <a-radio-group v-model="rfmSegment" @change="handleSegmentChange" type="button" size="small">
+                    <a-radio value="loyal_high_value">Khách trung thành giá trị cao</a-radio>
+                    <a-radio value="potential_loyal">Tiềm năng trung thành</a-radio>
+                    <a-radio value="big_spenders">Chi tiêu nhiều</a-radio>
+                    <a-radio value="at_risk">Có nguy cơ rời bỏ</a-radio>
+                    <a-radio value="lost">Đã lâu không quay lại</a-radio>
+                  </a-radio-group>
+                </div>
+              </a-tab-pane>
+              <a-tab-pane key="event" title="Sự kiện">
+                <div class="segment-options">
+                  <a-select v-model="eventSegment" @change="handleSegmentChange" placeholder="Chọn sự kiện" style="width: 100%">
+                    <a-option value="birthday_month">Sinh nhật tháng này</a-option>
+                    <a-option value="birthday_upcoming">Sinh nhật trong 7 ngày tới</a-option>
+                  </a-select>
+                  <a-input-number
+                    v-if="eventSegment === 'birthday_upcoming'"
+                    v-model="birthdayDays"
+                    :min="1"
+                    :max="30"
+                    :precision="0"
+                    placeholder="Số ngày"
+                    style="width: 100%; margin-top: 8px"
+                    @change="handleSegmentChange"
+                  />
+                </div>
+              </a-tab-pane>
+              <a-tab-pane key="all" title="Tất cả">
+                <div class="segment-options">
+                  <a-input-search
+                    v-model="allCustomersSearch"
+                    placeholder="Tìm kiếm theo tên, SĐT, email"
+                    allow-clear
+                    style="margin-bottom: 12px"
+                    @search="handleSegmentChange"
+                  />
+                  <a-row :gutter="8" style="margin-bottom: 12px">
+                    <a-col :span="12">
+                      <a-input-number
+                        v-model="allCustomersFilters.minOrdersCount"
+                        :min="0"
+                        :precision="0"
+                        placeholder="Số đơn tối thiểu"
+                        style="width: 100%"
+                      />
+                    </a-col>
+                    <a-col :span="12">
+                      <a-input-number
+                        v-model="allCustomersFilters.maxOrdersCount"
+                        :min="0"
+                        :precision="0"
+                        placeholder="Số đơn tối đa"
+                        style="width: 100%"
+                      />
+                    </a-col>
+                  </a-row>
+                  <a-row :gutter="8" style="margin-bottom: 12px">
+                    <a-col :span="12">
+                      <a-input-number
+                        v-model="allCustomersFilters.minTotalSpent"
+                        :min="0"
+                        placeholder="Tổng chi tối thiểu"
+                        style="width: 100%"
+                      />
+                    </a-col>
+                    <a-col :span="12">
+                      <a-input-number
+                        v-model="allCustomersFilters.maxTotalSpent"
+                        :min="0"
+                        placeholder="Tổng chi tối đa"
+                        style="width: 100%"
+                      />
+                    </a-col>
+                  </a-row>
+                  <a-range-picker
+                    v-model="allCustomersFilters.lastOrderRange"
+                    value-format="YYYY-MM-DD"
+                    format="DD/MM/YYYY"
+                    placeholder="[Từ ngày, Đến ngày]"
+                    style="width: 100%; margin-bottom: 12px"
+                  />
+                  <a-button type="primary" @click="handleSegmentChange" style="width: 100%">Áp dụng bộ lọc</a-button>
+                  <a-button @click="resetAllCustomersFilters" style="width: 100%; margin-top: 8px">Đặt lại</a-button>
+                </div>
+              </a-tab-pane>
+            </a-tabs>
 
-            <div style="margin-bottom: 12px; display: flex; gap: 8px">
-              <a-button size="small" @click="selectAllEditCustomers">
-                <template #icon>
-                  <icon-plus />
-                </template>
-                {{ t('discount.common.selectAll') }}
-              </a-button>
-              <a-button size="small" @click="deselectAllEditCustomers">
-                <template #icon>
-                  <icon-delete />
-                </template>
-                {{ t('discount.common.deselectAll') }}
-              </a-button>
+            <!-- Selection Controls -->
+            <div class="selection-controls">
+              <a-checkbox :model-value="isAllEditCustomersSelected" @change="toggleAllEditCustomers">
+                Chọn tất cả trong trang
+              </a-checkbox>
+              <a-button size="small" @click="selectAllEditCustomers" type="text">Chọn tất cả kết quả</a-button>
+              <a-button size="small" @click="deselectAllEditCustomers" type="text">Xóa chọn</a-button>
             </div>
 
+            <!-- Customer Table -->
             <a-table
               row-key="id"
               :columns="customerColumnsWithCheckbox"
-              :data="filteredCustomers"
+              :data="customers"
               :pagination="customerPagination"
               :loading="customersLoading"
               :scroll="{ y: 350 }"
               size="small"
               :bordered="{ cell: true }"
+              @page-change="handlePageChange"
+              @page-size-change="handlePageSizeChange"
             >
               <template #selectHeader>
                 <a-checkbox
@@ -198,22 +311,25 @@
                   @change="toggleEditCustomerSelection(record.id)"
                 />
               </template>
-              <template #segment="{ record }">
-                <a-space size="mini" wrap>
-                  <a-tag v-for="tag in getCustomerSegmentLabels(record)" :key="tag" size="small">
-                    {{ tag }}
-                  </a-tag>
-                </a-space>
-              </template>
               <template #birthday="{ record }">
                 {{ formatCustomerBirthday(record.ngaySinh) }}
               </template>
+              <template #ordersCount="{ record }">
+                {{ record.ordersCount ?? 0 }}
+              </template>
+              <template #totalSpent="{ record }">
+                {{ formatCurrency(record.totalSpent ?? 0) }}
+              </template>
+              <template #lastOrderAt="{ record }">
+                {{ record.lastOrderAt ? formatDate(record.lastOrderAt) : '—' }}
+              </template>
             </a-table>
 
-            <div style="margin-top: 8px; font-size: 12px; color: var(--color-text-3)">
-              {{ t('discount.common.selected') }}:
-              <strong>{{ couponEditForm.selectedCustomerIds.length }}</strong>
-              {{ t('discount.common.customers') }}
+            <!-- Footer -->
+            <div class="selection-footer">
+              <div class="selection-summary">
+                Đã chọn: <strong>{{ couponEditForm.selectedCustomerIds.length }}</strong> khách hàng
+              </div>
             </div>
           </div>
         </a-card>
@@ -250,16 +366,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive, watch, type Component } from 'vue'
 import router from '@/router'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
 import { useI18n } from 'vue-i18n'
 import PageActions from '@/components/page-actions/page-actions.vue'
-import { fetchCustomers, type CustomerApiModel, updateCoupon } from '@/api/discount-management'
+import { fetchCustomers, fetchCustomersBySegment, type CustomerApiModel, updateCoupon } from '@/api/discount-management'
 import type { FormInstance, FormRules } from '@arco-design/web-vue/es/form'
-import { IconPlus, IconDelete, IconLeft, IconUp } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete, IconLeft, IconUp, IconUser, IconGift, IconCalendar, IconStar, IconFire } from '@arco-design/web-vue/es/icon'
 import dayjs from 'dayjs'
+import {
+  couponTemplateOptions,
+  buildTemplatePayload,
+  type CouponTemplateOption,
+  type CouponTemplateIcon,
+} from './coupon-template-options'
 
 // Router
 const { t } = useI18n()
@@ -280,15 +402,47 @@ const couponEditForm = reactive({
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: null as number | null,
   maxDiscount: null as number | null,
-  minOrder: 0,
+  minOrder: null as number | null,
   quantity: null as number | null,
   dateRange: [] as string[],
   description: '',
   active: true,
   featured: false,
   selectedCustomerIds: [] as number[],
+  applyToProducts: false,
+  selectedProductIds: [] as number[],
   lyDoThayDoi: '',
 })
+
+const templateIconMap: Record<CouponTemplateIcon, Component> = {
+  gift: IconGift,
+  user: IconUser,
+  lightning: IconFire,
+  calendar: IconCalendar,
+  crown: IconStar,
+}
+
+const selectedTemplateId = ref<string | null>(null)
+
+const applyTemplate = (template: CouponTemplateOption) => {
+  const payload = buildTemplatePayload(template)
+  selectedTemplateId.value = template.id
+  couponEditForm.discountMode = payload.discountMode
+  couponEditForm.discountValue = payload.discountValue
+  couponEditForm.maxDiscount = payload.maxDiscount
+  couponEditForm.minOrder = payload.minOrder
+  couponEditForm.quantity = payload.quantity
+  couponEditForm.description = payload.description
+  couponEditForm.featured = payload.featured
+  couponEditForm.dateRange = payload.dateRange
+  if (!payload.featured) {
+    couponEditForm.selectedCustomerIds = []
+  }
+}
+
+const clearTemplateSelection = () => {
+  selectedTemplateId.value = null
+}
 
 const disablePastDates = (current: Date | string) => {
   if (!current) return false
@@ -302,13 +456,15 @@ const originalCouponEditForm = reactive({
   discountMode: 'percentage' as 'percentage' | 'amount',
   discountValue: null as number | null,
   maxDiscount: null as number | null,
-  minOrder: 0,
+  minOrder: null as number | null,
   quantity: null as number | null,
   dateRange: [] as string[],
   description: '',
   active: true,
   featured: false,
   selectedCustomerIds: [] as number[],
+  applyToProducts: false,
+  selectedProductIds: [] as number[],
 })
 
 const isPercentEdit = computed(() => couponEditForm.discountMode === 'percentage')
@@ -321,7 +477,7 @@ const couponEditRules = computed<FormRules>(() => ({
     { required: true, message: t('discount.validation.discountValueRequired') },
     {
       validator: (_: any, callback: (msg?: string) => void) => {
-        if (couponEditForm.discountValue === null || couponEditForm.discountValue === undefined || couponEditForm.discountValue === '') {
+        if (couponEditForm.discountValue === null || couponEditForm.discountValue === undefined) {
           callback(t('discount.validation.discountValueRequired'))
           return
         }
@@ -351,7 +507,7 @@ const couponEditRules = computed<FormRules>(() => ({
           return
         }
         const raw = couponEditForm.maxDiscount
-        if (raw === null || raw === undefined || raw === '') {
+        if (raw === null || raw === undefined) {
           callback(t('discount.validation.maxDiscountRequired'))
           return
         }
@@ -418,93 +574,50 @@ const couponEditRules = computed<FormRules>(() => ({
   lyDoThayDoi: [{ required: true, message: t('discount.validation.changeReasonRequired') }],
 }))
 
-// Customers
+// Customers - New segmentation system
 const customers = ref<CustomerApiModel[]>([])
 const customersLoading = ref(false)
-const customerSearchQuery = ref('')
+const activeSegmentTab = ref('behavior')
+const behaviorSegment = ref('new_customers')
+const rfmSegment = ref('loyal_high_value')
+const eventSegment = ref<string | null>(null)
+const birthdayDays = ref(7)
+const allCustomersSearch = ref('')
+const allCustomersFilters = reactive({
+  minOrdersCount: undefined as number | undefined,
+  maxOrdersCount: undefined as number | undefined,
+  minTotalSpent: undefined as number | undefined,
+  maxTotalSpent: undefined as number | undefined,
+  lastOrderRange: [] as string[],
+})
 
-type CustomerSegmentKey = 'all' | 'vip' | 'birthday' | 'loyal'
-
-interface CustomerSegment {
-  key: CustomerSegmentKey
-  label: string
-  description: string
-  matcher: (customer: CustomerApiModel) => boolean
-}
-
-const VIP_SPEND_THRESHOLD = 10_000_000
-const LOYAL_SPEND_THRESHOLD = 5_000_000
-const LOYAL_ORDER_THRESHOLD = 5
-
-const normalizeText = (value?: string | null) => value?.toString().toLowerCase().trim() ?? ''
-
-const isVipCustomer = (customer: CustomerApiModel) => {
-  const label = `${normalizeText(customer.phanLoai)} ${normalizeText(customer.phanLoaiText)}`
-  if (label.includes('vip')) {
-    return true
-  }
-  return (customer.tongChiTieu ?? 0) >= VIP_SPEND_THRESHOLD
-}
-
-const hasBirthdayThisMonth = (customer: CustomerApiModel) => {
-  if (!customer.ngaySinh) return false
-  const birthday = dayjs(customer.ngaySinh)
-  if (!birthday.isValid()) return false
-  return birthday.month() === dayjs().month()
-}
-
-const isLoyalCustomer = (customer: CustomerApiModel) => {
-  const spend = customer.tongChiTieu ?? 0
-  const orders = customer.tongDon ?? 0
-  return spend >= LOYAL_SPEND_THRESHOLD || orders >= LOYAL_ORDER_THRESHOLD
-}
-
-const customerSegments: CustomerSegment[] = [
-  {
-    key: 'all',
-    label: 'Tất cả',
-    description: 'Hiển thị toàn bộ khách hàng đang hoạt động',
-    matcher: () => true,
-  },
-  {
-    key: 'vip',
-    label: 'Khách VIP',
-    description: 'Khách được gắn nhãn VIP hoặc chi tiêu ≥ 10.000.000đ',
-    matcher: isVipCustomer,
-  },
-  {
-    key: 'birthday',
-    label: 'Sinh nhật tháng này',
-    description: 'Khách có ngày sinh trong tháng hiện tại',
-    matcher: hasBirthdayThisMonth,
-  },
-  {
-    key: 'loyal',
-    label: 'Khách thân thiết',
-    description: 'Khách có ≥ 5 đơn hàng hoặc chi tiêu ≥ 5.000.000đ',
-    matcher: isLoyalCustomer,
-  },
-]
-
-const customerSegment = ref<CustomerSegmentKey>('all')
-const currentCustomerSegment = computed(
-  () => customerSegments.find((segment) => segment.key === customerSegment.value) ?? customerSegments[0]
-)
-
-const getCustomerSegmentLabels = (customer: CustomerApiModel) => {
-  const labels: string[] = []
-  if (isVipCustomer(customer)) labels.push('VIP')
-  if (isLoyalCustomer(customer)) labels.push('Thân thiết')
-  if (hasBirthdayThisMonth(customer)) labels.push('Sinh nhật tháng này')
-  if (labels.length === 0) labels.push('Phổ thông')
-  return labels
-}
+const customerPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showTotal: true,
+  showPageSize: true,
+})
 
 const formatCustomerBirthday = (value?: string | null) => {
   if (!value) return '—'
   const date = dayjs(value)
   if (!date.isValid()) return '—'
   return date.format('DD/MM')
+}
+
+const formatDate = (value: string) => {
+  if (!value) return '—'
+  const date = dayjs(value)
+  if (!date.isValid()) return '—'
+  return date.format('DD/MM/YYYY')
+}
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount)
 }
 
 const customerColumns = computed(() => [
@@ -533,35 +646,27 @@ const customerColumns = computed(() => [
     align: 'center' as const,
   },
   {
-    title: 'Nhóm',
-    dataIndex: 'segment',
-    slotName: 'segment',
-    width: 160,
+    title: 'Số đơn',
+    dataIndex: 'ordersCount',
+    slotName: 'ordersCount',
+    width: 80,
+    align: 'center' as const,
+  },
+  {
+    title: 'Tổng chi',
+    dataIndex: 'totalSpent',
+    slotName: 'totalSpent',
+    width: 120,
+    align: 'right' as const,
+  },
+  {
+    title: 'Đơn cuối',
+    dataIndex: 'lastOrderAt',
+    slotName: 'lastOrderAt',
+    width: 110,
+    align: 'center' as const,
   },
 ])
-
-const filteredCustomers = computed(() => {
-  const matcher = currentCustomerSegment.value?.matcher ?? (() => true)
-  let list = customers.value.filter((customer) => matcher(customer))
-
-  if (customerSearchQuery.value) {
-    const query = customerSearchQuery.value.toLowerCase()
-    list = list.filter(
-      (customer) =>
-        customer.tenKhachHang?.toLowerCase().includes(query) ||
-        customer.soDienThoai?.toLowerCase().includes(query) ||
-        customer.email?.toLowerCase().includes(query)
-    )
-  }
-
-  return list
-})
-
-const customerPagination = computed(() => ({
-  pageSize: 5,
-  showTotal: true,
-  showPageSize: false,
-}))
 
 const customerColumnsWithCheckbox = computed(() => [
   {
@@ -575,12 +680,12 @@ const customerColumnsWithCheckbox = computed(() => [
 ])
 
 const isAllEditCustomersSelected = computed(() => {
-  if (filteredCustomers.value.length === 0) return false
-  return filteredCustomers.value.every((customer) => couponEditForm.selectedCustomerIds.includes(customer.id))
+  if (customers.value.length === 0) return false
+  return customers.value.every((customer) => couponEditForm.selectedCustomerIds.includes(customer.id))
 })
 
 const isSomeEditCustomersSelected = computed(() => {
-  return couponEditForm.selectedCustomerIds.length > 0
+  return couponEditForm.selectedCustomerIds.length > 0 && !isAllEditCustomersSelected.value
 })
 
 const toggleEditCustomerSelection = (customerId: number) => {
@@ -593,73 +698,144 @@ const toggleEditCustomerSelection = (customerId: number) => {
 }
 
 const toggleAllEditCustomers = () => {
-  if (isAllEditCustomersSelected.value) {
-    filteredCustomers.value.forEach((customer) => {
-      const index = couponEditForm.selectedCustomerIds.indexOf(customer.id)
+  const currentPageIds = customers.value.map((c) => c.id)
+  const allSelected = currentPageIds.every((id) => couponEditForm.selectedCustomerIds.includes(id))
+  if (allSelected) {
+    currentPageIds.forEach((id) => {
+      const index = couponEditForm.selectedCustomerIds.indexOf(id)
       if (index > -1) {
         couponEditForm.selectedCustomerIds.splice(index, 1)
       }
     })
   } else {
-    filteredCustomers.value.forEach((customer) => {
-      if (!couponEditForm.selectedCustomerIds.includes(customer.id)) {
-        couponEditForm.selectedCustomerIds.push(customer.id)
+    currentPageIds.forEach((id) => {
+      if (!couponEditForm.selectedCustomerIds.includes(id)) {
+        couponEditForm.selectedCustomerIds.push(id)
       }
     })
   }
 }
 
 const selectAllEditCustomers = () => {
-  filteredCustomers.value.forEach((customer) => {
+  customers.value.forEach((customer) => {
     if (!couponEditForm.selectedCustomerIds.includes(customer.id)) {
       couponEditForm.selectedCustomerIds.push(customer.id)
     }
   })
+  Message.info('Đã chọn tất cả khách hàng trong trang hiện tại')
 }
 
 const deselectAllEditCustomers = () => {
-  filteredCustomers.value.forEach((customer) => {
-    const index = couponEditForm.selectedCustomerIds.indexOf(customer.id)
-    if (index > -1) {
-      couponEditForm.selectedCustomerIds.splice(index, 1)
-    }
-  })
+  couponEditForm.selectedCustomerIds = []
 }
 
-const loadCustomers = async () => {
+const resetAllCustomersFilters = () => {
+  allCustomersSearch.value = ''
+  allCustomersFilters.minOrdersCount = undefined
+  allCustomersFilters.maxOrdersCount = undefined
+  allCustomersFilters.minTotalSpent = undefined
+  allCustomersFilters.maxTotalSpent = undefined
+  allCustomersFilters.lastOrderRange = []
+  handleSegmentChange()
+}
+
+const handleSegmentChange = async () => {
+  customerPagination.current = 1
+  await loadCustomersBySegment()
+}
+
+const handlePageChange = (page: number) => {
+  customerPagination.current = page
+  loadCustomersBySegment()
+}
+
+const handlePageSizeChange = (pageSize: number) => {
+  customerPagination.pageSize = pageSize
+  customerPagination.current = 1
+  loadCustomersBySegment()
+}
+
+const loadCustomersBySegment = async () => {
   customersLoading.value = true
   try {
-    const data = await fetchCustomers()
-
-    if (data && Array.isArray(data)) {
-      const activeCustomers = data.filter((c) => {
-        return c.trangThai !== false && c.trangThai !== 0
-      })
-      customers.value = activeCustomers
-
-      if (activeCustomers.length === 0) {
-        Message.info(t('discount.message.noActiveCustomers'))
-      }
-    } else {
-      customers.value = []
-      Message.warning(t('discount.message.invalidCustomerData'))
+    const params: any = {
+      page: customerPagination.current,
+      pageSize: customerPagination.pageSize,
     }
-  } catch {
+
+    if (activeSegmentTab.value === 'behavior') {
+      params.segmentType = 'behavior'
+      params.segmentKey = behaviorSegment.value
+    } else if (activeSegmentTab.value === 'rfm') {
+      params.segmentType = 'rfm'
+      params.segmentKey = rfmSegment.value
+    } else if (activeSegmentTab.value === 'event') {
+      params.segmentType = 'event'
+      params.segmentKey = eventSegment.value
+      if (eventSegment.value === 'birthday_upcoming') {
+        params.birthdayDays = birthdayDays.value
+      }
+    } else if (activeSegmentTab.value === 'all') {
+      params.segmentType = 'all'
+      if (allCustomersSearch.value) {
+        params.search = allCustomersSearch.value
+      }
+      if (allCustomersFilters.minOrdersCount !== undefined) {
+        params.minOrdersCount = allCustomersFilters.minOrdersCount
+      }
+      if (allCustomersFilters.maxOrdersCount !== undefined) {
+        params.maxOrdersCount = allCustomersFilters.maxOrdersCount
+      }
+      if (allCustomersFilters.minTotalSpent !== undefined) {
+        params.minTotalSpent = allCustomersFilters.minTotalSpent
+      }
+      if (allCustomersFilters.maxTotalSpent !== undefined) {
+        params.maxTotalSpent = allCustomersFilters.maxTotalSpent
+      }
+      if (allCustomersFilters.lastOrderRange && allCustomersFilters.lastOrderRange.length === 2) {
+        params.lastOrderFrom = allCustomersFilters.lastOrderRange[0]
+        params.lastOrderTo = allCustomersFilters.lastOrderRange[1]
+      }
+    }
+
+    const paged = await fetchCustomersBySegment(params)
+    const content = Array.isArray(paged?.content) ? paged.content : []
+    customers.value = content
+    customerPagination.total = paged?.totalElements ?? content.length
+    customerPagination.current = paged?.page ?? customerPagination.current
+    customerPagination.pageSize = paged?.size ?? customerPagination.pageSize
+  } catch (error) {
+    console.error('Failed to load customer segments', error)
     Message.error(t('discount.message.loadCustomersFailed'))
     customers.value = []
+    customerPagination.total = 0
   } finally {
     customersLoading.value = false
   }
 }
 
+const loadCustomers = async () => {
+  await loadCustomersBySegment()
+}
+
 watch(
   () => couponEditForm.featured,
   (isFeatured) => {
-    if (isFeatured && customers.value.length === 0) {
-      loadCustomers()
+    if (isFeatured) {
+      loadCustomersBySegment()
     }
     if (!isFeatured) {
       couponEditForm.selectedCustomerIds = []
+    }
+  }
+)
+
+// Reload customers when tab changes
+watch(
+  () => activeSegmentTab.value,
+  () => {
+    if (couponEditForm.featured) {
+      handleSegmentChange()
     }
   }
 )
@@ -780,7 +956,8 @@ watch(
 watch(
   () => couponEditForm.discountMode,
   (mode) => {
-    if (mode === 'percentage' && couponEditForm.discountValue > 100) {
+    const currentValue = couponEditForm.discountValue ?? 0
+    if (mode === 'percentage' && currentValue > 100) {
       couponEditForm.discountValue = 100
     }
   }
@@ -1019,14 +1196,22 @@ const handleMinOrderBlur = () => {
     couponEditForm.minOrder = Math.round(value)
   }
 
-  displayMinOrder.value = `${formatNumberWithSeparator(couponEditForm.minOrder)} VND`
+  if (couponEditForm.minOrder === null || couponEditForm.minOrder === undefined) {
+    displayMinOrder.value = ''
+  } else {
+    displayMinOrder.value = `${formatNumberWithSeparator(couponEditForm.minOrder)} VND`
+  }
 }
 
 watch(
   () => couponEditForm.minOrder,
   (newValue) => {
     if (!isEditingMinOrder.value) {
-      displayMinOrder.value = `${formatNumberWithSeparator(newValue)} VND`
+      if (newValue === null || newValue === undefined) {
+        displayMinOrder.value = ''
+      } else {
+        displayMinOrder.value = `${formatNumberWithSeparator(newValue)} VND`
+      }
     }
   },
   { immediate: true }
@@ -1080,6 +1265,7 @@ const loadCouponData = async () => {
       featured: couponEditForm.featured,
       selectedCustomerIds: [...couponEditForm.selectedCustomerIds],
     })
+    selectedTemplateId.value = null
 
     // Load customers if featured
     if (coupon.featured && customers.value.length === 0) {
@@ -1348,6 +1534,120 @@ onUnmounted(() => {
   margin: 0;
 }
 
+.template-selection {
+  border: 1px solid var(--color-border-2);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  background: var(--color-fill-1);
+}
+
+.template-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.template-selection-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.template-selection-subtitle {
+  font-size: 13px;
+  color: var(--color-text-3);
+  margin-top: 2px;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.template-card {
+  border: 1px solid var(--color-border-2);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  background: var(--color-bg-1);
+}
+
+.template-card:hover {
+  border-color: var(--color-primary-6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.template-card-selected {
+  border-color: var(--color-primary-6);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.template-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.template-card-icon :deep(svg) {
+  font-size: 24px;
+}
+
+.accent-blue .template-card-icon {
+  background: rgba(64, 123, 255, 0.12);
+  color: #3f76ff;
+}
+
+.accent-green .template-card-icon {
+  background: rgba(0, 192, 135, 0.12);
+  color: #00c087;
+}
+
+.accent-orange .template-card-icon {
+  background: rgba(255, 150, 0, 0.15);
+  color: #ff9600;
+}
+
+.accent-purple .template-card-icon {
+  background: rgba(144, 72, 255, 0.15);
+  color: #9048ff;
+}
+
+.template-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.template-card-title {
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.template-card-description {
+  font-size: 13px;
+  color: var(--color-text-3);
+  line-height: 1.4;
+}
+
+.template-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .customer-selection-section {
   border: 1px solid var(--color-border-2);
   border-radius: 8px;
@@ -1355,28 +1655,46 @@ onUnmounted(() => {
   background: var(--color-bg-2);
 }
 
-.segment-filter {
-  margin-bottom: 12px;
+.segment-tabs {
+  margin-bottom: 16px;
 }
 
-.segment-filter__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-2);
-  margin-bottom: 4px;
+.segment-tabs :deep(.arco-tabs-content) {
+  padding-top: 12px;
 }
 
-.segment-filter__radios {
+.segment-options {
+  min-height: 60px;
+}
+
+.segment-options :deep(.arco-radio-group) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.segment-filter__hint {
-  font-size: 12px;
-  color: var(--color-text-3);
-  margin-top: 4px;
+.selection-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: var(--color-fill-1);
+  border-radius: 4px;
 }
+
+.selection-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.selection-summary {
+  font-size: 13px;
+  color: var(--color-text-2);
+  text-align: center;
+}
+
 
 .product-selection-section {
   border: 1px solid var(--color-border-2);
