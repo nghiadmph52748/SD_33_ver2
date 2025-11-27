@@ -256,7 +256,7 @@ export async function calculateShippingFeeFromGHN(
     }
 
     const GHN_TOKEN = import.meta.env.VITE_GHN_TOKEN || ''
-    const GHN_DEV_TOKEN = import.meta.env.VITE_GHN_DEV_TOKEN || GHN_TOKEN
+    const GHN_DEV_TOKEN = import.meta.env.VITE_GHN_DEV_TOKEN || ''
     if (!GHN_TOKEN) {
       // Fallback to local calculation if GHN token not configured
       const fallbackFee = calculateShippingFee(location, 0)
@@ -288,6 +288,12 @@ export async function calculateShippingFeeFromGHN(
       return { fee: fallbackFee, message: 'Không tìm thấy quận huyện' }
     }
 
+    console.log('[ShippingFee] District lookup:', {
+      input: location.quan,
+      found: destinationDistrict.DistrictName,
+      districtId: destinationDistrict.DistrictID,
+    })
+
     // Fetch ward info to get ward ID
     const wardRes = await fetch('https://online-gateway.ghn.vn/shiip/public-api/master-data/ward', {
       method: 'POST',
@@ -313,6 +319,12 @@ export async function calculateShippingFeeFromGHN(
       return { fee: fallbackFee, message: 'Không tìm thấy phường xã' }
     }
 
+    console.log('[ShippingFee] Ward lookup:', {
+      input: location.phuong,
+      found: destinationWard.WardName,
+      wardCode: destinationWard.WardCode,
+    })
+
     // Call GHN shipping fee calculation API
     const feePayload = {
       from_district_id: 1, // Hà Nội
@@ -323,10 +335,18 @@ export async function calculateShippingFeeFromGHN(
       length: length,
       weight: weight,
       width: width,
+      service_type_id: 2, // Standard service
       insurance_value: 0,
       cod_failed_amount: 0,
       coupon: null,
     }
+
+    console.log('[ShippingFee] GHN Fee Payload:', {
+      ...feePayload,
+      address: `${location.diaChiCuThe}, ${location.phuong}, ${location.quan}, ${location.thanhPho}`,
+      destinationDistrictName: destinationDistrict.DistrictName,
+      destinationWardName: destinationWard.WardName,
+    })
 
     // Try production API first
     let feeRes = await fetch('https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee', {
@@ -338,8 +358,9 @@ export async function calculateShippingFeeFromGHN(
       body: JSON.stringify(feePayload),
     })
 
-    // If production fails, retry with dev server
-    if (!feeRes.ok) {
+    // If production fails and we have dev token, retry with dev server
+    if (!feeRes.ok && GHN_DEV_TOKEN) {
+      console.warn(`[ShippingFee] Production API failed (${feeRes.status}), trying dev server with token...`)
       feeRes = await fetch('https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee', {
         method: 'POST',
         headers: {
@@ -348,16 +369,22 @@ export async function calculateShippingFeeFromGHN(
         },
         body: JSON.stringify(feePayload),
       })
+      console.log('[ShippingFee] Retried with dev server.')
     }
 
     const feeData = await feeRes.json()
 
+    console.log('[ShippingFee] GHN Fee Response:', feeData)
+
     if (!feeRes.ok) {
+      const isDevServer = feeRes.url?.includes('dev-online-gateway')
+      const tokenUsed = isDevServer ? GHN_DEV_TOKEN : GHN_TOKEN
       console.error('[ShippingFee] GHN API Error:', {
         status: feeRes.status,
+        server: isDevServer ? 'dev-online-gateway' : 'online-gateway',
         payload: feePayload,
         response: feeData,
-        tokenExists: !!GHN_TOKEN,
+        tokenUsed: tokenUsed ? `${tokenUsed.substring(0, 8)}...` : 'N/A',
       })
       const fallbackFee = calculateShippingFee(location, 0)
       return { fee: fallbackFee, message: 'Không thể lấy phí vận chuyển từ GHN' }

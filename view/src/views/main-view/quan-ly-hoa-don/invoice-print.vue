@@ -197,12 +197,12 @@ const calculateUnitPrice = (product: any): number => {
     // Round to nearest integer to avoid decimal issues
     return Math.round(calculatedPrice)
   }
-  
+
   // Fallback to giaBan if available
   if (product.giaBan) {
     return Number(product.giaBan)
   }
-  
+
   return 0
 }
 
@@ -220,36 +220,27 @@ const formatDate = (date: string) => {
 const loadInvoiceData = async () => {
   try {
     const invoiceId = route.params.id as string
-    console.log('Loading invoice data for ID:', invoiceId)
 
     if (!invoiceId) {
-      console.log('No invoice ID provided')
       return
     }
 
     // Load invoice details
-    console.log('Loading invoice details...')
     const invoiceResponse = await axios.get(`/api/hoa-don-management/${invoiceId}`)
-    console.log('Invoice response:', invoiceResponse)
 
     if (invoiceResponse && invoiceResponse.data) {
       invoice.value = invoiceResponse.data
-      console.log('Invoice loaded:', invoice.value)
     }
 
     // Load products
-    console.log('Loading products...')
     const productsResponse = await axios.get(`/api/thong-tin-hoa-don-management/san-pham-da-ban/${invoiceId}`)
-    console.log('Products response:', productsResponse)
 
     if (productsResponse && productsResponse.data) {
       products.value = productsResponse.data
-      console.log('Products loaded:', products.value)
     }
   } catch (error) {
     console.error('Error loading invoice data:', error)
     // Fallback data
-    console.log('Using fallback data')
     invoice.value = {
       id: route.params.id,
       maHoaDon: 'HD00001',

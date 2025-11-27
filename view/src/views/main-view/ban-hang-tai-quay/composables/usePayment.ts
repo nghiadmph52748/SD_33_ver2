@@ -171,8 +171,11 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
       return
     }
 
+    console.log('[FillLocation] Filling location from customer:', customer.name)
+
     // Prefer structured address data if available
     if (customer.addressInfo) {
+      console.log('[FillLocation] Using structured addressInfo')
       walkInLocation.value.thanhPho = customer.addressInfo.thanhPho || ''
       walkInLocation.value.quan = customer.addressInfo.quan || ''
       walkInLocation.value.phuong = customer.addressInfo.phuong || ''
@@ -224,6 +227,8 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
       walkInLocation.value.diaChiCuThe = ''
       return
     }
+
+    console.log('[FillLocation] Using address string:', customer.address)
 
     // Store address in diaChiCuThe (already should be just specific address from loadCustomers)
     walkInLocation.value.diaChiCuThe = customer.address

@@ -655,16 +655,12 @@ const getHighestPriorityStatus = (thongTinDonHangs: any[]): string => {
 const fetchInvoices = async () => {
   try {
     loading.value = true
-    console.log('Đang gọi API hóa đơn...')
 
     // Sử dụng API mới
     const apiData = await fetchHoaDonList()
-    console.log('Dữ liệu từ API:', apiData)
 
     // Chỉ hiển thị những hóa đơn đã hoàn tất (không còn trong trạng thái tạo nháp ở POS)
     const confirmedInvoices = apiData.filter((invoice: HoaDonApiModel) => invoice.ghiChu !== 'Tạo hóa đơn bán hàng tại quầy')
-
-    console.log('Raw invoice data from server:', confirmedInvoices)
 
     // Map dữ liệu để đảm bảo có đầy đủ các trường cần thiết
     invoicesList.value = confirmedInvoices.map((invoice: HoaDonApiModel) => {
@@ -713,8 +709,6 @@ const fetchInvoices = async () => {
         trangThaiDonHang: getHighestPriorityStatus(invoice.thongTinDonHangs),
       }
     })
-
-    console.log('Dữ liệu hóa đơn đã xử lý:', invoicesList.value)
     calculateStatistics()
     // Pagination total sẽ được tính từ computed invoices
     return
@@ -827,7 +821,6 @@ const onSelectChange = (selectedKeys: any) => {
 }
 
 const viewInvoice = (invoice: any) => {
-  console.log('Đang chuyển đến trang chi tiết hóa đơn:', invoice.id)
   // Chuyển đến trang chi tiết hóa đơn mới
   router.push({ name: 'HoaDonChiTiet', params: { id: invoice.id } })
 }
@@ -858,7 +851,6 @@ onMounted(() => {
     orderBroadcastChannel = new BroadcastChannel('order-update-channel')
     orderBroadcastChannel.onmessage = (event) => {
       if (event.data.type === 'ORDER_CONFIRMED' || event.data.type === 'ORDER_DELETED' || event.data.type === 'ORDER_UPDATED') {
-        console.log(`[BroadcastChannel] ${event.data.type} received, refreshing invoice list`)
         // Immediately refresh invoice list when order is confirmed/deleted from POS
         fetchInvoices()
       }
@@ -881,7 +873,6 @@ onBeforeUnmount(() => {
   // Close BroadcastChannel
   if (orderBroadcastChannel) {
     orderBroadcastChannel.close()
-    console.log('[BroadcastChannel] Closed')
   }
 })
 </script>

@@ -26,7 +26,7 @@
               @open-product="openProductModal"
             >
               <a-card class="cart-card">
-                <template #title> Giỏ Hàng</template>
+                <template #title>Giỏ Hàng</template>
                 <CartTable
                   :items="paginatedCartItems as any"
                   :table-key="cartTableKey"
@@ -220,7 +220,12 @@
       :selected-coupon="selectedCoupon as any"
       :calculate-voucher-discount="calculateVoucherDiscount as any"
       :confirm-loading="confirmLoading"
-      @cancel="() => { showBetterVoucherModal = false; showConfirmOrderModal = true }"
+      @cancel="
+        () => {
+          showBetterVoucherModal = false
+          showConfirmOrderModal = true
+        }
+      "
       @confirm="handleConfirmFromBetterVoucher"
     />
   </div>
@@ -254,7 +259,7 @@ import {
   getPosActiveCouponsForCustomer,
 } from './services/posService'
 import { type PhieuGiamGiaResponse, type ConfirmBanHangRequest } from '@/api/pos'
-import { calculateShippingFee } from './services/shippingFeeService'
+import { calculateShippingFee, calculateShippingFeeFromGHN } from './services/shippingFeeService'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
 import useVoucher from './composables/useVoucher'
@@ -269,12 +274,7 @@ import { useOrdersManager } from './composables/useOrdersManager'
 import { useStock } from './composables/useStock'
 import useRealTimePriceSync from './composables/useRealTimePriceSync'
 import type { CreateQrSessionPayload } from '@/api/pos'
-import {
-  createQrPaymentSession,
-  updateQrPaymentSession,
-  cancelQrPaymentSession,
-  generateQrPayment,
-} from './services/qrSessionService'
+import { createQrPaymentSession, updateQrPaymentSession, cancelQrPaymentSession, generateQrPayment } from './services/qrSessionService'
 import CartTable from './components/CartTable.vue'
 import CustomerCard from './components/CustomerCard.vue'
 import PaymentCard from './components/PaymentCard.vue'
@@ -1070,19 +1070,23 @@ const handleOrderTypeChange = async (value: string) => {
       // Trigger shipping fee calculation for registered customer or walk-in customer
       // Use nextTick to ensure DOM is updated first
       await nextTick()
-      if (isWalkIn.value) {
-        // For walk-in customers, use structured location
-        if (walkInLocation.value.thanhPho && walkInLocation.value.quan && walkInLocation.value.phuong) {
-          // Force recalculation by triggering a manual watch
-          const fee = calculateShippingFee(walkInLocation.value as any, subtotal.value)
-          shippingFee.value = fee || 0
+      console.log('[OrderTypeChange] Delivery mode activated, calculating shipping fee...')
+      console.log('[OrderTypeChange] Walk-in:', isWalkIn.value)
+      console.log('[OrderTypeChange] Location:', walkInLocation.value)
+
+      if (walkInLocation.value.thanhPho && walkInLocation.value.quan && walkInLocation.value.phuong) {
+        // Call GHN API to get real shipping fee
+        try {
+          const result = await calculateShippingFeeFromGHN(walkInLocation.value as any)
+          console.log('[OrderTypeChange] GHN Fee:', result.fee)
+          shippingFee.value = result.fee || 0
+        } catch (error) {
+          console.error('[OrderTypeChange] Error getting GHN fee, using fallback:', error)
+          const fallbackFee = calculateShippingFee(walkInLocation.value as any, subtotal.value)
+          shippingFee.value = fallbackFee || 0
         }
-      } else if (selectedCustomer.value?.address) {
-        // For registered customers, address should already be in walkInLocation
-        if (walkInLocation.value.thanhPho && walkInLocation.value.quan && walkInLocation.value.phuong) {
-          const fee = calculateShippingFee(walkInLocation.value as any, subtotal.value)
-          shippingFee.value = fee || 0
-        }
+      } else {
+        console.log('[OrderTypeChange] Address incomplete, skipping fee calculation')
       }
     } else {
       // Reset shipping fee when not in delivery mode
@@ -1095,7 +1099,9 @@ const handleOrderTypeChange = async (value: string) => {
 }
 
 const updateShippingFeeValue = (value: number) => {
+  console.log('[UpdateShippingFee] Updating shipping fee to:', value)
   shippingFee.value = value
+  console.log('[UpdateShippingFee] Shipping fee local state updated. Will be sent to server when confirming order.')
 }
 
 const updateWalkInAddress = (value: string) => {
@@ -1164,9 +1170,7 @@ const syncQrSession = async (force = false) => {
   qrSyncing.value = true
   qrSyncError.value = null
   try {
-    const response = existing?.sessionId
-      ? await updateQrPaymentSession(existing.sessionId, payload)
-      : await createQrPaymentSession(payload)
+    const response = existing?.sessionId ? await updateQrPaymentSession(existing.sessionId, payload) : await createQrPaymentSession(payload)
 
     qrSessions.value[order.id] = {
       sessionId: response.qrSessionId,
@@ -1373,6 +1377,52 @@ const handleConfirmFromBetterVoucher = async () => {
   showConfirmOrderModal.value = false
   showBetterVoucherModal.value = false
 }
+
+// Watch for walk-in location changes (province, district, ward, address)
+watch(
+  () => walkInLocation.value,
+  (newLocation) => {
+    console.log('[WalkInLocationWatch] Location changed:', {
+      province: newLocation.thanhPho,
+      district: newLocation.quan,
+      ward: newLocation.phuong,
+      address: newLocation.diaChiCuThe,
+    })
+  },
+  { deep: true }
+)
+
+// Watch for province change
+watch(
+  () => walkInLocation.value.thanhPho,
+  async (newProvince) => {
+    console.log('[AddressWatch] Walk-in Province changed to:', newProvince)
+  }
+)
+
+// Watch for district change
+watch(
+  () => walkInLocation.value.quan,
+  async (newDistrict) => {
+    console.log('[AddressWatch] Walk-in District changed to:', newDistrict)
+  }
+)
+
+// Watch for ward change
+watch(
+  () => walkInLocation.value.phuong,
+  async (newWard) => {
+    console.log('[AddressWatch] Walk-in Ward changed to:', newWard)
+  }
+)
+
+// Watch for address detail change
+watch(
+  () => walkInLocation.value.diaChiCuThe,
+  async (newAddress) => {
+    console.log('[AddressWatch] Walk-in Address detail changed to:', newAddress)
+  }
+)
 
 onMounted(() => {
   // Do NOT initialize with an empty order - let user create orders manually by clicking "Thêm Đơn"

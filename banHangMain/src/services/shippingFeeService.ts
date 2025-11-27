@@ -117,7 +117,7 @@ export async function calculateShippingFeeFromGHN(
     }
 
     const GHN_TOKEN = import.meta.env.VITE_GHN_TOKEN || "";
-    const GHN_DEV_TOKEN = import.meta.env.VITE_GHN_DEV_TOKEN || GHN_TOKEN;
+    const GHN_DEV_TOKEN = import.meta.env.VITE_GHN_DEV_TOKEN || "";
 
     if (!GHN_TOKEN) {
       // Fallback to local calculation if GHN token not configured
@@ -207,6 +207,7 @@ export async function calculateShippingFeeFromGHN(
       length: length,
       weight: weight,
       width: width,
+      service_type_id: 2, // Standard service (required by GHN API)
       insurance_value: 0,
       cod_failed_amount: 0,
       coupon: null,
@@ -225,8 +226,11 @@ export async function calculateShippingFeeFromGHN(
       }
     );
 
-    // If production fails, retry with dev server
-    if (!feeRes.ok) {
+    // If production fails, retry with dev server (if dev token is configured)
+    if (!feeRes.ok && GHN_DEV_TOKEN) {
+      console.warn(
+        `[ShippingFee] Production API failed (${feeRes.status}), trying dev server with token...`
+      );
       feeRes = await fetch(
         "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee",
         {
@@ -243,11 +247,15 @@ export async function calculateShippingFeeFromGHN(
     const feeData = await feeRes.json();
 
     if (!feeRes.ok) {
+      const isDevServer = feeRes.url?.includes("dev-online-gateway");
+      const tokenUsed = isDevServer ? GHN_DEV_TOKEN : GHN_TOKEN;
       console.error("[ShippingFee] GHN API Error:", {
         status: feeRes.status,
+        server: isDevServer ? "dev-online-gateway" : "online-gateway",
         payload: feePayload,
         response: feeData,
-        tokenExists: !!GHN_TOKEN,
+        tokenExists: !!tokenUsed,
+        tokenUsed: tokenUsed ? `${tokenUsed.substring(0, 8)}...` : "N/A",
       });
       const fallbackFee = calculateLocalShippingFee(location);
       return {

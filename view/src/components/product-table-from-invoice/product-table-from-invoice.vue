@@ -239,12 +239,12 @@ const calculateUnitPrice = (record: any): number => {
     // Round to nearest integer to avoid decimal issues
     return Math.round(calculatedPrice)
   }
-  
+
   // Fallback to giaBan if available
   if (record.giaBan) {
     return Number(record.giaBan)
   }
-  
+
   return 0
 }
 
@@ -322,21 +322,14 @@ const loadProducts = async () => {
 
   try {
     loading.value = true
-    console.log('Loading products for invoice ID:', props.invoiceId)
     const response = await axios.get(`/api/thong-tin-hoa-don-management/san-pham-da-ban/${props.invoiceId}`)
-    console.log('API Response:', response)
-    console.log('Response type:', typeof response)
-    console.log('Response.data:', response?.data)
-    console.log('Is response.data Array:', Array.isArray(response?.data))
 
     // Response đã được interceptor xử lý, nên response chính là data từ backend
     if (response && response.data && Array.isArray(response.data)) {
       products.value = response.data || []
       paginationConfig.value.total = products.value.length
       isUsingMockData.value = false
-      console.log('Products loaded:', products.value)
     } else {
-      console.log('No data in response, using mock data')
       // Fallback to mock data if API fails
       products.value = getMockProducts()
       paginationConfig.value.total = products.value.length

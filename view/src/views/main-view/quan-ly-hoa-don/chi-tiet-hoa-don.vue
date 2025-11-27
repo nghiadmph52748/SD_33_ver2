@@ -295,7 +295,7 @@
               <a-input v-model="updateForm.maHoaDon" disabled />
             </a-form-item>
             <a-form-item label="Loại đơn">
-              <a-select v-model="updateForm.loaiDon" placeholder="Chọn loại đơn">
+              <a-select v-model="updateForm.loaiDon" placeholder="Chọn loại đơn" disabled>
                 <a-option :value="true">online</a-option>
                 <a-option :value="false">tại quầy</a-option>
               </a-select>
@@ -327,9 +327,80 @@
             <a-form-item label="Số điện thoại">
               <a-input v-model="updateForm.soDienThoaiNguoiNhan" placeholder="Nhập số điện thoại" />
             </a-form-item>
-            <a-form-item label="Địa chỉ">
-              <a-textarea v-model="updateForm.diaChiNhanHang" placeholder="Nhập địa chỉ" :auto-size="{ minRows: 2, maxRows: 4 }" />
-            </a-form-item>
+            <a-divider orientation="left">Địa chỉ giao hàng</a-divider>
+            <a-row :gutter="[12, 12]">
+              <a-col :span="12">
+                <a-form-item label="Tỉnh/Thành phố" required>
+                  <a-select
+                    v-model="updateLocationForm.thanhPho"
+                    placeholder="-- Chọn tỉnh/thành phố --"
+                    :options="provinces"
+                    @change="onProvinceChange"
+                    option-label-prop="label"
+                    allow-search
+                    allow-clear
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="Quận/Huyện" required>
+                  <a-select
+                    v-model="updateLocationForm.quan"
+                    placeholder="-- Chọn quận/huyện --"
+                    :options="districtsList"
+                    @change="onDistrictChange"
+                    option-label-prop="label"
+                    allow-search
+                    allow-clear
+                    :disabled="!updateLocationForm.thanhPho"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="Phường/Xã" required>
+                  <a-select
+                    v-model="updateLocationForm.phuong"
+                    placeholder="-- Chọn phường/xã --"
+                    :options="wardsList"
+                    option-label-prop="label"
+                    allow-search
+                    allow-clear
+                    :disabled="!updateLocationForm.quan"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="Địa chỉ cụ thể" required>
+                  <a-input v-model="updateLocationForm.diaChiCuThe" placeholder="Số nhà, đường..." />
+                </a-form-item>
+              </a-col>
+              <a-col :span="24">
+                <a-form-item label="Phí giao hàng (VNĐ)" v-if="calculatedShippingFee !== null">
+                  <a-space direction="vertical" fill>
+                    <div v-if="isCalculatingShippingFee" class="shipping-fee-loading">
+                      <a-spin size="small" />
+                      <span style="margin-left: 8px">Đang tính phí giao hàng...</span>
+                    </div>
+                    <div v-else-if="shippingFeeError" class="shipping-fee-error">
+                      <span style="color: #f53f3f">{{ shippingFeeError }}</span>
+                    </div>
+                    <div v-else class="shipping-fee-info">
+                      <a-input-number
+                        v-model="updateForm.phiGiaoHang"
+                        :min="0"
+                        :step="1000"
+                        :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
+                        :parser="(value) => value?.replace(/[^\d]/g, '') as any"
+                        style="width: 100%"
+                      />
+                      <div style="font-size: 12px; color: #86909c; margin-top: 4px">
+                        Giá được tính từ {{ currentInvoiceLocation.thanhPho }}, {{ currentInvoiceLocation.quan }} đến địa chỉ mới
+                      </div>
+                    </div>
+                  </a-space>
+                </a-form-item>
+              </a-col>
+            </a-row>
             <a-form-item label="Email">
               <a-input v-model="updateForm.emailNguoiNhan" placeholder="Nhập email" type="email" />
             </a-form-item>
@@ -351,7 +422,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { fetchTimelineByHoaDonId, type TimelineItem } from '@/api/timeline'
@@ -359,6 +430,8 @@ import { useUserStore } from '@/store'
 import { Message } from '@arco-design/web-vue'
 import { useOrderStatusNotification } from '@/composables/useOrderStatusNotification'
 import { useOrderStatusAsyncNotification } from '@/composables/useOrderStatusAsyncNotification'
+import { fetchProvinces, fetchDistrictsByProvinceCode, fetchWardsByDistrictCode } from '../ban-hang-tai-quay/services/locationService'
+import { calculateShippingFeeFromGHN, type ShippingLocation } from '../ban-hang-tai-quay/services/shippingFeeService'
 import {
   IconArrowLeft,
   IconPrinter,
@@ -382,7 +455,6 @@ const asyncNotification = useOrderStatusAsyncNotification()
 // Real-time notification setup
 const { isConnected, notifications, lastNotification } = useOrderStatusNotification(parseInt(route.params.id as string), {
   onStatusChange: (notification) => {
-    console.log('Order status changed:', notification)
     // Refresh invoice data when status changes
     if (notification.type === 'status_update') {
       fetchInvoiceDetail()
@@ -417,6 +489,27 @@ const updateForm = ref({
   emailNguoiNhan: '',
   ghiChu: '',
   soTienDaThanhToan: 0, // Payment amount when completing order
+  phiGiaoHang: 0, // Shipping fee
+})
+
+// Address Selection State
+const updateLocationForm = ref({
+  thanhPho: '',
+  quan: '',
+  phuong: '',
+  diaChiCuThe: '',
+})
+const provinces = ref<any[]>([])
+const districtsList = ref<any[]>([])
+const wardsList = ref<any[]>([])
+const isLoadingAddress = ref(false)
+const isCalculatingShippingFee = ref(false)
+const calculatedShippingFee = ref<number | null>(null)
+const shippingFeeError = ref<string>('')
+const currentInvoiceLocation = ref<{ thanhPho: string; quan: string; phuong: string }>({
+  thanhPho: '',
+  quan: '',
+  phuong: '',
 })
 
 // Helper functions
@@ -574,13 +667,7 @@ const STATUS_FLOW_ORDER: Record<string, number> = {
   'Đã hủy': 7,
 }
 
-const ONLINE_STATUS_OPTIONS = [
-  'Chờ xác nhận',
-  'Đã xác nhận',
-  'Đang giao hàng',
-  'Hoàn thành',
-  'Đã huỷ',
-]
+const ONLINE_STATUS_OPTIONS = ['Chờ xác nhận', 'Đã xác nhận', 'Đang giao hàng', 'Hoàn thành', 'Đã huỷ']
 
 const OFFLINE_STATUS_OPTIONS = ['Chờ xác nhận', 'Hoàn thành', 'Đã huỷ']
 
@@ -1648,7 +1735,129 @@ const handleViewProductDetail = (product: any) => {
   // Có thể mở modal hoặc chuyển trang chi tiết sản phẩm
 }
 
-const showUpdateModal = () => {
+/**
+ * Load provinces from GHN API
+ */
+const loadProvinces = async () => {
+  try {
+    isLoadingAddress.value = true
+    const response = await fetchProvinces()
+    provinces.value = response || []
+  } catch (error) {
+    console.error('Error loading provinces:', error)
+    Message.error('Lỗi khi tải danh sách tỉnh/thành phố')
+  } finally {
+    isLoadingAddress.value = false
+  }
+}
+
+/**
+ * Handle province change and load districts
+ */
+const onProvinceChange = async () => {
+  updateLocationForm.value.quan = ''
+  updateLocationForm.value.phuong = ''
+  districtsList.value = []
+  wardsList.value = []
+
+  if (!updateLocationForm.value.thanhPho) return
+
+  try {
+    isLoadingAddress.value = true
+    // Find province code
+    const province = provinces.value.find((p) => p.value === updateLocationForm.value.thanhPho)
+    if (province) {
+      const response = await fetchDistrictsByProvinceCode(province.code)
+      districtsList.value = response || []
+    }
+  } catch (error) {
+    console.error('Error loading districts:', error)
+    Message.error('Lỗi khi tải danh sách quận/huyện')
+  } finally {
+    isLoadingAddress.value = false
+  }
+}
+
+/**
+ * Handle district change and load wards, then recalculate shipping fee
+ */
+const onDistrictChange = async () => {
+  updateLocationForm.value.phuong = ''
+  wardsList.value = []
+
+  if (!updateLocationForm.value.quan) return
+
+  try {
+    isLoadingAddress.value = true
+    // Find district code
+    const district = districtsList.value.find((d) => d.value === updateLocationForm.value.quan)
+    if (district) {
+      const response = await fetchWardsByDistrictCode(district.code)
+      wardsList.value = response || []
+
+      // Auto-recalculate shipping fee
+      await recalculateShippingFee()
+    }
+  } catch (error) {
+    console.error('Error loading wards:', error)
+    Message.error('Lỗi khi tải danh sách phường/xã')
+  } finally {
+    isLoadingAddress.value = false
+  }
+}
+
+/**
+ * Recalculate shipping fee when location changes
+ */
+const recalculateShippingFee = async () => {
+  if (!updateLocationForm.value.thanhPho || !updateLocationForm.value.quan || !updateLocationForm.value.phuong) {
+    calculatedShippingFee.value = null
+    shippingFeeError.value = ''
+    return
+  }
+
+  // Don't recalculate if address hasn't changed significantly
+  if (
+    updateLocationForm.value.thanhPho === currentInvoiceLocation.value.thanhPho &&
+    updateLocationForm.value.quan === currentInvoiceLocation.value.quan &&
+    updateLocationForm.value.phuong === currentInvoiceLocation.value.phuong
+  ) {
+    calculatedShippingFee.value = null
+    shippingFeeError.value = ''
+    return
+  }
+
+  try {
+    isCalculatingShippingFee.value = true
+    shippingFeeError.value = ''
+
+    const newLocation: ShippingLocation = {
+      thanhPho: updateLocationForm.value.thanhPho,
+      quan: updateLocationForm.value.quan,
+      phuong: updateLocationForm.value.phuong,
+      diaChiCuThe: updateLocationForm.value.diaChiCuThe,
+    }
+
+    // Call GHN API to calculate shipping fee from current location to new location
+    const result = await calculateShippingFeeFromGHN(newLocation)
+
+    if (result && result.fee) {
+      calculatedShippingFee.value = result.fee
+      updateForm.value.phiGiaoHang = result.fee
+    } else {
+      throw new Error('Invalid shipping fee response')
+    }
+  } catch (error: any) {
+    console.error('Error calculating shipping fee:', error)
+    shippingFeeError.value = error?.message || 'Không thể tính phí giao hàng. Vui lòng thử lại.'
+    calculatedShippingFee.value = null
+    updateForm.value.phiGiaoHang = 0
+  } finally {
+    isCalculatingShippingFee.value = false
+  }
+}
+
+const showUpdateModal = async () => {
   if (!invoice.value) return
 
   // Get current status text from trangThaiDonHang (from getHighestPriorityStatusFromInvoice)
@@ -1667,8 +1876,111 @@ const showUpdateModal = () => {
     ghiChu: invoice.value.ghiChu || '',
     soTienDaThanhToan: invoice.value.tongTienSauGiam || invoice.value.tongTien || 0, // Default payment amount
   }
+
+  // Reset location form
+  updateLocationForm.value = {
+    thanhPho: '',
+    quan: '',
+    phuong: '',
+    diaChiCuThe: '',
+  }
+
   activeUpdateTab.value = 'order'
   updateModalVisible.value = true
+
+  // Load provinces when modal opens
+  await loadProvinces()
+
+  // Try to parse and fill current address
+  const currentAddress = updateForm.value.diaChiNhanHang
+  if (currentAddress) {
+    await parseAndFillAddress(currentAddress)
+  }
+}
+
+/**
+ * Parse current address string and fill location form
+ * Address format: "Địa chỉ cụ thể, Phường, Quận, Tỉnh"
+ */
+const parseAndFillAddress = async (addressString: string) => {
+  if (!addressString) return
+
+  // Split address by comma
+  const parts = addressString
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p)
+
+  if (parts.length === 0) return
+
+  // Try to identify components
+  // Usually format is: "số nhà đường, phường, quận, tỉnh"
+  // So we work backwards: last is tỉnh, second-to-last is quận, etc.
+
+  if (parts.length >= 1) {
+    // Last part should be tỉnh
+    const thanhPhoName = parts[parts.length - 1]
+    const province = provinces.value.find(
+      (p) => p.value.toLowerCase().includes(thanhPhoName.toLowerCase()) || thanhPhoName.toLowerCase().includes(p.value.toLowerCase())
+    )
+    if (province) {
+      updateLocationForm.value.thanhPho = province.value
+      // Store original location for shipping fee calculation
+      currentInvoiceLocation.value.thanhPho = province.value
+
+      // Load districts for this province
+      try {
+        const districts = await fetchDistrictsByProvinceCode(province.code)
+        districtsList.value = districts || []
+
+        // Try to find quận
+        if (parts.length >= 2) {
+          const quanName = parts[parts.length - 2]
+          const district = districtsList.value.find(
+            (d) => d.value.toLowerCase().includes(quanName.toLowerCase()) || quanName.toLowerCase().includes(d.value.toLowerCase())
+          )
+          if (district) {
+            updateLocationForm.value.quan = district.value
+            // Store original location
+            currentInvoiceLocation.value.quan = district.value
+
+            // Load wards for this district
+            try {
+              const wards = await fetchWardsByDistrictCode(district.code)
+              wardsList.value = wards || []
+
+              // Try to find phường
+              if (parts.length >= 3) {
+                const phuongName = parts[parts.length - 3]
+                const ward = wardsList.value.find(
+                  (w) =>
+                    w.value.toLowerCase().includes(phuongName.toLowerCase()) || phuongName.toLowerCase().includes(w.value.toLowerCase())
+                )
+                if (ward) {
+                  updateLocationForm.value.phuong = ward.value
+                  // Store original location
+                  currentInvoiceLocation.value.phuong = ward.value
+                }
+              }
+            } catch (error) {
+              console.error('Error loading wards:', error)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading districts:', error)
+      }
+
+      // Set địa chỉ cụ thể (first part or first few parts)
+      if (parts.length >= 3) {
+        // Join all parts except last 3 (tỉnh, quận, phường)
+        updateLocationForm.value.diaChiCuThe = parts.slice(0, parts.length - 3).join(', ')
+      } else if (parts.length > 1) {
+        // If we have less parts, use the first part as địa chỉ cụ thể
+        updateLocationForm.value.diaChiCuThe = parts[0]
+      }
+    }
+  }
 }
 
 const closeUpdateModal = () => {
@@ -1685,6 +1997,12 @@ const closeUpdateModal = () => {
     emailNguoiNhan: '',
     ghiChu: '',
     soTienDaThanhToan: 0,
+  }
+  updateLocationForm.value = {
+    thanhPho: '',
+    quan: '',
+    phuong: '',
+    diaChiCuThe: '',
   }
 }
 
@@ -1762,9 +2080,19 @@ const handleSaveUpdate = async () => {
     if (updateForm.value.tenNguoiNhan) {
       updateData.tenNguoiNhan = updateForm.value.tenNguoiNhan
     }
-    if (updateForm.value.diaChiNhanHang) {
-      updateData.diaChiNhanHang = updateForm.value.diaChiNhanHang
+
+    // Build address from structured form
+    const addressParts = [
+      updateLocationForm.value.diaChiCuThe,
+      updateLocationForm.value.phuong,
+      updateLocationForm.value.quan,
+      updateLocationForm.value.thanhPho,
+    ].filter((part) => part && part.trim())
+
+    if (addressParts.length > 0) {
+      updateData.diaChiNhanHang = addressParts.join(', ')
     }
+
     if (updateForm.value.soDienThoaiNguoiNhan) {
       updateData.soDienThoaiNguoiNhan = updateForm.value.soDienThoaiNguoiNhan
     }
@@ -1916,9 +2244,52 @@ const getTrangThaiDonColor = (trangThai: boolean) => {
   return 'orange'
 }
 
+// Watch for province change
+watch(
+  () => updateLocationForm.value.thanhPho,
+  async (newProvince) => {
+    console.log('[AddressWatch] Province changed to:', newProvince)
+    if (newProvince) {
+      await onProvinceChange()
+    }
+  }
+)
+
+// Watch for district change
+watch(
+  () => updateLocationForm.value.quan,
+  async (newDistrict) => {
+    console.log('[AddressWatch] District changed to:', newDistrict)
+    if (newDistrict) {
+      await onDistrictChange()
+    }
+  }
+)
+
+// Watch for ward change to recalculate shipping fee
+watch(
+  () => updateLocationForm.value.phuong,
+  async (newWard) => {
+    console.log('[AddressWatch] Ward changed to:', newWard)
+    if (newWard && updateLocationForm.value.quan && updateLocationForm.value.thanhPho) {
+      await recalculateShippingFee()
+    }
+  }
+)
+
+// Watch for diaChiCuThe change to recalculate shipping fee
+watch(
+  () => updateLocationForm.value.diaChiCuThe,
+  async (newAddress) => {
+    console.log('[AddressWatch] Address detail changed to:', newAddress)
+    if (newAddress && updateLocationForm.value.phuong && updateLocationForm.value.quan && updateLocationForm.value.thanhPho) {
+      await recalculateShippingFee()
+    }
+  }
+)
+
 // Lifecycle
 onMounted(() => {
-  console.log('📡 WebSocket connection status:', isConnected.value)
   fetchInvoiceDetail()
 })
 </script>
