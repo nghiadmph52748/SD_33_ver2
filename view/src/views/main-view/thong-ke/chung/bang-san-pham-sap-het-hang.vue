@@ -22,10 +22,10 @@
           <div class="product-image-cell">
             <div class="image-wrapper">
               <img :src="record.anh || '/default-product.png'" :alt="record.tenSanPham" class="product-img" />
-              <div :class="['stock-badge', getStockBadgeClass(record.soLuongTon)]">
-                <icon-exclamation-circle-fill v-if="record.soLuongTon === 0" />
-                <icon-exclamation v-else />
-              </div>
+            </div>
+            <div :class="['stock-badge', getStockBadgeClass(record.soLuongTon)]">
+              <icon-exclamation-circle-fill v-if="record.soLuongTon === 0" />
+              <icon-exclamation v-else />
             </div>
           </div>
         </template>
@@ -245,6 +245,14 @@ const cot = [
 }
 
 /* Product Image Styles */
+.product-image-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
 .image-wrapper {
   position: relative;
   width: 56px;
@@ -258,6 +266,7 @@ const cot = [
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .stock-badge {
@@ -266,13 +275,24 @@ const cot = [
   right: -4px;
   width: 20px;
   height: 20px;
+  min-width: 20px;
+  min-height: 20px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
   color: white;
   border: 2px solid white;
+  box-sizing: border-box;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.stock-badge :deep(svg) {
+  width: 12px;
+  height: 12px;
+  display: block;
 }
 
 .badge-critical {
