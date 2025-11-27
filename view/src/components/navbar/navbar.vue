@@ -12,6 +12,9 @@
     </div>
     <ul class="right-side">
       <li>
+        <StartShiftButton />
+      </li>
+      <li>
         <a-tooltip content="Trợ lý AI">
           <a-button class="nav-btn" type="outline" :shape="'circle'" @click="goAI">
             <template #icon>
@@ -175,6 +178,7 @@ import { useAppStore as useStore } from '@/store'
 import MessageBox from '../message-box/message-box.vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
+import StartShiftButton from '@/components/StartShiftButton.vue'
 
 const { t, locale } = useI18n()
 const currentLocale = ref(locale.value)

@@ -1,10 +1,12 @@
 <template>
   <div class="giao-ca-card">
+    <ConfirmModal ref="confirmModal" />
     <h3>Ca Làm Việc</h3>
 
     <div v-if="lastShift">
       <div class="previous-shift">
         <strong>Thông tin ca trước (Bàn giao)</strong>
+        <div>Người giao ca: <strong>{{ lastShift.nguoiGiao?.tenNhanVien || lastShift.nguoiGiao?.name || 'N/A' }}</strong></div>
         <div>Tiền mặt cuối ca trước: <strong>{{ formatCurrency(lastShift.tongTienCuoiCa) }}</strong></div>
         <div>Số đơn hàng chờ xử lý: <strong>{{ lastShift.soDonChoXuLy || 0 }}</strong></div>
       </div>
@@ -23,7 +25,11 @@
 
     <div v-else>
       <p>Ca đang hoạt động từ: <strong>{{ formatDate(activeShift.thoiGianGiaoCa) }}</strong></p>
-      <p v-if="activeShift.tongTienBanDau">Số tiền mặt ban đầu: <strong>{{ formatCurrency(activeShift.tongTienBanDau) }}</strong></p>
+      <div class="shift-info">
+        <p>Người giao ca: <strong class="amount">{{ activeShift.nguoiGiao?.tenNhanVien || activeShift.nguoiGiao?.name || 'N/A' }}</strong></p>
+        <p>Số tiền mặt ban đầu: <strong class="amount">{{ formatCurrency(activeShift.tongTienBanDau) }}</strong></p>
+        <p v-if="lastShift && lastShift.tongTienCuoiCa">Tiền mặt cuối ca trước: <strong class="amount">{{ formatCurrency(lastShift.tongTienCuoiCa) }}</strong></p>
+      </div>
       <div class="shift-sales">
         <p>Số hóa đơn trong ca: <strong>{{ invoiceCount }}</strong></p>
         <p>Tổng doanh thu (ước tính): <strong>{{ formatCurrency(invoiceTotal) }}</strong></p>
@@ -42,6 +48,9 @@ import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { themGiaoCa, suaGiaoCa, getGiaoCa } from '@/api/giao-ca'
 import { fetchHoaDonList } from '@/api/hoa-don'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import { Message } from '@arco-design/web-vue'
+import useUser from '@/hooks/user'
 
 const loading = ref(false)
 const activeShift = ref(null)
@@ -51,6 +60,32 @@ const userStore = useUserStore()
 const invoiceCount = ref(0)
 const invoiceTotal = ref(0)
 const invoiceIds = ref([])
+const confirmModal = ref(null)
+const { logout } = useUser()
+
+// Expose reload function to parent/navbar
+async function reloadShiftData() {
+  try {
+    const res = await getGiaoCa()
+    const list = (res.data || res) || []
+    const active = list.find((s) => s.trangThai === 'Đang hoạt động' || !s.thoiGianKetThuc)
+    if (active) {
+      activeShift.value = active
+      computeShiftSales(activeShift.value).catch((e) => console.warn(e))
+    }
+    const ended = list
+      .filter((s) => s.thoiGianKetThuc)
+      .sort((a, b) => new Date(b.thoiGianKetThuc) - new Date(a.thoiGianKetThuc))
+    if (ended.length) {
+      lastShift.value = ended[0]
+      if (lastShift.value.tongTienCuoiCa != null) initialCash.value = Number(lastShift.value.tongTienCuoiCa)
+    }
+  } catch (e) {
+    console.warn('Không tải lại danh sách giao ca', e)
+  }
+}
+
+defineExpose({ reloadShiftData })
 
 function formatDate(d) {
   if (!d) return '-'
@@ -153,6 +188,13 @@ function formatCurrency(n) {
 }
 
 async function startShift() {
+  const ok = await confirmModal.value.showConfirm(
+    'Bắt Đầu Ca Làm Việc',
+    'Bạn có chắc muốn bắt đầu ca làm việc với số tiền mặt ban đầu là ' + formatCurrency(initialCash.value) + ' không?',
+    'Xác Nhận',
+    'Hủy'
+  )
+  if (!ok) return
   loading.value = true
   try {
     const payload = {
@@ -165,10 +207,11 @@ async function startShift() {
     }
     const res = await themGiaoCa(payload)
     activeShift.value = res.data || res
+    Message.success('Bắt đầu ca thành công')
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Lỗi khi bắt đầu ca', err)
-    alert('Bắt đầu ca thất bại')
+    Message.error('Bắt đầu ca thất bại')
   } finally {
     loading.value = false
   }
@@ -204,7 +247,12 @@ onMounted(async () => {
 
 async function endShift() {
   if (!activeShift.value || !activeShift.value.id) return
-  const ok = confirm('Bạn có chắc muốn kết thúc ca hiện tại không?')
+  const ok = await confirmModal.value.showConfirm(
+    'Kết Thúc Ca Làm Việc',
+    'Bạn có chắc muốn kết thúc ca hiện tại không?',
+    'Xác Nhận',
+    'Hủy'
+  )
   if (!ok) return
   loading.value = true
   try {
@@ -245,10 +293,18 @@ async function endShift() {
     }
 
     activeShift.value = null
-    alert('Kết thúc ca thành công')
+    Message.success('Kết thúc ca thành công')
+    try {
+      await logout()
+    } catch (e) {
+      // ignore logout errors
+      // eslint-disable-next-line no-console
+      console.warn('Logout after endShift failed', e)
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Lỗi khi kết thúc ca', err)
+    Message.error('Kết thúc ca thất bại')
   } finally {
     loading.value = false
   }
@@ -257,26 +313,205 @@ async function endShift() {
 
 <style scoped>
 .giao-ca-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-width: 500px;
+  margin: 40px auto;
+}
+
+.giao-ca-card h3 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 24px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.previous-shift {
+  background: #fff;
+  padding: 18px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border-left: 5px solid #f39c12;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.previous-shift strong {
+  display: block;
+  color: #2c3e50;
+  font-size: 15px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.previous-shift div {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 14px;
+  color: #555;
+  border-bottom: 1px solid #eee;
+}
+
+.previous-shift div:last-child {
+  border-bottom: none;
+}
+
+.previous-shift div strong {
+  color: #f39c12;
+  margin-bottom: 0;
+  display: inline;
+  font-weight: 600;
+}
+
+label {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+input[type="number"] {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  margin-bottom: 24px;
+}
+
+input[type="number"]:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+}
+
+input[type="number"]::placeholder {
+  color: #999;
+}
+
+.shift-info {
   background: #fff;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  margin: 24px 0;
+  border-left: 5px solid #1890ff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
-.btn-start {
-  background: #2ecc71;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 6px;
-  cursor: pointer;
+
+.shift-info p {
+  margin: 14px 0;
+  font-size: 14px;
+  color: #555;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+
+.shift-info p strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.shift-sales {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 24px 0;
+  border-left: 5px solid #2ecc71;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.shift-sales p {
+  margin: 14px 0;
+  font-size: 14px;
+  color: #555;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shift-sales p strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.amount {
+  color: #1890ff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.btn-start,
 .btn-end {
-  background: #e74c3c;
-  color: #fff;
+  width: 100%;
+  padding: 14px 20px;
   border: none;
-  padding: 10px 18px;
   border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-.actions { margin-top: 12px }
+
+.btn-start {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: #fff;
+  margin-bottom: 14px;
+}
+
+.btn-start:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+}
+
+.btn-start:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-end {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: #fff;
+}
+
+.btn-end:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+
+.btn-end:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actions {
+  margin-top: 28px;
+  display: flex;
+  gap: 14px;
+}
+
+.actions button {
+  flex: 1;
+}
+
+p {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 22px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+p strong {
+  color: #1890ff;
+  font-weight: 600;
+}
 </style>
