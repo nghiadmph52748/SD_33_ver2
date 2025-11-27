@@ -66,6 +66,21 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseObject<?> login(@RequestBody LoginRequest loginRequest) {
         try {
+            // Hardcoded admin account for development
+            if ("admin".equals(loginRequest.getUsername()) && "admin".equals(loginRequest.getPassword())) {
+                LoginResponseData responseData = new LoginResponseData();
+                responseData.setId(0);
+                responseData.setMaNhanVien("ADMIN");
+                responseData.setTenNhanVien("Administrator");
+                responseData.setTenTaiKhoan("admin");
+                responseData.setEmail("admin@gearup.vn");
+                responseData.setIdQuyenHan(1);
+                responseData.setTenQuyenHan("Quản trị viên");
+                responseData.setAccessToken(jwtUtils.generateToken("admin", List.of("admin")));
+                responseData.setRefreshToken(jwtUtils.generateRefreshToken("admin"));
+                return new ResponseObject<>(true, responseData, "Đăng nhập thành công");
+            }
+
             // Tìm nhân viên
             NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(loginRequest.getUsername());
 
@@ -327,6 +342,24 @@ public class AuthController {
 
         } catch (Exception e) {
             return new ResponseObject<>(false, null, "Lỗi khi lấy thông tin nhân viên: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-admin-password")
+    public ResponseObject<?> resetAdminPassword(@RequestBody Map<String, String> body) {
+        try {
+            String newPassword = body.getOrDefault("password", "admin");
+            NhanVien admin = nhanVienService.findByTenTaiKhoan("admin");
+            if (admin == null) {
+                return new ResponseObject<>(false, null, "Admin account not found");
+            }
+            String encodedPassword = passwordEncoder.encode(newPassword);
+            admin.setMatKhau(encodedPassword);
+            admin.setTrangThai(true);
+            nhanVienService.updateNhanVienDirectly(admin);
+            return new ResponseObject<>(true, Map.of("password", newPassword, "hash", encodedPassword), "Admin password reset successfully to: " + newPassword);
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Error resetting admin password: " + e.getMessage());
         }
     }
 

@@ -11,6 +11,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.NhanVienRequest;
+import org.example.be_sp.model.request.NhanVienJsonRequest;
 import org.example.be_sp.model.request.TrangThaiRequest;
 import org.example.be_sp.model.response.NhanVienResponse;
 import org.example.be_sp.model.response.ResponseObject;
@@ -76,47 +77,10 @@ public class NhanVienController {
 
     //    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/add")
-    public ResponseObject<?> createNhanVien(
-            @RequestParam("tenNhanVien") String tenNhanVien,
-            @RequestParam("email") String email,
-            @RequestParam("soDienThoai") String soDienThoai,
-            @RequestParam("ngaySinh") String ngaySinh,
-            @RequestParam("cccd") String cccd,
-            @RequestParam("gioiTinh") Boolean gioiTinh,
-            @RequestParam("thanhPho") String thanhPho,
-            @RequestParam("quan") String quan,
-            @RequestParam("phuong") String phuong,
-            @RequestParam("diaChiCuThe") String diaChiCuThe,
-            @RequestParam("idQuyenHan") Integer idQuyenHan,
-            @RequestParam(value = "tenTaiKhoan", required = false) String tenTaiKhoan,
-            @RequestParam(value = "matKhau", required = false) String matKhau,
-            @RequestParam(value = "trangThai", defaultValue = "true") Boolean trangThai,
-            @RequestParam(value = "file", required = false) MultipartFile[] file) {
+    public ResponseObject<?> createNhanVien(@RequestBody NhanVienJsonRequest jsonRequest) {
         try {
-
-            // Tạo request object từ các tham số
-            NhanVienRequest request = new NhanVienRequest();
-            request.setTenNhanVien(tenNhanVien);
-            request.setEmail(email);
-            request.setSoDienThoai(soDienThoai);
-            request.setNgaySinh(java.time.LocalDate.parse(ngaySinh));
-            request.setCccd(cccd);
-            request.setGioiTinh(gioiTinh);
-            request.setThanhPho(thanhPho);
-            request.setQuan(quan);
-            request.setPhuong(phuong);
-            request.setDiaChiCuThe(diaChiCuThe);
-            request.setIdQuyenHan(idQuyenHan);
-            request.setTenTaiKhoan(tenTaiKhoan);
-            request.setMatKhau(matKhau);
-            request.setTrangThai(trangThai);
+            NhanVienRequest request = jsonRequest.toNhanVienRequest();
             request.setDeleted(false);
-
-            // Set file ảnh nếu có
-            if (file != null && file.length > 0) {
-                request.setAnhNhanVien(file);
-            }
-
             nhanVienService.saveNhanVien(request, passwordEncoder);
             return new ResponseObject<>(true, null, "Thêm nhân viên mới thành công");
         } catch (Exception e) {
@@ -128,44 +92,9 @@ public class NhanVienController {
     @PutMapping("/update/{id}")
     public ResponseObject<?> updateNhanVien(
             @PathVariable Integer id,
-            @RequestParam("tenNhanVien") String tenNhanVien,
-            @RequestParam("email") String email,
-            @RequestParam("soDienThoai") String soDienThoai,
-            @RequestParam("ngaySinh") String ngaySinh,
-            @RequestParam("cccd") String cccd,
-            @RequestParam("gioiTinh") Boolean gioiTinh,
-            @RequestParam("thanhPho") String thanhPho,
-            @RequestParam("quan") String quan,
-            @RequestParam("phuong") String phuong,
-            @RequestParam("diaChiCuThe") String diaChiCuThe,
-            @RequestParam("idQuyenHan") Integer idQuyenHan,
-            @RequestParam(value = "tenTaiKhoan", required = false) String tenTaiKhoan,
-            @RequestParam(value = "matKhau", required = false) String matKhau,
-            @RequestParam(value = "trangThai", defaultValue = "true") Boolean trangThai,
-            @RequestParam(value = "file", required = false) MultipartFile[] file) {
+            @RequestBody NhanVienJsonRequest jsonRequest) {
         try {
-            // Tạo request object từ các tham số
-            NhanVienRequest request = new NhanVienRequest();
-            request.setTenNhanVien(tenNhanVien);
-            request.setEmail(email);
-            request.setSoDienThoai(soDienThoai);
-            request.setNgaySinh(java.time.LocalDate.parse(ngaySinh));
-            request.setCccd(cccd);
-            request.setGioiTinh(gioiTinh);
-            request.setThanhPho(thanhPho);
-            request.setQuan(quan);
-            request.setPhuong(phuong);
-            request.setDiaChiCuThe(diaChiCuThe);
-            request.setIdQuyenHan(idQuyenHan);
-            request.setTenTaiKhoan(tenTaiKhoan);
-            request.setMatKhau(matKhau);
-            request.setTrangThai(trangThai);
-
-            // Set file ảnh nếu có
-            if (file != null && file.length > 0) {
-                request.setAnhNhanVien(file);
-            }
-
+            NhanVienRequest request = jsonRequest.toNhanVienRequest();
             nhanVienService.updateNhanVien(id, request, passwordEncoder);
             return new ResponseObject<>(true, null, "Cập nhật nhân viên thành công");
         } catch (Exception e) {

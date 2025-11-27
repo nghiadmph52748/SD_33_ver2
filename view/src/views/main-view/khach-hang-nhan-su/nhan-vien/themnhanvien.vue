@@ -145,8 +145,6 @@
                       :src="previewUrl"
                       alt="Ảnh nhân viên"
                       class="preview-image"
-                      @load="console.log('✅ Ảnh đã load thành công')"
-                      @error="console.error('❌ Lỗi load ảnh:', $event)"
                     />
                     <div class="image-overlay">
                       <a-button type="text" size="small" @click="removeImage" class="remove-button">
@@ -445,7 +443,6 @@ const openQRModal = async () => {
     videoRef.value,
     (result: ScanResult) => {
       const raw = result.data.trim()
-      console.log('✅ QR Result:', raw)
 
       // Nếu là loại chứa dấu |
       if (raw.includes('|')) {
@@ -524,7 +521,6 @@ const handleCCCDImageUpload = async (event: Event) => {
       }
     }
   } catch (err) {
-    console.error('Không đọc được mã QR:', err)
     Message.warning('Không phát hiện được mã QR trong ảnh này.')
   } finally {
     target.value = ''
@@ -569,7 +565,6 @@ const handleNativeFileChange = async (event: Event) => {
     }
 
     reader.onerror = (error) => {
-      console.error('❌ FileReader error:', error)
       Message.error('Không thể đọc file ảnh!')
       selectedFiles.value = []
       previewUrl.value = ''
@@ -578,7 +573,6 @@ const handleNativeFileChange = async (event: Event) => {
 
     reader.readAsDataURL(file)
   } catch (error) {
-    console.error('❌ Lỗi khi xử lý file:', error)
     Message.error('Lỗi khi xử lý file ảnh!')
     selectedFiles.value = []
     previewUrl.value = ''
@@ -671,32 +665,88 @@ const handleSubmit = async () => {
     const emailUsername = formData.value.email.split('@')[0]
     formData.value.tenTaiKhoan = emailUsername
 
-    // ✅ Tạo FormData để gửi file
-    const submitFormData = new FormData()
-    // Thêm thông tin nhân viên
-    Object.keys(formData.value).forEach((key) => {
-      const value = formData.value[key as keyof typeof formData.value]
-      if (value !== null && value !== undefined) {
-        submitFormData.append(key, value.toString())
-      }
-    })
-
-    // Thêm file ảnh nếu có
+    // ✅ Upload ảnh trước nếu có
+    let imageUrl: string | null = null
     if (selectedFiles.value.length > 0) {
-      selectedFiles.value.forEach((file) => {
-        submitFormData.append('file', file)
-      })
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', selectedFiles.value[0])
+      const uploadResponse = await (await import('axios')).default.post('/api/v1/upload-image/add', uploadFormData)
+      
+      // Try multiple ways to access the URL
+      let extractedUrl: string | null = null
+      
+      // Method 1: If response.data is directly an array (Axios unwrapped ResponseObject)
+      if (Array.isArray(uploadResponse.data) && uploadResponse.data.length > 0) {
+        const firstItem = uploadResponse.data[0]
+        if (firstItem && typeof firstItem === 'object' && 'url' in firstItem) {
+          extractedUrl = firstItem.url as string
+        }
+      }
+      
+      // Method 2: ResponseObject structure - data.data[0].url
+      if (!extractedUrl && uploadResponse.data?.data && Array.isArray(uploadResponse.data.data) && uploadResponse.data.data.length > 0) {
+        const firstItem = uploadResponse.data.data[0]
+        if (firstItem && typeof firstItem === 'object' && 'url' in firstItem) {
+          extractedUrl = firstItem.url as string
+        }
+      }
+      
+      // Method 3: Direct data.data.url (if it's an object, not array)
+      if (!extractedUrl && uploadResponse.data?.data && typeof uploadResponse.data.data === 'object' && !Array.isArray(uploadResponse.data.data) && 'url' in uploadResponse.data.data) {
+        extractedUrl = (uploadResponse.data.data as any).url
+      }
+      
+      // Method 4: Top-level data.url
+      if (!extractedUrl && uploadResponse.data?.url) {
+        extractedUrl = uploadResponse.data.url as string
+      }
+      
+      // Method 5: Direct response.data if it's a string URL
+      if (!extractedUrl && typeof uploadResponse.data === 'string') {
+        extractedUrl = uploadResponse.data
+      }
+      
+      if (extractedUrl) {
+        imageUrl = extractedUrl
+      } else {
+        Message.error('Không thể lấy URL ảnh từ phản hồi upload. Vui lòng thử lại.')
+        return
+      }
     }
 
-    // ✅ Gửi request với FormData
-    const response = await themNhanVien(submitFormData)
+    // ✅ Validate imageUrl if file was uploaded
+    if (selectedFiles.value.length > 0 && !imageUrl) {
+      Message.error('Không thể lấy URL ảnh sau khi upload. Vui lòng thử lại.')
+      return
+    }
+
+    // ✅ Tạo payload JSON với URL ảnh
+    const payload: NhanVienRequest = {
+      tenNhanVien: formData.value.tenNhanVien,
+      tenTaiKhoan: formData.value.tenTaiKhoan,
+      matKhau: formData.value.matKhau,
+      ngaySinh: formData.value.ngaySinh,
+      cccd: formData.value.cccd,
+      email: formData.value.email,
+      soDienThoai: formData.value.soDienThoai,
+      thanhPho: formData.value.thanhPho,
+      quan: formData.value.quan,
+      phuong: formData.value.phuong,
+      gioiTinh: formData.value.gioiTinh,
+      diaChiCuThe: formData.value.diaChiCuThe,
+      idQuyenHan: formData.value.idQuyenHan as number,
+      trangThai: formData.value.trangThai,
+      anhNhanVien: imageUrl,
+      deleted: false,
+    }
+
+    // ✅ Gửi request JSON (không multipart)
+    const response = await themNhanVien(payload)
     const result = await response.data
 
     Message.success('Thêm nhân viên thành công!')
     router.push({ name: 'QuanLyNhanVien' }) // ✅ SPA routing với route name
   } catch (error: unknown) {
-    console.error('❌ Submit failed:', (error as any)?.message)
-
     const err = error as any
     if (err.message?.includes('tài khoản đã tồn tại')) {
       Message.error('Email này đã được dùng để tạo tài khoản. Vui lòng dùng email khác.')
