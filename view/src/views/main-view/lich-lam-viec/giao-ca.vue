@@ -55,8 +55,23 @@
       </div>
 
       <div class="form-section">
-        <a-form-item label="Số tiền mặt ban đầu (VND)" class="cash-input-item">
-          <a-input-number v-model="initialCash" :min="0" :precision="0" placeholder="Nhập số tiền mặt" size="large" class="cash-input">
+        <a-form-item 
+          label="Số tiền mặt ban đầu (VND)" 
+          class="cash-input-item"
+          :validate-status="validationErrors.initialCash ? 'error' : undefined"
+          :help="validationErrors.initialCash || undefined"
+        >
+          <a-input-number 
+            v-model="initialCash" 
+            :min="0" 
+            :max="1000000000"
+            :precision="0" 
+            placeholder="Nhập số tiền mặt" 
+            size="large" 
+            class="cash-input"
+            @blur="validationErrors.initialCash = validateInitialCash(initialCash)"
+            @change="validationErrors.initialCash = validateInitialCash(initialCash)"
+          >
             <template #prefix>
               <icon-star />
             </template>
@@ -193,6 +208,11 @@ const confirmModal = ref(null)
 const { logout } = useUser()
 const router = useRouter()
 
+// Validation errors
+const validationErrors = ref({
+  initialCash: '',
+})
+
 // Expose reload function to parent/navbar
 async function reloadShiftData() {
   try {
@@ -325,14 +345,65 @@ function formatCurrency(n) {
   return new Intl.NumberFormat('vi-VN').format(n) + ' ₫'
 }
 
+// Validation functions
+function validateInitialCash(value) {
+  if (value === null || value === undefined) {
+    return 'Vui lòng nhập số tiền mặt ban đầu'
+  }
+  const numValue = Number(value)
+  if (Number.isNaN(numValue)) {
+    return 'Số tiền mặt phải là số hợp lệ'
+  }
+  if (numValue < 0) {
+    return 'Số tiền mặt không được âm'
+  }
+  if (numValue > 1000000000) {
+    return 'Số tiền mặt không được vượt quá 1.000.000.000 VND'
+  }
+  return ''
+}
+
+function validateUserInfo() {
+  if (!userStore.id) {
+    return 'Thông tin người dùng không hợp lệ. Vui lòng đăng nhập lại.'
+  }
+  return ''
+}
+
+function validateShiftData(shift) {
+  if (!shift) {
+    return 'Không tìm thấy thông tin ca làm việc'
+  }
+  if (!shift.id) {
+    return 'ID ca làm việc không hợp lệ'
+  }
+  return ''
+}
+
+function clearValidationErrors() {
+  validationErrors.value = {
+    initialCash: '',
+  }
+}
+
 async function startShift() {
-  const ok = await confirmModal.value.showConfirm(
-    'Bắt Đầu Ca Làm Việc',
-    'Bạn có chắc muốn bắt đầu ca làm việc với số tiền mặt ban đầu là ' + formatCurrency(initialCash.value) + ' không?',
-    'Xác Nhận',
-    'Hủy'
-  )
-  if (!ok) return
+  // Clear previous validation errors
+  clearValidationErrors()
+  
+  // Validate initial cash
+  const cashError = validateInitialCash(initialCash.value)
+  if (cashError) {
+    validationErrors.value.initialCash = cashError
+    Message.error(cashError)
+    return
+  }
+  
+  // Validate user info
+  const userError = validateUserInfo()
+  if (userError) {
+    Message.error(userError)
+    return
+  }
   
   // Check if user already has an active shift
   try {
@@ -353,7 +424,17 @@ async function startShift() {
     }
   } catch (e) {
     console.warn('Không thể kiểm tra ca hiện tại', e)
+    Message.error('Không thể kiểm tra trạng thái ca làm việc. Vui lòng thử lại.')
+    return
   }
+  
+  const ok = await confirmModal.value.showConfirm(
+    'Bắt Đầu Ca Làm Việc',
+    'Bạn có chắc muốn bắt đầu ca làm việc với số tiền mặt ban đầu là ' + formatCurrency(initialCash.value) + ' không?',
+    'Xác Nhận',
+    'Hủy'
+  )
+  if (!ok) return
   
   loading.value = true
   try {
@@ -362,8 +443,15 @@ async function startShift() {
     const nguoiGiaoId = (lastShift.value && lastShift.value.nguoiGiao && lastShift.value.nguoiGiao.id) || userStore.id
     const nguoiNhanId = userStore.id
     
+    // Validate employee IDs
     if (!nguoiGiaoId || !nguoiNhanId) {
       Message.error('Thông tin nhân viên không hợp lệ. Vui lòng đăng nhập lại.')
+      loading.value = false
+      return
+    }
+    
+    if (Number.isNaN(Number(nguoiGiaoId)) || Number.isNaN(Number(nguoiNhanId))) {
+      Message.error('ID nhân viên không hợp lệ.')
       loading.value = false
       return
     }
@@ -393,13 +481,36 @@ async function startShift() {
       }
     }
     
+    // Validate caLamViecId
+    if (!caLamViecId || Number.isNaN(Number(caLamViecId))) {
+      Message.error('Ca làm việc không hợp lệ. Vui lòng tạo ca làm việc trước.')
+      loading.value = false
+      return
+    }
+    
+    // Validate initial cash value
+    const cashValue = Number(initialCash.value) || 0
+    const cashValidationError = validateInitialCash(cashValue)
+    if (cashValidationError) {
+      Message.error(cashValidationError)
+      loading.value = false
+      return
+    }
+    
     // Ensure IDs are numbers
     const payload = {
       nguoiGiaoId: Number(nguoiGiaoId),
       nguoiNhanId: Number(nguoiNhanId),
       caLamViecId: Number(caLamViecId),
       thoiGianGiaoCa: toLocalDateTimeString(now),
-      tongTienBanDau: Number(initialCash.value) || 0,
+      tongTienBanDau: cashValue,
+    }
+    
+    // Validate payload before sending
+    if (!payload.thoiGianGiaoCa || payload.thoiGianGiaoCa.length < 19) {
+      Message.error('Thời gian giao ca không hợp lệ.')
+      loading.value = false
+      return
     }
     
     // Debug log
@@ -463,9 +574,28 @@ onMounted(async () => {
 })
 
 async function endShift() {
-  if (!activeShift.value || !activeShift.value.id) return
+  // Validate active shift exists
+  if (!activeShift.value) {
+    Message.error('Không tìm thấy ca làm việc đang hoạt động.')
+    return
+  }
+  
+  const shiftError = validateShiftData(activeShift.value)
+  if (shiftError) {
+    Message.error(shiftError)
+    return
+  }
+  
+  // Validate user info
+  const userError = validateUserInfo()
+  if (userError) {
+    Message.error(userError)
+    return
+  }
+  
   const ok = await confirmModal.value.showConfirm('Kết Thúc Ca Làm Việc', 'Bạn có chắc muốn kết thúc ca hiện tại không?', 'Xác Nhận', 'Hủy')
   if (!ok) return
+  
   loading.value = true
   try {
     const payload = {
@@ -497,6 +627,32 @@ async function endShift() {
       // Set trangThaiCa to indicate shift is ended
       trangThaiCa: 'Hoàn tất',
     }
+    
+    // Validate payload before sending
+    if (!payload.nguoiGiaoId || Number.isNaN(Number(payload.nguoiGiaoId))) {
+      Message.error('ID người giao ca không hợp lệ.')
+      loading.value = false
+      return
+    }
+    
+    if (!payload.nguoiNhanId || Number.isNaN(Number(payload.nguoiNhanId))) {
+      Message.error('ID người nhận ca không hợp lệ.')
+      loading.value = false
+      return
+    }
+    
+    if (!payload.thoiGianGiaoCa || payload.thoiGianGiaoCa.length < 19) {
+      Message.error('Thời gian giao ca không hợp lệ.')
+      loading.value = false
+      return
+    }
+    
+    if (!payload.trangThaiCa) {
+      Message.error('Trạng thái ca không hợp lệ.')
+      loading.value = false
+      return
+    }
+    
     // dùng endpoint PUT /api/giao-ca/{id} có sẵn trên backend
     await suaGiaoCa(activeShift.value.id, payload)
 
