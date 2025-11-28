@@ -465,8 +465,8 @@ public class HoaDonService {
         if (request.getIdTrangThaiDonHang() != null && request.getIdTrangThaiDonHang() == 2) {
             // Status is changing to "Đã xác nhận" - validate and deduct inventory
             // Only deduct for online orders (not counter sales)
-            if (saved.getGiaoHang() != null && saved.getGiaoHang() && 
-                (saved.getGhiChu() == null || !saved.getGhiChu().contains("Bán hàng tại quầy"))) {
+            if (saved.getGiaoHang() != null && saved.getGiaoHang()
+                    && (saved.getGhiChu() == null || !saved.getGhiChu().contains("Bán hàng tại quầy"))) {
                 validateAndDeductInventory(saved);
             }
         }
