@@ -728,6 +728,36 @@ const selectPaymentMethod = (method: 'cash' | 'transfer' | 'both') => {
   paymentForm.value.method = method
 }
 
+// Derived payment computeds (defined here so watchers below can safely reference them)
+const finalPrice = computed(() => {
+  const basePrice = subtotal.value - discountAmount.value
+  const shipping = orderType.value === 'delivery' ? shippingFee.value : 0
+  return basePrice + shipping
+})
+
+const totalReceived = computed(() => (paymentForm.value?.cashReceived || 0) + (paymentForm.value?.transferReceived || 0))
+const change = computed(() => totalReceived.value - finalPrice.value)
+const paymentMethod = computed({
+  get: () => paymentForm.value.method,
+  set: (value: 'cash' | 'transfer' | 'both') => {
+    paymentForm.value.method = value
+  },
+})
+const canConfirmOrder = computed(() => {
+  if (!currentOrder.value?.items.length || finalPrice.value <= 0) return false
+  if (orderType.value === 'delivery') {
+    if (selectedCustomer.value && !selectedCustomer.value.address) return false
+    if (isWalkIn.value) {
+      const wl = walkInLocation.value
+      if (!wl.thanhPho || !wl.quan || !wl.phuong || !wl.diaChiCuThe) return false
+    }
+  }
+  if (paymentForm.value.method === 'cash') return (paymentForm.value.cashReceived || 0) >= finalPrice.value
+  if (paymentForm.value.method === 'transfer') return (paymentForm.value.transferReceived || 0) >= finalPrice.value
+  if (paymentForm.value.method === 'both') return totalReceived.value >= finalPrice.value
+  return true
+})
+
 // ==================== QR SCANNER METHODS ====================
 
 // Watch for delete product modal visibility
@@ -1032,36 +1062,6 @@ async function refreshProductStock() {
 
 // Auto-refresh vouchers every 30 seconds
 let voucherRefreshInterval: number | null = null
-
-// Derived payment computeds (avoid circular deps)
-const finalPrice = computed(() => {
-  const basePrice = subtotal.value - discountAmount.value
-  const shipping = orderType.value === 'delivery' ? shippingFee.value : 0
-  return basePrice + shipping
-})
-
-const totalReceived = computed(() => (paymentForm.value?.cashReceived || 0) + (paymentForm.value?.transferReceived || 0))
-const change = computed(() => totalReceived.value - finalPrice.value)
-const paymentMethod = computed({
-  get: () => paymentForm.value.method,
-  set: (value: 'cash' | 'transfer' | 'both') => {
-    paymentForm.value.method = value
-  },
-})
-const canConfirmOrder = computed(() => {
-  if (!currentOrder.value?.items.length || finalPrice.value <= 0) return false
-  if (orderType.value === 'delivery') {
-    if (selectedCustomer.value && !selectedCustomer.value.address) return false
-    if (isWalkIn.value) {
-      const wl = walkInLocation.value
-      if (!wl.thanhPho || !wl.quan || !wl.phuong || !wl.diaChiCuThe) return false
-    }
-  }
-  if (paymentForm.value.method === 'cash') return (paymentForm.value.cashReceived || 0) >= finalPrice.value
-  if (paymentForm.value.method === 'transfer') return (paymentForm.value.transferReceived || 0) >= finalPrice.value
-  if (paymentForm.value.method === 'both') return totalReceived.value >= finalPrice.value
-  return true
-})
 
 // Actions that depend on finalPrice
 const handlePaymentMethodChange = async (value: string) => {

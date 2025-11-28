@@ -1802,15 +1802,9 @@ const formatDate = (dateString: string) => {
  */
 const checkAddressChangeStatus = () => {
   addressAlreadyChanged.value = false
-
-  console.log('[AddressCheck] Starting check...')
-  console.log('[AddressCheck] invoice.thongTinDonHangs:', invoice.value?.thongTinDonHangs)
-  console.log('[AddressCheck] Current highest priority status:', getHighestPriorityStatusFromInvoice())
-
   // Check 1: Order status restrictions - cannot change address if Cancelled (id=6) or Completed (id=7)
   const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
   if (currentStatusText === 'Đã huỷ' || currentStatusText === 'Hoàn thành') {
-    console.log('[AddressCheck] ✗ Order is in final status (Cancelled or Completed), address changes not allowed')
     addressAlreadyChanged.value = true
     return
   }
@@ -1818,27 +1812,18 @@ const checkAddressChangeStatus = () => {
   // Check 2: Check invoice.thongTinDonHangs if available
   // Look for tenTrangThaiDonHang field containing "Thay đổi địa chỉ giao hàng"
   if (invoice.value?.thongTinDonHangs && Array.isArray(invoice.value.thongTinDonHangs)) {
-    console.log('[AddressCheck] Found thongTinDonHangs, checking...')
-
     // Check each item for address change status
     for (let i = 0; i < invoice.value.thongTinDonHangs.length; i++) {
       const item = invoice.value.thongTinDonHangs[i]
       const statusName = item.tenTrangThaiDonHang || ''
       const statusId = item.idTrangThaiDonHang?.id
-
-      console.log(`[AddressCheck] Item ${i}: statusName="${statusName}", statusId=${statusId}`)
-
       // Check if status is address change (either by id=8 or by name)
       if (statusId === 8 || statusName === 'Thay đổi địa chỉ giao hàng' || statusName.includes('Thay đổi địa chỉ')) {
-        console.log('[AddressCheck] ✓ Address change detected!', { statusId, statusName })
         addressAlreadyChanged.value = true
         return
       }
     }
-    console.log('[AddressCheck] ✗ No address change found in thongTinDonHangs')
   }
-
-  console.log('[AddressCheck] Final result:', addressAlreadyChanged.value ? '✓ DISABLED' : '✗ ENABLED')
 }
 
 const formatCurrency = (amount: number) => {

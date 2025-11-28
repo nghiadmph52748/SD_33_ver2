@@ -4,8 +4,8 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Generated;
-import org.hibernate.generator.EventType;
 import org.hibernate.annotations.Nationalized;
+import org.hibernate.generator.EventType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,13 +24,14 @@ import lombok.Setter;
 @Entity
 @Table(name = "phieu_giam_gia_ca_nhan")
 public class PhieuGiamGiaCaNhan {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_khach_hang", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "id_khach_hang", nullable = true)
     private KhachHang idKhachHang;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

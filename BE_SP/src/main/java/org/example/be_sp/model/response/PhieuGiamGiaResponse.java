@@ -3,6 +3,7 @@ package org.example.be_sp.model.response;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 import org.example.be_sp.entity.PhieuGiamGia;
 
@@ -45,7 +46,8 @@ public class PhieuGiamGiaResponse {
         this.idKhachHang = (d.getPhieuGiamGiaCaNhans() != null && !d.getPhieuGiamGiaCaNhans().isEmpty())
                 ? d.getPhieuGiamGiaCaNhans().stream()
                         .filter(p -> !Boolean.TRUE.equals(p.getDeleted()))
-                        .map(p -> p.getIdKhachHang().getId())
+                        .map(p -> p.getIdKhachHang() != null ? p.getIdKhachHang().getId() : null)
+                        .filter(Objects::nonNull)
                         .toList()
                 : List.of();
         this.hoaDonToiThieu = d.getHoaDonToiThieu();

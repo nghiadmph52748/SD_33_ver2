@@ -464,7 +464,11 @@ public class HoaDonService {
         // ✅ VALIDATE & DEDUCT INVENTORY when status changes to "Đã xác nhận" (idTrangThaiDonHang = 2)
         if (request.getIdTrangThaiDonHang() != null && request.getIdTrangThaiDonHang() == 2) {
             // Status is changing to "Đã xác nhận" - validate and deduct inventory
-            validateAndDeductInventory(saved);
+            // Only deduct for online orders (not counter sales)
+            if (saved.getGiaoHang() != null && saved.getGiaoHang() && 
+                (saved.getGhiChu() == null || !saved.getGhiChu().contains("Bán hàng tại quầy"))) {
+                validateAndDeductInventory(saved);
+            }
         }
 
         // ✅ RESTORE INVENTORY when status changes to "Đã hủy" (idTrangThaiDonHang = 6)
@@ -1777,7 +1781,6 @@ public class HoaDonService {
         BigDecimal updatedTotal = originalTotal;
         BigDecimal recordedRefundAmount = BigDecimal.ZERO;
         boolean customerPaidFullBeforeChange = false;
-        BigDecimal updatedTotal = BigDecimal.ZERO;
 
         // Kiểm tra xem đơn hàng đã được thay đổi địa chỉ giao hàng trước đây chưa
         // Nếu có record ThongTinDonHang với idTrangThaiDonHang = 8 thì không cho phép thay đổi lần thứ 2

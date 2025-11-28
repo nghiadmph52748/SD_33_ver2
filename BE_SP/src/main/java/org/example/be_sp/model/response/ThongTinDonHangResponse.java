@@ -13,6 +13,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ThongTinDonHangResponse {
+
     private Integer id;
     private String maDonHang;
     private String tenTrangThaiDonHang;
@@ -20,23 +21,23 @@ public class ThongTinDonHangResponse {
     private LocalDateTime thoiGian;
     private String ghiChu;
     private Boolean deleted;
-    
+
     // Thông tin từ hoa_don
     private LocalDateTime ngayTao;
     private LocalDateTime ngayThanhToan;
     private String tenNhanVien;
     private String maNhanVien;
-    
+
     // Thông tin khách hàng từ hoa_don
     private String tenKhachHang;
     private String maKhachHang;
     private String emailKhachHang;
     private String soDienThoaiKhachHang;
     private String diaChiKhachHang;
-    
+
     // Tổng tiền hàng tính từ hoa_don_chi_tiet
     private BigDecimal tongTienHang;
-    
+
     // Danh sách sản phẩm đã bán từ hoa_don_chi_tiet
     private List<SanPhamDaBanResponse> danhSachSanPhamDaBan;
 
@@ -44,32 +45,32 @@ public class ThongTinDonHangResponse {
         if (data == null) {
             return;
         }
-        
+
         this.id = data.getId();
         this.maThongTinDonHang = data.getMaThongTinDonHang();
         this.thoiGian = data.getThoiGian();
         this.ghiChu = data.getGhiChu();
         this.deleted = data.getDeleted();
-        
+
         // Lấy thông tin từ hoa_don
         if (data.getIdHoaDon() != null) {
             this.maDonHang = data.getIdHoaDon().getMaHoaDon();
             this.ngayTao = data.getIdHoaDon().getNgayTao();
             this.ngayThanhToan = data.getIdHoaDon().getNgayThanhToan();
-            
+
             // Ưu tiên lấy từ trường trực tiếp, fallback về quan hệ
             if (data.getIdHoaDon().getTenNhanVien() != null && !data.getIdHoaDon().getTenNhanVien().trim().isEmpty()) {
                 this.tenNhanVien = data.getIdHoaDon().getTenNhanVien();
             } else if (data.getIdHoaDon().getIdNhanVien() != null) {
                 this.tenNhanVien = data.getIdHoaDon().getIdNhanVien().getTenNhanVien();
             }
-            
+
             if (data.getIdHoaDon().getMaNhanVien() != null && !data.getIdHoaDon().getMaNhanVien().trim().isEmpty()) {
                 this.maNhanVien = data.getIdHoaDon().getMaNhanVien();
             } else if (data.getIdHoaDon().getIdNhanVien() != null) {
                 this.maNhanVien = data.getIdHoaDon().getIdNhanVien().getMaNhanVien();
             }
-            
+
             // Lấy thông tin khách hàng từ hoa_don
             if (data.getIdHoaDon().getIdKhachHang() != null) {
                 this.tenKhachHang = data.getIdHoaDon().getIdKhachHang().getTenKhachHang();
@@ -77,25 +78,31 @@ public class ThongTinDonHangResponse {
                 this.emailKhachHang = data.getIdHoaDon().getIdKhachHang().getEmail();
                 this.soDienThoaiKhachHang = data.getIdHoaDon().getIdKhachHang().getSoDienThoai();
                 this.diaChiKhachHang = data.getIdHoaDon().getIdKhachHang().getDiaChi();
+            } else {
+                this.tenKhachHang = data.getIdHoaDon().getTenNguoiNhan();
+                this.maKhachHang = null;
+                this.emailKhachHang = data.getIdHoaDon().getEmailNguoiNhan();
+                this.soDienThoaiKhachHang = data.getIdHoaDon().getSoDienThoaiNguoiNhan();
+                this.diaChiKhachHang = data.getIdHoaDon().getDiaChiNguoiNhan();
             }
-            
+
             // Tính tổng tiền hàng từ hoa_don_chi_tiet
             this.tongTienHang = calculateTongTienHang(data.getIdHoaDon());
-            
+
             // Lấy danh sách sản phẩm đã bán từ hoa_don_chi_tiet
             this.danhSachSanPhamDaBan = data.getIdHoaDon().getHoaDonChiTiets()
-                .stream()
-                .filter(item -> item != null && !item.getDeleted())
-                .map(SanPhamDaBanResponse::new)
-                .collect(Collectors.toList());
+                    .stream()
+                    .filter(item -> item != null && !item.getDeleted())
+                    .map(SanPhamDaBanResponse::new)
+                    .collect(Collectors.toList());
         }
-        
+
         // Lấy thông tin trạng thái đơn hàng
         if (data.getIdTrangThaiDonHang() != null) {
             this.tenTrangThaiDonHang = data.getIdTrangThaiDonHang().getTenTrangThaiDonHang();
         }
     }
-    
+
     /**
      * Tính tổng tiền hàng từ các chi tiết hóa đơn
      */
@@ -103,10 +110,10 @@ public class ThongTinDonHangResponse {
         if (hoaDon.getHoaDonChiTiets() == null || hoaDon.getHoaDonChiTiets().isEmpty()) {
             return BigDecimal.ZERO;
         }
-        
+
         return hoaDon.getHoaDonChiTiets().stream()
-            .filter(item -> item.getThanhTien() != null && !item.getDeleted())
-            .map(item -> item.getThanhTien())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .filter(item -> item.getThanhTien() != null && !item.getDeleted())
+                .map(item -> item.getThanhTien())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

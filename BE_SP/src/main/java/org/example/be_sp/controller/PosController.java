@@ -30,7 +30,7 @@ public class PosController {
     @GetMapping("/coupons")
     public ResponseObject<?> getActiveCoupons() {
         try {
-            return new ResponseObject<>(true, phieuGiamGiaService.getAll(), "Lấy danh sách phiếu giảm giá thành công");
+            return new ResponseObject<>(true, phieuGiamGiaService.getPosActiveCoupons(), "Lấy danh sách phiếu giảm giá thành công");
         } catch (Exception e) {
             return new ResponseObject<>(false, null, "Lỗi khi lấy danh sách phiếu giảm giá: " + e.getMessage());
         }

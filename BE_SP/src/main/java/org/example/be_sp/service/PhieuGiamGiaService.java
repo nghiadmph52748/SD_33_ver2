@@ -3,6 +3,7 @@ package org.example.be_sp.service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.NhanVien;
@@ -68,6 +69,35 @@ public class PhieuGiamGiaService {
                     return response;
                 })
                 .toList());
+    }
+
+    public List<PhieuGiamGiaResponse> getPosActiveCoupons() {
+        LocalDateTime now = LocalDateTime.now();
+        List<PhieuGiamGiaResponse> result = new ArrayList<>();
+
+        phieuGiamGiaRepository.findAll().stream()
+                .filter(pgg -> !Boolean.TRUE.equals(pgg.getFeatured()))
+                .filter(pgg -> isCouponAvailable(pgg, now))
+                .forEach(pgg -> {
+                    PhieuGiamGiaResponse response = new PhieuGiamGiaResponse(pgg);
+                    Long usageCount = phieuGiamGiaRepository.countUsageByPhieuGiamGiaId(pgg.getId());
+                    response.setSoLuongDaDung(usageCount != null ? usageCount.intValue() : 0);
+                    result.add(response);
+                });
+
+        phieuGiamGiaCaNhanRepository.findAllByIdKhachHangIsNullAndDeletedAndTrangThai(false, true)
+                .stream()
+                .map(PhieuGiamGiaCaNhan::getIdPhieuGiamGia)
+                .filter(Objects::nonNull)
+                .filter(pgg -> isCouponAvailable(pgg, now))
+                .forEach(pgg -> {
+                    PhieuGiamGiaResponse response = new PhieuGiamGiaResponse(pgg, false);
+                    Long usageCount = phieuGiamGiaRepository.countUsageByPhieuGiamGiaId(pgg.getId());
+                    response.setSoLuongDaDung(usageCount != null ? usageCount.intValue() : 0);
+                    result.add(response);
+                });
+
+        return result;
     }
 
     public List<PhieuGiamGiaResponse> getCouponsForCustomer(Integer idKhachHang) {
@@ -183,7 +213,8 @@ public class PhieuGiamGiaService {
         // Snapshot old customer IDs for featured coupons
         List<Integer> oldCustomerIds = phieuGiamGiaCaNhanRepository.findByIdPhieuGiamGiaId(id).stream()
                 .filter(p -> !Boolean.TRUE.equals(p.getDeleted()))
-                .map(p -> p.getIdKhachHang().getId())
+                .map(p -> p.getIdKhachHang() != null ? p.getIdKhachHang().getId() : null)
+                .filter(Objects::nonNull)
                 .sorted()
                 .toList();
 
@@ -403,6 +434,35 @@ public class PhieuGiamGiaService {
             log.error("Failed to log history for coupon {}", idPhieuGiamGia, e);
             // Don't throw - history logging should not break main flow
         }
+    }
+
+    private boolean isCouponAvailable(PhieuGiamGia coupon, LocalDateTime now) {
+        if (coupon == null) {
+            return false;
+        }
+
+        if (!Boolean.TRUE.equals(coupon.getTrangThai())) {
+            return false;
+        }
+
+        if (Boolean.TRUE.equals(coupon.getDeleted())) {
+            return false;
+        }
+
+        Integer remaining = coupon.getSoLuongDung();
+        if (remaining == null || remaining <= 0) {
+            return false;
+        }
+
+        if (coupon.getNgayBatDau() != null && coupon.getNgayBatDau().isAfter(now)) {
+            return false;
+        }
+
+        if (coupon.getNgayKetThuc() != null && coupon.getNgayKetThuc().isBefore(now)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

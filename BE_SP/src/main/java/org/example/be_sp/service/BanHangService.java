@@ -80,6 +80,12 @@ public class BanHangService {
     @Autowired
     QRSessionService qrSessionService;
 
+    private BigDecimal normalizeCurrency(BigDecimal amount) {
+        BigDecimal nonNullAmount = amount != null ? amount : BigDecimal.ZERO;
+        BigDecimal nonNegative = nonNullAmount.max(BigDecimal.ZERO);
+        return nonNegative.setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
     /**
      * Helper method to create timeline entry automatically
      */
@@ -305,22 +311,24 @@ public class BanHangService {
             for (HoaDonChiTiet ct : chiTiets) {
                 tongTienHang = tongTienHang.add(ct.getThanhTien() != null ? ct.getThanhTien() : BigDecimal.ZERO);
             }
-            hoaDon.setTongTien(tongTienHang);
+            BigDecimal normalizedTongTien = normalizeCurrency(tongTienHang);
+            hoaDon.setTongTien(normalizedTongTien);
 
             // Tính tongTienSauGiam: nếu có voucher thì áp dụng, nếu không thì = tongTienHang
             if (hoaDon.getIdPhieuGiamGia() != null && hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia() != null) {
                 BigDecimal tongTienSauGiam = tongTienHang.multiply(
                         BigDecimal.valueOf((BigDecimal.valueOf(100).subtract(hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia()).doubleValue()) / 100.0));
-                hoaDon.setTongTienSauGiam(tongTienSauGiam);
+                hoaDon.setTongTienSauGiam(normalizeCurrency(tongTienSauGiam));
             } else {
                 // Nếu không có voucher, tổng sau giảm = tổng hàng
-                hoaDon.setTongTienSauGiam(tongTienHang);
+                hoaDon.setTongTienSauGiam(normalizedTongTien);
             }
         } else {
-            hoaDon.setTongTien(BigDecimal.ZERO);
-            hoaDon.setTongTienSauGiam(BigDecimal.ZERO);
-            hoaDon.setSoTienDaThanhToan(BigDecimal.ZERO);
-            hoaDon.setSoTienConLai(BigDecimal.ZERO);
+            BigDecimal zeroValue = normalizeCurrency(BigDecimal.ZERO);
+            hoaDon.setTongTien(zeroValue);
+            hoaDon.setTongTienSauGiam(zeroValue);
+            hoaDon.setSoTienDaThanhToan(zeroValue);
+            hoaDon.setSoTienConLai(zeroValue);
         }
 
         // Nếu không còn tổng, xoá các tham chiếu voucher để tránh áp dụng giảm giá ảo
@@ -513,10 +521,10 @@ public class BanHangService {
 
         hoaDon.setIdPhieuGiamGia(pgg);
         if (pgg.getLoaiPhieuGiamGia()) {
-            hoaDon.setTongTienSauGiam(hoaDon.getTongTien().subtract(pgg.getGiaTriGiamGia()));
+            hoaDon.setTongTienSauGiam(normalizeCurrency(hoaDon.getTongTien().subtract(pgg.getGiaTriGiamGia())));
         } else {
-            hoaDon.setTongTienSauGiam(hoaDon.getTongTien().multiply(
-                    BigDecimal.valueOf((BigDecimal.valueOf(100).subtract(pgg.getGiaTriGiamGia()).doubleValue()) / 100.0)));
+            hoaDon.setTongTienSauGiam(normalizeCurrency(hoaDon.getTongTien().multiply(
+                    BigDecimal.valueOf((BigDecimal.valueOf(100).subtract(pgg.getGiaTriGiamGia()).doubleValue()) / 100.0))));
         }
         hoaDon.setUpdateAt(LocalDateTime.now());
         hoaDon.setUpdateBy(idNhanVien);
@@ -596,20 +604,25 @@ public class BanHangService {
             PhieuGiamGia pgg = pggRepository.findById(request.getIdPhieuGiamGia()).orElseThrow();
 
             // Handle personal vouchers (featured = true)
-            if (pgg.getFeatured() && request.getIdKhachHang() != null) {
-                // Mark personal voucher as used (trangThai = false) so customer can't use it
-                // again
-                PhieuGiamGiaCaNhan pggcn = pggcnRepository.findByIdKhachHangAndIdPhieuGiamGiaAndTrangThaiAndDeleted(
-                        khRepository.findById(request.getIdKhachHang()).orElseThrow(),
-                        pggRepository.findById(request.getIdPhieuGiamGia()).orElseThrow(),
-                        true, // Looking for unused voucher (trangThai = true)
-                        false);
+            if (pgg.getFeatured()) {
+                PhieuGiamGiaCaNhan pggcn;
+                if (request.getIdKhachHang() != null) {
+                    pggcn = pggcnRepository.findByIdKhachHangAndIdPhieuGiamGiaAndTrangThaiAndDeleted(
+                            khRepository.findById(request.getIdKhachHang()).orElseThrow(),
+                            pgg,
+                            true,
+                            false);
+                } else {
+                    pggcn = pggcnRepository.findFirstByIdKhachHangIsNullAndIdPhieuGiamGiaAndTrangThaiAndDeleted(
+                            pgg,
+                            true,
+                            false);
+                }
+
                 if (pggcn != null) {
-                    // Mark as used by setting trangThai = false
                     pggcn.setTrangThai(false);
                     pggcnRepository.save(pggcn);
                 } else {
-                    // This shouldn't happen if validation is correct, but log for debugging
                     throw new ApiException("Phiếu giảm giá cá nhân này không tìm thấy hoặc đã được sử dụng", "400");
                 }
                 // NOTE: Personal vouchers don't decrease shared soLuongDung
@@ -667,15 +680,21 @@ public class BanHangService {
             return false;
         }
 
-        // If personal voucher (featured=true) and customer is specified, check
-        // customer-specific status
-        if (pgg.getFeatured() && idKhachHang != null) {
-            KhachHang khachHang = khRepository.findById(idKhachHang).orElseThrow();
-            PhieuGiamGiaCaNhan pggcn = pggcnRepository.findByIdKhachHangAndIdPhieuGiamGiaAndTrangThaiAndDeleted(
-                    khachHang, pgg, true, false);
-            // If no record found or trangThai=false, customer cannot use this voucher
-            if (pggcn == null || !pggcn.getTrangThai()) {
-                return false;
+        // If personal voucher (featured=true), ensure usable for the requesting party
+        if (pgg.getFeatured()) {
+            if (idKhachHang != null) {
+                KhachHang khachHang = khRepository.findById(idKhachHang).orElseThrow();
+                PhieuGiamGiaCaNhan pggcn = pggcnRepository.findByIdKhachHangAndIdPhieuGiamGiaAndTrangThaiAndDeleted(
+                        khachHang, pgg, true, false);
+                if (pggcn == null || !pggcn.getTrangThai()) {
+                    return false;
+                }
+            } else {
+                PhieuGiamGiaCaNhan pggcn = pggcnRepository.findFirstByIdKhachHangIsNullAndIdPhieuGiamGiaAndTrangThaiAndDeleted(
+                        pgg, true, false);
+                if (pggcn == null || !Boolean.TRUE.equals(pggcn.getTrangThai())) {
+                    return false;
+                }
             }
         }
 
