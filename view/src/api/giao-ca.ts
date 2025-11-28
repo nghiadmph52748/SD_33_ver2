@@ -126,3 +126,8 @@ export function thongKeGiaoCa(params?: { ngayBatDau?: string; ngayKetThuc?: stri
 export function ketThucGiaoCa(id: number, data?: Partial<ApiGiaoCa>) {
   return axios.put<ApiGiaoCa>(`/api/giao-ca/${id}/ket-thuc`, data)
 }
+
+/** Xác nhận người nhận ca */
+export function xacNhanGiaoCa(id: number, data?: { soTienNhanThucTe?: number; trangThaiXacNhan?: string; ghiChuXacNhan?: string }) {
+  return axios.put(`/api/giao-ca/xac-nhan/${id}`, data)
+}

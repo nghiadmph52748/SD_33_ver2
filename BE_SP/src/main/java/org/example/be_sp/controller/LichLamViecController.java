@@ -36,6 +36,31 @@ public class LichLamViecController {
         return ResponseEntity.ok(lichLamViecRepository.findAll());
     }
 
+    // 🔎 Tìm kiếm lịch làm việc theo ngày / nhân viên (endpoint riêng để tránh xung đột với /{id})
+    @GetMapping("/search")
+    public ResponseEntity<List<LichLamViec>> search(@RequestParam(required = false) String ngayLamViec,
+                                                    @RequestParam(required = false) Integer nhanVienId) {
+        List<LichLamViec> all = lichLamViecRepository.findAll();
+
+        java.util.stream.Stream<LichLamViec> stream = all.stream();
+
+        if (ngayLamViec != null && !ngayLamViec.isBlank()) {
+            try {
+                java.time.LocalDate d = java.time.LocalDate.parse(ngayLamViec);
+                stream = stream.filter(l -> d.equals(l.getNgayLamViec()));
+            } catch (Exception e) {
+                // ignore parse errors — no date filter applied
+            }
+        }
+
+        if (nhanVienId != null) {
+            stream = stream.filter(l -> l.getNhanVien() != null && l.getNhanVien().getId() != null && l.getNhanVien().getId().intValue() == nhanVienId.intValue());
+        }
+
+        java.util.List<LichLamViec> filtered = stream.toList();
+        return ResponseEntity.ok(filtered);
+    }
+
     // 🟢 Lấy lịch làm việc theo id
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id) {

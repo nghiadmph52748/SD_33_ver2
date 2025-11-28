@@ -125,18 +125,26 @@ public class GiaoCaService {
         GiaoCa giaoCa = getById(id);
 
         if (req.getNguoiGiaoId() == null) throw new IllegalArgumentException("nguoiGiaoId must not be null");
-        if (req.getNguoiNhanId() == null) throw new IllegalArgumentException("nguoiNhanId must not be null");
         if (req.getCaLamViecId() == null) throw new IllegalArgumentException("caLamViecId must not be null");
 
         NhanVien nguoiGiao = nhanVienRepository.findById(req.getNguoiGiaoId())
             .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên giao ca"));
-        NhanVien nguoiNhan = nhanVienRepository.findById(req.getNguoiNhanId())
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên nhận ca"));
+
+        NhanVien nguoiNhan = null;
+        if (req.getNguoiNhanId() != null) {
+            nguoiNhan = nhanVienRepository.findById(req.getNguoiNhanId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên nhận ca"));
+        }
+
         CaLamViec caLamViec = caLamViecRepository.findById(req.getCaLamViecId())
             .orElseThrow(() -> new RuntimeException("Không tìm thấy ca làm việc"));
 
         giaoCa.setNguoiGiao(nguoiGiao);
-        giaoCa.setNguoiNhan(nguoiNhan);
+        // Nếu req.getNguoiNhanId() != null thì cập nhật người nhận,
+        // nếu bằng null thì giữ nguyên người nhận hiện tại (không gán null)
+        if (req.getNguoiNhanId() != null) {
+            giaoCa.setNguoiNhan(nguoiNhan);
+        }
         giaoCa.setCaLamViec(caLamViec);
         giaoCa.setThoiGianGiaoCa(req.getThoiGianGiaoCa());
         giaoCa.setTongTienBanDau(req.getTongTienBanDau());

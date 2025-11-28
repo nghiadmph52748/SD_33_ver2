@@ -2,47 +2,7 @@
   <div class="giao-ca-container">
     <ConfirmModal ref="confirmModal" />
 
-    <div v-if="lastShift" class="previous-shift-card">
-      <div class="card-header">
-        <div class="header-icon-wrapper amber">
-          <icon-calendar />
-        </div>
-        <div class="header-title">
-          <h3>Ca trước (Bàn giao)</h3>
-          <span class="subtitle">Thông tin từ ca làm việc trước</span>
-        </div>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-icon">
-            <icon-user />
-          </div>
-          <div class="stat-content">
-            <span class="stat-label">Người giao ca</span>
-            <span class="stat-value">{{ lastShift.nguoiGiao?.tenNhanVien || lastShift.nguoiGiao?.name || 'N/A' }}</span>
-          </div>
-        </div>
-        <div class="stat-item highlight">
-          <div class="stat-icon">
-            <icon-star />
-          </div>
-          <div class="stat-content">
-            <span class="stat-label">Tiền mặt cuối ca</span>
-            <span class="stat-value">{{ formatCurrency(lastShift.tongTienCuoiCa) }}</span>
-          </div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-icon">
-            <icon-file />
-          </div>
-          <div class="stat-content">
-            <span class="stat-label">Đơn hàng chờ xử lý</span>
-            <span class="stat-value">{{ lastShift.soDonChoXuLy || 0 }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <!-- Start shift modal / card when no active shift -->
     <div v-if="!activeShift" class="start-shift-card">
       <div class="card-header">
         <div class="header-icon-wrapper blue">
@@ -50,24 +10,49 @@
         </div>
         <div class="header-title">
           <h3>Bắt đầu ca mới</h3>
-          <span class="subtitle">Nhập số tiền mặt ban đầu để bắt đầu ca làm việc</span>
+          <span class="subtitle">Nhập thông tin để bắt đầu ca làm việc</span>
         </div>
       </div>
 
       <div class="form-section">
-        <a-form-item 
-          label="Số tiền mặt ban đầu (VND)" 
-          class="cash-input-item"
+        <div class="info-item" style="margin-bottom: 12px;">
+          <span class="item-label"><icon-user /> Người bắt đầu ca</span>
+          <span class="item-value">{{ userStore.name || userStore.tenNhanVien || 'N/A' }}</span>
+        </div>
+
+        <div class="info-item" style="margin-bottom: 12px;">
+          <span class="item-label"><icon-clock-circle /> Thời gian bắt đầu</span>
+          <span class="item-value">{{ formatDate(currentTime) }}</span>
+        </div>
+
+
+          <a-form-item label="Ca làm việc" class="shift-select-item">
+            <a-select v-model="selectedCaId" placeholder="Chọn ca (chỉ ca admin phân)" size="large" :filterable="false">
+              <template v-if="scheduledList.length">
+                <a-select-option v-for="s in scheduledList" :key="'sch-' + s.id" :value="s.caLamViec?.id">
+                  {{ (s.caLamViec?.tenCa || s.caLamViec?.ten || ('Ca #' + s.caLamViec?.id)) + ' — ' + (formatDate(s.ngayLamViec) || '') }}
+                </a-select-option>
+              </template>
+              <template v-else>
+                <a-select-option v-for="c in caLamViecList" :key="c && c.id" :value="c && c.id">
+                  {{ (c && (c.tenCa || c.ten || c.name)) || ('Ca #' + (c && c.id)) }} (ID: {{ c && c.id }})
+                </a-select-option>
+              </template>
+            </a-select>
+            <div style="margin-top: 8px; color: #64748b; font-size: 12px">ID ca làm việc: <strong>{{ selectedCaId || '-' }}</strong></div>
+          </a-form-item>
+
+        <a-form-item label="Số tiền mặt ban đầu (VND)" class="cash-input-item"
           :validate-status="validationErrors.initialCash ? 'error' : undefined"
           :help="validationErrors.initialCash || undefined"
         >
-          <a-input-number 
-            v-model="initialCash" 
-            :min="0" 
+          <a-input-number
+            v-model="initialCash"
+            :min="0"
             :max="1000000000"
-            :precision="0" 
-            placeholder="Nhập số tiền mặt" 
-            size="large" 
+            :precision="0"
+            placeholder="Nhập số tiền mặt (nếu có)"
+            size="large"
             class="cash-input"
             @blur="validationErrors.initialCash = validateInitialCash(initialCash)"
             @change="validationErrors.initialCash = validateInitialCash(initialCash)"
@@ -76,6 +61,10 @@
               <icon-star />
             </template>
           </a-input-number>
+        </a-form-item>
+
+        <a-form-item label="Ghi chú đầu ca">
+          <a-textarea v-model="ghiChu" placeholder="Ghi chú (ví dụ: bàn giao quỹ, lưu ý...)" rows="3" />
         </a-form-item>
 
         <div class="button-wrapper">
@@ -89,6 +78,7 @@
       </div>
     </div>
 
+    <!-- Active shift card / end shift modal -->
     <div v-else class="active-shift-card">
       <div class="status-badge active">
         <icon-check-circle-fill />
@@ -162,23 +152,137 @@
         </div>
       </div>
 
-      <a-button type="primary" status="danger" size="large" :loading="loading" @click="endShift" class="btn-end" block>
+      <a-button type="primary" status="danger" size="large" :loading="loading" @click="openEndShiftModal" class="btn-end" block>
         <template #icon>
           <icon-close-circle />
         </template>
         {{ loading ? 'Đang xử lý...' : 'Kết Thúc Ca' }}
       </a-button>
     </div>
+
+    <!-- End shift modal -->
+    <ConfirmReceiveShift ref="confirmReceive" />
+    <div style="margin-top:12px;">
+      <a-button v-if="activeShift" size="small" @click="openConfirmReceive">Mở form xác nhận nhận ca (test)</a-button>
+    </div>
+    <a-modal v-model:visible="showEndShiftModal" title="Kết Thúc Ca Làm Việc" :width="800" :closable="!loading" @ok="finalizeEndShift">
+      <div class="end-shift-form">
+        <!-- Doanh thu summary -->
+        <div class="form-section">
+          <h4 class="section-title">Thống kê doanh thu</h4>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <span class="label">Tổng doanh thu</span>
+              <span class="value highlight">{{ formatCurrency(invoiceTotal) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Tổng tiền mặt (ban đầu)</span>
+              <span class="value">{{ formatCurrency(activeShift?.tongTienBanDau || 0) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Tổng tiền mặt dự kiến</span>
+              <span class="value">{{ formatCurrency((activeShift?.tongTienBanDau || 0) + invoiceTotal) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Số tiền thực đếm (input) -->
+        <div class="form-section">
+          <h4 class="section-title">Kiểm kê tiền mặt</h4>
+          <a-form-item label="Số tiền thực đếm (VND)" :validate-status="validationErrors.actualCash ? 'error' : undefined" :help="validationErrors.actualCash">
+            <a-input-number
+              v-model="actualCash"
+              :min="0"
+              :max="10000000000"
+              :precision="0"
+              placeholder="Nhập số tiền thực đếm"
+              size="large"
+            />
+          </a-form-item>
+
+          <div class="discrepancy-card" :class="{ positive: discrepancy > 0, negative: discrepancy < 0 }">
+            <span class="label">Tiền lệch:</span>
+            <span class="value">{{ formatCurrency(discrepancy) }}</span>
+            <span class="status" v-if="discrepancy > 0" style="color: #10b981">Thừa</span>
+            <span class="status" v-else-if="discrepancy < 0" style="color: #ef4444">Thiếu</span>
+            <span class="status" v-else style="color: #6b7280">Cân bằng</span>
+          </div>
+        </div>
+
+        <!-- Ghi chú kết ca -->
+        <div class="form-section">
+          <a-form-item label="Ghi chú kết ca">
+            <a-textarea v-model="endNotes" placeholder="Ghi chú (ví dụ: tình hình quỹ, phát sinh...)" rows="3" />
+          </a-form-item>
+        </div>
+
+        <!-- Người nhận ca tiếp theo (có thể để trống) -->
+        <div class="form-section">
+          <a-form-item label="Người nhận ca tiếp theo" :validate-status="validationErrors.nextReceiver ? 'error' : undefined" :help="validationErrors.nextReceiver">
+            <a-select v-model="nextReceiverId" placeholder="Chọn nhân viên nhận ca tiếp (hoặc bỏ qua)" size="large" :loading="loadingEmployees" allow-clear>
+              <a-select-option :value="null">Chưa có người nhận</a-select-option>
+              <a-select-option v-for="emp in employeeList" :key="emp.id" :value="emp.id">
+                {{ emp.tenNhanVien || emp.name || emp.ten || ('NV #' + emp.id) }} (ID: {{ emp.id }})
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+        </div>
+
+        <!-- Thời gian kết ca -->
+        <div class="form-section">
+          <div class="info-item">
+            <span class="item-label"><icon-clock-circle /> Thời gian kết ca</span>
+            <span class="item-value">{{ formatDate(endTime) }}</span>
+          </div>
+        </div>
+
+        <!-- Danh sách hóa đơn trong ca -->
+        <div class="form-section">
+          <h4 class="section-title">Danh sách hóa đơn trong ca ({{ invoiceList.length }})</h4>
+          <a-table
+            :columns="invoiceColumns"
+            :data="invoiceList"
+            :pagination="false"
+            :bordered="false"
+            size="small"
+            style="font-size: 12px"
+          >
+            <template #columns>
+              <a-table-column title="ID" data-index="id" :width="60" />
+              <a-table-column title="Số tiền" data-index="tongTien" :width="120">
+                <template #cell="{ record }">
+                  {{ formatCurrency(record.tongTienSauGiam ?? record.tongTien ?? 0) }}
+                </template>
+              </a-table-column>
+              <a-table-column title="Thời gian" data-index="ngayTao" :width="150">
+                <template #cell="{ record }">
+                  {{ formatDate(record.ngayTao || record.createAt) }}
+                </template>
+              </a-table-column>
+              <a-table-column title="Mô tả" data-index="mota" :ellipsis="true" />
+            </template>
+          </a-table>
+        </div>
+      </div>
+
+      <template #footer>
+        <a-button @click="showEndShiftModal = false" :disabled="loading">Hủy</a-button>
+        <a-button type="primary" :loading="loading" @click="finalizeEndShift">Xác Nhận Kết Ca</a-button>
+      </template>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { themGiaoCa, suaGiaoCa, getGiaoCa } from '@/api/giao-ca'
 import { fetchHoaDonList } from '@/api/hoa-don'
 import { getCaLamViec } from '@/api/ca-lam-viec'
+import { timKiemLichLamViec } from '@/api/lich-lam-viec'
+import { layDanhSachNhanVien } from '@/api/nhan-vien'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import ConfirmReceiveShift from '@/components/ConfirmReceiveShift.vue'
 import { Message } from '@arco-design/web-vue'
 import useUser from '@/hooks/user'
 import { useRouter } from 'vue-router'
@@ -204,104 +308,49 @@ const userStore = useUserStore()
 const invoiceCount = ref(0)
 const invoiceTotal = ref(0)
 const invoiceIds = ref([])
+const invoiceList = ref([])
 const confirmModal = ref(null)
+const confirmReceive = ref(null)
 const { logout } = useUser()
 const router = useRouter()
+
+// Start shift form refs
+const caLamViecList = ref([])
+const selectedCaId = ref(null)
+const scheduledList = ref([]) // admin-assigned schedule entries for current user/day
+const ghiChu = ref('')
+const currentTime = ref('')
+
+// End shift modal refs
+const showEndShiftModal = ref(false)
+const actualCash = ref(0)
+const endNotes = ref('')
+const nextReceiverId = ref(null)
+const endTime = ref('')
+const employeeList = ref([])
+const loadingEmployees = ref(false)
 
 // Validation errors
 const validationErrors = ref({
   initialCash: '',
+  actualCash: '',
+  nextReceiver: '',
 })
 
-// Expose reload function to parent/navbar
-async function reloadShiftData() {
-  try {
-    const res = await getGiaoCa()
-    const list = res.data || res || []
-    const active = list.find((s) => {
-      const trangThaiCa = s.trangThaiCa || s.trangThai
-      return trangThaiCa === 'Đang làm' || (trangThaiCa !== 'Hoàn tất' && !s.thoiGianKetThuc)
-    })
-    if (active) {
-      activeShift.value = active
-      computeShiftSales(activeShift.value).catch((e) => console.warn(e))
-    }
-    const ended = list.filter((s) => {
-      const trangThaiCa = s.trangThaiCa || s.trangThai
-      return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
-    }).sort((a, b) => {
-      const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
-      const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
-      return dateB.getTime() - dateA.getTime()
-    })
-    if (ended.length) {
-      lastShift.value = ended[0]
-      if (lastShift.value.tongTienCuoiCa != null) initialCash.value = Number(lastShift.value.tongTienCuoiCa)
-    }
-  } catch (e) {
-    console.warn('Không tải lại danh sách giao ca', e)
-  }
-}
+// Computed
+const discrepancy = computed(() => {
+  const expected = (activeShift.value?.tongTienBanDau || 0) + invoiceTotal.value
+  return actualCash.value - expected
+})
 
-defineExpose({ reloadShiftData })
+const invoiceColumns = [
+  { title: 'ID', dataIndex: 'id', width: 60 },
+  { title: 'Số tiền', dataIndex: 'tongTien', width: 120 },
+  { title: 'Thời gian', dataIndex: 'ngayTao', width: 150 },
+  { title: 'Mô tả', dataIndex: 'mota', ellipsis: true },
+]
 
-function formatDate(d) {
-  if (!d) return '-'
-  try {
-    // Accept both 'T' and space as separator between date and time
-    let s = d
-    if (typeof s === 'string' && s.length >= 19 && s[10] === ' ') {
-      s = s.replace(' ', 'T')
-    }
-    return new Date(s).toLocaleString()
-  } catch (e) {
-    return d
-  }
-}
-
-async function computeShiftSales(shift) {
-  try {
-    const all = await fetchHoaDonList()
-    const list = all || []
-
-    // Determine shift start and end
-    const start = shift.thoiGianGiaoCa ? new Date(shift.thoiGianGiaoCa) : null
-    const end = shift.thoiGianKetThuc ? new Date(shift.thoiGianKetThuc) : new Date()
-
-    // Determine employee id who made sales during shift: prefer nguoiNhan or idNhanVien
-    const empId = (shift.nguoiNhan && shift.nguoiNhan.id) || shift.nguoiNhanId || shift.nguoiNhan?.id || userStore.id
-
-    const invoices = list.filter((inv) => {
-      try {
-        const created = inv.ngayTao ? new Date(inv.ngayTao) : inv.createAt ? new Date(inv.createAt) : null
-        if (!created) return false
-        // check employee
-        if (inv.createBy && empId && inv.createBy !== empId) return false
-        if (inv.idNhanVien && empId && inv.idNhanVien !== empId) return false
-        // check time window
-        if (start && end) {
-          return created >= start && created <= end
-        }
-        return true
-      } catch (e) {
-        return false
-      }
-    })
-
-    invoiceIds.value = invoices.map((i) => i.id)
-    invoiceCount.value = invoices.length
-    // sum payments: prefer tongTienSauGiam then tongTien then soTienDaThanhToan
-    invoiceTotal.value = invoices.reduce((acc, cur) => {
-      const v = cur.tongTienSauGiam ?? cur.tongTien ?? cur.soTienDaThanhToan ?? 0
-      return acc + Number(v || 0)
-    }, 0)
-  } catch (e) {
-    // ignore
-    // eslint-disable-next-line no-console
-    console.warn('Không tính được doanh thu ca', e)
-  }
-}
-
+// Helper functions
 function toLocalDateTimeString(date) {
   const pad = (n) => String(n).padStart(2, '0')
   const Y = date.getFullYear()
@@ -310,7 +359,6 @@ function toLocalDateTimeString(date) {
   const h = pad(date.getHours())
   const m = pad(date.getMinutes())
   const s = pad(date.getSeconds())
-  // Use space separator to match backend LocalDateTime parsing ("yyyy-MM-dd HH:mm:ss")
   return `${Y}-${M}-${D} ${h}:${m}:${s}`
 }
 
@@ -318,16 +366,11 @@ function normalizeToLocalDateTime(value) {
   if (!value) return toLocalDateTimeString(new Date())
   if (typeof value === 'string') {
     let s = value.trim()
-    // remove timezone Z
     if (s.endsWith('Z')) s = s.slice(0, -1)
-    // convert 'T' separator to space
     s = s.replace('T', ' ')
-    // remove milliseconds if present
     const dot = s.indexOf('.')
     if (dot !== -1) s = s.substring(0, dot)
-    // ensure length at least 19 -> 'YYYY-MM-DD HH:mm:ss'
     if (s.length >= 19) return s.substring(0, 19)
-    // fallback: try to parse and format
     const d = new Date(s)
     if (!Number.isNaN(d.getTime())) return toLocalDateTimeString(d)
     return toLocalDateTimeString(new Date())
@@ -340,12 +383,24 @@ function normalizeToLocalDateTime(value) {
   }
 }
 
+function formatDate(d) {
+  if (!d) return '-'
+  try {
+    let s = d
+    if (typeof s === 'string' && s.length >= 19 && s[10] === ' ') {
+      s = s.replace(' ', 'T')
+    }
+    return new Date(s).toLocaleString()
+  } catch (e) {
+    return d
+  }
+}
+
 function formatCurrency(n) {
   if (n == null) return '-'
   return new Intl.NumberFormat('vi-VN').format(n) + ' ₫'
 }
 
-// Validation functions
 function validateInitialCash(value) {
   if (value === null || value === undefined) {
     return 'Vui lòng nhập số tiền mặt ban đầu'
@@ -370,42 +425,201 @@ function validateUserInfo() {
   return ''
 }
 
-function validateShiftData(shift) {
-  if (!shift) {
-    return 'Không tìm thấy thông tin ca làm việc'
+// Expose reload function
+async function reloadShiftData() {
+  try {
+    const res = await getGiaoCa()
+    const list = res.data || res || []
+    const active = list.find((s) => {
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      return trangThaiCa === 'Đang làm' || (trangThaiCa !== 'Hoàn tất' && !s.thoiGianKetThuc)
+    })
+    if (active) {
+      activeShift.value = active
+      computeShiftSales(activeShift.value).catch((e) => console.warn(e))
+    }
+    const ended = list.filter((s) => {
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
+    }).sort((a, b) => {
+      const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
+      const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
+      return dateB.getTime() - dateA.getTime()
+    })
+    if (ended.length) {
+      lastShift.value = ended[0]
+    }
+  } catch (e) {
+    console.warn('Không tải lại danh sách giao ca', e)
   }
-  if (!shift.id) {
-    return 'ID ca làm việc không hợp lệ'
-  }
-  return ''
 }
 
-function clearValidationErrors() {
-  validationErrors.value = {
-    initialCash: '',
+defineExpose({ reloadShiftData })
+
+async function computeShiftSales(shift) {
+  try {
+    const all = await fetchHoaDonList()
+    const list = all || []
+
+    const start = shift.thoiGianGiaoCa ? new Date(shift.thoiGianGiaoCa) : null
+    const end = shift.thoiGianKetThuc ? new Date(shift.thoiGianKetThuc) : new Date()
+
+    const empId = (shift.nguoiNhan && shift.nguoiNhan.id) || shift.nguoiNhanId || shift.nguoiNhan?.id || userStore.id
+
+    const invoices = list.filter((inv) => {
+      try {
+        const created = inv.ngayTao ? new Date(inv.ngayTao) : inv.createAt ? new Date(inv.createAt) : null
+        if (!created) return false
+        if (inv.createBy && empId && inv.createBy !== empId) return false
+        if (inv.idNhanVien && empId && inv.idNhanVien !== empId) return false
+        if (start && end) {
+          return created >= start && created <= end
+        }
+        return true
+      } catch (e) {
+        return false
+      }
+    })
+
+    invoiceIds.value = invoices.map((i) => i.id)
+    invoiceList.value = invoices
+    invoiceCount.value = invoices.length
+    invoiceTotal.value = invoices.reduce((acc, cur) => {
+      const v = cur.tongTienSauGiam ?? cur.tongTien ?? cur.soTienDaThanhToan ?? 0
+      return acc + Number(v || 0)
+    }, 0)
+  } catch (e) {
+    console.warn('Không tính được doanh thu ca', e)
+  }
+}
+
+// Init on mount
+onMounted(async () => {
+  currentTime.value = toLocalDateTimeString(new Date())
+  endTime.value = toLocalDateTimeString(new Date())
+
+  try {
+    const res = await getGiaoCa()
+    const list = res.data || res || []
+    const active = list.find((s) => {
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      return trangThaiCa === 'Đang làm' || (trangThaiCa !== 'Hoàn tất' && !s.thoiGianKetThuc)
+    })
+    if (active) {
+      activeShift.value = active
+      computeShiftSales(activeShift.value).catch((e) => console.warn(e))
+    }
+    const ended = list.filter((s) => {
+      const trangThaiCa = s.trangThaiCa || s.trangThai
+      return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
+    }).sort((a, b) => {
+      const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
+      const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
+      return dateB.getTime() - dateA.getTime()
+    })
+    if (ended.length) {
+      lastShift.value = ended[0]
+    }
+
+    // Nếu có giao ca đang chờ xác nhận cho user hiện tại thì mở modal xác nhận nhận ca tự động
+    try {
+      const pending = list.find((s) => {
+        const isPending = (s.trangThaiXacNhan === 'Chưa xác nhận' || s.trangThaiXacNhan === 'Chờ xác nhận')
+        const assignedId = (s.nguoiNhan && s.nguoiNhan.id) || s.nguoiNhanId
+        return isPending && assignedId && Number(assignedId) === Number(userStore.id)
+      })
+      if (pending) {
+        // Tính doanh thu + danh sách hóa đơn cho ca đó rồi mở modal xác nhận
+        await computeShiftSales(pending)
+        // set activeShift to the pending one so UI reflects it
+        activeShift.value = pending
+        // mở modal xác nhận
+        setTimeout(() => {
+          openConfirmReceive().catch((err) => console.warn('openConfirmReceive failed', err))
+        }, 200)
+      }
+    } catch (errPending) {
+      console.warn('Không kiểm tra được giao ca chờ xác nhận', errPending)
+    }
+  } catch (e) {
+    console.warn('Không lấy được danh sách giao ca', e)
+  }
+
+  // Prefer admin-assigned schedule for current user/day; otherwise load all shift types
+  try {
+    const today = currentTime.value ? currentTime.value.split(' ')[0] : new Date().toISOString().slice(0, 10)
+    const scheduleRes = await timKiemLichLamViec({ ngayLamViec: today, nhanVienId: userStore.id })
+    const scheduleData = scheduleRes.data || scheduleRes || []
+    const schedules = Array.isArray(scheduleData) ? scheduleData : []
+
+    if (schedules.length > 0) {
+      // keep the raw schedule entries for display (admin-assigned slots)
+      const forUser = schedules.filter((s) => s && s.nhanVien && Number(s.nhanVien.id) === Number(userStore.id))
+      scheduledList.value = Array.isArray(forUser) ? forUser : []
+      // map to unique caLamViec objects assigned to this user (for fallback uses)
+      const mapped = scheduledList.value
+        .map((s) => s && s.caLamViec)
+        .filter((c, idx, arr) => c && arr.findIndex((x) => x && x.id === c.id) === idx)
+      caLamViecList.value = mapped.filter(Boolean)
+      console.log('schedules (from API):', schedules)
+      console.log('scheduledList (user):', scheduledList.value)
+      console.log('mapped caLamViecList:', caLamViecList.value)
+      if (lastShift.value) {
+        const lastId = lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id || lastShift.value.caLamViecId
+        if (lastId) {
+          const found = caLamViecList.value.find((c) => c && c.id === lastId)
+          if (found) selectedCaId.value = found.id
+        }
+      }
+      if (!selectedCaId.value && scheduledList.value.length > 0) selectedCaId.value = scheduledList.value[0].caLamViec?.id
+      console.log('selectedCaId initial (from schedule):', selectedCaId.value)
+    } else {
+      const caRes = await getCaLamViec()
+      const responseData = caRes.data?.data || caRes.data || caRes
+      const list = Array.isArray(responseData) ? responseData : []
+      caLamViecList.value = list
+      if (lastShift.value) {
+        const lastId = lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id || lastShift.value.caLamViecId
+        if (lastId) {
+          const found = caLamViecList.value.find((c) => c && c.id === lastId)
+          if (found) selectedCaId.value = found.id
+        }
+      }
+      if (!selectedCaId.value && caLamViecList.value.length > 0) selectedCaId.value = caLamViecList.value[0].id
+      console.log('caLamViecList (fallback):', caLamViecList.value)
+      console.log('selectedCaId initial (fallback):', selectedCaId.value)
+    }
+  } catch (err) {
+    console.warn('Không lấy danh sách ca làm việc hoặc lịch', err)
+  }
+})
+
+async function openConfirmReceive() {
+  try {
+    if (confirmReceive.value && typeof confirmReceive.value.show === 'function') {
+      await confirmReceive.value.show(activeShift.value, invoiceList.value, { endTime: endTime.value })
+    }
+  } catch (e) {
+    console.error('Open confirm receive error', e)
   }
 }
 
 async function startShift() {
-  // Clear previous validation errors
-  clearValidationErrors()
-  
-  // Validate initial cash
+  validationErrors.value = { initialCash: '', actualCash: '', nextReceiver: '' }
+
   const cashError = validateInitialCash(initialCash.value)
   if (cashError) {
     validationErrors.value.initialCash = cashError
     Message.error(cashError)
     return
   }
-  
-  // Validate user info
+
   const userError = validateUserInfo()
   if (userError) {
     Message.error(userError)
     return
   }
-  
-  // Check if user already has an active shift
+
   try {
     const res = await getGiaoCa()
     const list = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : []
@@ -416,7 +630,7 @@ async function startShift() {
       const isActive = trangThaiCa === 'Đang làm' || (trangThaiCa !== 'Hoàn tất' && !s.thoiGianKetThuc && s.thoiGianGiaoCa)
       return assignedId === userId && isActive
     })
-    
+
     if (existingActive) {
       Message.warning('Bạn đã có ca làm việc đang hoạt động. Vui lòng kết thúc ca hiện tại trước khi bắt đầu ca mới.')
       activeShift.value = existingActive
@@ -427,7 +641,7 @@ async function startShift() {
     Message.error('Không thể kiểm tra trạng thái ca làm việc. Vui lòng thử lại.')
     return
   }
-  
+
   const ok = await confirmModal.value.showConfirm(
     'Bắt Đầu Ca Làm Việc',
     'Bạn có chắc muốn bắt đầu ca làm việc với số tiền mặt ban đầu là ' + formatCurrency(initialCash.value) + ' không?',
@@ -435,38 +649,34 @@ async function startShift() {
     'Hủy'
   )
   if (!ok) return
-  
+
   loading.value = true
   try {
     const now = new Date()
-    // For first shift or self-started shift, nguoiGiaoId should be the same as nguoiNhanId
     const nguoiGiaoId = (lastShift.value && lastShift.value.nguoiGiao && lastShift.value.nguoiGiao.id) || userStore.id
     const nguoiNhanId = userStore.id
-    
-    // Validate employee IDs
+
     if (!nguoiGiaoId || !nguoiNhanId) {
       Message.error('Thông tin nhân viên không hợp lệ. Vui lòng đăng nhập lại.')
       loading.value = false
       return
     }
-    
+
     if (Number.isNaN(Number(nguoiGiaoId)) || Number.isNaN(Number(nguoiNhanId))) {
       Message.error('ID nhân viên không hợp lệ.')
       loading.value = false
       return
     }
-    
-    // Get caLamViecId - try from lastShift first, then fetch from API
-    let caLamViecId = lastShift.value && (lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id)
-    
+
+    let caLamViecId = (selectedCaId.value && Number(selectedCaId.value)) || (lastShift.value && (lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id))
+
     if (!caLamViecId) {
-      // Fetch available ca lam viec from API
       try {
         const caLamViecRes = await getCaLamViec()
         const responseData = caLamViecRes.data?.data || caLamViecRes.data || caLamViecRes
-        const caLamViecList = Array.isArray(responseData) ? responseData : []
-        if (caLamViecList.length > 0) {
-          caLamViecId = caLamViecList[0].id
+        const caLamViecListTemp = Array.isArray(responseData) ? responseData : []
+        if (caLamViecListTemp.length > 0) {
+          caLamViecId = caLamViecListTemp[0].id
           console.log('Using ca lam viec ID:', caLamViecId)
         } else {
           Message.error('Không tìm thấy ca làm việc nào. Vui lòng tạo ca làm việc trước.')
@@ -480,15 +690,13 @@ async function startShift() {
         return
       }
     }
-    
-    // Validate caLamViecId
+
     if (!caLamViecId || Number.isNaN(Number(caLamViecId))) {
       Message.error('Ca làm việc không hợp lệ. Vui lòng tạo ca làm việc trước.')
       loading.value = false
       return
     }
-    
-    // Validate initial cash value
+
     const cashValue = Number(initialCash.value) || 0
     const cashValidationError = validateInitialCash(cashValue)
     if (cashValidationError) {
@@ -496,30 +704,27 @@ async function startShift() {
       loading.value = false
       return
     }
-    
-    // Ensure IDs are numbers
+
     const payload = {
       nguoiGiaoId: Number(nguoiGiaoId),
       nguoiNhanId: Number(nguoiNhanId),
       caLamViecId: Number(caLamViecId),
+      ghiChu: ghiChu.value || undefined,
       thoiGianGiaoCa: toLocalDateTimeString(now),
       tongTienBanDau: cashValue,
     }
-    
-    // Validate payload before sending
+
     if (!payload.thoiGianGiaoCa || payload.thoiGianGiaoCa.length < 19) {
       Message.error('Thời gian giao ca không hợp lệ.')
       loading.value = false
       return
     }
-    
-    // Debug log
+
     console.log('Creating shift with payload:', payload)
     const res = await themGiaoCa(payload)
     activeShift.value = res.data || res
     Message.success('Bắt đầu ca thành công')
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Lỗi khi bắt đầu ca', err)
     let errorMsg = 'Bắt đầu ca thất bại'
     try {
@@ -536,127 +741,102 @@ async function startShift() {
   }
 }
 
-// Load shifts on mount to find active or last shift
-onMounted(async () => {
-  try {
-    const res = await getGiaoCa()
-    const list = res.data || res || []
-    // find active shift: trangThaiCa === 'Đang làm' and not 'Hoàn tất'
-    const active = list.find((s) => {
-      const trangThaiCa = s.trangThaiCa || s.trangThai
-      return trangThaiCa === 'Đang làm' || (trangThaiCa !== 'Hoàn tất' && !s.thoiGianKetThuc)
-    })
-    if (active) {
-      activeShift.value = active
-      // compute sales for active shift
-      computeShiftSales(activeShift.value).catch((e) => console.warn(e))
-    }
-    // find last (most recent) ended shift - check trangThaiCa === 'Hoàn tất' or has thoiGianKetThuc
-    const ended = list.filter((s) => {
-      const trangThaiCa = s.trangThaiCa || s.trangThai
-      return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
-    }).sort((a, b) => {
-      // Sort by thoiGianKetThuc if available, otherwise by thoiGianGiaoCa
-      const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
-      const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
-      return dateB.getTime() - dateA.getTime()
-    })
-    if (ended.length) {
-      lastShift.value = ended[0]
-      // prefill initial cash from previous shift's tongTienCuoiCa if available
-      if (lastShift.value.tongTienCuoiCa != null) initialCash.value = Number(lastShift.value.tongTienCuoiCa)
-    }
-  } catch (e) {
-    // ignore errors for now
-    // eslint-disable-next-line no-console
-    console.warn('Không lấy được danh sách giao ca', e)
-  }
-})
-
-async function endShift() {
-  // Validate active shift exists
+async function openEndShiftModal() {
   if (!activeShift.value) {
     Message.error('Không tìm thấy ca làm việc đang hoạt động.')
     return
   }
-  
-  const shiftError = validateShiftData(activeShift.value)
-  if (shiftError) {
-    Message.error(shiftError)
+
+  // Fetch employee list for next receiver dropdown
+  loadingEmployees.value = true
+  try {
+    const res = await layDanhSachNhanVien()
+    const data = res.data || res || []
+    employeeList.value = Array.isArray(data) ? data : []
+  } catch (err) {
+    console.warn('Không lấy danh sách nhân viên', err)
+    employeeList.value = []
+  } finally {
+    loadingEmployees.value = false
+  }
+
+  // Reset form
+  actualCash.value = 0
+  endNotes.value = ''
+  nextReceiverId.value = null
+  endTime.value = toLocalDateTimeString(new Date())
+  validationErrors.value = { initialCash: '', actualCash: '', nextReceiver: '' }
+
+  showEndShiftModal.value = true
+}
+
+async function finalizeEndShift() {
+  validationErrors.value = { initialCash: '', actualCash: '', nextReceiver: '' }
+
+  if (actualCash.value === null || actualCash.value === undefined) {
+    validationErrors.value.actualCash = 'Vui lòng nhập số tiền thực đếm'
+    Message.error('Vui lòng nhập số tiền thực đếm')
     return
   }
-  
-  // Validate user info
-  const userError = validateUserInfo()
-  if (userError) {
-    Message.error(userError)
-    return
-  }
-  
-  const ok = await confirmModal.value.showConfirm('Kết Thúc Ca Làm Việc', 'Bạn có chắc muốn kết thúc ca hiện tại không?', 'Xác Nhận', 'Hủy')
+
+  // Người nhận ca tiếp có thể để trống — cho phép kết ca khi không có người nhận
+
+  const ok = await confirmModal.value.showConfirm(
+    'Xác Nhận Kết Ca',
+    `Bạn có chắc muốn kết thúc ca với tiền lệch: ${formatCurrency(discrepancy.value)} không?`,
+    'Xác Nhận',
+    'Hủy'
+  )
   if (!ok) return
-  
+
   loading.value = true
   try {
     const payload = {
-      // backend expects nguoiGiaoId (id of the person handing over)
       nguoiGiaoId: userStore.id,
       nguoiGiao: {
         id: userStore.id,
         tenNhanVien: userStore.name || userStore.tenNhanVien || userStore.ten || '',
       },
-      // include nguoiNhanId so backend validation won't fail (use activeShift's receiver if available)
-      nguoiNhanId:
-        (activeShift.value && ((activeShift.value.nguoiNhan && activeShift.value.nguoiNhan.id) || activeShift.value.nguoiNhanId)) ||
-        userStore.id,
-      nguoiNhan:
-        (activeShift.value &&
-          (activeShift.value.nguoiNhan || (activeShift.value.nguoiNhanId ? { id: activeShift.value.nguoiNhanId } : null))) ||
-        null,
-      // include caLamViecId (use active shift's working shift id)
+      nguoiNhanId: nextReceiverId.value == null ? null : Number(nextReceiverId.value),
       caLamViecId:
         (activeShift.value &&
           ((activeShift.value.caLamViec && activeShift.value.caLamViec.id) ||
             activeShift.value.ca_lam_viec_id ||
             activeShift.value.caLamViecId)) ||
         null,
-      // ensure thoiGianGiaoCa is sent (DB column is NOT NULL) - prefer the original value from activeShift
       thoiGianGiaoCa: normalizeToLocalDateTime(
         (activeShift.value && activeShift.value.thoiGianGiaoCa) || toLocalDateTimeString(new Date())
       ),
-      // Set trangThaiCa to indicate shift is ended
+      thoiGianKetThuc: normalizeToLocalDateTime(endTime.value),
+      soTienThucTe: Number(actualCash.value),
+      tienLech: discrepancy.value,
+      ghiChuNguoiGiao: endNotes.value || undefined,
       trangThaiCa: 'Hoàn tất',
     }
-    
-    // Validate payload before sending
+
     if (!payload.nguoiGiaoId || Number.isNaN(Number(payload.nguoiGiaoId))) {
       Message.error('ID người giao ca không hợp lệ.')
       loading.value = false
       return
     }
-    
-    if (!payload.nguoiNhanId || Number.isNaN(Number(payload.nguoiNhanId))) {
-      Message.error('ID người nhận ca không hợp lệ.')
-      loading.value = false
-      return
-    }
-    
+    // nguoiNhanId can be null if no next receiver is assigned
+
     if (!payload.thoiGianGiaoCa || payload.thoiGianGiaoCa.length < 19) {
       Message.error('Thời gian giao ca không hợp lệ.')
       loading.value = false
       return
     }
-    
+
     if (!payload.trangThaiCa) {
       Message.error('Trạng thái ca không hợp lệ.')
       loading.value = false
       return
     }
-    
-    // dùng endpoint PUT /api/giao-ca/{id} có sẵn trên backend
+
+    console.log('End shift payload:', payload)
     await suaGiaoCa(activeShift.value.id, payload)
 
-    // Refresh the giao-ca list so UI reflects the ended shift (lastShift etc.)
+    // Refresh data
     try {
       const res = await getGiaoCa()
       const list = res.data || res || []
@@ -672,29 +852,33 @@ async function endShift() {
         lastShift.value = ended[0]
       }
     } catch (e) {
-      // ignore refresh errors
-      // eslint-disable-next-line no-console
       console.warn('Không tải lại danh sách giao ca sau khi kết thúc', e)
     }
 
     activeShift.value = null
+    showEndShiftModal.value = false
     Message.success('Kết thúc ca thành công. Đang đăng xuất...')
-    
-    // Đợi một chút để user thấy thông báo thành công
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Logout sau khi kết thúc ca thành công
+
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
     try {
       await logout()
     } catch (e) {
-      // Nếu logout có lỗi, vẫn cố gắng redirect về login
       console.error('Logout after endShift failed', e)
       router.push({ name: 'login' })
     }
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Lỗi khi kết thúc ca', err)
-    Message.error('Kết thúc ca thất bại')
+    let errorMsg = 'Kết thúc ca thất bại'
+    try {
+      if (err && typeof err === 'object') {
+        // @ts-ignore
+        errorMsg = err?.response?.data?.message || err?.message || errorMsg
+      }
+    } catch {
+      // ignore
+    }
+    Message.error(errorMsg)
   } finally {
     loading.value = false
   }
@@ -741,11 +925,6 @@ async function endShift() {
   flex-shrink: 0;
 }
 
-.header-icon-wrapper.amber {
-  background: #fef3c7;
-  color: #d97706;
-}
-
 .header-icon-wrapper.blue {
   background: #dbeafe;
   color: #2563eb;
@@ -763,144 +942,111 @@ async function endShift() {
   color: #64748b;
 }
 
-.stats-grid {
+.form-section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.summary-item {
   padding: 16px;
   background: #f8fafc;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.2s;
-}
-
-.stat-item:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.stat-item.highlight {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-}
-
-.stat-icon {
-  width: 40px;
-  height: 40px;
   border-radius: 8px;
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  color: #3b82f6;
-  flex-shrink: 0;
-}
-
-.stat-item.highlight .stat-icon {
-  background: #dbeafe;
-  color: #2563eb;
-}
-
-.stat-content {
-  flex: 1;
+  border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.stat-label {
+.summary-item .label {
   font-size: 12px;
   color: #64748b;
   font-weight: 500;
 }
 
-.stat-value {
-  font-size: 16px;
-  color: #1e293b;
-  font-weight: 600;
-}
-
-.stat-item.highlight .stat-value {
-  color: #2563eb;
+.summary-item .value {
   font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
-.form-section {
-  margin-top: 8px;
+.summary-item .value.highlight {
+  color: #2563eb;
 }
 
-.button-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-top: 8px;
-}
-
-.cash-input-item {
-  margin-bottom: 20px;
-}
-
-.cash-input-item :deep(.arco-form-item-label) {
-  font-weight: 600;
-  color: #374151;
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
-.cash-input-item :deep(.arco-input-number) {
-  width: 100%;
-}
-
-.cash-input-item :deep(.arco-input-number-input) {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.btn-start {
-  height: 48px;
-  font-size: 16px;
-  font-weight: 600;
+.discrepancy-card {
+  padding: 16px;
+  background: #f8fafc;
+  border: 2px solid #cbd5e1;
   border-radius: 8px;
-  margin-top: 8px;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 20px;
-}
-
-.status-badge.active {
-  background: #d1fae5;
-  color: #059669;
-}
-
-.shift-time {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 16px;
+  font-weight: 600;
+  margin: 12px 0;
+}
+
+.discrepancy-card.positive {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.discrepancy-card.negative {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.discrepancy-card .label {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.discrepancy-card .value {
+  font-size: 20px;
+  color: #1e293b;
+  flex: 1;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
   background: #f8fafc;
   border-radius: 8px;
-  margin-bottom: 24px;
-  font-size: 14px;
-  color: #475569;
+  margin-bottom: 12px;
 }
 
-.shift-time strong {
+.item-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.item-value {
+  font-size: 14px;
   color: #1e293b;
   font-weight: 600;
+}
+
+.item-value.highlight {
+  color: #2563eb;
+  font-size: 15px;
 }
 
 .info-cards-grid {
@@ -965,35 +1111,6 @@ async function endShift() {
   gap: 12px;
 }
 
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.item-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.item-value {
-  font-size: 14px;
-  color: #1e293b;
-  font-weight: 600;
-}
-
-.item-value.highlight {
-  color: #2563eb;
-  font-size: 15px;
-}
-
 .sales-stats {
   display: flex;
   flex-direction: column;
@@ -1033,12 +1150,72 @@ async function endShift() {
   font-size: 24px;
 }
 
+.shift-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.shift-time strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.status-badge.active {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.btn-start,
 .btn-end {
   height: 48px;
   font-size: 16px;
   font-weight: 600;
   border-radius: 8px;
+}
+
+.button-wrapper {
+  display: flex;
+  justify-content: center;
   margin-top: 8px;
+}
+
+.shift-select-item :deep(.arco-select) {
+  width: 100%;
+}
+
+.cash-input-item :deep(.arco-form-item-label) {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.cash-input-item :deep(.arco-input-number) {
+  width: 100%;
+}
+
+.end-shift-form {
+  padding: 16px 0;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
 @media (max-width: 768px) {
@@ -1046,7 +1223,7 @@ async function endShift() {
     padding: 16px;
   }
 
-  .stats-grid {
+  .summary-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1054,5 +1231,15 @@ async function endShift() {
     grid-template-columns: 1fr;
   }
 
+  .discrepancy-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .discrepancy-card .value {
+    width: 100%;
+    text-align: right;
+  }
 }
 </style>
