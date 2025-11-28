@@ -275,7 +275,7 @@
                     <icon-check-circle class="summary-icon" />
                     <span class="summary-label">Thành tiền:</span>
                   </div>
-                  <span class="summary-value total">{{ formatCurrency(calculatedTongTienSauGiam) }}</span>
+                  <span class="summary-value total">{{ formatCurrency(calculatedFinalTotal) }}</span>
                 </div>
                 <div class="summary-status" v-if="invoice.trangThai">
                   <icon-check-circle class="status-icon" />
@@ -1592,6 +1592,30 @@ const calculatedDiscountAmount = computed(() => {
 
   // If no tongTienSauGiam from backend, discount is 0 (no discount applied)
   return 0
+})
+
+// Calculate final total (Thành tiền) = tongTienSauGiam + phiVanChuyen + phuPhi - hoanPhi
+const calculatedFinalTotal = computed(() => {
+  if (!invoice.value) return 0
+
+  let total = calculatedTongTienSauGiam.value
+
+  // Add shipping fee if available
+  if (invoice.value.phiVanChuyen && invoice.value.phiVanChuyen > 0) {
+    total += Number(invoice.value.phiVanChuyen)
+  }
+
+  // Add surcharge if available
+  if (invoice.value.phuPhi && invoice.value.phuPhi > 0) {
+    total += Number(invoice.value.phuPhi)
+  }
+
+  // Subtract refund if available
+  if (invoice.value.hoanPhi && invoice.value.hoanPhi > 0) {
+    total -= Number(invoice.value.hoanPhi)
+  }
+
+  return Math.max(0, total)
 })
 
 // Methods

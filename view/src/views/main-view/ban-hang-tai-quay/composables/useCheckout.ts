@@ -171,6 +171,7 @@ export default function useCheckout(params: {
         tienMat,
         tienChuyenKhoan,
         soTienConLai,
+        phiVanChuyen: orderType.value === 'delivery' ? shippingFee.value : 0,
         trangThaiThanhToan: totalReceived >= finalPrice.value,
         tongTien: subtotal.value,
         tongTienSauGiam: finalPrice.value,

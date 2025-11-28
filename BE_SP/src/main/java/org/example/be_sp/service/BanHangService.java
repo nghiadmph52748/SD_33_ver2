@@ -588,6 +588,10 @@ public class BanHangService {
                 : BigDecimal.ZERO;
         hoaDon.setSoTienDaThanhToan(tienMat.add(tienChuyenKhoan));
         hoaDon.setSoTienConLai(request.getSoTienConLai());
+        // Set shipping fee from request (if provided)
+        if (request.getPhiVanChuyen() != null) {
+            hoaDon.setPhiVanChuyen(request.getPhiVanChuyen());
+        }
         hoaDon.setGhiChu("Bán hàng tại quầy");
         // Set ngayThanhToan when checkout is successful
         if (request.getTrangThaiThanhToan() != null && request.getTrangThaiThanhToan()) {

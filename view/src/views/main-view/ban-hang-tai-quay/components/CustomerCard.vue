@@ -47,7 +47,7 @@
         <hr />
         <a-row :gutter="[12, 12]">
           <a-col :span="12">
-            <a-form-item label="Tên" :validate-status="nameError ? 'error' : undefined" :help="nameError || ''">
+            <a-form-item label="Tên" :validate-status="nameError ? 'error' : undefined" :help="nameError || ''" required>
               <a-input :model-value="walkInName" placeholder="Nhập tên" @update:model-value="$emit('update:walkInName', $event)" />
             </a-form-item>
           </a-col>
@@ -61,7 +61,7 @@
             </a-form-item>
           </a-col>
           <a-col :span="24">
-            <a-form-item label="Email" :validate-status="emailError ? 'error' : undefined" :help="emailError || ''">
+            <a-form-item label="Email" :validate-status="emailError ? 'error' : undefined" :help="emailError || ''" required>
               <a-input :model-value="walkInEmail" placeholder="Nhập email" @update:model-value="$emit('update:walkInEmail', $event)" />
             </a-form-item>
           </a-col>

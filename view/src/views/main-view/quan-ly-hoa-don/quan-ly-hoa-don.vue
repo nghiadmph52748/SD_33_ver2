@@ -104,6 +104,22 @@
                 </span>
               </template>
             </a-tab-pane>
+            <a-tab-pane key="surcharge">
+              <template #title>
+                <span class="tab-title">
+                  Phụ phí
+                  <a-badge :count="surchargeInvoices" :number-style="{ backgroundColor: '#722ed1' }" />
+                </span>
+              </template>
+            </a-tab-pane>
+            <a-tab-pane key="refund">
+              <template #title>
+                <span class="tab-title">
+                  Hoàn phí
+                  <a-badge :count="refundInvoices" :number-style="{ backgroundColor: '#13c2c2' }" />
+                </span>
+              </template>
+            </a-tab-pane>
           </a-tabs>
           <div class="tabs-actions">
             <a-button @click="exportExcel" type="primary">
@@ -137,7 +153,7 @@
         </template>
 
         <template #total="{ record }">
-          {{ formatCurrency(record.tongTienSauGiam || record.tongTien || 0) }}
+          {{ formatCurrency(calculateFinalTotal(record)) }}
         </template>
 
         <template #ngayTao="{ record }">
@@ -213,10 +229,22 @@
             <span>Giảm giá:</span>
             <span>-{{ formatCurrency((selectedInvoice.tongTien || 0) - (selectedInvoice.tongTienSauGiam || 0)) }}</span>
           </div>
+          <div v-if="selectedInvoice.phiVanChuyen && selectedInvoice.phiVanChuyen > 0" class="summary-row">
+            <span>Phí vận chuyển:</span>
+            <span>{{ formatCurrency(selectedInvoice.phiVanChuyen) }}</span>
+          </div>
+          <div v-if="selectedInvoice.phuPhi && selectedInvoice.phuPhi > 0" class="summary-row">
+            <span>Phụ phí:</span>
+            <span>+{{ formatCurrency(selectedInvoice.phuPhi) }}</span>
+          </div>
+          <div v-if="selectedInvoice.hoanPhi && selectedInvoice.hoanPhi > 0" class="summary-row">
+            <span>Hoàn phí:</span>
+            <span>-{{ formatCurrency(selectedInvoice.hoanPhi) }}</span>
+          </div>
           <div class="summary-row total">
             <span><strong>Tổng cộng:</strong></span>
             <span>
-              <strong>{{ formatCurrency(selectedInvoice.tongTienSauGiam || selectedInvoice.tongTien || 0) }}</strong>
+              <strong>{{ formatCurrency(calculateFinalTotal(selectedInvoice)) }}</strong>
             </span>
           </div>
         </div>
@@ -303,6 +331,8 @@ const cancelledInvoices = ref(0)
 const waitingConfirmationInvoices = ref(0)
 const waitingDeliveryInvoices = ref(0)
 const shippingInvoices = ref(0)
+const surchargeInvoices = ref(0)
+const refundInvoices = ref(0)
 const totalRevenue = ref(0)
 
 const loading = ref(false)
@@ -317,6 +347,8 @@ const filters = ref({
   status: 'all',
   dateRange: [] as any[],
   filterToday: false,
+  hasSurcharge: false,
+  hasRefund: false,
 })
 
 // Pagination
@@ -368,7 +400,7 @@ const invoiceColumns = [
     title: 'Ngày tạo',
     dataIndex: 'thoiGianTao',
     slotName: 'ngayTao',
-    width: 150,
+    width: 100,
     sortable: {
       sortDirections: ['ascend', 'descend'],
     },
@@ -382,6 +414,18 @@ const invoiceColumns = [
       if (isNaN(dateB)) return -1
       return dateB - dateA // Giảm dần: mới nhất trước
     },
+  },
+  {
+    title: 'Phụ phí',
+    dataIndex: 'phuPhi',
+    width: 100,
+    align: 'right',
+  },
+  {
+    title: 'Hoàn phí',
+    dataIndex: 'hoanPhi',
+    width: 100,
+    align: 'right',
   },
   {
     title: 'Tổng tiền',
@@ -447,6 +491,12 @@ const invoices = computed(() => {
     } else if (activeTab.value === 'cancelled') {
       // Đã hủy
       filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Đã huỷ')
+    } else if (activeTab.value === 'surcharge') {
+      // Có phụ phí > 0
+      filtered = filtered.filter((invoice) => invoice.phuPhi && invoice.phuPhi > 0)
+    } else if (activeTab.value === 'refund') {
+      // Có hoàn phí > 0
+      filtered = filtered.filter((invoice) => invoice.hoanPhi && invoice.hoanPhi > 0)
     }
   }
 
@@ -483,6 +533,16 @@ const invoices = computed(() => {
       const invoiceDate = new Date(invoice.thoiGianTao || invoice.ngayTao)
       return invoiceDate >= today && invoiceDate < tomorrow
     })
+  }
+
+  // Filter theo phụ phí > 0
+  if (filters.value.hasSurcharge) {
+    filtered = filtered.filter((invoice) => invoice.phuPhi && invoice.phuPhi > 0)
+  }
+
+  // Filter theo hoàn phí > 0
+  if (filters.value.hasRefund) {
+    filtered = filtered.filter((invoice) => invoice.hoanPhi && invoice.hoanPhi > 0)
   }
 
   // Sort theo ngày tạo giảm dần (mới nhất trước) - luôn áp dụng sort này
@@ -611,6 +671,12 @@ const calculateStatistics = () => {
   // Đếm hóa đơn đã hủy
   cancelledInvoices.value = invoicesList.value.filter((invoice) => invoice.trangThaiDonHang === 'Đã huỷ').length
 
+  // Đếm hóa đơn có phụ phí > 0
+  surchargeInvoices.value = invoicesList.value.filter((invoice) => invoice.phuPhi && invoice.phuPhi > 0).length
+
+  // Đếm hóa đơn có hoàn phí > 0
+  refundInvoices.value = invoicesList.value.filter((invoice) => invoice.hoanPhi && invoice.hoanPhi > 0).length
+
   // Tính tổng doanh thu từ tất cả hóa đơn đã thanh toán
   totalRevenue.value = invoicesList.value
     .filter((invoice) => invoice.ngayThanhToan)
@@ -701,6 +767,9 @@ const fetchInvoices = async () => {
         // Use tongTienSauGiam from API if available, otherwise use calculated value
         tongTienSauGiam: invoice.tongTienSauGiam && invoice.tongTienSauGiam > 0 ? invoice.tongTienSauGiam : calculatedTongTien,
         tongTien: invoice.tongTien && invoice.tongTien > 0 ? invoice.tongTien : calculatedTongTien,
+        phiVanChuyen: invoice.phiVanChuyen || 0,
+        phuPhi: invoice.phuPhi || 0,
+        hoanPhi: invoice.hoanPhi || 0,
         trangThai: invoice.trangThai,
         ngayThanhToan: invoice.ngayThanhToan,
         hoaDonChiTiets: invoice.items || invoice.chiTietSanPham || [],
@@ -761,6 +830,8 @@ const resetFilters = () => {
     status: 'all',
     dateRange: [],
     filterToday: false,
+    hasSurcharge: false,
+    hasRefund: false,
   }
   activeTab.value = 'all'
   fetchInvoices()
@@ -835,6 +906,39 @@ const cancelInvoice = () => {
 
 const exportExcel = () => {
   // Implement export logic
+}
+
+const calculateFinalTotal = (invoice: any) => {
+  if (!invoice) return 0
+
+  // Tổng tiền = tongTienSauGiam + phiVanChuyen + phuPhi - hoanPhi
+  let total = invoice.tongTienSauGiam || invoice.tongTien || 0
+
+  // Add shipping fee if available
+  if (invoice.phiVanChuyen && invoice.phiVanChuyen > 0) {
+    total += invoice.phiVanChuyen
+  }
+
+  // Add surcharge if available
+  if (invoice.phuPhi && invoice.phuPhi > 0) {
+    total += invoice.phuPhi
+  }
+
+  // Subtract refund if available
+  if (invoice.hoanPhi && invoice.hoanPhi > 0) {
+    total -= invoice.hoanPhi
+  }
+
+  console.log('calculateFinalTotal:', {
+    id: invoice.id,
+    tongTienSauGiam: invoice.tongTienSauGiam,
+    phiVanChuyen: invoice.phiVanChuyen,
+    phuPhi: invoice.phuPhi,
+    hoanPhi: invoice.hoanPhi,
+    total,
+  })
+
+  return Math.max(0, total)
 }
 
 // BroadcastChannel for real-time sync with other pages

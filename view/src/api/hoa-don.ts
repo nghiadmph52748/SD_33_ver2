@@ -78,6 +78,8 @@ export interface HoaDonApiModel {
   idPhuongThucThanhToan?: number
   idTrangThaiDonHang?: number
   phiVanChuyen?: number
+  phuPhi?: number
+  hoanPhi?: number
   tongTien?: number
   tongTienSauGiam?: number
   tenNguoiNhan?: string

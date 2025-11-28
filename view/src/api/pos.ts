@@ -192,6 +192,7 @@ export interface ConfirmBanHangRequest {
   tienMat?: number
   tienChuyenKhoan?: number
   soTienConLai?: number
+  phiVanChuyen?: number | null
   [key: string]: any
 }
 

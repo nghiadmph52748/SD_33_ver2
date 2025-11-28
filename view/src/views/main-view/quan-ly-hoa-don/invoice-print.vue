@@ -135,10 +135,18 @@
               <td class="label">Giảm giá:</td>
               <td class="value discount">-{{ formatPrice(invoice.giaTriGiamGia) }}</td>
             </tr>
+            <tr v-if="invoice?.phuPhi && invoice.phuPhi > 0">
+              <td class="label">Phụ phí:</td>
+              <td class="value">{{ formatPrice(invoice.phuPhi) }}</td>
+            </tr>
+            <tr v-if="invoice?.hoanPhi && invoice.hoanPhi > 0">
+              <td class="label">Hoàn phí:</td>
+              <td class="value discount">-{{ formatPrice(invoice.hoanPhi) }}</td>
+            </tr>
             <tr class="total-row">
               <td class="label"><strong>THÀNH TIỀN:</strong></td>
               <td class="value">
-                <strong>{{ formatPrice(invoice?.tongTienSauGiam || invoice?.tongTien || 0) }}</strong>
+                <strong>{{ formatPrice(calculateFinalTotal(invoice)) }}</strong>
               </td>
             </tr>
           </tbody>
@@ -215,6 +223,30 @@ const formatDate = (date: string) => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+const calculateFinalTotal = (invoice: any) => {
+  if (!invoice) return 0
+
+  // Tổng tiền = tongTienSauGiam + phiVanChuyen + phuPhi - hoanPhi
+  let total = invoice.tongTienSauGiam || invoice.tongTien || 0
+
+  // Add shipping fee if available
+  if (invoice.phiVanChuyen && invoice.phiVanChuyen > 0) {
+    total += invoice.phiVanChuyen
+  }
+
+  // Add surcharge if available
+  if (invoice.phuPhi && invoice.phuPhi > 0) {
+    total += invoice.phuPhi
+  }
+
+  // Subtract refund if available
+  if (invoice.hoanPhi && invoice.hoanPhi > 0) {
+    total -= invoice.hoanPhi
+  }
+
+  return Math.max(0, total)
 }
 
 const loadInvoiceData = async () => {

@@ -43,6 +43,7 @@ public class HoaDonResponse {
     private LocalDateTime ngayTao;
     private LocalDateTime ngayThanhToan;
     private BigDecimal phuPhi;
+    private BigDecimal hoanPhi;
     private Boolean trangThai;
     private Boolean deleted;
     private LocalDateTime createAt;
@@ -94,6 +95,7 @@ public class HoaDonResponse {
         this.ngayTao = hd.getNgayTao();
         this.ngayThanhToan = hd.getNgayThanhToan();
         this.phuPhi = hd.getPhuPhi();
+        this.hoanPhi = hd.getHoanPhi();
         this.trangThai = hd.getTrangThai();
         this.deleted = hd.getDeleted();
         this.createAt = hd.getCreateAt();
