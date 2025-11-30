@@ -158,6 +158,11 @@ export default function useCheckout(params: {
       const totalReceived = tienMat + tienChuyenKhoan
       const soTienConLai = Math.max(0, finalPrice.value - totalReceived)
 
+      // Calculate discount amount
+      const discountAmount = calculateVoucherDiscount(selectedCoupon.value)
+      // tongTienSauGiam should be the subtotal minus voucher discount (without shipping/fees)
+      const tongTienSauGiam = Math.max(0, subtotal.value - discountAmount)
+
       const req: ConfirmBanHangRequest = {
         idHoaDon: invoiceId,
         idKhachHang: customerId ?? null,
@@ -174,7 +179,7 @@ export default function useCheckout(params: {
         phiVanChuyen: orderType.value === 'delivery' ? shippingFee.value : 0,
         trangThaiThanhToan: totalReceived >= finalPrice.value,
         tongTien: subtotal.value,
-        tongTienSauGiam: finalPrice.value,
+        tongTienSauGiam: tongTienSauGiam,
       }
 
       confirmOrderRequest.value = req

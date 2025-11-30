@@ -47,10 +47,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class HoaDonService {
 
+    private static final Logger log = LoggerFactory.getLogger(HoaDonService.class);
     private static final BigDecimal REFUND_VOUCHER_THRESHOLD = new BigDecimal("50000");
 
     @Autowired
@@ -1771,12 +1774,115 @@ public class HoaDonService {
     }
 
     /**
+     * Helper method to calculate tongTienSauGiam = tongTien - voucher discount
+     * + phụ phí - hoàn phí Formula: tongTienSauGiam = tongTien -
+     * voucherDiscount + phuPhi - hoanPhi Supports two types of vouchers: -
+     * featured=true: fixed discount amount (giaTriGiamGia is the amount) -
+     * featured=false: percentage discount (giaTriGiamGia is the percentage)
+     */
+    private BigDecimal calculateTongTienSauGiamWithVoucher(BigDecimal tongTien, HoaDon hoaDon) {
+        return calculateTongTienSauGiamWithVoucherApplyAll(tongTien, hoaDon);
+    }
+
+    /**
+     * Helper method to calculate tongTienSauGiam = tongTien - voucher discount
+     * (ONLY voucher) Used when surcharge/refund are already applied to
+     * tongTien, to avoid double-counting
+     */
+    private BigDecimal calculateTongTienSauGiamWithVoucherOnly(BigDecimal tongTien, HoaDon hoaDon) {
+        BigDecimal result = tongTien;
+
+        // Subtract voucher discount only
+        if (hoaDon.getIdPhieuGiamGia() != null && hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia() != null) {
+            PhieuGiamGia voucher = hoaDon.getIdPhieuGiamGia();
+            BigDecimal discountValue = voucher.getGiaTriGiamGia();
+
+            // loaiPhieuGiamGia: 0=percentage, 1=fixed amount
+            if (Boolean.TRUE.equals(voucher.getLoaiPhieuGiamGia())) {
+                // Fixed amount discount (loaiPhieuGiamGia=1)
+                result = result.subtract(discountValue);
+            } else {
+                // Percentage discount (loaiPhieuGiamGia=0)
+                BigDecimal discountAmount = tongTien.multiply(discountValue).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                result = result.subtract(discountAmount);
+            }
+        }
+
+        // Ensure result is never negative
+        BigDecimal finalResult = result.compareTo(BigDecimal.ZERO) > 0 ? result : BigDecimal.ZERO;
+
+        log.info("[calculateTongTienSauGiam] tongTien={}, voucherCode={}, result={}",
+                tongTien,
+                hoaDon.getIdPhieuGiamGia() != null ? hoaDon.getIdPhieuGiamGia().getMaPhieuGiamGia() : "NONE",
+                finalResult);
+
+        return finalResult;
+    }
+
+    /**
+     * Helper method to calculate tongTienSauGiam = tongTien - voucher discount
+     * + phụ phí - hoàn phí Includes all adjustments (surcharge and refund from
+     * hoaDon object)
+     */
+    private BigDecimal calculateTongTienSauGiamWithVoucherApplyAll(BigDecimal tongTien, HoaDon hoaDon) {
+        BigDecimal result = tongTien;
+
+        // Step 1: Subtract voucher discount
+        if (hoaDon.getIdPhieuGiamGia() != null && hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia() != null) {
+            PhieuGiamGia voucher = hoaDon.getIdPhieuGiamGia();
+            BigDecimal discountValue = voucher.getGiaTriGiamGia();
+
+            // loaiPhieuGiamGia: 0=percentage, 1=fixed amount
+            if (Boolean.TRUE.equals(voucher.getLoaiPhieuGiamGia())) {
+                // Fixed amount discount (loaiPhieuGiamGia=1)
+                result = result.subtract(discountValue);
+            } else {
+                // Percentage discount (loaiPhieuGiamGia=0) - calculate on original tongTien
+                BigDecimal discountAmount = tongTien.multiply(discountValue).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                result = result.subtract(discountAmount);
+            }
+        }
+
+        // Step 2: Add surcharge (phụ phí)
+        if (hoaDon.getPhuPhi() != null && hoaDon.getPhuPhi().compareTo(BigDecimal.ZERO) > 0) {
+            result = result.add(hoaDon.getPhuPhi());
+        }
+
+        // Step 3: Subtract refund (hoàn phí)
+        if (hoaDon.getHoanPhi() != null && hoaDon.getHoanPhi().compareTo(BigDecimal.ZERO) > 0) {
+            result = result.subtract(hoaDon.getHoanPhi());
+        }
+
+        // Ensure result is never negative
+        BigDecimal finalResult = result.compareTo(BigDecimal.ZERO) > 0 ? result : BigDecimal.ZERO;
+
+        // Debug logging
+        log.info("[calculateTongTienSauGiamApplyAll] tongTien={}, voucherCode={}, phuPhi={}, hoanPhi={}, result={}",
+                tongTien,
+                hoaDon.getIdPhieuGiamGia() != null ? hoaDon.getIdPhieuGiamGia().getMaPhieuGiamGia() : "NONE",
+                hoaDon.getPhuPhi(),
+                hoaDon.getHoanPhi(),
+                finalResult);
+
+        return finalResult;
+    }
+
+    /**
      * Gửi thông báo thay đổi địa chỉ giao hàng cho khách hàng Hỗ trợ cả khách
      * hàng đã đăng ký và khách lẻ
      */
     public void sendAddressChangeNotification(Integer orderId, AddressChangeNotificationRequest request) {
-        HoaDon hoaDon = hoaDonRepository.findById(orderId)
+        HoaDon hoaDon = hoaDonRepository.findByIdWithVoucher(orderId)
                 .orElseThrow(() -> new ApiException("404", "Không tìm thấy đơn hàng"));
+
+        log.info("[sendAddressChangeNotification] Loaded hoaDon id={}, tongTien={}, idPhieuGiamGia={}, phuPhi={}, hoanPhi={}, tongTienSauGiam={}",
+                hoaDon.getId(),
+                hoaDon.getTongTien(),
+                hoaDon.getIdPhieuGiamGia() != null ? hoaDon.getIdPhieuGiamGia().getId() : "NULL",
+                hoaDon.getPhuPhi(),
+                hoaDon.getHoanPhi(),
+                hoaDon.getTongTienSauGiam());
+
         BigDecimal originalTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
         BigDecimal updatedTotal = originalTotal;
         BigDecimal recordedRefundAmount = BigDecimal.ZERO;
@@ -1846,7 +1952,15 @@ public class HoaDonService {
                     BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
                     updatedTotal = currentTotal.add(extraFee);
                     hoaDon.setTongTien(updatedTotal);
-                    hoaDon.setTongTienSauGiam(updatedTotal);
+
+                    // IMPORTANT: Set phuPhi to 0 BEFORE calling helper to avoid double-addition
+                    // The surcharge is already added to tongTien (updatedTotal = currentTotal + extraFee)
+                    hoaDon.setPhuPhi(BigDecimal.ZERO);
+
+                    // Recalculate tongTienSauGiam = updatedTotal - voucher discount
+                    // updatedTotal already includes the surcharge, so we don't add it again
+                    BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucherOnly(updatedTotal, hoaDon);
+                    hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
 
                     BigDecimal soTienDaThanhToan = hoaDon.getSoTienDaThanhToan() != null ? hoaDon.getSoTienDaThanhToan() : BigDecimal.ZERO;
                     BigDecimal soTienConLai = updatedTotal.subtract(soTienDaThanhToan);
@@ -1870,7 +1984,10 @@ public class HoaDonService {
                     if (daTraDuTien) {
                         BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
                         updatedTotal = currentTotal;
-                        hoaDon.setTongTienSauGiam(currentTotal);
+                        // Recalculate tongTienSauGiam = tongTien - voucher discount + phụ phí (KHÔNG trừ hoàn phí)
+                        // Vì khách đã trả đủ tiền, hoàn phí chỉ là ghi chú, không ảnh hưởng đến tongTienSauGiam
+                        BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucherOnly(currentTotal, hoaDon);
+                        hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
                         hoaDon.setSoTienConLai(BigDecimal.ZERO);
                     } else {
                         BigDecimal newTotal = tongTien.subtract(refundFee);
@@ -1879,13 +1996,34 @@ public class HoaDonService {
                         }
                         updatedTotal = newTotal;
                         hoaDon.setTongTien(newTotal);
-                        hoaDon.setTongTienSauGiam(newTotal);
+
+                        // IMPORTANT: Set hoanPhi to 0 BEFORE calling helper to avoid double-subtraction
+                        // The refund is already subtracted from tongTien (newTotal = tongTien - refund)
+                        hoaDon.setHoanPhi(BigDecimal.ZERO);
+
+                        // Recalculate tongTienSauGiam = newTotal - voucher discount
+                        // newTotal already includes the refund subtraction, so we don't subtract it again
+                        BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucherOnly(newTotal, hoaDon);
+                        hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
 
                         BigDecimal soTienConLai = newTotal.subtract(soTienDaThanhToan);
                         hoaDon.setSoTienConLai(soTienConLai.compareTo(BigDecimal.ZERO) > 0 ? soTienConLai : BigDecimal.ZERO);
                     }
                 }
+            } else {
+                // === KHÔNG THAY ĐỔI PHÍ: Vẫn cần recalculate tongTienSauGiam ===
+                // Trường hợp phí không thay đổi (rawDifference = 0) nhưng địa chỉ vẫn thay đổi
+                // Vẫn phải đảm bảo tongTienSauGiam được tính đúng với voucher discount
+                BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+                BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucher(currentTotal, hoaDon);
+                hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
             }
+        } else {
+            // === KHÔNG CÓ thông tin phí vận chuyển: Vẫn recalculate tongTienSauGiam ===
+            // Trường hợp request không chứa shippingFeeChange nhưng địa chỉ vẫn thay đổi
+            BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
+            BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucher(currentTotal, hoaDon);
+            hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
         }
 
         // Lưu thay đổi phí phụ/hoàn phí và tổng tiền

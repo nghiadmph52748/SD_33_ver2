@@ -140,13 +140,9 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
   const recalculateShippingFee = async () => {
     try {
       if (!walkInLocation.value.thanhPho || !walkInLocation.value.quan || !walkInLocation.value.phuong) {
-        console.log('[Payment] Address incomplete for shipping calculation')
         return
       }
-
-      console.log('[Payment] Recalculating shipping fee for address:', walkInLocation.value)
       const result = await calculateShippingFeeFromGHN(walkInLocation.value)
-      console.log('[Payment] Shipping fee calculated:', result)
       shippingFee.value = result.fee
     } catch (error) {
       console.error('[Payment] Error recalculating shipping fee:', error)
@@ -170,12 +166,8 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
       }
       return
     }
-
-    console.log('[FillLocation] Filling location from customer:', customer.name)
-
     // Prefer structured address data if available
     if (customer.addressInfo) {
-      console.log('[FillLocation] Using structured addressInfo')
       walkInLocation.value.thanhPho = customer.addressInfo.thanhPho || ''
       walkInLocation.value.quan = customer.addressInfo.quan || ''
       walkInLocation.value.phuong = customer.addressInfo.phuong || ''
@@ -227,9 +219,6 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
       walkInLocation.value.diaChiCuThe = ''
       return
     }
-
-    console.log('[FillLocation] Using address string:', customer.address)
-
     // Store address in diaChiCuThe (already should be just specific address from loadCustomers)
     walkInLocation.value.diaChiCuThe = customer.address
 
@@ -258,11 +247,10 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
 
   const updateInvoiceShipping = async (invoiceId: number) => {
     try {
-      if (orderType.value !== 'delivery') {
-        Message.info('Đơn hàng tại quầy, không cần cập nhật giao hàng')
-        return
-      }
-      await svcUpdateShippingMethod(invoiceId, userStore.id || 1)
+      // Convert orderType to boolean: 'delivery' = true, 'counter' = false
+      const loaiDon = orderType.value === 'delivery'
+      const fee = loaiDon ? shippingFee.value : 0
+      await svcUpdateShippingMethod(invoiceId, loaiDon, fee, userStore.id || 1)
       Message.success('Hình thức giao hàng đã được cập nhật')
     } catch (error: any) {
       console.error('Lỗi cập nhật giao hàng:', error)

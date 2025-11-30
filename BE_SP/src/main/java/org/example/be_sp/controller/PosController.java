@@ -114,9 +114,10 @@ public class PosController {
     }
 
     @PutMapping("/update-giao-hang")
-    public ResponseObject<?> updateGiaoHang(@RequestParam Integer idHoaDon, @RequestParam Integer idNhanVien) {
+    public ResponseObject<?> updateGiaoHang(@RequestParam Integer idHoaDon, @RequestParam Boolean loaiDon,
+            @RequestParam(required = false) java.math.BigDecimal phiVanChuyen, @RequestParam Integer idNhanVien) {
         try {
-            banHangService.updateGiaoHang(idHoaDon, idNhanVien);
+            banHangService.updateGiaoHang(idHoaDon, loaiDon, phiVanChuyen, idNhanVien);
             return new ResponseObject<>(true, null, "Cập nhật hình thức giao hàng thành công");
         } catch (Exception e) {
             return new ResponseObject<>(false, null, "Lỗi khi cập nhật hình thức giao hàng: " + e.getMessage());

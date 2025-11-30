@@ -1096,26 +1096,16 @@ const handlePaymentMethodChange = async (value: string) => {
 const handleOrderTypeChange = async (value: string) => {
   try {
     orderType.value = value as 'counter' | 'delivery'
-    if (currentOrder.value?.id) {
-      const invoiceId = parseInt(currentOrder.value.id)
-      if (!Number.isNaN(invoiceId)) {
-        await updateInvoiceShipping(invoiceId)
-      }
-    }
+
     if (value === 'delivery') {
       Message.info('Vui lòng nhập địa chỉ giao hàng')
       // Trigger shipping fee calculation for registered customer or walk-in customer
       // Use nextTick to ensure DOM is updated first
       await nextTick()
-      console.log('[OrderTypeChange] Delivery mode activated, calculating shipping fee...')
-      console.log('[OrderTypeChange] Walk-in:', isWalkIn.value)
-      console.log('[OrderTypeChange] Location:', walkInLocation.value)
-
       if (walkInLocation.value.thanhPho && walkInLocation.value.quan && walkInLocation.value.phuong) {
         // Call GHN API to get real shipping fee
         try {
           const result = await calculateShippingFeeFromGHN(walkInLocation.value as any)
-          console.log('[OrderTypeChange] GHN Fee:', result.fee)
           shippingFee.value = result.fee || 0
         } catch (error) {
           console.error('[OrderTypeChange] Error getting GHN fee, using fallback:', error)
@@ -1123,11 +1113,19 @@ const handleOrderTypeChange = async (value: string) => {
           shippingFee.value = fallbackFee || 0
         }
       } else {
-        console.log('[OrderTypeChange] Address incomplete, skipping fee calculation')
+        shippingFee.value = 0
       }
     } else {
       // Reset shipping fee when not in delivery mode
       shippingFee.value = 0
+    }
+
+    // Update backend AFTER shipping fee is calculated/reset
+    if (currentOrder.value?.id) {
+      const invoiceId = parseInt(currentOrder.value.id)
+      if (!Number.isNaN(invoiceId)) {
+        await updateInvoiceShipping(invoiceId)
+      }
     }
   } catch (error: any) {
     console.error('Lỗi cập nhật loại đơn:', error)
@@ -1136,9 +1134,7 @@ const handleOrderTypeChange = async (value: string) => {
 }
 
 const updateShippingFeeValue = (value: number) => {
-  console.log('[UpdateShippingFee] Updating shipping fee to:', value)
   shippingFee.value = value
-  console.log('[UpdateShippingFee] Shipping fee local state updated. Will be sent to server when confirming order.')
 }
 
 const updateWalkInAddress = (value: string) => {
@@ -1423,12 +1419,6 @@ const handleConfirmFromBetterVoucher = async () => {
 watch(
   () => walkInLocation.value,
   (newLocation) => {
-    console.log('[WalkInLocationWatch] Location changed:', {
-      province: newLocation.thanhPho,
-      district: newLocation.quan,
-      ward: newLocation.phuong,
-      address: newLocation.diaChiCuThe,
-    })
   },
   { deep: true }
 )
@@ -1437,7 +1427,6 @@ watch(
 watch(
   () => walkInLocation.value.thanhPho,
   async (newProvince) => {
-    console.log('[AddressWatch] Walk-in Province changed to:', newProvince)
   }
 )
 
@@ -1445,7 +1434,6 @@ watch(
 watch(
   () => walkInLocation.value.quan,
   async (newDistrict) => {
-    console.log('[AddressWatch] Walk-in District changed to:', newDistrict)
   }
 )
 
@@ -1453,7 +1441,6 @@ watch(
 watch(
   () => walkInLocation.value.phuong,
   async (newWard) => {
-    console.log('[AddressWatch] Walk-in Ward changed to:', newWard)
   }
 )
 
@@ -1461,7 +1448,6 @@ watch(
 watch(
   () => walkInLocation.value.diaChiCuThe,
   async (newAddress) => {
-    console.log('[AddressWatch] Walk-in Address detail changed to:', newAddress)
   }
 )
 

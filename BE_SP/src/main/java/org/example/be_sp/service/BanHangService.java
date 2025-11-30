@@ -217,7 +217,6 @@ public class BanHangService {
         try {
             qrSessionService.cancelSessionsByInvoice(idHoaDon);
         } catch (Exception e) {
-            log.error("Không thể huỷ QR session khi xoá hóa đơn {}: {}", idHoaDon, e.getMessage());
         }
         ArrayList<HoaDonChiTiet> lst = hdctRepository.findAllByIdHoaDonAndTrangThai(hd, true);
         Integer[] lstIdHdct = lst.stream().map(HoaDonChiTiet::getId).toArray(Integer[]::new);
@@ -314,15 +313,15 @@ public class BanHangService {
             BigDecimal normalizedTongTien = normalizeCurrency(tongTienHang);
             hoaDon.setTongTien(normalizedTongTien);
 
-            // Tính tongTienSauGiam: nếu có voucher thì áp dụng, nếu không thì = tongTienHang
+            // Tính tongTienSauGiam: tổng tiền sau giảm = tổng tiền - giảm giá từ voucher
+            // ALWAYS recalculate whenever tongTien changes (items added/removed)
+            BigDecimal tongTienSauGiam = normalizedTongTien;
             if (hoaDon.getIdPhieuGiamGia() != null && hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia() != null) {
-                BigDecimal tongTienSauGiam = tongTienHang.multiply(
-                        BigDecimal.valueOf((BigDecimal.valueOf(100).subtract(hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia()).doubleValue()) / 100.0));
-                hoaDon.setTongTienSauGiam(normalizeCurrency(tongTienSauGiam));
-            } else {
-                // Nếu không có voucher, tổng sau giảm = tổng hàng
-                hoaDon.setTongTienSauGiam(normalizedTongTien);
+                BigDecimal discountPercent = hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia();
+                BigDecimal discountAmount = tongTienHang.multiply(discountPercent).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                tongTienSauGiam = normalizedTongTien.subtract(discountAmount);
             }
+            hoaDon.setTongTienSauGiam(normalizeCurrency(tongTienSauGiam));
         } else {
             BigDecimal zeroValue = normalizeCurrency(BigDecimal.ZERO);
             hoaDon.setTongTien(zeroValue);
@@ -459,18 +458,25 @@ public class BanHangService {
         }
     }
 
-    public void updateGiaoHang(Integer idHoaDon, Integer idNhanVien) {
+    public void updateGiaoHang(Integer idHoaDon, Boolean loaiDon, BigDecimal phiVanChuyen, Integer idNhanVien) {
         HoaDon hoaDon = hdRepository.findById(idHoaDon)
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
         boolean giaohangCu = hoaDon.getGiaoHang();
-        hoaDon.setGiaoHang(!hoaDon.getGiaoHang());
+
+        // Use the loaiDon parameter from frontend (true = delivery, false = counter)
+        hoaDon.setGiaoHang(loaiDon != null ? loaiDon : false);
+
+        // Set shipping fee from frontend
         if (hoaDon.getGiaoHang()) {
-            hoaDon.setPhiVanChuyen(BigDecimal.valueOf(30000));
+            // Delivery mode - use shipping fee from frontend (or 0 if not provided)
+            hoaDon.setPhiVanChuyen(phiVanChuyen != null ? phiVanChuyen : BigDecimal.ZERO);
+        } else {
+            // Counter mode - reset shipping fee to 0
+            hoaDon.setPhiVanChuyen(BigDecimal.ZERO);
         }
         hoaDon.setUpdateAt(LocalDateTime.now());
         hoaDon.setUpdateBy(idNhanVien);
         hdRepository.save(hoaDon);
-
         // Create timeline: Cập nhật hình thức giao hàng
         addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
                 "Cập nhật hình thức giao hàng: " + (giaohangCu ? "Không giao" : "Giao hàng")
@@ -591,6 +597,10 @@ public class BanHangService {
         // Set shipping fee from request (if provided)
         if (request.getPhiVanChuyen() != null) {
             hoaDon.setPhiVanChuyen(request.getPhiVanChuyen());
+        }
+        // Set tongTienSauGiam from request (voucher discount already calculated on frontend)
+        if (request.getTongTienSauGiam() != null) {
+            hoaDon.setTongTienSauGiam(request.getTongTienSauGiam());
         }
         hoaDon.setGhiChu("Bán hàng tại quầy");
         // Set ngayThanhToan when checkout is successful

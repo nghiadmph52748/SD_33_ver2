@@ -146,11 +146,18 @@ export const updateCustomerForInvoice = (data: UpdateCustomerRequest) =>
   })
 
 /** Update shipping method */
-export const updateShippingMethod = (idHoaDon: number, idNhanVien: number) =>
-  requestJson<void>('/api/pos/update-giao-hang', {
-    method: 'PUT',
-    params: { idHoaDon, idNhanVien },
+export const updateShippingMethod = (idHoaDon: number, loaiDon: boolean, phiVanChuyen: number, idNhanVien: number) => {
+  const params = new URLSearchParams({
+    idHoaDon: String(idHoaDon),
+    loaiDon: String(loaiDon),
+    phiVanChuyen: String(phiVanChuyen),
+    idNhanVien: String(idNhanVien),
   })
+  const url = `/api/pos/update-giao-hang?${params.toString()}`
+  return requestJson<void>(url, {
+    method: 'PUT',
+  })
+}
 
 /** Update payment method */
 export interface UpdatePaymentMethodRequest {

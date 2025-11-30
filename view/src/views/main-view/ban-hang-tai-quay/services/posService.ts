@@ -44,8 +44,8 @@ export async function updateCustomerForInvoice(req: UpdateCustomerRequest) {
   return apiUpdateCustomerForInvoice(req)
 }
 
-export async function updateShippingMethod(invoiceId: number, userId: number) {
-  return apiUpdateShippingMethod(invoiceId, userId)
+export async function updateShippingMethod(invoiceId: number, loaiDon: boolean, phiVanChuyen: number, userId: number) {
+  return apiUpdateShippingMethod(invoiceId, loaiDon, phiVanChuyen, userId)
 }
 
 export async function updatePaymentMethod(invoiceId: number, method: 'cash' | 'transfer' | 'both', userId: number) {
