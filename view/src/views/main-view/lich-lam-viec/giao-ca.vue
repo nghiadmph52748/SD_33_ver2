@@ -279,7 +279,7 @@ import { useUserStore } from '@/store'
 import { themGiaoCa, suaGiaoCa, getGiaoCa } from '@/api/giao-ca'
 import { fetchHoaDonList } from '@/api/hoa-don'
 import { getCaLamViec } from '@/api/ca-lam-viec'
-import { timKiemLichLamViec } from '@/api/lich-lam-viec'
+import { timKiemLichLamViec, suaLichLamViec } from '@/api/lich-lam-viec'
 import { layDanhSachNhanVien } from '@/api/nhan-vien'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import ConfirmReceiveShift from '@/components/ConfirmReceiveShift.vue'
@@ -318,6 +318,7 @@ const router = useRouter()
 const caLamViecList = ref([])
 const selectedCaId = ref(null)
 const scheduledList = ref([]) // admin-assigned schedule entries for current user/day
+const currentLichLamViecId = ref(null) // Track current schedule ID for updating on shift end
 const ghiChu = ref('')
 const currentTime = ref('')
 
@@ -697,6 +698,16 @@ async function startShift() {
       return
     }
 
+    // Find the schedule ID from scheduledList if available
+    let scheduleId = null
+    if (scheduledList.value.length > 0) {
+      const selectedSchedule = scheduledList.value.find((s) => s.caLamViec?.id === Number(caLamViecId))
+      if (selectedSchedule) {
+        scheduleId = selectedSchedule.id
+      }
+    }
+    currentLichLamViecId.value = scheduleId
+
     const cashValue = Number(initialCash.value) || 0
     const cashValidationError = validateInitialCash(cashValue)
     if (cashValidationError) {
@@ -751,8 +762,17 @@ async function openEndShiftModal() {
   loadingEmployees.value = true
   try {
     const res = await layDanhSachNhanVien()
+    console.log('Employee list response:', res)
     const data = res.data || res || []
-    employeeList.value = Array.isArray(data) ? data : []
+    const employees = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
+    console.log('Processed employee list:', employees)
+    employeeList.value = employees.map((emp: any) => ({
+      id: emp.id,
+      tenNhanVien: emp.tenNhanVien || emp.ten || emp.name || '',
+      name: emp.tenNhanVien || emp.ten || emp.name || '',
+      ten: emp.tenNhanVien || emp.ten || emp.name || '',
+    }))
+    console.log('Final employee list:', employeeList.value)
   } catch (err) {
     console.warn('Không lấy danh sách nhân viên', err)
     employeeList.value = []
@@ -835,6 +855,17 @@ async function finalizeEndShift() {
 
     console.log('End shift payload:', payload)
     await suaGiaoCa(activeShift.value.id, payload)
+
+    // Update schedule status to "Đã làm" if schedule exists
+    if (currentLichLamViecId.value) {
+      try {
+        await suaLichLamViec(currentLichLamViecId.value, { trangThai: 'Đã làm' })
+        console.log('Updated schedule status to "Đã làm" for schedule ID:', currentLichLamViecId.value)
+      } catch (scheduleError) {
+        console.warn('Không cập nhật được trạng thái lịch làm việc:', scheduleError)
+        // Continue even if schedule update fails
+      }
+    }
 
     // Refresh data
     try {

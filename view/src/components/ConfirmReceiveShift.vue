@@ -44,6 +44,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { xacNhanGiaoCa } from '@/api/giao-ca'
+import { useUserStore } from '@/store'
 import { Message } from '@arco-design/web-vue'
 
 const visible = ref(false)
@@ -53,6 +54,7 @@ const invoiceList = ref([] as any[])
 const endTime = ref(new Date().toISOString())
 const actualCash = ref(0)
 const receiveNote = ref('')
+const userStore = useUserStore()
 
 let resolver: ((v: any) => void) | null = null
 
@@ -95,17 +97,29 @@ async function onConfirm() {
   loading.value = true
   try {
     const payload = {
+      nguoiNhanId: userStore.id,
       soTienNhanThucTe: Number(actualCash.value),
       trangThaiXacNhan: 'Đã xác nhận',
       ghiChuXacNhan: receiveNote.value || undefined,
     }
+    console.log('Submitting confirm payload:', payload)
     await xacNhanGiaoCa(shift.value.id, payload)
     Message.success('Xác nhận nhận ca thành công')
     visible.value = false
     if (resolver) resolver(true)
   } catch (e) {
     console.error('Lỗi xác nhận nhận ca', e)
-    Message.error('Xác nhận thất bại')
+    let errorMsg = 'Xác nhận thất bại'
+    try {
+      // @ts-ignore
+      if (e?.response?.data?.message) {
+        // @ts-ignore
+        errorMsg = e.response.data.message
+      } else if (e?.message) {
+        errorMsg = e.message
+      }
+    } catch {}
+    Message.error(errorMsg)
     if (resolver) resolver(false)
   } finally {
     loading.value = false
