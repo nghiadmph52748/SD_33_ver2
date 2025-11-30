@@ -32,17 +32,17 @@
           <a-textarea v-model="receiveNote" rows="3" placeholder="Ghi chú nhận ca" />
         </a-form-item>
       </div>
+    </div>
 
     <template #footer>
       <a-button @click="onCancel" :disabled="loading">Hủy</a-button>
       <a-button type="primary" :loading="loading" @click="onConfirm">XÁC NHẬN NHẬN CA</a-button>
     </template>
-    </div>
   </a-modal>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { xacNhanGiaoCa } from '@/api/giao-ca'
 import { Message } from '@arco-design/web-vue'
 
@@ -78,7 +78,7 @@ const expectedCash = computed(() => {
   return base + invoicesTotal
 })
 
-export function show(s: any, invoices: any[] = [], opts: { endTime?: string } = {}) {
+function show(s: any, invoices: any[] = [], opts: { endTime?: string } = {}) {
   shift.value = s
   invoiceList.value = invoices
   endTime.value = opts.endTime || new Date().toISOString()
@@ -118,6 +118,11 @@ function onCancel() {
   if (resolver) resolver(false)
   resolver = null
 }
+
+// Export hàm show để sử dụng từ bên ngoài
+defineExpose({
+  show
+})
 </script>
 
 <style scoped>
