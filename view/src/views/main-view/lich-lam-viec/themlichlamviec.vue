@@ -59,7 +59,7 @@ import { useRouter } from 'vue-router'
 
 import { layDanhSachNhanVien } from '@/api/nhan-vien'
 import { getCaLamViec } from '@/api/ca-lam-viec'
-import { themLichLamViec } from '@/api/lich-lam-viec'
+import { themLichLamViec, getLichLamViec } from '@/api/lich-lam-viec'
 
 const router = useRouter()
 
@@ -160,6 +160,39 @@ const handleSubmit = async () => {
     return
   }
 
+  // Validate ngày không được là ngày cũ
+  const selectedDate = dayjs(form.value.ngayLamViec).startOf('day')
+  const today = dayjs().startOf('day')
+  if (selectedDate.isBefore(today)) {
+    Message.error('Không được chọn lịch cũ. Vui lòng chọn ngày hiện tại hoặc lớn hơn ngày hiện tại')
+    return
+  }
+
+  // Validate không thêm 2 ca trùng giờ cùng một ngày
+  try {
+    const ngayLamViec = dayjs(form.value.ngayLamViec).format('YYYY-MM-DD')
+    const list = await getLichLamViec()
+    const allSchedules = Array.isArray(list.data) ? list.data : Array.isArray(list) ? list : []
+    
+    // Check for conflicting schedule (same employee, same date, same shift)
+    const hasConflict = allSchedules.some((item: any) => {
+      const empId = item.nhanVien?.id || item.nhanVienId
+      const itemDate = item.ngayLamViec || item.ngayLam
+      const existingCaId = item.caLamViec?.id || item.caLamViecId
+      
+      return empId === form.value.nhanVien && itemDate === ngayLamViec && existingCaId === form.value.caLamViec
+    })
+    
+    if (hasConflict) {
+      Message.error('Nhân viên này đã có lịch làm ca này trong ngày. Không thể thêm 2 ca trùng giờ cùng một ngày!')
+      return
+    }
+  } catch (err) {
+    console.error('Error checking schedule conflict:', err)
+    Message.error('Lỗi khi kiểm tra lịch trùng')
+    return
+  }
+
   Modal.confirm({
     title: 'Xác nhận thêm lịch làm việc',
     content: 'Bạn có chắc chắn muốn lưu lịch làm việc này không?',
@@ -175,7 +208,7 @@ const handleSubmit = async () => {
         nhanVienId,
         caLamViecId,
         ngayLamViec,
-        trangThai: true,
+        trangThai: false,
         ghiChu: form.value.ghiChu || null,
       }
 

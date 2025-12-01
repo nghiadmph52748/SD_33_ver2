@@ -85,3 +85,28 @@ export function timKiemLichLamViec(params: { ngayLamViec?: string; nhanVienId?: 
   // Nếu backend thực sự có endpoint /search, giữ; nếu không, đổi thành query trên /api/lich-lam-viec
   return axios.get<ApiLichLamViec[]>('/api/lich-lam-viec/search', { params })
 }
+
+/**
+ * Kiểm tra xem nhân viên có lịch trùng giờ trong ngày không
+ */
+export async function checkScheduleConflict(nhanVienId: number, caLamViecId: number, ngayLamViec: string, excludeScheduleId?: number): Promise<boolean> {
+  try {
+    const res = await getLichLamViec()
+    const list = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : []
+    
+    const existingSchedules = list.filter((item: any) => {
+      const empId = item.nhanVien?.id || item.nhanVienId
+      const itemDate = item.ngayLamViec || item.ngayLam
+      const existingCaId = item.caLamViec?.id || item.caLamViecId
+      
+      if (excludeScheduleId && item.id === excludeScheduleId) return false
+      
+      return empId === nhanVienId && itemDate === ngayLamViec && existingCaId === caLamViecId
+    })
+    
+    return existingSchedules.length > 0
+  } catch (err) {
+    console.warn('Error checking schedule conflict:', err)
+    return false
+  }
+}

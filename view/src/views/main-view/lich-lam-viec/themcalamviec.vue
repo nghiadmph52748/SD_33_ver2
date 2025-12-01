@@ -50,7 +50,7 @@ import { useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
 import Breadcrumb from '@/components/breadcrumb/breadcrumb.vue'
 import useBreadcrumb from '@/hooks/breadcrumb'
-import { getCaLamViec, themCaLamViec } from '@/api/ca-lam-viec'
+import { getCaLamViec, themCaLamViec, checkTimeConflict } from '@/api/ca-lam-viec'
 
 const { breadcrumbItems } = useBreadcrumb()
 const router = useRouter()
@@ -92,6 +92,42 @@ const validateForm = () => {
 
 const onSubmit = async () => {
   if (!validateForm()) return
+
+  // Validate ca cùng giờ không được tồn tại
+  try {
+    const startTime = formatToLocalTime(form.value.gioBatDau)
+    const endTime = formatToLocalTime(form.value.gioKetThuc)
+    
+    // Normalize to HH:mm format for comparison
+    const normalizeTimeFormat = (time: string) => {
+      if (!time) return ''
+      return time.split(':').slice(0, 2).join(':')
+    }
+    
+    const normalizedStart = normalizeTimeFormat(startTime || '')
+    const normalizedEnd = normalizeTimeFormat(endTime || '')
+    
+    // Get all existing shifts
+    const res = await getCaLamViec()
+    const allShifts = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : []
+    
+    // Check if any shift has the same time
+    const hasConflict = allShifts.some((ca: any) => {
+      const existingStart = normalizeTimeFormat(ca.thoiGianBatDau || ca.gioBatDau)
+      const existingEnd = normalizeTimeFormat(ca.thoiGianKetThuc || ca.gioKetThuc)
+      
+      return existingStart === normalizedStart && existingEnd === normalizedEnd
+    })
+    
+    if (hasConflict) {
+      Message.error('Ca làm việc với giờ này đã tồn tại. Vui lòng chọn giờ khác!')
+      return
+    }
+  } catch (err) {
+    console.error('Error checking time conflict:', err)
+    Message.error('Lỗi khi kiểm tra ca trùng')
+    return
+  }
 
   //  Xác nhận trước khi lưu
   Modal.confirm({
