@@ -584,6 +584,25 @@ public class HoaDonService {
                     // Fallback: map boolean to status text
                     trangThaiMoi = saved.getTrangThai() ? "Hoàn thành" : "Chờ xác nhận";
                 }
+
+                // Create timeline entry describing the status transition
+                try {
+                    TimelineDonHang timeline = new TimelineDonHang();
+                    timeline.setIdHoaDon(saved);
+                    timeline.setIdNhanVien(timelineNhanVien);
+                    timeline.setTrangThaiCu(trangThaiCu);
+                    timeline.setTrangThaiMoi(trangThaiMoi);
+                    timeline.setHanhDong("Cập nhật");
+                    timeline.setMoTa("Cập nhật trạng thái đơn hàng từ \"" + trangThaiCu + "\" sang \"" + trangThaiMoi + "\"");
+                    timeline.setGhiChu("Trạng thái đơn hàng: " + trangThaiMoi);
+                    timeline.setThoiGian(java.time.Instant.now());
+                    timeline.setTrangThai(true);
+                    timeline.setDeleted(false);
+                    timelineDonHangRepository.save(timeline);
+                } catch (Exception e) {
+                    // Ignore timeline persistence issues so primary update proceeds
+                }
+
                 // Update ThongTinDonHang with corresponding idTrangThaiDonHang
                 // idTrangThaiDonHang: 1 = Chờ xác nhận, 2 = Đã xác nhận, 3 = Đang xử lý, 4 =
                 // Đang giao hàng, 5 = Đã giao hàng, 6 = Đã hủy, 7 = Hoàn thành
@@ -1790,30 +1809,24 @@ public class HoaDonService {
      * tongTien, to avoid double-counting
      */
     private BigDecimal calculateTongTienSauGiamWithVoucherOnly(BigDecimal tongTien, HoaDon hoaDon) {
-        BigDecimal result = tongTien;
-
-        // Subtract voucher discount only
-        if (hoaDon.getIdPhieuGiamGia() != null && hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia() != null) {
-            PhieuGiamGia voucher = hoaDon.getIdPhieuGiamGia();
-            BigDecimal discountValue = voucher.getGiaTriGiamGia();
-
-            // loaiPhieuGiamGia: 0=percentage, 1=fixed amount
-            if (Boolean.TRUE.equals(voucher.getLoaiPhieuGiamGia())) {
-                // Fixed amount discount (loaiPhieuGiamGia=1)
-                result = result.subtract(discountValue);
-            } else {
-                // Percentage discount (loaiPhieuGiamGia=0)
-                BigDecimal discountAmount = tongTien.multiply(discountValue).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
-                result = result.subtract(discountAmount);
-            }
+        BigDecimal discountAmount = resolveVoucherDiscountAmount(tongTien, hoaDon);
+        BigDecimal subtotal = tongTien.subtract(discountAmount);
+        if (subtotal.compareTo(BigDecimal.ZERO) < 0) {
+            subtotal = BigDecimal.ZERO;
         }
 
-        // Ensure result is never negative
-        BigDecimal finalResult = result.compareTo(BigDecimal.ZERO) > 0 ? result : BigDecimal.ZERO;
+        BigDecimal shippingFee = hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO;
+        BigDecimal finalResult = subtotal.add(shippingFee);
 
-        log.info("[calculateTongTienSauGiam] tongTien={}, voucherCode={}, result={}",
+        if (finalResult.compareTo(BigDecimal.ZERO) < 0) {
+            finalResult = BigDecimal.ZERO;
+        }
+
+        log.info("[calculateTongTienSauGiam] tongTien={}, voucherCode={}, shipping={}, discount={}, result={}",
                 tongTien,
                 hoaDon.getIdPhieuGiamGia() != null ? hoaDon.getIdPhieuGiamGia().getMaPhieuGiamGia() : "NONE",
+                shippingFee,
+                discountAmount,
                 finalResult);
 
         return finalResult;
@@ -1825,46 +1838,63 @@ public class HoaDonService {
      * hoaDon object)
      */
     private BigDecimal calculateTongTienSauGiamWithVoucherApplyAll(BigDecimal tongTien, HoaDon hoaDon) {
-        BigDecimal result = tongTien;
-
-        // Step 1: Subtract voucher discount
-        if (hoaDon.getIdPhieuGiamGia() != null && hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia() != null) {
-            PhieuGiamGia voucher = hoaDon.getIdPhieuGiamGia();
-            BigDecimal discountValue = voucher.getGiaTriGiamGia();
-
-            // loaiPhieuGiamGia: 0=percentage, 1=fixed amount
-            if (Boolean.TRUE.equals(voucher.getLoaiPhieuGiamGia())) {
-                // Fixed amount discount (loaiPhieuGiamGia=1)
-                result = result.subtract(discountValue);
-            } else {
-                // Percentage discount (loaiPhieuGiamGia=0) - calculate on original tongTien
-                BigDecimal discountAmount = tongTien.multiply(discountValue).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
-                result = result.subtract(discountAmount);
-            }
+        BigDecimal discountAmount = resolveVoucherDiscountAmount(tongTien, hoaDon);
+        BigDecimal subtotal = tongTien.subtract(discountAmount);
+        if (subtotal.compareTo(BigDecimal.ZERO) < 0) {
+            subtotal = BigDecimal.ZERO;
         }
 
-        // Step 2: Add surcharge (phụ phí)
+        BigDecimal shippingFee = hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO;
+        BigDecimal result = subtotal.add(shippingFee);
+
         if (hoaDon.getPhuPhi() != null && hoaDon.getPhuPhi().compareTo(BigDecimal.ZERO) > 0) {
             result = result.add(hoaDon.getPhuPhi());
         }
 
-        // Step 3: Subtract refund (hoàn phí)
         if (hoaDon.getHoanPhi() != null && hoaDon.getHoanPhi().compareTo(BigDecimal.ZERO) > 0) {
             result = result.subtract(hoaDon.getHoanPhi());
         }
 
-        // Ensure result is never negative
-        BigDecimal finalResult = result.compareTo(BigDecimal.ZERO) > 0 ? result : BigDecimal.ZERO;
+        if (result.compareTo(BigDecimal.ZERO) < 0) {
+            result = BigDecimal.ZERO;
+        }
 
-        // Debug logging
-        log.info("[calculateTongTienSauGiamApplyAll] tongTien={}, voucherCode={}, phuPhi={}, hoanPhi={}, result={}",
+        log.info("[calculateTongTienSauGiamApplyAll] tongTien={}, voucherCode={}, shipping={}, phuPhi={}, hoanPhi={}, discount={}, result={}",
                 tongTien,
                 hoaDon.getIdPhieuGiamGia() != null ? hoaDon.getIdPhieuGiamGia().getMaPhieuGiamGia() : "NONE",
+                shippingFee,
                 hoaDon.getPhuPhi(),
                 hoaDon.getHoanPhi(),
-                finalResult);
+                discountAmount,
+                result);
 
-        return finalResult;
+        return result;
+    }
+
+    private BigDecimal resolveVoucherDiscountAmount(BigDecimal baseAmount, HoaDon hoaDon) {
+        if (hoaDon.getIdPhieuGiamGia() == null || hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        PhieuGiamGia voucher = hoaDon.getIdPhieuGiamGia();
+        BigDecimal discountValue = voucher.getGiaTriGiamGia();
+        BigDecimal discountAmount;
+
+        if (Boolean.TRUE.equals(voucher.getLoaiPhieuGiamGia())) {
+            discountAmount = discountValue;
+        } else {
+            discountAmount = baseAmount.multiply(discountValue)
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        }
+
+        if (discountAmount.compareTo(baseAmount) > 0) {
+            discountAmount = baseAmount;
+        }
+        if (discountAmount.compareTo(BigDecimal.ZERO) < 0) {
+            discountAmount = BigDecimal.ZERO;
+        }
+
+        return discountAmount;
     }
 
     /**
@@ -1884,13 +1914,15 @@ public class HoaDonService {
                 hoaDon.getTongTienSauGiam());
 
         BigDecimal originalTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-        BigDecimal updatedTotal = originalTotal;
         BigDecimal recordedRefundAmount = BigDecimal.ZERO;
         boolean customerPaidFullBeforeChange = false;
 
         // Kiểm tra xem đơn hàng đã được thay đổi địa chỉ giao hàng trước đây chưa
         // Nếu có record ThongTinDonHang với idTrangThaiDonHang = 8 thì không cho phép thay đổi lần thứ 2
-        boolean alreadyAddressChanged = thongTinDonHangRepository.existsByHoaDonIdAndStatusId(hoaDon.getId(), 8);
+        if (thongTinDonHangRepository.existsByHoaDonIdAndStatusId(hoaDon.getId(), 8)) {
+            log.warn("[sendAddressChangeNotification] Order id={} has already recorded an address change (status id=8)",
+                    hoaDon.getId());
+        }
         // Lấy thông tin khách hàng - ưu tiên từ hoaDon (cho khách lẻ), sau đó từ idKhachHang
         String customerEmail = null;
         String customerName = "Khách hàng";
@@ -1950,7 +1982,7 @@ public class HoaDonService {
                     hoaDon.setHoanPhi(BigDecimal.ZERO);
 
                     BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-                    updatedTotal = currentTotal.add(extraFee);
+                    BigDecimal updatedTotal = currentTotal.add(extraFee);
                     hoaDon.setTongTien(updatedTotal);
 
                     // IMPORTANT: Set phuPhi to 0 BEFORE calling helper to avoid double-addition
@@ -1983,7 +2015,6 @@ public class HoaDonService {
 
                     if (daTraDuTien) {
                         BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-                        updatedTotal = currentTotal;
                         // Recalculate tongTienSauGiam = tongTien - voucher discount + phụ phí (KHÔNG trừ hoàn phí)
                         // Vì khách đã trả đủ tiền, hoàn phí chỉ là ghi chú, không ảnh hưởng đến tongTienSauGiam
                         BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucherOnly(currentTotal, hoaDon);
@@ -1994,7 +2025,6 @@ public class HoaDonService {
                         if (newTotal.compareTo(BigDecimal.ZERO) < 0) {
                             newTotal = BigDecimal.ZERO;
                         }
-                        updatedTotal = newTotal;
                         hoaDon.setTongTien(newTotal);
 
                         // IMPORTANT: Set hoanPhi to 0 BEFORE calling helper to avoid double-subtraction
@@ -2061,9 +2091,6 @@ public class HoaDonService {
                 originalTotal,
                 finalUpdatedTotal);
 
-        BigDecimal loggedSurcharge = (request != null && request.getSurcharge() != null)
-                ? request.getSurcharge()
-                : BigDecimal.ZERO;
     }
 
     /**

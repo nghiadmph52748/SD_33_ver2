@@ -200,22 +200,24 @@
             </div>
             <div class="voucher-apply-row">
               <input
-                  v-model.trim="voucherCode"
-                  type="text"
-                  class="voucher-input"
-                  placeholder="Nhập mã"
-                  :disabled="applyingVoucher || cartCount === 0"
-                  @keydown.enter.prevent="applyVoucherCode"
+                v-model.trim="voucherCode"
+                type="text"
+                class="voucher-input"
+                placeholder="Nhập mã"
+                :disabled="applyingVoucher || cartCount === 0"
+                @keydown.enter.prevent="applyVoucherCode"
               />
               <button
-                  class="btn-apply-voucher"
-                  :disabled="!voucherCode || applyingVoucher || cartCount === 0"
-                  @click="applyVoucherCode"
+                class="btn-apply-voucher"
+                :disabled="!voucherCode || applyingVoucher || cartCount === 0"
+                @click="applyVoucherCode"
               >
                 {{ applyingVoucher ? "Đang kiểm tra..." : "Áp dụng" }}
               </button>
             </div>
-            <div v-if="voucherError" class="voucher-error">{{ voucherError }}</div>
+            <div v-if="voucherError" class="voucher-error">
+              {{ voucherError }}
+            </div>
 
             <!-- Voucher Details -->
             <div v-if="selectedVoucher" class="voucher-details-display">
@@ -396,30 +398,30 @@ async function updateShippingFee() {
 // Voucher functions
 async function applyVoucherCode() {
   if (!voucherCode.value) return;
-  voucherError.value = '';
+  voucherError.value = "";
   applyingVoucher.value = true;
   try {
     const code = voucherCode.value.trim();
     if (!code) {
-      voucherError.value = 'Vui lòng nhập mã phiếu';
+      voucherError.value = "Vui lòng nhập mã phiếu";
       return;
     }
     const voucher = await getVoucherByCode(code);
     if (!voucher) {
-      voucherError.value = 'Mã phiếu không hợp lệ hoặc đã hết hạn';
+      voucherError.value = "Mã phiếu không hợp lệ hoặc đã hết hạn";
       return;
     }
     const validation = validateVoucherUsage(voucher, cartTotal.value);
     if (!validation.valid) {
-      voucherError.value = validation.reason || 'Không thể áp dụng mã này';
+      voucherError.value = validation.reason || "Không thể áp dụng mã này";
       return;
     }
     selectedVoucher.value = voucher;
     voucherCode.value = voucher.maPhieuGiamGia || code;
-    voucherError.value = '';
+    voucherError.value = "";
   } catch (err: any) {
-    console.error('applyVoucherCode error:', err);
-    voucherError.value = err?.message || 'Không thể áp dụng mã';
+    console.error("applyVoucherCode error:", err);
+    voucherError.value = err?.message || "Không thể áp dụng mã";
   } finally {
     applyingVoucher.value = false;
   }
@@ -435,15 +437,15 @@ function closeVoucherModal() {
 
 function selectVoucher(voucher: Voucher) {
   selectedVoucher.value = voucher;
-  voucherCode.value = voucher?.maPhieuGiamGia || '';
-  voucherError.value = '';
+  voucherCode.value = voucher?.maPhieuGiamGia || "";
+  voucherError.value = "";
   closeVoucherModal();
 }
 
 function clearVoucher() {
   selectedVoucher.value = null;
-  voucherCode.value = '';
-  voucherError.value = '';
+  voucherCode.value = "";
+  voucherError.value = "";
 }
 
 function closeOrderConfirmation() {
@@ -1004,6 +1006,7 @@ async function handleCODCheckout() {
       customerId: userStore.id || undefined,
       paymentMethodId: codPaymentMethodId,
       voucherId: selectedVoucher.value?.id,
+      voucherDiscount: voucherDiscount.value,
       notes: orderNotes,
       shippingFee: shippingFee.value, // Extract ref value
       subtotal: cartTotal.value,
@@ -1223,7 +1226,7 @@ async function handleVnpayCheckout() {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.voucher-apply-row{
+.voucher-apply-row {
   display: flex;
   flex-direction: row;
   gap: 10px;

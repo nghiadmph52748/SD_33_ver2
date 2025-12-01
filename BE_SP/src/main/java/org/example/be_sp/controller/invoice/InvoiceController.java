@@ -65,6 +65,12 @@ public class InvoiceController {
         return new ResponseObject<>(true, null, "Xóa hóa đơn thành công");
     }
 
+    @PostMapping("/{id}/sync-payment")
+    public ResponseObject<?> synchronisePaidAmount(@PathVariable Integer id) {
+        return new ResponseObject<>(invoiceService.synchronisePaidAmount(id),
+                "Đồng bộ số tiền đã thanh toán thành công");
+    }
+
     @PostMapping("/send-address-change-notification/{id}")
     public ResponseObject<?> sendAddressChangeNotification(
             @PathVariable Integer id,

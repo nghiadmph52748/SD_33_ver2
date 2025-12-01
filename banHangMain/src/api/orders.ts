@@ -148,6 +148,7 @@ export interface CreateOrderOptions {
   customerId?: number;
   paymentMethodId?: number;
   voucherId?: number;
+  voucherDiscount?: number;
   notes?: string;
   shippingFee?: number;
   subtotal?: number;
@@ -276,13 +277,22 @@ export async function createOrderFromCart(
         0
       );
 
-    // totalAmount = subtotal + shippingFee (without VAT)
-    const totalAmount = Number(options.totalAmount ?? 0);
+    // totalAmount = subtotal + shippingFee - voucherDiscount (if provided)
+    const providedTotalAmount = Number(options.totalAmount ?? 0);
+    const inferredFinalTotal =
+      providedTotalAmount > 0 ? providedTotalAmount : subtotal + shippingFee;
 
-    // tongTien = total invoice amount (subtotal + shipping fee)
-    // tongTienSauGiam = final amount customer pays (same as tongTien, no discount/voucher yet)
-    const tongTien = totalAmount > 0 ? totalAmount : subtotal + shippingFee;
-    const tongTienSauGiam = tongTien;
+    const providedDiscount = Number(options.voucherDiscount ?? NaN);
+    const inferredDiscount = subtotal + shippingFee - inferredFinalTotal;
+    const rawDiscount = Number.isFinite(providedDiscount)
+      ? providedDiscount
+      : inferredDiscount;
+
+    const normalizedDiscount = Math.min(Math.max(rawDiscount, 0), subtotal);
+
+    const tongTien = subtotal;
+    const finalTotal = Math.max(0, subtotal - normalizedDiscount + shippingFee);
+    const tongTienSauGiam = finalTotal;
 
     const orderRequest: CreateOrderRequest = {
       idKhachHang: options.customerId ? Number(options.customerId) : undefined,

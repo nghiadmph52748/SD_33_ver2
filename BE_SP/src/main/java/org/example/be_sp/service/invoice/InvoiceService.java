@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.example.be_sp.entity.HinhThucThanhToan;
 import org.example.be_sp.entity.HoaDon;
 import org.example.be_sp.entity.HoaDonChiTiet;
 import org.example.be_sp.entity.KhachHang;
@@ -17,7 +18,9 @@ import org.example.be_sp.model.request.AddressChangeNotificationRequest;
 import org.example.be_sp.model.request.invoice.InvoiceAddressChangeRequest;
 import org.example.be_sp.model.request.invoice.InvoiceRequest;
 import org.example.be_sp.model.response.PagingResponse;
+import org.example.be_sp.model.response.invoice.InvoicePaymentSyncResponse;
 import org.example.be_sp.model.response.invoice.InvoiceResponse;
+import org.example.be_sp.repository.HinhThucThanhToanRepository;
 import org.example.be_sp.repository.HoaDonRepository;
 import org.example.be_sp.repository.PhieuGiamGiaCaNhanRepository;
 import org.example.be_sp.repository.PhieuGiamGiaRepository;
@@ -48,6 +51,7 @@ public class InvoiceService {
 
     private final HoaDonService hoaDonService;
     private final HoaDonRepository hoaDonRepository;
+    private final HinhThucThanhToanRepository hinhThucThanhToanRepository;
     private final ThongTinDonHangRepository thongTinDonHangRepository;
     private final TrangThaiDonHangRepository trangThaiDonHangRepository;
     private final PhieuGiamGiaRepository phieuGiamGiaRepository;
@@ -58,6 +62,7 @@ public class InvoiceService {
     public InvoiceService(
             HoaDonService hoaDonService,
             HoaDonRepository hoaDonRepository,
+            HinhThucThanhToanRepository hinhThucThanhToanRepository,
             ThongTinDonHangRepository thongTinDonHangRepository,
             TrangThaiDonHangRepository trangThaiDonHangRepository,
             PhieuGiamGiaRepository phieuGiamGiaRepository,
@@ -65,6 +70,7 @@ public class InvoiceService {
             EmailService emailService) {
         this.hoaDonService = hoaDonService;
         this.hoaDonRepository = hoaDonRepository;
+        this.hinhThucThanhToanRepository = hinhThucThanhToanRepository;
         this.thongTinDonHangRepository = thongTinDonHangRepository;
         this.trangThaiDonHangRepository = trangThaiDonHangRepository;
         this.phieuGiamGiaRepository = phieuGiamGiaRepository;
@@ -118,7 +124,11 @@ public class InvoiceService {
         HoaDon hoaDon = hoaDonRepository.findByIdWithVoucher(orderId)
                 .orElseThrow(() -> new ApiException("404", "Không tìm thấy hóa đơn"));
 
-        AddressChangeContext context = AddressChangeContext.from(hoaDon, request);
+        BigDecimal productTotal = calculateDetailTotal(hoaDon);
+        BigDecimal currentShipping = safe(hoaDon.getPhiVanChuyen());
+        BigDecimal discountAmount = determineDiscountAmount(hoaDon, productTotal, currentShipping);
+
+        AddressChangeContext context = AddressChangeContext.from(hoaDon, request, productTotal, discountAmount);
 
         log.info("[InvoiceService] Address change processing for order {} with difference {}",
                 hoaDon.getMaHoaDon(), context.difference);
@@ -143,6 +153,47 @@ public class InvoiceService {
         hoaDonRepository.save(hoaDon);
 
         appendAddressChangeStatus(hoaDon);
+    }
+
+    @Transactional
+    public InvoicePaymentSyncResponse synchronisePaidAmount(Integer orderId) {
+        HoaDon hoaDon = hoaDonRepository.findById(orderId)
+                .orElseThrow(() -> new ApiException("404", "Không tìm thấy hóa đơn"));
+
+        initialiseLazyCollections(hoaDon);
+
+        List<HinhThucThanhToan> payments = hinhThucThanhToanRepository.findByIdHoaDonAndDeleted(hoaDon, false);
+
+        BigDecimal totalPaid = payments.stream()
+                .filter(payment -> !Boolean.FALSE.equals(payment.getTrangThai()))
+                .map(payment -> safe(payment.getTienMat()).add(safe(payment.getTienChuyenKhoan())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal grandTotal = resolveGrandTotal(hoaDon);
+        BigDecimal remaining = grandTotal.subtract(totalPaid);
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+            remaining = BigDecimal.ZERO;
+        }
+
+        boolean fullyPaid = grandTotal.compareTo(BigDecimal.ZERO) > 0 && totalPaid.compareTo(grandTotal) >= 0;
+        LocalDateTime syncTimestamp = LocalDateTime.now();
+
+        hoaDon.setSoTienDaThanhToan(totalPaid);
+        hoaDon.setSoTienConLai(remaining);
+        hoaDon.setTrangThaiThanhToan(fullyPaid);
+        if (fullyPaid && hoaDon.getNgayThanhToan() == null) {
+            hoaDon.setNgayThanhToan(syncTimestamp);
+        }
+        hoaDon.setUpdateAt(syncTimestamp);
+        hoaDonRepository.save(hoaDon);
+
+        return new InvoicePaymentSyncResponse(
+                hoaDon.getId(),
+                grandTotal,
+                totalPaid,
+                remaining,
+                fullyPaid,
+                syncTimestamp);
     }
 
     private InvoiceResponse reload(Integer id) {
@@ -263,6 +314,38 @@ public class InvoiceService {
         return hoaDon.getHoaDonChiTiets().stream()
                 .map(this::resolveLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal determineDiscountAmount(HoaDon hoaDon, BigDecimal productTotal, BigDecimal shippingFee) {
+        BigDecimal recordedFinal = safe(hoaDon.getTongTienSauGiam());
+        if (recordedFinal.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal discountedSubtotal = recordedFinal.subtract(shippingFee);
+            BigDecimal discount = productTotal.subtract(discountedSubtotal);
+            if (discount.compareTo(BigDecimal.ZERO) < 0) {
+                return BigDecimal.ZERO;
+            }
+            if (discount.compareTo(productTotal) > 0) {
+                return productTotal;
+            }
+            return discount;
+        }
+
+        BigDecimal discountFromTongTien = safe(hoaDon.getTongTien()).subtract(productTotal);
+        if (discountFromTongTien.compareTo(BigDecimal.ZERO) > 0) {
+            return discountFromTongTien.min(productTotal);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal resolveGrandTotal(HoaDon hoaDon) {
+        BigDecimal discounted = safe(hoaDon.getTongTienSauGiam());
+        if (discounted.compareTo(BigDecimal.ZERO) > 0) {
+            return discounted;
+        }
+
+        BigDecimal detailTotal = calculateDetailTotal(hoaDon);
+        BigDecimal shipping = safe(hoaDon.getPhiVanChuyen());
+        return detailTotal.add(shipping);
     }
 
     private BigDecimal resolveLineTotal(HoaDonChiTiet chiTiet) {
@@ -402,6 +485,8 @@ public class InvoiceService {
 
         private final InvoiceAddressChangeRequest request;
         private final BigDecimal originalTotal;
+        private final BigDecimal productTotal;
+        private final BigDecimal discountAmount;
         private final BigDecimal difference;
         private final BigDecimal currentShippingFee;
         private final BigDecimal newShippingFee;
@@ -412,6 +497,8 @@ public class InvoiceService {
         private AddressChangeContext(
                 InvoiceAddressChangeRequest request,
                 BigDecimal originalTotal,
+                BigDecimal productTotal,
+                BigDecimal discountAmount,
                 BigDecimal difference,
                 BigDecimal currentShippingFee,
                 BigDecimal newShippingFee,
@@ -420,6 +507,8 @@ public class InvoiceService {
                 String customerName) {
             this.request = request;
             this.originalTotal = originalTotal;
+            this.productTotal = productTotal;
+            this.discountAmount = discountAmount;
             this.difference = difference;
             this.currentShippingFee = currentShippingFee;
             this.newShippingFee = newShippingFee;
@@ -428,7 +517,11 @@ public class InvoiceService {
             this.customerName = customerName;
         }
 
-        private static AddressChangeContext from(HoaDon hoaDon, InvoiceAddressChangeRequest request) {
+        private static AddressChangeContext from(
+                HoaDon hoaDon,
+                InvoiceAddressChangeRequest request,
+                BigDecimal productTotal,
+                BigDecimal discountAmount) {
             BigDecimal originalTotal = hoaDon.getTongTienSauGiam() != null
                     ? hoaDon.getTongTienSauGiam()
                     : BigDecimal.ZERO;
@@ -460,7 +553,7 @@ public class InvoiceService {
             String customerEmail = resolveEmail(hoaDon);
             String customerName = resolveName(hoaDon);
 
-            return new AddressChangeContext(request, originalTotal, difference, currentFee, newFee,
+            return new AddressChangeContext(request, originalTotal, productTotal, discountAmount, difference, currentFee, newFee,
                     paidInFull, customerEmail,
                     customerName);
         }
@@ -480,11 +573,12 @@ public class InvoiceService {
         }
 
         BigDecimal calculateDiscountedTotal() {
-            BigDecimal base = safe(originalTotal).subtract(safe(currentShippingFee));
-            if (base.compareTo(BigDecimal.ZERO) < 0) {
-                base = BigDecimal.ZERO;
+            BigDecimal subtotalAfterDiscount = safe(productTotal).subtract(safe(discountAmount));
+            if (subtotalAfterDiscount.compareTo(BigDecimal.ZERO) < 0) {
+                subtotalAfterDiscount = BigDecimal.ZERO;
             }
-            return base.add(targetShippingFee());
+            BigDecimal total = subtotalAfterDiscount.add(targetShippingFee());
+            return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
         }
 
         private BigDecimal targetShippingFee() {
