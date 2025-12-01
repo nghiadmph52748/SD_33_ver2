@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/content-data", "/api/popular/**").permitAll() // Allow dashboard mock data
                 .requestMatchers("/api/payment/vnpay/**").permitAll() // Allow VNPAY redirect/IPN without auth
                 .requestMatchers("/ws-chat/**").permitAll() // Allow WebSocket connection (auth handled by interceptor)
+                .requestMatchers("/api/invoice-management/**").permitAll() // Allow new invoice module endpoints
                 .requestMatchers("/api/hoa-don-management/**").permitAll() // Allow invoice management without auth for testing
                 .requestMatchers("/api/hoa-don-chi-tiet-management/**").permitAll() // Allow invoice detail management without auth for testing
                 .requestMatchers("/api/thong-tin-hoa-don-management/**").permitAll() // Allow order info management without auth for testing

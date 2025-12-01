@@ -146,8 +146,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, withDefaults } from 'vue'
 import { fetchTimelineByHoaDonId, type TimelineItem } from '@/api/timeline'
+import { fetchInvoiceById, type InvoiceApiModel } from '@/api/invoice'
 import { fetchHoaDonById, type HoaDonApiModel } from '@/api/hoa-don'
 import {
   IconRefresh,
@@ -163,12 +164,18 @@ import {
 import { createTimelineItem } from '@/api/timeline'
 import { getUserInfo } from '@/api/user'
 
-const props = defineProps<{
-  hoaDonId: number | string
-}>()
+const props = withDefaults(
+  defineProps<{
+    hoaDonId: number | string
+    useInvoiceApi?: boolean
+  }>(),
+  {
+    useInvoiceApi: false,
+  }
+)
 
 const timelineData = ref<TimelineItem[]>([])
-const orderInfo = ref<HoaDonApiModel | null>(null)
+const orderInfo = ref<InvoiceApiModel | HoaDonApiModel | null>(null)
 const loading = ref(false)
 const actionLoading = ref<string | null>(null)
 const currentUser = ref<any>(null)
@@ -178,6 +185,8 @@ const getHoaDonId = () => {
   return id && !isNaN(id) ? id : null
 }
 
+const shouldUseInvoiceApi = computed(() => props.useInvoiceApi === true)
+
 const fetchOrderInfo = async () => {
   try {
     const id = getHoaDonId()
@@ -185,7 +194,7 @@ const fetchOrderInfo = async () => {
       console.warn('hoaDonId không hợp lệ:', props.hoaDonId)
       return
     }
-    const data = await fetchHoaDonById(id)
+    const data = shouldUseInvoiceApi.value ? await fetchInvoiceById(id) : await fetchHoaDonById(id)
     orderInfo.value = data
     console.log('Đã lấy thông tin đơn hàng:', data)
 
@@ -1095,6 +1104,16 @@ watch(
     }
   },
   { immediate: false }
+)
+
+// Re-fetch timeline when switching between legacy and invoice APIs
+watch(
+  () => props.useInvoiceApi,
+  async (newValue, oldValue) => {
+    if (newValue === oldValue) return
+    if (!props.hoaDonId) return
+    await refreshTimeline()
+  }
 )
 </script>
 

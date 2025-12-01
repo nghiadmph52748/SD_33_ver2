@@ -228,25 +228,18 @@ const formatDate = (date: string) => {
 const calculateFinalTotal = (invoice: any) => {
   if (!invoice) return 0
 
-  // Tổng tiền = tongTienSauGiam + phiVanChuyen + phuPhi - hoanPhi
-  let total = invoice.tongTienSauGiam || invoice.tongTien || 0
-
-  // Add shipping fee if available
-  if (invoice.phiVanChuyen && invoice.phiVanChuyen > 0) {
-    total += invoice.phiVanChuyen
+  const backendTotal = invoice.tongTienSauGiam
+  if (backendTotal !== undefined && backendTotal !== null) {
+    const numericTotal = Number(backendTotal)
+    return Number.isFinite(numericTotal) ? Math.max(0, numericTotal) : 0
   }
 
-  // Add surcharge if available
-  if (invoice.phuPhi && invoice.phuPhi > 0) {
-    total += invoice.phuPhi
-  }
-
-  // Subtract refund if available
-  if (invoice.hoanPhi && invoice.hoanPhi > 0) {
-    total -= invoice.hoanPhi
-  }
-
-  return Math.max(0, total)
+  const base = Number(invoice.tongTien || 0)
+  const shipping = Number(invoice.phiVanChuyen || 0)
+  const surcharge = Number(invoice.phuPhi || 0)
+  const refund = Number(invoice.hoanPhi || 0)
+  const manualTotal = base + shipping + surcharge - refund
+  return Math.max(0, manualTotal)
 }
 
 const loadInvoiceData = async () => {
@@ -258,7 +251,7 @@ const loadInvoiceData = async () => {
     }
 
     // Load invoice details
-    const invoiceResponse = await axios.get(`/api/hoa-don-management/${invoiceId}`)
+    const invoiceResponse = await axios.get(`/api/invoice-management/${invoiceId}`)
 
     if (invoiceResponse && invoiceResponse.data) {
       invoice.value = invoiceResponse.data

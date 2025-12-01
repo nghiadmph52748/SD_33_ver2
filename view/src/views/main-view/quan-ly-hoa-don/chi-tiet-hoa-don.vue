@@ -1557,7 +1557,7 @@ const calculatedTongTienSauGiam = computed(() => {
   if (!invoice.value) return 0
 
   // Priority 1: Use tongTienSauGiam from backend if available
-  if (invoice.value.tongTienSauGiam && invoice.value.tongTienSauGiam > 0) {
+  if (invoice.value.tongTienSauGiam !== undefined && invoice.value.tongTienSauGiam !== null) {
     return Number(invoice.value.tongTienSauGiam)
   }
 
@@ -1585,8 +1585,12 @@ const calculatedDiscountAmount = computed(() => {
   const tongTienSauGiam = calculatedTongTienSauGiam.value
 
   // If tongTienSauGiam is from backend, use it directly
-  if (invoice.value.tongTienSauGiam && invoice.value.tongTienSauGiam > 0) {
-    const discount = tongTien - Number(invoice.value.tongTienSauGiam)
+  if (invoice.value.tongTienSauGiam !== undefined && invoice.value.tongTienSauGiam !== null) {
+    const shipping = Number(invoice.value.phiVanChuyen || 0)
+    const surcharge = Number(invoice.value.phuPhi || 0)
+    const refund = Number(invoice.value.hoanPhi || 0)
+    const comparableTotal = Number(invoice.value.tongTienSauGiam) - shipping - surcharge + refund
+    const discount = tongTien - comparableTotal
     return Math.max(0, discount)
   }
 
@@ -1594,28 +1598,27 @@ const calculatedDiscountAmount = computed(() => {
   return 0
 })
 
-// Calculate final total (Thành tiền) = tongTienSauGiam + phiVanChuyen + phuPhi - hoanPhi
+// Calculate final total (Thành tiền). Prefer backend-provided tongTienSauGiam to avoid double counting.
 const calculatedFinalTotal = computed(() => {
   if (!invoice.value) return 0
 
-  let total = calculatedTongTienSauGiam.value
-
-  // Add shipping fee if available
-  if (invoice.value.phiVanChuyen && invoice.value.phiVanChuyen > 0) {
-    total += Number(invoice.value.phiVanChuyen)
+  const backendTotal = invoice.value.tongTienSauGiam
+  if (backendTotal !== undefined && backendTotal !== null) {
+    const numericTotal = Number(backendTotal)
+    return Number.isFinite(numericTotal) ? Math.max(0, numericTotal) : 0
   }
 
-  // Add surcharge if available
-  if (invoice.value.phuPhi && invoice.value.phuPhi > 0) {
-    total += Number(invoice.value.phuPhi)
+  let total = Number(invoice.value.tongTien ?? 0)
+  if (!total) {
+    total = calculatedTongTien.value
   }
 
-  // Subtract refund if available
-  if (invoice.value.hoanPhi && invoice.value.hoanPhi > 0) {
-    total -= Number(invoice.value.hoanPhi)
-  }
+  const shipping = Number(invoice.value.phiVanChuyen || 0)
+  const surcharge = Number(invoice.value.phuPhi || 0)
+  const refund = Number(invoice.value.hoanPhi || 0)
 
-  return Math.max(0, total)
+  const manualTotal = total + shipping + surcharge - refund
+  return Math.max(0, manualTotal)
 })
 
 // Methods
@@ -1674,7 +1677,7 @@ const fetchInvoiceDetail = async () => {
     }
 
     // Fallback: thử API hóa đơn trực tiếp
-    const invoiceResponse = await axios.get(`/api/hoa-don-management/${invoiceId.value}`)
+    const invoiceResponse = await axios.get(`/api/invoice-management/${invoiceId.value}`)
 
     if (invoiceResponse.data && invoiceResponse.data.data) {
       invoice.value = invoiceResponse.data.data
@@ -2384,7 +2387,7 @@ const handleSaveUpdate = async () => {
     // Call API to update invoice
     let updateSucceeded = false
     try {
-      const response = await axios.put(`/api/hoa-don-management/update/${invoice.value.id}`, updateData)
+      const response = await axios.put(`/api/invoice-management/update/${invoice.value.id}`, updateData)
 
       // ResponseObject has isSuccess field (not success)
       // Backend returns: { isSuccess: true, data: null, message: "..." }
@@ -2482,7 +2485,7 @@ const handleSaveUpdate = async () => {
         }
         console.log('[AddressChange] Notification payload to send:', addressChangePayload)
         try {
-          await axios.post(`/api/hoa-don-management/send-address-change-notification/${invoice.value.id}`, addressChangePayload)
+          await axios.post(`/api/invoice-management/send-address-change-notification/${invoice.value.id}`, addressChangePayload)
           addressChangeNotificationSent = true
           console.log('[AddressChange] Notification payload sent:', addressChangePayload)
         } catch (notificationError: any) {

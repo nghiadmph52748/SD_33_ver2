@@ -207,7 +207,7 @@ const productColumns = [
 const fetchInvoiceDetail = async () => {
   try {
     loading.value = true
-    const response = await axios.get(`/api/hoa-don-management/${invoiceId.value}`)
+    const response = await axios.get(`/api/invoice-management/${invoiceId.value}`)
 
     if (response.data && response.data.data) {
       invoiceData.value = response.data.data

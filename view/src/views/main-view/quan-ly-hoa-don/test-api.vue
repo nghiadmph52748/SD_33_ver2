@@ -66,7 +66,7 @@ const testHealth = async () => {
 const testInvoiceList = async () => {
   try {
     testResult.value = 'Testing invoice list...'
-    const response = await axios.get('/api/hoa-don-management/playlist')
+    const response = await axios.get('/api/invoice-management/playlist')
     testResult.value = `Invoice List Response: ${JSON.stringify(response.data, null, 2)}`
 
     if (response.data && response.data.data) {
@@ -80,7 +80,7 @@ const testInvoiceList = async () => {
 const testInvoiceDetail = async () => {
   try {
     testResult.value = 'Testing invoice detail...'
-    const response = await axios.get('/api/hoa-don-management/1')
+    const response = await axios.get('/api/invoice-management/1')
     testResult.value = `Invoice Detail Response: ${JSON.stringify(response.data, null, 2)}`
 
     if (response.data && response.data.data) {
@@ -94,7 +94,7 @@ const testInvoiceDetail = async () => {
 const viewDetail = async (id: number) => {
   try {
     testResult.value = `Loading invoice detail for ID: ${id}`
-    const response = await axios.get(`/api/hoa-don-management/${id}`)
+    const response = await axios.get(`/api/invoice-management/${id}`)
     testResult.value = `Invoice Detail Response: ${JSON.stringify(response.data, null, 2)}`
 
     if (response.data && response.data.data) {

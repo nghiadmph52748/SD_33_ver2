@@ -10,7 +10,7 @@ interface ApiEnvelope<T> {
   message?: string
 }
 
-export interface ThongTinDonHangModel {
+export interface OrderStatusTimelineModel {
   id?: number
   idHoaDon?: number
   idTrangThaiDonHang?: number
@@ -68,7 +68,7 @@ const requestJson = async <T>(path: string, config?: AxiosRequestConfig): Promis
   }
 }
 
-export interface HoaDonApiModel {
+export interface InvoiceApiModel {
   id?: number
   idKhachHang?: number
   idPhieuGiamGia?: number
@@ -105,10 +105,10 @@ export interface HoaDonApiModel {
   moTaLoaiDon?: string
   items?: any[]
   chiTietSanPham?: any[]
-  thongTinDonHangs?: ThongTinDonHangModel[]
+  thongTinDonHangs?: OrderStatusTimelineModel[]
 }
 
-export interface HoaDonRequestPayload {
+export interface InvoiceRequestPayload {
   idKhachHang?: number
   idPhieuGiamGia?: number
   idNhanVien?: number
@@ -138,28 +138,28 @@ export interface HoaDonRequestPayload {
   maPhieuGiamGia?: string
 }
 
-export const fetchHoaDonList = () => requestJson<HoaDonApiModel[]>('/api/hoa-don-management/playlist')
+export const fetchInvoiceList = () => requestJson<InvoiceApiModel[]>('/api/invoice-management/playlist')
 
-export const fetchHoaDonById = (id: number) => requestJson<HoaDonApiModel>(`/api/hoa-don-management/${id}`)
+export const fetchInvoiceById = (id: number) => requestJson<InvoiceApiModel>(`/api/invoice-management/${id}`)
 
-export const createHoaDon = (data: Partial<HoaDonRequestPayload>) =>
-  requestJson<HoaDonApiModel>('/api/hoa-don-management/add', {
+export const createInvoice = (data: Partial<InvoiceRequestPayload>) =>
+  requestJson<InvoiceApiModel>('/api/invoice-management/add', {
     method: 'POST',
     data,
   })
 
-export const updateHoaDon = (id: number, data: Partial<HoaDonApiModel>) =>
-  requestJson<HoaDonApiModel>(`/api/hoa-don-management/update/${id}`, {
+export const updateInvoice = (id: number, data: Partial<InvoiceApiModel>) =>
+  requestJson<InvoiceApiModel>(`/api/invoice-management/update/${id}`, {
     method: 'PUT',
     data,
   })
 
-export const deleteHoaDon = (id: number) =>
-  requestJson<void>(`/api/hoa-don-management/delete/${id}`, {
+export const deleteInvoice = (id: number) =>
+  requestJson<void>(`/api/invoice-management/delete/${id}`, {
     method: 'DELETE',
   })
 
-export interface HoaDonChiTietApiModel {
+export interface InvoiceLineItemPayload {
   idHoaDon: number
   idBienTheSanPham: number
   soLuong: number
@@ -175,13 +175,13 @@ export interface HoaDonChiTietApiModel {
   updateBy?: number
 }
 
-export const createHoaDonChiTiet = (data: Partial<HoaDonChiTietApiModel>) =>
-  requestJson<HoaDonChiTietApiModel>('/api/hoa-don-chi-tiet-management/add', {
+export const createInvoiceLineItem = (data: Partial<InvoiceLineItemPayload>) =>
+  requestJson<InvoiceLineItemPayload>('/api/hoa-don-chi-tiet-management/add', {
     method: 'POST',
     data,
   })
 
-export interface HinhThucThanhToanApiModel {
+export interface PaymentHistoryPayload {
   idHoaDon: number
   idPhuongThucThanhToan: number
   tienChuyenKhoan?: number
@@ -190,20 +190,20 @@ export interface HinhThucThanhToanApiModel {
   deleted?: boolean
 }
 
-export const createHinhThucThanhToan = (data: Partial<HinhThucThanhToanApiModel>) =>
-  requestJson<HinhThucThanhToanApiModel>('/api/hinh-thuc-thanh-toan-management/add', {
+export const createPaymentHistory = (data: Partial<PaymentHistoryPayload>) =>
+  requestJson<PaymentHistoryPayload>('/api/hinh-thuc-thanh-toan-management/add', {
     method: 'POST',
     data,
   })
 
-export interface ThongTinHoaDonApiModel {
+export interface OrderInfoPayload {
   idHoaDon: number
   idTrangThaiDonHang: number
   ghiChu?: string
 }
 
-export const createThongTinHoaDon = (data: Partial<ThongTinHoaDonApiModel>) =>
-  requestJson<ThongTinHoaDonApiModel>('/api/thong-tin-hoa-don-management/add', {
+export const createOrderInfo = (data: Partial<OrderInfoPayload>) =>
+  requestJson<OrderInfoPayload>('/api/thong-tin-hoa-don-management/add', {
     method: 'POST',
     data,
   })

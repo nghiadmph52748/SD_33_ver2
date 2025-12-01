@@ -227,7 +227,7 @@
           </div>
           <div class="summary-row">
             <span>Giảm giá:</span>
-            <span>-{{ formatCurrency((selectedInvoice.tongTien || 0) - (selectedInvoice.tongTienSauGiam || 0)) }}</span>
+            <span>-{{ formatCurrency(calculateDiscountAmount(selectedInvoice)) }}</span>
           </div>
           <div v-if="selectedInvoice.phiVanChuyen && selectedInvoice.phiVanChuyen > 0" class="summary-row">
             <span>Phí vận chuyển:</span>
@@ -275,7 +275,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
-import { fetchHoaDonList, type HoaDonApiModel } from '@/api/hoa-don'
+import { fetchInvoiceList, type InvoiceApiModel } from '@/api/invoice'
 import {
   IconFile,
   IconCheckCircle,
@@ -723,15 +723,15 @@ const fetchInvoices = async () => {
     loading.value = true
 
     // Sử dụng API mới
-    const apiData = await fetchHoaDonList()
+    const apiData = await fetchInvoiceList()
 
     // Chỉ hiển thị những hóa đơn đã hoàn tất (không còn trong trạng thái tạo nháp ở POS)
-    const confirmedInvoices = apiData.filter((invoice: HoaDonApiModel) => invoice.ghiChu !== 'Tạo hóa đơn bán hàng tại quầy')
+    const confirmedInvoices = apiData.filter((invoice: InvoiceApiModel) => invoice.ghiChu !== 'Tạo hóa đơn bán hàng tại quầy')
 
     // Map dữ liệu để đảm bảo có đầy đủ các trường cần thiết
-    invoicesList.value = confirmedInvoices.map((invoice: HoaDonApiModel) => {
+    invoicesList.value = confirmedInvoices.map((invoice: InvoiceApiModel) => {
       // Calculate tongTien from items if not provided
-      let calculatedTongTien = invoice.tongTienSauGiam || invoice.tongTien || 0
+      let calculatedTongTien = invoice.tongTien || invoice.tongTienSauGiam || 0
       if (calculatedTongTien === 0 && invoice.items && invoice.items.length > 0) {
         calculatedTongTien = invoice.items.reduce((sum: number, item: any) => {
           return sum + (item.thanhTien || (item.giaBan || 0) * (item.soLuong || 0))
@@ -765,8 +765,10 @@ const fetchInvoices = async () => {
         thoiGianTao: ngayTaoValue,
         ngayTao: ngayTaoValue,
         // Use tongTienSauGiam from API if available, otherwise use calculated value
-        tongTienSauGiam: invoice.tongTienSauGiam && invoice.tongTienSauGiam > 0 ? invoice.tongTienSauGiam : calculatedTongTien,
-        tongTien: invoice.tongTien && invoice.tongTien > 0 ? invoice.tongTien : calculatedTongTien,
+        tongTienSauGiam:
+          invoice.tongTienSauGiam !== undefined && invoice.tongTienSauGiam !== null ? invoice.tongTienSauGiam : calculatedTongTien,
+        tongTien:
+          invoice.tongTien !== undefined && invoice.tongTien !== null && invoice.tongTien > 0 ? invoice.tongTien : calculatedTongTien,
         phiVanChuyen: invoice.phiVanChuyen || 0,
         phuPhi: invoice.phuPhi || 0,
         hoanPhi: invoice.hoanPhi || 0,
@@ -911,34 +913,47 @@ const exportExcel = () => {
 const calculateFinalTotal = (invoice: any) => {
   if (!invoice) return 0
 
-  // Tổng tiền = tongTienSauGiam + phiVanChuyen + phuPhi - hoanPhi
-  let total = invoice.tongTienSauGiam || invoice.tongTien || 0
-
-  // Add shipping fee if available
-  if (invoice.phiVanChuyen && invoice.phiVanChuyen > 0) {
-    total += invoice.phiVanChuyen
+  const backendTotal = invoice.tongTienSauGiam
+  if (backendTotal !== undefined && backendTotal !== null) {
+    const numericTotal = Number(backendTotal)
+    return Number.isFinite(numericTotal) ? Math.max(0, numericTotal) : 0
   }
 
-  // Add surcharge if available
-  if (invoice.phuPhi && invoice.phuPhi > 0) {
-    total += invoice.phuPhi
-  }
+  const base = Number(invoice.tongTien || 0)
+  const shipping = Number(invoice.phiVanChuyen || 0)
+  const surcharge = Number(invoice.phuPhi || 0)
+  const refund = Number(invoice.hoanPhi || 0)
+  const manualTotal = base + shipping + surcharge - refund
 
-  // Subtract refund if available
-  if (invoice.hoanPhi && invoice.hoanPhi > 0) {
-    total -= invoice.hoanPhi
-  }
-
-  console.log('calculateFinalTotal:', {
+  console.log('calculateFinalTotal (fallback):', {
     id: invoice.id,
     tongTienSauGiam: invoice.tongTienSauGiam,
     phiVanChuyen: invoice.phiVanChuyen,
     phuPhi: invoice.phuPhi,
     hoanPhi: invoice.hoanPhi,
-    total,
+    manualTotal,
   })
 
-  return Math.max(0, total)
+  return Math.max(0, manualTotal)
+}
+
+const calculateDiscountAmount = (invoice: any) => {
+  if (!invoice) return 0
+
+  const base = Number(invoice.tongTien || 0)
+  if (!base) return 0
+
+  if (invoice.tongTienSauGiam !== undefined && invoice.tongTienSauGiam !== null) {
+    const shipping = Number(invoice.phiVanChuyen || 0)
+    const surcharge = Number(invoice.phuPhi || 0)
+    const refund = Number(invoice.hoanPhi || 0)
+    const comparableTotal = Number(invoice.tongTienSauGiam) - shipping - surcharge + refund
+    const discount = base - comparableTotal
+    return discount > 0 ? discount : 0
+  }
+
+  const fallback = base - Number(invoice.tongTienSauGiam || 0)
+  return fallback > 0 ? fallback : 0
 }
 
 // BroadcastChannel for real-time sync with other pages

@@ -15,34 +15,44 @@
       </div>
 
       <div class="form-section">
-        <div class="info-item" style="margin-bottom: 12px;">
-          <span class="item-label"><icon-user /> Người bắt đầu ca</span>
+        <div class="info-item" style="margin-bottom: 12px">
+          <span class="item-label">
+            <icon-user />
+            Người bắt đầu ca
+          </span>
           <span class="item-value">{{ userStore.name || userStore.tenNhanVien || 'N/A' }}</span>
         </div>
 
-        <div class="info-item" style="margin-bottom: 12px;">
-          <span class="item-label"><icon-clock-circle /> Thời gian bắt đầu</span>
+        <div class="info-item" style="margin-bottom: 12px">
+          <span class="item-label">
+            <icon-clock-circle />
+            Thời gian bắt đầu
+          </span>
           <span class="item-value">{{ formatDate(currentTime) }}</span>
         </div>
 
+        <a-form-item label="Ca làm việc" class="shift-select-item">
+          <a-select v-model="selectedCaId" placeholder="Chọn ca (chỉ ca admin phân)" size="large" :filterable="false">
+            <template v-if="scheduledList.length">
+              <a-select-option v-for="s in scheduledList" :key="'sch-' + s.id" :value="s.caLamViec?.id">
+                {{ (s.caLamViec?.tenCa || s.caLamViec?.ten || 'Ca #' + s.caLamViec?.id) + ' — ' + (formatDate(s.ngayLamViec) || '') }}
+              </a-select-option>
+            </template>
+            <template v-else>
+              <a-select-option v-for="c in caLamViecList" :key="c && c.id" :value="c && c.id">
+                {{ (c && (c.tenCa || c.ten || c.name)) || 'Ca #' + (c && c.id) }} (ID: {{ c && c.id }})
+              </a-select-option>
+            </template>
+          </a-select>
+          <div style="margin-top: 8px; color: #64748b; font-size: 12px">
+            ID ca làm việc:
+            <strong>{{ selectedCaId || '-' }}</strong>
+          </div>
+        </a-form-item>
 
-          <a-form-item label="Ca làm việc" class="shift-select-item">
-            <a-select v-model="selectedCaId" placeholder="Chọn ca (chỉ ca admin phân)" size="large" :filterable="false">
-              <template v-if="scheduledList.length">
-                <a-select-option v-for="s in scheduledList" :key="'sch-' + s.id" :value="s.caLamViec?.id">
-                  {{ (s.caLamViec?.tenCa || s.caLamViec?.ten || ('Ca #' + s.caLamViec?.id)) + ' — ' + (formatDate(s.ngayLamViec) || '') }}
-                </a-select-option>
-              </template>
-              <template v-else>
-                <a-select-option v-for="c in caLamViecList" :key="c && c.id" :value="c && c.id">
-                  {{ (c && (c.tenCa || c.ten || c.name)) || ('Ca #' + (c && c.id)) }} (ID: {{ c && c.id }})
-                </a-select-option>
-              </template>
-            </a-select>
-            <div style="margin-top: 8px; color: #64748b; font-size: 12px">ID ca làm việc: <strong>{{ selectedCaId || '-' }}</strong></div>
-          </a-form-item>
-
-        <a-form-item label="Số tiền mặt ban đầu (VND)" class="cash-input-item"
+        <a-form-item
+          label="Số tiền mặt ban đầu (VND)"
+          class="cash-input-item"
           :validate-status="validationErrors.initialCash ? 'error' : undefined"
           :help="validationErrors.initialCash || undefined"
         >
@@ -162,7 +172,7 @@
 
     <!-- End shift modal -->
     <ConfirmReceiveShift ref="confirmReceive" />
-    <div style="margin-top:12px;">
+    <div style="margin-top: 12px">
       <a-button v-if="activeShift" size="small" @click="openConfirmReceive">Mở form xác nhận nhận ca (test)</a-button>
     </div>
     <a-modal v-model:visible="showEndShiftModal" title="Kết Thúc Ca Làm Việc" :width="800" :closable="!loading" @ok="finalizeEndShift">
@@ -189,7 +199,11 @@
         <!-- Số tiền thực đếm (input) -->
         <div class="form-section">
           <h4 class="section-title">Kiểm kê tiền mặt</h4>
-          <a-form-item label="Số tiền thực đếm (VND)" :validate-status="validationErrors.actualCash ? 'error' : undefined" :help="validationErrors.actualCash">
+          <a-form-item
+            label="Số tiền thực đếm (VND)"
+            :validate-status="validationErrors.actualCash ? 'error' : undefined"
+            :help="validationErrors.actualCash"
+          >
             <a-input-number
               v-model="actualCash"
               :min="0"
@@ -218,11 +232,21 @@
 
         <!-- Người nhận ca tiếp theo (có thể để trống) -->
         <div class="form-section">
-          <a-form-item label="Người nhận ca tiếp theo" :validate-status="validationErrors.nextReceiver ? 'error' : undefined" :help="validationErrors.nextReceiver">
-            <a-select v-model="nextReceiverId" placeholder="Chọn nhân viên nhận ca tiếp (hoặc bỏ qua)" size="large" :loading="loadingEmployees" allow-clear>
+          <a-form-item
+            label="Người nhận ca tiếp theo"
+            :validate-status="validationErrors.nextReceiver ? 'error' : undefined"
+            :help="validationErrors.nextReceiver"
+          >
+            <a-select
+              v-model="nextReceiverId"
+              placeholder="Chọn nhân viên nhận ca tiếp (hoặc bỏ qua)"
+              size="large"
+              :loading="loadingEmployees"
+              allow-clear
+            >
               <a-select-option :value="null">Chưa có người nhận</a-select-option>
               <a-select-option v-for="emp in employeeList" :key="emp.id" :value="emp.id">
-                {{ emp.tenNhanVien || emp.name || emp.ten || ('NV #' + emp.id) }} (ID: {{ emp.id }})
+                {{ emp.tenNhanVien || emp.name || emp.ten || 'NV #' + emp.id }} (ID: {{ emp.id }})
               </a-select-option>
             </a-select>
           </a-form-item>
@@ -231,7 +255,10 @@
         <!-- Thời gian kết ca -->
         <div class="form-section">
           <div class="info-item">
-            <span class="item-label"><icon-clock-circle /> Thời gian kết ca</span>
+            <span class="item-label">
+              <icon-clock-circle />
+              Thời gian kết ca
+            </span>
             <span class="item-value">{{ formatDate(endTime) }}</span>
           </div>
         </div>
@@ -239,14 +266,7 @@
         <!-- Danh sách hóa đơn trong ca -->
         <div class="form-section">
           <h4 class="section-title">Danh sách hóa đơn trong ca ({{ invoiceList.length }})</h4>
-          <a-table
-            :columns="invoiceColumns"
-            :data="invoiceList"
-            :pagination="false"
-            :bordered="false"
-            size="small"
-            style="font-size: 12px"
-          >
+          <a-table :columns="invoiceColumns" :data="invoiceList" :pagination="false" :bordered="false" size="small" style="font-size: 12px">
             <template #columns>
               <a-table-column title="ID" data-index="id" :width="60" />
               <a-table-column title="Số tiền" data-index="tongTien" :width="120">
@@ -438,14 +458,16 @@ async function reloadShiftData() {
       activeShift.value = active
       computeShiftSales(activeShift.value).catch((e) => console.warn(e))
     }
-    const ended = list.filter((s) => {
-      const trangThaiCa = s.trangThaiCa || s.trangThai
-      return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
-    }).sort((a, b) => {
-      const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
-      const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
-      return dateB.getTime() - dateA.getTime()
-    })
+    const ended = list
+      .filter((s) => {
+        const trangThaiCa = s.trangThaiCa || s.trangThai
+        return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
+      })
+      .sort((a, b) => {
+        const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
+        const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
+        return dateB.getTime() - dateA.getTime()
+      })
     if (ended.length) {
       lastShift.value = ended[0]
     }
@@ -509,14 +531,16 @@ onMounted(async () => {
       activeShift.value = active
       computeShiftSales(activeShift.value).catch((e) => console.warn(e))
     }
-    const ended = list.filter((s) => {
-      const trangThaiCa = s.trangThaiCa || s.trangThai
-      return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
-    }).sort((a, b) => {
-      const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
-      const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
-      return dateB.getTime() - dateA.getTime()
-    })
+    const ended = list
+      .filter((s) => {
+        const trangThaiCa = s.trangThaiCa || s.trangThai
+        return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
+      })
+      .sort((a, b) => {
+        const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
+        const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
+        return dateB.getTime() - dateA.getTime()
+      })
     if (ended.length) {
       lastShift.value = ended[0]
     }
@@ -524,7 +548,7 @@ onMounted(async () => {
     // Nếu có giao ca đang chờ xác nhận cho user hiện tại thì mở modal xác nhận nhận ca tự động
     try {
       const pending = list.find((s) => {
-        const isPending = (s.trangThaiXacNhan === 'Chưa xác nhận' || s.trangThaiXacNhan === 'Chờ xác nhận')
+        const isPending = s.trangThaiXacNhan === 'Chưa xác nhận' || s.trangThaiXacNhan === 'Chờ xác nhận'
         const assignedId = (s.nguoiNhan && s.nguoiNhan.id) || s.nguoiNhanId
         return isPending && assignedId && Number(assignedId) === Number(userStore.id)
       })
@@ -668,7 +692,9 @@ async function startShift() {
       return
     }
 
-    let caLamViecId = (selectedCaId.value && Number(selectedCaId.value)) || (lastShift.value && (lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id))
+    let caLamViecId =
+      (selectedCaId.value && Number(selectedCaId.value)) ||
+      (lastShift.value && (lastShift.value.caLamViec?.id || lastShift.value.ca_lam_viec_id))
 
     if (!caLamViecId) {
       try {
@@ -840,14 +866,16 @@ async function finalizeEndShift() {
     try {
       const res = await getGiaoCa()
       const list = res.data || res || []
-      const ended = list.filter((s) => {
-        const trangThaiCa = s.trangThaiCa || s.trangThai
-        return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
-      }).sort((a, b) => {
-        const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
-        const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
-        return dateB.getTime() - dateA.getTime()
-      })
+      const ended = list
+        .filter((s) => {
+          const trangThaiCa = s.trangThaiCa || s.trangThai
+          return trangThaiCa === 'Hoàn tất' || s.thoiGianKetThuc
+        })
+        .sort((a, b) => {
+          const dateA = a.thoiGianKetThuc ? new Date(a.thoiGianKetThuc) : new Date(a.thoiGianGiaoCa || 0)
+          const dateB = b.thoiGianKetThuc ? new Date(b.thoiGianKetThuc) : new Date(b.thoiGianGiaoCa || 0)
+          return dateB.getTime() - dateA.getTime()
+        })
       if (ended.length) {
         lastShift.value = ended[0]
       }
