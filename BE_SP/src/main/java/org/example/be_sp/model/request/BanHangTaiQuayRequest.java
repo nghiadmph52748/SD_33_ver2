@@ -15,6 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BanHangTaiQuayRequest {
+
     private Integer idKhachHang;
     private Integer idPhieuGiamGia;
     private Integer idNhanVien;
@@ -25,6 +26,8 @@ public class BanHangTaiQuayRequest {
     private BigDecimal phiVanChuyen;
     private BigDecimal tongTien;
     private BigDecimal tongTienSauGiam;
+    private BigDecimal soTienDaThanhToan;
+    private BigDecimal soTienThuThem;
     private String tenNguoiNhan;
     private String diaChiNhanHang;
     private String soDienThoaiNguoiNhan;
@@ -39,7 +42,7 @@ public class BanHangTaiQuayRequest {
     private Integer createBy;
     private LocalDateTime updateAt;
     private Integer updateBy;
-    
+
     // Các trường mới cho nhân viên và phiếu giảm giá
     private String tenNhanVien;
     private String maNhanVien;

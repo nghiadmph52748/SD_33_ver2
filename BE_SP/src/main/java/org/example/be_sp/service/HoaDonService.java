@@ -386,6 +386,47 @@ public class HoaDonService {
         if (request.getPhiVanChuyen() != null) {
             hd.setPhiVanChuyen(request.getPhiVanChuyen());
         }
+        BigDecimal basePaidAmount = hd.getSoTienDaThanhToan() != null ? hd.getSoTienDaThanhToan() : BigDecimal.ZERO;
+        BigDecimal updatedPaidAmount = basePaidAmount;
+        boolean paidAmountUpdated = false;
+        BigDecimal additionalPaid = request.getSoTienThuThem();
+        if (additionalPaid != null) {
+            updatedPaidAmount = basePaidAmount.add(additionalPaid);
+            hd.setSoTienDaThanhToan(updatedPaidAmount);
+            paidAmountUpdated = true;
+        }
+        if (!paidAmountUpdated && request.getSoTienDaThanhToan() != null) {
+            updatedPaidAmount = request.getSoTienDaThanhToan();
+            hd.setSoTienDaThanhToan(updatedPaidAmount);
+            paidAmountUpdated = true;
+        }
+        if (paidAmountUpdated) {
+            BigDecimal shippingFee = hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO;
+            BigDecimal effectiveGrandTotal = BigDecimal.ZERO;
+            if (hd.getTongTienSauGiam() != null && hd.getTongTienSauGiam().compareTo(BigDecimal.ZERO) > 0) {
+                effectiveGrandTotal = hd.getTongTienSauGiam();
+            } else if (hd.getTongTien() != null && hd.getTongTien().compareTo(BigDecimal.ZERO) > 0) {
+                effectiveGrandTotal = hd.getTongTien().add(shippingFee);
+            } else {
+                effectiveGrandTotal = shippingFee;
+            }
+
+            BigDecimal remaining = effectiveGrandTotal.subtract(updatedPaidAmount != null ? updatedPaidAmount : BigDecimal.ZERO);
+            if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+                remaining = BigDecimal.ZERO;
+            }
+            hd.setSoTienConLai(remaining);
+
+            boolean paidInFull = effectiveGrandTotal.compareTo(BigDecimal.ZERO) > 0
+                    && updatedPaidAmount != null
+                    && updatedPaidAmount.compareTo(effectiveGrandTotal) >= 0;
+            hd.setTrangThaiThanhToan(paidInFull);
+            if (paidInFull && hd.getNgayThanhToan() == null) {
+                hd.setNgayThanhToan(LocalDateTime.now());
+            }
+
+            // Lịch sử thanh toán bổ sung được xử lý riêng cho module invoice
+        }
         if (request.getLoaiDon() != null) {
             hd.setGiaoHang(request.getLoaiDon()); // ✅ update loại đơn
         }
@@ -1961,6 +2002,9 @@ public class HoaDonService {
         // Xử lý từ shippingFeeChange (nếu có - ưu tiên hơn surcharge)
         if (request != null && request.getShippingFeeChange() != null) {
             AddressChangeNotificationRequest.ShippingFeeChange feeChange = request.getShippingFeeChange();
+            if (feeChange.getNewFee() != null) {
+                hoaDon.setPhiVanChuyen(feeChange.getNewFee());
+            }
             BigDecimal rawDifference = feeChange.getDifference() != null ? feeChange.getDifference() : BigDecimal.ZERO;
             Boolean isExtraProvided = feeChange.getIsExtra();
             boolean inferredExtra = Boolean.TRUE.equals(isExtraProvided);
@@ -1980,24 +2024,6 @@ public class HoaDonService {
                 if (extraFee.compareTo(BigDecimal.ZERO) > 0) {
                     hoaDon.setPhuPhi(extraFee);
                     hoaDon.setHoanPhi(BigDecimal.ZERO);
-
-                    BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-                    BigDecimal updatedTotal = currentTotal.add(extraFee);
-                    hoaDon.setTongTien(updatedTotal);
-
-                    // IMPORTANT: Set phuPhi to 0 BEFORE calling helper to avoid double-addition
-                    // The surcharge is already added to tongTien (updatedTotal = currentTotal + extraFee)
-                    hoaDon.setPhuPhi(BigDecimal.ZERO);
-
-                    // Recalculate tongTienSauGiam = updatedTotal - voucher discount
-                    // updatedTotal already includes the surcharge, so we don't add it again
-                    BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucherOnly(updatedTotal, hoaDon);
-                    hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
-
-                    BigDecimal soTienDaThanhToan = hoaDon.getSoTienDaThanhToan() != null ? hoaDon.getSoTienDaThanhToan() : BigDecimal.ZERO;
-                    BigDecimal soTienConLai = updatedTotal.subtract(soTienDaThanhToan);
-                    hoaDon.setSoTienConLai(soTienConLai.compareTo(BigDecimal.ZERO) > 0 ? soTienConLai : BigDecimal.ZERO);
-
                 }
             } else if (inferredRefund) {
                 // === HOÀN PHÍ: Giảm phí ===
@@ -2012,48 +2038,12 @@ public class HoaDonService {
 
                     hoaDon.setPhuPhi(BigDecimal.ZERO);
                     hoaDon.setHoanPhi(refundFee);
-
-                    if (daTraDuTien) {
-                        BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-                        // Recalculate tongTienSauGiam = tongTien - voucher discount + phụ phí (KHÔNG trừ hoàn phí)
-                        // Vì khách đã trả đủ tiền, hoàn phí chỉ là ghi chú, không ảnh hưởng đến tongTienSauGiam
-                        BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucherOnly(currentTotal, hoaDon);
-                        hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
-                        hoaDon.setSoTienConLai(BigDecimal.ZERO);
-                    } else {
-                        BigDecimal newTotal = tongTien.subtract(refundFee);
-                        if (newTotal.compareTo(BigDecimal.ZERO) < 0) {
-                            newTotal = BigDecimal.ZERO;
-                        }
-                        hoaDon.setTongTien(newTotal);
-
-                        // IMPORTANT: Set hoanPhi to 0 BEFORE calling helper to avoid double-subtraction
-                        // The refund is already subtracted from tongTien (newTotal = tongTien - refund)
-                        hoaDon.setHoanPhi(BigDecimal.ZERO);
-
-                        // Recalculate tongTienSauGiam = newTotal - voucher discount
-                        // newTotal already includes the refund subtraction, so we don't subtract it again
-                        BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucherOnly(newTotal, hoaDon);
-                        hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
-
-                        BigDecimal soTienConLai = newTotal.subtract(soTienDaThanhToan);
-                        hoaDon.setSoTienConLai(soTienConLai.compareTo(BigDecimal.ZERO) > 0 ? soTienConLai : BigDecimal.ZERO);
-                    }
                 }
             } else {
-                // === KHÔNG THAY ĐỔI PHÍ: Vẫn cần recalculate tongTienSauGiam ===
-                // Trường hợp phí không thay đổi (rawDifference = 0) nhưng địa chỉ vẫn thay đổi
-                // Vẫn phải đảm bảo tongTienSauGiam được tính đúng với voucher discount
-                BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-                BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucher(currentTotal, hoaDon);
-                hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
+                // No surcharge/refund difference detected; do not recalculate voucher totals.
             }
         } else {
-            // === KHÔNG CÓ thông tin phí vận chuyển: Vẫn recalculate tongTienSauGiam ===
-            // Trường hợp request không chứa shippingFeeChange nhưng địa chỉ vẫn thay đổi
-            BigDecimal currentTotal = hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO;
-            BigDecimal tongTienSauGiamRecalc = calculateTongTienSauGiamWithVoucher(currentTotal, hoaDon);
-            hoaDon.setTongTienSauGiam(tongTienSauGiamRecalc);
+            // No shipping information provided; leave existing totals untouched.
         }
 
         // Lưu thay đổi phí phụ/hoàn phí và tổng tiền
@@ -2357,4 +2347,5 @@ public class HoaDonService {
 
         return sb.toString();
     }
+
 }

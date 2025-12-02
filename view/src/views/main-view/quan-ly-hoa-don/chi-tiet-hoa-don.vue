@@ -249,26 +249,31 @@
                   </div>
                   <span class="summary-value discount">-{{ formatCurrency(calculatedDiscountAmount) }}</span>
                 </div>
-                <div class="summary-row" v-if="invoice?.phiVanChuyen || 0 > 0">
+                <div
+                  class="summary-row"
+                  v-if="
+                    calculatedShippingGross > 0 || calculatedShippingBase > 0 || calculatedSurchargeAmount > 0 || calculatedRefundAmount > 0
+                  "
+                >
                   <div class="summary-label-wrapper">
                     <icon-send class="summary-icon" />
                     <span class="summary-label">Phí giao hàng:</span>
                   </div>
-                  <span class="summary-value">{{ formatCurrency(invoice?.phiVanChuyen || 0) }}</span>
+                  <span class="summary-value">{{ formatCurrency(calculatedShippingBase) }}</span>
                 </div>
-                <div class="summary-row" v-if="(invoice?.phuPhi || 0) > 0">
+                <div class="summary-row" v-if="calculatedSurchargeAmount > 0">
                   <div class="summary-label-wrapper">
                     <icon-send class="summary-icon" />
                     <span class="summary-label">Phụ phí phát sinh:</span>
                   </div>
-                  <span class="summary-value surcharge">+{{ formatCurrency(invoice?.phuPhi || 0) }}</span>
+                  <span class="summary-value surcharge">+{{ formatCurrency(calculatedSurchargeAmount) }}</span>
                 </div>
-                <div class="summary-row" v-if="(invoice?.hoanPhi || 0) > 0">
+                <div class="summary-row" v-if="calculatedRefundAmount > 0">
                   <div class="summary-label-wrapper">
                     <icon-send class="summary-icon" />
                     <span class="summary-label">Hoàn phí:</span>
                   </div>
-                  <span class="summary-value refund">-{{ formatCurrency(invoice?.hoanPhi || 0) }}</span>
+                  <span class="summary-value refund">-{{ formatCurrency(calculatedRefundAmount) }}</span>
                 </div>
                 <div class="summary-row total-row">
                   <div class="summary-label-wrapper">
@@ -336,12 +341,13 @@
               </a-select>
             </a-form-item>
             <!-- Show payment input when status is "Hoàn thành" -->
-            <a-form-item v-if="showPaymentInput" label="Tiền khách trả">
+            <a-form-item v-if="showPaymentInput" label="Số tiền thu thêm">
               <a-input-number
                 v-model="updateForm.soTienDaThanhToan"
                 :precision="0"
                 :step="1000"
-                placeholder="Nhập tiền khách trả"
+                :max="Math.round(calculatedRemainingAmount)"
+                placeholder="Nhập số tiền thu thêm"
                 :min="0"
               />
               <div
@@ -349,12 +355,12 @@
                 :class="{ warning: remainingAmountForCompletion > 0, success: remainingAmountForCompletion === 0 }"
               >
                 <template v-if="remainingAmountForCompletion > 0">
-                  Đơn hàng còn thiếu {{ formatCurrency(remainingAmountForCompletion) }} so với tổng tiền sau giảm.
+                  Đơn hàng vẫn còn thiếu {{ formatCurrency(remainingAmountForCompletion) }} sau khi thu thêm.
                 </template>
                 <template v-else-if="paymentCompletionDelta > 0">
-                  Số tiền đã nhập vượt quá tổng tiền sau giảm {{ formatCurrency(paymentCompletionDelta) }}.
+                  Số tiền thu thêm vượt quá tổng tiền sau giảm {{ formatCurrency(paymentCompletionDelta) }}.
                 </template>
-                <template v-else>Số tiền khách đã thanh toán khớp với tổng tiền sau giảm.</template>
+                <template v-else>Đã thu đủ số tiền còn thiếu.</template>
               </div>
             </a-form-item>
           </a-form>
@@ -565,7 +571,7 @@ const updateForm = ref({
   diaChiNhanHang: '',
   emailNguoiNhan: '',
   ghiChu: '',
-  soTienDaThanhToan: 0, // Payment amount when completing order
+  soTienDaThanhToan: 0, // Additional amount to collect when completing order
   phiGiaoHang: 0, // Shipping fee
 })
 
@@ -1426,6 +1432,42 @@ const paymentHistory = computed(() => {
   return history
 })
 
+const primaryPaymentMethodId = computed(() => {
+  const extractId = (raw: unknown): number | null => {
+    if (raw === null || raw === undefined) return null
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return raw
+    if (typeof raw === 'string') {
+      const parsed = Number(raw)
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+    }
+    if (typeof raw === 'object') {
+      const candidate = raw as Record<string, unknown>
+      if (candidate && typeof candidate.id === 'number' && candidate.id > 0) {
+        return candidate.id
+      }
+      if (candidate && typeof candidate.id === 'string') {
+        const parsed = Number(candidate.id)
+        if (Number.isFinite(parsed) && parsed > 0) {
+          return parsed
+        }
+      }
+    }
+    return null
+  }
+
+  if (paymentMethods.value && paymentMethods.value.length > 0) {
+    const active = paymentMethods.value.find((method: any) => method?.deleted !== true && method?.trangThai !== false)
+    const fallback = active || paymentMethods.value[0]
+    const resolved = extractId(fallback?.idPhuongThucThanhToan)
+    if (resolved) return resolved
+  }
+
+  const invoiceMethod = extractId(invoice.value?.idPhuongThucThanhToan || invoice.value?.idPTTT)
+  if (invoiceMethod) return invoiceMethod
+
+  return null
+})
+
 // Invoice history
 const invoiceHistory = computed(() => {
   const history: Array<{ action: string; userCode: string; date: string }> = []
@@ -1569,145 +1611,132 @@ const resolveAmount = (value: unknown) => {
   return Number.isFinite(numeric) ? numeric : 0
 }
 
-const financialSnapshot = computed(() => {
-  if (!invoice.value) {
-    return {
-      productTotal: 0,
-      baseTotal: 0,
-      shipping: 0,
-      surcharge: 0,
-      refund: 0,
-      adjustment: 0,
-      totalPaid: 0,
-      expectedDiscount: 0,
-    }
-  }
-
-  const productTotal = clampCurrency(calculatedTongTien.value)
-  const baseTotal = clampCurrency(resolveAmount(invoice.value.tongTienSauGiam))
-  const shipping = clampCurrency(resolveAmount(invoice.value.phiVanChuyen))
-  const surcharge = clampCurrency(resolveAmount(invoice.value.phuPhi))
-  const refund = clampCurrency(resolveAmount(invoice.value.hoanPhi))
-  const adjustment = surcharge - refund
-
-  let totalPaid = clampCurrency(resolveAmount(invoice.value.soTienDaThanhToan))
-  if (!totalPaid && paymentHistory.value && paymentHistory.value.length > 0) {
-    totalPaid = clampCurrency(paymentHistory.value.reduce((sum: number, record: any) => sum + (resolveAmount(record.amount) || 0), 0))
-  }
-
-  let expectedDiscount = 0
-  const voucherValue = resolveAmount(invoice.value.giaTriGiamGia)
-  if (voucherValue > 0 && productTotal > 0) {
-    if (invoice.value.loaiPhieuGiamGia === true) {
-      expectedDiscount = voucherValue
-    } else if (invoice.value.loaiPhieuGiamGia === false) {
-      expectedDiscount = (productTotal * voucherValue) / 100
-    }
-  }
-  expectedDiscount = clampCurrency(expectedDiscount)
-  if (expectedDiscount > productTotal) {
-    expectedDiscount = productTotal
-  }
-
-  return {
-    productTotal,
-    baseTotal,
-    shipping,
-    surcharge,
-    refund,
-    adjustment,
-    totalPaid,
-    expectedDiscount,
-  }
+const hasSubtotalAfterDiscount = computed(() => {
+  if (!invoice.value) return false
+  return Object.prototype.hasOwnProperty.call(invoice.value, 'tongTienSauGiam')
 })
 
-const resolvedDiscountTotals = computed(() => {
-  const { productTotal, baseTotal, shipping, adjustment, totalPaid, expectedDiscount } = financialSnapshot.value
-
-  if (productTotal <= 0) {
-    const baseFinal = clampCurrency(baseTotal + adjustment + shipping)
-    return { discount: 0, final: baseFinal }
-  }
-
-  const discountCandidateA = clampCurrency(productTotal - baseTotal)
-  const finalCandidateA = clampCurrency(productTotal - discountCandidateA + shipping + adjustment)
-
-  const discountedSubtotalB = baseTotal - shipping - adjustment
-  const candidateBValid = discountedSubtotalB >= 0
-  const discountCandidateB = candidateBValid ? clampCurrency(productTotal - discountedSubtotalB) : Number.NaN
-  const finalCandidateB = candidateBValid ? clampCurrency(productTotal - discountCandidateB + shipping + adjustment) : Number.NaN
-
-  const candidateA = {
-    discount: Math.min(discountCandidateA, productTotal),
-    final: finalCandidateA,
-  }
-
-  const candidateB = {
-    discount: candidateBValid ? Math.min(discountCandidateB, productTotal) : Number.NaN,
-    final: candidateBValid ? finalCandidateB : Number.NaN,
-  }
-
-  let chosen = candidateA
-  const tolerance = 0.5
-
-  if (candidateBValid) {
-    let scoreA = Number.POSITIVE_INFINITY
-    let scoreB = Number.POSITIVE_INFINITY
-
-    if (expectedDiscount > 0) {
-      scoreA = Math.abs(candidateA.discount - expectedDiscount)
-      scoreB = Math.abs(candidateB.discount - expectedDiscount)
-    } else if (totalPaid > 0) {
-      scoreA = Math.abs(candidateA.final - totalPaid)
-      scoreB = Math.abs(candidateB.final - totalPaid)
-    } else {
-      const baseDeviationA = Math.abs(productTotal - candidateA.discount - baseTotal)
-      const baseDeviationB = Math.abs(productTotal - candidateB.discount + shipping + adjustment - baseTotal)
-      scoreA = baseDeviationA
-      scoreB = baseDeviationB
-    }
-
-    if (scoreB + tolerance < scoreA) {
-      chosen = candidateB
-    } else if (scoreA + tolerance < scoreB) {
-      chosen = candidateA
-    }
-  }
-
-  const discount = clampCurrency(Math.min(chosen.discount, productTotal))
-  let final = clampCurrency(chosen.final)
-
-  if (!final) {
-    final = clampCurrency(productTotal - discount + shipping + adjustment)
-  }
-
-  return { discount, final }
-})
-
-// Calculate actual discount amount
-const calculatedDiscountAmount = computed(() => resolvedDiscountTotals.value.discount)
-
-// Calculate final total (Thành tiền) using resolved totals so shipping is kept separate from discounts.
-const calculatedFinalTotal = computed(() => resolvedDiscountTotals.value.final)
-
-const calculatedRemainingAmount = computed(() => {
+const resolvedSubtotalAfterDiscount = computed(() => {
   if (!invoice.value) return 0
 
-  const paidAmount = Number(invoice.value.soTienDaThanhToan || 0)
-  const remaining = calculatedFinalTotal.value - paidAmount
+  if (hasSubtotalAfterDiscount.value) {
+    const rawSubtotal = invoice.value.tongTienSauGiam
+    if (rawSubtotal !== null && rawSubtotal !== undefined) {
+      return clampCurrency(resolveAmount(rawSubtotal))
+    }
+  }
+
+  const productTotal = calculatedTongTien.value
+  if (productTotal <= 0) {
+    return 0
+  }
+
+  const rawDiscount = invoice.value.giamGia ?? invoice.value.soTienGiamGia ?? invoice.value.giaTriGiamGia
+  if (rawDiscount !== undefined && rawDiscount !== null) {
+    const discountAmount = clampCurrency(resolveAmount(rawDiscount))
+    if (discountAmount >= productTotal) {
+      return 0
+    }
+    if (discountAmount > 0) {
+      return clampCurrency(productTotal - discountAmount)
+    }
+  }
+
+  return clampCurrency(productTotal)
+})
+
+const calculatedDiscountAmount = computed(() => {
+  const productTotal = calculatedTongTien.value
+  if (productTotal <= 0) {
+    return 0
+  }
+
+  if (hasSubtotalAfterDiscount.value) {
+    const subtotalAfterDiscount = resolvedSubtotalAfterDiscount.value
+    const discount = productTotal - subtotalAfterDiscount
+    return discount > 0 ? clampCurrency(discount) : 0
+  }
+
+  const derivedSubtotal = resolvedSubtotalAfterDiscount.value
+  if (derivedSubtotal >= 0 && derivedSubtotal <= productTotal) {
+    return clampCurrency(productTotal - derivedSubtotal)
+  }
+
+  return 0
+})
+
+const calculatedSurchargeAmount = computed(() => {
+  if (!invoice.value) return 0
+  return clampCurrency(resolveAmount(invoice.value.phuPhi))
+})
+
+const calculatedRefundAmount = computed(() => {
+  if (!invoice.value) return 0
+  return clampCurrency(resolveAmount(invoice.value.hoanPhi))
+})
+
+const calculatedShippingGross = computed(() => {
+  if (!invoice.value) return 0
+  return clampCurrency(resolveAmount(invoice.value.phiVanChuyen))
+})
+
+const calculatedShippingBase = computed(() => {
+  // Normalize displayed shipping so surcharges/refunds remain on their own rows.
+  const shippingBase = calculatedShippingGross.value - calculatedSurchargeAmount.value + calculatedRefundAmount.value
+  return shippingBase > 0 ? shippingBase : 0
+})
+
+const calculatedFinalTotal = computed(() => {
+  // Thành tiền = tổng tiền sau giảm + toàn bộ phí giao hàng theo API.
+  const subtotalAfterDiscount = resolvedSubtotalAfterDiscount.value
+  let baseSubtotal = subtotalAfterDiscount
+
+  if (!hasSubtotalAfterDiscount.value && baseSubtotal <= 0) {
+    const derivedSubtotal = calculatedTongTien.value - calculatedDiscountAmount.value
+    baseSubtotal = derivedSubtotal > 0 ? derivedSubtotal : calculatedTongTien.value
+  }
+
+  if (baseSubtotal < 0) {
+    baseSubtotal = 0
+  }
+
+  const finalTotal = baseSubtotal + calculatedShippingGross.value
+  return finalTotal > 0 ? finalTotal : 0
+})
+
+const calculatedPaidAmount = computed(() => {
+  if (!invoice.value) return 0
+
+  let paid = clampCurrency(resolveAmount(invoice.value.soTienDaThanhToan))
+
+  if (!paid && paymentHistory.value && paymentHistory.value.length > 0) {
+    paid = clampCurrency(paymentHistory.value.reduce((sum: number, record: any) => sum + clampCurrency(resolveAmount(record.amount)), 0))
+  }
+
+  return paid
+})
+
+const calculatedRemainingAmount = computed(() => {
+  const remaining = calculatedFinalTotal.value - calculatedPaidAmount.value
   return remaining > 0 ? remaining : 0
+})
+const additionalPaymentAmount = computed(() => {
+  const inputAmount = updateForm.value?.soTienDaThanhToan
+  if (inputAmount === undefined || inputAmount === null) {
+    return 0
+  }
+  const numeric = Number(inputAmount)
+  if (!Number.isFinite(numeric)) {
+    return 0
+  }
+  const rounded = Math.round(numeric)
+  return rounded > 0 ? rounded : 0
 })
 
 const paymentAmountForCompletion = computed(() => {
-  if (!invoice.value) {
-    return Number(updateForm.value.soTienDaThanhToan || 0)
-  }
-  const inputAmount = updateForm.value.soTienDaThanhToan
-  if (inputAmount !== undefined && inputAmount !== null) {
-    const numeric = Number(inputAmount)
-    return Number.isFinite(numeric) ? Math.round(numeric) : 0
-  }
-  return Math.round(Number(invoice.value.soTienDaThanhToan || 0))
+  // Projected total paid after collecting the additional amount.
+  const projectedTotal = calculatedPaidAmount.value + additionalPaymentAmount.value
+  return projectedTotal > 0 ? Math.round(projectedTotal) : 0
 })
 
 const remainingAmountForCompletion = computed(() => {
@@ -2148,6 +2177,7 @@ const showUpdateModal = async () => {
 
   // Get current status text from trangThaiDonHang (from getHighestPriorityStatusFromInvoice)
   const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
+  const suggestedCollectionAmount = Math.round(calculatedRemainingAmount.value)
 
   // Populate form with current invoice data
   updateForm.value = {
@@ -2160,7 +2190,7 @@ const showUpdateModal = async () => {
     diaChiNhanHang: invoice.value.diaChiNhanHang || invoice.value.diaChiNguoiNhan || invoice.value.diaChi || '',
     emailNguoiNhan: invoice.value.emailNguoiNhan || invoice.value.email || '',
     ghiChu: invoice.value.ghiChu || '',
-    soTienDaThanhToan: invoice.value.soTienDaThanhToan ?? invoice.value.tongTienSauGiam ?? invoice.value.tongTien ?? 0, // Actual paid amount
+    soTienDaThanhToan: suggestedCollectionAmount > 0 ? suggestedCollectionAmount : 0,
     phiGiaoHang: invoice.value.phiVanChuyen || 0, // Current shipping fee
   }
 
@@ -2344,6 +2374,7 @@ const handleSaveUpdate = async () => {
       return
     }
 
+    const additionalAmount = additionalPaymentAmount.value
     const paidAmountForValidation = paymentAmountForCompletion.value
 
     if (statusName === 'Hoàn thành') {
@@ -2351,13 +2382,17 @@ const handleSaveUpdate = async () => {
       const difference = paidAmountForValidation - finalTotal
 
       if (difference > 0) {
-        Message.error(`Số tiền khách thanh toán đang vượt tổng tiền sau giảm ${formatCurrency(difference)}. Vui lòng kiểm tra lại.`)
+        Message.error(
+          `Số tiền thu thêm khiến tổng thanh toán vượt tổng tiền sau giảm ${formatCurrency(difference)}. Vui lòng kiểm tra lại.`
+        )
         saving.value = false
         return
       }
 
       if (difference < 0) {
-        Message.error(`Đơn hàng vẫn còn thiếu ${formatCurrency(Math.abs(difference))}. Thu đủ trước khi chuyển trạng thái Hoàn thành.`)
+        Message.error(
+          `Đơn hàng vẫn còn thiếu ${formatCurrency(Math.abs(difference))} sau khi thu thêm. Thu đủ trước khi chuyển trạng thái Hoàn thành.`
+        )
         saving.value = false
         return
       }
@@ -2504,6 +2539,13 @@ const handleSaveUpdate = async () => {
     // Include payment amount when completing order for delivery (online)
     if (showPaymentInput.value && paidAmountForValidation >= 0) {
       updateData.soTienDaThanhToan = paidAmountForValidation
+      if (additionalAmount > 0) {
+        updateData.soTienThuThem = additionalAmount
+      }
+      const methodId = primaryPaymentMethodId.value
+      if (methodId) {
+        updateData.idPhuongThucThanhToan = methodId
+      }
     }
 
     console.log('[SaveUpdate] Final update data:', updateData)

@@ -138,24 +138,24 @@ export interface HoaDonRequestPayload {
   maPhieuGiamGia?: string
 }
 
-export const fetchHoaDonList = () => requestJson<HoaDonApiModel[]>('/api/hoa-don-management/playlist')
+export const fetchHoaDonList = () => requestJson<HoaDonApiModel[]>('/api/invoice-management/playlist')
 
-export const fetchHoaDonById = (id: number) => requestJson<HoaDonApiModel>(`/api/hoa-don-management/${id}`)
+export const fetchHoaDonById = (id: number) => requestJson<HoaDonApiModel>(`/api/invoice-management/${id}`)
 
 export const createHoaDon = (data: Partial<HoaDonRequestPayload>) =>
-  requestJson<HoaDonApiModel>('/api/hoa-don-management/add', {
+  requestJson<HoaDonApiModel>('/api/invoice-management/add', {
     method: 'POST',
     data,
   })
 
 export const updateHoaDon = (id: number, data: Partial<HoaDonApiModel>) =>
-  requestJson<HoaDonApiModel>(`/api/hoa-don-management/update/${id}`, {
+  requestJson<HoaDonApiModel>(`/api/invoice-management/update/${id}`, {
     method: 'PUT',
     data,
   })
 
 export const deleteHoaDon = (id: number) =>
-  requestJson<void>(`/api/hoa-don-management/delete/${id}`, {
+  requestJson<void>(`/api/invoice-management/delete/${id}`, {
     method: 'DELETE',
   })
 

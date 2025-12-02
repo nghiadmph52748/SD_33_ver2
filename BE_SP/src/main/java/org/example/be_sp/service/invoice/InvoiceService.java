@@ -57,6 +57,7 @@ public class InvoiceService {
     private final PhieuGiamGiaRepository phieuGiamGiaRepository;
     private final PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
     private final EmailService emailService;
+    private final InvoicePaymentHistoryService invoicePaymentHistoryService;
 
     @Autowired
     public InvoiceService(
@@ -67,7 +68,8 @@ public class InvoiceService {
             TrangThaiDonHangRepository trangThaiDonHangRepository,
             PhieuGiamGiaRepository phieuGiamGiaRepository,
             PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository,
-            EmailService emailService) {
+            EmailService emailService,
+            InvoicePaymentHistoryService invoicePaymentHistoryService) {
         this.hoaDonService = hoaDonService;
         this.hoaDonRepository = hoaDonRepository;
         this.hinhThucThanhToanRepository = hinhThucThanhToanRepository;
@@ -76,6 +78,7 @@ public class InvoiceService {
         this.phieuGiamGiaRepository = phieuGiamGiaRepository;
         this.phieuGiamGiaCaNhanRepository = phieuGiamGiaCaNhanRepository;
         this.emailService = emailService;
+        this.invoicePaymentHistoryService = invoicePaymentHistoryService;
     }
 
     public List<InvoiceResponse> getAll() {
@@ -112,6 +115,7 @@ public class InvoiceService {
 
     public InvoiceResponse update(Integer id, InvoiceRequest request) {
         InvoiceResponse response = InvoiceResponse.from(hoaDonService.update(id, request));
+        invoicePaymentHistoryService.appendAdditionalPayment(id, request);
         return reload(response.getId());
     }
 
@@ -223,9 +227,6 @@ public class InvoiceService {
 
         hoaDon.setPhuPhi(surcharge);
         hoaDon.setHoanPhi(BigDecimal.ZERO);
-        hoaDon.setTongTien(calculateDetailTotal(hoaDon));
-        hoaDon.setTongTienSauGiam(context.calculateDiscountedTotal());
-        hoaDon.setSoTienConLai(safe(hoaDon.getSoTienConLai()).add(surcharge));
 
         log.info("[InvoiceService] Applied surcharge {} to order {}", surcharge, hoaDon.getMaHoaDon());
 
@@ -236,10 +237,6 @@ public class InvoiceService {
         BigDecimal refund = context.difference.abs();
         hoaDon.setPhuPhi(BigDecimal.ZERO);
         hoaDon.setHoanPhi(refund);
-        hoaDon.setSoTienConLai(BigDecimal.ZERO);
-
-        hoaDon.setTongTien(calculateDetailTotal(hoaDon));
-        hoaDon.setTongTienSauGiam(context.calculateDiscountedTotal());
 
         boolean rewardAsVoucher = refund.compareTo(VOUCHER_REFUND_THRESHOLD) >= 0;
         String voucherCode = null;
@@ -274,13 +271,6 @@ public class InvoiceService {
 
         hoaDon.setPhuPhi(surcharge);
         hoaDon.setHoanPhi(refund);
-        hoaDon.setTongTien(calculateDetailTotal(hoaDon));
-
-        BigDecimal discountedTotal = context.calculateDiscountedTotal();
-        hoaDon.setTongTienSauGiam(discountedTotal.max(BigDecimal.ZERO));
-
-        BigDecimal soTienConLai = discountedTotal.subtract(safe(hoaDon.getSoTienDaThanhToan()));
-        hoaDon.setSoTienConLai(soTienConLai.max(BigDecimal.ZERO));
 
         if (surcharge.signum() > 0) {
             sendAddressChangeEmail(hoaDon, context.request, surcharge);
@@ -292,7 +282,7 @@ public class InvoiceService {
                     .refundAmount(refund)
                     .appliedToOrder(true)
                     .originalTotal(context.originalTotal)
-                    .newTotal(hoaDon.getTongTienSauGiam())
+                    .newTotal(context.originalTotal)
                     .giftReward(false)
                     .voucherReward(false)
                     .build();
