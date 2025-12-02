@@ -241,6 +241,14 @@ export async function createOrderFromCart(
   options: CreateOrderOptions
 ): Promise<OrderResponse | null> {
   try {
+    const toSafeNumber = (value: unknown, fallback = 0): number => {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+      }
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : fallback;
+    };
+
     if (!options?.recipient) {
       throw new Error("Thiếu thông tin người nhận để tạo hoá đơn");
     }
@@ -269,20 +277,21 @@ export async function createOrderFromCart(
     const now = new Date();
     const createdAt = (options.createAt ??
       now.toISOString().split(".")[0]) as string;
-    const shippingFee = Number(options.shippingFee ?? 0);
-    const subtotal =
-      Number(options.subtotal) ||
+    const shippingFee = toSafeNumber(options.shippingFee, 0);
+    const subtotal = toSafeNumber(
+      options.subtotal,
       plainCartItems.reduce(
-        (total, item) => total + item.price * item.quantity,
+        (total, item) => total + toSafeNumber(item.price, 0) * item.quantity,
         0
-      );
+      )
+    );
 
     // totalAmount = subtotal + shippingFee - voucherDiscount (if provided)
-    const providedTotalAmount = Number(options.totalAmount ?? 0);
+    const providedTotalAmount = toSafeNumber(options.totalAmount, 0);
     const inferredFinalTotal =
       providedTotalAmount > 0 ? providedTotalAmount : subtotal + shippingFee;
 
-    const providedDiscount = Number(options.voucherDiscount ?? NaN);
+    const providedDiscount = toSafeNumber(options.voucherDiscount, NaN);
     const inferredDiscount = subtotal + shippingFee - inferredFinalTotal;
     const rawDiscount = Number.isFinite(providedDiscount)
       ? providedDiscount
@@ -290,9 +299,10 @@ export async function createOrderFromCart(
 
     const normalizedDiscount = Math.min(Math.max(rawDiscount, 0), subtotal);
 
+    const discountedSubtotal = Math.max(0, subtotal - normalizedDiscount);
     const tongTien = subtotal;
-    const finalTotal = Math.max(0, subtotal - normalizedDiscount + shippingFee);
-    const tongTienSauGiam = finalTotal;
+    const tongTienSauGiam = discountedSubtotal;
+    const finalTotal = Math.max(0, discountedSubtotal + shippingFee);
 
     const orderRequest: CreateOrderRequest = {
       idKhachHang: options.customerId ? Number(options.customerId) : undefined,
@@ -317,7 +327,7 @@ export async function createOrderFromCart(
         const request: HoaDonChiTietRequest = {
           idBienThe: idChiTietSanPham, // Backend accepts this as idChiTietSanPham
           soLuong: item.quantity,
-          giaBan: item.price,
+          giaBan: toSafeNumber(item.price, 0),
           trangThai: true,
           deleted: false,
           createAt: createdAt,
@@ -325,9 +335,9 @@ export async function createOrderFromCart(
         return request;
       }),
       loaiDon: true,
-      phiVanChuyen: Number(shippingFee), // Ensure it's a number
-      tongTien: Number(tongTien),
-      tongTienSauGiam: Number(tongTienSauGiam),
+      phiVanChuyen: toSafeNumber(shippingFee, 0), // Ensure backend receives numeric value
+      tongTien: toSafeNumber(tongTien, 0),
+      tongTienSauGiam: toSafeNumber(tongTienSauGiam, tongTien),
       ghiChu: String(options.notes ?? ""),
       trangThai: true,
       deleted: false,
