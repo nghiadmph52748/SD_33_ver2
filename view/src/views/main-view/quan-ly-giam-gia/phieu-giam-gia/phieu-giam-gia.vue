@@ -1504,7 +1504,6 @@ const filteredCoupons = computed(() => {
 
 // Pagination
 const pagination = computed(() => ({
-  current: 1,
   pageSize: 10,
   total: filteredCoupons.value.length,
   showSizeChanger: true,
