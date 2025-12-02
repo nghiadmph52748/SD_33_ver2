@@ -36,6 +36,9 @@ public class PhieuGiamGia {
     @Column(name = "gia_tri_giam_gia", precision = 18, scale = 2)
     private BigDecimal giaTriGiamGia;
 
+    @Column(name = "so_tien_toi_da", precision = 18, scale = 2)
+    private BigDecimal soTienToiDa;
+
     @Column(name = "hoa_don_toi_thieu", precision = 18, scale = 2)
     private BigDecimal hoaDonToiThieu;
 

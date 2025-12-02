@@ -23,6 +23,7 @@ public class PhieuGiamGiaResponse {
     String tenPhieuGiamGia;
     Boolean loaiPhieuGiamGia;
     BigDecimal giaTriGiamGia;
+    BigDecimal soTienToiDa;
     BigDecimal hoaDonToiThieu;
     List<Integer> idKhachHang;
     Integer soLuongDung;
@@ -43,6 +44,7 @@ public class PhieuGiamGiaResponse {
         this.tenPhieuGiamGia = d.getTenPhieuGiamGia();
         this.loaiPhieuGiamGia = d.getLoaiPhieuGiamGia();
         this.giaTriGiamGia = d.getGiaTriGiamGia();
+        this.soTienToiDa = d.getSoTienToiDa();
         this.idKhachHang = (d.getPhieuGiamGiaCaNhans() != null && !d.getPhieuGiamGiaCaNhans().isEmpty())
                 ? d.getPhieuGiamGiaCaNhans().stream()
                         .filter(p -> !Boolean.TRUE.equals(p.getDeleted()))

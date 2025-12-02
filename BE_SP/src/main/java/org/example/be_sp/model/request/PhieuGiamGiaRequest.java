@@ -18,6 +18,7 @@ public class PhieuGiamGiaRequest {
     String tenPhieuGiamGia;
     Boolean loaiPhieuGiamGia;
     BigDecimal giaTriGiamGia;
+    BigDecimal soTienToiDa;
     BigDecimal hoaDonToiThieu;
     List<Integer> idKhachHang;
     Integer soLuongDung;

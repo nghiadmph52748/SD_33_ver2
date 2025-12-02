@@ -85,6 +85,7 @@ export interface CouponApiModel {
   tenPhieuGiamGia: string
   loaiPhieuGiamGia: boolean
   giaTriGiamGia: number | string | null
+  soTienToiDa?: number | string | null
   hoaDonToiThieu: number | string | null
   soLuongDung: number | null
   soLuongDaDung?: number | null
@@ -135,6 +136,7 @@ export interface CreateCouponPayload {
   tenPhieuGiamGia?: string
   loaiPhieuGiamGia: boolean
   giaTriGiamGia: number
+  soTienToiDa?: number | null
   hoaDonToiThieu: number | null
   soLuongDung: number | null
   ngayBatDau: string

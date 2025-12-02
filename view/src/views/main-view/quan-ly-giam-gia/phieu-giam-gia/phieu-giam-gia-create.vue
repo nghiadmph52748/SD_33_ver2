@@ -1428,6 +1428,7 @@ const confirmSave = async () => {
   border-radius: 8px;
   padding: 16px;
   background: var(--color-bg-2);
+  min-width: 960px;
 }
 
 .segment-tabs {
@@ -1521,8 +1522,10 @@ const confirmSave = async () => {
 
 .right-column {
   flex: 1;
+  min-width: 0;
   padding: 20px;
   background: var(--color-fill-1);
+  overflow-x: auto;
 }
 
 .column-title {

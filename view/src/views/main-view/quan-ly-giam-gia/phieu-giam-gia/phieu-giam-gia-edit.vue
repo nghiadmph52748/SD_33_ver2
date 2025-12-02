@@ -169,7 +169,7 @@
       </a-col>
 
       <!-- Right Column: Customer Selection (only if featured) -->
-      <a-col :span="13" v-if="couponEditForm.featured">
+      <a-col :span="13" v-if="couponEditForm.featured" class="right-column-edit">
         <a-card :title="t('discount.coupon.selectCustomers')">
           <div class="customer-selection-section">
             <!-- Segmentation Tabs -->
@@ -267,7 +267,6 @@
                     v-model="allCustomersFilters.lastOrderRange"
                     value-format="YYYY-MM-DD"
                     format="DD/MM/YYYY"
-                    placeholder="[Từ ngày, Đến ngày]"
                     style="width: 100%; margin-bottom: 12px"
                   />
                   <a-button type="primary" @click="handleSegmentChange" style="width: 100%">Áp dụng bộ lọc</a-button>
@@ -1692,6 +1691,15 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 16px;
   background: var(--color-bg-2);
+  min-width: 960px;
+}
+
+.right-column-edit {
+  min-width: 0;
+}
+
+.right-column-edit :deep(.arco-card-body) {
+  overflow-x: auto;
 }
 
 .segment-tabs {

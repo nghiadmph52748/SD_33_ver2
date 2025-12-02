@@ -201,6 +201,7 @@ public class PhieuGiamGiaService {
         PhieuGiamGia oldSnapshot = new PhieuGiamGia();
         oldSnapshot.setTenPhieuGiamGia(existingPgg.getTenPhieuGiamGia());
         oldSnapshot.setGiaTriGiamGia(existingPgg.getGiaTriGiamGia());
+        oldSnapshot.setSoTienToiDa(existingPgg.getSoTienToiDa());
         oldSnapshot.setLoaiPhieuGiamGia(existingPgg.getLoaiPhieuGiamGia());
         oldSnapshot.setHoaDonToiThieu(existingPgg.getHoaDonToiThieu());
         oldSnapshot.setSoLuongDung(existingPgg.getSoLuongDung());
@@ -308,7 +309,7 @@ public class PhieuGiamGiaService {
                         .voucherName(pgg.getTenPhieuGiamGia())
                         .voucherType(pgg.getLoaiPhieuGiamGia() ? "FIXED_AMOUNT" : "PERCENTAGE")
                         .discountValue(pgg.getGiaTriGiamGia())
-                        .maxDiscount(null)
+                        .maxDiscount(pgg.getSoTienToiDa())
                         .minOrderValue(pgg.getHoaDonToiThieu())
                         .validFrom(pgg.getNgayBatDau())
                         .validUntil(pgg.getNgayKetThuc())

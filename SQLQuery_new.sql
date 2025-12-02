@@ -854,6 +854,7 @@ CREATE TABLE [dbo].[phieu_giam_gia](
 	[ten_phieu_giam_gia] [nvarchar](255) NULL,
 	[loai_phieu_giam_gia] [bit] NULL,
 	[gia_tri_giam_gia] [decimal](18, 2) NULL,
+	[so_tien_toi_da] [decimal](18, 2) NULL,
 	[hoa_don_toi_thieu] [decimal](18, 2) NULL,
 	[so_luong_dung] [int] NULL,
 	[ngay_bat_dau] [datetime] NULL,

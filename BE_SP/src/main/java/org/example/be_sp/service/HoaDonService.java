@@ -1922,10 +1922,18 @@ public class HoaDonService {
         BigDecimal discountAmount;
 
         if (Boolean.TRUE.equals(voucher.getLoaiPhieuGiamGia())) {
+            // Fixed amount voucher
             discountAmount = discountValue;
         } else {
+            // Percentage voucher with optional max cap
             discountAmount = baseAmount.multiply(discountValue)
                     .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+
+            BigDecimal maxDiscount = voucher.getSoTienToiDa();
+            if (maxDiscount != null && maxDiscount.compareTo(BigDecimal.ZERO) > 0
+                    && discountAmount.compareTo(maxDiscount) > 0) {
+                discountAmount = maxDiscount;
+            }
         }
 
         if (discountAmount.compareTo(baseAmount) > 0) {
