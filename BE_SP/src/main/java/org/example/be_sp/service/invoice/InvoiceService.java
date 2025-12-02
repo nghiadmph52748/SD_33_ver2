@@ -137,8 +137,6 @@ public class InvoiceService {
         log.info("[InvoiceService] Address change processing for order {} with difference {}",
                 hoaDon.getMaHoaDon(), context.difference);
 
-        sendAddressChangeEmail(hoaDon, request, null);
-
         if (context.isPaidInFull) {
             if (context.difference.signum() > 0) {
                 handlePaidFullWithSurcharge(hoaDon, context);
@@ -150,6 +148,14 @@ public class InvoiceService {
         } else {
             handleOutstandingBalance(hoaDon, context);
         }
+
+        BigDecimal emailDelta = context.difference != null ? context.difference : BigDecimal.ZERO;
+        InvoiceAddressChangeRequest emailRequest = context.request != null ? context.request : request;
+
+        log.info("[InvoiceService] Dispatching address change email for order {} with delta {} (paidInFull={})",
+                hoaDon.getMaHoaDon(), emailDelta, context.isPaidInFull);
+
+        sendAddressChangeEmail(hoaDon, emailRequest, emailDelta);
 
         applyShippingFee(hoaDon, context);
 
@@ -230,7 +236,6 @@ public class InvoiceService {
 
         log.info("[InvoiceService] Applied surcharge {} to order {}", surcharge, hoaDon.getMaHoaDon());
 
-        sendAddressChangeEmail(hoaDon, context.request, surcharge);
     }
 
     private void handlePaidFullWithRefund(HoaDon hoaDon, AddressChangeContext context) {
@@ -272,9 +277,7 @@ public class InvoiceService {
         hoaDon.setPhuPhi(surcharge);
         hoaDon.setHoanPhi(refund);
 
-        if (surcharge.signum() > 0) {
-            sendAddressChangeEmail(hoaDon, context.request, surcharge);
-        } else if (refund.signum() > 0) {
+        if (refund.signum() > 0) {
             RefundNotificationEmailData emailData = RefundNotificationEmailData.builder()
                     .customerName(context.customerName)
                     .customerEmail(context.customerEmail)
@@ -371,6 +374,8 @@ public class InvoiceService {
     private void sendAddressChangeEmail(HoaDon hoaDon, InvoiceAddressChangeRequest request, BigDecimal surcharge) {
         if (!StringUtils.hasText(hoaDon.getEmailNguoiNhan()) && (hoaDon.getIdKhachHang() == null
                 || !StringUtils.hasText(hoaDon.getIdKhachHang().getEmail()))) {
+            log.warn("[InvoiceService] Skipping address change email for order {} due to missing customer email",
+                    hoaDon.getMaHoaDon());
             return;
         }
 
@@ -381,6 +386,9 @@ public class InvoiceService {
 
         String oldAddress = buildAddressString(request != null ? request.getOldAddress() : null);
         String newAddress = buildAddressString(request != null ? request.getNewAddress() : null);
+
+        log.info("[InvoiceService] Prepared address change email payload for order {} | old='{}' | new='{}' | delta={}",
+                hoaDon.getMaHoaDon(), oldAddress, newAddress, surcharge);
 
         emailService.sendAddressChangeNotificationEmail(
                 customerEmail,
@@ -562,6 +570,7 @@ public class InvoiceService {
             return hoaDon.getIdKhachHang() != null ? hoaDon.getIdKhachHang().getTenKhachHang() : "Khách hàng";
         }
 
+        @SuppressWarnings("unused")
         BigDecimal calculateDiscountedTotal() {
             BigDecimal subtotalAfterDiscount = safe(productTotal).subtract(safe(discountAmount));
             if (subtotalAfterDiscount.compareTo(BigDecimal.ZERO) < 0) {

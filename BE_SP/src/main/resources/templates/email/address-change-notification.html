@@ -119,10 +119,23 @@
 			margin-bottom: 8px;
 		}
 
+		.surcharge-info.refund {
+			background-color: #e6ffed;
+			border-left-color: #36c26d;
+		}
+
+		.surcharge-info.refund h4 {
+			color: #1f7a3f;
+		}
+
 		.surcharge-amount {
 			font-size: 18px;
 			font-weight: bold;
 			color: #d39e00;
+		}
+
+		.surcharge-info.refund .surcharge-amount {
+			color: #1f7a3f;
 		}
 
 		.surcharge-note {
@@ -130,6 +143,10 @@
 			color: #856404;
 			margin-top: 8px;
 			line-height: 1.5;
+		}
+
+		.surcharge-info.refund .surcharge-note {
+			color: #1f7a3f;
 		}
 
 		.note-section {
@@ -225,7 +242,7 @@
 			<!-- Order Info -->
 			<div class="order-info">
 				<span class="address-label">Mã đơn hàng:</span>
-				<p class="order-code" th:text="${orderCode}">ORD-123456</p>
+				<p class="order-code" th:text="${orderCode}"></p>
 			</div>
 
 			<p style="margin-bottom: 15px; color: #555;">
@@ -235,45 +252,61 @@
 			<div class="divider"></div>
 
 			<!-- Old Address -->
-			<div class="address-section">
+			<div class="address-section" th:if="${#strings.isNotEmpty(oldAddress)}">
 				<h3>❌ Địa chỉ cũ</h3>
 				<div class="address-box">
 					<div class="address-label">Địa chỉ giao hàng cũ:</div>
-					<p th:text="${oldAddress}">
-						123 Đường ABC, Phường XYZ, Quận ABC, TP. Hồ Chí Minh
-					</p>
+					<p th:text="${oldAddress}"></p>
 				</div>
 			</div>
 
 			<!-- New Address -->
-			<div class="address-section">
+			<div class="address-section" th:if="${#strings.isNotEmpty(newAddress)}">
 				<h3>✅ Địa chỉ mới</h3>
 				<div class="address-box">
 					<div class="address-label">Địa chỉ giao hàng mới:</div>
-					<p th:text="${newAddress}">
-						456 Đường XYZ, Phường ABC, Quận XYZ, TP. Hà Nội
-					</p>
+					<p th:text="${newAddress}"></p>
 				</div>
 			</div>
 
 			<!-- Surcharge Info -->
-			<div class="surcharge-info">
+			<div class="surcharge-info" th:if="${surcharge != null and surcharge.signum() > 0}">
 				<h4>⚠️ Phí phụ thêm</h4>
-				<div class="surcharge-amount" th:text="${#numbers.formatInteger(surcharge.intValue(), 3, 'COMMA')} + ' ₫'">
-					50,000 ₫
+				<div class="surcharge-amount" th:text="${#numbers.formatDecimal(surcharge, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
 				</div>
 				<p class="surcharge-note">
-					Vì bạn yêu cầu thay đổi địa chỉ giao hàng sau khi đặt hàng, nên sẽ phát sinh phí phụ thêm như trên.
-					Phí này sẽ được thanh toán cùng với đơn hàng.
+					Thay đổi địa chỉ giao hàng làm phát sinh thêm chi phí vận chuyển. Phí phụ thêm sẽ được cộng vào tổng giá
+					trị
+					đơn hàng.
+				</p>
+			</div>
+
+			<div class="surcharge-info refund" th:if="${surcharge != null and surcharge.signum() < 0}">
+				<h4>✅ Chúng tôi hoàn phí cho bạn</h4>
+				<div class="surcharge-amount"
+					th:text="${#numbers.formatDecimal(surcharge.abs(), 0, 'COMMA', 0, 'POINT')} + ' ₫'"></div>
+				<p class="surcharge-note">
+					Cước vận chuyển mới thấp hơn so với trước đây nên chúng tôi sẽ hoàn trả phần chênh lệch như trên. Khoản
+					phí này
+					sẽ được xử lý theo chính sách thanh toán hiện hành của đơn hàng.
+				</p>
+			</div>
+
+			<div class="note-section" th:if="${surcharge == null or surcharge.signum() == 0}">
+				<h4>ℹ️ Không phát sinh phí thêm</h4>
+				<p>
+					Thay đổi địa chỉ giao hàng không làm thay đổi chi phí vận chuyển. Đơn hàng của bạn sẽ tiếp tục được xử lý
+					theo
+					đúng tiến độ.
 				</p>
 			</div>
 
 			<!-- Important Note -->
-			<div class="note-section">
+			<div class="note-section" th:if="${surcharge != null and surcharge.signum() != 0}">
 				<h4>ℹ️ Thông tin quan trọng</h4>
 				<p>
 					✓ Thay đổi địa chỉ giao hàng đã được cập nhật vào hệ thống<br>
-					✓ Phí phụ sẽ được cộng vào tổng giá trị đơn hàng<br>
+					✓ Chi phí vận chuyển đã được điều chỉnh theo thông tin mới<br>
 					✓ Đơn hàng sẽ được giao đến địa chỉ mới
 				</p>
 			</div>

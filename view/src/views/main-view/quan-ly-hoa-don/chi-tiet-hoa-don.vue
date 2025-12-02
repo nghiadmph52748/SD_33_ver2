@@ -1672,7 +1672,9 @@ const calculatedSurchargeAmount = computed(() => {
 
 const calculatedRefundAmount = computed(() => {
   if (!invoice.value) return 0
-  return clampCurrency(resolveAmount(invoice.value.hoanPhi))
+  const rawRefund = resolveAmount(invoice.value.hoanPhi)
+  const absoluteRefund = Math.abs(rawRefund)
+  return clampCurrency(absoluteRefund)
 })
 
 const calculatedShippingGross = computed(() => {

@@ -6,88 +6,180 @@
 	<title>Thông báo hoàn phí thay đổi địa chỉ</title>
 	<style>
 		body {
-			font-family: 'Segoe UI', Arial, sans-serif;
-			background-color: #f4f4f4;
 			margin: 0;
 			padding: 0;
-			color: #333333;
+			font-family: 'Segoe UI', Arial, sans-serif;
+			background: #f2f4ff;
+			color: #2b2b2b;
 		}
 
 		.container {
 			max-width: 640px;
-			margin: 24px auto;
-			background-color: #ffffff;
-			border-radius: 8px;
+			margin: 32px auto;
+			background: #ffffff;
+			border-radius: 16px;
 			overflow: hidden;
-			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+			box-shadow: 0 18px 36px rgba(76, 84, 117, 0.12);
 		}
 
 		.header {
-			background: linear-gradient(135deg, #667eea, #764ba2);
+			background: radial-gradient(circle at top, #8a8df0, #5b63d8 55%, #3f48c1 90%);
 			color: #ffffff;
-			padding: 28px 24px;
+			padding: 36px 32px;
 			text-align: center;
 		}
 
 		.header h1 {
+			margin: 0 0 12px;
+			font-size: 24px;
+			letter-spacing: 0.6px;
+		}
+
+		.header p {
 			margin: 0;
-			font-size: 22px;
+			font-size: 15px;
+			opacity: 0.9;
 		}
 
 		.content {
-			padding: 28px 24px;
+			padding: 36px 32px;
+		}
+
+		.content p {
+			margin: 0 0 16px;
+			font-size: 15px;
+			line-height: 1.7;
+			color: #454b66;
 		}
 
 		.section {
-			margin-bottom: 24px;
-			padding: 18px;
-			border-radius: 6px;
-			background-color: #f8f9ff;
+			margin-bottom: 28px;
+			padding: 20px 22px;
+			border-radius: 12px;
+			background: linear-gradient(145deg, #f7f8ff, #eef0ff);
+			border: 1px solid rgba(91, 99, 216, 0.12);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+		}
+
+		.section.neutral {
+			background: linear-gradient(145deg, #f6f6f6, #ededed);
 		}
 
 		.section h2 {
-			margin: 0 0 10px;
-			font-size: 16px;
-			color: #4a54e1;
+			margin: 0 0 12px;
+			font-size: 17px;
+			color: #3841aa;
 		}
 
 		.highlight {
-			font-size: 28px;
-			font-weight: bold;
-			color: #4a54e1;
+			display: inline-flex;
+			align-items: baseline;
+			gap: 6px;
+			margin-top: 4px;
+			font-size: 32px;
+			font-weight: 700;
+			color: #2f35a1;
+			letter-spacing: 0.4px;
+		}
+
+		.voucher-card {
+			margin-bottom: 22px;
+			padding: 24px 28px;
+			border-radius: 16px;
+			background: radial-gradient(circle at 25% -10%, rgba(255, 255, 255, 0.9), rgba(126, 132, 255, 0.25)),
+				linear-gradient(125deg, rgba(63, 72, 193, 0.2), rgba(131, 140, 255, 0.45));
+			border: 1px solid rgba(86, 95, 214, 0.25);
+			box-shadow: 0 16px 24px rgba(72, 82, 196, 0.18);
+			text-align: center;
+		}
+
+		.voucher-header {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 16px;
+			padding: 6px 12px;
+			border-radius: 999px;
+			background: rgba(255, 255, 255, 0.6);
+			font-size: 14px;
+			font-weight: 600;
+			color: #2f35a1;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+
+		.voucher-code {
+			font-size: 30px;
+			font-weight: 800;
+			color: #262b85;
+			letter-spacing: 4px;
+			margin-bottom: 12px;
+		}
+
+		.voucher-meta {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 12px 24px;
+			font-size: 13px;
+			color: #303a71;
+		}
+
+		.voucher-meta span {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 6px 10px;
+			border-radius: 999px;
+			background: rgba(255, 255, 255, 0.65);
 		}
 
 		.note {
-			margin-top: 16px;
-			padding: 14px;
-			background-color: #fff7e6;
-			border-left: 4px solid #ffa940;
-			border-radius: 4px;
+			margin-top: 18px;
+			padding: 16px 18px;
+			border-radius: 12px;
+			background: linear-gradient(135deg, #fff4df, #ffe7c1);
+			border: 1px solid rgba(255, 169, 64, 0.32);
 			font-size: 14px;
-			color: #ad6800;
+			color: #a85a05;
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 		}
 
 		ul {
-			padding-left: 20px;
+			margin: 8px 0 0 18px;
+			padding: 0;
+			color: #454b66;
+		}
+
+		ul li {
+			margin-bottom: 8px;
 		}
 
 		.cta {
 			display: inline-block;
-			margin-top: 24px;
-			background: linear-gradient(135deg, #667eea, #764ba2);
-			color: #ffffff;
+			margin-top: 30px;
+			padding: 14px 42px;
+			border-radius: 999px;
+			background: linear-gradient(135deg, #ff8f5a, #ff5f8f);
+			color: #000000;
 			text-decoration: none;
-			padding: 12px 32px;
-			border-radius: 6px;
 			font-weight: 600;
+			letter-spacing: 0.5px;
+			box-shadow: 0 14px 24px rgba(255, 111, 135, 0.28);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.cta:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 18px 28px rgba(255, 111, 135, 0.35);
 		}
 
 		.footer {
-			background-color: #f4f4f4;
+			padding: 20px 16px;
+			background: #f2f4ff;
 			text-align: center;
-			padding: 16px;
 			font-size: 12px;
-			color: #666666;
+			color: #616890;
 		}
 	</style>
 </head>
@@ -96,20 +188,14 @@
 	<div class="container">
 		<div class="header">
 			<h1>Thông báo hoàn phí thay đổi địa chỉ</h1>
-			<p>Đơn hàng <strong th:text="${orderCode}">HD-0001</strong></p>
+			<p>Đơn hàng <strong th:text="${orderCode}"></strong></p>
 		</div>
 		<div class="content">
-			<p>Xin chào <strong th:text="${customerName}">Khách hàng</strong>,</p>
+			<p>Xin chào <strong th:text="${customerName}"></strong>,</p>
 			<p>
 				Yêu cầu thay đổi địa chỉ giao hàng của bạn đã được xử lý thành công. Phí vận chuyển mới giúp giảm chi phí,
-				vì vậy chúng tôi sẽ hoàn lại cho bạn số tiền:
+				vì vậy chúng tôi sẽ hoàn lại cho bạn số tiền thừa bằng voucher:
 			</p>
-			<div class="section">
-				<h2>Số tiền hoàn lại</h2>
-				<div class="highlight" th:text="${#numbers.formatDecimal(refundAmount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
-					50,000 ₫</div>
-			</div>
-
 			<div class="section" th:if="${appliedToOrder}">
 				<h2>Hoàn phí đã trừ trực tiếp vào đơn hàng</h2>
 				<p>Đơn hàng của bạn chưa thanh toán đủ nên chúng tôi đã trừ trực tiếp phần hoàn phí vào giá trị đơn.</p>
@@ -125,6 +211,20 @@
 			</div>
 
 			<div class="section" th:if="${!appliedToOrder}">
+				<div class="voucher-card" th:if="${voucherReward}">
+					<div class="voucher-header">Voucher hoàn phí dành cho bạn</div>
+					<div class="voucher-code" th:text="${voucherCode}"></div>
+					<div class="voucher-meta">
+						<span>
+							💰 Giá trị: <strong
+								th:text="${#numbers.formatDecimal(refundAmount != null ? refundAmount.abs() : 0, 0, 'COMMA', 0, 'POINT')} + ' ₫'"></strong>
+						</span>
+						<span th:if="${voucherExpiryFormatted != null}">
+							⏳ Hạn sử dụng: <strong th:text="${voucherExpiryFormatted}"></strong>
+						</span>
+					</div>
+				</div>
+
 				<h2>Hoàn phí cho đơn hàng đã thanh toán đủ</h2>
 				<p>
 					Bạn đã thanh toán đủ giá trị đơn hàng, vì vậy phần hoàn phí sẽ được xử lý theo chính sách ưu đãi dành
@@ -135,10 +235,9 @@
 					hàng kế tiếp.
 				</div>
 				<div class="note" th:if="${voucherReward}">
-					🎟️ Chúng tôi đã tạo tặng bạn voucher giảm giá mã <strong th:text="${voucherCode}">REF_12345</strong> trị
-					giá
-					đúng bằng số tiền hoàn lại. Voucher có hiệu lực đến <strong
-						th:text="${voucherExpiryFormatted}">31/12/2024</strong>.
+					🎟️ Chúng tôi đã tạo tặng bạn voucher giảm giá trị giá đúng bằng số tiền hoàn lại từ hoá đơn <span
+						th:text="${orderCode}"></span>. Voucher có hiệu lực đến
+					<strong th:text="${voucherExpiryFormatted}"></strong>.
 				</div>
 			</div>
 
