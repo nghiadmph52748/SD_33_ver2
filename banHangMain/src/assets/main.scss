@@ -34,7 +34,9 @@ a {
 }
 
 /* Button system */
-.btn {
+.btn,
+.btn:link,
+.btn:visited {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -51,9 +53,10 @@ a {
   color: #ffffff;
   transition: transform 0.06s ease, background 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+  text-decoration: none;
 }
 
-.btn:hover { background: #000000; box-shadow: 0 6px 18px rgba(0,0,0,.18); transform: translateY(-1px); }
+.btn:hover { background: #000000; color: #ffffff; box-shadow: 0 6px 18px rgba(0,0,0,.18); transform: translateY(-1px); }
 .btn:active { transform: translateY(1px) scale(0.98); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(135,206,255,.8); }
 .btn:disabled { opacity: .6; cursor: not-allowed; }

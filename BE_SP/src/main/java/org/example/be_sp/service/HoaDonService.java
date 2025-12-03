@@ -333,8 +333,14 @@ public class HoaDonService {
         } catch (Exception e) {
             // Ignore lazy loading issues; response is still generated
         }
-        // Send order confirmation email once invoice is persisted
-        sendOrderConfirmationEmail(savedHoaDon);
+        // Send order confirmation email:
+        // - COD / offline payments may send immediately when order is created
+        // - Online payments (VNPAY, etc.) should send only after payment is marked as paid
+        // Here we only send when trangThaiThanhToan == true (paid) to avoid emailing
+        // customers before VNPAY confirms payment.
+        if (Boolean.TRUE.equals(savedHoaDon.getTrangThaiThanhToan())) {
+            sendOrderConfirmationEmail(savedHoaDon);
+        }
         // 🔔 NOTIFICATION: New order created
         try {
             // Notify staff member assigned to order

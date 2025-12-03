@@ -88,7 +88,9 @@ public class VnPayService {
                 vnp.put("vnp_BankCode", req.getBankCode());
             }
 
+            // Build query string theo đúng định dạng VNPAY (đã URL-encode value)
             String query = buildQuery(vnp);
+            // VNPAY JSP legacy sample thực tế hash chính chuỗi query này
             String secureHash = hmacSHA512(vnpHashSecret, query);
             String payUrl = vnpPayUrl + "?" + query + "&vnp_SecureHash=" + secureHash;
 
@@ -108,6 +110,9 @@ public class VnPayService {
 
     private String get(String key, String defVal) {
         String value = env.getProperty(key);
+        if (value != null) {
+            value = value.trim();
+        }
         return (value == null || value.isBlank()) ? defVal : value;
     }
 
@@ -119,6 +124,7 @@ public class VnPayService {
         return get("app.frontendUrl", "http://localhost:5173");
     }
 
+    // Tạo query string cho URL thanh toán và cũng dùng làm chuỗi hashData (JSP sample)
     private static String buildQuery(Map<String, String> params) {
         SortedMap<String, String> sorted = new TreeMap<>(params);
         StringBuilder sb = new StringBuilder();

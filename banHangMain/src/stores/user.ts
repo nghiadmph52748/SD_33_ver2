@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { setToken, clearToken, getToken } from '@/utils/auth'
-import { loginCustomer, getMe, refreshToken, type CustomerProfile, type ApiResponse, type LoginResponseData } from '@/api/auth'
+import { loginCustomer, getMe, refreshToken, registerCustomer, type CustomerProfile, type ApiResponse, type LoginResponseData } from '@/api/auth'
 import { showMessageError } from '@/utils/message'
 
 type UserState = {
@@ -117,6 +117,38 @@ export const useUserStore = defineStore('user', {
           cartStore.loadCartForUser(normalizedProfile?.id)
         }
         
+        return true
+      } finally {
+        this.loading = false
+      }
+    },
+    async register(fullName: string, email: string, password: string) {
+      this.loading = true
+      try {
+        const res: ApiResponse<LoginResponseData> = await registerCustomer({
+          fullName,
+          email,
+          password,
+        })
+        if (!res.success) {
+          throw new Error(res.message || 'Đăng ký thất bại')
+        }
+        const { accessToken, refreshToken: rt, khachHang } = res.data
+        setToken(accessToken)
+        if (rt) localStorage.setItem(REFRESH_KEY, rt)
+        const normalizedProfile = normalizeProfile(khachHang)
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(normalizedProfile))
+        this.isAuthenticated = true
+        this.accessToken = accessToken
+        this.refreshToken = rt || null
+        this.profile = normalizedProfile
+
+        if (typeof window !== 'undefined') {
+          const { useCartStore } = await import('./cart')
+          const cartStore = useCartStore()
+          cartStore.loadCartForUser(normalizedProfile?.id)
+        }
+
         return true
       } finally {
         this.loading = false

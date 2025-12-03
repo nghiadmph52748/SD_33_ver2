@@ -135,9 +135,13 @@
                 <label for="bank">{{ $t("checkout.bankOptional") }}</label>
                 <select id="bank" v-model="bankCode">
                   <option value="">{{ "—" }}</option>
-                  <option value="NCB">NCB</option>
-                  <option value="VCB">VCB</option>
-                  <option value="ABB">ABBANK</option>
+                  <option
+                    v-for="bank in vnpayBanks"
+                    :key="bank.code"
+                    :value="bank.code"
+                  >
+                    {{ bank.label }}
+                  </option>
                 </select>
               </div>
             </form>
@@ -366,6 +370,23 @@ const voucherDiscount = computed(() => {
 const orderTotal = computed(
   () => cartTotal.value + shippingFee.value - voucherDiscount.value
 );
+
+// VNPAY supported bank list (common banks)
+const vnpayBanks = [
+  { code: "NCB", label: "NCB - Ngân hàng Quốc Dân" },
+  { code: "VCB", label: "VCB - Vietcombank" },
+  { code: "BIDV", label: "BIDV - Đầu tư và Phát triển Việt Nam" },
+  { code: "CTG", label: "VietinBank" },
+  { code: "TCB", label: "Techcombank" },
+  { code: "MB", label: "MB Bank" },
+  { code: "ACB", label: "ACB - Á Châu" },
+  { code: "VPB", label: "VPBank" },
+  { code: "VIB", label: "VIB" },
+  { code: "HDB", label: "HDBank" },
+  { code: "OCB", label: "OCB" },
+  { code: "SCB", label: "SCB" },
+  { code: "ABB", label: "ABBANK" },
+];
 
 // Calculate shipping fee from GHN
 async function updateShippingFee() {
@@ -949,81 +970,81 @@ async function handleCheckout() {
   openOrderConfirmation();
 }
 
+async function createOnlineOrder(paymentMethodId: number, notePrefix: string) {
+  // Build delivery address
+  const deliveryAddress = [
+    address.value.street,
+    address.value.ward,
+    address.value.district,
+    address.value.province,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  // Ensure cart items have variant IDs
+  const cartItemsWithVariants = await Promise.all(
+    cart.value.map(async (item) => {
+      if ((item as any).idBienThe) {
+        return item;
+      }
+      try {
+        const productId = Number(item.id);
+        if (!Number.isNaN(productId)) {
+          const variants = await fetchVariantsByProduct(productId);
+          const matchingVariant = variants.find((v) => {
+            const variantColor = (v.tenMauSac || "").trim().toLowerCase();
+            const variantSize = (v.tenKichThuoc || "").trim();
+            const itemColor = (item.color || "").trim().toLowerCase();
+            const itemSize = item.size?.trim();
+            return variantColor === itemColor && variantSize === itemSize;
+          });
+          if (matchingVariant?.id) {
+            return { ...item, idBienThe: matchingVariant.id };
+          }
+        }
+      } catch (error) {
+        console.warn("Failed to fetch variant for item:", item.id, error);
+      }
+      return item;
+    })
+  );
+
+  const plainCartItems = JSON.parse(JSON.stringify(cartItemsWithVariants));
+  const orderNotes = `${notePrefix}`;
+
+  const order = await createOrderFromCart(plainCartItems, {
+    customerId: userStore.id || undefined,
+    paymentMethodId,
+    voucherId: selectedVoucher.value?.id,
+    voucherDiscount: voucherDiscount.value,
+    notes: orderNotes,
+    shippingFee: shippingFee.value,
+    subtotal: cartTotal.value,
+    totalAmount: orderTotal.value,
+    recipient: {
+      fullName: contact.value.fullName,
+      phone: contact.value.phone,
+      email: contact.value.email,
+      address: deliveryAddress,
+    },
+  });
+
+  if (!order) {
+    throw new Error("Không thể tạo đơn hàng");
+  }
+  return order;
+}
+
 async function handleCODCheckout() {
   try {
-    // Build delivery address
-    const deliveryAddress = [
-      address.value.street,
-      address.value.ward,
-      address.value.district,
-      address.value.province,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
-    // Ensure cart items have variant IDs
-    const cartItemsWithVariants = await Promise.all(
-      cart.value.map(async (item) => {
-        // If variant ID already exists, use it
-        if ((item as any).idBienThe) {
-          return item;
-        }
-
-        // Otherwise, try to find variant ID from backend
-        try {
-          const productId = Number(item.id);
-          if (!Number.isNaN(productId)) {
-            const variants = await fetchVariantsByProduct(productId);
-            // Find matching variant by color and size
-            const matchingVariant = variants.find((v) => {
-              const variantColor = (v.tenMauSac || "").trim().toLowerCase();
-              const variantSize = (v.tenKichThuoc || "").trim();
-              const itemColor = (item.color || "").trim().toLowerCase();
-              const itemSize = item.size?.trim();
-              return variantColor === itemColor && variantSize === itemSize;
-            });
-            if (matchingVariant?.id) {
-              return { ...item, idBienThe: matchingVariant.id };
-            }
-          }
-        } catch (error) {
-          console.warn("Failed to fetch variant for item:", item.id, error);
-        }
-        // Return item as-is if variant not found (backend may handle it)
-        return item;
-      })
+    // COD payment method ID is usually 1 or 2, adjust based on your backend
+    const codPaymentMethodId = 1;
+    const order = await createOnlineOrder(
+      codPaymentMethodId,
+      "Đơn hàng online - Thanh toán COD"
     );
 
-    // Convert cart items to plain objects to avoid circular reference errors
-    // This removes Vue reactive proxies which cause JSON serialization errors
-    const plainCartItems = JSON.parse(JSON.stringify(cartItemsWithVariants));
-
-    // Create order with COD payment method (typically ID 1 or 2, adjust based on your backend)
-    // COD payment method ID is usually 1 or 2, VNPAY might be 2 or 3
-    const codPaymentMethodId = 1; // Adjust this based on your backend
-    const orderNotes = `Đơn hàng online - Thanh toán COD`;
-    const order = await createOrderFromCart(plainCartItems, {
-      customerId: userStore.id || undefined,
-      paymentMethodId: codPaymentMethodId,
-      voucherId: selectedVoucher.value?.id,
-      voucherDiscount: voucherDiscount.value,
-      notes: orderNotes,
-      shippingFee: shippingFee.value, // Extract ref value
-      subtotal: cartTotal.value,
-      totalAmount: orderTotal.value,
-      recipient: {
-        fullName: contact.value.fullName,
-        phone: contact.value.phone,
-        email: contact.value.email,
-        address: deliveryAddress,
-      },
-    });
-    if (!order) {
-      throw new Error("Không thể tạo đơn hàng");
-    }
-    // Clear cart after successful order
     cartStore.clearCart();
-    // Redirect to COD success page
     router.push({
       path: "/payment/cod/result",
       query: {
@@ -1038,9 +1059,17 @@ async function handleCODCheckout() {
 
 async function handleVnpayCheckout() {
   try {
+    // VNPAY payment method ID in backend (adjust if needed)
+    const vnpayPaymentMethodId = 2;
+    const order = await createOnlineOrder(
+      vnpayPaymentMethodId,
+      "Đơn hàng online - Thanh toán VNPAY"
+    );
+
     const res = await createVnPayPayment({
       amount: Math.round(orderTotal.value),
-      orderInfo: "Thanh toan don hang",
+      orderId: order.maHoaDon || order.id.toString(),
+      orderInfo: `Thanh toan don hang ${order.maHoaDon || order.id.toString()}`,
       locale: "vn",
       bankCode: bankCode.value || undefined,
     });
@@ -1192,19 +1221,19 @@ async function handleVnpayCheckout() {
   align-items: center;
 }
 .btn-select-voucher {
-  background: white;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 14px;
-  color: #f77234;
-  font-weight: 500;
+  background: #ffffff;
+  border: 1px solid #111111;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #111111;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .btn-select-voucher:hover {
-  border-color: #f77234;
-  background: #fef7f3;
+  border-color: #111111;
+  background: #f5f5f5;
 }
 .btn-clear-voucher {
   background: white;

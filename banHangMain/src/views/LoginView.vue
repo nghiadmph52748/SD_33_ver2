@@ -150,17 +150,36 @@ async function handleSubmit() {
   } else {
     // Register logic
     if (!formData.value.fullName || !formData.value.email || !formData.value.password) {
+      Message.error(t('auth.missingFields') as string || 'Vui lòng nhập đầy đủ thông tin')
       return
     }
     if (formData.value.password !== formData.value.confirmPassword) {
+      Message.error(t('auth.passwordNotMatch') as string || 'Mật khẩu xác nhận không khớp')
       return
     }
     loading.value = true
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const ok = await userStore.register(
+        formData.value.fullName,
+        formData.value.email,
+        formData.value.password
+      )
+      if (ok) {
+        const redirect = (router.currentRoute.value.query.redirect as string) || '/'
+        router.push(redirect)
+        const name =
+          userStore.profile?.tenKhachHang ||
+          userStore.profile?.tenTaiKhoan ||
+          formData.value.fullName
+        Message.success(t('auth.registerSuccess', { name }))
+      }
+    } catch (error: any) {
+      // Error message is already shown via interceptor or thrown error
+      // eslint-disable-next-line no-console
+      console.error('Register failed', error)
+    } finally {
       loading.value = false
-      router.push('/')
-    }, 1000)
+    }
   }
 }
 

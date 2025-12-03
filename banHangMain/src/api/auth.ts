@@ -32,6 +32,12 @@ export interface LoginResponseData {
   khachHang: CustomerProfile;
 }
 
+export interface RegisterPayload {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
 export function loginCustomer(
   identifier: string,
   password: string
@@ -41,6 +47,14 @@ export function loginCustomer(
       identifier,
       password,
     })
+    .then((res) => res as unknown as ApiResponse<LoginResponseData>);
+}
+
+export function registerCustomer(
+  payload: RegisterPayload
+): Promise<ApiResponse<LoginResponseData>> {
+  return axios
+    .post<ApiResponse<LoginResponseData>>('/api/khach-hang/auth/register', payload)
     .then((res) => res as unknown as ApiResponse<LoginResponseData>);
 }
 

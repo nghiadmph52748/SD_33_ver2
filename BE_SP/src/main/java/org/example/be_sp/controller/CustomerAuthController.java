@@ -6,6 +6,7 @@ import java.util.Map;
 import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.model.request.CustomerLoginRequest;
 import org.example.be_sp.model.request.CustomerRefreshTokenRequest;
+import org.example.be_sp.model.request.CustomerRegisterRequest;
 import org.example.be_sp.model.response.CustomerLoginResponse;
 import org.example.be_sp.model.response.CustomerProfileResponse;
 import org.example.be_sp.model.response.ResponseObject;
@@ -70,6 +71,43 @@ public class CustomerAuthController {
 
         CustomerLoginResponse response = new CustomerLoginResponse(accessToken, refreshToken, profile);
         return new ResponseObject<>(true, response, "Đăng nhập thành công");
+    }
+
+    @PostMapping("/register")
+    public ResponseObject<CustomerLoginResponse> register(@RequestBody CustomerRegisterRequest request) {
+        if (request == null || request.getEmail() == null || request.getEmail().isBlank()
+                || request.getPassword() == null || request.getPassword().isBlank()
+                || request.getFullName() == null || request.getFullName().isBlank()) {
+            return new ResponseObject<>(false, null, "Vui lòng nhập đầy đủ họ tên, email và mật khẩu");
+        }
+
+        String email = request.getEmail().trim().toLowerCase();
+        if (khachHangRepository.findByEmail(email) != null) {
+            return new ResponseObject<>(false, null, "Email đã được sử dụng");
+        }
+
+        KhachHang kh = new KhachHang();
+        kh.setTenKhachHang(request.getFullName().trim());
+        kh.setEmail(email);
+        kh.setTenTaiKhoan(email);
+        kh.setMatKhau(passwordEncoder.encode(request.getPassword()));
+        kh.setTrangThai(true);
+        kh.setDeleted(false);
+        kh.setPhanLoai(0);
+
+        KhachHang saved = khachHangRepository.save(kh);
+
+        String subject = saved.getTenTaiKhoan() != null && !saved.getTenTaiKhoan().isBlank()
+                ? saved.getTenTaiKhoan()
+                : saved.getEmail();
+
+        List<String> roles = List.of("customer");
+        String accessToken = jwtUtils.generateToken(subject, roles);
+        String refreshToken = jwtUtils.generateRefreshToken(subject);
+
+        CustomerProfileResponse profile = new CustomerProfileResponse(saved);
+        CustomerLoginResponse response = new CustomerLoginResponse(accessToken, refreshToken, profile);
+        return new ResponseObject<>(true, response, "Đăng ký tài khoản thành công");
     }
 
     @PostMapping("/refresh")

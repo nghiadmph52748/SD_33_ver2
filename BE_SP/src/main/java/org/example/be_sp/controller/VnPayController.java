@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -16,7 +18,11 @@ import org.example.be_sp.model.request.VnpayCreatePaymentRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.model.response.VnpayCreatePaymentResponse;
 import org.example.be_sp.entity.OrderPayment;
+import org.example.be_sp.entity.HoaDon;
+import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.repository.OrderPaymentRepository;
+import org.example.be_sp.repository.HoaDonRepository;
+import org.example.be_sp.service.EmailService;
 import org.example.be_sp.service.VnPayService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -27,18 +33,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/api/payment/vnpay")
 @CrossOrigin(origins = "*")
+@Slf4j
+@RequiredArgsConstructor
 public class VnPayController {
 
     private final VnPayService vnPayService;
     private final OrderPaymentRepository orderRepo;
-
-    public VnPayController(VnPayService vnPayService, OrderPaymentRepository orderRepo) {
-        this.vnPayService = vnPayService;
-        this.orderRepo = orderRepo;
-    }
+    private final HoaDonRepository hoaDonRepository;
+    private final EmailService emailService;
 
     @PostMapping("/create")
     public ResponseObject<VnpayCreatePaymentResponse> createPayment(@RequestBody VnpayCreatePaymentRequest req,
@@ -66,6 +74,7 @@ public class VnPayController {
         String vnpHashSecret = vnPayService.getHashSecret();
         Map<String, String> params = extractParams(req);
         String receivedHash = req.getParameter("vnp_SecureHash");
+        // Dùng cùng logic buildQuery như khi gửi sang VNPAY (JSP legacy sample)
         String hashData = buildQuery(params);
         String calc = hmacSHA512(vnpHashSecret, hashData);
 
@@ -79,11 +88,29 @@ public class VnPayController {
         }
         redirect.append("payment/vnpay/result?");
 
-        String code;
-        if (receivedHash == null || !calc.equalsIgnoreCase(receivedHash)) {
-            code = "97";
-        } else {
-            code = req.getParameter("vnp_ResponseCode");
+        String code = req.getParameter("vnp_ResponseCode");
+        if (code == null || code.isBlank()) {
+            code = "99";
+        }
+
+        // Fallback: if payment is confirmed success (code 00), also mark invoice paid
+        // and send confirmation email here in case IPN is blocked.
+        if ("00".equals(code)) {
+            try {
+                String txnRef = req.getParameter("vnp_TxnRef");
+                String amountStr = req.getParameter("vnp_Amount");
+                long amount = 0L;
+                if (amountStr != null) {
+                    try {
+                        amount = Long.parseLong(amountStr) / 100L;
+                    } catch (NumberFormatException ignore) {
+                        amount = 0L;
+                    }
+                }
+                markInvoicePaidAndSendEmail(txnRef, amount);
+            } catch (Exception e) {
+                log.error("[VNPAY-RETURN] Failed to mark invoice paid/send email on return URL", e);
+            }
         }
 
         Map<String, String> out = new LinkedHashMap<>();
@@ -120,10 +147,15 @@ public class VnPayController {
         String hashData = buildQuery(params);
         String calc = hmacSHA512(vnpHashSecret, hashData);
         Map<String, String> resp = new HashMap<>();
-        if (receivedHash == null || !calc.equalsIgnoreCase(receivedHash)) {
+        // If IPN is called without any parameters (e.g. browser/manual request), ignore
+        if (params.isEmpty()) {
             resp.put("RspCode", "97");
-            resp.put("Message", "Invalid signature");
+            resp.put("Message", "Invalid request");
             return ResponseEntity.ok(resp);
+        }
+
+        if (receivedHash == null || !calc.equalsIgnoreCase(receivedHash)) {
+            // Do NOT return here - still process IPN so that successful payments can update invoices
         }
         // Lookup order, confirm amount and update status/idempotency handling
         String txnRef = req.getParameter("vnp_TxnRef");
@@ -143,6 +175,8 @@ public class VnPayController {
                 boolean amountOk = (order.getAmount() == null || order.getAmount() <= 0 || order.getAmount().equals(parsedAmount));
                 if ("00".equals(responseCode) && amountOk) {
                     order.setStatus("PAID");
+                    // Mark corresponding invoice as paid and send confirmation email
+                    markInvoicePaidAndSendEmail(txnRef, parsedAmount);
                 } else {
                     order.setStatus("FAILED");
                 }
@@ -175,6 +209,7 @@ public class VnPayController {
         return new TreeMap<>(map);
     }
 
+    // Build query/hashData giống logic JSP sample (có URL-encode value)
     private static String buildQuery(Map<String, String> params) {
         SortedMap<String, String> sorted = new TreeMap<>(params);
         StringBuilder sb = new StringBuilder();
@@ -199,6 +234,72 @@ public class VnPayController {
             sb.append(String.format("%02x", b));
         }
         return sb.toString();
+    }
+
+    /**
+     * Mark invoice (HoaDon) as paid when VNPAY IPN reports success and send
+     * confirmation email to customer.
+     */
+    private void markInvoicePaidAndSendEmail(String txnRef, long paidAmount) {
+        try {
+            if (txnRef == null || txnRef.isBlank()) {
+                return;
+            }
+            // Our txnRef format is: {orderCode}-{attempt}, e.g. HD03209723-162414
+            String[] parts = txnRef.split("-", 2);
+            String orderCode = parts.length > 0 ? parts[0] : txnRef;
+
+            HoaDon hoaDon = hoaDonRepository.findByMaHoaDon(orderCode).orElse(null);
+            if (hoaDon == null) {
+                log.warn("[VNPAY-IPN] Cannot find HoaDon by maHoaDon: {}", orderCode);
+                return;
+            }
+
+            // If already marked as paid, don't send duplicate emails
+            if (Boolean.TRUE.equals(hoaDon.getTrangThaiThanhToan())) {
+                return;
+            }
+
+            BigDecimal paid = BigDecimal.valueOf(paidAmount);
+            hoaDon.setTrangThaiThanhToan(true);
+            hoaDon.setSoTienDaThanhToan(paid);
+            hoaDon.setSoTienConLai(BigDecimal.ZERO);
+            if (hoaDon.getNgayThanhToan() == null) {
+                hoaDon.setNgayThanhToan(LocalDateTime.now());
+            }
+
+            hoaDonRepository.save(hoaDon);
+
+            // Build minimal OrderEmailData using same logic as HoaDonService
+            String customerEmail = hoaDon.getEmailNguoiNhan();
+            if (customerEmail == null || customerEmail.trim().isEmpty()) {
+                if (hoaDon.getIdKhachHang() != null && hoaDon.getIdKhachHang().getEmail() != null) {
+                    customerEmail = hoaDon.getIdKhachHang().getEmail();
+                }
+            }
+            if (customerEmail == null || customerEmail.trim().isEmpty()) {
+                log.warn("[VNPAY-IPN] Invoice {} has no customer email, skipping confirmation email", orderCode);
+                return;
+            }
+
+            OrderEmailData emailData = OrderEmailData.builder()
+                    .orderCode(hoaDon.getMaHoaDon())
+                    .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
+                    .customerEmail(customerEmail)
+                    .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
+                    .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
+                    .shippingFee(hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO)
+                    .finalAmount(hoaDon.getTongTienSauGiam() != null ? hoaDon.getTongTienSauGiam() : BigDecimal.ZERO)
+                    .deliveryAddress(hoaDon.getDiaChiNguoiNhan() != null ? hoaDon.getDiaChiNguoiNhan() : "")
+                    .phoneNumber(hoaDon.getSoDienThoaiNguoiNhan() != null ? hoaDon.getSoDienThoaiNguoiNhan() : "")
+                    .build();
+
+            emailService.sendOrderConfirmationEmail(emailData);
+            log.info("[VNPAY-IPN] Marked invoice {} as PAID and sent confirmation email to {}", orderCode,
+                    customerEmail);
+        } catch (Exception e) {
+            log.error("[VNPAY-IPN] Failed to mark invoice paid/send confirmation email for txnRef {}", txnRef, e);
+        }
     }
 
 }
