@@ -162,6 +162,11 @@ export interface CreateOrderOptions {
   };
 }
 
+export interface CancelOrderOptions {
+  reason?: string;
+  note?: string;
+}
+
 // Convert cart items to plain objects (removes Vue reactive proxies)
 // Uses JSON stringify/parse to safely handle circular references
 export function toPlainObject(obj: any): any {
@@ -233,6 +238,29 @@ export function fetchLatestOrderStatus(
   return axios.get(
     `/api/thong-tin-hoa-don-management/latest-by-hoa-don/${orderId}`
   );
+}
+
+export function cancelOrder(
+  orderId: number,
+  options?: CancelOrderOptions
+): Promise<HttpResponse<OrderResponse>> {
+  const payload: Record<string, unknown> = {
+    idTrangThaiDonHang: 6,
+    trangThai: false,
+  };
+
+  const reason = options?.reason?.trim();
+  if (reason) {
+    payload.ghiChu = reason;
+  }
+
+  if (options?.note) {
+    payload.ghiChu = reason
+      ? `${reason} — ${options.note.trim()}`
+      : options.note.trim();
+  }
+
+  return axios.put(`/api/hoa-don-management/update/${orderId}`, payload);
 }
 
 // Create order from cart items

@@ -61,19 +61,28 @@
 
         <div class="result-card" :class="resultCardClass">
           <template v-if="state === 'success' && order">
-            <div class="result-head">
-              <div class="status-chip" :class="statusTone">
-                {{ currentStatusLabel }}
-              </div>
-              <p class="muted">
-                {{ $t("orderLookup.status.updated") }}
-                <strong>{{ statusUpdatedLabel }}</strong>
-              </p>
-            </div>
             <dl class="result-grid">
               <div>
                 <dt>{{ $t("orderLookup.results.orderCode") }}</dt>
-                <dd>{{ orderCodeDisplay }}</dd>
+                <dd class="order-code-value">{{ orderCodeDisplay }}</dd>
+              </div>
+              <div class="order-action-row">
+                <dt>{{ $t("orderLookup.actions.label") }}</dt>
+                <dd class="cancel-action-cell">
+                  <button
+                    type="button"
+                    class="cancel-order-btn"
+                    :disabled="!canCancelOrder"
+                    @click="openCancelConfirm"
+                  >
+                    <span
+                      v-if="isCancelling"
+                      class="inline-spinner"
+                      aria-hidden="true"
+                    ></span>
+                    <span>{{ cancelButtonLabel }}</span>
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt>{{ $t("orderLookup.results.placedOn") }}</dt>
@@ -90,6 +99,17 @@
               <div v-if="isAuthenticated">
                 <dt>{{ $t("orderLookup.results.contact") }}</dt>
                 <dd>{{ contactSummary }}</dd>
+              </div>
+              <div>
+                <dt>Trạng thái gần nhất</dt>
+                <dd class="latest-status-dd">
+                  <span class="status-chip" :class="statusTone">
+                    {{ currentStatusLabel }}
+                  </span>
+                  <span v-if="hasStatusUpdatedTime" class="latest-status-time">
+                    {{ statusUpdatedLabel }}
+                  </span>
+                </dd>
               </div>
             </dl>
           </template>
@@ -183,12 +203,47 @@
       </section>
     </div>
   </div>
+
+  <div
+    v-if="showCancelConfirm"
+    class="cancel-confirm-overlay"
+    @click.self="closeCancelConfirm"
+  >
+    <div class="cancel-confirm-dialog">
+      <h3>{{ t("orderLookup.actions.confirmTitle") }}</h3>
+      <p>{{ t("orderLookup.actions.cancelConfirm") }}</p>
+      <div class="cancel-confirm-actions">
+        <button
+          type="button"
+          class="cancel-confirm-secondary"
+          :disabled="isCancelling"
+          @click="closeCancelConfirm"
+        >
+          {{ t("orderLookup.actions.keepOrder") }}
+        </button>
+        <button
+          type="button"
+          class="cancel-confirm-danger"
+          :disabled="isCancelling"
+          @click="cancelOrder"
+        >
+          <span
+            v-if="isCancelling"
+            class="inline-spinner"
+            aria-hidden="true"
+          ></span>
+          <span>{{ t("orderLookup.actions.cancelNow") }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
+  cancelOrder as cancelOrderRequest,
   fetchLatestOrderStatus,
   fetchOrderById,
   fetchOrderByCode,
@@ -199,17 +254,20 @@ import {
 } from "@/api/orders";
 import { formatCurrency } from "@/utils/currency";
 import { useUserStore } from "@/stores/user";
+import { showMessageError, showMessageSuccess } from "@/utils/message";
 
 type LookupState = "idle" | "loading" | "success" | "error";
 
 const orderCode = ref("");
 const contactValue = ref("");
-const state = ref<LookupState>("idle");
 const errorMessage = ref("");
 const order = ref<OrderTrackingDetail | null>(null);
 const timeline = ref<OrderTimelineEntry[]>([]);
 const snapshot = ref<OrderStatusSnapshot | null>(null);
+const state = ref<LookupState>("idle");
 const formErrors = reactive<{ code?: string; contact?: string }>({});
+const isCancelling = ref(false);
+const showCancelConfirm = ref(false);
 const { t } = useI18n();
 const userStore = useUserStore();
 const isAuthenticated = computed(() => userStore.isAuthenticated);
@@ -272,32 +330,6 @@ const contactSummary = computed(() => {
   return email || phone || "—";
 });
 
-const statusUpdatedLabel = computed(() => {
-  // Prioritize thongTinDonHang's thoiGian (latest update time)
-  const source =
-    snapshot.value?.thoiGian ||
-    timeline.value.at(-1)?.thoiGian ||
-    order.value?.ngayTao ||
-    null;
-  return formatDateTimeVN(source);
-});
-
-const currentStatusLabel = computed(() => {
-  return (
-    snapshot.value?.tenTrangThaiDonHang ||
-    timeline.value.at(-1)?.trangThaiMoi ||
-    t("orderLookup.status.unknown")
-  );
-});
-
-const statusTone = computed(() => {
-  const key = (currentStatusLabel.value || "").toLowerCase();
-  if (key.includes("hủy") || key.includes("cancel")) return "tone-danger";
-  if (key.includes("giao") || key.includes("delivered")) return "tone-success";
-  if (key.includes("chuẩn") || key.includes("processing")) return "tone-warn";
-  return "tone-neutral";
-});
-
 const orderItems = computed(() => {
   // Support both 'hoaDonChiTiets' and 'items' field names
   const items = order.value?.hoaDonChiTiets || order.value?.items;
@@ -308,7 +340,6 @@ const orderItems = computed(() => {
   }
 
   return items.map((item, index) => {
-
     // Tên sản phẩm - từ nhiều nguồn khác nhau
     const productName =
       item.tenSanPhamChiTiet ||
@@ -363,6 +394,71 @@ const timelineEvents = computed(() => {
     return timeB - timeA; // DESC order (newest first)
   });
 });
+
+const latestTimelineEntry = computed(() => timelineEvents.value[0] || null);
+
+const statusUpdatedLabel = computed(() => {
+  const source =
+    latestTimelineEntry.value?.thoiGian ||
+    snapshot.value?.thoiGian ||
+    order.value?.ngayTao ||
+    null;
+  return formatDateTimeVN(source);
+});
+
+const hasStatusUpdatedTime = computed(() =>
+  Boolean(statusUpdatedLabel.value && statusUpdatedLabel.value !== "—")
+);
+
+const currentStatusLabel = computed(() => {
+  if (latestTimelineEntry.value?.tenTrangThaiDonHang) {
+    return latestTimelineEntry.value.tenTrangThaiDonHang;
+  }
+  if (latestTimelineEntry.value?.trangThaiMoi) {
+    return latestTimelineEntry.value.trangThaiMoi;
+  }
+  if (snapshot.value?.tenTrangThaiDonHang) {
+    return snapshot.value.tenTrangThaiDonHang;
+  }
+  return t("orderLookup.status.unknown");
+});
+
+const statusTone = computed(() => {
+  const key = (currentStatusLabel.value || "").toLowerCase();
+  if (key.includes("hủy") || key.includes("cancel")) return "tone-danger";
+  if (key.includes("giao") || key.includes("delivered")) return "tone-success";
+  if (key.includes("chuẩn") || key.includes("processing")) return "tone-warn";
+  return "tone-neutral";
+});
+
+const normalizedStatusText = computed(() =>
+  removeDiacritics(currentStatusLabel.value || "").toLowerCase()
+);
+
+const orderIdForMutation = computed(() => {
+  if (order.value?.id && order.value.id > 0) {
+    return order.value.id;
+  }
+  const extracted = extractOrderId(orderCodeDisplay.value);
+  return extracted ?? null;
+});
+
+const CANCEL_KEYWORDS = ["cho xac nhan", "pending confirmation", "pending"];
+
+const canCancelOrder = computed(() => {
+  if (!order.value) return false;
+  if (isCancelling.value) return false;
+  if (!orderIdForMutation.value) return false;
+  const statusText = normalizedStatusText.value;
+  if (!statusText) return false;
+  return CANCEL_KEYWORDS.some((keyword) => statusText.includes(keyword));
+});
+
+const cancelButtonLabel = computed(() =>
+  isCancelling.value
+    ? t("orderLookup.actions.cancelling")
+    : t("orderLookup.actions.cancel")
+);
 
 const resultCardClass = computed(() => {
   if (state.value === "success") return "result-card--success";
@@ -464,6 +560,53 @@ async function lookupOrder() {
   }
 }
 
+function openCancelConfirm() {
+  if (!canCancelOrder.value || isCancelling.value) return;
+
+  if (!orderIdForMutation.value) {
+    showMessageError(t("orderLookup.actions.missingId"));
+    return;
+  }
+
+  showCancelConfirm.value = true;
+}
+
+function closeCancelConfirm() {
+  if (isCancelling.value) return;
+  showCancelConfirm.value = false;
+}
+
+async function cancelOrder() {
+  if (isCancelling.value) return;
+
+  const orderId = orderIdForMutation.value;
+  if (!orderId) {
+    showMessageError(t("orderLookup.actions.missingId"));
+    showCancelConfirm.value = false;
+    return;
+  }
+
+  isCancelling.value = true;
+  try {
+    const reason = t("orderLookup.actions.cancelNote");
+    await cancelOrderRequest(orderId, {
+      reason,
+    });
+    showMessageSuccess(t("orderLookup.actions.cancelled"));
+    showCancelConfirm.value = false;
+    await lookupOrder();
+  } catch (error: any) {
+    console.error("[OrderLookup] Cancel order failed:", error);
+    const message =
+      error?.message && typeof error.message === "string"
+        ? error.message
+        : t("orderLookup.actions.cancelFailed");
+    showMessageError(message);
+  } finally {
+    isCancelling.value = false;
+  }
+}
+
 function resetState() {
   formErrors.code = undefined;
   formErrors.contact = undefined;
@@ -497,6 +640,10 @@ function extractOrderId(code: string) {
   const parsed = Number(digits);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return parsed;
+}
+
+function removeDiacritics(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function matchesContact(orderData: OrderTrackingDetail, input: string) {
@@ -741,18 +888,24 @@ function formatDateTime(value?: string | null) {
   border-color: rgba(214, 69, 69, 0.4);
 }
 
-.result-head {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .status-chip {
   align-self: flex-start;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
+}
+
+.latest-status-dd {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.latest-status-time {
+  font-size: 13px;
+  color: rgba(17, 17, 17, 0.6);
 }
 
 .tone-danger {
@@ -794,6 +947,158 @@ function formatDateTime(value?: string | null) {
     font-size: 15px;
     font-weight: 600;
     color: #111;
+  }
+}
+
+.cancel-action-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.cancel-order-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(214, 69, 69, 0.35);
+  background: rgba(214, 69, 69, 0.08);
+  color: #a02121;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.cancel-order-btn:hover:not(:disabled) {
+  background: rgba(214, 69, 69, 0.16);
+  border-color: rgba(214, 69, 69, 0.5);
+}
+
+.cancel-order-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel-order-btn .inline-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(160, 33, 33, 0.3);
+  border-top-color: #a02121;
+}
+
+.cancel-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1200;
+  animation: cancelOverlayFade 0.18s ease;
+}
+
+.cancel-confirm-dialog {
+  width: min(360px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: cancelDialogSlide 0.22s ease;
+}
+
+.cancel-confirm-dialog h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111;
+}
+
+.cancel-confirm-dialog p {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(17, 17, 17, 0.75);
+}
+
+.cancel-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-confirm-secondary,
+.cancel-confirm-danger {
+  border-radius: 18px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.1s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancel-confirm-secondary {
+  background: #fff;
+  border-color: rgba(17, 17, 17, 0.12);
+  color: #111;
+}
+
+.cancel-confirm-secondary:hover:not(:disabled) {
+  border-color: rgba(17, 17, 17, 0.3);
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.08);
+}
+
+.cancel-confirm-danger {
+  background: #a02121;
+  color: #fff;
+  border-color: transparent;
+}
+
+.cancel-confirm-danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 32px rgba(160, 33, 33, 0.32);
+}
+
+.cancel-confirm-secondary:disabled,
+.cancel-confirm-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.cancel-confirm-danger .inline-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+}
+
+@keyframes cancelOverlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cancelDialogSlide {
+  from {
+    transform: translateY(16px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
   }
 }
 

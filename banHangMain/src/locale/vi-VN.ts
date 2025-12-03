@@ -55,6 +55,20 @@ export default {
   "orderLookup.results.shippingTo": "Giao đến",
   "orderLookup.results.contact": "Liên hệ",
   "orderLookup.results.lastChecked": "Lần tra cứu gần nhất",
+  "orderLookup.actions.label": "Thao tác",
+  "orderLookup.actions.cancel": "Huỷ đơn hàng",
+  "orderLookup.actions.cancelling": "Đang huỷ…",
+  "orderLookup.actions.cancelConfirm":
+    "Bạn có chắc chắn muốn huỷ đơn hàng này?",
+  "orderLookup.actions.cancelled": "Đơn hàng đã được huỷ.",
+  "orderLookup.actions.cancelFailed":
+    "Không thể huỷ đơn hàng. Vui lòng thử lại.",
+  "orderLookup.actions.cancelNote":
+    "Khách hàng yêu cầu huỷ đơn qua trang tra cứu.",
+  "orderLookup.actions.missingId": "Không xác định được mã đơn để huỷ.",
+  "orderLookup.actions.confirmTitle": "Huỷ đơn hàng này?",
+  "orderLookup.actions.keepOrder": "Giữ đơn hàng",
+  "orderLookup.actions.cancelNow": "Huỷ ngay",
   "orderLookup.timeline.heading": "Dòng thời gian đơn hàng",
   "orderLookup.timeline.updates": "cập nhật",
   "orderLookup.timeline.emptyTitle": "Chưa có lịch sử trạng thái",

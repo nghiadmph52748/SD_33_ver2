@@ -9,6 +9,7 @@ export interface Voucher {
   loaiPhieuGiamGia: boolean; // true = fixed amount (số tiền VND), false = percentage (%)
   giaTriGiamGia: number; // fixed amount in VND or percentage (0-100)
   hoaDonToiThieu: number; // min order value to use voucher (from backend: hoa_don_toi_thieu)
+  soTienToiDa?: number | null; // percentage vouchers: optional cap
   soLuongDung?: number; // Available quantity remaining (số lượng còn)
   soLuongDaDung?: number; // Already used count (số lượng đã dùng)
   ngayBatDau?: string; // Start date
@@ -135,7 +136,13 @@ export function calculateVoucherDiscount(
     return Math.min(voucher.giaTriGiamGia, subtotal);
   } else {
     // Percentage discount: calculate percentage of subtotal
-    return Math.floor((subtotal * voucher.giaTriGiamGia) / 100);
+    const rawDiscount = Math.floor((subtotal * voucher.giaTriGiamGia) / 100);
+    const cap =
+      typeof voucher.soTienToiDa === "number" ? voucher.soTienToiDa : null;
+    if (cap != null && cap > 0) {
+      return Math.min(rawDiscount, cap);
+    }
+    return rawDiscount;
   }
 }
 
@@ -205,7 +212,6 @@ export function getVoucherDetailedInfo(voucher: Voucher): {
     conditions,
   };
 }
-
 
 /**
  * Get voucher by code

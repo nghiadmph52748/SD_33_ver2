@@ -19,25 +19,33 @@ export default {
   "nav.favorites": "Favorites",
   "orderLookup.eyebrow": "Order support",
   "orderLookup.title": "Track your invoice",
-  "orderLookup.subtitle": "Enter your invoice code together with the email or phone number used at checkout to see the latest status.",
+  "orderLookup.subtitle":
+    "Enter your invoice code together with the email or phone number used at checkout to see the latest status.",
   "orderLookup.form.codeLabel": "Invoice code",
   "orderLookup.form.codePlaceholder": "e.g. HD000001234",
   "orderLookup.form.contactLabel": "Email or phone number",
-  "orderLookup.form.contactPlaceholder": "Enter the email or phone from your order",
+  "orderLookup.form.contactPlaceholder":
+    "Enter the email or phone from your order",
   "orderLookup.form.submit": "Check status",
   "orderLookup.form.checking": "Checking…",
   "orderLookup.form.hint": "We only use this information to verify your order.",
-  "orderLookup.form.guestHint": "Guests can look up invoices by code only. Sign in to verify using your saved email or phone number.",
+  "orderLookup.form.guestHint":
+    "Guests can look up invoices by code only. Sign in to verify using your saved email or phone number.",
   "orderLookup.form.codeError": "Please enter your invoice code",
-  "orderLookup.form.contactError": "Please enter the email or phone on the order",
-  "orderLookup.form.contactFormatError": "Enter a valid email address or at least 6 digits",
+  "orderLookup.form.contactError":
+    "Please enter the email or phone on the order",
+  "orderLookup.form.contactFormatError":
+    "Enter a valid email address or at least 6 digits",
   "orderLookup.error.title": "We could not find that invoice",
   "orderLookup.error.generic": "Double-check the details and try again.",
-  "orderLookup.error.notFound": "No invoice matches the information you entered.",
-  "orderLookup.error.contactMismatch": "The contact information does not match this invoice.",
+  "orderLookup.error.notFound":
+    "No invoice matches the information you entered.",
+  "orderLookup.error.contactMismatch":
+    "The contact information does not match this invoice.",
   "orderLookup.error.invalidCode": "The invoice code looks incorrect.",
   "orderLookup.empty.title": "Enter your details to begin",
-  "orderLookup.empty.subtitle": "You can find the invoice code in your confirmation email or SMS.",
+  "orderLookup.empty.subtitle":
+    "You can find the invoice code in your confirmation email or SMS.",
   "orderLookup.status.updated": "Last update:",
   "orderLookup.status.unknown": "Status unavailable",
   "orderLookup.results.orderCode": "Invoice code",
@@ -46,9 +54,25 @@ export default {
   "orderLookup.results.shippingTo": "Shipping to",
   "orderLookup.results.contact": "Contact",
   "orderLookup.results.lastChecked": "Last checked",
+  "orderLookup.actions.label": "Actions",
+  "orderLookup.actions.cancel": "Cancel order",
+  "orderLookup.actions.cancelling": "Cancelling…",
+  "orderLookup.actions.cancelConfirm":
+    "Are you sure you want to cancel this order?",
+  "orderLookup.actions.cancelled": "The order has been cancelled.",
+  "orderLookup.actions.cancelFailed":
+    "We could not cancel the order. Please try again.",
+  "orderLookup.actions.cancelNote":
+    "Customer requested cancellation via order lookup page.",
+  "orderLookup.actions.missingId":
+    "We could not determine the order ID to cancel.",
+  "orderLookup.actions.confirmTitle": "Cancel this order?",
+  "orderLookup.actions.keepOrder": "Keep order",
+  "orderLookup.actions.cancelNow": "Cancel now",
   "orderLookup.timeline.heading": "Latest status updates",
   "orderLookup.timeline.emptyTitle": "No timeline entries yet",
-  "orderLookup.timeline.emptySubtitle": "Updates will appear here as soon as the order progresses.",
+  "orderLookup.timeline.emptySubtitle":
+    "Updates will appear here as soon as the order progresses.",
   "orderLookup.items.heading": "Items in this order",
   "orderLookup.items.product": "Product",
   "orderLookup.items.variant": "Variant",
