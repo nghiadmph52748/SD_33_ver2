@@ -33,10 +33,22 @@ export default function useVoucher(params: {
     if (!coupon) return 0
     const discountValue = Number(coupon.giaTriGiamGia) || 0
     const subtotalValue = subtotal.value
+    const rawMaxDiscount = coupon.soTienToiDa != null ? Number(coupon.soTienToiDa) : null
+    const maxDiscount = rawMaxDiscount !== null && Number.isFinite(rawMaxDiscount) ? rawMaxDiscount : null
+
     if (!coupon.loaiPhieuGiamGia) {
-      return subtotalValue * (discountValue / 100)
+      const percentageDiscount = subtotalValue * (discountValue / 100)
+      if (maxDiscount !== null && maxDiscount > 0) {
+        return Math.min(percentageDiscount, maxDiscount, subtotalValue)
+      }
+      return Math.min(percentageDiscount, subtotalValue)
     }
-    return Math.min(discountValue, subtotalValue)
+
+    const fixedDiscount = Math.min(discountValue, subtotalValue)
+    if (maxDiscount !== null && maxDiscount > 0) {
+      return Math.min(fixedDiscount, maxDiscount)
+    }
+    return fixedDiscount
   }
 
   const getVoucherStatus = (coupon: CouponApiModel) => {
@@ -58,8 +70,19 @@ export default function useVoucher(params: {
 
   const getDiscountDisplay = (coupon: CouponApiModel) => {
     const discountValue = Number(coupon.giaTriGiamGia) || 0
-    if (!coupon.loaiPhieuGiamGia) return `${discountValue}%`
-    // eslint-disable-next-line no-use-before-define
+    const maxDiscount = coupon.soTienToiDa != null ? Number(coupon.soTienToiDa) : null
+    const hasMaxCap = maxDiscount !== null && Number.isFinite(maxDiscount) && maxDiscount > 0
+
+    if (!coupon.loaiPhieuGiamGia) {
+      if (hasMaxCap) {
+        return `${discountValue}% (tối đa ${formatCurrency(maxDiscount!)})`
+      }
+      return `${discountValue}%`
+    }
+
+    if (hasMaxCap) {
+      return `${formatCurrency(discountValue)} (tối đa ${formatCurrency(maxDiscount!)})`
+    }
     return formatCurrency(discountValue)
   }
 

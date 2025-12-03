@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.example.be_sp.entity.ChiTietSanPham;
@@ -55,6 +56,7 @@ public class HoaDonService {
 
     private static final Logger log = LoggerFactory.getLogger(HoaDonService.class);
     private static final BigDecimal REFUND_VOUCHER_THRESHOLD = new BigDecimal("50000");
+    private static final String ADDRESS_CHANGE_NOTE = "Thay đổi địa chỉ giao hàng";
 
     @Autowired
     private HoaDonRepository hoaDonRepository;
@@ -1347,7 +1349,7 @@ public class HoaDonService {
             // Tổng doanh thu từ đơn hàng có trạng thái cuối cùng là hoàn thành
             String totalRevenueSQL = """
                     SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as total_revenue
-                    FROM hoa_don hd 
+                    FROM hoa_don hd
                     WHERE hd.id IN (
                         SELECT DISTINCT ttdh.id_hoa_don
                         FROM thong_tin_don_hang ttdh
@@ -1368,7 +1370,7 @@ public class HoaDonService {
             // Số đơn hàng có trạng thái cuối cùng là hoàn thành
             String completedOrdersSQL = """
                     SELECT COUNT(*) as completed_orders
-                    FROM hoa_don hd 
+                    FROM hoa_don hd
                     WHERE hd.id IN (
                         SELECT DISTINCT ttdh.id_hoa_don
                         FROM thong_tin_don_hang ttdh
@@ -1389,7 +1391,7 @@ public class HoaDonService {
             // Doanh thu hôm nay (chỉ đơn có trạng thái cuối cùng là hoàn thành)
             String todayRevenueSQL = """
                     SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as today_revenue
-                    FROM hoa_don hd 
+                    FROM hoa_don hd
                     WHERE hd.id IN (
                         SELECT DISTINCT ttdh.id_hoa_don
                         FROM thong_tin_don_hang ttdh
@@ -1411,7 +1413,7 @@ public class HoaDonService {
             // Doanh thu tháng này (chỉ đơn có trạng thái cuối cùng là hoàn thành)
             String monthRevenueSQL = """
                     SELECT COALESCE(SUM(hd.tong_tien_sau_giam), 0) as month_revenue
-                    FROM hoa_don hd 
+                    FROM hoa_don hd
                     WHERE hd.id IN (
                         SELECT DISTINCT ttdh.id_hoa_don
                         FROM thong_tin_don_hang ttdh
@@ -1721,8 +1723,8 @@ public class HoaDonService {
             if (existingCount > 0) {
                 // Cập nhật mục tiêu hiện có
                 String updateSql = """
-                        UPDATE revenue_targets 
-                        SET target_amount = ?, updated_at = GETDATE() 
+                        UPDATE revenue_targets
+                        SET target_amount = ?, updated_at = GETDATE()
                         WHERE period_type = ? AND target_period = ? AND deleted = 0
                         """;
                 jdbcTemplate.update(updateSql, targetAmount, period.toLowerCase(), targetPeriod);
@@ -1967,10 +1969,21 @@ public class HoaDonService {
         boolean customerPaidFullBeforeChange = false;
 
         // Kiểm tra xem đơn hàng đã được thay đổi địa chỉ giao hàng trước đây chưa
-        // Nếu có record ThongTinDonHang với idTrangThaiDonHang = 8 thì không cho phép thay đổi lần thứ 2
-        if (thongTinDonHangRepository.existsByHoaDonIdAndStatusId(hoaDon.getId(), 8)) {
-            log.warn("[sendAddressChangeNotification] Order id={} has already recorded an address change (status id=8)",
-                    hoaDon.getId());
+        // Nếu có record ThongTinDonHang với idTrangThaiDonHang = 1 (hoặc legacy id 8) thì không cho phép thay đổi lần thứ 2
+        Integer currentStatusId = null;
+        Optional<ThongTinDonHang> latestStatus = thongTinDonHangRepository.findLatestByHoaDonId(hoaDon.getId());
+        if (latestStatus.isPresent() && latestStatus.get().getIdTrangThaiDonHang() != null) {
+            currentStatusId = latestStatus.get().getIdTrangThaiDonHang().getId();
+        }
+
+        if (currentStatusId != null && !currentStatusId.equals(1)) {
+            throw new ApiException("Chỉ có thể thay đổi địa chỉ giao hàng khi đơn hàng đang ở trạng thái Chờ xác nhận", "400");
+        }
+
+        boolean alreadyChanged = thongTinDonHangRepository.existsByHoaDonIdAndStatusId(hoaDon.getId(), 8)
+                || thongTinDonHangRepository.existsByHoaDonIdAndGhiChuKeyword(hoaDon.getId(), ADDRESS_CHANGE_NOTE);
+        if (alreadyChanged) {
+            throw new ApiException("Đơn hàng đã được thay đổi địa chỉ giao hàng trước đó", "400");
         }
         // Lấy thông tin khách hàng - ưu tiên từ hoaDon (cho khách lẻ), sau đó từ idKhachHang
         String customerEmail = null;
@@ -2057,23 +2070,24 @@ public class HoaDonService {
         // Lưu thay đổi phí phụ/hoàn phí và tổng tiền
         HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
 
-        // Cập nhật trạng thái đơn hàng thành id = 8 (Thay đổi địa chỉ giao hàng)
+        // Cập nhật trạng thái đơn hàng thành id = 1 (Thay đổi địa chỉ giao hàng)
         try {
-            TrangThaiDonHang trangThaiAddressChange = trangThaiDonHangRepository.findById(8)
+            TrangThaiDonHang trangThaiAddressChange = trangThaiDonHangRepository.findById(1)
                     .orElse(null);
 
             if (trangThaiAddressChange != null) {
-                // Tạo bản ghi ThongTinDonHang mới với trạng thái 8
+                // Tạo bản ghi ThongTinDonHang mới với trạng thái 1
                 ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
                 thongTinDonHang.setIdHoaDon(hoaDon);
                 thongTinDonHang.setIdTrangThaiDonHang(trangThaiAddressChange);
                 thongTinDonHang.setTrangThai(true);
                 thongTinDonHang.setThoiGian(LocalDateTime.now());
                 thongTinDonHang.setDeleted(false);
+                thongTinDonHang.setGhiChu(ADDRESS_CHANGE_NOTE);
                 thongTinDonHangRepository.save(thongTinDonHang);
             }
         } catch (Exception e) {
-            throw new RuntimeException("Error updating order status to id = 8", e);
+            throw new RuntimeException("Error updating order status to id = 1", e);
         }
 
         // Xử lý thông báo về phụ phí/hoàn phí cho khách hàng

@@ -3,6 +3,7 @@ package org.example.be_sp.service.invoice;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.example.be_sp.entity.HinhThucThanhToan;
 import org.example.be_sp.entity.HoaDon;
@@ -48,6 +49,7 @@ public class InvoiceService {
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
     private static final BigDecimal VOUCHER_REFUND_THRESHOLD = new BigDecimal("40000");
+    private static final String ADDRESS_CHANGE_NOTE = "Thay đổi địa chỉ giao hàng";
 
     private final HoaDonService hoaDonService;
     private final HoaDonRepository hoaDonRepository;
@@ -127,6 +129,22 @@ public class InvoiceService {
     public void sendAddressChangeNotification(Integer orderId, InvoiceAddressChangeRequest request) {
         HoaDon hoaDon = hoaDonRepository.findByIdWithVoucher(orderId)
                 .orElseThrow(() -> new ApiException("404", "Không tìm thấy hóa đơn"));
+
+        Integer currentStatusId = null;
+        Optional<ThongTinDonHang> latestStatus = thongTinDonHangRepository.findLatestByHoaDonId(hoaDon.getId());
+        if (latestStatus.isPresent() && latestStatus.get().getIdTrangThaiDonHang() != null) {
+            currentStatusId = latestStatus.get().getIdTrangThaiDonHang().getId();
+        }
+
+        if (currentStatusId != null && !currentStatusId.equals(1)) {
+            throw new ApiException("Chỉ có thể thay đổi địa chỉ giao hàng khi đơn hàng đang ở trạng thái Chờ xác nhận", "400");
+        }
+
+        boolean alreadyChanged = thongTinDonHangRepository.existsByHoaDonIdAndStatusId(hoaDon.getId(), 8)
+                || thongTinDonHangRepository.existsByHoaDonIdAndGhiChuKeyword(hoaDon.getId(), ADDRESS_CHANGE_NOTE);
+        if (alreadyChanged) {
+            throw new ApiException("Đơn hàng đã được thay đổi địa chỉ giao hàng trước đó", "400");
+        }
 
         BigDecimal productTotal = calculateDetailTotal(hoaDon);
         BigDecimal currentShipping = safe(hoaDon.getPhiVanChuyen());
@@ -355,9 +373,9 @@ public class InvoiceService {
     }
 
     private void appendAddressChangeStatus(HoaDon hoaDon) {
-        TrangThaiDonHang status = trangThaiDonHangRepository.findById(8).orElse(null);
+        TrangThaiDonHang status = trangThaiDonHangRepository.findById(1).orElse(null);
         if (status == null) {
-            log.warn("[InvoiceService] Missing TrangThaiDonHang id=8, skipping history append for order {}",
+            log.warn("[InvoiceService] Missing TrangThaiDonHang id=1, skipping history append for order {}",
                     hoaDon.getMaHoaDon());
             return;
         }
@@ -368,6 +386,7 @@ public class InvoiceService {
         thongTin.setTrangThai(true);
         thongTin.setThoiGian(LocalDateTime.now());
         thongTin.setDeleted(false);
+        thongTin.setGhiChu(ADDRESS_CHANGE_NOTE);
         thongTinDonHangRepository.save(thongTin);
     }
 

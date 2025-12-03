@@ -68,13 +68,16 @@ export default function useCustomer(params: { currentOrder: Ref<Order | null> })
       if (customersResponse) {
         customers.value = customersResponse.map((c: KhachHangResponse) => {
           const defaultAddress = c.listDiaChi?.[0]
+          const addressParts = [defaultAddress?.diaChiCuThe, defaultAddress?.phuong, defaultAddress?.quan, defaultAddress?.thanhPho].filter(
+            (part) => typeof part === 'string' && part.trim().length > 0
+          )
 
           return {
             id: c.id.toString(),
             name: c.tenKhachHang,
             phone: c.soDienThoai,
             email: c.email,
-            address: defaultAddress?.diaChiCuThe || '',
+            address: addressParts.join(', '),
             addressInfo: {
               thanhPho: defaultAddress?.thanhPho || '',
               quan: defaultAddress?.quan || '',
@@ -105,7 +108,9 @@ export default function useCustomer(params: { currentOrder: Ref<Order | null> })
           walkInLocation.value.phuong,
           walkInLocation.value.quan,
           walkInLocation.value.thanhPho,
-        ].filter(Boolean)
+        ]
+          .map((part) => (typeof part === 'string' ? part.trim() : part))
+          .filter(Boolean)
         walkInAddress = addressParts.join(', ')
       }
 

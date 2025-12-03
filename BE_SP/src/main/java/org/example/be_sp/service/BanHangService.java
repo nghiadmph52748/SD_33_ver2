@@ -812,12 +812,5 @@ public class BanHangService {
         thongTinDonHang2.setTrangThai(true);
         thongTinDonHang2.setDeleted(false);
         ttDhRepository.save(thongTinDonHang2);
-        ThongTinDonHang thongTinDonHang3 = new ThongTinDonHang();
-        thongTinDonHang3.setIdHoaDon(hdRepository.findById(idHoaDon).orElseThrow());
-        thongTinDonHang3.setIdTrangThaiDonHang(getOrderStatus(3));
-        thongTinDonHang3.setThoiGian(LocalDateTime.now());
-        thongTinDonHang3.setTrangThai(true);
-        thongTinDonHang3.setDeleted(false);
-        ttDhRepository.save(thongTinDonHang3);
     }
 }

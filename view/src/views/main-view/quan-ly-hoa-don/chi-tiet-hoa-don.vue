@@ -340,7 +340,7 @@
                 </a-option>
               </a-select>
             </a-form-item>
-            <!-- Show payment input when status is "Hoàn thành" -->
+            <!-- Show payment input when completing an order that still has an outstanding balance -->
             <a-form-item v-if="showPaymentInput" label="Số tiền thu thêm">
               <a-input-number
                 v-model="updateForm.soTienDaThanhToan"
@@ -383,9 +383,9 @@
         </a-tab-pane>
         <a-tab-pane key="address" title="Địa Chỉ Giao Hàng">
           <a-form :model="updateForm" layout="vertical" class="update-form">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px">
-              <span style="font-weight: 500">Thông tin địa chỉ</span>
-              <a-tag v-if="addressAlreadyChanged" color="red">{{ addressDisableReason }}</a-tag>
+            <div class="address-info-header">
+              <span class="address-info-title">Thông tin địa chỉ</span>
+              <a-tag v-if="isAddressLocked" color="red">{{ addressDisableReason }}</a-tag>
             </div>
             <a-row :gutter="[12, 12]">
               <a-col :span="12">
@@ -398,7 +398,7 @@
                     option-label-prop="label"
                     allow-search
                     allow-clear
-                    :disabled="addressAlreadyChanged"
+                    :disabled="isAddressLocked"
                   />
                 </a-form-item>
               </a-col>
@@ -412,7 +412,7 @@
                     option-label-prop="label"
                     allow-search
                     allow-clear
-                    :disabled="!updateLocationForm.thanhPho || addressAlreadyChanged"
+                    :disabled="!updateLocationForm.thanhPho || isAddressLocked"
                   />
                 </a-form-item>
               </a-col>
@@ -425,13 +425,13 @@
                     option-label-prop="label"
                     allow-search
                     allow-clear
-                    :disabled="!updateLocationForm.quan || addressAlreadyChanged"
+                    :disabled="!updateLocationForm.quan || isAddressLocked"
                   />
                 </a-form-item>
               </a-col>
               <a-col :span="12">
                 <a-form-item label="Địa chỉ cụ thể" required>
-                  <a-input v-model="updateLocationForm.diaChiCuThe" placeholder="Số nhà, đường..." :disabled="addressAlreadyChanged" />
+                  <a-input v-model="updateLocationForm.diaChiCuThe" placeholder="Số nhà, đường..." :disabled="isAddressLocked" />
                 </a-form-item>
               </a-col>
             </a-row>
@@ -596,19 +596,10 @@ const originalInvoiceLocation = ref<{ thanhPho: string; quan: string; phuong: st
   phuong: '',
   diaChiCuThe: '',
 })
-// Track if address has already been changed
-const addressAlreadyChanged = ref(false)
 
-// Computed property to show why address is disabled
-const addressDisableReason = computed(() => {
-  if (!addressAlreadyChanged.value) return null
-
-  const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
-  if (currentStatusText === 'Đã huỷ' || currentStatusText === 'Hoàn thành') {
-    return `Đơn hàng ở trạng thái "${currentStatusText}" - Không thể thay đổi`
-  }
-  return 'Đã thay đổi - Không thể chỉnh sửa'
-})
+const addressLockReason = ref<string | null>(null)
+const isAddressLocked = computed(() => Boolean(addressLockReason.value))
+const addressDisableReason = computed(() => addressLockReason.value)
 
 // Helper functions
 const formatDateTime = (dateString?: string | Date) => {
@@ -1748,7 +1739,7 @@ const remainingAmountForCompletion = computed(() => {
 
 const paymentCompletionDelta = computed(() => paymentAmountForCompletion.value - Math.round(calculatedFinalTotal.value))
 
-const showPaymentInput = computed(() => updateForm.value.trangThaiText === 'Hoàn thành')
+const showPaymentInput = computed(() => updateForm.value.trangThaiText === 'Hoàn thành' && calculatedRemainingAmount.value > 0)
 
 const statusOptions = computed(() => {
   if (invoice.value?.loaiDon === false || updateForm.value.loaiDon === false) {
@@ -1959,30 +1950,28 @@ const formatDate = (dateString: string) => {
 }
 
 /**
- * Check if the delivery address has already been changed
- * Sets addressAlreadyChanged ref to true if address change is detected
- * Also checks if order is in a status where address change is not allowed
+ * Determine whether the delivery address can still be edited
+ * Populates addressLockReason when the address is locked either by status or previous change
  */
 const checkAddressChangeStatus = () => {
-  addressAlreadyChanged.value = false
-  // Check 1: Order status restrictions - cannot change address if Cancelled (id=6) or Completed (id=7)
+  addressLockReason.value = null
+
   const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
-  if (currentStatusText === 'Đã huỷ' || currentStatusText === 'Hoàn thành') {
-    addressAlreadyChanged.value = true
+  if (currentStatusText !== 'Chờ xác nhận') {
+    addressLockReason.value = 'Chỉ có thể thay đổi địa chỉ khi đơn hàng đang ở trạng thái "Chờ xác nhận"'
     return
   }
 
-  // Check 2: Check invoice.thongTinDonHangs if available
-  // Look for tenTrangThaiDonHang field containing "Thay đổi địa chỉ giao hàng"
   if (invoice.value?.thongTinDonHangs && Array.isArray(invoice.value.thongTinDonHangs)) {
-    // Check each item for address change status
     for (let i = 0; i < invoice.value.thongTinDonHangs.length; i++) {
       const item = invoice.value.thongTinDonHangs[i]
-      const statusName = item.tenTrangThaiDonHang || ''
       const statusId = item.idTrangThaiDonHang?.id
-      // Check if status is address change (either by id=8 or by name)
-      if (statusId === 8 || statusName === 'Thay đổi địa chỉ giao hàng' || statusName.includes('Thay đổi địa chỉ')) {
-        addressAlreadyChanged.value = true
+      const statusName = (item.tenTrangThaiDonHang || '').toLowerCase()
+      const note = `${item.ghiChu || ''} ${item.moTa || ''}`.toLowerCase()
+      const noteContainsAddressChange = note.includes('thay đổi địa chỉ')
+
+      if (statusId === 8 || statusName.includes('thay đổi địa chỉ') || noteContainsAddressChange) {
+        addressLockReason.value = 'Địa chỉ giao hàng đã được thay đổi trước đó'
         return
       }
     }
@@ -2727,7 +2716,7 @@ const handleSaveUpdate = async () => {
 
     // Check if this is an address change error
     if (errorMessage.includes('Chỉ được phép thay đổi địa chỉ 1 lần')) {
-      // Refresh the page to ensure addressAlreadyChanged is set correctly
+      // Refresh the page to ensure the address lock state is set correctly
       await fetchInvoiceDetail()
       checkAddressChangeStatus()
       // Close the modal so user sees the updated state
@@ -2783,6 +2772,9 @@ const getTrangThaiDonColor = (trangThai: boolean) => {
 watch(
   () => updateLocationForm.value.thanhPho,
   async (newProvince) => {
+    if (isAddressLocked.value) {
+      return
+    }
     console.log('[AddressWatch] Province changed to:', newProvince)
     if (newProvince) {
       await onProvinceChange()
@@ -2794,6 +2786,9 @@ watch(
 watch(
   () => updateLocationForm.value.quan,
   async (newDistrict) => {
+    if (isAddressLocked.value) {
+      return
+    }
     console.log('[AddressWatch] District changed to:', newDistrict)
     if (newDistrict) {
       await onDistrictChange()
@@ -2805,6 +2800,9 @@ watch(
 watch(
   () => updateLocationForm.value.phuong,
   async (newWard) => {
+    if (isAddressLocked.value) {
+      return
+    }
     console.log('[AddressWatch] Ward changed to:', newWard, {
       quan: updateLocationForm.value.quan,
       thanhPho: updateLocationForm.value.thanhPho,
@@ -2823,6 +2821,9 @@ watch(
 watch(
   () => updateLocationForm.value.diaChiCuThe,
   (newDetail) => {
+    if (isAddressLocked.value) {
+      return
+    }
     console.log('[AddressWatch] Address detail changed to:', newDetail)
   }
 )
@@ -2831,6 +2832,9 @@ watch(
 watch(
   () => updateLocationForm.value.diaChiCuThe,
   async (newAddress) => {
+    if (isAddressLocked.value) {
+      return
+    }
     console.log('[AddressWatch] Address detail changed to:', newAddress, {
       phuong: updateLocationForm.value.phuong,
       quan: updateLocationForm.value.quan,
@@ -3274,6 +3278,18 @@ onMounted(() => {
 
 .update-tabs :deep(.arco-tabs-content) {
   padding: 24px;
+}
+
+.address-info-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.address-info-title {
+  font-weight: 500;
 }
 
 .update-form {

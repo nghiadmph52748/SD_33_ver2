@@ -96,9 +96,7 @@ export default function useCheckout(params: {
       }, 0) || 0
 
     const getActualDiscount = (coupon: CouponApiModel): number => {
-      const discountValue = Number(coupon.giaTriGiamGia) || 0
-      if (!coupon.loaiPhieuGiamGia) return orderSubtotal * (discountValue / 100)
-      return Math.min(discountValue, orderSubtotal)
+      return calculateVoucherDiscount(coupon)
     }
 
     return coupons.value.filter((coupon) => {
@@ -131,7 +129,9 @@ export default function useCheckout(params: {
           walkInLocation.value.phuong,
           walkInLocation.value.quan,
           walkInLocation.value.thanhPho,
-        ].filter(Boolean)
+        ]
+          .map((part) => (typeof part === 'string' ? part.trim() : part))
+          .filter(Boolean)
         walkInAddress = addressParts.join(', ')
       }
 
