@@ -78,6 +78,8 @@ export default function useCartActions(params: {
       const invoiceId = parseInt(currentOrder.value.id, 10)
       const quantity = productQuantityInput.value
       const productId = selectedProductForAdd.value.id
+      const unitPrice = Number(selectedProductForAdd.value.giaBan ?? 0)
+      const unitDiscount = Number(selectedProductForAdd.value.giaTriGiamGia ?? 0)
 
       if (!quantity || quantity < 1) {
         Message.error('Số lượng phải lớn hơn 0')
@@ -94,7 +96,12 @@ export default function useCartActions(params: {
 
       const idHoaDonChiTiet = await addProductToInvoice(invoiceId, productId, quantity, userId)
 
-      const existingItem = currentOrder.value.items.find((item) => item.productId === productId.toString())
+      const existingItem = currentOrder.value.items.find((item) => {
+        if (item.productId !== productId.toString()) return false
+        const samePrice = Math.abs((item.price ?? 0) - unitPrice) < 0.0001
+        const sameDiscount = Math.abs((item.discount ?? 0) - unitDiscount) < 0.0001
+        return samePrice && sameDiscount
+      })
       if (existingItem) {
         existingItem.quantity += quantity
         if (idHoaDonChiTiet) {
@@ -108,8 +115,8 @@ export default function useCartActions(params: {
           idHoaDonChiTiets: idHoaDonChiTiet ? [idHoaDonChiTiet] : [],
           productId: productId.toString(),
           productName: selectedProductForAdd.value.tenSanPham || '',
-          price: selectedProductForAdd.value.giaBan || 0,
-          discount: selectedProductForAdd.value.giaTriGiamGia || 0,
+          price: unitPrice,
+          discount: unitDiscount,
           quantity,
           image: selectedProductForAdd.value.anhSanPham?.[0] || '',
           images: selectedProductForAdd.value.anhSanPham || [],
@@ -162,6 +169,18 @@ export default function useCartActions(params: {
 
       const productInVariants = allProductVariants.value.find((p) => p.id === productId)
       if (!productInVariants) throw new Error('Không tìm thấy thông tin sản phẩm trong kho')
+
+      const serverPrice = Number(productInVariants.giaBan ?? 0)
+      const serverDiscount = Number(productInVariants.giaTriGiamGia ?? 0)
+      const priceUnchanged = Math.abs((item.price ?? 0) - serverPrice) < 0.0001
+      const discountUnchanged = Math.abs((item.discount ?? 0) - serverDiscount) < 0.0001
+
+      if (diff > 0 && (!priceUnchanged || !discountUnchanged)) {
+        Message.warning('Sản phẩm đã thay đổi giá, vui lòng thêm sản phẩm mới để áp dụng giá hiện tại')
+        item.quantity = oldQuantity
+        cartTableKey.value += 1
+        return
+      }
 
       try {
         const currentStockInWarehouse = productInVariants.soLuong || 0

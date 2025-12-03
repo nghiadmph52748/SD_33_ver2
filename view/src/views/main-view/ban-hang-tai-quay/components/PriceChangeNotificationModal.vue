@@ -14,6 +14,9 @@
       <div style="font-size: 12px; margin-top: 8px">
         Tổng cộng {{ priceChanges.size }} sản phẩm có thay đổi. Bạn có thể xem chi tiết bên dưới.
       </div>
+      <div style="font-size: 12px; margin-top: 4px; color: #666">
+        Giá đã thêm trước đó vẫn được giữ nguyên cho các dòng hàng hiện tại. Thêm sản phẩm lại để áp dụng giá mới.
+      </div>
     </a-alert>
 
     <div style="max-height: 400px; overflow-y: auto">

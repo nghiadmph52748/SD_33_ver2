@@ -8,6 +8,8 @@ interface CartItem {
   discount: number
   quantity: number
   productName?: string
+  lastServerPriceNotified?: number
+  lastServerDiscountNotified?: number
 }
 
 interface Order {
@@ -52,6 +54,16 @@ export default function useRealTimePriceSync(params: {
       const serverPrice = serverProduct.giaBan || 0
       const serverDiscount = serverProduct.giaTriGiamGia || 0
 
+      if (cartItem.lastServerPriceNotified === serverPrice && cartItem.lastServerDiscountNotified === serverDiscount) {
+        return
+      }
+
+      if (currentPrice === serverPrice && currentDiscount === serverDiscount) {
+        cartItem.lastServerPriceNotified = serverPrice
+        cartItem.lastServerDiscountNotified = serverDiscount
+        return
+      }
+
       if (currentPrice !== serverPrice || currentDiscount !== serverDiscount) {
         changes.set(cartItem.id, {
           id: cartItem.id,
@@ -62,9 +74,8 @@ export default function useRealTimePriceSync(params: {
           newDiscount: serverDiscount,
         })
 
-        // Update cart item with new price immediately
-        cartItem.price = serverPrice
-        cartItem.discount = serverDiscount
+        cartItem.lastServerPriceNotified = serverPrice
+        cartItem.lastServerDiscountNotified = serverDiscount
       }
     })
 

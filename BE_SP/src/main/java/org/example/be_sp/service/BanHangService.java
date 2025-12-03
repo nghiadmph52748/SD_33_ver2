@@ -548,27 +548,6 @@ public class BanHangService {
         HoaDon hoaDon = hdRepository.findById(request.getIdHoaDon())
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + request.getIdHoaDon(), "404"));
         ArrayList<HoaDonChiTiet> chiTiets = hdctRepository.findAllByIdHoaDonAndTrangThai(hoaDon, true);
-        if (chiTiets != null && !chiTiets.isEmpty()) {
-            for (HoaDonChiTiet ct : chiTiets) {
-                ChiTietSanPham variant = ct.getIdChiTietSanPham();
-                if (variant == null) {
-                    continue;
-                }
-                BigDecimal giaBanTinhLai = calculateGiaBanSauGiam(variant);
-                BigDecimal giaBanHienTai = ct.getGiaBan() != null ? ct.getGiaBan() : BigDecimal.ZERO;
-                if (giaBanTinhLai.compareTo(giaBanHienTai) != 0) {
-                    int soLuongHienTai = ct.getSoLuong() != null ? ct.getSoLuong() : 0;
-                    ct.setGiaBan(giaBanTinhLai);
-                    ct.setThanhTien(giaBanTinhLai.multiply(BigDecimal.valueOf(soLuongHienTai)));
-                    ct.setUpdateAt(LocalDateTime.now());
-                    if (request.getIdNhanVien() != null) {
-                        ct.setUpdateBy(request.getIdNhanVien());
-                    }
-                    hdctRepository.save(ct);
-                }
-            }
-        }
-
         updateTongTienHoaDon(hoaDon);
         // Build map of products for validation
         Map<Integer, Integer> danhSachSanPham = new HashMap<>();
