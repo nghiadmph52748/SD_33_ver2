@@ -319,7 +319,7 @@ const useChatStore = defineStore('chat', {
       this.wsConnecting = true
 
       const baseURL = axios.defaults.baseURL || 'http://localhost:8080'
-      const wsUrl = `${baseURL}/ws-chat`
+      const wsUrl = `${baseURL}/ws-chat/sockjs`
 
       const client = new Client({
         webSocketFactory: () => new SockJS(wsUrl),

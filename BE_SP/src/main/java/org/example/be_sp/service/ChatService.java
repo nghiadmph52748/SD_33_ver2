@@ -115,6 +115,13 @@ public class ChatService {
      */
     @Transactional
     public TinNhanResponse sendMessage(Integer senderId, SendMessageRequest request) {
+        if (senderId == null || request.getReceiverId() == null) {
+            throw new ApiException("Thiếu thông tin người gửi/nhận", "400");
+        }
+        if (senderId.equals(request.getReceiverId())) {
+            throw new ApiException("Không thể gửi tin nhắn cho chính mình", "400");
+        }
+        
         boolean senderIsCustomer = isCustomer(senderId);
         boolean receiverIsCustomer = isCustomer(request.getReceiverId());
         

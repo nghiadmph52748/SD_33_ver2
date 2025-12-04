@@ -52,12 +52,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { formatCurrency } from '@/utils/currency'
+import { useCartStore } from '@/stores/cart'
 
 const route = useRoute()
+const cartStore = useCartStore()
 const { t } = useI18n()
 
 // VNPAY specific fields
@@ -151,6 +153,13 @@ const status = computed<StatusConfig>(() => {
     secondaryLabelKey: 'payment.actions.continueShopping',
     variant: 'failure',
     icon: '❌',
+  }
+})
+
+// Clear cart only when payment is confirmed success (code === '00')
+onMounted(() => {
+  if (code.value === '00') {
+    cartStore.clearCart()
   }
 })
 

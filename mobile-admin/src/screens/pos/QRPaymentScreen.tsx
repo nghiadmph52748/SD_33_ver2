@@ -11,6 +11,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 type QRPaymentStackParamList = {
   'QR.Payment': { sessionId?: string }
   'QR.Success': { sessionId: string }
+  'QR.Confirmation': { sessionId: string }
 }
 
 type QRPaymentScreenRouteProp = RouteProp<QRPaymentStackParamList, 'QR.Payment'>
@@ -28,6 +29,8 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 
 const BANK_SHORT_CODE = 'MB'
 const BANK_ACCOUNT_NUMBER = '288579542666'
+
+const logoSource = require('../../assets/logo-datn.png')
 
 export default function QRPaymentScreen() {
   const route = useRoute<QRPaymentScreenRouteProp>()
@@ -311,7 +314,7 @@ export default function QRPaymentScreen() {
       <View style={styles.welcomeWrapper}>
         <Card style={styles.welcomeCard}>
           <Card.Content>
-            <Text style={styles.welcomeEmoji}>🤝</Text>
+            <Image source={logoSource} style={styles.welcomeLogo} resizeMode="contain" />
             <Text style={styles.welcomeTitle}>Chào mừng đến với GearUp Store!</Text>
             {message ? <Text style={styles.welcomeHint}>{message}</Text> : null}
           </Card.Content>
@@ -450,9 +453,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     elevation: 2,
   },
-  welcomeEmoji: {
-    fontSize: 42,
-    textAlign: 'center',
+  welcomeLogo: {
+    width: 140,
+    height: 60,
+    alignSelf: 'center',
     marginBottom: 12,
   },
   welcomeTitle: {

@@ -109,6 +109,7 @@
             @update:walkin-ward="updateWalkInWard"
             @open-mobile="openMobileSession"
             @sync-qr="forceSyncQrSession"
+          @reset-qr-session="handleResetQrSessionClick"
           />
         </a-col>
       </a-row>
@@ -1241,13 +1242,46 @@ const forceSyncQrSession = () => {
 
 const triggerDeepLink = (url: string) => {
   if (typeof document === 'undefined') return
-  const iframe = document.createElement('iframe')
-  iframe.style.display = 'none'
-  iframe.src = url
-  document.body.appendChild(iframe)
-  setTimeout(() => {
-    document.body.removeChild(iframe)
-  }, 1000)
+  
+  // Method 1: Try iframe (works for most cases)
+  try {
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.src = url
+    document.body.appendChild(iframe)
+    setTimeout(() => {
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe)
+      }
+    }, 2000)
+  } catch (e) {
+    // Silent fail
+  }
+  
+  // Method 2: Try window.location (fallback)
+  try {
+    const link = document.createElement('a')
+    link.href = url
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    setTimeout(() => {
+      if (link.parentNode) {
+        document.body.removeChild(link)
+      }
+    }, 100)
+  } catch (e) {
+    // Silent fail
+  }
+  
+  // Method 3: Try direct window.location.href (last resort)
+  try {
+    window.location.href = url
+  } catch (e) {
+    // Silent fail
+  }
 }
 
 const openMobileSession = async () => {
@@ -1268,10 +1302,11 @@ const openMobileSession = async () => {
   }
 
   try {
+    // Gọi generateQrPayment để backend tạo/update mã QR cho session hiện tại.
+    // Mobile app (QRPaymentScreen) sẽ tự động nhận session mới qua WebSocket/polling
+    // và hiển thị màn hình QR mà không cần deeplink từ trình duyệt.
     await generateQrPayment(session.sessionId)
-    const deepLink = `mobileadmin://qr?sessionId=${session.sessionId}`
-    triggerDeepLink(deepLink)
-    Message.success('Đã mở VietQR trên mobile')
+    Message.success('Đã sẵn sàng màn hình QR trên mobile')
   } catch (error: any) {
     console.error('Không thể tạo mã QR:', error)
     Message.error(error.message || 'Không thể tạo mã QR thanh toán')
@@ -1286,6 +1321,85 @@ const cancelCurrentQrSession = async () => {
   } catch (error: any) {
     console.error('Không thể huỷ QR session hiện tại:', error)
   }
+}
+
+const resetQrSession = async () => {
+  try {
+    // Use the same method as when clearing cart: cancel QR session
+    // This will trigger WebSocket message with status 'EXPIRED'
+    // Mobile app will automatically return to welcome screen (QRPaymentScreen with "Vui lòng chờ...")
+    const session = currentQrSession.value
+    const orderId = currentOrder.value?.id
+    
+    // Try to find sessionId from current session or from qrSessions
+    let sessionId: string | null = null
+    let foundOrderId: string | null = null
+    
+    if (session?.sessionId) {
+      sessionId = session.sessionId
+      foundOrderId = orderId || null
+    } else if (orderId && qrSessions.value[orderId]?.sessionId) {
+      sessionId = qrSessions.value[orderId].sessionId
+      foundOrderId = orderId
+    } else {
+      // If no orderId, try to find sessionId from all qrSessions (get the most recent one)
+      const allSessions = Object.entries(qrSessions.value)
+      if (allSessions.length > 0) {
+        const sortedSessions = allSessions.sort((a, b) => {
+          const aUpdated = a[1]?.updatedAt || 0
+          const bUpdated = b[1]?.updatedAt || 0
+          return bUpdated - aUpdated
+        })
+        const [latestOrderId, latestSession] = sortedSessions[0]
+        if (latestSession?.sessionId) {
+          sessionId = latestSession.sessionId
+          foundOrderId = latestOrderId
+        }
+      }
+    }
+    
+    // Không có session nào đang hiển thị trên mobile
+    if (!sessionId) {
+      Message.warning('Không có màn hình thanh toán nào để reset')
+      return
+    }
+
+    // Cancel session để mobile tự quay về màn hình chờ (giống clear cart)
+    // Cancel session to trigger WebSocket message (same as when clearing cart)
+    if (sessionId) {
+      try {
+        await cancelQrPaymentSession(sessionId)
+        
+        // Remove from local state
+        const orderIdToDelete = foundOrderId || orderId
+        if (orderIdToDelete && qrSessions.value[orderIdToDelete]) {
+          delete qrSessions.value[orderIdToDelete]
+        }
+      } catch (error: any) {
+        console.error('Không thể reset màn hình mobile:', error)
+        Message.error('Không thể reset màn hình mobile: ' + (error.message || 'Lỗi không xác định'))
+        return
+      }
+    } else {
+      Message.warning('Không có màn hình thanh toán nào để reset')
+      return
+    }
+    
+    Message.success('Đã reset màn hình thanh toán trên mobile về màn hình chính')
+  } catch (error: any) {
+    console.error('Lỗi khi reset màn hình mobile:', error)
+    Message.error('Không thể reset màn hình mobile')
+  }
+}
+
+const handleResetQrSessionClick = () => {
+  Modal.confirm({
+    title: 'Reset màn hình thanh toán?',
+    content: 'Màn hình thanh toán trên mobile sẽ quay về trạng thái chờ. Bạn có chắc chắn muốn thực hiện?',
+    okText: 'Đồng ý',
+    cancelText: 'Huỷ',
+    onOk: () => resetQrSession(),
+  })
 }
 
 watch(

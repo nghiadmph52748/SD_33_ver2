@@ -26,15 +26,16 @@
           </header>
           <div class="meta">
             <div class="line" v-if="item.gender">
-              <span class="line__label">{{ t("cart.itemGender") }}:</span>
+              <span class="line__label">{{ t("cart.itemGender") }}:&nbsp;</span>
               <span>{{ formatGender(item.gender) }}</span>
             </div>
             <div class="line">
-              <span class="line__label">{{ t("cart.itemColor") }}:</span>
+              <span class="line__label">{{ t("cart.itemColor") }}:&nbsp;</span>
               <span>{{ item.color || t("cart.valueUnknown") }}</span>
             </div>
             <div class="line" v-if="item.size">
-              <span>{{ t("cart.itemSize", { size: item.size }) }}</span>
+              <span class="line__label">Size:&nbsp;</span>
+              <span>{{ item.size }}</span>
             </div>
           </div>
           <div class="controls">

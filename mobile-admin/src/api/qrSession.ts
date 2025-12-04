@@ -25,6 +25,9 @@ export interface QRSession {
   status: 'PENDING' | 'PAID' | 'EXPIRED' | 'FAILED' | 'CANCELLED'
   expiresAt: string
   createdAt: string
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
 }
 
 export const getQRSession = (sessionId: string) =>
@@ -44,5 +47,4 @@ export const createQRSession = (data: {
   customerId?: string
 }) =>
   client.post<QRSession, QRSession>('/api/pos/qr-session', data)
-
 

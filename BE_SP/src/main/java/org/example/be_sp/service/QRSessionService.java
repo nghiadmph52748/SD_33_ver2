@@ -147,7 +147,10 @@ public class QRSessionService {
     @Transactional
     public void updateStatus(String sessionId, String status) {
         QRSession session = qrSessionRepository.findBySessionId(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
+                .orElseThrow(() -> {
+                    log.error("Session not found: {}", sessionId);
+                    return new RuntimeException("Session not found: " + sessionId);
+                });
         session.setStatus(status);
         if (!"PAID".equals(status)) {
             session.setExpiresAt(LocalDateTime.now());
@@ -296,6 +299,23 @@ public class QRSessionService {
             log.error("Failed to parse cart data JSON", e);
         }
 
+        String customerName = null;
+        String customerPhone = null;
+        String customerEmail = null;
+        
+        if (session.getIdHoaDon() != null) {
+            HoaDon hoaDon = session.getIdHoaDon();
+            if (hoaDon.getIdKhachHang() != null) {
+                customerName = hoaDon.getIdKhachHang().getTenKhachHang();
+                customerPhone = hoaDon.getIdKhachHang().getSoDienThoai();
+                customerEmail = hoaDon.getIdKhachHang().getEmail();
+            } else {
+                customerName = hoaDon.getTenNguoiNhan();
+                customerPhone = hoaDon.getSoDienThoaiNguoiNhan();
+                customerEmail = hoaDon.getEmailNguoiNhan();
+            }
+        }
+
         return QRSessionResponse.builder()
                 .qrSessionId(session.getSessionId())
                 .qrCodeUrl(session.getQrCodeUrl())
@@ -308,6 +328,9 @@ public class QRSessionService {
                 .status(session.getStatus())
                 .expiresAt(session.getExpiresAt())
                 .createdAt(session.getCreatedAt())
+                .customerName(customerName)
+                .customerPhone(customerPhone)
+                .customerEmail(customerEmail)
                 .build();
     }
 
@@ -329,7 +352,11 @@ public class QRSessionService {
                 .createdAt(session.getCreatedAt())
                 .build();
 
-        messagingTemplate.convertAndSend("/topic/qr-session", event);
+        try {
+            messagingTemplate.convertAndSend("/topic/qr-session", event);
+        } catch (Exception e) {
+            log.error("Failed to publish WebSocket message for sessionId: {}", session.getSessionId(), e);
+        }
     }
 
     private boolean isSessionUsable(QRSession session) {

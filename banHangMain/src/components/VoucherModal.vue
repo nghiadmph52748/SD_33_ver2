@@ -1,6 +1,11 @@
 <template>
-  <div v-if="isOpen" class="voucher-modal-overlay" @click.self="closeModal">
-    <div class="voucher-modal">
+1  <Transition name="voucher-fade">
+    <div
+      v-if="isOpen"
+      class="voucher-modal-overlay"
+      @click.self="closeModal"
+    >
+      <div class="voucher-modal">
       <div class="modal-header">
         <h2>Chọn phiếu giảm giá</h2>
         <button class="close-btn" @click="closeModal">✕</button>
@@ -29,6 +34,12 @@
                     ? `Giảm ${formatCurrency(voucher.giaTriGiamGia)}`
                     : `Giảm ${voucher.giaTriGiamGia}%`
                 }}
+              </div>
+              <div
+                v-if="selectedVoucherId === voucher.id"
+                class="checkmark"
+              >
+                ✓
               </div>
             </div>
 
@@ -83,25 +94,23 @@
               </div>
             </div>
 
-            <div v-if="selectedVoucherId === voucher.id" class="checkmark">
-              ✓
-            </div>
           </div>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-cancel" @click="closeModal">Hủy</button>
+        <button class="btn btn-outline" @click="closeModal">Hủy</button>
         <button
-          class="btn btn-confirm"
+          class="btn"
           :disabled="!selectedVoucherId || loading"
           @click="confirmSelection"
         >
           Áp dụng
         </button>
       </div>
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
@@ -234,45 +243,56 @@ function formatDate(dateString: string): string {
 <style scoped lang="scss">
 .voucher-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 16px;
+}
+
+/* Transition animations */
+.voucher-fade-enter-active,
+.voucher-fade-leave-active {
+  transition: opacity 0.18s ease-out;
+}
+
+.voucher-fade-enter-from,
+.voucher-fade-leave-to {
+  opacity: 0;
 }
 
 .voucher-modal {
-  background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 82vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(17, 17, 17, 0.06);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid #f4f4f5;
 
   h2 {
     margin: 0;
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
   }
 
   .close-btn {
     background: none;
     border: none;
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
     color: #999;
     padding: 0;
@@ -291,7 +311,7 @@ function formatDate(dateString: string): string {
 .modal-body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 10px 20px 14px;
 
   .loading,
   .no-vouchers {
@@ -307,46 +327,63 @@ function formatDate(dateString: string): string {
 }
 
 .voucher-item {
-  border: 2px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 
   &:hover {
-    border-color: #f77234;
-    background: #fef7f3;
+    border-color: #111111;
+    background: #f9fafb;
   }
 
   &.selected {
-    border-color: #f77234;
-    background: #fff8f2;
+    border-color: #111111;
+    background: #f3f4f6;
   }
 
   .voucher-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 12px;
 
     .voucher-code {
       font-weight: 600;
-      font-size: 14px;
-      color: #f77234;
-      font-family: monospace;
+      font-size: 13px;
+      color: #111111;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .voucher-discount {
       font-weight: 600;
-      color: #f77234;
+      color: #111111;
       font-size: 14px;
+      margin-left: auto; // push discount (and checkmark) to the right
+    }
+
+    .checkmark {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      background: #111111;
+      color: #ffffff;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 13px;
+      margin-left: 8px;
     }
   }
 
   .voucher-info {
     .voucher-name {
-      margin: 0 0 4px 0;
+      margin: 0 0 2px 0;
       font-weight: 500;
       color: #1d2129;
       font-size: 14px;
@@ -355,7 +392,7 @@ function formatDate(dateString: string): string {
     .voucher-desc {
       margin: 0 0 8px 0;
       font-size: 13px;
-      color: #666;
+      color: #4b5563;
     }
 
     // Type badge
@@ -368,12 +405,12 @@ function formatDate(dateString: string): string {
         border-radius: 4px;
         font-size: 12px;
         font-weight: 500;
-        background: #f0f0f0;
-        color: #666;
+        background: #f3f4f6;
+        color: #4b5563;
 
         &.percentage {
-          background: #ffe8d6;
-          color: #f77234;
+          background: #e5e7eb;
+          color: #111111;
         }
       }
     }
@@ -390,7 +427,7 @@ function formatDate(dateString: string): string {
         align-items: center;
         gap: 6px;
         font-size: 12px;
-        color: #666;
+        color: #4b5563;
 
         .icon {
           font-size: 11px;
@@ -403,7 +440,7 @@ function formatDate(dateString: string): string {
       align-items: center;
       gap: 6px;
       font-size: 12px;
-      color: #999;
+      color: #6b7280;
 
       .icon {
         font-size: 11px;
@@ -415,8 +452,8 @@ function formatDate(dateString: string): string {
       align-items: flex-start;
       gap: 6px;
       font-size: 12px;
-      color: #f77234;
-      background: #fff8f2;
+      color: #b45309;
+      background: #fffbeb;
       padding: 6px 8px;
       border-radius: 4px;
       margin-top: 8px;
@@ -428,61 +465,13 @@ function formatDate(dateString: string): string {
     }
   }
 
-  .checkmark {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 24px;
-    height: 24px;
-    background: #f77234;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-  }
 }
 
 .modal-footer {
   display: flex;
   gap: 12px;
-  padding: 20px;
-  border-top: 1px solid #f0f0f0;
+  padding: 10px 20px 14px;
+  border-top: 1px solid #f4f4f5;
   justify-content: flex-end;
-
-  .btn {
-    padding: 10px 24px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &.btn-cancel {
-      background: white;
-      color: #666;
-
-      &:hover {
-        border-color: #999;
-      }
-    }
-
-    &.btn-confirm {
-      background: #f77234;
-      color: white;
-      border-color: #f77234;
-
-      &:hover:not(:disabled) {
-        background: #e65f1f;
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-  }
 }
 </style>

@@ -3,6 +3,7 @@ import { clearToken, setToken } from '@/utils/auth'
 import { removeRouteListener } from '@/utils/route-listener'
 import { defineStore } from 'pinia'
 import useAppStore from './app'
+import useChatStore from './chat'
 import { UserState, RoleType } from './user/types'
 
 const USER_INFO_STORAGE_KEY = 'userInfo'
@@ -129,6 +130,10 @@ const useUserStore = defineStore('user', {
         localStorage.setItem(USER_INFO_STORAGE_KEY, JSON.stringify(storedProfile))
 
         this.setInfo(userInfo)
+
+        // Reset chat state to avoid carrying over conversations from previous sessions
+        const chatStore = useChatStore()
+        chatStore.resetState()
       } catch (err) {
         clearToken()
         localStorage.removeItem(USER_ID_STORAGE_KEY)
@@ -145,6 +150,8 @@ const useUserStore = defineStore('user', {
         // Ignore server errors
       } finally {
         const appStore = useAppStore()
+        const chatStore = useChatStore()
+        chatStore.resetState()
         this.resetInfo()
         clearToken()
         localStorage.removeItem(USER_ID_STORAGE_KEY)
