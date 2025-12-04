@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Entity
-@Table(name = "timeline_don_hang")
+@Table(name = "lich_su_don_hang")
 public class TimelineDonHang {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,7 +32,7 @@ public class TimelineDonHang {
     @Size(max = 7)
     @Nationalized
     @ColumnDefault("'TL'+right('00000'+CONVERT([nvarchar](5), [ID]), 5)")
-    @Column(name = "ma_timeline", length = 7, insertable = false, updatable = false)
+    @Column(name = "ma_lich_su_don_hang", length = 7, insertable = false, updatable = false)
     private String maTimeline;
 
     @Size(max = 100)
@@ -65,15 +65,6 @@ public class TimelineDonHang {
     @NotNull
     @Column(name = "thoi_gian", nullable = false)
     private Instant thoiGian;
-
-    @Size(max = 50)
-    @Column(name = "ip_address", length = 50)
-    private String ipAddress;
-
-    @Size(max = 500)
-    @Nationalized
-    @Column(name = "user_agent", length = 500)
-    private String userAgent;
 
     @ColumnDefault("1")
     @Column(name = "trang_thai")

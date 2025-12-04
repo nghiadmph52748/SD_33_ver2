@@ -1027,24 +1027,22 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[timeline_don_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[lich_su_don_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE [dbo].[timeline_don_hang](
+CREATE TABLE [dbo].[lich_su_don_hang](
 	[id] [int] IDENTITY(1,1) NOT NULL,
 	[id_hoa_don] [int] NOT NULL,
 	[id_nhan_vien] [int] NULL,
-	[ma_timeline]  AS ('TL'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ma_lich_su_don_hang]  AS ('TL'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
 	[trang_thai_cu] [nvarchar](100) NULL,
 	[trang_thai_moi] [nvarchar](100) NOT NULL,
 	[hanh_dong] [nvarchar](100) NOT NULL,
 	[mo_ta] [nvarchar](500) NULL,
 	[ghi_chu] [nvarchar](500) NULL,
 	[thoi_gian] [datetime] NOT NULL,
-	[ip_address] [varchar](50) NULL,
-	[user_agent] [nvarchar](500) NULL,
 	[trang_thai] [bit] NULL,
 	[deleted] [bit] NULL,
 	[create_at] [date] NULL,
@@ -1978,8 +1976,8 @@ CREATE NONCLUSTERED INDEX [IX_thong_bao_nguoi_dung] ON [dbo].[thong_bao]
 	[thoi_gian_tao] DESC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_timeline_don_hang_composite]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE NONCLUSTERED INDEX [IX_timeline_don_hang_composite] ON [dbo].[timeline_don_hang]
+/****** Object:  Index [IX_lich_su_don_hang_composite]    Script Date: 11/12/2025 10:29:48 AM ******/
+CREATE NONCLUSTERED INDEX [IX_lich_su_don_hang_composite] ON [dbo].[lich_su_don_hang]
 (
 	[id_hoa_don] ASC,
 	[thoi_gian] DESC
@@ -2289,11 +2287,11 @@ ALTER TABLE [dbo].[thong_tin_don_hang] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
 ALTER TABLE [dbo].[thong_tin_don_hang] ADD  DEFAULT ((0)) FOR [deleted]
 GO
-ALTER TABLE [dbo].[timeline_don_hang] ADD  CONSTRAINT [DF_timeline_don_hang_thoi_gian]  DEFAULT (getdate()) FOR [thoi_gian]
+ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_thoi_gian]  DEFAULT (getdate()) FOR [thoi_gian]
 GO
-ALTER TABLE [dbo].[timeline_don_hang] ADD  CONSTRAINT [DF_timeline_don_hang_trang_thai]  DEFAULT ((1)) FOR [trang_thai]
+ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_trang_thai]  DEFAULT ((1)) FOR [trang_thai]
 GO
-ALTER TABLE [dbo].[timeline_don_hang] ADD  CONSTRAINT [DF_timeline_don_hang_deleted]  DEFAULT ((0)) FOR [deleted]
+ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_deleted]  DEFAULT ((0)) FOR [deleted]
 GO
 ALTER TABLE [dbo].[qr_sessions] ADD  DEFAULT (sysdatetime()) FOR [created_at]
 GO
@@ -2447,10 +2445,10 @@ GO
 ALTER TABLE [dbo].[thong_tin_don_hang]  WITH CHECK ADD FOREIGN KEY([id_trang_thai_don_hang])
 REFERENCES [dbo].[trang_thai_don_hang] ([id])
 GO
-ALTER TABLE [dbo].[timeline_don_hang]  WITH CHECK ADD FOREIGN KEY([id_hoa_don])
+ALTER TABLE [dbo].[lich_su_don_hang]  WITH CHECK ADD FOREIGN KEY([id_hoa_don])
 REFERENCES [dbo].[hoa_don] ([id])
 GO
-ALTER TABLE [dbo].[timeline_don_hang]  WITH CHECK ADD FOREIGN KEY([id_nhan_vien])
+ALTER TABLE [dbo].[lich_su_don_hang]  WITH CHECK ADD FOREIGN KEY([id_nhan_vien])
 REFERENCES [dbo].[nhan_vien] ([id])
 GO
 ALTER TABLE [dbo].[tin_nhan]  WITH CHECK ADD  CONSTRAINT [FK_tin_nhan_nguoi_gui] FOREIGN KEY([id_nguoi_gui])
@@ -2738,7 +2736,7 @@ EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Số tiền đ
 GO
 EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Số tiền còn lại cần thanh toán' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'so_tien_con_lai'
 GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Bảng timeline theo dõi quá trình xử lý đơn hàng' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'timeline_don_hang'
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Bảng timeline theo dõi quá trình xử lý đơn hàng' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'lich_su_don_hang'
 GO
 USE [master]
 GO

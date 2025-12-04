@@ -163,8 +163,6 @@ public class TimelineDonHangService {
             timeline.setHanhDong(request.getHanhDong());
             timeline.setMoTa(request.getMoTa() != null ? request.getMoTa() : "");
             timeline.setGhiChu(request.getGhiChu() != null ? request.getGhiChu() : "");
-            timeline.setIpAddress(request.getIpAddress());
-            timeline.setUserAgent(request.getUserAgent());
             
             // Parse thời gian
             if (request.getThoiGian() != null && !request.getThoiGian().trim().isEmpty()) {

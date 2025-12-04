@@ -39,8 +39,6 @@ public class TimelineDonHangResponse {
         this.moTa = data.getMoTa();
         this.ghiChu = data.getGhiChu();
         this.thoiGian = data.getThoiGian();
-        this.ipAddress = data.getIpAddress();
-        this.userAgent = data.getUserAgent();
         this.trangThai = data.getTrangThai();
         this.deleted = data.getDeleted();
         
