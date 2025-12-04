@@ -2,6 +2,7 @@ import { ref, Ref, onUnmounted } from 'vue'
 import { Message, Notification } from '@arco-design/web-vue'
 import SockJS from 'sockjs-client'
 import { Stomp } from '@stomp/stompjs'
+import axios from 'axios'
 import { getToken } from '@/utils/auth'
 
 export interface OrderStatusNotification {
@@ -41,7 +42,8 @@ export function useOrderStatusNotification(orderId: number | Ref<number>, option
 
     isConnecting = true
     try {
-      const socket = new SockJS('http://localhost:8080/ws-chat')
+      const baseURL = axios.defaults.baseURL || 'http://localhost:8080'
+      const socket = new SockJS(`${baseURL}/ws-chat/sockjs`)
       stompClient = Stomp.over(socket)
 
       // Get JWT token using shared auth util (login stores token under `token`)

@@ -332,7 +332,7 @@ const useChatStore = defineStore('chat', {
 
       // Tạo STOMP client với SockJS
       const client = new Client({
-        webSocketFactory: () => new SockJS('http://localhost:8080/ws-chat'),
+        webSocketFactory: () => new SockJS('http://localhost:8080/ws-chat/sockjs'),
 
         connectHeaders: {
           Authorization: `Bearer ${token}`,

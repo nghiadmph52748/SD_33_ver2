@@ -430,6 +430,14 @@ const useChatStore = defineStore('chat', {
      */
     async fetchUnreadCount() {
       try {
+        const token = getToken()
+        const userStore = useUserStore()
+
+        if (!token || !userStore.id) {
+          this.totalUnreadCount = 0
+          return
+        }
+
         const response = await laySoTinNhanChuaDoc()
         const count = response.data?.data ?? response.data ?? 0
         this.totalUnreadCount = typeof count === 'number' ? count : 0
@@ -499,7 +507,7 @@ const useChatStore = defineStore('chat', {
 
       // Get base URL from axios defaults or use localhost
       const baseURL = axios.defaults.baseURL || 'http://localhost:8080'
-      const wsUrl = `${baseURL}/ws-chat`
+      const wsUrl = `${baseURL}/ws-chat/sockjs`
       console.log('WebSocket URL:', wsUrl)
 
       // Tạo STOMP client với SockJS

@@ -37,7 +37,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/payment/vnpay")
+@RequestMapping("/api/payment/vnpay") 
 @CrossOrigin(origins = "*")
 @Slf4j
 @RequiredArgsConstructor
