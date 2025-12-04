@@ -86,8 +86,18 @@ const handleSubmit = async ({ errors, values }: { errors: Record<string, Validat
     try {
       await userStore.login(values as LoginData)
 
-      // Both admin and staff must go to shift handover page first
-      router.push('/lich-lam-viec/giao-ca')
+      // Chuyển hướng theo role: admin → thống kê, user → giao ca
+      const userRole = userStore.primaryRole || userStore.roles?.[0] || 'user'
+      console.log('🔐 User logged in with role:', userRole)
+      
+      if (userRole === 'admin') {
+        router.push('/thong-ke/chung')
+        console.log('→ Redirecting admin to statistics')
+      } else {
+        router.push('/lich-lam-viec/giao-ca')
+        console.log('→ Redirecting user to shift handover')
+      }
+      
       Message.success(t('login.form.login.success'))
       const { rememberPassword } = loginConfig.value
       const { username, password } = values

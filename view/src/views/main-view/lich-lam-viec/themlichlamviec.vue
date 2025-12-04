@@ -129,16 +129,19 @@ const fetchCaLamViecs = async () => {
     console.log(' API ca làm việc:', res)
 
     // Kiểm tra res trực tiếp là mảng, không cần res.data nữa
-    const data = Array.isArray(res) ? res : []
+    // API may return { data: [...] } or array directly
+    const data = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : (res.data?.data || [])
 
     if (data.length === 0) {
       throw new Error('Không có dữ liệu ca làm việc')
     }
 
-    // Lọc và chuẩn hóa dữ liệu (chỉ lấy id và tenCa)
+    // Lưu toàn bộ thông tin ca (bao gồm giờ bắt đầu/kết thúc) để phục vụ validation
     caLamViecs.value = data.map((item: any) => ({
       id: item.id,
-      tenCa: item.tenCa || item.tenca, // chỉ lấy tên ca
+      tenCa: item.tenCa || item.tenca,
+      thoiGianBatDau: item.thoiGianBatDau || item.gioBatDau || item.startTime || null,
+      thoiGianKetThuc: item.thoiGianKetThuc || item.gioKetThuc || item.endTime || null,
     }))
 
     console.log(' Danh sách ca làm việc:', caLamViecs.value)

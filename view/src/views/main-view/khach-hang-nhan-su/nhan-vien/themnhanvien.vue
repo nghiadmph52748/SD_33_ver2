@@ -45,8 +45,9 @@
                 <span style="color: red">*</span>
               </template>
 
-              <div style="display: flex; gap: 8px; align-items: center">
-                <a-input v-model="formData.cccd" placeholder="Nhập hoặc quét CCCD" style="flex: 1" />
+             <div style="display: flex; gap: 8px; align-items: center">
+                <!-- CCCD: only accept via QR scan or image upload. Manual typing disabled. -->
+                <a-input v-model="formData.cccd" placeholder="Vui lòng quét QR hoặc tải ảnh CCCD (không cho phép nhập tay)" style="flex: 1" readonly @keydown.prevent />
 
                 <!-- Nút quét CCCD -->
                 <a-button type="outline" @click="openQRModal">
@@ -354,8 +355,7 @@ const formRules = {
   tenNhanVien: [{ required: true, message: 'Vui lòng nhập tên nhân viên' }],
   ngaySinh: [{ required: true, message: 'Vui lòng chọn ngày sinh' }],
   cccd: [
-    { required: true, message: 'Vui lòng nhập CCCD' },
-    { pattern: /^\d{9,12}$/, message: 'CCCD phải là 9-12 chữ số' },
+    { required: true, message: 'Vui lòng quét CCCD (QR hoặc ảnh)' },
   ],
   soDienThoai: [
     { required: true, message: 'Vui lòng nhập số điện thoại' },
@@ -620,8 +620,8 @@ const handleSubmit = async () => {
       Message.error('Vui lòng nhập CCCD.')
       return
     }
-    if (!/^\d{9,12}$/.test(formData.value.cccd)) {
-      Message.error('CCCD phải là 9-12 chữ số.')
+    if (!formData.value.cccd) {
+      Message.error('Vui lòng quét CCCD bằng QR hoặc tải ảnh CCCD.')
       return
     }
     if (!formData.value.soDienThoai) {

@@ -95,7 +95,7 @@ const LICH_LAM_VIEC: AppRouteRecordRaw = {
       meta: {
         locale: 'Giao Ca',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['user'],
       },
     },
    
