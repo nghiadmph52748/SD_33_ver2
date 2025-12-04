@@ -26,30 +26,25 @@
         </a-space>
       </div>
 
-      <!-- Tabs -->
-      <a-tabs v-model:active-key="messageType" type="line" size="small" class="notification-tabs" destroy-on-hide>
-        <a-tab-pane v-for="item in tabList" :key="item.key">
-          <template #title>
-            <a-space :size="4">
-              <component :is="item.icon" v-if="item.icon" />
-              <span>{{ item.title }}</span>
-              <a-badge v-if="unreadCountByType(item.key) > 0" :count="unreadCountByType(item.key)" :max-count="99" :offset="[6, -2]" />
-            </a-space>
-          </template>
+      <!-- Body: single unified list (no categories) -->
+      <div class="notification-body">
+        <!-- Empty State -->
+        <div v-if="!renderList.length" class="empty-state">
+          <a-empty :description="$t('messageBox.noContent')">
+            <template #image>
+              <icon-folder-delete :style="{ fontSize: '48px', color: 'var(--color-text-4)' }" />
+            </template>
+          </a-empty>
+        </div>
 
-          <!-- Empty State -->
-          <div v-if="!renderList.length" class="empty-state">
-            <a-empty :description="$t('messageBox.noContent')">
-              <template #image>
-                <icon-folder-delete :style="{ fontSize: '48px', color: 'var(--color-text-4)' }" />
-              </template>
-            </a-empty>
-          </div>
-
-          <!-- List -->
-          <List v-else :render-list="renderList" :unread-count="unreadCount" @item-click="handleItemClick" @more="openAll" />
-        </a-tab-pane>
-      </a-tabs>
+        <!-- List -->
+        <List
+          v-else
+          :render-list="renderList"
+          :unread-count="unreadCount"
+          @item-click="handleItemClick"
+        />
+      </div>
     </a-spin>
   </div>
 </template>
@@ -57,49 +52,21 @@
 <script lang="ts" setup>
 import { MessageListType } from '@/api/message'
 import useNotificationStore from '@/store/modules/notification'
-import { computed, onMounted, ref } from 'vue'
+import useUserStore from '@/store/modules/user'
+import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import List from './list.vue'
 
-interface TabItem {
-  key: string
-  title: string
-  icon?: any
-}
-
-const messageType = ref('message')
 const { t } = useI18n()
 const notificationStore = useNotificationStore()
-
-const tabList: TabItem[] = [
-  {
-    key: 'message',
-    title: t('messageBox.tab.title.message'),
-    icon: 'icon-message',
-  },
-  {
-    key: 'notice',
-    title: t('messageBox.tab.title.notice'),
-    icon: 'icon-notification',
-  },
-  {
-    key: 'todo',
-    title: t('messageBox.tab.title.todo'),
-    icon: 'icon-calendar-clock',
-  },
-]
+const userStore = useUserStore()
 
 // Computed values from store
 const loading = computed(() => notificationStore.loading)
-const renderList = computed(() => notificationStore.messagesByType(messageType.value))
-const unreadCount = computed(() => {
-  return renderList.value.filter((item) => !item.status).length
-})
-
-const unreadCountByType = (type: string) => {
-  return notificationStore.unreadCountByType(type)
-}
+// Show all notifications, newest first
+const renderList = computed(() => notificationStore.messages)
+const unreadCount = computed(() => notificationStore.totalUnread)
 
 const handleItemClick = async (items: MessageListType) => {
   if (items.length > 0) {
@@ -108,9 +75,13 @@ const handleItemClick = async (items: MessageListType) => {
   }
 }
 
-const clearAll = () => {
-  notificationStore.clearAll()
-  Message.success('Đã xóa tất cả thông báo')
+const clearAll = async () => {
+  try {
+    await notificationStore.clearAll()
+    Message.success('Đã xóa tất cả thông báo')
+  } catch (error) {
+    Message.error('Không thể xóa thông báo')
+  }
 }
 
 const markAll = async () => {
@@ -122,16 +93,20 @@ const markAll = async () => {
   }
 }
 
-const openAll = () => {
-  // navigate to a notifications center if exists; fallback to messages page
-  window.location.hash = '#/notifications'
-}
-
-// Fetch notifications and connect WebSocket on mount
-onMounted(() => {
-  notificationStore.fetchNotifications()
-  notificationStore.connectWebSocket()
-})
+watch(
+  () => userStore.id,
+  (newId, oldId) => {
+    if (newId) {
+      notificationStore.fetchNotifications()
+      notificationStore.connectWebSocket()
+    } else if (oldId) {
+      // Only clear when user truly logs out to avoid wiping read state during reload
+      notificationStore.clearAll()
+      notificationStore.disconnectWebSocket()
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped lang="less">
@@ -199,6 +174,12 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
   }
+}
+
+.notification-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .empty-state {

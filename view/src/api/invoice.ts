@@ -142,6 +142,9 @@ export const fetchInvoiceList = () => requestJson<InvoiceApiModel[]>('/api/invoi
 
 export const fetchInvoiceById = (id: number) => requestJson<InvoiceApiModel>(`/api/invoice-management/${id}`)
 
+export const fetchInvoiceByCode = (code: string) =>
+  requestJson<InvoiceApiModel>(`/api/hoa-don-management/code/${encodeURIComponent(code)}`)
+
 export const createInvoice = (data: Partial<InvoiceRequestPayload>) =>
   requestJson<InvoiceApiModel>('/api/invoice-management/add', {
     method: 'POST',

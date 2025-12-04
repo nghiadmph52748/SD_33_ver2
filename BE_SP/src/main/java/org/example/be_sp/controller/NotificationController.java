@@ -4,10 +4,14 @@ import lombok.RequiredArgsConstructor;
 import org.example.be_sp.annotation.RequireAuth;
 import org.example.be_sp.entity.Notification;
 import org.example.be_sp.entity.NotificationPreference;
+import org.example.be_sp.entity.NhanVien;
 import org.example.be_sp.model.response.NotificationResponse;
 import org.example.be_sp.model.response.ResponseObject;
+import org.example.be_sp.repository.NhanVienRepository;
 import org.example.be_sp.service.NotificationPreferenceService;
 import org.example.be_sp.service.NotificationService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,13 +26,27 @@ public class NotificationController {
     
     private final NotificationService notificationService;
     private final NotificationPreferenceService preferenceService;
+    private final NhanVienRepository nhanVienRepository;
     
-    // TODO: Get actual user ID from SecurityContext
-    // For now, use ID 1 for testing
     private Integer getCurrentUserId() {
-        // This should be replaced with actual SecurityUtils.getCurrentUserId()
-        // when that method is implemented
-        return 1;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("Đăng nhập lại để xem thông báo");
+        }
+
+        String username = authentication.getName();
+
+        // Try by username first
+        NhanVien nhanVien = nhanVienRepository.findByTenTaiKhoan(username)
+                .orElse(null);
+
+        // Fallback: try by email (some security configs use email as principal)
+        if (nhanVien == null) {
+            nhanVien = nhanVienRepository.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên: " + username));
+        }
+
+        return nhanVien.getId();
     }
     
     /**

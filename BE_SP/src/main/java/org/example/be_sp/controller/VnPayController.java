@@ -23,6 +23,7 @@ import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.repository.OrderPaymentRepository;
 import org.example.be_sp.repository.HoaDonRepository;
 import org.example.be_sp.service.EmailService;
+import org.example.be_sp.service.NotificationService;
 import org.example.be_sp.service.VnPayService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -47,6 +48,7 @@ public class VnPayController {
     private final OrderPaymentRepository orderRepo;
     private final HoaDonRepository hoaDonRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @PostMapping("/create")
     public ResponseObject<VnpayCreatePaymentResponse> createPayment(@RequestBody VnpayCreatePaymentRequest req,
@@ -297,9 +299,22 @@ public class VnPayController {
             emailService.sendOrderConfirmationEmail(emailData);
             log.info("[VNPAY-IPN] Marked invoice {} as PAID and sent confirmation email to {}", orderCode,
                     customerEmail);
+            notificationService.notifyAllStaff(
+                    "Thanh toán VNPAY #" + hoaDon.getMaHoaDon(),
+                    "Đã thanh toán",
+                    "Đơn hàng đã thanh toán " + formatCurrency(hoaDon.getTongTienSauGiam()) + " qua VNPAY.",
+                    1
+            );
         } catch (Exception e) {
             log.error("[VNPAY-IPN] Failed to mark invoice paid/send confirmation email for txnRef {}", txnRef, e);
         }
+    }
+
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) {
+            return "0₫";
+        }
+        return amount.stripTrailingZeros().toPlainString() + "₫";
     }
 
 }

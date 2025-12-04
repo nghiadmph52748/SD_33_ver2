@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { queryMessageList, setMessageStatus, MessageRecord } from '@/api/message'
+import { queryMessageList, setMessageStatus, clearAllNotifications, MessageRecord } from '@/api/message'
 import { Client, IMessage } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { getToken } from '@/utils/auth'
@@ -60,11 +60,13 @@ export interface NotificationState {
   stompClient: Client | null
 }
 
+const initialMessages = loadLocalNotifications()
+
 const useNotificationStore = defineStore('notification', {
   state: (): NotificationState => ({
-    messages: [],
+    messages: initialMessages,
     loading: false,
-    unreadCount: 0,
+    unreadCount: initialMessages.filter((msg) => msg.status === 0).length,
     wsConnected: false,
     wsConnecting: false,
     stompClient: null,
@@ -98,41 +100,50 @@ const useNotificationStore = defineStore('notification', {
       this.loading = true
       try {
         const response = await queryMessageList()
-        // Backend returns ResponseObject with data property containing the notifications array
-        const notifications = response.data?.data || []
+        const notifications = normalizeNotificationPayload(response)
         const readIds = loadReadIds()
-        const normalized = notifications.map((m) => ({
-          // Ensure required fields exist for UI rendering
-          id: m.id,
-          title: m.title || 'Thông báo',
-          subTitle: m.subTitle || '',
-          content: m.content || '',
-          time: m.time || new Date().toISOString(),
-          // If backend marks as read keep it; otherwise honor local read state
-          status: (m.status as 0 | 1) ?? (readIds.has(m.id) ? 1 : 0),
-          avatar: m.avatar,
-          type: m.type || (m.messageType === 0 ? 'todo' : 'message'),
-          messageType: m.messageType,
-        }))
 
-        // Merge with locally stored notifications (dev/test or realtime persisted ones)
-        const localList = loadLocalNotifications()
-        const backendIds = new Set(normalized.map((n) => n.id))
-        const merged = [...normalized]
-        for (const local of localList) {
-          if (!backendIds.has(local.id)) {
-            // Apply read state from storage
-            const status = (local.status as 0 | 1) ?? (readIds.has(local.id) ? 1 : 0)
-            merged.push({ ...local, status })
+        if (notifications.length > 0) {
+          const normalized = notifications.map((m) => {
+            const backendStatus = (m.status as 0 | 1) ?? 0
+            const status: 0 | 1 = (backendStatus === 1 || readIds.has(m.id)) ? 1 : 0
+
+            return {
+              // Ensure required fields exist for UI rendering
+              id: m.id,
+              title: m.title || 'Thông báo',
+              subTitle: m.subTitle || '',
+              content: m.content || '',
+              time: m.time || new Date().toISOString(),
+              status,
+              avatar: m.avatar,
+              type: m.type || (m.messageType === 0 ? 'todo' : 'message'),
+              messageType: m.messageType,
+            }
+          })
+
+          // Use backend data and persist to localStorage as cache
+          this.messages = normalized
+          this.unreadCount = this.totalUnread
+          saveLocalNotifications(this.messages)
+        } else {
+          // If backend returns empty (e.g. only pushing new real-time notifications),
+          // keep existing/local notifications so they do not disappear when reopening popup.
+          const cachedResponse = loadLocalNotifications()
+          const cached = normalizeNotificationPayload(cachedResponse)
+          if (!this.messages.length && cached.length) {
+            this.messages = cached
+            this.unreadCount = this.totalUnread
           }
         }
-
-        // Use merged data
-        this.messages = merged
-        this.unreadCount = this.totalUnread
       } catch (error) {
         console.error('Failed to fetch notifications:', error)
-        // Keep existing messages on error
+        // Fallback: try to restore from localStorage cache
+        const cached = normalizeNotificationPayload(loadLocalNotifications())
+        if (!this.messages.length && cached.length) {
+          this.messages = cached
+          this.unreadCount = this.totalUnread
+        }
       } finally {
         this.loading = false
       }
@@ -164,7 +175,9 @@ const useNotificationStore = defineStore('notification', {
         // If any are local-only, persist updated local notifications list
         if (localOnlyIds.length > 0) {
           const localList = loadLocalNotifications()
-          const updatedLocalList = localList.map((n) => (localOnlyIds.includes(n.id) ? { ...n, status: 1 } : n))
+          const updatedLocalList = localList.map((n) =>
+            localOnlyIds.includes(n.id) ? { ...n, status: 1 as 0 | 1 } : n
+          )
           saveLocalNotifications(updatedLocalList)
         }
       } catch (error) {
@@ -182,7 +195,13 @@ const useNotificationStore = defineStore('notification', {
     },
 
     // Clear all notifications (for "empty list" action)
-    clearAll() {
+    async clearAll() {
+      try {
+        await clearAllNotifications()
+      } catch (error) {
+        console.error('Failed to clear notifications:', error)
+        throw error
+      }
       this.messages = []
       this.unreadCount = 0
       // Also clear persisted local data
@@ -205,14 +224,11 @@ const useNotificationStore = defineStore('notification', {
         this.unreadCount += 1
       }
 
-      // Persist local-only notifications so they survive reloads
-      if (isLocalOnlyId(normalized.id)) {
-        const localList = loadLocalNotifications()
-        // de-dupe by id
-        const exists = localList.some((n) => n.id === normalized.id)
-        const updated = exists ? localList.map((n) => (n.id === normalized.id ? normalized : n)) : [normalized, ...localList]
-        saveLocalNotifications(updated)
-      }
+      // Persist notifications so they survive reloads (cache)
+      const localList = loadLocalNotifications()
+      const exists = localList.some((n) => n.id === normalized.id)
+      const updated = exists ? localList.map((n) => (n.id === normalized.id ? normalized : n)) : [normalized, ...localList]
+      saveLocalNotifications(updated)
     },
 
     // Connect to WebSocket for real-time notifications
@@ -287,5 +303,20 @@ const useNotificationStore = defineStore('notification', {
     },
   },
 })
+
+function normalizeNotificationPayload(payload: unknown): MessageRecord[] {
+  if (Array.isArray(payload)) {
+    return payload as MessageRecord[]
+  }
+  const dataLevel1 = (payload as { data?: unknown })?.data
+  if (Array.isArray(dataLevel1)) {
+    return dataLevel1 as MessageRecord[]
+  }
+  const dataLevel2 = (dataLevel1 as { data?: unknown })?.data
+  if (Array.isArray(dataLevel2)) {
+    return dataLevel2 as MessageRecord[]
+  }
+  return []
+}
 
 export default useNotificationStore

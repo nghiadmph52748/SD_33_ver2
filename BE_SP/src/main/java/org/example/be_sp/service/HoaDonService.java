@@ -343,20 +343,13 @@ public class HoaDonService {
         }
         // 🔔 NOTIFICATION: New order created
         try {
-            // Notify staff member assigned to order
-            if (savedHoaDon.getIdNhanVien() != null) {
-                notificationService.createNotification(
-                        savedHoaDon.getIdNhanVien().getId(),
-                        "todo",
-                        "Đơn hàng mới #" + savedHoaDon.getMaHoaDon(),
-                        "Chờ xử lý",
-                        "Đơn hàng mới từ "
-                        + (savedHoaDon.getTenNguoiNhan() != null ? savedHoaDon.getTenNguoiNhan() : "khách hàng"),
-                        2 // in progress
-                );
+            if (Boolean.TRUE.equals(savedHoaDon.getGiaoHang())) {
+                notifyAllStaffAboutOnlineOrder(savedHoaDon, request.getIdPhuongThucThanhToan());
+            } else {
+                notifyAssignedStaffAboutOrder(savedHoaDon);
             }
         } catch (Exception e) {
-            // Ignore notification errors; order persists regardless
+            log.warn("Không thể gửi thông báo đơn hàng mới: {}", e.getMessage());
         }
         ThongTinDonHang thongTinDonHang = new ThongTinDonHang();
         thongTinDonHang.setIdHoaDon(savedHoaDon);
@@ -366,6 +359,79 @@ public class HoaDonService {
         thongTinDonHang.setDeleted(false);
         thongTinDonHangRepository.save(thongTinDonHang);
         return new HoaDonResponse(savedHoaDon);
+    }
+
+    private void notifyAssignedStaffAboutOrder(HoaDon order) {
+        List<Integer> targetStaffIds = new ArrayList<>();
+        if (order.getIdNhanVien() != null && order.getIdNhanVien().getId() != null) {
+            targetStaffIds.add(order.getIdNhanVien().getId());
+        } else {
+            List<NhanVien> allStaff = nhanVienRepository.findAll();
+            for (NhanVien staff : allStaff) {
+                if (staff != null && staff.getId() != null) {
+                    targetStaffIds.add(staff.getId());
+                }
+            }
+        }
+
+        if (targetStaffIds.isEmpty()) {
+            log.warn("Không tìm thấy nhân viên nào để gửi thông báo đơn hàng {}", order.getMaHoaDon());
+            return;
+        }
+
+        String customerName = order.getTenNguoiNhan() != null ? order.getTenNguoiNhan() : "khách hàng";
+        String content = "Đơn hàng mới từ " + customerName;
+        for (Integer staffId : targetStaffIds) {
+            notificationService.createNotification(
+                    staffId,
+                    "todo",
+                    "Đơn hàng mới #" + order.getMaHoaDon(),
+                    "Chờ xử lý",
+                    content,
+                    2
+            );
+        }
+    }
+
+    private void notifyAllStaffAboutOnlineOrder(HoaDon order, Integer paymentMethodId) {
+        String paymentLabel = resolvePaymentLabel(paymentMethodId);
+        String customerName = order.getTenNguoiNhan() != null ? order.getTenNguoiNhan() : "Khách hàng";
+        String content = customerName + " vừa đặt đơn trị giá " + formatCurrency(resolveOrderAmount(order)) + ".";
+        notificationService.notifyAllStaff(
+                "Đơn online mới #" + order.getMaHoaDon(),
+                paymentLabel,
+                content,
+                2
+        );
+    }
+
+    private String resolvePaymentLabel(Integer paymentMethodId) {
+        if (paymentMethodId == null) {
+            return "Thanh toán COD";
+        }
+        try {
+            Optional<PhuongThucThanhToan> method = phuongThucThanhToanRepository.findById(paymentMethodId);
+            return method.map(PhuongThucThanhToan::getTenPhuongThucThanhToan).orElse("Thanh toán COD");
+        } catch (Exception e) {
+            return "Thanh toán COD";
+        }
+    }
+
+    private BigDecimal resolveOrderAmount(HoaDon order) {
+        if (order.getTongTienSauGiam() != null && order.getTongTienSauGiam().compareTo(BigDecimal.ZERO) > 0) {
+            return order.getTongTienSauGiam();
+        }
+        if (order.getTongTien() != null) {
+            return order.getTongTien();
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) {
+            return "0₫";
+        }
+        return amount.stripTrailingZeros().toPlainString() + "₫";
     }
 
     public HoaDonResponse update(Integer id, BanHangTaiQuayRequest request) {
