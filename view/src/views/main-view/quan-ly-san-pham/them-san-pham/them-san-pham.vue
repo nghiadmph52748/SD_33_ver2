@@ -864,6 +864,7 @@ import {
   getBienTheSanPhamList,
 } from '@/api/san-pham'
 import { uploadMutipartFile, getAnhSanPhamByTenMau } from '@/api/san-pham/thuoc-tinh/anh-san-pham'
+import { hasErrorBeenNotified, mapApiErrorToMessage, markErrorAsNotified } from '@/utils/api-errors'
 
 // Breadcrumb setup
 const router = useRouter()
@@ -921,6 +922,77 @@ const MAX_IMAGES_PER_COLOR = 5 // Giới hạn tối đa 5 ảnh mỗi màu
 
 // Storage for uploaded image IDs per color - lưu IDs của ảnh đã upload
 const uploadedImageStore = ref<Record<string, number[]>>({})
+
+const notifyApiError = (error: any, fallbackMessage: string, entityLabel?: string) => {
+  const message = mapApiErrorToMessage(error, { defaultMessage: fallbackMessage, entityLabel })
+  if (!hasErrorBeenNotified(error)) {
+    Message.error(message)
+    markErrorAsNotified(error)
+  }
+  return message
+}
+
+type VariantProcessingStatus = 'created' | 'updated' | 'duplicate' | 'failed'
+
+interface VariantProcessingResult {
+  status: VariantProcessingStatus
+  label: string
+  variantId: number | null
+  error?: any
+}
+
+const DUPLICATE_ERROR_PATTERNS = [/đã tồn tại/i, /duplicate/i, /already exists?/i, /trùng/i]
+
+const buildVariantLabel = (colorId: number | string, sizeId: number | string) => {
+  const colorName = colorInputs.value.find((c) => String(c.value) === String(colorId))?.label || 'Màu chưa xác định'
+  const sizeName = sizeInputs.value.find((s) => String(s.value) === String(sizeId))?.label || 'Kích thước chưa xác định'
+  return `${colorName} - ${sizeName}`
+}
+
+const isDuplicateApiError = (error: any) => {
+  if (!error) {
+    return false
+  }
+  const statusCode = error?.response?.status
+  if (statusCode === 409) {
+    return true
+  }
+  const responseMessage =
+    (typeof error?.response?.data === 'string' && error.response.data) ||
+    (typeof error?.response?.data?.message === 'string' && error.response.data.message) ||
+    error?.message
+
+  if (typeof responseMessage !== 'string') {
+    return false
+  }
+
+  return DUPLICATE_ERROR_PATTERNS.some((pattern) => pattern.test(responseMessage))
+}
+
+const mapSubmissionErrorMessage = (error: any, variantLabel?: string) => {
+  const labelPrefix = variantLabel ? `Biến thể ${variantLabel}` : 'Biến thể này'
+
+  if (isDuplicateApiError(error)) {
+    return `${labelPrefix} đã tồn tại trong hệ thống. Vui lòng kiểm tra lại danh sách.`
+  }
+
+  if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+    return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng và thử lại.'
+  }
+
+  const statusCode = error?.response?.status
+
+  if (typeof statusCode === 'number') {
+    if (statusCode >= 500) {
+      return `${labelPrefix} không thể xử lý do máy chủ đang gặp sự cố. Vui lòng thử lại sau.`
+    }
+    if (statusCode >= 400) {
+      return `${labelPrefix} chưa được tạo vì thông tin chưa hợp lệ. Vui lòng kiểm tra lại dữ liệu.`
+    }
+  }
+
+  return `${labelPrefix} chưa được tạo. Vui lòng thử lại sau.`
+}
 
 // Form refs for add modals
 const newManufacturerFormRef = ref()
@@ -1109,7 +1181,7 @@ const loadAllInputs = async () => {
         }))
     }
   } catch (error) {
-    Message.error(`Lỗi khi tải dữ liệu: ${error}`)
+    notifyApiError(error, 'Không thể tải dữ liệu sản phẩm. Vui lòng thử lại sau.')
   }
 }
 
@@ -1126,8 +1198,7 @@ const loadManufacturerInputs = async () => {
         }))
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error loading manufacturer inputs:', error)
+    notifyApiError(error, 'Không thể tải danh sách nhà sản xuất. Vui lòng thử lại.', 'Nhà sản xuất')
   }
 }
 
@@ -1143,8 +1214,7 @@ const loadOriginInputs = async () => {
         }))
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error loading origin inputs:', error)
+    notifyApiError(error, 'Không thể tải danh sách xuất xứ. Vui lòng thử lại.', 'Xuất xứ')
   }
 }
 
@@ -1160,8 +1230,7 @@ const loadMaterialInputs = async () => {
         }))
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error loading material inputs:', error)
+    notifyApiError(error, 'Không thể tải danh sách chất liệu. Vui lòng thử lại.', 'Chất liệu')
   }
 }
 
@@ -1177,8 +1246,7 @@ const loadShoeSoleInputs = async () => {
         }))
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error loading shoe sole inputs:', error)
+    notifyApiError(error, 'Không thể tải danh sách đế giày. Vui lòng thử lại.', 'Đế giày')
   }
 }
 
@@ -1195,8 +1263,7 @@ const loadColorInputs = async () => {
         }))
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error loading color inputs:', error)
+    notifyApiError(error, 'Không thể tải danh sách màu sắc. Vui lòng thử lại.', 'Màu sắc')
   }
 }
 
@@ -1220,8 +1287,7 @@ const loadSizeInputs = async () => {
         })
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error loading size inputs:', error)
+    notifyApiError(error, 'Không thể tải danh sách kích thước. Vui lòng thử lại.', 'Kích thước')
   }
 }
 
@@ -1971,7 +2037,7 @@ const handleAddManufacturer = async () => {
       Message.success('Nhà sản xuất đã được thêm thành công!')
     }
   } catch (error) {
-    Message.error(`Lỗi khi thêm nhà sản xuất: ${error.message || error}`)
+    notifyApiError(error, 'Không thể thêm nhà sản xuất mới. Vui lòng thử lại.', 'Nhà sản xuất')
   }
 }
 
@@ -2016,7 +2082,7 @@ const handleAddOrigin = async () => {
       Message.success('Xuất xứ đã được thêm thành công!')
     }
   } catch (error) {
-    Message.error(`Lỗi khi thêm xuất xứ: ${error.message || error}`)
+    notifyApiError(error, 'Không thể thêm xuất xứ mới. Vui lòng thử lại.', 'Xuất xứ')
   }
 }
 
@@ -2062,7 +2128,7 @@ const handleAddMaterial = async () => {
       Message.success('Chất liệu đã được thêm thành công!')
     }
   } catch (error) {
-    Message.error(`Lỗi khi thêm chất liệu: ${error.message || error}`)
+    notifyApiError(error, 'Không thể thêm chất liệu mới. Vui lòng thử lại.', 'Chất liệu')
   }
 }
 
@@ -2108,7 +2174,7 @@ const handleAddShoeSole = async () => {
       Message.success('Đế giày đã được thêm thành công!')
     }
   } catch (error) {
-    Message.error(`Lỗi khi thêm đế giày: ${error.message || error}`)
+    notifyApiError(error, 'Không thể thêm đế giày mới. Vui lòng thử lại.', 'Đế giày')
   }
 }
 
@@ -2345,7 +2411,7 @@ const handleAddColor = async () => {
       Message.success('Màu sắc đã được thêm thành công!')
     }
   } catch (error) {
-    Message.error(`Lỗi khi thêm màu sắc: ${error.message || error}`)
+    notifyApiError(error, 'Không thể thêm màu sắc mới. Vui lòng thử lại.', 'Màu sắc')
   }
 }
 
@@ -2400,7 +2466,7 @@ const handleAddSize = async () => {
       Message.success('Kích thước đã được thêm thành công!')
     }
   } catch (error) {
-    Message.error(`Lỗi khi thêm kích thước: ${error.message || error}`)
+    notifyApiError(error, 'Không thể thêm kích thước mới. Vui lòng thử lại.', 'Kích thước')
   }
 }
 
@@ -2436,10 +2502,8 @@ const showImageModal = async (colorId: string) => {
     const response = await getAnhSanPhamByTenMau(colorName)
     existingImages.value = response.data || []
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(' Failed to load existing images:', error)
     existingImages.value = []
-    Message.error('Không thể tải ảnh có sẵn')
+    notifyApiError(error, 'Không thể tải ảnh có sẵn. Vui lòng thử lại.')
   } finally {
     loadingExistingImages.value = false
   }
@@ -2557,13 +2621,10 @@ const handleImageModalOk = async () => {
         })
       } catch (uploadError) {
         uploadProgressText.value = 'Upload thất bại!'
-
-        // eslint-disable-next-line no-console
-        console.error(' Failed to upload images:', uploadError)
-        if (uploadError.message.includes('timeout')) {
+        if (uploadError.message && uploadError.message.includes('timeout')) {
           Message.error('Upload ảnh quá thời gian cho phép (30s). Vui lòng thử lại.')
         } else {
-          Message.error(`Lỗi upload ảnh: ${uploadError.message || 'Unknown error'}`)
+          notifyApiError(uploadError, 'Không thể upload ảnh. Vui lòng thử lại.')
         }
         uploadingImages.value = false
         return
@@ -2603,9 +2664,7 @@ const handleImageModalOk = async () => {
     handleImageModalCancel()
     Message.success(`Đã lưu ${allImages.length} ảnh cho màu này`)
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(' Failed to process images:', error)
-    Message.error(`Lỗi xử lý ảnh: ${error.message || 'Unknown error'}`)
+    notifyApiError(error, 'Không thể lưu ảnh cho màu sắc này. Vui lòng thử lại.')
   } finally {
     uploadingImages.value = false
     uploadProgressText.value = ''
@@ -2653,8 +2712,7 @@ const handleSubmit = async () => {
     // Show confirmation modal
     showSubmitConfirm.value = true
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Validation error:', error)
+    // Form validation đã hiển thị lỗi tương ứng, không cần thông báo thêm
   }
 }
 
@@ -2683,9 +2741,7 @@ const checkExistingVariant = async (productId: number, mauSac: number, kichThuoc
     }
     return null
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error checking existing variant:', error)
-    return null
+    throw error
   }
 }
 
@@ -2694,17 +2750,14 @@ const confirmSubmit = async () => {
   try {
     showSubmitConfirm.value = false
 
-    // First, create the product if it's pending
     let productId = formData.selectedProductId
 
-    // Validate productId exists
     if (!productId || productId === 'pending') {
       if (productId === 'pending' && pendingNewProduct.value) {
-        // Create new product
         const productData = {
           tenSanPham: pendingNewProduct.value.tenSanPham,
-          idNhaSanXuat: formData.manufacturer || 1, // Use selected manufacturer or default
-          idXuatXu: formData.origin || 1, // Use selected origin or default
+          idNhaSanXuat: formData.manufacturer || 1,
+          idXuatXu: formData.origin || 1,
           trangThai: true,
           deleted: false,
           createAt: new Date().toISOString().split('T')[0],
@@ -2712,40 +2765,60 @@ const confirmSubmit = async () => {
         }
         const productResponse = await createDanhMucSanPham(productData)
         productId = productResponse.data.id
-        // Clear pending state
         pendingNewProduct.value = null
       } else {
-        // No valid product selected
         Message.error('Vui lòng chọn sản phẩm trước khi thêm biến thể')
         loading.value = false
         return
       }
     }
+
     loading.value = true
 
-    // Sử dụng trực tiếp uploadedImageStore để lấy danh sách image IDs cho mỗi màu
     const finalImageIds = { ...uploadedImageStore.value }
+    const duplicateVariantLabels = new Set<string>()
+    const failedImageLinkLabels = new Set<string>()
 
-    // Counters for tracking
-    let createdCount = 0
-    let updatedCount = 0
+    const linkImagesForVariant = async (variantId: number | null, colorId: string, variantLabel: string) => {
+      if (!variantId) {
+        return
+      }
+      const allImageIds = finalImageIds[colorId] || []
+      if (allImageIds.length === 0) {
+        return
+      }
+      try {
+        await themAnhChoBienThe({
+          idChiTietSanPham: variantId,
+          idAnhSanPhamList: allImageIds,
+          trangThai: true,
+          deleted: false,
+          createAt: new Date().toISOString().split('T')[0],
+          createBy: userStore.id,
+        })
+      } catch (error) {
+        failedImageLinkLabels.add(variantLabel || `ID ${variantId}`)
+      }
+    }
 
-    // Tạo danh sách promises cho việc tạo/update biến thể
     const variantPromises = variants.value.flatMap((colorGroup) =>
       colorGroup.variants.map(async (variant) => {
-        // Tạo tên sản phẩm chi tiết (luôn lấy label, không lấy id)
+        const variantLabel = buildVariantLabel(variant.color, variant.size)
+        const colorKey = variant.color.toString()
+
         const productName =
           productNameInputs.value.find((p) => String(p.value) === String(productId))?.label || formData.name || 'Tên sản phẩm'
         const colorName = colorInputs.value.find((c) => String(c.value) === String(variant.color))?.label || 'Màu'
         const sizeName = sizeInputs.value.find((s) => String(s.value) === String(variant.size))?.label || 'Size'
         const tenSanPhamChiTiet = `${productName} + ${colorName} + ${sizeName}`.trim()
-        const variantData = {
+
+        const baseVariantData = {
           idSanPham: productId,
           idMauSac: variant.color,
           idKichThuoc: variant.size,
-          idDeGiay: formData.shoeSole || 1, // Default if not selected
-          idChatLieu: formData.material || 1, // Default if not selected
-          idTrongLuong: 1, // You might need to add weight selection
+          idDeGiay: formData.shoeSole || 1,
+          idChatLieu: formData.material || 1,
+          idTrongLuong: 1,
           soLuong: variant.stock || 0,
           giaBan: variant.price || 0,
           tenSanPhamChiTiet,
@@ -2755,123 +2828,173 @@ const confirmSubmit = async () => {
           createBy: userStore.id,
         }
 
-        // Check if variant already exists
-        const existingVariant = await checkExistingVariant(
-          productId,
-          variant.color,
-          variant.size,
-          formData.material || 1,
-          formData.shoeSole || 1
-        )
-
-        let variantResponse
-        let variantId
+        let existingVariant: any = null
+        try {
+          existingVariant = await checkExistingVariant(
+            productId,
+            variant.color,
+            variant.size,
+            formData.material || 1,
+            formData.shoeSole || 1
+          )
+        } catch (error) {
+          return { status: 'failed', variantId: null, label: variantLabel, error } as VariantProcessingResult
+        }
 
         if (existingVariant) {
+          duplicateVariantLabels.add(variantLabel)
           const updateData = {
-            ...variantData,
-            soLuong: existingVariant.soLuong + variant.stock, // CỘNG thêm số lượng
-            tenSanPhamChiTiet, // Cập nhật tên sản phẩm chi tiết
+            ...baseVariantData,
+            soLuong: (existingVariant.soLuong || 0) + (variant.stock || 0),
             updateAt: new Date().toISOString().split('T')[0],
             updateBy: userStore.id,
           }
 
           try {
-            variantResponse = await updateBienTheSanPham(existingVariant.id, updateData)
-            variantId = existingVariant.id
-            updatedCount += 1
+            await updateBienTheSanPham(existingVariant.id, updateData)
+            await linkImagesForVariant(existingVariant.id, colorKey, variantLabel)
+            return { status: 'updated', variantId: existingVariant.id, label: variantLabel } as VariantProcessingResult
           } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error(' Lỗi khi update biến thể:', error)
-            throw error
+            return { status: 'failed', variantId: existingVariant.id, label: variantLabel, error } as VariantProcessingResult
           }
-        } else {
-          variantResponse = await createBienTheSanPham(variantData)
-          if (!variantResponse?.success || !variantResponse.data) {
-            // eslint-disable-next-line no-console
-            console.error(' Invalid variant response:', variantResponse)
-            throw new Error('Failed to create variant - no ID returned')
-          }
-          variantId = variantResponse.data // ID is directly in data field
-          createdCount += 1
         }
 
-        // NOW proceed with image linking - only after variant creation is complete
-        const colorId = variant.color.toString()
+        try {
+          const createResponse = await createBienTheSanPham(baseVariantData)
+          const newVariantId = createResponse?.data ?? null
 
-        // Get all combined image IDs for this color using stored IDs
-        const allImageIds = finalImageIds[colorId] || []
+          if (!newVariantId) {
+            return {
+              status: 'failed',
+              variantId: null,
+              label: variantLabel,
+              error: new Error('Không nhận được mã biến thể mới'),
+            } as VariantProcessingResult
+          }
 
-        if (allImageIds.length > 0) {
-          // ONLY link images if we have a valid variant ID
-          if (allImageIds.length > 0 && variantId) {
+          await linkImagesForVariant(newVariantId, colorKey, variantLabel)
+          return { status: 'created', variantId: newVariantId, label: variantLabel } as VariantProcessingResult
+        } catch (error) {
+          if (isDuplicateApiError(error)) {
+            duplicateVariantLabels.add(variantLabel)
+            let fallbackVariant: any = null
             try {
-              const linkData = {
-                idChiTietSanPham: variantId,
-                idAnhSanPhamList: allImageIds,
-                trangThai: true,
-                deleted: false,
-                createAt: new Date().toISOString().split('T')[0],
-                createBy: userStore.id,
+              fallbackVariant = await checkExistingVariant(
+                productId,
+                variant.color,
+                variant.size,
+                formData.material || 1,
+                formData.shoeSole || 1
+              )
+            } catch (checkError) {
+              return { status: 'failed', variantId: null, label: variantLabel, error: checkError } as VariantProcessingResult
+            }
+
+            if (fallbackVariant) {
+              const updateData = {
+                ...baseVariantData,
+                soLuong: (fallbackVariant.soLuong || 0) + (variant.stock || 0),
+                updateAt: new Date().toISOString().split('T')[0],
+                updateBy: userStore.id,
               }
 
-              // WAIT for image linking to complete
-              await themAnhChoBienThe(linkData)
-            } catch (error) {
-              // eslint-disable-next-line no-console
-              console.error(` Failed to link images to variant ${variantId}:`, error.message)
-              // eslint-disable-next-line no-console
-              console.error(' Link error details:', error)
-              // Don't stop the process for image linking errors, but log the error
+              try {
+                await updateBienTheSanPham(fallbackVariant.id, updateData)
+                await linkImagesForVariant(fallbackVariant.id, colorKey, variantLabel)
+                return { status: 'updated', variantId: fallbackVariant.id, label: variantLabel } as VariantProcessingResult
+              } catch (updateError) {
+                return {
+                  status: 'failed',
+                  variantId: fallbackVariant.id,
+                  label: variantLabel,
+                  error: updateError,
+                } as VariantProcessingResult
+              }
             }
-          }
-        }
 
-        // Return both response and variantId for collection
-        return {
-          response: variantResponse,
-          variantId,
-          sku: `${formData.name}-${variant.color}-${variant.size}`, // For identification
+            return { status: 'duplicate', variantId: null, label: variantLabel, error } as VariantProcessingResult
+          }
+
+          return { status: 'failed', variantId: null, label: variantLabel, error } as VariantProcessingResult
         }
       })
     )
 
-    // Wait for all variants to be created/updated and collect their IDs
     const variantResults = await Promise.all(variantPromises)
-    const allVariantIds = variantResults.map((result) => result.variantId).filter(Boolean)
-    loading.value = false
 
-    // Show success message with detailed info
-    if (updatedCount > 0 && createdCount > 0) {
-      Message.success(`Hoàn thành! Đã tạo mới ${createdCount} biến thể và cập nhật ${updatedCount} biến thể đã tồn tại.`)
-    } else if (updatedCount > 0) {
-      Message.success(`Đã cập nhật ${updatedCount} biến thể đã tồn tại.`)
-    } else {
-      Message.success(`Đã tạo mới ${createdCount} biến thể sản phẩm!`)
+    const failedVariant = variantResults.find((result) => result.status === 'failed')
+    if (failedVariant) {
+      loading.value = false
+      const friendlyMessage = mapSubmissionErrorMessage(failedVariant.error, failedVariant.label)
+      if (!hasErrorBeenNotified(failedVariant.error)) {
+        Message.error(friendlyMessage)
+        markErrorAsNotified(failedVariant.error)
+      }
+      return
     }
 
-    // Clear uploaded image store after successful submission
+    const createdCount = variantResults.filter((result) => result.status === 'created').length
+    const updatedCount = variantResults.filter((result) => result.status === 'updated').length
+    const duplicateResults = variantResults.filter((result) => result.status === 'duplicate')
+    const collectedVariantIds = variantResults.map((result) => result.variantId).filter((id): id is number => typeof id === 'number')
+
+    loading.value = false
+
+    if (createdCount === 0 && updatedCount === 0 && duplicateResults.length === 0) {
+      Message.warning('Không có biến thể nào được tạo hoặc cập nhật. Vui lòng kiểm tra lại thông tin.')
+      return
+    }
+
+    const summaryParts: string[] = []
+    if (createdCount > 0) {
+      summaryParts.push(`tạo mới ${createdCount} biến thể`)
+    }
+    if (updatedCount > 0) {
+      summaryParts.push(`cập nhật ${updatedCount} biến thể`)
+    }
+
+    if (summaryParts.length > 0) {
+      Message.success(`Hoàn tất: ${summaryParts.join(' và ')}.`)
+    }
+
+    const duplicateLabels = Array.from(duplicateVariantLabels)
+    if (duplicateLabels.length > 0) {
+      const duplicateMessage =
+        summaryParts.length > 0
+          ? `Các biến thể sau đã có sẵn trong hệ thống. Vui lòng kiểm tra lại: ${duplicateLabels.join(', ')}`
+          : `Các biến thể bạn chọn đã tồn tại trong hệ thống: ${duplicateLabels.join(', ')}. Không có biến thể mới được tạo.`
+      Message.warning(duplicateMessage)
+    } else if (duplicateResults.length > 0) {
+      Message.info('Một số biến thể đã tồn tại trong hệ thống và không có thay đổi mới.')
+    }
+
+    if (failedImageLinkLabels.size > 0) {
+      Message.warning(
+        `Không thể liên kết ảnh cho các biến thể sau: ${Array.from(failedImageLinkLabels).join(', ')}. Vui lòng kiểm tra lại sau khi lưu.`
+      )
+    }
+
     uploadedImageStore.value = {}
 
-    // Validate productId before navigation
     if (!productId) {
-      // eslint-disable-next-line no-console
-      console.error(' ProductId is missing after submission')
       Message.error('Lỗi: Không tìm thấy ID sản phẩm')
       return
     }
+
     router.push({
       path: `/quan-ly-san-pham/bien-the/${productId}`,
       query: {
-        newVariants: allVariantIds.join(','),
+        newVariants: collectedVariantIds.join(','),
         highlight: 'true',
       },
     })
   } catch (error) {
     loading.value = false
-    // eslint-disable-next-line no-console
-    console.error(' Submission failed:', error.message || error)
-    Message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message || error}`)
+    const fallbackMessage = mapSubmissionErrorMessage(error)
+    if (!hasErrorBeenNotified(error)) {
+      Message.error(fallbackMessage)
+      markErrorAsNotified(error)
+    }
   }
 }
 

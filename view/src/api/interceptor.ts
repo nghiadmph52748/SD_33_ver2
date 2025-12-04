@@ -1,6 +1,7 @@
 import router from '@/router'
 import pinia, { useUserStore } from '@/store'
 import { getToken, setToken } from '@/utils/auth'
+import { hasErrorBeenNotified, mapApiErrorToMessage, markErrorAsNotified } from '@/utils/api-errors'
 import { Message } from '@arco-design/web-vue'
 import axios from 'axios'
 
@@ -72,42 +73,45 @@ axios.interceptors.response.use(
 
     // Check if request was successful
     if (res.success === false) {
-      Message.error({
-        content: res.message || 'Request failed',
-        duration: 5 * 1000,
-      })
-      return Promise.reject(new Error(res.message || 'Request failed'))
+      const pseudoError: any = {
+        response: {
+          status: response.status,
+          data: {
+            message: res.message,
+          },
+        },
+      }
+      const friendlyMessage = mapApiErrorToMessage(pseudoError, { defaultMessage: 'Yêu cầu thất bại.' })
+      if (!hasErrorBeenNotified(pseudoError)) {
+        Message.error({
+          content: friendlyMessage,
+          duration: 5 * 1000,
+        })
+        markErrorAsNotified(pseudoError)
+      }
+      return Promise.reject(new Error(friendlyMessage))
     }
 
     // Return the actual data for successful requests
     return res
   },
   async (error) => {
-    // Handle network errors or other axios errors
-    if (error.response) {
-      if (error.response.status === 401) {
-        await handleAuthError(error.response.data?.message)
-        return Promise.reject(error)
-      }
-      // Server responded with error status
-      const errorMessage = error.response.data?.message || `Request failed with status ${error.response.status}`
-      Message.error({
-        content: errorMessage,
-        duration: 5 * 1000,
-      })
-    } else if (error.request) {
-      // Network error
-      Message.error({
-        content: 'Network error - unable to connect to server',
-        duration: 5 * 1000,
-      })
-    } else {
-      // Other error
-      Message.error({
-        content: error.message || 'Request Error',
-        duration: 5 * 1000,
-      })
+    if (error?.response?.status === 401) {
+      await handleAuthError(error.response.data?.message)
+      return Promise.reject(error)
     }
+
+    const shouldShowGlobalMessage = error?.config?.skipGlobalErrorMessage !== true
+    const friendlyMessage = mapApiErrorToMessage(error)
+
+    if (shouldShowGlobalMessage && !hasErrorBeenNotified(error)) {
+      Message.error({
+        content: friendlyMessage,
+        duration: 5 * 1000,
+      })
+      markErrorAsNotified(error)
+    }
+
     return Promise.reject(error)
   }
 )
