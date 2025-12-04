@@ -97,6 +97,34 @@ public class NotificationService {
         
         return savedNotification;
     }
+
+    /**
+     * Notify all staff members (used for system-wide operational alerts).
+     */
+    public void notifyAllStaff(String title, String subTitle, String content, Integer messageType) {
+        List<NhanVien> staff = nhanVienRepository.findAll();
+        if (staff == null || staff.isEmpty()) {
+            log.warn("⚠️ No staff accounts available for notification broadcast: {}", title);
+            return;
+        }
+        for (NhanVien user : staff) {
+            if (user == null || user.getId() == null) {
+                continue;
+            }
+            try {
+                createNotification(
+                        user.getId(),
+                        "todo",
+                        title,
+                        subTitle,
+                        content,
+                        messageType != null ? messageType : 2
+                );
+            } catch (Exception e) {
+                log.error("Failed to create broadcast notification for user {}: {}", user.getId(), e.getMessage());
+            }
+        }
+    }
     
     /**
      * Create notification for all users (broadcast)

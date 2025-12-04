@@ -69,6 +69,7 @@
           :arrow-style="{ display: 'none' }"
           :content-style="{ padding: 0, minWidth: '420px', maxWidth: '420px' }"
           content-class="notification-popover"
+          @popup-visible-change="handleNotificationPopoverVisible"
         >
           <div ref="refBtn" class="ref-btn"></div>
           <template #content>
@@ -260,6 +261,15 @@ const setPopoverVisible = () => {
     cancelable: true,
   })
   refBtn.value.dispatchEvent(event)
+}
+const handleNotificationPopoverVisible = async (visible: boolean) => {
+  if (visible && notificationStore.totalUnread > 0) {
+    try {
+      await notificationStore.markAllAsRead()
+    } catch (error) {
+      console.error('Failed to auto mark notifications as read:', error)
+    }
+  }
 }
 const handleLogout = () => {
   logout()

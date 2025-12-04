@@ -5,7 +5,7 @@
         <div class="time-group">
           <div class="group-header">
             <span class="group-label">{{ group.label }}</span>
-            <a-button v-if="group.items.some((i) => !i.status)" type="text" size="mini" @click="markGroup(group.items)">
+            <a-button v-if="hasUnread(group.items)" type="text" size="mini" @click="markGroup(group.items)">
               <template #icon>
                 <icon-check />
               </template>
@@ -78,20 +78,17 @@
         </template>
         {{ $t('messageBox.allRead') }}
       </a-button>
-      <a-divider direction="vertical" />
-      <a-button type="text" long @click="viewMore">
-        <template #icon>
-          <icon-double-right />
-        </template>
-        {{ $t('messageBox.viewMore') }}
-      </a-button>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { MessageListType, MessageRecord } from '@/api/message'
-import { PropType, computed } from 'vue'
+import { fetchInvoiceByCode } from '@/api/invoice'
+import { mapApiErrorToMessage } from '@/utils/api-errors'
+import { Message } from '@arco-design/web-vue'
+import { PropType, computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const props = defineProps({
   renderList: {
@@ -104,23 +101,31 @@ const props = defineProps({
   },
 })
 const emit = defineEmits(['itemClick', 'more'])
+const router = useRouter()
+const isNavigating = ref(false)
+
 const allRead = () => {
   emit('itemClick', [...props.renderList])
 }
-const viewMore = () => {
-  emit('more')
-}
-
 const markGroup = (items: MessageListType) => {
   emit(
     'itemClick',
-    items.filter((i) => !i.status)
+    items.filter((i: MessageRecord) => !i.status)
   )
 }
 
-const onItemClick = (item: MessageRecord) => {
-  if (!item.status) {
-    emit('itemClick', [item])
+const hasUnread = (items: MessageListType) => items.some((record: MessageRecord) => !record.status)
+
+const onItemClick = async (item: MessageRecord) => {
+  if (isNavigating.value) return
+  isNavigating.value = true
+  try {
+    if (!item.status) {
+      emit('itemClick', [item])
+    }
+    await navigateToOrderDetail(item)
+  } finally {
+    isNavigating.value = false
   }
 }
 
@@ -181,7 +186,8 @@ function getTypeIcon(messageType?: number) {
     case 1:
       return 'icon-check-circle'
     case 2:
-      return 'icon-loading'
+      // Đơn hàng đang tiến hành: dùng icon tĩnh, không animation
+      return 'icon-clock-circle'
     case 3:
       return 'icon-exclamation-circle'
     default:
@@ -225,7 +231,7 @@ const grouped = computed(() => {
   const items = props.renderList || []
 
   // Use forEach instead of for...of to avoid iterator issues
-  items.forEach((it) => {
+  items.forEach((it: MessageRecord) => {
     const label = getRelativeLabel(it.time)
     if (!groups[label]) groups[label] = []
     groups[label].push(it)
@@ -233,6 +239,39 @@ const grouped = computed(() => {
 
   return Object.keys(groups).map((k) => ({ key: k, label: k, items: groups[k] }))
 })
+
+function extractOrderCode(item: MessageRecord) {
+  const source = `${item.title || ''} ${item.content || ''}`.trim()
+  const match = source.match(/#?(HD\d+)/i)
+  return match ? match[1].toUpperCase() : null
+}
+
+async function navigateToOrderDetail(item: MessageRecord) {
+  const orderCode = extractOrderCode(item)
+  if (!orderCode) {
+    Message.warning('Không tìm thấy mã đơn hàng trong thông báo này')
+    return
+  }
+
+  try {
+    const invoice = await fetchInvoiceByCode(orderCode)
+    if (!invoice?.id) {
+      Message.warning('Không tìm thấy hóa đơn tương ứng')
+      return
+    }
+
+    await router.push({
+      name: 'HoaDonChiTiet',
+      params: { id: invoice.id },
+      query: { code: orderCode },
+    })
+  } catch (error) {
+    const friendlyMessage = mapApiErrorToMessage(error, {
+      defaultMessage: 'Không thể mở chi tiết hóa đơn. Vui lòng thử lại.',
+    })
+    Message.error(friendlyMessage)
+  }
+}
 </script>
 
 <style scoped lang="less">
@@ -369,6 +408,7 @@ const grouped = computed(() => {
       color: var(--color-text-2);
       line-height: 1.5;
       display: -webkit-box;
+      line-clamp: 2;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;

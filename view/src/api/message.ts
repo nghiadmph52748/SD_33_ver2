@@ -32,6 +32,10 @@ export function setMessageStatus(data: MessageStatus) {
   return axios.post<MessageListType>('/api/message/read', data)
 }
 
+export function clearAllNotifications() {
+  return axios.post('/api/message/clear-all')
+}
+
 export interface ChatRecord {
   id: number
   username: string

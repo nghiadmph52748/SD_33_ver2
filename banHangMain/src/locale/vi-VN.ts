@@ -367,12 +367,10 @@ export default {
   "chat.emptyConversations": "Chưa có cuộc trò chuyện nào",
   "chat.inputPlaceholder": "Nhập tin nhắn…",
   "chat.sendError": "Không thể gửi: {message}",
-  "chat.loginRequired": "Vui lòng đăng nhập để trò chuyện với nhân viên.",
-  "chat.yesterday": "Hôm qua",
-  "chat.noMessages": "Chưa có tin nhắn",
-  "chat.previewYou": "Bạn: {text}",
-  "chat.loginRequired": "Vui lòng đăng nhập để chat với nhân viên",
-  "chat.staffLoginRequired":
+"chat.loginRequired": "Vui lòng đăng nhập để chat với nhân viên",
+"chat.yesterday": "Hôm qua",
+"chat.noMessages": "Chưa có tin nhắn",
+"chat.previewYou": "Bạn: {text}",
+"chat.staffLoginRequired":
     "Vui lòng đăng nhập bằng tài khoản nhân viên để sử dụng chat với nhân viên.",
-  "chat.yesterday": "Hôm qua",
 };
