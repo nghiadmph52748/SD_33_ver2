@@ -294,7 +294,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useUserStore } from '@/store'
 import { themGiaoCa, suaGiaoCa, getGiaoCa } from '@/api/giao-ca'
 import { fetchHoaDonList } from '@/api/hoa-don'
@@ -341,6 +341,7 @@ const scheduledList = ref([]) // admin-assigned schedule entries for current use
 const currentLichLamViecId = ref(null) // Track current schedule ID for updating on shift end
 const ghiChu = ref('')
 const currentTime = ref('')
+const autoEndTimer = ref<number | null>(null)
 
 // End shift modal refs
 const showEndShiftModal = ref(false)
@@ -478,6 +479,233 @@ async function reloadShiftData() {
 }
 
 defineExpose({ reloadShiftData })
+
+// Helper: try to compute an end Date from a schedule entry or caLamViec definition.
+function getScheduleEndDate(schedule) {
+  if (!schedule) return null
+  try {
+    // 1) explicit full datetime fields
+    const tryParse = (v) => {
+      if (!v) return null
+      let s = String(v).trim()
+      // Normalize common ISO variants to local-like parse: remove trailing Z (UTC) and strip milliseconds
+      if (s.endsWith('Z')) s = s.slice(0, -1)
+      // Replace T with space so engines parse as local datetime when possible
+      s = s.replace('T', ' ')
+      const dot = s.indexOf('.')
+      if (dot !== -1) s = s.substring(0, dot)
+      // If length >= 19, crop to seconds
+      if (s.length >= 19) s = s.substring(0, 19)
+      const d = new Date(s)
+      return Number.isNaN(d.getTime()) ? null : d
+    }
+
+    const possible = []
+    if (schedule.thoiGianKetThuc) possible.push(tryParse(schedule.thoiGianKetThuc))
+    if (schedule.thoi_gio_ket_thuc) possible.push(tryParse(schedule.thoi_gio_ket_thuc))
+    if (schedule.gioKetThuc) possible.push(tryParse(schedule.gioKetThuc))
+    if (schedule.ketThuc) possible.push(tryParse(schedule.ketThuc))
+    if (schedule.caLamViec && schedule.caLamViec.gioKetThuc) possible.push(tryParse(schedule.caLamViec.gioKetThuc))
+    if (schedule.caLamViec && schedule.caLamViec.gioKetThucFull) possible.push(tryParse(schedule.caLamViec.gioKetThucFull))
+
+    // If schedule has a date (ngayLamViec) and time string (e.g., ca.gioKetThuc '17:00'), combine
+    const datePart = schedule.ngayLamViec || schedule.ngay || schedule.ngay_lam_viec
+    const timeCandidate =
+      (schedule.caLamViec && (schedule.caLamViec.gioKetThuc || schedule.caLamViec.gioKetThucFull)) || schedule.gioKetThuc || schedule.ketThuc
+    if (datePart && timeCandidate && String(timeCandidate).indexOf(':') !== -1) {
+      const ds = String(datePart).trim().split(' ')[0]
+      const ts = String(timeCandidate).trim()
+      const combined = ds + ' ' + (ts.length === 5 ? ts + ':00' : ts)
+      const parsed = tryParse(combined)
+      if (parsed) possible.push(parsed)
+    }
+
+    // pick earliest non-null parsed date (prefer explicit thoiGianKetThuc)
+    for (const p of possible) {
+      if (p) return p
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null
+}
+
+// Helper: extract schedule ID from a shift object using multiple possible field names/structures
+function extractScheduleIdFromShift(shift) {
+  if (!shift) return null
+  try {
+    // common keys that might contain schedule reference
+    const keys = [
+      'lichLamViec',
+      'lich_lam_viec',
+      'lichLamViecId',
+      'lich_lam_viec_id',
+      'lichId',
+      'lich_id',
+      'lichlamviecId',
+      'caLamViecId',
+      'ca_lam_viec_id',
+    ]
+
+    for (const k of keys) {
+      const v = shift[k]
+      if (v == null) continue
+      // nested object with id
+      if (typeof v === 'object') {
+        if (v.id != null && !Number.isNaN(Number(v.id))) return Number(v.id)
+        // sometimes object may contain nested schedule under 'lich' or similar
+        if (v.lich && v.lich.id != null && !Number.isNaN(Number(v.lich.id))) return Number(v.lich.id)
+      }
+      // primitive id-like value
+      if (!Number.isNaN(Number(v))) return Number(v)
+    }
+
+    // Sometimes schedule id is stored under different names directly on shift
+    const alt = shift.lichId || shift.lich_id || shift.lichLamViecId || shift.currentLichLamViecId || shift.current_lich_lam_viec_id
+    if (alt != null && !Number.isNaN(Number(alt))) return Number(alt)
+  } catch (e) {
+    // ignore and return null
+  }
+  return null
+}
+
+function clearAutoEndTimer() {
+  try {
+    if (autoEndTimer.value) {
+      clearTimeout(autoEndTimer.value as any)
+      autoEndTimer.value = null
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+async function autoFinalizeEndShift() {
+  if (!activeShift.value) return
+  if (loading.value) return
+  loading.value = true
+  try {
+    const expected = (activeShift.value?.tongTienBanDau || 0) + invoiceTotal.value
+    const payload = {
+      nguoiGiaoId: userStore.id,
+      nguoiGiao: {
+        id: userStore.id,
+        tenNhanVien: userStore.name || userStore.tenNhanVien || userStore.ten || '',
+      },
+      nguoiNhanId: null,
+      caLamViecId:
+        (activeShift.value && ((activeShift.value.caLamViec && activeShift.value.caLamViec.id) || activeShift.value.ca_lam_viec_id || activeShift.value.caLamViecId)) ||
+        null,
+      thoiGianGiaoCa: normalizeToLocalDateTime((activeShift.value && activeShift.value.thoiGianGiaoCa) || toLocalDateTimeString(new Date())),
+      thoiGianKetThuc: normalizeToLocalDateTime(toLocalDateTimeString(new Date())),
+      soTienThucTe: Number(expected),
+      tienLech: 0,
+      ghiChuNguoiGiao: 'Kết ca tự động khi hết thời gian làm việc',
+      trangThaiCa: 'Hoàn tất',
+    }
+
+    await suaGiaoCa(activeShift.value.id, payload)
+
+    if (currentLichLamViecId.value) {
+      try {
+        // backend expects a boolean `trangThai` (true = done), not a string
+        await suaLichLamViec(currentLichLamViecId.value, { trangThai: true })
+      } catch (e) {
+        console.warn('Auto end: unable to update schedule status', e)
+      }
+    }
+
+    // refresh minimal local state
+    activeShift.value = null
+    showEndShiftModal.value = false
+    Message.success('Ca đã được kết tự động do hết thời gian làm việc')
+    // optionally logout user after a small delay (reuse existing flow)
+    await new Promise((r) => setTimeout(r, 800))
+    try {
+      await logout()
+    } catch (e) {
+      router.push({ name: 'login' })
+    }
+  } catch (err) {
+    console.error('Auto finalize end shift failed', err)
+    Message.error('Không thể tự động kết ca — vui lòng kết thúc ca thủ công')
+  } finally {
+    loading.value = false
+    clearAutoEndTimer()
+  }
+}
+
+function setupAutoEndForActiveShift() {
+  clearAutoEndTimer()
+  if (!activeShift.value) return
+  // Try to find schedule entry linked to this shift
+  let scheduleEntry = null
+  try {
+    const sid = currentLichLamViecId.value || extractScheduleIdFromShift(activeShift.value)
+    if (sid && scheduledList.value && scheduledList.value.length > 0) {
+      scheduleEntry = scheduledList.value.find((s) => Number(s.id) === Number(sid)) || null
+    }
+    // fallback: try to find schedule by ca id + date
+    if (!scheduleEntry && scheduledList.value && scheduledList.value.length > 0) {
+      const caId = activeShift.value.caLamViec?.id || activeShift.value.ca_lam_viec_id || activeShift.value.caLamViecId
+      const dateStr = (activeShift.value.thoiGianGiaoCa || '').toString().split(' ')[0]
+      scheduleEntry = scheduledList.value.find((s) => {
+        try {
+          const sCaId = s.caLamViec?.id || s.ca_lam_viec_id || s.caLamViecId
+          const sDate = (s.ngayLamViec || '').toString().split(' ')[0]
+          if (!sCaId || !caId) return false
+          return Number(sCaId) === Number(caId) && (!sDate || !dateStr || sDate === dateStr)
+        } catch {
+          return false
+        }
+      })
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  const endDate = getScheduleEndDate(scheduleEntry) || getScheduleEndDate(activeShift.value) || null
+  if (!endDate) return
+
+  const now = new Date()
+  if (now >= endDate) {
+    // already past end time — finalize immediately
+    autoFinalizeEndShift().catch((e) => console.warn('auto finalize failed', e))
+    return
+  }
+
+  const ms = endDate.getTime() - now.getTime()
+  // schedule timer
+  try {
+    console.log('Setup auto-end timer — endDate:', endDate, 'now:', now, 'msUntilEnd:', ms)
+    autoEndTimer.value = setTimeout(() => {
+      autoFinalizeEndShift().catch((e) => console.error('Auto finalize error', e))
+    }, ms) as unknown as number
+  } catch (e) {
+    console.warn('Failed to set auto end timer', e)
+  }
+}
+
+// watch activeShift and scheduledList so we can setup/clear auto-end appropriately
+watch(activeShift, (n) => {
+  try {
+    setupAutoEndForActiveShift()
+  } catch (e) {
+    console.warn('watch activeShift setup auto end error', e)
+  }
+})
+
+watch(scheduledList, () => {
+  try {
+    setupAutoEndForActiveShift()
+  } catch (e) {
+    console.warn('watch scheduledList setup auto end error', e)
+  }
+})
+
+onUnmounted(() => {
+  clearAutoEndTimer()
+})
 
 async function computeShiftSales(shift) {
   try {
@@ -883,10 +1111,68 @@ async function finalizeEndShift() {
     await suaGiaoCa(activeShift.value.id, payload)
 
     // Update schedule status to "Đã làm" if schedule exists
+    // Try to ensure we have a schedule ID to update. If not present, attempt to find one
+    // by matching ca/date in the loaded `scheduledList` or by calling the search API.
+    if (!currentLichLamViecId.value) {
+      try {
+        // derive date string from thoiGianGiaoCa (YYYY-MM-DD)
+        const dateStr = (payload.thoiGianGiaoCa || '').toString().split(' ')[0]
+        const caIdCandidate = payload.caLamViecId || (activeShift.value && ((activeShift.value.caLamViec && activeShift.value.caLamViec.id) || activeShift.value.ca_lam_viec_id || activeShift.value.caLamViecId))
+
+        if (scheduledList.value && scheduledList.value.length > 0 && caIdCandidate) {
+          const found = scheduledList.value.find((s) => {
+            try {
+              const sCaId = s.caLamViec?.id || s.ca_lam_viec_id || s.caLamViecId
+              const sDate = (s.ngayLamViec || '').toString().split(' ')[0]
+              return sCaId && Number(sCaId) === Number(caIdCandidate) && sDate === dateStr
+            } catch {
+              return false
+            }
+          })
+          if (found && found.id) currentLichLamViecId.value = found.id
+        }
+
+        // fallback: call search API to find schedules for that date + user
+        if (!currentLichLamViecId.value && dateStr) {
+          try {
+            const searchRes = await timKiemLichLamViec({ ngayLamViec: dateStr, nhanVienId: userStore.id })
+            const searchData = searchRes.data || searchRes || []
+            const searchList = Array.isArray(searchData) ? searchData : []
+            const found2 = searchList.find((s) => {
+              try {
+                const sCaId = s.caLamViec?.id || s.ca_lam_viec_id || s.caLamViecId
+                return sCaId && Number(sCaId) === Number(caIdCandidate)
+              } catch {
+                return false
+              }
+            })
+            if (found2 && found2.id) currentLichLamViecId.value = found2.id
+          } catch (e) {
+            console.warn('Fallback schedule search failed', e)
+          }
+        }
+      } catch (e) {
+        console.warn('Error trying to resolve schedule id before update', e)
+      }
+    }
+
     if (currentLichLamViecId.value) {
       try {
-        await suaLichLamViec(currentLichLamViecId.value, { trangThai: 'Đã làm' })
+        // backend expects a boolean `trangThai` (true = done)
+        await suaLichLamViec(currentLichLamViecId.value, { trangThai: true })
         console.log('Updated schedule status to "Đã làm" for schedule ID:', currentLichLamViecId.value)
+
+        // Refresh scheduledList for today so UI reflects change
+        try {
+          const today = currentTime.value ? currentTime.value.split(' ')[0] : new Date().toISOString().slice(0, 10)
+          const refreshed = await timKiemLichLamViec({ ngayLamViec: today, nhanVienId: userStore.id })
+          const refreshedData = refreshed.data || refreshed || []
+          const schedules = Array.isArray(refreshedData) ? refreshedData : []
+          const forUser = schedules.filter((s) => s && s.nhanVien && Number(s.nhanVien.id) === Number(userStore.id))
+          scheduledList.value = Array.isArray(forUser) ? forUser : []
+        } catch (e) {
+          // ignore refresh errors
+        }
       } catch (scheduleError) {
         console.warn('Không cập nhật được trạng thái lịch làm việc:', scheduleError)
         // Continue even if schedule update fails

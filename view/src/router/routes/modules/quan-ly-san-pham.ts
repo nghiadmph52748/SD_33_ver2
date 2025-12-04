@@ -11,7 +11,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
     requiresAuth: true,
     icon: 'IconSettings',
     order: 4,
-    roles: ['*'],
+    roles: ['admin'],
   },
   children: [
     {
@@ -21,7 +21,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.quan-ly-san-pham.danh-muc',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
       },
     },
     {
@@ -34,7 +34,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
         requiresAuth: true,
         hideInMenu: true,
         activeMenu: 'DanhMucSanPham',
-        roles: ['*'],
+        roles: ['admin'],
       },
     },
     {
@@ -44,7 +44,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.quan-ly-san-pham.bien-the',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
       },
     },
     {
@@ -56,7 +56,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
         requiresAuth: true,
         hideInMenu: true,
         activeMenu: 'BienTheSanPham',
-        roles: ['*'],
+        roles: ['admin'],
         isProductSpecific: true,
       },
     },
@@ -69,7 +69,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
         requiresAuth: true,
         hideInMenu: true,
         activeMenu: 'BienTheSanPham',
-        roles: ['*'],
+        roles: ['admin'],
       },
     },
     {
@@ -81,7 +81,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
         requiresAuth: true,
         hideInMenu: true,
         activeMenu: 'BienTheSanPham',
-        roles: ['*'],
+        roles: ['admin'],
       },
     },
     {
@@ -91,7 +91,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.quan-ly-san-pham.thuoc-tinh',
         requiresAuth: true,
-        roles: ['*'],
+        roles: ['admin'],
       },
       children: [
         {
@@ -101,7 +101,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.anh-san-pham',
             requiresAuth: true,
-            roles: ['*'],
+            roles: ['admin'],
           },
         },
         {
@@ -111,7 +111,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.nha-san-xuat',
             requiresAuth: true,
-            roles: ['*'],
+            roles: ['admin'],
           },
         },
         {
@@ -121,7 +121,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.xuat-xu',
             requiresAuth: true,
-            roles: ['*'],
+            roles: ['admin'],
           },
         },
         {
@@ -131,7 +131,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.mau-sac',
             requiresAuth: true,
-            roles: ['*'],
+            roles: ['admin'],
           },
         },
         {
@@ -141,7 +141,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.kich-thuoc',
             requiresAuth: true,
-            roles: ['*'],
+            roles: ['admin'],
           },
         },
         {
@@ -151,7 +151,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.de-giay',
             requiresAuth: true,
-            roles: ['*'],
+            roles: ['admin'],
           },
         },
         {
@@ -161,7 +161,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.chat-lieu',
             requiresAuth: true,
-            roles: ['*'],
+            roles: ['admin'],
           },
         },
         {
@@ -172,7 +172,7 @@ const QUAN_LY_SAN_PHAM: AppRouteRecordRaw = {
             locale: 'menu.quan-ly-san-pham.thuoc-tinh.trong-luong',
             requiresAuth: true,
             hideInMenu: true,
-            roles: ['*'],
+            roles: ['admin'],
           },
         },
       ],
