@@ -58,7 +58,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Đăng ký STOMP endpoint mà client sẽ kết nối đến
         // Endpoint: ws://localhost:8080/ws-chat
+        // WebSocket thuần cho mobile app (không dùng SockJS)
         registry.addEndpoint("/ws-chat")
+                .setAllowedOrigins("*") // Allow all origins for mobile app
+                .setAllowedOriginPatterns("*"); // Allow all origin patterns
+        
+        // SockJS endpoint cho web browser (fallback)
+        registry.addEndpoint("/ws-chat/sockjs")
                 .setAllowedOrigins(
                     "http://localhost:5173", 
                     "http://localhost:5174",

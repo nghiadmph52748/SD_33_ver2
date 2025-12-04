@@ -221,12 +221,23 @@
           Hiển thị QR
         </a-button>
         <p class="qr-hint">
-          {{ qrSession ? 'Sẵn sàng mở QR cho khách quét.' : 'Hoàn tất giỏ hàng để tạo QR trước khi hiển thị.' }}
+          {{ qrSession ? 'Sẵn sàng mở màn hình thanh toán cho khách quét.' : 'Hoàn tất giỏ hàng để tạo màn hình thanh toán trước khi hiển thị.' }}
         </p>
         <p v-if="qrSyncError" class="qr-session-error">
           <icon-info-circle style="margin-right: 4px" />
           {{ qrSyncError }}
         </p>
+      </div>
+
+      <div class="reset-session-action">
+        <a-button
+          type="outline"
+          status="warning"
+          long
+          @click="$emit('reset-qr-session')"
+        >
+          Reset Màn Hình Thanh Toán
+        </a-button>
       </div>
 
       <a-space direction="vertical" size="large" style="width: 100%; margin-top: 16px">
@@ -300,6 +311,7 @@ defineEmits<{
   (e: 'update:walkin-address', value: string): void
   (e: 'update:walkin-ward', value: string): void
   (e: 'open-mobile'): void
+  (e: 'reset-qr-session'): void
 }>()
 </script>
 
@@ -325,5 +337,9 @@ defineEmits<{
   margin-top: 4px;
   display: flex;
   align-items: center;
+}
+
+.reset-session-action {
+  margin-top: 12px;
 }
 </style>

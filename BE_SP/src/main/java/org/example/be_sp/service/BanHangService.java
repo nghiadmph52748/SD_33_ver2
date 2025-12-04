@@ -18,6 +18,7 @@ import org.example.be_sp.entity.KhachHang;
 import org.example.be_sp.entity.PhieuGiamGia;
 import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
 import org.example.be_sp.entity.PhuongThucThanhToan;
+import org.example.be_sp.entity.QRSession;
 import org.example.be_sp.entity.ThongTinDonHang;
 import org.example.be_sp.entity.TimelineDonHang;
 import org.example.be_sp.entity.TrangThaiDonHang;
@@ -34,6 +35,7 @@ import org.example.be_sp.repository.NhanVienRepository;
 import org.example.be_sp.repository.PhieuGiamGiaCaNhanRepository;
 import org.example.be_sp.repository.PhieuGiamGiaRepository;
 import org.example.be_sp.repository.PhuongThucThanhToanRepository;
+import org.example.be_sp.repository.QRSessionRepository;
 import org.example.be_sp.repository.ThongTinDonHangRepository;
 import org.example.be_sp.repository.TimelineDonHangRepository;
 import org.example.be_sp.repository.TrangThaiDonHangRepository;
@@ -79,6 +81,8 @@ public class BanHangService {
     JdbcTemplate jdbcTemplate;
     @Autowired
     QRSessionService qrSessionService;
+    @Autowired
+    QRSessionRepository qrSessionRepository;
 
     private BigDecimal normalizeCurrency(BigDecimal amount) {
         BigDecimal nonNullAmount = amount != null ? amount : BigDecimal.ZERO;
@@ -650,6 +654,20 @@ public class BanHangService {
             trangThaiDonHangOffline(saved.getId());
         } else {
             trangThaiDonHangOnline(saved.getId());
+        }
+
+        // Update QR session status to PAID when order is confirmed
+        if (request.getTrangThaiThanhToan() != null && request.getTrangThaiThanhToan()) {
+            try {
+                List<QRSession> qrSessions = qrSessionRepository.findAllByIdHoaDon_Id(saved.getId());
+                for (QRSession qrSession : qrSessions) {
+                    if ("PENDING".equals(qrSession.getStatus())) {
+                        qrSessionService.updateStatus(qrSession.getSessionId(), "PAID");
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to update QR session status to PAID for invoice {}", saved.getId(), e);
+            }
         }
     }
 

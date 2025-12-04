@@ -25,6 +25,9 @@ public class QRSessionResponse {
     private String status;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
+    private String customerName;
+    private String customerPhone;
+    private String customerEmail;
 
     @Data
     @Builder

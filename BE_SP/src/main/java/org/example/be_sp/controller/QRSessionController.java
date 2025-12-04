@@ -60,7 +60,7 @@ public class QRSessionController {
         } catch (RuntimeException e) {
             // Không có session PENDING nào là tình huống bình thường -> log ở mức INFO, không cần stack trace
             if (e.getMessage() != null && e.getMessage().contains("Không có phiên VNPAY đang hoạt động")) {
-                log.info("No active QR session found when calling /latest");
+                //log.info("No active QR session found when calling /latest");
                 return ResponseEntity.ok(new ResponseObject<>(null, "Không có phiên VNPAY đang hoạt động"));
             }
 
