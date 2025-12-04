@@ -913,28 +913,23 @@ const exportExcel = () => {
 const calculateFinalTotal = (invoice: any) => {
   if (!invoice) return 0
 
-  const backendTotal = invoice.tongTienSauGiam
-  if (backendTotal !== undefined && backendTotal !== null) {
-    const numericTotal = Number(backendTotal)
-    return Number.isFinite(numericTotal) ? Math.max(0, numericTotal) : 0
+  const discounted = invoice.tongTienSauGiam
+  if (discounted !== undefined && discounted !== null) {
+    const baseTotal = Number(discounted)
+    if (Number.isFinite(baseTotal)) {
+      const shipping = Number(invoice.phiVanChuyen || 0)
+      return Math.max(0, baseTotal + shipping)
+    }
   }
 
-  const base = Number(invoice.tongTien || 0)
+  const fallbackBase = invoice.tongTienSauGiam ?? invoice.tongTien ?? 0
+  const numericBase = Number(fallbackBase)
   const shipping = Number(invoice.phiVanChuyen || 0)
-  const surcharge = Number(invoice.phuPhi || 0)
-  const refund = Number(invoice.hoanPhi || 0)
-  const manualTotal = base + shipping + surcharge - refund
+  if (!Number.isFinite(numericBase)) {
+    return Math.max(0, shipping)
+  }
 
-  console.log('calculateFinalTotal (fallback):', {
-    id: invoice.id,
-    tongTienSauGiam: invoice.tongTienSauGiam,
-    phiVanChuyen: invoice.phiVanChuyen,
-    phuPhi: invoice.phuPhi,
-    hoanPhi: invoice.hoanPhi,
-    manualTotal,
-  })
-
-  return Math.max(0, manualTotal)
+  return Math.max(0, numericBase + shipping)
 }
 
 const calculateDiscountAmount = (invoice: any) => {

@@ -36,20 +36,20 @@ import org.example.be_sp.repository.HoaDonChiTietRepository;
 import org.example.be_sp.repository.HoaDonRepository;
 import org.example.be_sp.repository.KhachHangRepository;
 import org.example.be_sp.repository.NhanVienRepository;
+import org.example.be_sp.repository.PhieuGiamGiaCaNhanRepository;
+import org.example.be_sp.repository.PhieuGiamGiaRepository;
 import org.example.be_sp.repository.PhuongThucThanhToanRepository;
 import org.example.be_sp.repository.ThongTinDonHangRepository;
 import org.example.be_sp.repository.TimelineDonHangRepository;
 import org.example.be_sp.repository.TrangThaiDonHangRepository;
-import org.example.be_sp.repository.PhieuGiamGiaRepository;
-import org.example.be_sp.repository.PhieuGiamGiaCaNhanRepository;
 import org.example.be_sp.util.MapperUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
 public class HoaDonService {
@@ -90,6 +90,20 @@ public class HoaDonService {
     private PhieuGiamGiaRepository phieuGiamGiaRepository;
     @Autowired
     private PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
+
+    private BigDecimal safe(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private BigDecimal computeGrandTotal(HoaDon hoaDon) {
+        BigDecimal baseTotal = safe(hoaDon.getTongTienSauGiam());
+        if (baseTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            baseTotal = safe(hoaDon.getTongTien());
+        }
+
+        BigDecimal total = baseTotal.add(safe(hoaDon.getPhiVanChuyen()));
+        return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
+    }
 
     public List<HoaDonResponse> getAll() {
         return hoaDonRepository.findAll().stream().map(HoaDonResponse::new).toList();
@@ -409,25 +423,17 @@ public class HoaDonService {
             paidAmountUpdated = true;
         }
         if (paidAmountUpdated) {
-            BigDecimal shippingFee = hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO;
-            BigDecimal effectiveGrandTotal = BigDecimal.ZERO;
-            if (hd.getTongTienSauGiam() != null && hd.getTongTienSauGiam().compareTo(BigDecimal.ZERO) > 0) {
-                effectiveGrandTotal = hd.getTongTienSauGiam();
-            } else if (hd.getTongTien() != null && hd.getTongTien().compareTo(BigDecimal.ZERO) > 0) {
-                effectiveGrandTotal = hd.getTongTien().add(shippingFee);
-            } else {
-                effectiveGrandTotal = shippingFee;
-            }
+            BigDecimal effectiveGrandTotal = computeGrandTotal(hd);
+            BigDecimal paidValue = updatedPaidAmount != null ? updatedPaidAmount : BigDecimal.ZERO;
 
-            BigDecimal remaining = effectiveGrandTotal.subtract(updatedPaidAmount != null ? updatedPaidAmount : BigDecimal.ZERO);
+            BigDecimal remaining = effectiveGrandTotal.subtract(paidValue);
             if (remaining.compareTo(BigDecimal.ZERO) < 0) {
                 remaining = BigDecimal.ZERO;
             }
             hd.setSoTienConLai(remaining);
 
             boolean paidInFull = effectiveGrandTotal.compareTo(BigDecimal.ZERO) > 0
-                    && updatedPaidAmount != null
-                    && updatedPaidAmount.compareTo(effectiveGrandTotal) >= 0;
+                    && paidValue.compareTo(effectiveGrandTotal) >= 0;
             hd.setTrangThaiThanhToan(paidInFull);
             if (paidInFull && hd.getNgayThanhToan() == null) {
                 hd.setNgayThanhToan(LocalDateTime.now());
@@ -670,9 +676,23 @@ public class HoaDonService {
                     if (!trangThaiDonHangRepository.existsById(idTrangThaiDonHang)) {
                     } else {
                         // Create new ThongTinDonHang entry for status change
-                        if (hd.getGiaoHang() && !hd.getGhiChu().contains("Bán hàng tại quầy")
-                                && trangThaiMoi.equals("Hoàn thành")) {
-                            hd.setSoTienDaThanhToan(hd.getTongTienSauGiam());
+                        boolean isCounterSale = hd.getGhiChu() != null && hd.getGhiChu().contains("Bán hàng tại quầy");
+                        if (hd.getGiaoHang() && !isCounterSale && "Hoàn thành".equals(trangThaiMoi)) {
+                            BigDecimal grandTotal = computeGrandTotal(hd);
+                            BigDecimal currentPaid = safe(hd.getSoTienDaThanhToan());
+
+                            if (currentPaid.compareTo(grandTotal) < 0) {
+                                currentPaid = grandTotal;
+                                hd.setSoTienDaThanhToan(currentPaid);
+                            }
+
+                            BigDecimal remaining = grandTotal.subtract(currentPaid);
+                            if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+                                remaining = BigDecimal.ZERO;
+                            }
+
+                            hd.setSoTienConLai(remaining);
+                            hd.setTrangThaiThanhToan(grandTotal.compareTo(BigDecimal.ZERO) > 0 && remaining.compareTo(BigDecimal.ZERO) == 0);
                             saved = hoaDonRepository.save(hd);
                         }
                         ThongTinDonHang newThongTin = new ThongTinDonHang();

@@ -282,6 +282,20 @@
                   </div>
                   <span class="summary-value total">{{ formatCurrency(calculatedFinalTotal) }}</span>
                 </div>
+                <div class="summary-row">
+                  <div class="summary-label-wrapper">
+                    <icon-check-circle class="summary-icon" />
+                    <span class="summary-label">Đã thanh toán:</span>
+                  </div>
+                  <span class="summary-value" :class="paymentStatusClass">{{ formatCurrency(calculatedPaidAmount) }}</span>
+                </div>
+                <div class="summary-row" v-if="calculatedOverpaidAmount > 0">
+                  <div class="summary-label-wrapper">
+                    <icon-check-circle class="summary-icon" />
+                    <span class="summary-label">Thanh toán dư:</span>
+                  </div>
+                  <span class="summary-value overpaid">+{{ formatCurrency(calculatedOverpaidAmount) }}</span>
+                </div>
                 <div class="summary-row" v-if="calculatedRemainingAmount > 0">
                   <div class="summary-label-wrapper">
                     <icon-clock-circle class="summary-icon" />
@@ -334,7 +348,7 @@
               </a-select>
             </a-form-item>
             <a-form-item label="Trạng thái">
-              <a-select v-model="updateForm.trangThaiText" placeholder="Chọn trạng thái">
+              <a-select v-model="updateForm.trangThaiText" placeholder="Chọn trạng thái" :disabled="statusEditingLocked">
                 <a-option v-for="status in statusOptions" :key="status" :value="status">
                   {{ status }}
                 </a-option>
@@ -346,7 +360,7 @@
                 v-model="updateForm.soTienDaThanhToan"
                 :precision="0"
                 :step="1000"
-                :max="Math.round(calculatedRemainingAmount)"
+                :max="calculatedRemainingAmount"
                 placeholder="Nhập số tiền thu thêm"
                 :min="0"
               />
@@ -498,7 +512,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { fetchTimelineByHoaDonId, type TimelineItem } from '@/api/timeline'
@@ -574,6 +588,9 @@ const updateForm = ref({
   soTienDaThanhToan: 0, // Additional amount to collect when completing order
   phiGiaoHang: 0, // Shipping fee
 })
+const paymentAmountManuallyEdited = ref(false)
+const isProgrammaticPaymentSync = ref(false)
+const modalOriginalStatus = ref('Chờ xác nhận')
 
 // Address Selection State
 const updateLocationForm = ref({
@@ -789,14 +806,24 @@ const TIMELINE_STAGE_DEFINITIONS: Array<{
   {
     key: 'shipping',
     label: 'Đang giao hàng',
-    keywords: ['dang giao', 'dang giao hang', 'dang van chuyen'],
+    keywords: ['dang giao', 'dang giao hang', 'dang van chuyen', 'giao hang', 'van chuyen', 'dang ship', 'ship hang'],
     icon: IconSend,
     order: 3,
   },
   {
     key: 'completed',
     label: 'Hoàn thành',
-    keywords: ['hoan thanh', 'da thanh toan', 'thanh toan xong', 'hoan tat', 'da giao hang', 'giao thanh cong', 'giao hang thanh cong'],
+    keywords: [
+      'hoan thanh',
+      'da thanh toan',
+      'thanh toan xong',
+      'hoan tat',
+      'da giao hang',
+      'giao thanh cong',
+      'giao hang thanh cong',
+      'thanh toan thanh cong',
+      'da thanh toan thanh cong',
+    ],
     icon: IconCheck,
     order: 4,
   },
@@ -867,6 +894,8 @@ const resolveStageDefinitionFromStatus = (rawStatus: string) => {
           normalized.includes('dang xu ly') ||
           normalized.includes('chuan bi') ||
           normalized.includes('dong goi'))) ||
+      (definition.key === 'shipping' &&
+        (normalized.includes('giao hang') || normalized.includes('van chuyen') || normalized.includes('ship'))) ||
       (definition.key === 'completed' &&
         (normalized.includes('da giao hang') || normalized.includes('giao thanh cong') || normalized.includes('giao hang thanh cong'))) ||
       (definition.key === 'pending' && normalized.includes('cho thanh toan'))
@@ -981,22 +1010,32 @@ const getTimeFromTimeline = (statusKey: string): string => {
     })
 
     // Helper function để normalize text
-    const normalize = (text?: string): string => {
-      return (text || '').toLowerCase().trim()
-    }
+    const normalize = (text?: string): string => removeVietnameseDiacritics((text ?? '').toString())
 
     // Helper function để check match
     const matches = (item: any, patterns: string[]): boolean => {
       const hanhDong = normalize(item.hanhDong)
       const trangThaiMoi = normalize(item.trangThaiMoi)
-      return patterns.some((pattern) => hanhDong.includes(pattern) || trangThaiMoi.includes(pattern))
+      return patterns.some((pattern) => {
+        const normalizedPattern = normalize(pattern)
+        if (!normalizedPattern) {
+          return false
+        }
+        return hanhDong.includes(normalizedPattern) || trangThaiMoi.includes(normalizedPattern)
+      })
     }
 
     // Helper function để check exclude
     const excludes = (item: any, patterns: string[]): boolean => {
       const hanhDong = normalize(item.hanhDong)
       const trangThaiMoi = normalize(item.trangThaiMoi)
-      return patterns.some((pattern) => hanhDong.includes(pattern) || trangThaiMoi.includes(pattern))
+      return patterns.some((pattern) => {
+        const normalizedPattern = normalize(pattern)
+        if (!normalizedPattern) {
+          return false
+        }
+        return hanhDong.includes(normalizedPattern) || trangThaiMoi.includes(normalizedPattern)
+      })
     }
 
     // ========== PENDING: Chờ xác nhận ==========
@@ -1007,7 +1046,7 @@ const getTimeFromTimeline = (statusKey: string): string => {
         const item = sortedTimeline[i]
         const hanhDongNorm = normalize(item.hanhDong || '')
         const trangThaiMoiNorm = normalize(item.trangThaiMoi || '')
-        const isCapNhatChoXacNhan = hanhDongNorm === 'cập nhật' && trangThaiMoiNorm.includes('chờ xác nhận')
+        const isCapNhatChoXacNhan = hanhDongNorm === 'cap nhat' && trangThaiMoiNorm.includes('cho xac nhan')
 
         if (isCapNhatChoXacNhan && item.thoiGian) {
           return formatDateTime(item.thoiGian)
@@ -1019,9 +1058,9 @@ const getTimeFromTimeline = (statusKey: string): string => {
         const hanhDongNorm = normalize(item.hanhDong || '')
         const trangThaiMoiNorm = normalize(item.trangThaiMoi || '')
         // Backend trả về: hanhDong = "Tạo", trangThaiMoi = "Tạo đơn hàng"
-        const isTao = hanhDongNorm === 'tạo' || hanhDongNorm.includes('tạo')
-        const isTaoDonHang = trangThaiMoiNorm.includes('tạo đơn hàng')
-        const isChoXacNhan = trangThaiMoiNorm.includes('chờ xác nhận')
+        const isTao = hanhDongNorm === 'tao' || hanhDongNorm.includes('tao')
+        const isTaoDonHang = trangThaiMoiNorm.includes('tao don hang')
+        const isChoXacNhan = trangThaiMoiNorm.includes('cho xac nhan')
 
         if ((isTao || isTaoDonHang || isChoXacNhan) && item.thoiGian) {
           return formatDateTime(item.thoiGian)
@@ -1056,7 +1095,7 @@ const getTimeFromTimeline = (statusKey: string): string => {
       // Fallback: cho phép dùng trạng thái "Chờ giao hàng" hoặc "Chuẩn bị"
       for (let i = sortedTimeline.length - 1; i >= 0; i--) {
         const item = sortedTimeline[i]
-        if (excludes(item, ['hoàn thành', 'đã thanh toán'])) {
+        if (excludes(item, ['hoàn thành', 'đã thanh toán', 'thanh toán thành công'])) {
           continue
         }
         if (matches(item, ['chờ giao hàng', 'cho giao hang', 'chuẩn bị', 'chuan bi'])) {
@@ -1082,7 +1121,7 @@ const getTimeFromTimeline = (statusKey: string): string => {
         }
 
         // Tìm entry "Đang giao" hoặc "Giao hàng"
-        if (matches(item, ['đang giao', 'giao hàng'])) {
+        if (matches(item, ['đang giao', 'giao hàng', 'giao hang'])) {
           if (item.thoiGian) {
             return formatDateTime(item.thoiGian)
           }
@@ -1102,7 +1141,7 @@ const getTimeFromTimeline = (statusKey: string): string => {
         const item = sortedTimeline[i]
         const hanhDongNorm = normalize(item.hanhDong)
         const trangThaiMoiNorm = normalize(item.trangThaiMoi)
-        const isCapNhatHoanThanh = hanhDongNorm === 'cập nhật' && trangThaiMoiNorm.includes('hoàn thành')
+        const isCapNhatHoanThanh = hanhDongNorm === 'cap nhat' && trangThaiMoiNorm.includes('hoan thanh')
 
         if (isCapNhatHoanThanh && item.thoiGian) {
           return formatDateTime(item.thoiGian)
@@ -1117,7 +1156,7 @@ const getTimeFromTimeline = (statusKey: string): string => {
         const trangThaiMoiNorm = normalize(item.trangThaiMoi || '')
 
         // Tìm "Xác nhận" với "Hoàn thành" (backend format)
-        const isXacNhanHoanThanh = hanhDongNorm === 'xác nhận' && trangThaiMoiNorm.includes('hoàn thành')
+        const isXacNhanHoanThanh = hanhDongNorm === 'xac nhan' && trangThaiMoiNorm.includes('hoan thanh')
 
         if (isXacNhanHoanThanh && item.thoiGian) {
           return formatDateTime(item.thoiGian)
@@ -1129,7 +1168,10 @@ const getTimeFromTimeline = (statusKey: string): string => {
         const item = sortedTimeline[i]
         const trangThaiMoiNorm = normalize(item.trangThaiMoi || '')
 
-        const isHoanThanh = trangThaiMoiNorm.includes('hoàn thành') || trangThaiMoiNorm.includes('đã thanh toán')
+        const isHoanThanh =
+          trangThaiMoiNorm.includes('hoan thanh') ||
+          trangThaiMoiNorm.includes('da thanh toan') ||
+          trangThaiMoiNorm.includes('thanh toan thanh cong')
 
         if (isHoanThanh && item.thoiGian) {
           return formatDateTime(item.thoiGian)
@@ -1229,6 +1271,13 @@ const getStatusColorByName = (statusName: string): string => {
     default:
       return 'blue'
   }
+}
+
+const resolvePaymentMethodLabel = (methodId?: number | null): string => {
+  if (methodId === 1) return 'Tiền mặt'
+  if (methodId === 2) return 'Chuyển khoản'
+  if (methodId === 3) return 'Tiền mặt + Chuyển khoản'
+  return 'Thanh toán'
 }
 
 // Computed: Get current stage status label (for display in order info)
@@ -1634,7 +1683,24 @@ const statusStages = computed(() => {
     }
 
     const resolvedActiveIndex = resolveActiveIndex()
-    const activeIndex = resolvedActiveIndex >= 0 ? resolvedActiveIndex : stageEntries.length - 1
+    const statusToStageKey: Record<string, string> = {
+      'Chờ xác nhận': 'pending',
+      'Đã xác nhận': 'confirmed',
+      'Đang giao hàng': 'shipping',
+      'Hoàn thành': 'completed',
+      [CANCELLATION_STATUS]: 'cancelled',
+    }
+
+    let activeIndex = resolvedActiveIndex >= 0 ? resolvedActiveIndex : stageEntries.length - 1
+
+    const normalizedInvoiceStatus = normalizeStatusForFlow(currentStageStatus.value)
+    const desiredStageKey = statusToStageKey[normalizedInvoiceStatus]
+    if (desiredStageKey) {
+      const invoiceStageIndex = stageEntries.findIndex((stage) => stage.key === desiredStageKey)
+      if (invoiceStageIndex >= 0) {
+        activeIndex = Math.max(activeIndex, invoiceStageIndex)
+      }
+    }
 
     return stageEntries.map((stage, index) => ({
       key: stage.key,
@@ -1662,7 +1728,14 @@ const paymentHistory = computed(() => {
     return []
   }
 
-  const history = []
+  const history: Array<{
+    method: string
+    amount: number
+    code: string
+    userCode: string
+    date: unknown
+    methodId?: number
+  }> = []
   let hasValidPaymentRecord = false
 
   // Nếu có paymentMethods từ API, sử dụng thông tin đó
@@ -1707,6 +1780,7 @@ const paymentHistory = computed(() => {
           code: paymentCode,
           userCode,
           date: paymentDate,
+          methodId: idPTTT,
         })
       } else if (idPTTT === 2 && tienChuyenKhoan > 0) {
         // Chuyển khoản
@@ -1716,6 +1790,7 @@ const paymentHistory = computed(() => {
           code: paymentCode,
           userCode,
           date: paymentDate,
+          methodId: idPTTT,
         })
       } else if (idPTTT === 3) {
         // Cả hai - tạo mã riêng cho từng phương thức
@@ -1733,6 +1808,7 @@ const paymentHistory = computed(() => {
             code: paymentCodeTM,
             userCode,
             date: paymentDate,
+            methodId: 1,
           })
         }
         if (tienChuyenKhoan > 0) {
@@ -1742,6 +1818,7 @@ const paymentHistory = computed(() => {
             code: paymentCodeCK,
             userCode,
             date: paymentDate,
+            methodId: 2,
           })
         }
       }
@@ -1752,15 +1829,7 @@ const paymentHistory = computed(() => {
   if (!hasValidPaymentRecord && soTienDaThanhToan > 0) {
     // Fallback: nếu không có paymentMethods, sử dụng thông tin từ invoice
     const idPTTT = invoice.value.idPhuongThucThanhToan || invoice.value.idPTTT
-    let method = 'Chuyển khoản'
-
-    if (idPTTT === 1) {
-      method = 'Tiền mặt'
-    } else if (idPTTT === 2) {
-      method = 'Chuyển khoản'
-    } else if (idPTTT === 3) {
-      method = 'Tiền mặt + Chuyển khoản'
-    }
+    let method = resolvePaymentMethodLabel(idPTTT)
 
     history.push({
       method,
@@ -1768,10 +1837,82 @@ const paymentHistory = computed(() => {
       code: `PTT${String(invoice.value.id || 0).padStart(5, '0')}`,
       userCode: invoice.value.maNhanVien || invoice.value.tenNhanVien || 'NV000001',
       date: invoice.value.ngayThanhToan,
+      methodId: idPTTT || undefined,
     })
   }
 
-  return history
+  if (history.length === 0) {
+    return history
+  }
+
+  const normalizeAmount = (value: unknown) => {
+    const numeric = Number(value)
+    return Number.isFinite(numeric) ? Math.round(numeric) : 0
+  }
+
+  const parseHistoryTimestamp = (value: unknown): number => {
+    const parsed = parseTimelineTimestamp(value)
+    if (parsed !== null) {
+      return parsed
+    }
+    if (value instanceof Date) {
+      const time = value.getTime()
+      return Number.isFinite(time) ? time : 0
+    }
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0
+    }
+    if (typeof value === 'string') {
+      const date = new Date(value)
+      const time = date.getTime()
+      return Number.isFinite(time) ? time : 0
+    }
+    return 0
+  }
+
+  const expectedTotal = normalizeAmount(soTienDaThanhToan)
+  const recordedTotal = history.reduce((sum, item) => sum + normalizeAmount(item.amount), 0)
+  const tolerance = 0
+
+  let normalizedHistory = history as typeof history
+
+  if (expectedTotal > 0 && Math.abs(recordedTotal - expectedTotal) > tolerance) {
+    const map = new Map<number | string, { payment: (typeof history)[number]; timestamp: number }>()
+    history.forEach((item) => {
+      const key = item.methodId ?? item.method ?? item.code
+      const timestamp = parseHistoryTimestamp(item.date)
+      const existing = map.get(key)
+      if (!existing || timestamp >= existing.timestamp) {
+        map.set(key, { payment: item, timestamp })
+      }
+    })
+
+    const deduped = Array.from(map.values())
+      .map((entry) => entry.payment)
+      .sort((a, b) => parseHistoryTimestamp(a.date) - parseHistoryTimestamp(b.date))
+
+    const dedupedTotal = deduped.reduce((sum, item) => sum + normalizeAmount(item.amount), 0)
+
+    if (deduped.length > 0 && Math.abs(dedupedTotal - expectedTotal) <= tolerance) {
+      normalizedHistory = deduped
+    } else {
+      const sortedByDateDesc = [...history].sort((a, b) => parseHistoryTimestamp(b.date) - parseHistoryTimestamp(a.date))
+      const latest = sortedByDateDesc[0]
+      const fallbackMethodId = latest?.methodId ?? invoice.value?.idPhuongThucThanhToan ?? invoice.value?.idPTTT ?? null
+      normalizedHistory = [
+        {
+          method: latest?.method || resolvePaymentMethodLabel(fallbackMethodId),
+          amount: expectedTotal,
+          code: latest?.code || `PTT${String(invoice.value?.id || 0).padStart(5, '0')}`,
+          userCode: latest?.userCode || invoice.value?.maNhanVien || invoice.value?.tenNhanVien || 'NV000001',
+          date: latest?.date || invoice.value?.ngayThanhToan || invoice.value?.ngayTao,
+          methodId: fallbackMethodId ?? undefined,
+        },
+      ]
+    }
+  }
+
+  return [...normalizedHistory].sort((a, b) => parseHistoryTimestamp(b.date) - parseHistoryTimestamp(a.date))
 })
 
 const primaryPaymentMethodId = computed(() => {
@@ -2030,7 +2171,7 @@ const calculatedShippingBase = computed(() => {
   return shippingBase > 0 ? shippingBase : 0
 })
 
-const calculatedFinalTotal = computed(() => {
+const calculatedFinalTotalRaw = computed(() => {
   // Thành tiền = tổng tiền sau giảm + toàn bộ phí giao hàng theo API.
   const subtotalAfterDiscount = resolvedSubtotalAfterDiscount.value
   let baseSubtotal = subtotalAfterDiscount
@@ -2048,7 +2189,9 @@ const calculatedFinalTotal = computed(() => {
   return finalTotal > 0 ? finalTotal : 0
 })
 
-const calculatedPaidAmount = computed(() => {
+const calculatedFinalTotal = computed(() => Math.max(Math.round(calculatedFinalTotalRaw.value), 0))
+
+const calculatedPaidAmountRaw = computed(() => {
   if (!invoice.value) return 0
 
   let paid = clampCurrency(resolveAmount(invoice.value.soTienDaThanhToan))
@@ -2060,11 +2203,37 @@ const calculatedPaidAmount = computed(() => {
   return paid
 })
 
-const calculatedRemainingAmount = computed(() => {
-  const remaining = calculatedFinalTotal.value - calculatedPaidAmount.value
+const calculatedPaidAmount = computed(() => Math.max(Math.round(calculatedPaidAmountRaw.value), 0))
+
+const calculatedRemainingAmountRaw = computed(() => {
+  const remaining = calculatedFinalTotalRaw.value - calculatedPaidAmountRaw.value
   return remaining > 0 ? remaining : 0
 })
+
+const calculatedRemainingAmount = computed(() => Math.max(Math.round(calculatedRemainingAmountRaw.value), 0))
+
+const calculatedOverpaidAmount = computed(() => {
+  const excess = calculatedPaidAmount.value - calculatedFinalTotal.value
+  return excess > 0 ? excess : 0
+})
+
+const paymentStatusClass = computed(() => {
+  if (calculatedOverpaidAmount.value > 0) {
+    return 'overpaid'
+  }
+  if (calculatedRemainingAmount.value > 0) {
+    return 'outstanding'
+  }
+  return 'paid-ok'
+})
+
 const additionalPaymentAmount = computed(() => {
+  if (updateForm.value?.trangThaiText !== 'Hoàn thành') {
+    return 0
+  }
+  if (modalOriginalStatus.value !== 'Đang giao hàng') {
+    return 0
+  }
   const inputAmount = updateForm.value?.soTienDaThanhToan
   if (inputAmount === undefined || inputAmount === null) {
     return 0
@@ -2084,24 +2253,70 @@ const paymentAmountForCompletion = computed(() => {
 })
 
 const remainingAmountForCompletion = computed(() => {
-  const outstanding = Math.round(calculatedFinalTotal.value) - paymentAmountForCompletion.value
+  const outstanding = calculatedFinalTotal.value - paymentAmountForCompletion.value
   return outstanding > 0 ? outstanding : 0
 })
 
-const paymentCompletionDelta = computed(() => paymentAmountForCompletion.value - Math.round(calculatedFinalTotal.value))
+const paymentCompletionDelta = computed(() => paymentAmountForCompletion.value - calculatedFinalTotal.value)
 
-const showPaymentInput = computed(() => updateForm.value.trangThaiText === 'Hoàn thành' && calculatedRemainingAmount.value > 0)
+const showPaymentInput = computed(
+  () =>
+    updateForm.value.trangThaiText === 'Hoàn thành' && modalOriginalStatus.value === 'Đang giao hàng' && calculatedRemainingAmount.value > 0
+)
+const setPaymentAmountProgrammatically = (amount: number) => {
+  isProgrammaticPaymentSync.value = true
+  updateForm.value.soTienDaThanhToan = amount
+  nextTick(() => {
+    isProgrammaticPaymentSync.value = false
+  })
+}
+
+watch(
+  () => updateForm.value.trangThaiText,
+  (newStatus) => {
+    if (newStatus === 'Hoàn thành') {
+      if (!paymentAmountManuallyEdited.value) {
+        setPaymentAmountProgrammatically(calculatedRemainingAmount.value)
+      }
+    } else {
+      paymentAmountManuallyEdited.value = false
+    }
+  }
+)
+
+watch(
+  () => calculatedRemainingAmount.value,
+  (next) => {
+    if (showPaymentInput.value && !paymentAmountManuallyEdited.value) {
+      setPaymentAmountProgrammatically(next)
+    }
+  }
+)
+
+watch(
+  () => updateForm.value.soTienDaThanhToan,
+  (newValue, oldValue) => {
+    if (!showPaymentInput.value) {
+      paymentAmountManuallyEdited.value = false
+      return
+    }
+    if (isProgrammaticPaymentSync.value) {
+      return
+    }
+    if (newValue !== oldValue) {
+      paymentAmountManuallyEdited.value = true
+    }
+  }
+)
 
 const statusOptions = computed(() => {
+  if (modalOriginalStatus.value === 'Hoàn thành' || modalOriginalStatus.value === 'Đã huỷ') {
+    return [modalOriginalStatus.value]
+  }
   const isOffline = invoice.value?.loaiDon === false || updateForm.value.loaiDon === false
   const flow = isOffline ? OFFLINE_STATUS_FLOW : ONLINE_STATUS_FLOW
 
-  let currentStatus = 'Chờ xác nhận'
-  try {
-    currentStatus = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
-  } catch {
-    currentStatus = 'Chờ xác nhận'
-  }
+  const currentStatus = modalOriginalStatus.value || 'Chờ xác nhận'
 
   const normalizedCurrent = normalizeStatusForFlow(currentStatus)
   const currentPriority = STATUS_FLOW_ORDER[normalizedCurrent] ?? 0
@@ -2135,6 +2350,8 @@ const statusOptions = computed(() => {
 
   return options
 })
+
+const statusEditingLocked = computed(() => modalOriginalStatus.value === 'Hoàn thành' || modalOriginalStatus.value === 'Đã huỷ')
 
 // Methods
 
@@ -2559,9 +2776,12 @@ const showUpdateModal = async () => {
 
   // Get current status text from trangThaiDonHang (from getHighestPriorityStatusFromInvoice)
   const currentStatusText = getHighestPriorityStatusFromInvoice() || 'Chờ xác nhận'
-  const suggestedCollectionAmount = Math.round(calculatedRemainingAmount.value)
+  const suggestedCollectionAmount = calculatedRemainingAmount.value
+
+  modalOriginalStatus.value = currentStatusText
 
   // Populate form with current invoice data
+  isProgrammaticPaymentSync.value = true
   updateForm.value = {
     maHoaDon: invoice.value.maHoaDon || `HD${String(invoice.value.id).padStart(6, '0')}`,
     loaiDon: invoice.value.loaiDon || false,
@@ -2572,9 +2792,13 @@ const showUpdateModal = async () => {
     diaChiNhanHang: invoice.value.diaChiNhanHang || invoice.value.diaChiNguoiNhan || invoice.value.diaChi || '',
     emailNguoiNhan: invoice.value.emailNguoiNhan || invoice.value.email || '',
     ghiChu: invoice.value.ghiChu || '',
-    soTienDaThanhToan: suggestedCollectionAmount > 0 ? suggestedCollectionAmount : 0,
+    soTienDaThanhToan: 0,
     phiGiaoHang: invoice.value.phiVanChuyen || 0, // Current shipping fee
   }
+  paymentAmountManuallyEdited.value = false
+  nextTick(() => {
+    isProgrammaticPaymentSync.value = false
+  })
 
   // Reset location form
   updateLocationForm.value = {
@@ -2708,6 +2932,9 @@ const closeUpdateModal = () => {
     ghiChu: '',
     soTienDaThanhToan: 0,
   }
+  paymentAmountManuallyEdited.value = false
+  isProgrammaticPaymentSync.value = false
+  modalOriginalStatus.value = 'Chờ xác nhận'
   updateLocationForm.value = {
     thanhPho: '',
     quan: '',
@@ -2756,25 +2983,40 @@ const handleSaveUpdate = async () => {
       return
     }
 
-    const additionalAmount = additionalPaymentAmount.value
-    const paidAmountForValidation = paymentAmountForCompletion.value
+    const additionalAmount = Math.max(additionalPaymentAmount.value, 0)
+    const finalTotalRounded = Math.max(Math.round(calculatedFinalTotalRaw.value), 0)
+    const paidSoFarRounded = Math.max(Math.round(calculatedPaidAmountRaw.value), 0)
+    const expectedCollection = Math.max(finalTotalRounded - paidSoFarRounded, 0)
+    const projectedPaidTotal = paidSoFarRounded + additionalAmount
 
     if (statusName === 'Hoàn thành') {
-      const finalTotal = Math.round(calculatedFinalTotal.value)
-      const difference = paidAmountForValidation - finalTotal
+      const collectionDelta = expectedCollection - additionalAmount
 
-      if (difference > 0) {
+      if (collectionDelta > 0) {
         Message.error(
-          `Số tiền thu thêm khiến tổng thanh toán vượt tổng tiền sau giảm ${formatCurrency(difference)}. Vui lòng kiểm tra lại.`
+          `Đơn hàng vẫn còn thiếu ${formatCurrency(collectionDelta)} sau khi thu thêm. Thu đủ trước khi chuyển trạng thái Hoàn thành.`
         )
         saving.value = false
         return
       }
 
-      if (difference < 0) {
-        Message.error(
-          `Đơn hàng vẫn còn thiếu ${formatCurrency(Math.abs(difference))} sau khi thu thêm. Thu đủ trước khi chuyển trạng thái Hoàn thành.`
-        )
+      if (collectionDelta < 0) {
+        Message.error(`Số tiền thu thêm vượt quá số tiền cần thu ${formatCurrency(Math.abs(collectionDelta))}. Vui lòng kiểm tra lại.`)
+        saving.value = false
+        return
+      }
+
+      const totalDelta = projectedPaidTotal - finalTotalRounded
+      if (totalDelta !== 0) {
+        if (totalDelta > 0) {
+          Message.error(
+            `Số tiền thu thêm khiến tổng thanh toán vượt tổng tiền sau giảm ${formatCurrency(totalDelta)}. Vui lòng kiểm tra lại.`
+          )
+        } else {
+          Message.error(
+            `Đơn hàng vẫn còn thiếu ${formatCurrency(Math.abs(totalDelta))} sau khi thu thêm. Thu đủ trước khi chuyển trạng thái Hoàn thành.`
+          )
+        }
         saving.value = false
         return
       }
@@ -2919,10 +3161,18 @@ const handleSaveUpdate = async () => {
     }
 
     // Include payment amount when completing order for delivery (online)
-    if (showPaymentInput.value && paidAmountForValidation >= 0) {
-      updateData.soTienDaThanhToan = paidAmountForValidation
-      if (additionalAmount > 0) {
-        updateData.soTienThuThem = additionalAmount
+    let amountToPersist = additionalAmount
+    let totalPaidToPersist = projectedPaidTotal
+
+    if (statusName === 'Hoàn thành') {
+      totalPaidToPersist = finalTotalRounded
+      amountToPersist = Math.max(finalTotalRounded - paidSoFarRounded, 0)
+    }
+
+    if (statusName === 'Hoàn thành' || amountToPersist > 0) {
+      updateData.soTienDaThanhToan = totalPaidToPersist
+      if (amountToPersist > 0) {
+        updateData.soTienThuThem = amountToPersist
       }
       const methodId = primaryPaymentMethodId.value
       if (methodId) {
@@ -3891,6 +4141,16 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.summary-value.paid-ok {
+  color: #00b578;
+  font-weight: 600;
+}
+
+.summary-value.overpaid {
+  color: #165dff;
+  font-weight: 600;
+}
+
 .summary-value.outstanding {
   color: #f77234;
   font-weight: 600;
@@ -4121,6 +4381,14 @@ onMounted(() => {
 .summary-value.total {
   color: #00b42a;
   font-size: 16px;
+}
+
+.summary-value.paid-ok {
+  color: #00b42a;
+}
+
+.summary-value.overpaid {
+  color: #165dff;
 }
 
 .summary-value.outstanding {

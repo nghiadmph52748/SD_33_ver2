@@ -349,14 +349,21 @@ public class InvoiceService {
     }
 
     private BigDecimal resolveGrandTotal(HoaDon hoaDon) {
+        BigDecimal shipping = safe(hoaDon.getPhiVanChuyen());
+
         BigDecimal discounted = safe(hoaDon.getTongTienSauGiam());
         if (discounted.compareTo(BigDecimal.ZERO) > 0) {
-            return discounted;
+            BigDecimal total = discounted.add(shipping);
+            return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
         }
 
         BigDecimal detailTotal = calculateDetailTotal(hoaDon);
-        BigDecimal shipping = safe(hoaDon.getPhiVanChuyen());
-        return detailTotal.add(shipping);
+        if (detailTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            detailTotal = safe(hoaDon.getTongTien());
+        }
+
+        BigDecimal total = detailTotal.add(shipping);
+        return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
     }
 
     private BigDecimal resolveLineTotal(HoaDonChiTiet chiTiet) {
