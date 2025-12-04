@@ -262,10 +262,31 @@ public class VnPayController {
                 return;
             }
 
-            BigDecimal paid = BigDecimal.valueOf(paidAmount);
-            hoaDon.setTrangThaiThanhToan(true);
-            hoaDon.setSoTienDaThanhToan(paid);
-            hoaDon.setSoTienConLai(BigDecimal.ZERO);
+            BigDecimal invoiceTotal = resolveInvoiceTotal(hoaDon);
+            BigDecimal existingPaid = safe(hoaDon.getSoTienDaThanhToan());
+            BigDecimal incoming = paidAmount > 0 ? BigDecimal.valueOf(paidAmount) : invoiceTotal;
+            if (incoming.compareTo(BigDecimal.ZERO) <= 0 && invoiceTotal.compareTo(existingPaid) > 0) {
+                incoming = invoiceTotal.subtract(existingPaid);
+            }
+
+            BigDecimal newPaid = existingPaid.add(incoming);
+            if (newPaid.compareTo(invoiceTotal) > 0) {
+                newPaid = invoiceTotal;
+            }
+            if (newPaid.compareTo(existingPaid) < 0) {
+                newPaid = existingPaid;
+            }
+
+            hoaDon.setSoTienDaThanhToan(newPaid);
+
+            BigDecimal remaining = invoiceTotal.subtract(newPaid);
+            if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+                remaining = BigDecimal.ZERO;
+            }
+            hoaDon.setSoTienConLai(remaining);
+
+            boolean paidInFull = invoiceTotal.compareTo(BigDecimal.ZERO) > 0 && remaining.compareTo(BigDecimal.ZERO) == 0;
+            hoaDon.setTrangThaiThanhToan(paidInFull);
             if (hoaDon.getNgayThanhToan() == null) {
                 hoaDon.setNgayThanhToan(LocalDateTime.now());
             }
@@ -315,6 +336,22 @@ public class VnPayController {
             return "0₫";
         }
         return amount.stripTrailingZeros().toPlainString() + "₫";
+    }
+
+    private BigDecimal safe(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private BigDecimal resolveInvoiceTotal(HoaDon hoaDon) {
+        BigDecimal base = safe(hoaDon.getTongTienSauGiam());
+        if (base.compareTo(BigDecimal.ZERO) <= 0) {
+            base = safe(hoaDon.getTongTien());
+        }
+        BigDecimal total = base.add(safe(hoaDon.getPhiVanChuyen()));
+        if (Boolean.TRUE.equals(hoaDon.getGiaoHang())) {
+            total = total.add(safe(hoaDon.getHoanPhi()));
+        }
+        return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
     }
 
 }

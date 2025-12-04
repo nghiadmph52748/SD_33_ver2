@@ -354,6 +354,9 @@ public class InvoiceService {
         BigDecimal discounted = safe(hoaDon.getTongTienSauGiam());
         if (discounted.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal total = discounted.add(shipping);
+            if (Boolean.TRUE.equals(hoaDon.getGiaoHang())) {
+                total = total.add(safe(hoaDon.getHoanPhi()));
+            }
             return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
         }
 
@@ -363,6 +366,9 @@ public class InvoiceService {
         }
 
         BigDecimal total = detailTotal.add(shipping);
+        if (Boolean.TRUE.equals(hoaDon.getGiaoHang())) {
+            total = total.add(safe(hoaDon.getHoanPhi()));
+        }
         return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
     }
 

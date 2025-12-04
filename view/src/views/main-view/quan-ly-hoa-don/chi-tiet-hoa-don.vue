@@ -2186,7 +2186,14 @@ const calculatedFinalTotalRaw = computed(() => {
     baseSubtotal = 0
   }
 
-  const finalTotal = baseSubtotal + calculatedShippingGross.value
+  let finalTotal = baseSubtotal + calculatedShippingGross.value
+
+  const onlineFlag = invoice.value?.loaiDon ?? updateForm.value?.loaiDon
+  if (onlineFlag === true) {
+    const refundSigned = resolveAmount(invoice.value?.hoanPhi)
+    finalTotal += refundSigned
+  }
+
   return finalTotal > 0 ? finalTotal : 0
 })
 

@@ -914,22 +914,23 @@ const calculateFinalTotal = (invoice: any) => {
   if (!invoice) return 0
 
   const discounted = invoice.tongTienSauGiam
+  const shipping = Number(invoice.phiVanChuyen || 0)
+  const refundAddition = invoice.loaiDon === true ? Number(invoice.hoanPhi || 0) : 0
+
   if (discounted !== undefined && discounted !== null) {
     const baseTotal = Number(discounted)
     if (Number.isFinite(baseTotal)) {
-      const shipping = Number(invoice.phiVanChuyen || 0)
-      return Math.max(0, baseTotal + shipping)
+      return Math.max(0, baseTotal + shipping + refundAddition)
     }
   }
 
   const fallbackBase = invoice.tongTienSauGiam ?? invoice.tongTien ?? 0
   const numericBase = Number(fallbackBase)
-  const shipping = Number(invoice.phiVanChuyen || 0)
   if (!Number.isFinite(numericBase)) {
-    return Math.max(0, shipping)
+    return Math.max(0, shipping + refundAddition)
   }
 
-  return Math.max(0, numericBase + shipping)
+  return Math.max(0, numericBase + shipping + refundAddition)
 }
 
 const calculateDiscountAmount = (invoice: any) => {

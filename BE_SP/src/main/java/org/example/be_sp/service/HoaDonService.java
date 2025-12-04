@@ -102,6 +102,9 @@ public class HoaDonService {
         }
 
         BigDecimal total = baseTotal.add(safe(hoaDon.getPhiVanChuyen()));
+        if (Boolean.TRUE.equals(hoaDon.getGiaoHang())) {
+            total = total.add(safe(hoaDon.getHoanPhi()));
+        }
         return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
     }
 
