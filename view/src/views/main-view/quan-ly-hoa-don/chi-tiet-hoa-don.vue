@@ -338,16 +338,16 @@
       <a-tabs v-model:active-key="activeUpdateTab" type="line" class="update-tabs">
         <a-tab-pane key="order" title="Thông Tin Đơn Hàng">
           <a-form :model="updateForm" layout="vertical" class="update-form">
-            <a-form-item label="Mã đơn hàng">
+            <a-form-item label="Mã đơn hàng" required>
               <a-input v-model="updateForm.maHoaDon" disabled />
             </a-form-item>
-            <a-form-item label="Loại đơn">
+            <a-form-item label="Loại đơn" required>
               <a-select v-model="updateForm.loaiDon" placeholder="Chọn loại đơn" disabled>
                 <a-option :value="true">online</a-option>
                 <a-option :value="false">tại quầy</a-option>
               </a-select>
             </a-form-item>
-            <a-form-item label="Trạng thái">
+            <a-form-item label="Trạng thái" required>
               <a-select v-model="updateForm.trangThaiText" placeholder="Chọn trạng thái" :disabled="statusEditingLocked">
                 <a-option v-for="status in statusOptions" :key="status" :value="status">
                   {{ status }}
@@ -355,7 +355,7 @@
               </a-select>
             </a-form-item>
             <!-- Show payment input when completing an order that still has an outstanding balance -->
-            <a-form-item v-if="showPaymentInput" label="Số tiền thu thêm">
+            <a-form-item v-if="showPaymentInput" label="Số tiền thu thêm" required>
               <a-input-number
                 v-model="updateForm.soTienDaThanhToan"
                 :precision="0"
@@ -381,16 +381,16 @@
         </a-tab-pane>
         <a-tab-pane key="customer" title="Thông Tin Khách Hàng">
           <a-form :model="updateForm" layout="vertical" class="update-form">
-            <a-form-item label="Tên khách hàng">
+            <a-form-item label="Tên khách hàng" :required="isOnlineUpdateOrder">
               <a-input v-model="updateForm.tenNguoiNhan" placeholder="Nhập tên khách hàng" />
             </a-form-item>
-            <a-form-item label="Số điện thoại">
+            <a-form-item label="Số điện thoại" :required="isOnlineUpdateOrder">
               <a-input v-model="updateForm.soDienThoaiNguoiNhan" placeholder="Nhập số điện thoại" />
             </a-form-item>
-            <a-form-item label="Email">
+            <a-form-item label="Email" :required="isOnlineUpdateOrder">
               <a-input v-model="updateForm.emailNguoiNhan" placeholder="Nhập email" type="email" />
             </a-form-item>
-            <a-form-item label="Ghi chú">
+            <a-form-item label="Ghi chú" required>
               <a-textarea v-model="updateForm.ghiChu" placeholder="Nhập ghi chú (nếu có)" :auto-size="{ minRows: 2, maxRows: 4 }" />
             </a-form-item>
           </a-form>
@@ -403,7 +403,7 @@
             </div>
             <a-row :gutter="[12, 12]">
               <a-col :span="12">
-                <a-form-item label="Tỉnh/Thành phố" required>
+                <a-form-item label="Tỉnh/Thành phố" :required="isOnlineUpdateOrder">
                   <a-select
                     v-model="updateLocationForm.thanhPho"
                     placeholder="-- Chọn tỉnh/thành phố --"
@@ -417,7 +417,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="12">
-                <a-form-item label="Quận/Huyện" required>
+                <a-form-item label="Quận/Huyện" :required="isOnlineUpdateOrder">
                   <a-select
                     v-model="updateLocationForm.quan"
                     placeholder="-- Chọn quận/huyện --"
@@ -431,7 +431,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="12">
-                <a-form-item label="Phường/Xã" required>
+                <a-form-item label="Phường/Xã" :required="isOnlineUpdateOrder">
                   <a-select
                     v-model="updateLocationForm.phuong"
                     placeholder="-- Chọn phường/xã --"
@@ -444,7 +444,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="12">
-                <a-form-item label="Địa chỉ cụ thể" required>
+                <a-form-item label="Địa chỉ cụ thể" :required="isOnlineUpdateOrder">
                   <a-input v-model="updateLocationForm.diaChiCuThe" placeholder="Số nhà, đường..." :disabled="isAddressLocked" />
                 </a-form-item>
               </a-col>
@@ -453,7 +453,7 @@
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px">
               <span style="font-weight: 500">Phí giao hàng</span>
             </div>
-            <a-form-item label="Phí giao hàng (VNĐ)" v-if="calculatedShippingFee !== null">
+            <a-form-item label="Phí giao hàng (VNĐ)" v-if="calculatedShippingFee !== null" required>
               <a-space direction="vertical" fill>
                 <div v-if="isCalculatingShippingFee" class="shipping-fee-loading">
                   <a-spin size="small" />
@@ -474,7 +474,7 @@
                 </div>
               </a-space>
             </a-form-item>
-            <a-form-item label="Phụ phí phát sinh (VNĐ)" v-if="calculatedSurcharge !== null">
+            <a-form-item label="Phụ phí phát sinh (VNĐ)" v-if="calculatedSurcharge !== null" required>
               <a-input-number
                 v-model="calculatedSurcharge"
                 disabled
@@ -617,6 +617,7 @@ const originalInvoiceLocation = ref<{ thanhPho: string; quan: string; phuong: st
 const addressLockReason = ref<string | null>(null)
 const isAddressLocked = computed(() => Boolean(addressLockReason.value))
 const addressDisableReason = computed(() => addressLockReason.value)
+const isOnlineUpdateOrder = computed(() => updateForm.value.loaiDon !== false)
 
 // Helper functions
 const formatDateTime = (dateString?: string | Date) => {
@@ -2951,6 +2952,33 @@ const closeUpdateModal = () => {
 
 const handleSaveUpdate = async () => {
   if (!invoice.value) return
+
+  if (isOnlineUpdateOrder.value) {
+    const customerName = (updateForm.value.tenNguoiNhan || '').trim()
+    const customerPhone = (updateForm.value.soDienThoaiNguoiNhan || '').trim()
+    const addressFields = [
+      updateLocationForm.value.diaChiCuThe,
+      updateLocationForm.value.phuong,
+      updateLocationForm.value.quan,
+      updateLocationForm.value.thanhPho,
+    ]
+
+    if (!customerName) {
+      Message.error('Vui lòng nhập tên khách hàng cho đơn online.')
+      return
+    }
+
+    if (!customerPhone) {
+      Message.error('Vui lòng nhập số điện thoại khách hàng cho đơn online.')
+      return
+    }
+
+    const missingAddress = addressFields.some((part) => !part || !part.toString().trim())
+    if (missingAddress) {
+      Message.error('Vui lòng nhập đầy đủ địa chỉ giao hàng cho đơn online.')
+      return
+    }
+  }
 
   saving.value = true
   try {
