@@ -1,6 +1,6 @@
 USE [master]
 GO
-/****** Object:  Database [GearUp]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Database [GearUp]    Script Date: 12/5/2025 12:33:06 PM ******/
 CREATE DATABASE [GearUp]
 GO
 ALTER DATABASE [GearUp] SET COMPATIBILITY_LEVEL = 160
@@ -78,7 +78,7 @@ ALTER DATABASE [GearUp] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_PO
 GO
 USE [GearUp]
 GO
-/****** Object:  Table [dbo].[hoa_don]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[hoa_don]    Script Date: 12/5/2025 12:33:06 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -99,11 +99,11 @@ CREATE TABLE [dbo].[hoa_don](
 	[so_dien_thoai_khach_hang] [varchar](12) NULL,
 	[email_khach_hang] [varchar](255) NULL,
 	[ngay_thanh_toan] [datetime] NULL,
-    [trang_thai_thanh_toan] [int] NULL,
-    [so_tien_da_thanh_toan] [decimal](18, 2) NULL,
-    [so_tien_con_lai] [decimal](18, 2) NULL,
-    [phu_phi] [decimal](18, 2) NULL DEFAULT 0,
-    [hoan_phi] [decimal](18, 2) NULL DEFAULT 0,
+	[trang_thai_thanh_toan] [int] NULL,
+	[so_tien_da_thanh_toan] [decimal](18, 2) NULL,
+	[so_tien_con_lai] [decimal](18, 2) NULL,
+	[phu_phi] [decimal](18, 2) NULL,
+	[hoan_phi] [decimal](18, 2) NULL,
 	[trang_thai] [bit] NULL,
 	[deleted] [bit] NULL,
 	[create_at] [datetime] NULL,
@@ -116,7 +116,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  View [dbo].[v_hoa_don_full_info]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  View [dbo].[v_hoa_don_full_info]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -127,17 +127,14 @@ CREATE VIEW [dbo].[v_hoa_don_full_info] AS
 SELECT 
     hd.id,
     hd.ma_hoa_don,
-    hd.ten_hoa_don,
     hd.loai_don,
-    hd.mo_ta_loai_don,
-    hd.thoi_gian_tao,
-    hd.ngay_tao,
+    hd.create_at,
     hd.ngay_thanh_toan,
     hd.tong_tien,
     hd.tong_tien_sau_giam,
     hd.phi_van_chuyen,
     hd.phu_phi,
-	 hd.hoan_phi,
+	hd.hoan_phi,
     hd.ghi_chu,
     hd.trang_thai,
     hd.deleted,
@@ -147,22 +144,8 @@ SELECT
     hd.so_dien_thoai_khach_hang,
     hd.email_khach_hang,
     hd.dia_chi_khach_hang,
-    
-    -- Thông tin nhân viên
-    hd.ten_nhan_vien,
-    hd.ma_nhan_vien,
-    hd.so_dien_thoai_nhan_vien,
-    
-    -- Thông tin phiếu giảm giá
-    hd.ten_phieu_giam_gia,
-    hd.ma_phieu_giam_gia,
-    
+
     -- Thông tin bổ sung
-    hd.thoi_gian_cap_nhat,
-    hd.ghi_chu_noi_bo,
-    hd.ma_van_don,
-    hd.phuong_thuc_giao_hang,
-    hd.dia_chi_giao_hang_chi_tiet,
     hd.trang_thai_thanh_toan,
     hd.so_tien_da_thanh_toan,
     hd.so_tien_con_lai
@@ -170,7 +153,7 @@ FROM [dbo].[hoa_don] hd
 WHERE hd.deleted = 0
 
 GO
-/****** Object:  Table [dbo].[nhan_vien]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[nhan_vien]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -199,15 +182,15 @@ CREATE TABLE [dbo].[nhan_vien](
 	[create_by] [int] NULL,
 	[update_at] [date] NULL,
 	[update_by] [int] NULL,
-    [reset_token] VARCHAR(255) NULL,
-    [reset_token_expiry] DATETIME NULL
+	[reset_token] [varchar](255) NULL,
+	[reset_token_expiry] [datetime] NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[quyen_han]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[quyen_han]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -228,7 +211,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[tin_nhan]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[tin_nhan]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -240,7 +223,7 @@ CREATE TABLE [dbo].[tin_nhan](
 	[id_nguoi_nhan] [int] NULL,
 	[id_khach_hang_gui] [int] NULL,
 	[id_khach_hang_nhan] [int] NULL,
-	[loai_tin_nhan_type] [nvarchar](20) NULL DEFAULT 'STAFF_STAFF',
+	[loai_tin_nhan_type] [nvarchar](20) NULL,
 	[noi_dung] [nvarchar](max) NOT NULL,
 	[loai_tin_nhan] [varchar](20) NULL,
 	[da_doc] [bit] NULL,
@@ -258,7 +241,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  View [dbo].[v_tin_nhan_chi_tiet]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  View [dbo].[v_tin_nhan_chi_tiet]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -295,7 +278,7 @@ WHERE
     tn.deleted = 0
 
 GO
-/****** Object:  Table [dbo].[cuoc_trao_doi]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[cuoc_trao_doi]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -308,7 +291,7 @@ CREATE TABLE [dbo].[cuoc_trao_doi](
 	[id_khach_hang] [int] NULL,
 	[id_nhan_vien] [int] NULL,
 	[id_khach_hang_gui_cuoi] [int] NULL,
-	[loai_cuoc_trao_doi] [nvarchar](20) NULL DEFAULT 'STAFF_STAFF',
+	[loai_cuoc_trao_doi] [nvarchar](20) NULL,
 	[tin_nhan_cuoi_cung] [nvarchar](500) NULL,
 	[thoi_gian_tin_nhan_cuoi] [datetime2](7) NULL,
 	[id_nguoi_gui_cuoi] [int] NULL,
@@ -326,7 +309,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  View [dbo].[v_cuoc_trao_doi_chi_tiet]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  View [dbo].[v_cuoc_trao_doi_chi_tiet]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -365,309 +348,7 @@ WHERE
     ctd.deleted = 0
 
 GO
-/****** Object:  Table [dbo].[anh_san_pham]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[anh_san_pham](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[duong_dan_anh] [nvarchar](255) NOT NULL,
-	[ten_anh] [nvarchar](255) NULL,
-	[mau_anh] [nvarchar](255) NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[cai_dat_thong_bao]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[cai_dat_thong_bao](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_nguoi_dung] [int] NOT NULL,
-	[bat_thong_bao_don_hang] [bit] NOT NULL,
-	[bat_canh_bao_ton_kho] [bit] NOT NULL,
-	[bat_thong_bao_he_thong] [bit] NOT NULL,
-	[bat_tin_nhan_chat] [bit] NOT NULL,
-	[bat_thong_bao_web] [bit] NOT NULL,
-	[bat_thong_bao_email] [bit] NOT NULL,
-	[bat_che_do_im_lang] [bit] NOT NULL,
-	[gio_bat_dau_im_lang] [int] NOT NULL,
-	[gio_ket_thuc_im_lang] [int] NOT NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[chat_lieu]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[chat_lieu](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[ma_chat_lieu]  AS ('CL'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
-	[ten_chat_lieu] [nvarchar](255) NOT NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[chi_tiet_dot_giam_gia]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[chi_tiet_dot_giam_gia](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_dot_giam_gia] [int] NOT NULL,
-	[id_chi_tiet_san_pham] [int] NOT NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[chi_tiet_phieu_giam_gia]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[chi_tiet_phieu_giam_gia](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_phieu_giam_gia] [int] NOT NULL,
-	[id_chi_tiet_san_pham] [int] NOT NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[chi_tiet_san_pham]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[chi_tiet_san_pham](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_san_pham] [int] NOT NULL,
-	[id_mau_sac] [int] NOT NULL,
-	[id_kich_thuoc] [int] NOT NULL,
-	[id_de_giay] [int] NOT NULL,
-	[id_chat_lieu] [int] NOT NULL,
-	[id_trong_luong] [int] NOT NULL,
-	[ma_chi_tiet_san_pham]  AS ('CTSP'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
-	[ten_chi_tiet_san_pham] [nvarchar](255) NULL,
-	[so_luong] [int] NULL,
-	[gia_ban] [decimal](18, 2) NULL,
-	[trang_thai] [bit] NULL,
-	[ghi_chu] [nvarchar](255) NULL,
-	[qrcode] [varchar](255) NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-	[ten_san_pham_chi_tiet] [nvarchar](500) NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[chi_tiet_san_pham_anh]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[chi_tiet_san_pham_anh](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_chi_tiet_san_pham] [int] NOT NULL,
-	[id_anh_san_pham] [int] NOT NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[de_giay]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[de_giay](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[ma_de_giay]  AS ('DG'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
-	[ten_de_giay] [nvarchar](255) NOT NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[dia_chi_khach_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[dia_chi_khach_hang](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_khach_hang] [int] NOT NULL,
-	[ma_dia_chi]  AS ('DC'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
-	[ten_dia_chi] [nvarchar](255) NULL,
-	[thanh_pho] [nvarchar](255) NULL,
-	[quan] [nvarchar](255) NULL,
-	[phuong] [nvarchar](255) NULL,
-	[dia_chi_cu_the] [nvarchar](255) NULL,
-	[mac_dinh] [bit] NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[dot_giam_gia]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[dot_giam_gia](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[ma_dot_giam_gia] [nvarchar](50) NOT NULL,
-	[ten_dot_giam_gia] [nvarchar](255) NOT NULL,
-	[gia_tri_giam_gia] [int] NULL,
-	[ngay_bat_dau] [datetime] NULL,
-	[ngay_ket_thuc] [datetime] NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-	[created_at] [datetime] NULL,
-	[updated_at] [datetime] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[lich_su_dot_giam_gia]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[lich_su_dot_giam_gia](
-	[id] [bigint] IDENTITY(1,1) NOT NULL,
-	[id_dot_giam_gia] [int] NOT NULL,
-	[id_nhan_vien] [int] NOT NULL,
-	[hanh_dong] [nvarchar](50) NOT NULL,
-	[mo_ta_thay_doi] [nvarchar](max) NULL,
-	[ngay_thay_doi] [datetime2](7) NOT NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[hinh_thuc_thanh_toan]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[hinh_thuc_thanh_toan](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_hoa_don] [int] NOT NULL,
-	[id_phuong_thuc_thanh_toan] [int] NOT NULL,
-	[ma_hinh_thuc_thanh_toan]  AS ('HTTT'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
-	[tien_chuyen_khoan] [decimal](18, 2) NULL,
-	[tien_mat] [decimal](18, 2) NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[hoa_don_chi_tiet]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[hoa_don_chi_tiet](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_hoa_don] [int] NOT NULL,
-	[id_chi_tiet_san_pham] [int] NOT NULL,
-	[ma_hoa_don_chi_tiet]  AS ('HDCT'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
-	[so_luong] [int] NULL,
-	[gia_ban] [decimal](18, 2) NULL,
-	[thanh_tien] [decimal](18, 2) NULL,
-	[trang_thai] [bit] NULL,
-	[ghi_chu] [nvarchar](255) NULL,
-	[ten_san_pham_chi_tiet] [nvarchar](255) NULL,
-	[ma_san_pham_chi_tiet] [nvarchar](20) NULL,
-	[deleted] [bit] NULL,
-	[create_at] [datetime] NULL,
-	[create_by] [int] NULL,
-	[update_at] [datetime] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[khach_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[khach_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -695,7 +376,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  View [dbo].[vw_khach_hang_rfm]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  View [dbo].[vw_khach_hang_rfm]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -743,7 +424,342 @@ GROUP BY
     kh.create_at
 
 GO
-/****** Object:  Table [dbo].[kich_thuoc]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[anh_san_pham]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[anh_san_pham](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[duong_dan_anh] [nvarchar](255) NOT NULL,
+	[ten_anh] [nvarchar](255) NULL,
+	[mau_anh] [nvarchar](255) NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ca_lam_viec]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ca_lam_viec](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[ten_ca] [nvarchar](100) NOT NULL,
+	[thoi_gian_bat_dau] [time](7) NOT NULL,
+	[thoi_gian_ket_thuc] [time](7) NOT NULL,
+	[trang_thai] [bit] NULL,
+	[ghi_chu] [nvarchar](255) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[cai_dat_thong_bao]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[cai_dat_thong_bao](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_nguoi_dung] [int] NOT NULL,
+	[bat_thong_bao_don_hang] [bit] NOT NULL,
+	[bat_canh_bao_ton_kho] [bit] NOT NULL,
+	[bat_thong_bao_he_thong] [bit] NOT NULL,
+	[bat_tin_nhan_chat] [bit] NOT NULL,
+	[bat_thong_bao_web] [bit] NOT NULL,
+	[bat_thong_bao_email] [bit] NOT NULL,
+	[bat_che_do_im_lang] [bit] NOT NULL,
+	[gio_bat_dau_im_lang] [int] NOT NULL,
+	[gio_ket_thuc_im_lang] [int] NOT NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[chat_lieu]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[chat_lieu](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[ma_chat_lieu]  AS ('CL'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ten_chat_lieu] [nvarchar](255) NOT NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[chi_tiet_dot_giam_gia]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[chi_tiet_dot_giam_gia](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_dot_giam_gia] [int] NOT NULL,
+	[id_chi_tiet_san_pham] [int] NOT NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[chi_tiet_phieu_giam_gia]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[chi_tiet_phieu_giam_gia](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_phieu_giam_gia] [int] NOT NULL,
+	[id_chi_tiet_san_pham] [int] NOT NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[chi_tiet_san_pham]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[chi_tiet_san_pham](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_san_pham] [int] NOT NULL,
+	[id_mau_sac] [int] NOT NULL,
+	[id_kich_thuoc] [int] NOT NULL,
+	[id_de_giay] [int] NOT NULL,
+	[id_chat_lieu] [int] NOT NULL,
+	[id_trong_luong] [int] NOT NULL,
+	[ma_chi_tiet_san_pham]  AS ('CTSP'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ten_chi_tiet_san_pham] [nvarchar](255) NULL,
+	[so_luong] [int] NULL,
+	[gia_ban] [decimal](18, 2) NULL,
+	[trang_thai] [bit] NULL,
+	[ghi_chu] [nvarchar](255) NULL,
+	[qrcode] [varchar](255) NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+	[ten_san_pham_chi_tiet] [nvarchar](500) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[chi_tiet_san_pham_anh]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[chi_tiet_san_pham_anh](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_chi_tiet_san_pham] [int] NOT NULL,
+	[id_anh_san_pham] [int] NOT NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[de_giay]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[de_giay](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[ma_de_giay]  AS ('DG'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ten_de_giay] [nvarchar](255) NOT NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[dia_chi_khach_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[dia_chi_khach_hang](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_khach_hang] [int] NOT NULL,
+	[ma_dia_chi]  AS ('DC'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[ten_dia_chi] [nvarchar](255) NULL,
+	[thanh_pho] [nvarchar](255) NULL,
+	[quan] [nvarchar](255) NULL,
+	[phuong] [nvarchar](255) NULL,
+	[dia_chi_cu_the] [nvarchar](255) NULL,
+	[mac_dinh] [bit] NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[dot_giam_gia]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[dot_giam_gia](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[ma_dot_giam_gia] [nvarchar](50) NOT NULL,
+	[ten_dot_giam_gia] [nvarchar](255) NOT NULL,
+	[gia_tri_giam_gia] [int] NULL,
+	[ngay_bat_dau] [datetime] NULL,
+	[ngay_ket_thuc] [datetime] NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[created_at] [datetime] NULL,
+	[updated_at] [datetime] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[giao_ca]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[giao_ca](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[nguoi_giao_id] [int] NOT NULL,
+	[nguoi_nhan_id] [int] NOT NULL,
+	[ca_lam_viec_id] [int] NOT NULL,
+	[thoi_gian_giao_ca] [datetime2](7) NOT NULL,
+	[tong_tien_ban_dau] [decimal](18, 2) NULL,
+	[tong_tien_cuoi_ca] [decimal](18, 2) NULL,
+	[tong_tien_mat] [decimal](18, 2) NULL,
+	[tong_tien_chuyen_khoan] [decimal](18, 2) NULL,
+	[tong_tien_khac] [decimal](18, 2) NULL,
+	[tong_doanh_thu] [decimal](18, 2) NULL,
+	[tien_phat_sinh] [decimal](18, 2) NULL,
+	[tong_tien_thuc_te] [decimal](18, 2) NULL,
+	[chenh_lech] [decimal](18, 2) NULL,
+	[tien_mat_nop_lai] [decimal](18, 2) NULL,
+	[ghi_chu] [nvarchar](255) NULL,
+	[so_tien_nhan_thuc_te] [decimal](18, 2) NULL,
+	[trang_thai_xac_nhan] [nvarchar](50) NOT NULL,
+	[thoi_gian_xac_nhan] [datetime2](7) NULL,
+	[ghi_chu_xac_nhan] [nvarchar](255) NULL,
+	[trang_thai_ca] [nvarchar](50) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[hinh_thuc_thanh_toan]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[hinh_thuc_thanh_toan](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_hoa_don] [int] NOT NULL,
+	[id_phuong_thuc_thanh_toan] [int] NOT NULL,
+	[ma_hinh_thuc_thanh_toan]  AS ('HTTT'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[tien_chuyen_khoan] [decimal](18, 2) NULL,
+	[tien_mat] [decimal](18, 2) NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[hoa_don_chi_tiet]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[hoa_don_chi_tiet](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_hoa_don] [int] NOT NULL,
+	[id_chi_tiet_san_pham] [int] NOT NULL,
+	[ma_hoa_don_chi_tiet]  AS ('HDCT'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[so_luong] [int] NULL,
+	[gia_ban] [decimal](18, 2) NULL,
+	[thanh_tien] [decimal](18, 2) NULL,
+	[trang_thai] [bit] NULL,
+	[ghi_chu] [nvarchar](255) NULL,
+	[ten_san_pham_chi_tiet] [nvarchar](255) NULL,
+	[ma_san_pham_chi_tiet] [nvarchar](20) NULL,
+	[deleted] [bit] NULL,
+	[create_at] [datetime] NULL,
+	[create_by] [int] NULL,
+	[update_at] [datetime] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[kich_thuoc]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -764,7 +780,109 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[loai_don_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[lich_lam_viec]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[lich_lam_viec](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[nhan_vien_id] [int] NOT NULL,
+	[ca_lam_viec_id] [int] NOT NULL,
+	[ngay_lam_viec] [date] NOT NULL,
+	[trang_thai] [bit] NULL,
+	[ghi_chu] [nvarchar](255) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[lich_su_ai_chat]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[lich_su_ai_chat](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_khach_hang] [int] NOT NULL,
+	[session_id] [nvarchar](255) NOT NULL,
+	[role] [nvarchar](50) NOT NULL,
+	[content] [nvarchar](max) NOT NULL,
+	[timestamp] [datetime2](7) NULL,
+	[created_at] [datetime2](7) NULL,
+	[created_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[lich_su_don_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[lich_su_don_hang](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[id_hoa_don] [int] NOT NULL,
+	[id_nhan_vien] [int] NULL,
+	[ma_lich_su_don_hang]  AS ('TL'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
+	[trang_thai_cu] [nvarchar](100) NULL,
+	[trang_thai_moi] [nvarchar](100) NOT NULL,
+	[hanh_dong] [nvarchar](100) NOT NULL,
+	[mo_ta] [nvarchar](500) NULL,
+	[ghi_chu] [nvarchar](500) NULL,
+	[thoi_gian] [datetime] NOT NULL,
+	[trang_thai] [bit] NULL,
+	[deleted] [bit] NULL,
+	[create_at] [date] NULL,
+	[create_by] [int] NULL,
+	[update_at] [date] NULL,
+	[update_by] [int] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[lich_su_dot_giam_gia]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[lich_su_dot_giam_gia](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[id_dot_giam_gia] [int] NOT NULL,
+	[id_nhan_vien] [int] NOT NULL,
+	[hanh_dong] [nvarchar](50) NOT NULL,
+	[mo_ta_thay_doi] [nvarchar](max) NULL,
+	[ngay_thay_doi] [datetime2](7) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[lich_su_phieu_giam_gia]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[lich_su_phieu_giam_gia](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[id_phieu_giam_gia] [int] NOT NULL,
+	[id_nhan_vien] [int] NOT NULL,
+	[hanh_dong] [nvarchar](50) NOT NULL,
+	[mo_ta_thay_doi] [nvarchar](max) NULL,
+	[ngay_thay_doi] [datetime2](7) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[loai_don_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -786,7 +904,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[mau_sac]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[mau_sac]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -808,7 +926,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[nha_san_xuat]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[nha_san_xuat]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -829,7 +947,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[phieu_giam_gia]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[phieu_giam_gia]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -861,7 +979,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[phieu_giam_gia_ca_nhan]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[phieu_giam_gia_ca_nhan]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -886,25 +1004,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[lich_su_phieu_giam_gia]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[lich_su_phieu_giam_gia](
-	[id] [bigint] IDENTITY(1,1) NOT NULL,
-	[id_phieu_giam_gia] [int] NOT NULL,
-	[id_nhan_vien] [int] NOT NULL,
-	[hanh_dong] [nvarchar](50) NOT NULL,
-	[mo_ta_thay_doi] [nvarchar](max) NULL,
-	[ngay_thay_doi] [datetime2](7) NOT NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[phuong_thuc_thanh_toan]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[phuong_thuc_thanh_toan]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -925,7 +1025,32 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[san_pham]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[qr_sessions]    Script Date: 12/5/2025 12:33:07 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[qr_sessions](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[session_id] [nvarchar](36) NOT NULL,
+	[order_code] [nvarchar](50) NOT NULL,
+	[id_hoa_don] [int] NULL,
+	[qr_code_url] [nvarchar](max) NULL,
+	[status] [nvarchar](20) NOT NULL,
+	[expires_at] [datetime2](7) NOT NULL,
+	[created_at] [datetime2](7) NOT NULL,
+	[cart_data_json] [nvarchar](max) NULL,
+	[subtotal] [decimal](18, 2) NOT NULL,
+	[discount_amount] [decimal](18, 2) NULL,
+	[shipping_fee] [decimal](18, 2) NULL,
+	[final_price] [decimal](18, 2) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[san_pham]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -948,7 +1073,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[thanh_toan_don_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[thanh_toan_don_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -966,7 +1091,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[thong_bao]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[thong_bao]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -993,7 +1118,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[thong_tin_don_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[thong_tin_don_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1013,60 +1138,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[lich_su_don_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[lich_su_don_hang](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_hoa_don] [int] NOT NULL,
-	[id_nhan_vien] [int] NULL,
-	[ma_lich_su_don_hang]  AS ('TL'+right('00000'+CONVERT([nvarchar](5),[ID]),(5))) PERSISTED,
-	[trang_thai_cu] [nvarchar](100) NULL,
-	[trang_thai_moi] [nvarchar](100) NOT NULL,
-	[hanh_dong] [nvarchar](100) NOT NULL,
-	[mo_ta] [nvarchar](500) NULL,
-	[ghi_chu] [nvarchar](500) NULL,
-	[thoi_gian] [datetime] NOT NULL,
-	[trang_thai] [bit] NULL,
-	[deleted] [bit] NULL,
-	[create_at] [date] NULL,
-	[create_by] [int] NULL,
-	[update_at] [date] NULL,
-	[update_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[qr_sessions]    Script Date: 11/12/2025 10:29:48 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[qr_sessions](
-	[id] [bigint] IDENTITY(1,1) NOT NULL,
-	[session_id] [nvarchar](36) NOT NULL,
-	[order_code] [nvarchar](50) NOT NULL,
-	[id_hoa_don] [int] NULL,
-	[qr_code_url] [nvarchar](max) NULL,
-	[status] [nvarchar](20) NOT NULL,
-	[expires_at] [datetime2](7) NOT NULL,
-	[created_at] [datetime2](7) NOT NULL,
-	[cart_data_json] [nvarchar](max) NULL,
-	[subtotal] [decimal](18, 2) NOT NULL,
-	[discount_amount] [decimal](18, 2) NULL,
-	[shipping_fee] [decimal](18, 2) NULL,
-	[final_price] [decimal](18, 2) NOT NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[token_blacklist]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[token_blacklist]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1083,7 +1155,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[trang_thai_don_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[trang_thai_don_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1104,7 +1176,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[trong_luong]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[trong_luong]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1125,7 +1197,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[xuat_xu]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Table [dbo].[xuat_xu]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1145,76 +1217,6 @@ PRIMARY KEY CLUSTERED
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[lich_su_ai_chat]    Script Date: 11/14/2025 08:00:00 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[lich_su_ai_chat](
-	[id] [int] IDENTITY(1,1) NOT NULL,
-	[id_khach_hang] [int] NOT NULL,
-	[session_id] [nvarchar](255) NOT NULL,
-	[role] [nvarchar](50) NOT NULL,
-	[content] [nvarchar](max) NOT NULL,
-	[timestamp] [datetime2](7) NULL DEFAULT GETDATE(),
-	[created_at] [datetime2](7) NULL DEFAULT GETDATE(),
-	[created_by] [int] NULL,
-PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-GO
-CREATE TABLE dbo.ca_lam_viec (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    ten_ca NVARCHAR(100) NOT NULL,
-    thoi_gian_bat_dau TIME NOT NULL,
-    thoi_gian_ket_thuc TIME NOT NULL,
-    trang_thai BIT NULL, 
-    ghi_chu NVARCHAR(255) NULL
-);
-
-
-CREATE TABLE dbo.lich_lam_viec ( 
-    id INT IDENTITY(1,1) PRIMARY KEY, 
-    nhan_vien_id INT NOT NULL, 
-    ca_lam_viec_id INT NOT NULL,
-    ngay_lam_viec DATE NOT NULL,
-    trang_thai BIT NULL, 
-    ghi_chu NVARCHAR(255) NULL,
-
-    CONSTRAINT FK_lich_lam_viec_nhan_vien FOREIGN KEY (nhan_vien_id) REFERENCES dbo.nhan_vien(id),
-    CONSTRAINT FK_lich_lam_viec_ca_lam_viec FOREIGN KEY (ca_lam_viec_id) REFERENCES dbo.ca_lam_viec(id)
-);
-
-
-	CREATE TABLE dbo.giao_ca (
-		id INT IDENTITY(1,1) PRIMARY KEY,
-		nguoi_giao_id INT NOT NULL,
-		nguoi_nhan_id INT NOT NULL,
-		ca_lam_viec_id INT NOT NULL,
-		thoi_gian_giao_ca DATETIME2 NOT NULL,
-		tong_tien_ban_dau DECIMAL(18,2) NULL, 
-		tong_tien_cuoi_ca DECIMAL(18,2) NULL, 
-		tong_tien_mat DECIMAL(18,2) NULL,
-		tong_tien_chuyen_khoan DECIMAL(18,2) NULL,
-		tong_tien_khac DECIMAL(18,2) NULL,
-		tong_doanh_thu DECIMAL(18,2) NULL,
-		tien_phat_sinh DECIMAL(18,2) NULL,
-		tong_tien_thuc_te DECIMAL(18,2) NULL,
-		chenh_lech DECIMAL(18,2) NULL,
-		tien_mat_nop_lai DECIMAL(18,2) NULL,
-		ghi_chu NVARCHAR(255) NULL,
-		so_tien_nhan_thuc_te DECIMAL(18,2) NULL, 
-		trang_thai_xac_nhan NVARCHAR(50) NOT NULL DEFAULT (N'Chưa xác nhận'), 
-		thoi_gian_xac_nhan DATETIME2 NULL,
-		ghi_chu_xac_nhan NVARCHAR(255) NULL, 
-		trang_thai_ca NVARCHAR(50) NULL DEFAULT (N'Đang làm'),
-		CONSTRAINT FK_giao_ca_nguoi_giao FOREIGN KEY (nguoi_giao_id) REFERENCES dbo.nhan_vien(id),
-		CONSTRAINT FK_giao_ca_nguoi_nhan FOREIGN KEY (nguoi_nhan_id) REFERENCES dbo.nhan_vien(id),
-		CONSTRAINT FK_giao_ca_ca_lam_viec FOREIGN KEY (ca_lam_viec_id) REFERENCES dbo.ca_lam_viec(id)
-	);
 GO
 SET IDENTITY_INSERT [dbo].[chat_lieu] ON 
 GO
@@ -1250,7 +1252,7 @@ SET IDENTITY_INSERT [dbo].[chi_tiet_dot_giam_gia] OFF
 GO
 SET IDENTITY_INSERT [dbo].[chi_tiet_san_pham] ON 
 GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (1, 1, 1, 1, 1, 1, 1, NULL, 48, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', NULL, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Đen - Size 39')
+INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (1, 1, 1, 1, 1, 1, 1, NULL, 47, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', NULL, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Đen - Size 39')
 GO
 INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (2, 1, 2, 2, 1, 1, 1, NULL, 44, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', NULL, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Trắng - Size 40')
 GO
@@ -1286,10 +1288,6 @@ INSERT [dbo].[dia_chi_khach_hang] ([id], [id_khach_hang], [ten_dia_chi], [thanh_
 GO
 INSERT [dbo].[dia_chi_khach_hang] ([id], [id_khach_hang], [ten_dia_chi], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [mac_dinh], [trang_thai], [deleted]) VALUES (2, 2, N'Địa chỉ công ty', N'Hà Nội', N'Hai Bà Trưng', N'Bạch Mai', N'Số 20 Đường XYZ, Bạch Mai, Hai Bà Trưng', 1, 1, 0)
 GO
-SET IDENTITY_INSERT [dbo].[dia_chi_khach_hang] OFF
-GO
-SET IDENTITY_INSERT [dbo].[dia_chi_khach_hang] ON 
-GO
 INSERT [dbo].[dia_chi_khach_hang] ([id], [id_khach_hang], [ten_dia_chi], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [mac_dinh], [trang_thai], [deleted]) VALUES (3, 3, N'Nhà riêng', N'Hà Nội', N'Cầu Giấy', N'Dịch Vọng', N'Số 15 Ngõ 68 Cầu Giấy', 1, 1, 0)
 GO
 INSERT [dbo].[dia_chi_khach_hang] ([id], [id_khach_hang], [ten_dia_chi], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [mac_dinh], [trang_thai], [deleted]) VALUES (4, 4, N'Công ty', N'Hà Nội', N'Hoàn Kiếm', N'Phan Chu Trinh', N'Phòng 1203, Tòa nhà Prime Center', 1, 1, 0)
@@ -1317,10 +1315,6 @@ GO
 INSERT [dbo].[khach_hang] ([id], [ten_khach_hang], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [gioi_tinh], [ngay_sinh], [phan_loai], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'Phạm Văn A', N'khachhang1', N'$2b$10$0mtckgjPZO1VE87q/FbAK.P/m5sgMZpBvglzziHgAzuJwaQ1G4eum', N'khachhang1@gmail.com', N'0123456789', 1, CAST(N'1998-03-10' AS Date), NULL, 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 INSERT [dbo].[khach_hang] ([id], [ten_khach_hang], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [gioi_tinh], [ngay_sinh], [phan_loai], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'Hoàng Thị B', N'khachhang2', N'$2a$10$moruvP4SlJifGfvkFTXuSuaXWQ58UlnCHWEc/PtmteILY9PeCUDU2', N'khachhang2@gmail.com', N'0987654321', 0, CAST(N'1996-07-25' AS Date), NULL, 1, 0, NULL, NULL, CAST(N'2025-10-13' AS Date), 1)
-GO
-SET IDENTITY_INSERT [dbo].[khach_hang] OFF
-GO
-SET IDENTITY_INSERT [dbo].[khach_hang] ON
 GO
 INSERT [dbo].[khach_hang] ([id], [ten_khach_hang], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [gioi_tinh], [ngay_sinh], [phan_loai], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, N'Lê Thành C', N'khachhang3', N'$2b$10$0mtckgjPZO1VE87q/FbAK.P/m5sgMZpBvglzziHgAzuJwaQ1G4eum', N'khachhang3@gmail.com', N'0901122334', 1, CAST(N'1993-05-20' AS Date), NULL, 1, 0, CAST(N'2025-09-15' AS Date), 1, NULL, NULL)
 GO
@@ -1374,17 +1368,17 @@ SET IDENTITY_INSERT [dbo].[nha_san_xuat] OFF
 GO
 SET IDENTITY_INSERT [dbo].[nhan_vien] ON 
 GO
-INSERT [dbo].[nhan_vien] ([id], [id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [gioi_tinh], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, N'Nguyễn Đại Ca', N'admin', N'$2b$10$U82w.VimlpY59wUI5WMHI.1POdYFduZtlm9m8fPdd64EyAcL4P/Gi', N'daica@gearup.vn', N'0987654321', NULL, CAST(N'1990-01-01' AS Date), N'Quản trị viên hệ thống', N'Hà Nội', N'Hoàn Kiếm', N'Phúc Tân', N'', 1, N'', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[nhan_vien] ([id], [id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [gioi_tinh], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [reset_token], [reset_token_expiry]) VALUES (1, 1, N'Nguyễn Đại Ca', N'admin', N'$2b$10$U82w.VimlpY59wUI5WMHI.1POdYFduZtlm9m8fPdd64EyAcL4P/Gi', N'daica@gearup.vn', N'0987654321', NULL, CAST(N'1990-01-01' AS Date), N'Quản trị viên hệ thống', N'Hà Nội', N'Hoàn Kiếm', N'Phúc Tân', N'', 1, N'', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, NULL, NULL)
 GO
-INSERT [dbo].[nhan_vien] ([id], [id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [gioi_tinh], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 1, N'Trần Thị Em', N'them', N'$2a$10$8K2L0IgfzC3QHICobxwVOXdKUOz5hdzrQyLj8LrQ8D6cjzVzVzQG', N'them.tran@gearup.vn', N'0978123456', NULL, CAST(N'1995-02-15' AS Date), N'Nhân viên bán hàng tại quầy', N'Hà Nội', N'Ba Đình', N'Ngọc Hà', N'Số 45 Ngõ 89 Đường Ngọc Hà', 0, N'012345678901', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+INSERT [dbo].[nhan_vien] ([id], [id_quyen_han], [ten_nhan_vien], [ten_tai_khoan], [mat_khau], [email], [so_dien_thoai], [anh_nhan_vien], [ngay_sinh], [ghi_chu], [thanh_pho], [quan], [phuong], [dia_chi_cu_the], [gioi_tinh], [cccd], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by], [reset_token], [reset_token_expiry]) VALUES (2, 1, N'Trần Thị Em', N'them', N'$2a$10$8K2L0IgfzC3QHICobxwVOXdKUOz5hdzrQyLj8LrQ8D6cjzVzVzQG', N'them.tran@gearup.vn', N'0978123456', NULL, CAST(N'1995-02-15' AS Date), N'Nhân viên bán hàng tại quầy', N'Hà Nội', N'Ba Đình', N'Ngọc Hà', N'Số 45 Ngõ 89 Đường Ngọc Hà', 0, N'012345678901', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[nhan_vien] OFF
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia] ON 
 GO
-INSERT [dbo].[phieu_giam_gia] ([id], [ma_phieu_giam_gia], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'PGG00001', N'Giảm giá 10% cho đơn hàng đầu tiên', 0, CAST(10.00 AS Decimal(18, 2)), CAST(1000000.00 AS Decimal(18, 2)), 98, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho khách hàng mới', 0, 0, CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia] ([id], [ma_phieu_giam_gia], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [so_tien_toi_da], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (1, N'PGG00001', N'Giảm giá 10% cho đơn hàng đầu tiên', 0, CAST(10.00 AS Decimal(18, 2)), NULL, CAST(1000000.00 AS Decimal(18, 2)), 97, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho khách hàng mới', 0, 0, CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-13T14:42:01.113' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
-INSERT [dbo].[phieu_giam_gia] ([id], [ma_phieu_giam_gia], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'PGG00002', N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', 1, CAST(200000.00 AS Decimal(18, 2)), CAST(2000000.00 AS Decimal(18, 2)), 50, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho tất cả khách hàng', 0, 0, CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+INSERT [dbo].[phieu_giam_gia] ([id], [ma_phieu_giam_gia], [ten_phieu_giam_gia], [loai_phieu_giam_gia], [gia_tri_giam_gia], [so_tien_toi_da], [hoa_don_toi_thieu], [so_luong_dung], [ngay_bat_dau], [ngay_ket_thuc], [trang_thai], [mo_ta], [noi_bat], [deleted], [created_at], [updated_at], [create_at], [create_by], [update_at], [update_by]) VALUES (2, N'PGG00002', N'Giảm giá 200.000đ cho đơn hàng từ 2 triệu', 1, CAST(200000.00 AS Decimal(18, 2)), NULL, CAST(2000000.00 AS Decimal(18, 2)), 50, CAST(N'2025-10-01T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, N'Áp dụng cho tất cả khách hàng', 0, 0, CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-13T14:42:01.120' AS DateTime), CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[phieu_giam_gia] OFF
 GO
@@ -1393,10 +1387,6 @@ GO
 INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, N'Phiếu giảm giá cá nhân - Khách 1', CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-12-27T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
 INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 2, 2, N'Phiếu giảm giá cá nhân - Khách 2', CAST(N'2025-09-27T00:00:00.000' AS DateTime), CAST(N'2025-11-27T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
-GO
-SET IDENTITY_INSERT [dbo].[phieu_giam_gia_ca_nhan] OFF
-GO
-SET IDENTITY_INSERT [dbo].[phieu_giam_gia_ca_nhan] ON 
 GO
 INSERT [dbo].[phieu_giam_gia_ca_nhan] ([id], [id_khach_hang], [id_phieu_giam_gia], [ten_phieu_giam_gia_ca_nhan], [ngay_nhan], [ngay_het_han], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, 3, 1, N'Phiếu khách 3 - giảm 10%', CAST(N'2025-10-15T00:00:00.000' AS DateTime), CAST(N'2025-12-31T23:59:59.000' AS DateTime), 1, 0, CAST(N'2025-10-15' AS Date), 1, NULL, NULL)
 GO
@@ -1478,19 +1468,19 @@ SET IDENTITY_INSERT [dbo].[xuat_xu] OFF
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__anh_san___F73EF501423DF869]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__anh_san___F73EF50112015C7E]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[anh_san_pham] ADD UNIQUE NONCLUSTERED 
 (
 	[duong_dan_anh] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [UQ_cai_dat_thong_bao_nguoi_dung]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ_cai_dat_thong_bao_nguoi_dung]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[cai_dat_thong_bao] ADD  CONSTRAINT [UQ_cai_dat_thong_bao_nguoi_dung] UNIQUE NONCLUSTERED 
 (
 	[id_nguoi_dung] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_cai_dat_thong_bao_nguoi_dung]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_cai_dat_thong_bao_nguoi_dung]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_cai_dat_thong_bao_nguoi_dung] ON [dbo].[cai_dat_thong_bao]
 (
 	[id_nguoi_dung] ASC
@@ -1500,13 +1490,13 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__chat_lie__47FA2872C3F37194]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__chat_lie__47FA28724B381CBE]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[chat_lieu] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_chat_lieu] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_chi_tiet_dot_giam_gia_dot]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_chi_tiet_dot_giam_gia_dot]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_chi_tiet_dot_giam_gia_dot] ON [dbo].[chi_tiet_dot_giam_gia]
 (
 	[id_dot_giam_gia] ASC
@@ -1514,7 +1504,7 @@ CREATE NONCLUSTERED INDEX [IX_chi_tiet_dot_giam_gia_dot] ON [dbo].[chi_tiet_dot_
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_chi_tiet_dot_giam_gia_san_pham]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_chi_tiet_dot_giam_gia_san_pham]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_chi_tiet_dot_giam_gia_san_pham] ON [dbo].[chi_tiet_dot_giam_gia]
 (
 	[id_chi_tiet_san_pham] ASC
@@ -1522,7 +1512,7 @@ CREATE NONCLUSTERED INDEX [IX_chi_tiet_dot_giam_gia_san_pham] ON [dbo].[chi_tiet
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_chi_tiet_san_pham_kich_thuoc]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_chi_tiet_san_pham_kich_thuoc]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_chi_tiet_san_pham_kich_thuoc] ON [dbo].[chi_tiet_san_pham]
 (
 	[id_kich_thuoc] ASC
@@ -1530,7 +1520,7 @@ CREATE NONCLUSTERED INDEX [IX_chi_tiet_san_pham_kich_thuoc] ON [dbo].[chi_tiet_s
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_chi_tiet_san_pham_mau_sac]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_chi_tiet_san_pham_mau_sac]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_chi_tiet_san_pham_mau_sac] ON [dbo].[chi_tiet_san_pham]
 (
 	[id_mau_sac] ASC
@@ -1538,7 +1528,7 @@ CREATE NONCLUSTERED INDEX [IX_chi_tiet_san_pham_mau_sac] ON [dbo].[chi_tiet_san_
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_chi_tiet_san_pham_san_pham]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_chi_tiet_san_pham_san_pham]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_chi_tiet_san_pham_san_pham] ON [dbo].[chi_tiet_san_pham]
 (
 	[id_san_pham] ASC
@@ -1547,7 +1537,7 @@ INCLUDE([gia_ban],[so_luong],[trang_thai])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_chi_tiet_san_pham_so_luong]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_chi_tiet_san_pham_so_luong]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_chi_tiet_san_pham_so_luong] ON [dbo].[chi_tiet_san_pham]
 (
 	[so_luong] ASC
@@ -1555,7 +1545,7 @@ CREATE NONCLUSTERED INDEX [IX_chi_tiet_san_pham_so_luong] ON [dbo].[chi_tiet_san
 WHERE ([deleted]=(0) AND [trang_thai]=(1) AND [so_luong]>(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_chi_tiet_san_pham_trang_thai]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_chi_tiet_san_pham_trang_thai]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_chi_tiet_san_pham_trang_thai] ON [dbo].[chi_tiet_san_pham]
 (
 	[trang_thai] ASC,
@@ -1565,7 +1555,25 @@ INCLUDE([so_luong],[gia_ban])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_cuoc_trao_doi_nhan_vien]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_cuoc_trao_doi_khach_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_cuoc_trao_doi_khach_hang] ON [dbo].[cuoc_trao_doi]
+(
+	[id_khach_hang] ASC
+)
+WHERE ([deleted]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_cuoc_trao_doi_loai]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_cuoc_trao_doi_loai] ON [dbo].[cuoc_trao_doi]
+(
+	[loai_cuoc_trao_doi] ASC
+)
+WHERE ([deleted]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_cuoc_trao_doi_nhan_vien]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_cuoc_trao_doi_nhan_vien] ON [dbo].[cuoc_trao_doi]
 (
 	[id_nhan_vien_1] ASC,
@@ -1575,7 +1583,7 @@ CREATE NONCLUSTERED INDEX [IX_cuoc_trao_doi_nhan_vien] ON [dbo].[cuoc_trao_doi]
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_cuoc_trao_doi_nhan_vien_1]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_cuoc_trao_doi_nhan_vien_1]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_cuoc_trao_doi_nhan_vien_1] ON [dbo].[cuoc_trao_doi]
 (
 	[id_nhan_vien_1] ASC
@@ -1584,7 +1592,7 @@ INCLUDE([thoi_gian_tin_nhan_cuoi],[so_tin_nhan_chua_doc_nv1])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_cuoc_trao_doi_nhan_vien_2]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_cuoc_trao_doi_nhan_vien_2]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_cuoc_trao_doi_nhan_vien_2] ON [dbo].[cuoc_trao_doi]
 (
 	[id_nhan_vien_2] ASC
@@ -1593,16 +1601,15 @@ INCLUDE([thoi_gian_tin_nhan_cuoi],[so_tin_nhan_chua_doc_nv2])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
--- Unique index for staff-staff conversations
-CREATE UNIQUE NONCLUSTERED INDEX [UQ_cuoc_trao_doi_staff_staff] ON [dbo].[cuoc_trao_doi]
+/****** Object:  Index [IX_cuoc_trao_doi_nhan_vien_single]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_cuoc_trao_doi_nhan_vien_single] ON [dbo].[cuoc_trao_doi]
 (
-	[id_nhan_vien_1] ASC,
-	[id_nhan_vien_2] ASC
+	[id_nhan_vien] ASC
 )
-WHERE ([deleted]=(0) AND [loai_cuoc_trao_doi]='STAFF_STAFF' AND [id_nhan_vien_1] IS NOT NULL AND [id_nhan_vien_2] IS NOT NULL)
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+WHERE ([deleted]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
--- Unique index for customer-staff conversations
+/****** Object:  Index [UQ_cuoc_trao_doi_customer_staff]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UQ_cuoc_trao_doi_customer_staff] ON [dbo].[cuoc_trao_doi]
 (
 	[id_khach_hang] ASC,
@@ -1611,15 +1618,24 @@ CREATE UNIQUE NONCLUSTERED INDEX [UQ_cuoc_trao_doi_customer_staff] ON [dbo].[cuo
 WHERE ([deleted]=(0) AND [loai_cuoc_trao_doi]='CUSTOMER_STAFF' AND [id_khach_hang] IS NOT NULL AND [id_nhan_vien] IS NOT NULL)
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
+/****** Object:  Index [UQ_cuoc_trao_doi_staff_staff]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_cuoc_trao_doi_staff_staff] ON [dbo].[cuoc_trao_doi]
+(
+	[id_nhan_vien_1] ASC,
+	[id_nhan_vien_2] ASC
+)
+WHERE ([deleted]=(0) AND [loai_cuoc_trao_doi]='STAFF_STAFF' AND [id_nhan_vien_1] IS NOT NULL AND [id_nhan_vien_2] IS NOT NULL)
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__de_giay__C3D40955612A1C73]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__de_giay__C3D40955F0D04C87]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[de_giay] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_de_giay] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_dia_chi_khach_hang_khach_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_dia_chi_khach_hang_khach_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_dia_chi_khach_hang_khach_hang] ON [dbo].[dia_chi_khach_hang]
 (
 	[id_khach_hang] ASC
@@ -1630,7 +1646,7 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__dot_giam__E885712BA9A1A897]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__dot_giam__E885712B60129CF0]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[dot_giam_gia] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_dot_giam_gia] ASC
@@ -1638,13 +1654,13 @@ ALTER TABLE [dbo].[dot_giam_gia] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ_dot_giam_gia_ma]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ_dot_giam_gia_ma]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[dot_giam_gia] ADD  CONSTRAINT [UQ_dot_giam_gia_ma] UNIQUE NONCLUSTERED 
 (
 	[ma_dot_giam_gia] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_dot_giam_gia_ngay]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_dot_giam_gia_ngay]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_dot_giam_gia_ngay] ON [dbo].[dot_giam_gia]
 (
 	[ngay_bat_dau] ASC,
@@ -1654,34 +1670,26 @@ INCLUDE([ten_dot_giam_gia],[gia_tri_giam_gia])
 WHERE ([deleted]=(0) AND [trang_thai]=(1))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_dot_giam_gia_history_composite]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE NONCLUSTERED INDEX [IX_dot_giam_gia_history_composite] ON [dbo].[lich_su_dot_giam_gia]
-(
-	[id_dot_giam_gia] ASC,
-	[ngay_thay_doi] DESC
-)
-INCLUDE([id_nhan_vien],[hanh_dong]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-/****** Object:  Index [IX_hoa_don_khach_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_hoa_don_khach_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_hoa_don_khach_hang] ON [dbo].[hoa_don]
 (
 	[id_khach_hang] ASC
 )
-INCLUDE([tong_tien_sau_giam],[ngay_tao],[trang_thai]) 
+INCLUDE([tong_tien_sau_giam],[create_at],[trang_thai]) 
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_hoa_don_ngay_tao]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_hoa_don_ngay_tao]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_hoa_don_ngay_tao] ON [dbo].[hoa_don]
 (
-	[ngay_tao] DESC,
+	[create_at] DESC,
 	[trang_thai] ASC
 )
 INCLUDE([tong_tien_sau_giam],[id_khach_hang]) 
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_hoa_don_nhan_vien]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_hoa_don_nhan_vien]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_hoa_don_nhan_vien] ON [dbo].[hoa_don]
 (
 	[id_nhan_vien] ASC
@@ -1689,7 +1697,7 @@ CREATE NONCLUSTERED INDEX [IX_hoa_don_nhan_vien] ON [dbo].[hoa_don]
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_hoa_don_phieu_giam_gia]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_hoa_don_phieu_giam_gia]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_hoa_don_phieu_giam_gia] ON [dbo].[hoa_don]
 (
 	[id_phieu_giam_gia] ASC
@@ -1697,11 +1705,11 @@ CREATE NONCLUSTERED INDEX [IX_hoa_don_phieu_giam_gia] ON [dbo].[hoa_don]
 WHERE ([id_phieu_giam_gia] IS NOT NULL AND [deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_hoa_don_trang_thai]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_hoa_don_trang_thai]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_hoa_don_trang_thai] ON [dbo].[hoa_don]
 (
 	[trang_thai] ASC,
-	[ngay_tao] DESC
+	[create_at] DESC
 )
 INCLUDE([ma_hoa_don],[tong_tien_sau_giam]) 
 WHERE ([deleted]=(0))
@@ -1709,7 +1717,7 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ_hoa_don_ma_hoa_don]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ_hoa_don_ma_hoa_don]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UQ_hoa_don_ma_hoa_don] ON [dbo].[hoa_don]
 (
 	[ma_hoa_don] ASC
@@ -1717,7 +1725,7 @@ CREATE UNIQUE NONCLUSTERED INDEX [UQ_hoa_don_ma_hoa_don] ON [dbo].[hoa_don]
 WHERE ([ma_hoa_don] IS NOT NULL)
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_hoa_don_chi_tiet_hoa_don]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_hoa_don_chi_tiet_hoa_don]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_hoa_don_chi_tiet_hoa_don] ON [dbo].[hoa_don_chi_tiet]
 (
 	[id_hoa_don] ASC
@@ -1726,7 +1734,7 @@ INCLUDE([so_luong],[gia_ban],[thanh_tien])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_hoa_don_chi_tiet_san_pham]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_hoa_don_chi_tiet_san_pham]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_hoa_don_chi_tiet_san_pham] ON [dbo].[hoa_don_chi_tiet]
 (
 	[id_chi_tiet_san_pham] ASC
@@ -1737,7 +1745,7 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__khach_ha__17112F094200345A]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__khach_ha__17112F09E63863B4]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_tai_khoan] ASC
@@ -1745,7 +1753,7 @@ ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__khach_ha__AB6E61643AD4DF9A]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__khach_ha__AB6E616467FF6A7A]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED 
 (
 	[email] ASC
@@ -1753,7 +1761,7 @@ ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__khach_ha__BD03D94CDC3358A8]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__khach_ha__BD03D94CF674C4A2]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED 
 (
 	[so_dien_thoai] ASC
@@ -1761,7 +1769,7 @@ ALTER TABLE [dbo].[khach_hang] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_khach_hang_search]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_khach_hang_search]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_khach_hang_search] ON [dbo].[khach_hang]
 (
 	[ten_khach_hang] ASC,
@@ -1772,15 +1780,73 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__kich_thu__06BE27955E7C4A7E]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__kich_thu__06BE279578D674BC]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[kich_thuoc] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_kich_thuoc] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
+/****** Object:  Index [idx_ai_chat_customer]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [idx_ai_chat_customer] ON [dbo].[lich_su_ai_chat]
+(
+	[id_khach_hang] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__mau_sac__25764485595621CD]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [idx_ai_chat_session]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [idx_ai_chat_session] ON [dbo].[lich_su_ai_chat]
+(
+	[session_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [idx_ai_chat_timestamp]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [idx_ai_chat_timestamp] ON [dbo].[lich_su_ai_chat]
+(
+	[timestamp] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_lich_su_don_hang_composite]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_lich_su_don_hang_composite] ON [dbo].[lich_su_don_hang]
+(
+	[id_hoa_don] ASC,
+	[thoi_gian] DESC
+)
+INCLUDE([trang_thai_moi],[ghi_chu]) 
+WHERE ([deleted]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_dot_giam_gia_history_composite]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_dot_giam_gia_history_composite] ON [dbo].[lich_su_dot_giam_gia]
+(
+	[id_dot_giam_gia] ASC,
+	[ngay_thay_doi] DESC
+)
+INCLUDE([id_nhan_vien],[hanh_dong]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [idx_phieu_giam_gia_history_id_phieu]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [idx_phieu_giam_gia_history_id_phieu] ON [dbo].[lich_su_phieu_giam_gia]
+(
+	[id_phieu_giam_gia] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [idx_phieu_giam_gia_history_ngay_thay_doi]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [idx_phieu_giam_gia_history_ngay_thay_doi] ON [dbo].[lich_su_phieu_giam_gia]
+(
+	[ngay_thay_doi] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_phieu_giam_gia_history_composite]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_phieu_giam_gia_history_composite] ON [dbo].[lich_su_phieu_giam_gia]
+(
+	[id_phieu_giam_gia] ASC,
+	[ngay_thay_doi] DESC
+)
+INCLUDE([id_nhan_vien],[hanh_dong]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [UQ__mau_sac__257644856783077C]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[mau_sac] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_mau_sac] ASC
@@ -1788,7 +1854,7 @@ ALTER TABLE [dbo].[mau_sac] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__nha_san___700B0905E0E74681]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__nha_san___700B0905F2EAA360]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[nha_san_xuat] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_nha_san_xuat] ASC
@@ -1796,7 +1862,7 @@ ALTER TABLE [dbo].[nha_san_xuat] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__nhan_vie__17112F09DD8B858D]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__nhan_vie__17112F09544C1366]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_tai_khoan] ASC
@@ -1804,7 +1870,7 @@ ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__nhan_vie__AB6E6164786A580A]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__nhan_vie__AB6E61645B3D539D]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED 
 (
 	[email] ASC
@@ -1812,7 +1878,7 @@ ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__nhan_vie__BD03D94C35B3FECA]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__nhan_vie__BD03D94C1AB3B56E]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED 
 (
 	[so_dien_thoai] ASC
@@ -1820,7 +1886,7 @@ ALTER TABLE [dbo].[nhan_vien] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_nhan_vien_search]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_nhan_vien_search]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_nhan_vien_search] ON [dbo].[nhan_vien]
 (
 	[ten_nhan_vien] ASC,
@@ -1831,13 +1897,13 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ_phieu_giam_gia_ma]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ_phieu_giam_gia_ma]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[phieu_giam_gia] ADD  CONSTRAINT [UQ_phieu_giam_gia_ma] UNIQUE NONCLUSTERED 
 (
 	[ma_phieu_giam_gia] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_phieu_giam_gia_ngay]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_phieu_giam_gia_ngay]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_phieu_giam_gia_ngay] ON [dbo].[phieu_giam_gia]
 (
 	[ngay_bat_dau] ASC,
@@ -1846,7 +1912,7 @@ CREATE NONCLUSTERED INDEX [IX_phieu_giam_gia_ngay] ON [dbo].[phieu_giam_gia]
 WHERE ([deleted]=(0) AND [trang_thai]=(1))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_phieu_giam_gia_noi_bat]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_phieu_giam_gia_noi_bat]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_phieu_giam_gia_noi_bat] ON [dbo].[phieu_giam_gia]
 (
 	[noi_bat] ASC,
@@ -1856,7 +1922,7 @@ INCLUDE([ma_phieu_giam_gia],[ten_phieu_giam_gia],[ngay_bat_dau],[ngay_ket_thuc])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_phieu_giam_gia_ca_nhan_khach_hang]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_phieu_giam_gia_ca_nhan_khach_hang]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_phieu_giam_gia_ca_nhan_khach_hang] ON [dbo].[phieu_giam_gia_ca_nhan]
 (
 	[id_khach_hang] ASC
@@ -1865,7 +1931,7 @@ INCLUDE([id_phieu_giam_gia],[trang_thai])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_phieu_giam_gia_ca_nhan_phieu]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_phieu_giam_gia_ca_nhan_phieu]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_phieu_giam_gia_ca_nhan_phieu] ON [dbo].[phieu_giam_gia_ca_nhan]
 (
 	[id_phieu_giam_gia] ASC
@@ -1873,29 +1939,35 @@ CREATE NONCLUSTERED INDEX [IX_phieu_giam_gia_ca_nhan_phieu] ON [dbo].[phieu_giam
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [idx_phieu_giam_gia_history_id_phieu]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE NONCLUSTERED INDEX [idx_phieu_giam_gia_history_id_phieu] ON [dbo].[lich_su_phieu_giam_gia]
-(
-	[id_phieu_giam_gia] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+SET ANSI_PADDING ON
 GO
-/****** Object:  Index [idx_phieu_giam_gia_history_ngay_thay_doi]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE NONCLUSTERED INDEX [idx_phieu_giam_gia_history_ngay_thay_doi] ON [dbo].[lich_su_phieu_giam_gia]
+/****** Object:  Index [IX_qr_sessions_order_code]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_qr_sessions_order_code] ON [dbo].[qr_sessions]
 (
-	[ngay_thay_doi] DESC
+	[order_code] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-/****** Object:  Index [IX_phieu_giam_gia_history_composite]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE NONCLUSTERED INDEX [IX_phieu_giam_gia_history_composite] ON [dbo].[lich_su_phieu_giam_gia]
-(
-	[id_phieu_giam_gia] ASC,
-	[ngay_thay_doi] DESC
-)
-INCLUDE([id_nhan_vien],[hanh_dong]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__quyen_ha__1EABFF49CA767B83]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_qr_sessions_status_expiry]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_qr_sessions_status_expiry] ON [dbo].[qr_sessions]
+(
+	[status] ASC,
+	[expires_at] DESC
+)
+INCLUDE([order_code],[final_price]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [UQ_qr_sessions_session]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_qr_sessions_session] ON [dbo].[qr_sessions]
+(
+	[session_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [UQ__quyen_ha__1EABFF49E4153270]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[quyen_han] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_quyen_han] ASC
@@ -1903,13 +1975,13 @@ ALTER TABLE [dbo].[quyen_han] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__san_pham__BA66C03132014C3D]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__san_pham__BA66C0318EBA7843]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[san_pham] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_san_pham] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_san_pham_nha_san_xuat]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_san_pham_nha_san_xuat]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_san_pham_nha_san_xuat] ON [dbo].[san_pham]
 (
 	[id_nha_san_xuat] ASC
@@ -1919,7 +1991,7 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_san_pham_ten_search]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_san_pham_ten_search]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_san_pham_ten_search] ON [dbo].[san_pham]
 (
 	[ten_san_pham] ASC
@@ -1928,7 +2000,7 @@ INCLUDE([trang_thai])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_san_pham_xuat_xu]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_san_pham_xuat_xu]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_san_pham_xuat_xu] ON [dbo].[san_pham]
 (
 	[id_xuat_xu] ASC
@@ -1938,13 +2010,13 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__thanh_to__B914BF1B7D6885D9]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__thanh_to__B914BF1B971695DA]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[thanh_toan_don_hang] ADD UNIQUE NONCLUSTERED 
 (
 	[txn_ref] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_thong_bao_chua_doc]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_thong_bao_chua_doc]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_thong_bao_chua_doc] ON [dbo].[thong_bao]
 (
 	[id_nguoi_dung] ASC,
@@ -1953,7 +2025,7 @@ CREATE NONCLUSTERED INDEX [IX_thong_bao_chua_doc] ON [dbo].[thong_bao]
 WHERE ([trang_thai]=(0) AND [deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_thong_bao_nguoi_dung]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_thong_bao_nguoi_dung]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_thong_bao_nguoi_dung] ON [dbo].[thong_bao]
 (
 	[id_nguoi_dung] ASC,
@@ -1962,39 +2034,7 @@ CREATE NONCLUSTERED INDEX [IX_thong_bao_nguoi_dung] ON [dbo].[thong_bao]
 	[thoi_gian_tao] DESC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_lich_su_don_hang_composite]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE NONCLUSTERED INDEX [IX_lich_su_don_hang_composite] ON [dbo].[lich_su_don_hang]
-(
-	[id_hoa_don] ASC,
-	[thoi_gian] DESC
-)
-INCLUDE([trang_thai_moi],[ghi_chu]) 
-WHERE ([deleted]=(0))
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-/****** Object:  Index [UQ_qr_sessions_session]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE UNIQUE NONCLUSTERED INDEX [UQ_qr_sessions_session] ON [dbo].[qr_sessions]
-(
-	[session_id] ASC
-)
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-/****** Object:  Index [IX_qr_sessions_status_expiry]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE NONCLUSTERED INDEX [IX_qr_sessions_status_expiry] ON [dbo].[qr_sessions]
-(
-	[status] ASC,
-	[expires_at] DESC
-)
-INCLUDE([order_code],[final_price]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-/****** Object:  Index [IX_qr_sessions_order_code]    Script Date: 11/12/2025 10:29:48 AM ******/
-CREATE NONCLUSTERED INDEX [IX_qr_sessions_order_code] ON [dbo].[qr_sessions]
-(
-	[order_code] ASC
-)
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
-/****** Object:  Index [IX_tin_nhan_chua_doc]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_tin_nhan_chua_doc]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_tin_nhan_chua_doc] ON [dbo].[tin_nhan]
 (
 	[id_nguoi_nhan] ASC,
@@ -2003,7 +2043,7 @@ CREATE NONCLUSTERED INDEX [IX_tin_nhan_chua_doc] ON [dbo].[tin_nhan]
 WHERE ([da_doc]=(0) AND [deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_tin_nhan_conversation]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_tin_nhan_conversation]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_tin_nhan_conversation] ON [dbo].[tin_nhan]
 (
 	[id_nguoi_gui] ASC,
@@ -2012,7 +2052,7 @@ CREATE NONCLUSTERED INDEX [IX_tin_nhan_conversation] ON [dbo].[tin_nhan]
 )
 INCLUDE([noi_dung],[da_doc],[loai_tin_nhan]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_tin_nhan_da_doc]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_tin_nhan_da_doc]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_tin_nhan_da_doc] ON [dbo].[tin_nhan]
 (
 	[da_doc] ASC,
@@ -2022,7 +2062,33 @@ INCLUDE([thoi_gian_gui],[id_nguoi_gui])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_tin_nhan_nguoi_gui]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_tin_nhan_khach_hang_gui]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tin_nhan_khach_hang_gui] ON [dbo].[tin_nhan]
+(
+	[id_khach_hang_gui] ASC
+)
+WHERE ([deleted]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tin_nhan_khach_hang_nhan]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tin_nhan_khach_hang_nhan] ON [dbo].[tin_nhan]
+(
+	[id_khach_hang_nhan] ASC
+)
+WHERE ([deleted]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tin_nhan_loai_type]    Script Date: 12/5/2025 12:33:07 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tin_nhan_loai_type] ON [dbo].[tin_nhan]
+(
+	[loai_tin_nhan_type] ASC
+)
+WHERE ([deleted]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tin_nhan_nguoi_gui]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_tin_nhan_nguoi_gui] ON [dbo].[tin_nhan]
 (
 	[id_nguoi_gui] ASC
@@ -2031,7 +2097,7 @@ INCLUDE([thoi_gian_gui],[da_doc])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_tin_nhan_nguoi_nhan]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_tin_nhan_nguoi_nhan]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_tin_nhan_nguoi_nhan] ON [dbo].[tin_nhan]
 (
 	[id_nguoi_nhan] ASC,
@@ -2041,49 +2107,22 @@ INCLUDE([thoi_gian_gui],[id_nguoi_gui])
 WHERE ([deleted]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_tin_nhan_thoi_gian]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [IX_tin_nhan_thoi_gian]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [IX_tin_nhan_thoi_gian] ON [dbo].[tin_nhan]
 (
 	[thoi_gian_gui] DESC
 )
 INCLUDE([id_nguoi_gui],[id_nguoi_nhan],[noi_dung]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_khach_hang_gui' AND object_id = OBJECT_ID('tin_nhan'))
-    CREATE NONCLUSTERED INDEX IX_tin_nhan_khach_hang_gui ON [dbo].[tin_nhan]([id_khach_hang_gui]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_khach_hang_nhan' AND object_id = OBJECT_ID('tin_nhan'))
-    CREATE NONCLUSTERED INDEX IX_tin_nhan_khach_hang_nhan ON [dbo].[tin_nhan]([id_khach_hang_nhan]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_tin_nhan_loai_type' AND object_id = OBJECT_ID('tin_nhan'))
-    CREATE NONCLUSTERED INDEX IX_tin_nhan_loai_type ON [dbo].[tin_nhan]([loai_tin_nhan_type]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_cuoc_trao_doi_khach_hang' AND object_id = OBJECT_ID('cuoc_trao_doi'))
-    CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_khach_hang ON [dbo].[cuoc_trao_doi]([id_khach_hang]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_cuoc_trao_doi_nhan_vien_single' AND object_id = OBJECT_ID('cuoc_trao_doi'))
-    CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_nhan_vien_single ON [dbo].[cuoc_trao_doi]([id_nhan_vien]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_cuoc_trao_doi_loai' AND object_id = OBJECT_ID('cuoc_trao_doi'))
-    CREATE NONCLUSTERED INDEX IX_cuoc_trao_doi_loai ON [dbo].[cuoc_trao_doi]([loai_cuoc_trao_doi]) WHERE [deleted] = 0
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_chat_customer' AND object_id = OBJECT_ID('lich_su_ai_chat'))
-    CREATE NONCLUSTERED INDEX idx_ai_chat_customer ON [dbo].[lich_su_ai_chat]([id_khach_hang])
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_chat_session' AND object_id = OBJECT_ID('lich_su_ai_chat'))
-    CREATE NONCLUSTERED INDEX idx_ai_chat_session ON [dbo].[lich_su_ai_chat]([session_id])
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_chat_timestamp' AND object_id = OBJECT_ID('lich_su_ai_chat'))
-    CREATE NONCLUSTERED INDEX idx_ai_chat_timestamp ON [dbo].[lich_su_ai_chat]([timestamp] DESC)
-GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [uk_token_blacklist_token]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [uk_token_blacklist_token]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[token_blacklist] ADD  CONSTRAINT [uk_token_blacklist_token] UNIQUE NONCLUSTERED 
 (
 	[token] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [idx_token_blacklist_expiry_date]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [idx_token_blacklist_expiry_date]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [idx_token_blacklist_expiry_date] ON [dbo].[token_blacklist]
 (
 	[expiry_date] ASC
@@ -2091,7 +2130,7 @@ CREATE NONCLUSTERED INDEX [idx_token_blacklist_expiry_date] ON [dbo].[token_blac
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [idx_token_blacklist_token]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [idx_token_blacklist_token]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [idx_token_blacklist_token] ON [dbo].[token_blacklist]
 (
 	[token] ASC
@@ -2099,7 +2138,7 @@ CREATE NONCLUSTERED INDEX [idx_token_blacklist_token] ON [dbo].[token_blacklist]
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [idx_token_blacklist_username]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [idx_token_blacklist_username]    Script Date: 12/5/2025 12:33:07 PM ******/
 CREATE NONCLUSTERED INDEX [idx_token_blacklist_username] ON [dbo].[token_blacklist]
 (
 	[username] ASC
@@ -2107,7 +2146,7 @@ CREATE NONCLUSTERED INDEX [idx_token_blacklist_username] ON [dbo].[token_blackli
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__trong_lu__399742A0B934375E]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__trong_lu__399742A0D8E2B05E]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[trong_luong] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_trong_luong] ASC
@@ -2115,7 +2154,7 @@ ALTER TABLE [dbo].[trong_luong] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__xuat_xu__BA9B8924F7B3F1AA]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  Index [UQ__xuat_xu__BA9B89249308FA1F]    Script Date: 12/5/2025 12:33:07 PM ******/
 ALTER TABLE [dbo].[xuat_xu] ADD UNIQUE NONCLUSTERED 
 (
 	[ten_xuat_xu] ASC
@@ -2163,6 +2202,8 @@ ALTER TABLE [dbo].[chi_tiet_san_pham_anh] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
 ALTER TABLE [dbo].[chi_tiet_san_pham_anh] ADD  DEFAULT ((0)) FOR [deleted]
 GO
+ALTER TABLE [dbo].[cuoc_trao_doi] ADD  DEFAULT ('STAFF_STAFF') FOR [loai_cuoc_trao_doi]
+GO
 ALTER TABLE [dbo].[de_giay] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
 ALTER TABLE [dbo].[de_giay] ADD  DEFAULT ((0)) FOR [deleted]
@@ -2181,7 +2222,9 @@ ALTER TABLE [dbo].[dot_giam_gia] ADD  DEFAULT (getdate()) FOR [created_at]
 GO
 ALTER TABLE [dbo].[dot_giam_gia] ADD  DEFAULT (getdate()) FOR [updated_at]
 GO
-ALTER TABLE [dbo].[lich_su_dot_giam_gia] ADD  DEFAULT (getdate()) FOR [ngay_thay_doi]
+ALTER TABLE [dbo].[giao_ca] ADD  DEFAULT (N'Chưa xác nhận') FOR [trang_thai_xac_nhan]
+GO
+ALTER TABLE [dbo].[giao_ca] ADD  DEFAULT (N'Đang làm') FOR [trang_thai_ca]
 GO
 ALTER TABLE [dbo].[hinh_thuc_thanh_toan] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
@@ -2189,19 +2232,23 @@ ALTER TABLE [dbo].[hinh_thuc_thanh_toan] ADD  DEFAULT ((0)) FOR [deleted]
 GO
 ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((0)) FOR [loai_don]
 GO
-ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((1)) FOR [trang_thai]
-GO
-ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((0)) FOR [deleted]
-GO
-ALTER TABLE [dbo].[hoa_don] ADD  CONSTRAINT [DF_hoa_don_thoi_gian_tao]  DEFAULT (getdate()) FOR [thoi_gian_tao]
-GO
-ALTER TABLE [dbo].[hoa_don] ADD  CONSTRAINT [DF_hoa_don_thoi_gian_cap_nhat]  DEFAULT (getdate()) FOR [thoi_gian_cap_nhat]
-GO
 ALTER TABLE [dbo].[hoa_don] ADD  CONSTRAINT [DF_hoa_don_trang_thai_thanh_toan]  DEFAULT ((0)) FOR [trang_thai_thanh_toan]
 GO
 ALTER TABLE [dbo].[hoa_don] ADD  CONSTRAINT [DF_hoa_don_so_tien_da_thanh_toan]  DEFAULT ((0)) FOR [so_tien_da_thanh_toan]
 GO
 ALTER TABLE [dbo].[hoa_don] ADD  CONSTRAINT [DF_hoa_don_so_tien_con_lai]  DEFAULT ((0)) FOR [so_tien_con_lai]
+GO
+ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((0)) FOR [phu_phi]
+GO
+ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((0)) FOR [hoan_phi]
+GO
+ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((1)) FOR [trang_thai]
+GO
+ALTER TABLE [dbo].[hoa_don] ADD  DEFAULT ((0)) FOR [deleted]
+GO
+ALTER TABLE [dbo].[hoa_don] ADD  CONSTRAINT [DF_hoa_don_thoi_gian_tao]  DEFAULT (getdate()) FOR [create_at]
+GO
+ALTER TABLE [dbo].[hoa_don] ADD  CONSTRAINT [DF_hoa_don_thoi_gian_cap_nhat]  DEFAULT (getdate()) FOR [update_at]
 GO
 ALTER TABLE [dbo].[hoa_don_chi_tiet] ADD  DEFAULT ((0)) FOR [so_luong]
 GO
@@ -2216,6 +2263,20 @@ GO
 ALTER TABLE [dbo].[kich_thuoc] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
 ALTER TABLE [dbo].[kich_thuoc] ADD  DEFAULT ((0)) FOR [deleted]
+GO
+ALTER TABLE [dbo].[lich_su_ai_chat] ADD  DEFAULT (getdate()) FOR [timestamp]
+GO
+ALTER TABLE [dbo].[lich_su_ai_chat] ADD  DEFAULT (getdate()) FOR [created_at]
+GO
+ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_thoi_gian]  DEFAULT (getdate()) FOR [thoi_gian]
+GO
+ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_trang_thai]  DEFAULT ((1)) FOR [trang_thai]
+GO
+ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_deleted]  DEFAULT ((0)) FOR [deleted]
+GO
+ALTER TABLE [dbo].[lich_su_dot_giam_gia] ADD  DEFAULT (getdate()) FOR [ngay_thay_doi]
+GO
+ALTER TABLE [dbo].[lich_su_phieu_giam_gia] ADD  DEFAULT (getdate()) FOR [ngay_thay_doi]
 GO
 ALTER TABLE [dbo].[mau_sac] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
@@ -2245,11 +2306,13 @@ ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan] ADD  DEFAULT ((0)) FOR [deleted]
 GO
-ALTER TABLE [dbo].[lich_su_phieu_giam_gia] ADD  DEFAULT (getdate()) FOR [ngay_thay_doi]
-GO
 ALTER TABLE [dbo].[phuong_thuc_thanh_toan] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
 ALTER TABLE [dbo].[phuong_thuc_thanh_toan] ADD  DEFAULT ((0)) FOR [deleted]
+GO
+ALTER TABLE [dbo].[qr_sessions] ADD  DEFAULT (N'PENDING') FOR [status]
+GO
+ALTER TABLE [dbo].[qr_sessions] ADD  DEFAULT (sysdatetime()) FOR [created_at]
 GO
 ALTER TABLE [dbo].[quyen_han] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
@@ -2273,15 +2336,7 @@ ALTER TABLE [dbo].[thong_tin_don_hang] ADD  DEFAULT ((1)) FOR [trang_thai]
 GO
 ALTER TABLE [dbo].[thong_tin_don_hang] ADD  DEFAULT ((0)) FOR [deleted]
 GO
-ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_thoi_gian]  DEFAULT (getdate()) FOR [thoi_gian]
-GO
-ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_trang_thai]  DEFAULT ((1)) FOR [trang_thai]
-GO
-ALTER TABLE [dbo].[lich_su_don_hang] ADD  CONSTRAINT [DF_lich_su_don_hang_deleted]  DEFAULT ((0)) FOR [deleted]
-GO
-ALTER TABLE [dbo].[qr_sessions] ADD  DEFAULT (sysdatetime()) FOR [created_at]
-GO
-ALTER TABLE [dbo].[qr_sessions] ADD  DEFAULT (N'PENDING') FOR [status]
+ALTER TABLE [dbo].[tin_nhan] ADD  DEFAULT ('STAFF_STAFF') FOR [loai_tin_nhan_type]
 GO
 ALTER TABLE [dbo].[token_blacklist] ADD  DEFAULT (getdate()) FOR [created_at]
 GO
@@ -2338,32 +2393,20 @@ GO
 ALTER TABLE [dbo].[chi_tiet_san_pham_anh]  WITH CHECK ADD FOREIGN KEY([id_chi_tiet_san_pham])
 REFERENCES [dbo].[chi_tiet_san_pham] ([id])
 GO
-ALTER TABLE [dbo].[qr_sessions]  WITH CHECK ADD  CONSTRAINT [FK_qr_sessions_hoa_don] FOREIGN KEY([id_hoa_don])
-REFERENCES [dbo].[hoa_don] ([id])
-ON DELETE SET NULL
+ALTER TABLE [dbo].[cuoc_trao_doi]  WITH CHECK ADD  CONSTRAINT [FK_cuoc_trao_doi_khach_hang] FOREIGN KEY([id_khach_hang])
+REFERENCES [dbo].[khach_hang] ([id])
 GO
-ALTER TABLE [dbo].[qr_sessions] CHECK CONSTRAINT [FK_qr_sessions_hoa_don]
+ALTER TABLE [dbo].[cuoc_trao_doi] CHECK CONSTRAINT [FK_cuoc_trao_doi_khach_hang]
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi]  WITH CHECK ADD  CONSTRAINT [FK_cuoc_trao_doi_khach_hang_gui_cuoi] FOREIGN KEY([id_khach_hang_gui_cuoi])
+REFERENCES [dbo].[khach_hang] ([id])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] CHECK CONSTRAINT [FK_cuoc_trao_doi_khach_hang_gui_cuoi]
 GO
 ALTER TABLE [dbo].[cuoc_trao_doi]  WITH CHECK ADD  CONSTRAINT [FK_cuoc_trao_doi_nguoi_gui_cuoi] FOREIGN KEY([id_nguoi_gui_cuoi])
 REFERENCES [dbo].[nhan_vien] ([id])
 GO
 ALTER TABLE [dbo].[cuoc_trao_doi] CHECK CONSTRAINT [FK_cuoc_trao_doi_nguoi_gui_cuoi]
-GO
-ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
-ADD CONSTRAINT FK_cuoc_trao_doi_khach_hang 
-FOREIGN KEY([id_khach_hang]) REFERENCES [dbo].[khach_hang]([id])
-GO
-ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
-ADD CONSTRAINT FK_cuoc_trao_doi_nhan_vien_single 
-FOREIGN KEY([id_nhan_vien]) REFERENCES [dbo].[nhan_vien]([id])
-GO
-ALTER TABLE [dbo].[cuoc_trao_doi] WITH CHECK 
-ADD CONSTRAINT FK_cuoc_trao_doi_khach_hang_gui_cuoi 
-FOREIGN KEY([id_khach_hang_gui_cuoi]) REFERENCES [dbo].[khach_hang]([id])
-GO
-ALTER TABLE [dbo].[lich_su_ai_chat] WITH CHECK
-ADD CONSTRAINT FK_ai_chat_history_khach_hang 
-FOREIGN KEY([id_khach_hang]) REFERENCES [dbo].[khach_hang]([id]) ON DELETE CASCADE
 GO
 ALTER TABLE [dbo].[cuoc_trao_doi]  WITH CHECK ADD  CONSTRAINT [FK_cuoc_trao_doi_nhan_vien_1] FOREIGN KEY([id_nhan_vien_1])
 REFERENCES [dbo].[nhan_vien] ([id])
@@ -2375,8 +2418,28 @@ REFERENCES [dbo].[nhan_vien] ([id])
 GO
 ALTER TABLE [dbo].[cuoc_trao_doi] CHECK CONSTRAINT [FK_cuoc_trao_doi_nhan_vien_2]
 GO
+ALTER TABLE [dbo].[cuoc_trao_doi]  WITH CHECK ADD  CONSTRAINT [FK_cuoc_trao_doi_nhan_vien_single] FOREIGN KEY([id_nhan_vien])
+REFERENCES [dbo].[nhan_vien] ([id])
+GO
+ALTER TABLE [dbo].[cuoc_trao_doi] CHECK CONSTRAINT [FK_cuoc_trao_doi_nhan_vien_single]
+GO
 ALTER TABLE [dbo].[dia_chi_khach_hang]  WITH CHECK ADD FOREIGN KEY([id_khach_hang])
 REFERENCES [dbo].[khach_hang] ([id])
+GO
+ALTER TABLE [dbo].[giao_ca]  WITH CHECK ADD  CONSTRAINT [FK_giao_ca_ca_lam_viec] FOREIGN KEY([ca_lam_viec_id])
+REFERENCES [dbo].[ca_lam_viec] ([id])
+GO
+ALTER TABLE [dbo].[giao_ca] CHECK CONSTRAINT [FK_giao_ca_ca_lam_viec]
+GO
+ALTER TABLE [dbo].[giao_ca]  WITH CHECK ADD  CONSTRAINT [FK_giao_ca_nguoi_giao] FOREIGN KEY([nguoi_giao_id])
+REFERENCES [dbo].[nhan_vien] ([id])
+GO
+ALTER TABLE [dbo].[giao_ca] CHECK CONSTRAINT [FK_giao_ca_nguoi_giao]
+GO
+ALTER TABLE [dbo].[giao_ca]  WITH CHECK ADD  CONSTRAINT [FK_giao_ca_nguoi_nhan] FOREIGN KEY([nguoi_nhan_id])
+REFERENCES [dbo].[nhan_vien] ([id])
+GO
+ALTER TABLE [dbo].[giao_ca] CHECK CONSTRAINT [FK_giao_ca_nguoi_nhan]
 GO
 ALTER TABLE [dbo].[hinh_thuc_thanh_toan]  WITH CHECK ADD FOREIGN KEY([id_hoa_don])
 REFERENCES [dbo].[hoa_don] ([id])
@@ -2399,6 +2462,34 @@ GO
 ALTER TABLE [dbo].[hoa_don_chi_tiet]  WITH CHECK ADD FOREIGN KEY([id_hoa_don])
 REFERENCES [dbo].[hoa_don] ([id])
 GO
+ALTER TABLE [dbo].[lich_lam_viec]  WITH CHECK ADD  CONSTRAINT [FK_lich_lam_viec_ca_lam_viec] FOREIGN KEY([ca_lam_viec_id])
+REFERENCES [dbo].[ca_lam_viec] ([id])
+GO
+ALTER TABLE [dbo].[lich_lam_viec] CHECK CONSTRAINT [FK_lich_lam_viec_ca_lam_viec]
+GO
+ALTER TABLE [dbo].[lich_lam_viec]  WITH CHECK ADD  CONSTRAINT [FK_lich_lam_viec_nhan_vien] FOREIGN KEY([nhan_vien_id])
+REFERENCES [dbo].[nhan_vien] ([id])
+GO
+ALTER TABLE [dbo].[lich_lam_viec] CHECK CONSTRAINT [FK_lich_lam_viec_nhan_vien]
+GO
+ALTER TABLE [dbo].[lich_su_ai_chat]  WITH CHECK ADD  CONSTRAINT [FK_ai_chat_history_khach_hang] FOREIGN KEY([id_khach_hang])
+REFERENCES [dbo].[khach_hang] ([id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[lich_su_ai_chat] CHECK CONSTRAINT [FK_ai_chat_history_khach_hang]
+GO
+ALTER TABLE [dbo].[lich_su_don_hang]  WITH CHECK ADD FOREIGN KEY([id_hoa_don])
+REFERENCES [dbo].[hoa_don] ([id])
+GO
+ALTER TABLE [dbo].[lich_su_don_hang]  WITH CHECK ADD FOREIGN KEY([id_nhan_vien])
+REFERENCES [dbo].[nhan_vien] ([id])
+GO
+ALTER TABLE [dbo].[lich_su_phieu_giam_gia]  WITH CHECK ADD FOREIGN KEY([id_nhan_vien])
+REFERENCES [dbo].[nhan_vien] ([id])
+GO
+ALTER TABLE [dbo].[lich_su_phieu_giam_gia]  WITH CHECK ADD FOREIGN KEY([id_phieu_giam_gia])
+REFERENCES [dbo].[phieu_giam_gia] ([id])
+GO
 ALTER TABLE [dbo].[nhan_vien]  WITH CHECK ADD FOREIGN KEY([id_quyen_han])
 REFERENCES [dbo].[quyen_han] ([id])
 GO
@@ -2408,11 +2499,11 @@ GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD FOREIGN KEY([id_phieu_giam_gia])
 REFERENCES [dbo].[phieu_giam_gia] ([id])
 GO
-ALTER TABLE [dbo].[lich_su_phieu_giam_gia]  WITH CHECK ADD FOREIGN KEY([id_nhan_vien])
-REFERENCES [dbo].[nhan_vien] ([id])
+ALTER TABLE [dbo].[qr_sessions]  WITH CHECK ADD  CONSTRAINT [FK_qr_sessions_hoa_don] FOREIGN KEY([id_hoa_don])
+REFERENCES [dbo].[hoa_don] ([id])
+ON DELETE SET NULL
 GO
-ALTER TABLE [dbo].[lich_su_phieu_giam_gia]  WITH CHECK ADD FOREIGN KEY([id_phieu_giam_gia])
-REFERENCES [dbo].[phieu_giam_gia] ([id])
+ALTER TABLE [dbo].[qr_sessions] CHECK CONSTRAINT [FK_qr_sessions_hoa_don]
 GO
 ALTER TABLE [dbo].[san_pham]  WITH CHECK ADD FOREIGN KEY([id_nha_san_xuat])
 REFERENCES [dbo].[nha_san_xuat] ([id])
@@ -2431,11 +2522,15 @@ GO
 ALTER TABLE [dbo].[thong_tin_don_hang]  WITH CHECK ADD FOREIGN KEY([id_trang_thai_don_hang])
 REFERENCES [dbo].[trang_thai_don_hang] ([id])
 GO
-ALTER TABLE [dbo].[lich_su_don_hang]  WITH CHECK ADD FOREIGN KEY([id_hoa_don])
-REFERENCES [dbo].[hoa_don] ([id])
+ALTER TABLE [dbo].[tin_nhan]  WITH CHECK ADD  CONSTRAINT [FK_tin_nhan_khach_hang_gui] FOREIGN KEY([id_khach_hang_gui])
+REFERENCES [dbo].[khach_hang] ([id])
 GO
-ALTER TABLE [dbo].[lich_su_don_hang]  WITH CHECK ADD FOREIGN KEY([id_nhan_vien])
-REFERENCES [dbo].[nhan_vien] ([id])
+ALTER TABLE [dbo].[tin_nhan] CHECK CONSTRAINT [FK_tin_nhan_khach_hang_gui]
+GO
+ALTER TABLE [dbo].[tin_nhan]  WITH CHECK ADD  CONSTRAINT [FK_tin_nhan_khach_hang_nhan] FOREIGN KEY([id_khach_hang_nhan])
+REFERENCES [dbo].[khach_hang] ([id])
+GO
+ALTER TABLE [dbo].[tin_nhan] CHECK CONSTRAINT [FK_tin_nhan_khach_hang_nhan]
 GO
 ALTER TABLE [dbo].[tin_nhan]  WITH CHECK ADD  CONSTRAINT [FK_tin_nhan_nguoi_gui] FOREIGN KEY([id_nguoi_gui])
 REFERENCES [dbo].[nhan_vien] ([id])
@@ -2447,22 +2542,11 @@ REFERENCES [dbo].[nhan_vien] ([id])
 GO
 ALTER TABLE [dbo].[tin_nhan] CHECK CONSTRAINT [FK_tin_nhan_nguoi_nhan]
 GO
-ALTER TABLE [dbo].[tin_nhan] WITH CHECK 
-ADD CONSTRAINT FK_tin_nhan_khach_hang_gui 
-FOREIGN KEY([id_khach_hang_gui]) REFERENCES [dbo].[khach_hang]([id])
-GO
-ALTER TABLE [dbo].[tin_nhan] WITH CHECK 
-ADD CONSTRAINT FK_tin_nhan_khach_hang_nhan 
-FOREIGN KEY([id_khach_hang_nhan]) REFERENCES [dbo].[khach_hang]([id])
-GO
 ALTER TABLE [dbo].[chi_tiet_san_pham]  WITH CHECK ADD CHECK  (([gia_ban]>=(0)))
 GO
 ALTER TABLE [dbo].[chi_tiet_san_pham]  WITH CHECK ADD CHECK  (([so_luong]>=(0)))
 GO
-ALTER TABLE [dbo].[cuoc_trao_doi]  WITH CHECK ADD  CONSTRAINT [CHK_cuoc_trao_doi_khac_nguoi] CHECK (
-    ([id_nhan_vien_1] IS NOT NULL AND [id_nhan_vien_2] IS NOT NULL AND [id_nhan_vien_1] <> [id_nhan_vien_2])
-    OR ([id_khach_hang] IS NOT NULL AND [id_nhan_vien] IS NOT NULL)
-)
+ALTER TABLE [dbo].[cuoc_trao_doi]  WITH CHECK ADD  CONSTRAINT [CHK_cuoc_trao_doi_khac_nguoi] CHECK  (([id_nhan_vien_1] IS NOT NULL AND [id_nhan_vien_2] IS NOT NULL AND [id_nhan_vien_1]<>[id_nhan_vien_2] OR [id_khach_hang] IS NOT NULL AND [id_nhan_vien] IS NOT NULL))
 GO
 ALTER TABLE [dbo].[cuoc_trao_doi] CHECK CONSTRAINT [CHK_cuoc_trao_doi_khac_nguoi]
 GO
@@ -2482,7 +2566,7 @@ ALTER TABLE [dbo].[hinh_thuc_thanh_toan]  WITH CHECK ADD CHECK  (([tien_chuyen_k
 GO
 ALTER TABLE [dbo].[hinh_thuc_thanh_toan]  WITH CHECK ADD CHECK  (([tien_mat]>=(0)))
 GO
-ALTER TABLE [dbo].[hoa_don]  WITH CHECK ADD CHECK  (([ngay_thanh_toan]>=[ngay_tao]))
+ALTER TABLE [dbo].[hoa_don]  WITH CHECK ADD CHECK  (([ngay_thanh_toan]>=[create_at]))
 GO
 ALTER TABLE [dbo].[hoa_don]  WITH CHECK ADD CHECK  (([tong_tien_sau_giam]<=[tong_tien]))
 GO
@@ -2520,12 +2604,11 @@ ALTER TABLE [dbo].[phieu_giam_gia]  WITH CHECK ADD CHECK  (([ngay_ket_thuc]>[nga
 GO
 ALTER TABLE [dbo].[phieu_giam_gia_ca_nhan]  WITH CHECK ADD CHECK  (([ngay_het_han]>[ngay_nhan]))
 GO
-ALTER TABLE [dbo].[tin_nhan]  WITH CHECK ADD  CONSTRAINT [CHK_tin_nhan_khac_nguoi] CHECK (
-    ([id_nguoi_gui] IS NOT NULL AND [id_nguoi_nhan] IS NOT NULL AND [id_nguoi_gui] <> [id_nguoi_nhan])
-    OR ([id_khach_hang_gui] IS NOT NULL AND [id_khach_hang_nhan] IS NOT NULL AND [id_khach_hang_gui] <> [id_khach_hang_nhan])
-    OR ([id_nguoi_gui] IS NOT NULL AND [id_khach_hang_nhan] IS NOT NULL)
-    OR ([id_khach_hang_gui] IS NOT NULL AND [id_nguoi_nhan] IS NOT NULL)
-)
+ALTER TABLE [dbo].[qr_sessions]  WITH CHECK ADD  CONSTRAINT [CHK_qr_sessions_amounts] CHECK  (([subtotal]>=(0) AND [final_price]>=(0) AND ([discount_amount] IS NULL OR [discount_amount]>=(0)) AND ([shipping_fee] IS NULL OR [shipping_fee]>=(0))))
+GO
+ALTER TABLE [dbo].[qr_sessions] CHECK CONSTRAINT [CHK_qr_sessions_amounts]
+GO
+ALTER TABLE [dbo].[tin_nhan]  WITH CHECK ADD  CONSTRAINT [CHK_tin_nhan_khac_nguoi] CHECK  (([id_nguoi_gui] IS NOT NULL AND [id_nguoi_nhan] IS NOT NULL AND [id_nguoi_gui]<>[id_nguoi_nhan] OR [id_khach_hang_gui] IS NOT NULL AND [id_khach_hang_nhan] IS NOT NULL AND [id_khach_hang_gui]<>[id_khach_hang_nhan] OR [id_nguoi_gui] IS NOT NULL AND [id_khach_hang_nhan] IS NOT NULL OR [id_khach_hang_gui] IS NOT NULL AND [id_nguoi_nhan] IS NOT NULL))
 GO
 ALTER TABLE [dbo].[tin_nhan] CHECK CONSTRAINT [CHK_tin_nhan_khac_nguoi]
 GO
@@ -2537,12 +2620,7 @@ ALTER TABLE [dbo].[tin_nhan]  WITH CHECK ADD  CONSTRAINT [CHK_tin_nhan_noi_dung]
 GO
 ALTER TABLE [dbo].[tin_nhan] CHECK CONSTRAINT [CHK_tin_nhan_noi_dung]
 GO
-/****** Check totals for qr_sessions ******/
-ALTER TABLE [dbo].[qr_sessions]  WITH CHECK ADD  CONSTRAINT [CHK_qr_sessions_amounts] CHECK  (([subtotal]>=(0) AND [final_price]>=(0) AND ([discount_amount] IS NULL OR [discount_amount]>=(0)) AND ([shipping_fee] IS NULL OR [shipping_fee]>=(0))))
-GO
-ALTER TABLE [dbo].[qr_sessions] CHECK CONSTRAINT [CHK_qr_sessions_amounts]
-GO
-/****** Object:  StoredProcedure [dbo].[sp_dem_tin_chua_doc]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  StoredProcedure [dbo].[sp_dem_tin_chua_doc]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -2563,7 +2641,7 @@ BEGIN
 END
 
 GO
-/****** Object:  StoredProcedure [dbo].[sp_GenerateMaHoaDon]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  StoredProcedure [dbo].[sp_GenerateMaHoaDon]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -2614,7 +2692,7 @@ BEGIN
 END
 
 GO
-/****** Object:  StoredProcedure [dbo].[sp_lay_danh_sach_cuoc_trao_doi]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  StoredProcedure [dbo].[sp_lay_danh_sach_cuoc_trao_doi]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -2659,7 +2737,7 @@ BEGIN
 END
 
 GO
-/****** Object:  StoredProcedure [dbo].[sp_lay_tin_nhan]    Script Date: 11/12/2025 10:29:48 AM ******/
+/****** Object:  StoredProcedure [dbo].[sp_lay_tin_nhan]    Script Date: 12/5/2025 12:33:07 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -2700,27 +2778,15 @@ BEGIN
 END
 
 GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Số điện thoại nhân viên xử lý đơn hàng' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'so_dien_thoai_nhan_vien'
-GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Mô tả chi tiết loại đơn hàng (Bán hàng tại quầy, Bán hàng online)' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'mo_ta_loai_don'
-GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Thời gian tạo hóa đơn chi tiết (bao gồm giờ phút giây)' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'thoi_gian_tao'
-GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Thời gian cập nhật cuối cùng của hóa đơn' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'thoi_gian_cap_nhat'
-GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Ghi chú nội bộ cho nhân viên xử lý' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'ghi_chu_noi_bo'
-GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Mã vận đơn của đơn vị vận chuyển' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'ma_van_don'
-GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Phương thức giao hàng (Giao tận nơi, Tại cửa hàng, Giao nhanh...)' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'phuong_thuc_giao_hang'
-GO
-EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Địa chỉ giao hàng chi tiết (có thể khác với địa chỉ khách hàng)' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'dia_chi_giao_hang_chi_tiet'
-GO
 EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Trạng thái thanh toán (0: Chưa thanh toán, 1: Đã thanh toán một phần, 2: Đã thanh toán đủ, 3: Hoàn tiền)' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'trang_thai_thanh_toan'
 GO
 EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Số tiền đã thanh toán' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'so_tien_da_thanh_toan'
 GO
 EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Số tiền còn lại cần thanh toán' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'so_tien_con_lai'
+GO
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Thời gian tạo hóa đơn chi tiết (bao gồm giờ phút giây)' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'create_at'
+GO
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Thời gian cập nhật cuối cùng của hóa đơn' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'hoa_don', @level2type=N'COLUMN',@level2name=N'update_at'
 GO
 EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Bảng timeline theo dõi quá trình xử lý đơn hàng' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'lich_su_don_hang'
 GO
