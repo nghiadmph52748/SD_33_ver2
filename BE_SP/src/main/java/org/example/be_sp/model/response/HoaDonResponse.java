@@ -81,8 +81,6 @@ public class HoaDonResponse {
             this.loaiPhieuGiamGia = hd.getIdPhieuGiamGia().getLoaiPhieuGiamGia();
             this.giaTriGiamGia = hd.getIdPhieuGiamGia().getGiaTriGiamGia();
         }
-
-        this.tenHoaDon = hd.getTenHoaDon();
         this.loaiDon = hd.getGiaoHang();
         this.phiVanChuyen = hd.getPhiVanChuyen();
         this.tongTien = hd.getTongTien();
@@ -92,7 +90,7 @@ public class HoaDonResponse {
         this.diaChiNhanHang = hd.getDiaChiNguoiNhan();
         this.soDienThoaiNguoiNhan = hd.getSoDienThoaiNguoiNhan();
         this.emailNguoiNhan = hd.getEmailNguoiNhan();
-        this.ngayTao = hd.getNgayTao();
+        this.ngayTao = hd.getCreateAt();
         this.ngayThanhToan = hd.getNgayThanhToan();
         this.phuPhi = hd.getPhuPhi();
         this.hoanPhi = hd.getHoanPhi();
@@ -151,22 +149,6 @@ public class HoaDonResponse {
             this.tenNhanVien = hd.getIdNhanVien().getTenNhanVien();
             this.maNhanVien = hd.getIdNhanVien().getMaNhanVien();
             this.idNhanVien = hd.getIdNhanVien().getId();
-        }
-
-        // Ưu tiên lấy từ trường trực tiếp nếu có
-        if (hd.getTenNhanVien() != null && !hd.getTenNhanVien().trim().isEmpty()) {
-            this.tenNhanVien = hd.getTenNhanVien();
-        }
-        if (hd.getMaNhanVien() != null && !hd.getMaNhanVien().trim().isEmpty()) {
-            this.maNhanVien = hd.getMaNhanVien();
-        }
-
-        // Ưu tiên lấy từ trường trực tiếp nếu có
-        if (hd.getTenPhieuGiamGia() != null && !hd.getTenPhieuGiamGia().trim().isEmpty()) {
-            this.tenPhieuGiamGia = hd.getTenPhieuGiamGia();
-        }
-        if (hd.getMaPhieuGiamGia() != null && !hd.getMaPhieuGiamGia().trim().isEmpty()) {
-            this.maPhieuGiamGia = hd.getMaPhieuGiamGia();
         }
         // Mapping chi tiết sản phẩm
 

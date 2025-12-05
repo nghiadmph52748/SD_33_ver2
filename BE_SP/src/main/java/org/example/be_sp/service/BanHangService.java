@@ -166,7 +166,7 @@ public class BanHangService {
                 .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên với id: " + idNhanVien, "404")));
         LocalDateTime now = LocalDateTime.now();
         hd.setCreateAt(now);
-        hd.setNgayTao(now);
+        hd.setCreateAt(now);
         hd.setCreateBy(idNhanVien);
         hd.setGiaoHang(false);
         hd.setGhiChu("Tạo hóa đơn bán hàng tại quầy");
@@ -337,8 +337,6 @@ public class BanHangService {
         // Nếu không còn tổng, xoá các tham chiếu voucher để tránh áp dụng giảm giá ảo
         if (hoaDon.getTongTien().compareTo(BigDecimal.ZERO) == 0) {
             hoaDon.setIdPhieuGiamGia(null);
-            hoaDon.setMaPhieuGiamGia(null);
-            hoaDon.setTenPhieuGiamGia(null);
         }
 
         hdRepository.save(hoaDon);
@@ -591,8 +589,8 @@ public class BanHangService {
             hoaDon.setNgayThanhToan(LocalDateTime.now());
         }
         // Ensure ngayTao is set if not already set
-        if (hoaDon.getNgayTao() == null) {
-            hoaDon.setNgayTao(LocalDateTime.now());
+        if (hoaDon.getCreateAt() == null) {
+            hoaDon.setCreateAt(LocalDateTime.now());
         }
         HoaDon saved = hdRepository.save(hoaDon);
 

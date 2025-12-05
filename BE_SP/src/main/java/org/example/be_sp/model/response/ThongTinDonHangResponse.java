@@ -55,19 +55,12 @@ public class ThongTinDonHangResponse {
         // Lấy thông tin từ hoa_don
         if (data.getIdHoaDon() != null) {
             this.maDonHang = data.getIdHoaDon().getMaHoaDon();
-            this.ngayTao = data.getIdHoaDon().getNgayTao();
+            this.ngayTao = data.getIdHoaDon().getCreateAt();
             this.ngayThanhToan = data.getIdHoaDon().getNgayThanhToan();
-
-            // Ưu tiên lấy từ trường trực tiếp, fallback về quan hệ
-            if (data.getIdHoaDon().getTenNhanVien() != null && !data.getIdHoaDon().getTenNhanVien().trim().isEmpty()) {
-                this.tenNhanVien = data.getIdHoaDon().getTenNhanVien();
-            } else if (data.getIdHoaDon().getIdNhanVien() != null) {
+            if (data.getIdHoaDon().getIdNhanVien() != null) {
                 this.tenNhanVien = data.getIdHoaDon().getIdNhanVien().getTenNhanVien();
             }
-
-            if (data.getIdHoaDon().getMaNhanVien() != null && !data.getIdHoaDon().getMaNhanVien().trim().isEmpty()) {
-                this.maNhanVien = data.getIdHoaDon().getMaNhanVien();
-            } else if (data.getIdHoaDon().getIdNhanVien() != null) {
+            if (data.getIdHoaDon().getIdNhanVien() != null) {
                 this.maNhanVien = data.getIdHoaDon().getIdNhanVien().getMaNhanVien();
             }
 

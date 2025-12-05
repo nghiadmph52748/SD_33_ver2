@@ -145,32 +145,10 @@ public class HoaDonService {
             hd.setIdNhanVien(nhanVienRepository.findById(request.getIdNhanVien())
                     .orElseThrow(() -> new ApiException("Nhân viên không tồn tại", "404")));
         }
-        // Tự động điền tên và mã nhân viên
-        if (hd.getIdNhanVien() != null) {
-            if (request.getTenNhanVien() == null || request.getTenNhanVien().trim().isEmpty()) {
-                hd.setTenNhanVien(hd.getIdNhanVien().getTenNhanVien());
-            }
-            if (request.getMaNhanVien() == null || request.getMaNhanVien().trim().isEmpty()) {
-                hd.setMaNhanVien(hd.getIdNhanVien().getMaNhanVien());
-            }
-        }
-        // Tự động điền tên phiếu giảm giá (nhưng KHÔNG điền mã để tránh truncation)
-        if (hd.getIdPhieuGiamGia() != null) {
-            if (request.getTenPhieuGiamGia() == null || request.getTenPhieuGiamGia().trim().isEmpty()) {
-                hd.setTenPhieuGiamGia(hd.getIdPhieuGiamGia().getTenPhieuGiamGia());
-            }
-            // Do NOT auto-populate maPhieuGiamGia - keep it NULL to avoid DB column
-            // truncation
-            // hd.setMaPhieuGiamGia(hd.getIdPhieuGiamGia().getMaPhieuGiamGia());
-        }
         // Map diaChiNhanHang từ request vào diaChiNguoiNhan của entity
         // (vì tên field khác nhau nên ModelMapper không tự động map)
         if (request.getDiaChiNhanHang() != null && !request.getDiaChiNhanHang().trim().isEmpty()) {
             hd.setDiaChiNguoiNhan(request.getDiaChiNhanHang());
-        }
-        // Set ngayTao if not provided
-        if (hd.getNgayTao() == null) {
-            hd.setNgayTao(LocalDateTime.now());
         }
         // Set createAt if not provided
         if (hd.getCreateAt() == null) {
@@ -516,26 +494,11 @@ public class HoaDonService {
         if (request.getTrangThai() != null) {
             hd.setTrangThai(request.getTrangThai());
         }
-        if (request.getNgayTao() != null) {
-            hd.setNgayTao(request.getNgayTao());
-        }
         if (request.getNgayThanhToan() != null) {
             hd.setNgayThanhToan(request.getNgayThanhToan());
         }
         if (request.getGhiChu() != null) {
             hd.setGhiChu(request.getGhiChu());
-        }
-        if (request.getTenNhanVien() != null) {
-            hd.setTenNhanVien(request.getTenNhanVien());
-        }
-        if (request.getMaNhanVien() != null) {
-            hd.setMaNhanVien(request.getMaNhanVien());
-        }
-        if (request.getTenPhieuGiamGia() != null) {
-            hd.setTenPhieuGiamGia(request.getTenPhieuGiamGia());
-        }
-        if (request.getMaPhieuGiamGia() != null) {
-            hd.setMaPhieuGiamGia(request.getMaPhieuGiamGia());
         }
 
         // Gán lại các quan hệ
@@ -545,26 +508,9 @@ public class HoaDonService {
         }
         if (request.getIdPhieuGiamGia() != null) {
             hd.setIdPhieuGiamGia(phieuGiamGiaService.getById(request.getIdPhieuGiamGia()));
-
-            // Tự động điền tên phiếu giảm giá nếu chưa có (nhưng KHÔNG điền mã)
-            if (hd.getIdPhieuGiamGia() != null) {
-                if (hd.getTenPhieuGiamGia() == null || hd.getTenPhieuGiamGia().trim().isEmpty()) {
-                    hd.setTenPhieuGiamGia(hd.getIdPhieuGiamGia().getTenPhieuGiamGia());
-                }
-            }
         }
         if (request.getIdNhanVien() != null) {
             hd.setIdNhanVien(nhanVienRepository.getById(request.getIdNhanVien()));
-
-            // Tự động điền tên và mã nhân viên nếu chưa có
-            if (hd.getIdNhanVien() != null) {
-                if (hd.getTenNhanVien() == null || hd.getTenNhanVien().trim().isEmpty()) {
-                    hd.setTenNhanVien(hd.getIdNhanVien().getTenNhanVien());
-                }
-                if (hd.getMaNhanVien() == null || hd.getMaNhanVien().trim().isEmpty()) {
-                    hd.setMaNhanVien(hd.getIdNhanVien().getMaNhanVien());
-                }
-            }
         }
         hd.setUpdateAt(LocalDateTime.now());
 
@@ -1107,7 +1053,7 @@ public class HoaDonService {
                 .orderCode(hoaDon.getMaHoaDon())
                 .customerName(customerName != null ? customerName : "Khách hàng")
                 .customerEmail(customerEmail)
-                .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
+                .orderDate(hoaDon.getCreateAt() != null ? hoaDon.getCreateAt() : LocalDateTime.now())
                 .orderStatus(resolvedStatus)
                 .totalAmount(totalAmount)
                 .discountAmount(discountAmount)
@@ -1203,7 +1149,7 @@ public class HoaDonService {
                     .orderCode(hoaDon.getMaHoaDon())
                     .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                     .customerEmail(customerEmail)
-                    .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
+                    .orderDate(hoaDon.getCreateAt() != null ? hoaDon.getCreateAt() : LocalDateTime.now())
                     .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
                     .discountAmount(discountAmount)
                     .shippingFee(hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO)
@@ -1250,7 +1196,7 @@ public class HoaDonService {
                     .orderCode(hoaDon.getMaHoaDon())
                     .customerName(customerName)
                     .customerEmail(customerEmail)
-                    .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
+                    .orderDate(hoaDon.getCreateAt() != null ? hoaDon.getCreateAt() : LocalDateTime.now())
                     .orderStatus("Sự cố về số lượng - " + insufficientProductDetails)
                     .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
                     .finalAmount(hoaDon.getTongTienSauGiam() != null ? hoaDon.getTongTienSauGiam() : BigDecimal.ZERO)
@@ -1286,7 +1232,6 @@ public class HoaDonService {
                 HoaDon hoaDon = new HoaDon();
                 hoaDon.setIdKhachHang(khachHang);
                 hoaDon.setIdNhanVien(nhanVien);
-                hoaDon.setTenHoaDon("Hóa đơn mẫu " + i);
                 hoaDon.setGiaoHang(false); // Tại quầy
                 hoaDon.setPhiVanChuyen(BigDecimal.ZERO);
                 hoaDon.setTongTien(BigDecimal.valueOf(1000000 * i));
@@ -1295,9 +1240,9 @@ public class HoaDonService {
                 hoaDon.setDiaChiNguoiNhan("Địa chỉ " + i + ", TP.HCM");
                 hoaDon.setSoDienThoaiNguoiNhan("012345678" + i);
                 hoaDon.setEmailNguoiNhan("khachhang" + i + "@email.com");
-                hoaDon.setNgayTao(LocalDateTime.now());
                 hoaDon.setTrangThai(true); // Hoàn thành
                 hoaDon.setDeleted(false);
+                hoaDon.setCreateAt(LocalDateTime.now());
 
                 HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
 

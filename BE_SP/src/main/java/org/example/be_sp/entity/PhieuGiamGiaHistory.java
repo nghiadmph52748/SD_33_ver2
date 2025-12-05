@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "phieu_giam_gia_history")
+@Table(name = "lich_su_phieu_giam_gia")
 public class PhieuGiamGiaHistory {
 
     @Id

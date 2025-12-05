@@ -309,7 +309,7 @@ public class VnPayController {
                     .orderCode(hoaDon.getMaHoaDon())
                     .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                     .customerEmail(customerEmail)
-                    .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
+                    .orderDate(hoaDon.getCreateAt() != null ? hoaDon.getCreateAt() : LocalDateTime.now())
                     .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
                     .shippingFee(hoaDon.getPhiVanChuyen() != null ? hoaDon.getPhiVanChuyen() : BigDecimal.ZERO)
                     .finalAmount(hoaDon.getTongTienSauGiam() != null ? hoaDon.getTongTienSauGiam() : BigDecimal.ZERO)

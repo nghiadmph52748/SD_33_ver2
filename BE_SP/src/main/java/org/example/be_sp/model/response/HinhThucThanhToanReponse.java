@@ -28,7 +28,6 @@ public class HinhThucThanhToanReponse {
     public HinhThucThanhToanReponse(HinhThucThanhToan httt) {
         this.id = httt.getId();
         this.maHoaDon = httt.getIdHoaDon().getMaHoaDon();
-        this.tenHoaDon = httt.getIdHoaDon().getTenHoaDon();
         this.idPhuongThucThanhToan = httt.getIdPhuongThucThanhToan().getId();
         this.tenPhuongThucThanhToan = httt.getIdPhuongThucThanhToan().getTenPhuongThucThanhToan();
         this.maHinhThucThanhToan = httt.getMaHinhThucThanhToan();
@@ -41,14 +40,11 @@ public class HinhThucThanhToanReponse {
         if (httt.getIdHoaDon() != null) {
             this.ngayTao = httt.getIdHoaDon().getNgayThanhToan() != null 
                 ? httt.getIdHoaDon().getNgayThanhToan() 
-                : httt.getIdHoaDon().getNgayTao();
+                : httt.getIdHoaDon().getCreateAt();
         }
         // Set tenNhanVienXacNhan from hoaDon
         if (httt.getIdHoaDon() != null && httt.getIdHoaDon().getIdNhanVien() != null) {
             this.tenNhanVienXacNhan = httt.getIdHoaDon().getIdNhanVien().getTenNhanVien();
-        } else if (httt.getIdHoaDon() != null && httt.getIdHoaDon().getTenNhanVien() != null) {
-            // Fallback to tenNhanVien string field if idNhanVien is null
-            this.tenNhanVienXacNhan = httt.getIdHoaDon().getTenNhanVien();
         }
 
     }

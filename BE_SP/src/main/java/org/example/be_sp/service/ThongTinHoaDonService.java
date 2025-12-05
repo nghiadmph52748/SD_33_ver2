@@ -324,7 +324,7 @@ public class ThongTinHoaDonService {
                 .orderCode(hoaDon.getMaHoaDon())
                 .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                 .customerEmail(customerEmail)
-                .orderDate(hoaDon.getNgayTao() != null ? hoaDon.getNgayTao() : LocalDateTime.now())
+                .orderDate(hoaDon.getCreateAt() != null ? hoaDon.getCreateAt() : LocalDateTime.now())
                 .orderStatus(statusName)
                 .totalAmount(hoaDon.getTongTien() != null ? hoaDon.getTongTien() : BigDecimal.ZERO)
                 .discountAmount(discountAmount)

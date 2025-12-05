@@ -49,10 +49,6 @@ public class HoaDon {
     @Column(name = "ma_hoa_don", length = 10)
     private String maHoaDon;
 
-    @Nationalized
-    @Column(name = "ten_hoa_don")
-    private String tenHoaDon;
-
     @ColumnDefault("0")
     @Column(name = "loai_don")
     private Boolean giaoHang;
@@ -84,25 +80,23 @@ public class HoaDon {
     @Column(name = "email_khach_hang", columnDefinition = "nvarchar(255)")
     private String emailNguoiNhan;
 
-    @Nationalized
-    @Column(name = "ten_nhan_vien")
-    private String tenNhanVien;
-
-    @Column(name = "ma_nhan_vien", length = 7)
-    private String maNhanVien;
-
-    @Nationalized
-    @Column(name = "ten_phieu_giam_gia")
-    private String tenPhieuGiamGia;
-
-    @Column(name = "ma_phieu_giam_gia", length = 7)
-    private String maPhieuGiamGia;
-
-    @Column(name = "ngay_tao")
-    private LocalDateTime ngayTao;
-
     @Column(name = "ngay_thanh_toan")
     private LocalDateTime ngayThanhToan;
+
+    @Column(name = "trang_thai_thanh_toan")
+    private Boolean trangThaiThanhToan;
+
+    @Column(name = "so_tien_da_thanh_toan", precision = 18, scale = 2)
+    private BigDecimal soTienDaThanhToan;
+
+    @Column(name = "so_tien_con_lai", precision = 18, scale = 2)
+    private BigDecimal soTienConLai;
+
+    @Column(name = "phu_phi", precision = 18, scale = 2)
+    private BigDecimal phuPhi;
+
+    @Column(name = "hoan_phi", precision = 18, scale = 2)
+    private BigDecimal hoanPhi;
 
     @ColumnDefault("1")
     @Column(name = "trang_thai")
@@ -123,21 +117,6 @@ public class HoaDon {
 
     @Column(name = "update_by")
     private Integer updateBy;
-
-    @Column(name = "trang_thai_thanh_toan")
-    private Boolean trangThaiThanhToan;
-
-    @Column(name = "so_tien_da_thanh_toan", precision = 18, scale = 2)
-    private BigDecimal soTienDaThanhToan;
-
-    @Column(name = "so_tien_con_lai", precision = 18, scale = 2)
-    private BigDecimal soTienConLai;
-
-    @Column(name = "phu_phi", precision = 18, scale = 2)
-    private BigDecimal phuPhi;
-
-    @Column(name = "hoan_phi", precision = 18, scale = 2)
-    private BigDecimal hoanPhi;
 
     @OneToMany(mappedBy = "idHoaDon")
     @JsonManagedReference

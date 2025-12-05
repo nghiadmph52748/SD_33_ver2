@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "ai_chat_history")
+@Table(name = "lich_su_ai_chat")
 @Data
 public class AiChatHistory {
     

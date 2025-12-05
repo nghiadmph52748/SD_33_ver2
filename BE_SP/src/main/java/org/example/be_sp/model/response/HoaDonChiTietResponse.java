@@ -74,7 +74,6 @@ public class HoaDonChiTietResponse {
         // Hóa đơn thông tin
         if (d.getIdHoaDon() != null) {
             this.maHoaDon = d.getIdHoaDon().getMaHoaDon();
-            this.tenHoaDon = d.getIdHoaDon().getTenHoaDon();
             this.loaiDon = d.getIdHoaDon().getGiaoHang();
             this.phiVanChuyen = d.getIdHoaDon().getPhiVanChuyen();
             this.tongTien = d.getIdHoaDon().getTongTien();
