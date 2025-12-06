@@ -53,6 +53,42 @@ public class ChatWebSocketController {
             Integer senderId = getUserIdFromPrincipal(principal);
             String senderUsername = principal.getName();
             
+            // Handle guest users
+            if (senderId == null && senderUsername != null && senderUsername.startsWith("guest-")) {
+                // Guest user - assign an available staff member automatically
+                Integer assignedStaffId = chatService.assignStaffForGuest(request);
+                if (assignedStaffId == null) {
+                    throw new RuntimeException("Hiện tại không có nhân viên nào đang hoạt động. Vui lòng thử lại sau.");
+                }
+                
+                // Create guest message with assigned staff
+                TinNhanResponse savedMessage = chatService.sendGuestMessage(senderUsername, assignedStaffId, request);
+                
+                // Get receiver username
+                String receiverUsername = getUsernameFromUserId(assignedStaffId);
+                
+                // Send to assigned staff
+                messagingTemplate.convertAndSendToUser(
+                    receiverUsername,
+                    "/queue/messages",
+                    savedMessage
+                );
+                
+                // Send confirmation to guest (using guest session ID)
+                messagingTemplate.convertAndSendToUser(
+                    senderUsername,
+                    "/queue/messages",
+                    savedMessage
+                );
+                
+                System.out.println("✅ Guest WebSocket message sent successfully:");
+                System.out.println("   From: Guest (" + senderUsername + ")");
+                System.out.println("   To: " + receiverUsername + " (ID: " + assignedStaffId + ")");
+                System.out.println("   Content: " + savedMessage.getContent().substring(0, Math.min(50, savedMessage.getContent().length())));
+                return;
+            }
+            
+            // Regular authenticated user flow
             // Lưu tin nhắn vào database
             TinNhanResponse savedMessage = chatService.sendMessage(senderId, request);
             
@@ -107,7 +143,7 @@ public class ChatWebSocketController {
     }
 
     /**
-     * Lấy userId từ Principal (hỗ trợ cả customer và staff)
+     * Lấy userId từ Principal (hỗ trợ cả customer, staff và guest)
      */
     private Integer getUserIdFromPrincipal(Principal principal) {
         if (principal == null) {
@@ -115,6 +151,13 @@ public class ChatWebSocketController {
         }
         
         String username = principal.getName();
+        
+        // Check if this is a guest session
+        if (username != null && username.startsWith("guest-")) {
+            // Guest user - return null to indicate guest
+            // Service will handle guest message creation
+            return null;
+        }
         
         // Thử tìm trong NhanVien trước
         NhanVien nhanVien = nhanVienService.findByTenTaiKhoan(username);

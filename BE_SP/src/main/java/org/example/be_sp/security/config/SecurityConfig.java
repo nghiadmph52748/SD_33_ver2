@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/giao-ca/**").permitAll()
                 .requestMatchers("/api/content-data", "/api/popular/**").permitAll() // Allow dashboard mock data
                 .requestMatchers("/api/payment/vnpay/**").permitAll() // Allow VNPAY redirect/IPN without auth
+                .requestMatchers("/api/payment/momo/**").permitAll() // Allow MoMo redirect/IPN without auth
                 .requestMatchers("/ws-chat/**").permitAll() // Allow WebSocket connection (auth handled by interceptor)
                 .requestMatchers("/api/invoice-management/**").permitAll() // Allow new invoice module endpoints
                 .requestMatchers("/api/hoa-don-management/**").permitAll() // Allow invoice management without auth for testing

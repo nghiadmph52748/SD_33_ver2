@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, validator
-from app.utils.lm_studio import lm_client
+from app.utils.llm_client import llm_client
 from app.utils.customer_database import CustomerDatabaseClient
+from app.utils.smart_recommendation import SmartRecommendationEngine
 import logging
 import json
 import re
@@ -11,6 +12,49 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/customer", tags=["Customer Chatbot"])
 # Use restricted customer database client - blocks admin queries
 db_client = CustomerDatabaseClient()
+# Initialize smart recommendation engine
+recommendation_engine = SmartRecommendationEngine(db_client)
+
+def get_follow_up_suggestions_llm_customer(user_question: str, ai_response: str) -> list[str]:
+    """Generate contextual follow-up suggestions for customers using LLM"""
+    try:
+        prompt = f"""Dựa trên cuộc trò chuyện với khách hàng, hãy đề xuất 3 câu hỏi tiếp theo ngắn gọn giúp khách hàng mua sắm tốt hơn.
+
+Câu hỏi của khách: {user_question}
+Phản hồi của trợ lý: {ai_response[:300]}...
+
+Yêu cầu:
+- 3 câu hỏi thân thiện, hữu ích cho khách hàng (tối đa 60 ký tự mỗi câu)
+- Liên quan đến sản phẩm, giá cả, khuyến mãi, hoặc đặt hàng
+- Ngôn ngữ tự nhiên, thân thiện như hỗ trợ khách hàng
+- Chỉ trả lời 3 câu hỏi, mỗi câu trên 1 dòng, không có số thứ tự
+
+Ví dụ:
+Sản phẩm này có màu nào khác?
+Giá có giảm thêm không?
+Làm sao để đặt hàng?"""
+
+        messages = [{"role": "user", "content": prompt}]
+        response = llm_client.chat(messages, temperature=0.7, max_tokens=150, stream=False)
+        
+        # Parse response
+        suggestions_text = response.strip()
+        suggestions = [s.strip() for s in suggestions_text.split('\n') if s.strip()]
+        
+        # Clean up
+        cleaned_suggestions = []
+        for s in suggestions[:5]:
+            cleaned = re.sub(r'^[\d\.\-\*\+]+\s*', '', s).strip()
+            if cleaned and len(cleaned) <= 100:
+                cleaned_suggestions.append(cleaned)
+        
+        # Return exactly 3
+        fallback = ["Có sản phẩm nào tương tự?", "Giá bao nhiêu?", "Làm sao đặt hàng?"]
+        return cleaned_suggestions[:3] if len(cleaned_suggestions) >= 3 else cleaned_suggestions + fallback[:3-len(cleaned_suggestions)]
+    
+    except Exception as e:
+        logger.error(f"Failed to generate customer suggestions: {e}")
+        return ["Sản phẩm này có màu nào?", "Có khuyến mãi không?", "Kích thước nào phù hợp?"]
 
 # Security constants
 MAX_MESSAGE_LENGTH = 1000  # Maximum characters per message
@@ -59,6 +103,7 @@ BLOCKED_PATTERNS = [
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=MAX_MESSAGE_LENGTH)
     context: str = Field(default="", max_length=MAX_CONTEXT_LENGTH)
+    chat_history: list = Field(default_factory=list)  # List of {role: str, content: str}
     
     @validator('message')
     def validate_message(cls, v):
@@ -134,10 +179,12 @@ CUSTOMER_SYSTEM_PROMPT = """Bạn là Trợ lý Hỗ trợ Khách hàng (Custome
 
 **QUY TẮC HIỂN THỊ SẢN PHẨM - BẮT BUỘC**
 - Khi khách hàng hỏi về "sản phẩm nào đang giảm giá", "sản phẩm này còn hàng không", hoặc các câu hỏi tương tự về giảm giá/khuyến mãi/tồn kho, BẠN PHẢI:
-  1. Trả lời câu hỏi của khách hàng một cách ngắn gọn và thân thiện
-  2. SAU ĐÓ, hệ thống sẽ tự động hiển thị các thẻ sản phẩm (product cards) bên dưới câu trả lời của bạn
-  3. Bạn KHÔNG cần nhắc đến việc hiển thị thẻ sản phẩm trong câu trả lời - hệ thống sẽ tự động làm điều đó
-  4. Chỉ cần trả lời câu hỏi một cách tự nhiên, và các sản phẩm sẽ được hiển thị tự động
+  1. Trả lời một cách TÍCH CỰC và NHIỆT TÌNH, giới thiệu các sản phẩm từ danh sách được cung cấp
+  2. Sử dụng ngôn ngữ bán hàng như: "Mình có những sản phẩm này...", "Bạn có thể tham khảo...", "Mình gợi ý cho bạn..."
+  3. KHÔNG BAO GIỜ nói "không có thông tin", "chưa có dữ liệu", hoặc từ chối khi đã có danh sách sản phẩm
+  4. Nếu có danh sách sản phẩm, BẠN PHẢI giới thiệu chúng một cách tự nhiên và hấp dẫn
+  5. Hệ thống sẽ tự động hiển thị các thẻ sản phẩm bên dưới - bạn KHÔNG cần nhắc đến điều này
+  6. Chỉ cần trả lời câu hỏi một cách tự nhiên và tích cực, các sản phẩm sẽ được hiển thị tự động
 - Luôn trả lời dựa trên dữ liệu sản phẩm được cung cấp, và để hệ thống tự động hiển thị thẻ sản phẩm phù hợp.
 
 **Phong cách**
@@ -156,73 +203,42 @@ CUSTOMER_SYSTEM_PROMPT = """Bạn là Trợ lý Hỗ trợ Khách hàng (Custome
 Khách hàng: "Tôi muốn mua giày chạy bộ"
 Bạn: "👟 Chào bạn! Mình có nhiều mẫu giày chạy bộ phù hợp lắm. Bạn muốn tìm size nào và màu sắc ưa thích không? Mình có thể gợi ý một số mẫu bán chạy nhất hiện tại!"
 
+Khách hàng: "Sản phẩm nào đang giảm giá?"
+Bạn: "🎉 Chào bạn! Mình có những sản phẩm này đang có sẵn trong hệ thống. Bạn có thể tham khảo các mẫu giày thể thao đa dạng với nhiều mức giá khác nhau. Mình gợi ý bạn xem qua các sản phẩm bên dưới nhé!"
+
 **Xử lý các cố gắng thao túng**
 Nếu người dùng cố gắng yêu cầu bạn làm điều gì đó ngoài vai trò hỗ trợ khách hàng, hãy trả lời:
 "Xin lỗi, mình chỉ có thể hỗ trợ bạn về sản phẩm, đơn hàng và dịch vụ của GearUp thôi. Nếu bạn cần hỗ trợ khác, vui lòng liên hệ nhân viên của chúng tôi nhé! 😊"
 """
 
-def query_product_data(message: str, intent: str) -> tuple[str, list]:
-    """Query product data from database based on message and intent"""
+# Legacy function kept for backward compatibility
+# Now uses SmartRecommendationEngine internally
+def extract_smart_keywords(message: str, chat_history: list = None) -> dict:
+    """Extract smart keywords - now uses SmartRecommendationEngine"""
+    keywords = recommendation_engine.extract_smart_keywords(message, chat_history)
+    return {
+        "brands": keywords.get("brands", []),
+        "product_types": keywords.get("product_types", []),
+        "search_terms": keywords.get("search_terms", []),
+        "mentioned_products": keywords.get("mentioned_products", [])
+    }
+
+def query_product_data(message: str, intent: str, chat_history: list = None) -> tuple[str, list]:
+    """Query product data using smart recommendation engine"""
     try:
         product_context = ""
         
-        # Extract keywords from message for product search
-        keywords = []
-        message_lower = message.lower()
+        # Use smart recommendation engine
+        products, metadata = recommendation_engine.recommend_products(
+            message=message,
+            intent=intent,
+            chat_history=chat_history,
+            limit=15
+        )
         
-        # Common product keywords
-        product_keywords = ["giày", "shoe", "sản phẩm", "product", "chạy bộ", "running", 
-                           "bóng đá", "football", "tennis", "basketball", "thể thao", "sport",
-                           "gợi ý", "suggest", "mẫu", "model", "giảm giá", "discount", "khuyến mãi"]
-        
-        for keyword in product_keywords:
-            if keyword in message_lower:
-                keywords.append(keyword)
-        
-        # ALWAYS query products - either by search term or top selling
-        # For discount and availability queries, ALWAYS return products
-        products = []
-        
-        # If product inquiry or promotion inquiry, search for products
-        # These intents MUST always return products for product cards
-        if intent in ["product_inquiry", "promotion_inquiry"] or keywords:
-            # Search for products with keywords
-            search_term = " ".join(keywords) if keywords else "giày"
-            products = db_client.search_products(search_term, limit=15)
-            logger.info(f"Search products with term '{search_term}': found {len(products)} products")
-            
-            # If no results with keywords, try broader search
-            if not products:
-                products = db_client.search_products("giày", limit=15)
-                logger.info(f"Fallback search 'giày': found {len(products)} products")
-            
-            # If still no results, try empty search to get all products
-            if not products:
-                products = db_client.search_products("", limit=15)
-                logger.info(f"Empty search (all products): found {len(products)} products")
-        else:
-            # For other intents, get top selling products
-            products = db_client.get_top_selling_products(limit=10, days=30)
-            logger.info(f"Top selling products: found {len(products)} products")
-        
-        # Final fallback: if still no products, try to get any active products
-        # This is especially important for discount/availability queries
-        if not products:
-            try:
-                # Get any active products as last resort
-                products = db_client.search_products("", limit=15)
-                logger.info(f"Final fallback - all products: found {len(products)} products")
-            except Exception as e:
-                logger.error(f"Error in final fallback product query: {e}")
-        
-        # For promotion_inquiry and product_inquiry (especially availability queries),
-        # ensure we have products to show. If still empty, try top selling as last resort
-        if intent in ["promotion_inquiry", "product_inquiry"] and not products:
-            try:
-                products = db_client.get_top_selling_products(limit=15, days=365)
-                logger.info(f"Last resort - top selling products: found {len(products)} products")
-            except Exception as e:
-                logger.error(f"Error in last resort product query: {e}")
+        logger.info(f"Smart recommendation - keywords: {metadata.get('keywords_extracted', {})}, "
+                   f"candidates: {metadata.get('total_candidates', 0)}, "
+                   f"final: {metadata.get('final_count', 0)}")
         
         # Format product data for AI prompt
         if products:
@@ -231,15 +247,25 @@ def query_product_data(message: str, intent: str) -> tuple[str, list]:
             
             # Add special instruction for discount/availability queries
             if intent == "promotion_inquiry":
-                product_context += "🎯 LƯU Ý ĐẶC BIỆT: Khách hàng đang hỏi về sản phẩm giảm giá/khuyến mãi. "
-                product_context += "Hãy trả lời câu hỏi của họ, và hệ thống sẽ tự động hiển thị các thẻ sản phẩm bên dưới. "
-                product_context += "Bạn chỉ cần trả lời tự nhiên về các sản phẩm có sẵn.\n\n"
+                product_context += "🎯 LƯU Ý ĐẶC BIỆT: Khách hàng đang hỏi về sản phẩm giảm giá/khuyến mãi.\n"
+                product_context += "BẠN PHẢI:\n"
+                product_context += "1. Trả lời một cách tích cực và nhiệt tình về các sản phẩm có sẵn\n"
+                product_context += "2. Đề xuất các sản phẩm từ danh sách dưới đây một cách tự nhiên\n"
+                product_context += "3. Sử dụng ngôn ngữ bán hàng như: 'Mình có những sản phẩm này đang có sẵn...', 'Bạn có thể tham khảo...', 'Mình gợi ý cho bạn...'\n"
+                product_context += "4. KHÔNG nói 'không có thông tin' hoặc 'chưa có dữ liệu' - thay vào đó hãy giới thiệu các sản phẩm có sẵn\n"
+                product_context += "5. Hệ thống sẽ tự động hiển thị thẻ sản phẩm bên dưới, bạn không cần nhắc đến điều này\n\n"
             elif intent == "product_inquiry" and any(keyword in message.lower() for keyword in ["còn hàng", "có hàng", "tồn kho", "stock", "còn không"]):
                 product_context += "🎯 LƯU Ý ĐẶC BIỆT: Khách hàng đang hỏi về tình trạng tồn kho/sản phẩm còn hàng. "
                 product_context += "Hãy trả lời câu hỏi của họ về tình trạng tồn kho, và hệ thống sẽ tự động hiển thị các thẻ sản phẩm bên dưới. "
                 product_context += "Bạn chỉ cần trả lời tự nhiên về các sản phẩm có sẵn và tình trạng tồn kho.\n\n"
             
-            product_context += "Danh sách sản phẩm có sẵn trong hệ thống:\n\n"
+            if intent == "promotion_inquiry":
+                product_context += "🎉 **DANH SÁCH SẢN PHẨM CÓ SẴN - BẠN PHẢI GIỚI THIỆU TÍCH CỰC:**\n\n"
+                product_context += "Khách hàng đang hỏi về sản phẩm giảm giá/khuyến mãi. "
+                product_context += "BẠN PHẢI giới thiệu các sản phẩm dưới đây một cách nhiệt tình và tích cực. "
+                product_context += "Sử dụng ngôn ngữ như: 'Mình có những sản phẩm này đang có sẵn...', 'Bạn có thể tham khảo...', 'Mình gợi ý cho bạn...'\n\n"
+            else:
+                product_context += "Danh sách sản phẩm có sẵn trong hệ thống:\n\n"
             
             for i, p in enumerate(products[:15], 1):
                 product_name = p.get('product_name', 'N/A')
@@ -262,7 +288,12 @@ def query_product_data(message: str, intent: str) -> tuple[str, list]:
                     product_context += f" - Tồn kho: {int(total_stock)} đôi"
                 product_context += "\n"
             
-            product_context += "\n⚠️ LƯU Ý: Chỉ đề xuất các sản phẩm có trong danh sách trên. KHÔNG được đề xuất sản phẩm nào khác."
+            if intent == "promotion_inquiry":
+                product_context += "\n⚠️ QUAN TRỌNG: BẠN PHẢI giới thiệu các sản phẩm trên một cách tích cực. "
+                product_context += "KHÔNG được nói 'không có thông tin' hoặc 'chưa có dữ liệu'. "
+                product_context += "Hãy trả lời như một nhân viên bán hàng nhiệt tình giới thiệu sản phẩm cho khách hàng."
+            else:
+                product_context += "\n⚠️ LƯU Ý: Chỉ đề xuất các sản phẩm có trong danh sách trên. KHÔNG được đề xuất sản phẩm nào khác."
         else:
             product_context = "\n\n**DỮ LIỆU SẢN PHẨM:**\n\n"
             product_context += "⚠️ KHÔNG CÓ SẢN PHẨM: Hiện tại không có sản phẩm nào trong hệ thống.\n"
@@ -380,22 +411,43 @@ async def chat(request: ChatRequest):
         # 2. Query product data from database
         product_context, products_list = query_product_data(sanitized_message, intent)
         
-        # 3. Build messages for LLM with sanitized input and product data
+        # 3. Build messages for LLM with sanitized input, product data, and chat history
         # Use sanitized message to prevent any injection attempts
         system_prompt_with_data = CUSTOMER_SYSTEM_PROMPT + product_context
         messages = [
-            {"role": "system", "content": system_prompt_with_data},
-            {"role": "user", "content": sanitized_message}
+            {"role": "system", "content": system_prompt_with_data}
         ]
+        
+        # Add chat history (last 20 messages for better context)
+        if request.chat_history:
+            # Filter and sanitize chat history
+            logger.info(f"Received chat history (non-stream): {len(request.chat_history)} messages")
+            for hist_msg in request.chat_history[-20:]:  # Last 20 messages for better context
+                role = hist_msg.get("role", "")
+                content = hist_msg.get("content", "")
+                if role in ["user", "assistant"] and content and content.strip():
+                    # Sanitize content from history
+                    sanitized_hist_content = sanitize_user_input(content)
+                    if sanitized_hist_content:
+                        messages.append({
+                            "role": role,
+                            "content": sanitized_hist_content
+                        })
+            logger.info(f"Added {len(messages) - 1} messages from chat history (excluding system prompt)")
+        
+        # Add current user message
+        messages.append({"role": "user", "content": sanitized_message})
         
         # 4. Log product data for debugging
         logger.info(f"Product data provided to AI: {product_context[:200]}...")
         logger.info(f"Products found: {len(products_list)}")
         
-        # 5. Call LM Studio with lower temperature to strictly follow data
-        response = lm_client.chat(
+        # 5. Call LLM - adjust temperature based on intent
+        # Lower temperature for promotion_inquiry to ensure positive, enthusiastic responses
+        temperature = 0.2 if intent == "promotion_inquiry" else 0.3
+        response = llm_client.chat(
             messages=messages,
-            temperature=0.3,  # Very low temperature to strictly follow provided data
+            temperature=temperature,
             max_tokens=1000
         )
         
@@ -410,38 +462,90 @@ async def chat(request: ChatRequest):
             # Clean up whitespace
             ai_message = ai_message.strip()
         
+        # Check if query failed (error context indicates system error)
+        query_failed = "LỖI" in product_context or "gặp sự cố" in product_context or "không thể truy cập" in product_context
+        
+        # Check if AI response is an error message (not related to products)
+        ai_response_lower = ai_message.lower() if ai_message else ""
+        is_error_response = (
+            "lỗi" in ai_response_lower or 
+            "sự cố" in ai_response_lower or 
+            "không thể" in ai_response_lower or
+            "gặp sự cố" in ai_response_lower or
+            ("liên hệ nhân viên" in ai_response_lower and "sản phẩm" not in ai_response_lower)
+        )
+        ai_mentions_products = (
+            "sản phẩm" in ai_response_lower or
+            "giày" in ai_response_lower or
+            "giảm giá" in ai_response_lower or
+            "khuyến mãi" in ai_response_lower
+        )
+        
         # Format products for frontend (only include essential fields)
         # Convert Decimal to float/int for JSON serialization
         formatted_products = []
-        for p in products_list[:10]:  # Limit to 10 products for response
-            min_price = p.get("min_price")
-            max_price = p.get("max_price")
-            stock = p.get("total_stock", 0)
-            
-            # Convert Decimal to float
-            if min_price is not None:
-                min_price = float(min_price)
-            if max_price is not None:
-                max_price = float(max_price)
-            if stock is not None:
-                stock = int(stock)
-            
-            formatted_products.append({
-                "id": int(p.get("product_id", 0)),
-                "name": str(p.get("product_name", "")),
-                "min_price": min_price,
-                "max_price": max_price,
-                "image_url": str(p.get("image_url", "")) if p.get("image_url") else None,
-                "stock": stock
-            })
         
-        # For discount and availability queries, ensure products are always included
-        # If no products found, try to get products using search as fallback
-        if intent in ["promotion_inquiry", "product_inquiry"] and not formatted_products:
+        # Only format products if query didn't fail AND AI response is relevant (not error)
+        if not query_failed and not is_error_response and ai_mentions_products:
+            for p in products_list[:10]:  # Limit to 10 products for response
+                # Validate product_id - must be present and > 0
+                product_id = p.get("product_id")
+                if product_id is None or product_id == 0:
+                    logger.warning(f"Skipping product with invalid product_id: {product_id}, product_name: {p.get('product_name', 'N/A')}")
+                    continue
+                
+                try:
+                    product_id = int(product_id)
+                    if product_id <= 0:
+                        logger.warning(f"Skipping product with invalid product_id: {product_id}, product_name: {p.get('product_name', 'N/A')}")
+                        continue
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Skipping product with invalid product_id type: {product_id}, error: {e}")
+                    continue
+                
+                min_price = p.get("min_price")
+                max_price = p.get("max_price")
+                stock = p.get("total_stock", 0)
+                
+                # Convert Decimal to float
+                if min_price is not None:
+                    min_price = float(min_price)
+                if max_price is not None:
+                    max_price = float(max_price)
+                if stock is not None:
+                    stock = int(stock)
+                
+                formatted_products.append({
+                    "id": product_id,
+                    "name": str(p.get("product_name", "")),
+                    "min_price": min_price,
+                    "max_price": max_price,
+                    "image_url": str(p.get("image_url", "")) if p.get("image_url") else None,
+                    "stock": stock
+                })
+        
+        # Only use fallback products if query didn't fail AND AI response is relevant
+        # Don't use fallback if query failed or AI response is error (don't show misleading products)
+        if not query_failed and not is_error_response and ai_mentions_products and intent in ["promotion_inquiry", "product_inquiry"] and not formatted_products:
             try:
                 logger.warning(f"No products found for {intent}, trying fallback query")
                 fallback_products = db_client.search_products("", limit=10)
                 for p in fallback_products[:10]:
+                    # Validate product_id - must be present and > 0
+                    product_id = p.get("product_id")
+                    if product_id is None or product_id == 0:
+                        logger.warning(f"Skipping fallback product with invalid product_id: {product_id}")
+                        continue
+                    
+                    try:
+                        product_id = int(product_id)
+                        if product_id <= 0:
+                            logger.warning(f"Skipping fallback product with invalid product_id: {product_id}")
+                            continue
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Skipping fallback product with invalid product_id type: {product_id}, error: {e}")
+                        continue
+                    
                     min_price = p.get("min_price")
                     max_price = p.get("max_price")
                     stock = p.get("total_stock", 0)
@@ -454,7 +558,7 @@ async def chat(request: ChatRequest):
                         stock = int(stock)
                     
                     formatted_products.append({
-                        "id": int(p.get("product_id", 0)),
+                        "id": product_id,
                         "name": str(p.get("product_name", "")),
                         "min_price": min_price,
                         "max_price": max_price,
@@ -525,38 +629,74 @@ async def chat_stream(request: ChatRequest):
         logger.info(f"Product data provided to AI (stream): {product_context[:200]}...")
         logger.info(f"Products found: {len(products_list)}")
         
+        # Check if query failed (error context indicates system error)
+        query_failed = "LỖI" in product_context or "gặp sự cố" in product_context or "không thể truy cập" in product_context
+        
         # Format products for frontend
         # Convert Decimal to float/int for JSON serialization
         formatted_products = []
-        for p in products_list[:10]:  # Limit to 10 products
-            min_price = p.get("min_price")
-            max_price = p.get("max_price")
-            stock = p.get("total_stock", 0)
-            
-            # Convert Decimal to float
-            if min_price is not None:
-                min_price = float(min_price)
-            if max_price is not None:
-                max_price = float(max_price)
-            if stock is not None:
-                stock = int(stock)
-            
-            formatted_products.append({
-                "id": int(p.get("product_id", 0)),
-                "name": str(p.get("product_name", "")),
-                "min_price": min_price,
-                "max_price": max_price,
-                "image_url": str(p.get("image_url", "")) if p.get("image_url") else None,
-                "stock": stock
-            })
         
-        # For discount and availability queries, ensure products are always included
-        # If no products found, try to get products using search as fallback
-        if intent in ["promotion_inquiry", "product_inquiry"] and not formatted_products:
+        # Only format products if query didn't fail
+        if not query_failed:
+            for p in products_list[:10]:  # Limit to 10 products
+                # Validate product_id - must be present and > 0
+                product_id = p.get("product_id")
+                if product_id is None or product_id == 0:
+                    logger.warning(f"Skipping product with invalid product_id: {product_id}, product_name: {p.get('product_name', 'N/A')}")
+                    continue
+                
+                try:
+                    product_id = int(product_id)
+                    if product_id <= 0:
+                        logger.warning(f"Skipping product with invalid product_id: {product_id}, product_name: {p.get('product_name', 'N/A')}")
+                        continue
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Skipping product with invalid product_id type: {product_id}, error: {e}")
+                    continue
+                
+                min_price = p.get("min_price")
+                max_price = p.get("max_price")
+                stock = p.get("total_stock", 0)
+                
+                # Convert Decimal to float
+                if min_price is not None:
+                    min_price = float(min_price)
+                if max_price is not None:
+                    max_price = float(max_price)
+                if stock is not None:
+                    stock = int(stock)
+                
+                formatted_products.append({
+                    "id": product_id,
+                    "name": str(p.get("product_name", "")),
+                    "min_price": min_price,
+                    "max_price": max_price,
+                    "image_url": str(p.get("image_url", "")) if p.get("image_url") else None,
+                    "stock": stock
+                })
+        
+        # Only use fallback products if query didn't fail and we need products for promotion/product inquiries
+        # Don't use fallback if query failed (indicates system error - don't show misleading products)
+        if not query_failed and intent in ["promotion_inquiry", "product_inquiry"] and not formatted_products:
             try:
                 logger.warning(f"No products found for {intent} (stream), trying fallback query")
                 fallback_products = db_client.search_products("", limit=10)
                 for p in fallback_products[:10]:
+                    # Validate product_id - must be present and > 0
+                    product_id = p.get("product_id")
+                    if product_id is None or product_id == 0:
+                        logger.warning(f"Skipping fallback product with invalid product_id: {product_id}")
+                        continue
+                    
+                    try:
+                        product_id = int(product_id)
+                        if product_id <= 0:
+                            logger.warning(f"Skipping fallback product with invalid product_id: {product_id}")
+                            continue
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Skipping fallback product with invalid product_id type: {product_id}, error: {e}")
+                        continue
+                    
                     min_price = p.get("min_price")
                     max_price = p.get("max_price")
                     stock = p.get("total_stock", 0)
@@ -569,7 +709,7 @@ async def chat_stream(request: ChatRequest):
                         stock = int(stock)
                     
                     formatted_products.append({
-                        "id": int(p.get("product_id", 0)),
+                        "id": product_id,
                         "name": str(p.get("product_name", "")),
                         "min_price": min_price,
                         "max_price": max_price,
@@ -580,48 +720,138 @@ async def chat_stream(request: ChatRequest):
             except Exception as e:
                 logger.error(f"Error in fallback product query (stream): {e}")
         
-        # 4. Build messages for LLM with sanitized input and product data
+        # 4. Build messages for LLM with sanitized input, product data, and chat history
         system_prompt_with_data = CUSTOMER_SYSTEM_PROMPT + product_context
         messages = [
-            {"role": "system", "content": system_prompt_with_data},
-            {"role": "user", "content": sanitized_message}
+            {"role": "system", "content": system_prompt_with_data}
         ]
+        
+        # Add chat history (last 20 messages for better context)
+        if request.chat_history:
+            # Filter and sanitize chat history
+            logger.info(f"Received chat history (stream): {len(request.chat_history)} messages")
+            for hist_msg in request.chat_history[-20:]:  # Last 20 messages for better context
+                role = hist_msg.get("role", "")
+                content = hist_msg.get("content", "")
+                if role in ["user", "assistant"] and content and content.strip():
+                    # Sanitize content from history
+                    sanitized_hist_content = sanitize_user_input(content)
+                    if sanitized_hist_content:
+                        messages.append({
+                            "role": role,
+                            "content": sanitized_hist_content
+                        })
+            logger.info(f"Added {len(messages) - 1} messages from chat history (excluding system prompt)")
+        
+        # Add current user message
+        messages.append({"role": "user", "content": sanitized_message})
         
         # 5. Stream generator function
         async def generate():
+            full_response = ""  # Collect full response for generating suggestions
             try:
-                # Send initial metadata with products
+                # Send initial metadata with products (no suggestions yet)
                 metadata = {
                     'type': 'start',
                     'intent': intent,
                     'data_source': 'Hệ thống hỗ trợ khách hàng GearUp',
-                    'follow_up_suggestions': [],
                     'data_context': {},
                     'redirect_to_staff': False,
                     'products': formatted_products
                 }
                 yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
                 
-                # Call LM Studio with streaming enabled
-                stream = lm_client.chat(
+                # Call LLM with streaming enabled - adjust temperature based on intent
+                temperature = 0.2 if intent == "promotion_inquiry" else 0.3
+                stream = llm_client.chat(
                     messages=messages,
-                    temperature=0.3,  # Very low temperature to strictly follow provided data
+                    temperature=temperature,
                     max_tokens=1000,
                     stream=True
                 )
                 
-                # Stream each chunk
-                for chunk in stream:
-                    if chunk.choices[0].delta.content:
-                        content = chunk.choices[0].delta.content
+                # Stream each chunk (handle both OpenAI and Gemini formats)
+                try:
+                    for chunk in stream:
+                        content = None
                         
-                        # Remove any suspicious system tokens
-                        filtered_content = re.sub(r'<\|system\|>|<\|assistant\|>|<\|user\|>', '', content)
+                        # Handle OpenAI format (LM Studio)
+                        if hasattr(chunk, 'choices') and chunk.choices:
+                            if hasattr(chunk.choices[0], 'delta') and hasattr(chunk.choices[0].delta, 'content'):
+                                content = chunk.choices[0].delta.content
+                        # Handle Gemini format - check multiple possible attributes
+                        elif hasattr(chunk, 'text'):
+                            try:
+                                # Try to access .text, but it may raise ValueError if no valid Part
+                                # Check if chunk has candidates first to avoid accessing .text unnecessarily
+                                if hasattr(chunk, 'candidates') and chunk.candidates:
+                                    candidate = chunk.candidates[0]
+                                    if hasattr(candidate, 'finish_reason'):
+                                        finish_reason = candidate.finish_reason
+                                        # finish_reason 1 = STOP, 2 = SAFETY, 3 = RECITATION, etc.
+                                        if finish_reason in [1, 2, 3]:
+                                            # Stream is complete or blocked, break the loop
+                                            break
+                                
+                                # Try to get text content
+                                content = chunk.text if chunk.text else None
+                            except ValueError as e:
+                                # Chunk has no text content (finish_reason = 1, 2, etc.)
+                                # This is normal for completion chunks, just skip
+                                continue
+                            except Exception as e:
+                                # Other errors accessing .text, skip this chunk
+                                logger.warning(f"Error accessing chunk.text: {e}")
+                                continue
+                        elif hasattr(chunk, 'parts') and chunk.parts:
+                            # Gemini sometimes returns parts array
+                            for part in chunk.parts:
+                                try:
+                                    if hasattr(part, 'text') and part.text:
+                                        content = part.text
+                                        break
+                                except (ValueError, AttributeError):
+                                    continue
+                        # Fallback: try to get content directly
+                        elif hasattr(chunk, 'content'):
+                            content = chunk.content
                         
-                        # Only yield if there's actual content after filtering
-                        if filtered_content.strip():
-                            content_event = json.dumps({'type': 'content', 'content': filtered_content}, ensure_ascii=False)
-                            yield f"data: {content_event}\n\n"
+                        if content:
+                            # Remove any suspicious system tokens
+                            filtered_content = re.sub(r'<\|system\|>|<\|assistant\|>|<\|user\|>', '', content)
+                            full_response += filtered_content  # Collect for suggestions
+                            
+                            # Only yield if there's actual content after filtering
+                            if filtered_content.strip():
+                                content_event = json.dumps({'type': 'content', 'content': filtered_content}, ensure_ascii=False)
+                                yield f"data: {content_event}\n\n"
+                except StopIteration:
+                    # Gemini stream iterator ends with StopIteration - this is normal
+                    logger.debug("Stream ended normally (StopIteration)")
+                    pass
+                except Exception as stream_error:
+                    logger.error(f"Error during streaming: {stream_error}", exc_info=True)
+                    error_event = json.dumps({'type': 'error', 'error': f'Streaming error: {str(stream_error)}'})
+                    yield f"data: {error_event}\n\n"
+                
+                # Generate contextual suggestions using LLM after response completes
+                if full_response:
+                    try:
+                        suggestions = get_follow_up_suggestions_llm_customer(sanitized_message, full_response)
+                        suggestions_event = json.dumps({
+                            'type': 'suggestions',
+                            'follow_up_suggestions': suggestions
+                        }, ensure_ascii=False)
+                        yield f"data: {suggestions_event}\n\n"
+                    except Exception as sug_error:
+                        logger.error(f"Failed to generate customer suggestions: {sug_error}")
+                        # Send fallback suggestions
+                        fallback_suggestions = ["Sản phẩm này có màu nào?", "Có khuyến mãi không?", "Làm sao đặt hàng?"]
+                        suggestions_event = json.dumps({
+                            'type': 'suggestions',
+                            'follow_up_suggestions': fallback_suggestions
+                        }, ensure_ascii=False)
+                        yield f"data: {suggestions_event}\n\n"
                 
                 # Send end signal
                 yield f"data: {json.dumps({'type': 'end'})}\n\n"
@@ -647,13 +877,21 @@ async def chat_stream(request: ChatRequest):
 
 @router.get("/health")
 async def health_check():
-    """Check LM Studio connection"""
-    is_connected, message = lm_client.test_connection()
+    """Check LLM provider connection"""
+    is_connected, message = llm_client.test_connection()
     
-    return {
-        "lm_studio": "connected" if is_connected else "disconnected",
+    provider_info = {
+        "provider": llm_client.provider,
+        "status": "connected" if is_connected else "disconnected",
         "message": message,
-        "model": lm_client.model,
-        "base_url": lm_client.client.base_url
+        "model": llm_client.model
     }
+    
+    # Add provider-specific info
+    if llm_client.provider == "lm_studio":
+        provider_info["base_url"] = llm_client.client.client.base_url
+    elif llm_client.provider == "gemini":
+        provider_info["api_key_configured"] = bool(llm_client.client.api_key) if hasattr(llm_client.client, 'api_key') else False
+    
+    return provider_info
 

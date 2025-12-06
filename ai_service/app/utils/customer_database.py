@@ -26,6 +26,7 @@ class CustomerDatabaseClient:
             'get_variant_stock',
             'get_discount_by_code',
             'get_active_personal_vouchers',
+            'get_products_on_sale',  # Allow customers to see products on sale
         }
     
     def _check_permission(self, method_name: str):
@@ -63,6 +64,11 @@ class CustomerDatabaseClient:
         """Get active personal vouchers for a customer - PUBLIC ACCESS"""
         self._check_permission('get_active_personal_vouchers')
         return self._db.get_active_personal_vouchers(customer_id)
+    
+    def get_products_on_sale(self, limit: int = 15) -> List[Dict]:
+        """Get products that are currently on sale - PUBLIC ACCESS"""
+        self._check_permission('get_products_on_sale')
+        return self._db.get_products_on_sale(limit)
     
     # Explicitly block all admin methods
     def execute_query(self, *args, **kwargs):

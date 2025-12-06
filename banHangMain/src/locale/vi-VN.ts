@@ -217,6 +217,7 @@ export default {
   "cart.savings": "Tiết kiệm",
   // Thanh toán
   "payment.title": "Thanh toán qua VNPAY",
+  "payment.titleMomo": "Thanh toán qua MoMo",
   "payment.successTitle": "Thanh toán thành công",
   "payment.successMessage":
     "Cảm ơn bạn! Giao dịch đã được xác nhận. Chúng tôi sẽ chuẩn bị đơn hàng ngay.",
@@ -246,6 +247,7 @@ export default {
   "payment.details.copied": "Đã sao chép!",
   "payment.details.orderId": "Mã đơn hàng",
   "payment.details.method": "Phương thức thanh toán",
+  "payment.details.message": "Thông báo",
   "payment.cod": "Giao hàng tận nơi (COD)",
   "payment.codTitle": "Giao hàng tận nơi (COD)",
   "payment.codSuccessTitle": "Đặt hàng thành công",
@@ -265,6 +267,7 @@ export default {
   "checkout.cod": "Giao hàng tận nơi (COD)",
   "checkout.codDesc": "Thanh toán khi nhận hàng",
   "checkout.vnpayDesc": "Thanh toán online qua VNPAY",
+  "checkout.momoDesc": "Thanh toán qua ví điện tử MoMo",
   "checkout.placeOrder": "Đặt hàng",
   // Validation
   "checkout.err.fullName": "Vui lòng nhập họ và tên",
@@ -367,10 +370,10 @@ export default {
   "chat.emptyConversations": "Chưa có cuộc trò chuyện nào",
   "chat.inputPlaceholder": "Nhập tin nhắn…",
   "chat.sendError": "Không thể gửi: {message}",
-"chat.loginRequired": "Vui lòng đăng nhập để chat với nhân viên",
-"chat.yesterday": "Hôm qua",
-"chat.noMessages": "Chưa có tin nhắn",
-"chat.previewYou": "Bạn: {text}",
-"chat.staffLoginRequired":
+  "chat.loginRequired": "Vui lòng đăng nhập để chat với nhân viên",
+  "chat.yesterday": "Hôm qua",
+  "chat.noMessages": "Chưa có tin nhắn",
+  "chat.previewYou": "Bạn: {text}",
+  "chat.staffLoginRequired":
     "Vui lòng đăng nhập bằng tài khoản nhân viên để sử dụng chat với nhân viên.",
 };

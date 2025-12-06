@@ -129,6 +129,13 @@
                       <small>{{ $t("checkout.vnpayDesc") }}</small>
                     </span>
                   </label>
+                  <label class="payment-option">
+                    <input type="radio" v-model="paymentMethod" value="momo" />
+                    <span class="payment-label">
+                      <strong>MoMo</strong>
+                      <small>{{ $t("checkout.momoDesc") }}</small>
+                    </span>
+                  </label>
                 </div>
               </div>
               <div class="row" v-if="paymentMethod === 'vnpay'">
@@ -280,6 +287,9 @@
                   <span v-else-if="paymentMethod === 'vnpay'"
                     >{{ $t("cart.checkout") }} — VNPAY</span
                   >
+                  <span v-else-if="paymentMethod === 'momo'"
+                    >{{ $t("cart.checkout") }} — MoMo</span
+                  >
                   <span v-else>{{ $t("cart.checkout") }}</span>
                 </span>
                 <span v-else>{{ $t("cart.processing") }}</span>
@@ -320,7 +330,7 @@ import { storeToRefs } from "pinia";
 import { useCartStore } from "@/stores/cart";
 import { useUserStore } from "@/stores/user";
 import { formatCurrency } from "@/utils/currency";
-import { createVnPayPayment } from "@/api/payment";
+import { createVnPayPayment, createMoMoPayment } from "@/api/payment";
 import { createOrderFromCart } from "@/api/orders";
 import { fetchVariantsByProduct } from "@/api/variants";
 import { Select as ASelect } from "@arco-design/web-vue";
@@ -511,6 +521,8 @@ async function finalizeOrder() {
       await handleCODCheckout();
     } else if (paymentMethod.value === "vnpay") {
       await handleVnpayCheckout();
+    } else if (paymentMethod.value === "momo") {
+      await handleMoMoCheckout();
     }
   } catch (e: any) {
     error.value = e?.message || "Checkout failed";
@@ -521,7 +533,7 @@ async function finalizeOrder() {
 
 const paying = ref(false);
 const error = ref("");
-const paymentMethod = ref<"cod" | "vnpay" | "">("cod"); // Default to COD
+const paymentMethod = ref<"cod" | "vnpay" | "momo" | "">("cod"); // Default to COD
 const bankCode = ref<string>("");
 const contact = ref({ fullName: "", email: "", phone: "", address: "" });
 
@@ -1080,6 +1092,30 @@ async function handleVnpayCheckout() {
     window.location.href = url;
   } catch (e: any) {
     throw new Error(e?.message || "Payment init failed");
+  }
+}
+
+async function handleMoMoCheckout() {
+  try {
+    // MoMo payment method ID in backend (adjust if needed - typically 3)
+    const momoPaymentMethodId = 3;
+    const order = await createOnlineOrder(
+      momoPaymentMethodId,
+      "Đơn hàng online - Thanh toán MoMo"
+    );
+
+    const res = await createMoMoPayment({
+      amount: Math.round(orderTotal.value),
+      orderId: order.maHoaDon || order.id.toString(),
+      orderInfo: `Thanh toan don hang ${order.maHoaDon || order.id.toString()}`,
+    });
+    const url = res.data?.payUrl;
+    if (!url) {
+      throw new Error("Missing payUrl");
+    }
+    window.location.href = url;
+  } catch (e: any) {
+    throw new Error(e?.message || "MoMo payment init failed");
   }
 }
 </script>

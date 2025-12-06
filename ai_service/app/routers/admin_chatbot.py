@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from app.utils.lm_studio import lm_client
+from app.utils.llm_client import llm_client
 from app.utils.database import db_client
 import logging
 from datetime import datetime, timedelta
@@ -117,48 +117,71 @@ def get_data_source_info(intent: str) -> str:
     }
     return sources.get(intent, "Dữ liệu hệ thống GearUp")
 
-def get_follow_up_suggestions(intent: str) -> list[str]:
-    """Get follow-up question suggestions based on intent"""
+def get_follow_up_suggestions_llm(user_question: str, ai_response: str, intent: str) -> list[str]:
+    """Generate contextual follow-up suggestions using LLM"""
+    try:
+        prompt = f"""Dựa trên cuộc trò chuyện sau, hãy đề xuất 3 câu hỏi tiếp theo ngắn gọn, liên quan và hữu ích cho quản trị viên cửa hàng GearUp.
+
+Câu hỏi của admin: {user_question}
+Phản hồi của AI: {ai_response[:300]}...
+Chủ đề: {intent}
+
+Yêu cầu:
+- 3 câu hỏi ngắn gọn, súc tích (tối đa 50 ký tự mỗi câu)
+- Liên quan trực tiếp đến dữ liệu vừa được hiển thị
+- Tập trung vào phân tích sâu hơn, so sánh, hoặc hành động tiếp theo
+- Sử dụng ngôn ngữ quản trị (doanh thu, tồn kho, nhân viên, khách hàng)
+- Chỉ trả lời 3 câu hỏi, mỗi câu trên 1 dòng, không có số thứ tự hoặc ký tự đầu dòng
+
+Ví dụ format trả lời:
+So sánh với tháng trước?
+Phân tích theo kênh bán?
+Tạo mã giảm giá?"""
+
+        messages = [{"role": "user", "content": prompt}]
+        response = llm_client.chat(messages, temperature=0.7, max_tokens=150, stream=False)
+        
+        # Parse response into list of suggestions
+        suggestions_text = response.strip()
+        suggestions = [s.strip() for s in suggestions_text.split('\n') if s.strip()]
+        
+        # Filter out numbering, bullets, and ensure max 3 suggestions
+        cleaned_suggestions = []
+        for s in suggestions[:5]:  # Take max 5 in case of extras
+            # Remove common prefixes like "1.", "-", "*", etc.
+            cleaned = re.sub(r'^[\d\.\-\*\+]+\s*', '', s).strip()
+            if cleaned and len(cleaned) <= 100:  # Reasonable length
+                cleaned_suggestions.append(cleaned)
+        
+        # Return exactly 3 suggestions
+        return cleaned_suggestions[:3] if len(cleaned_suggestions) >= 3 else cleaned_suggestions + get_fallback_suggestions(intent)[:3-len(cleaned_suggestions)]
+    
+    except Exception as e:
+        logger.error(f"Failed to generate LLM suggestions: {e}")
+        return get_fallback_suggestions(intent)
+
+def get_fallback_suggestions(intent: str) -> list[str]:
+    """Fallback suggestions when LLM fails"""
     suggestions = {
         "top_products": [
-            "Sản phẩm nào bán chậm nhất?",
-            "So sánh doanh thu tháng này với tháng trước?",
-            "Tồn kho của các sản phẩm này còn bao nhiêu?"
+            "So sánh với tháng trước?",
+            "Phân tích theo kênh bán?",
+            "Tồn kho còn bao nhiêu?"
         ],
         "revenue": [
-            "Khách hàng VIP chi tiêu nhiều nhất?",
-            "Phân tích theo kênh bán hàng?",
-            "Nhân viên nào bán hàng tốt nhất?"
+            "Khách VIP chi tiêu nhiều?",
+            "Phân tích theo kênh?",
+            "Nhân viên bán tốt nhất?"
         ],
         "low_stock": [
-            "Sản phẩm nào bán chạy nhất cần nhập thêm?",
-            "Doanh thu của các sản phẩm sắp hết?",
-            "Tạo mã giảm giá để xả hàng tồn kho?"
+            "Sản phẩm nào cần nhập?",
+            "Doanh thu các sản phẩm?",
+            "Tạo mã xả hàng?"
         ],
         "order_status": [
-            "Đơn hàng nào đang chờ xác nhận?",
-            "Doanh thu từ đơn đã hoàn thành?",
-            "Nhân viên nào xử lý nhiều đơn nhất?"
-        ],
-        "customers_detail": [
-            "Sản phẩm nào họ mua nhiều nhất?",
-            "Xu hướng mua hàng theo tháng?",
-            "Tạo voucher cho khách VIP?"
-        ],
-        "discounts": [
-            "Hiệu quả của các đợt giảm giá?",
-            "Tạo mã giảm giá mới?",
-            "Sản phẩm nào cần khuyến mãi?"
-        ],
-        "employees": [
-            "Tỷ lệ chuyển đổi của từng nhân viên?",
-            "Kênh bán hàng nào nhân viên hoạt động nhiều?",
-            "So sánh hiệu suất theo tháng?"
-        ],
-        "channel_dist": [
-            "Sản phẩm bán chạy ở mỗi kênh?",
-            "Nhân viên nào bán online tốt nhất?",
-            "Xu hướng theo thời gian?"
+            "Đơn chờ xác nhận?",
+            "Doanh thu đơn hoàn thành?",
+            "Nhân viên xử lý nhiều?"
         ],
     }
     return suggestions.get(intent, [
@@ -443,8 +466,8 @@ async def chat(request: ChatRequest):
             {"role": "user", "content": f"{request.message}\n\n**Dữ liệu từ hệ thống:**\n{db_context}"}
         ]
         
-        # 4. Call LM Studio
-        response = lm_client.chat(
+        # 4. Call LLM
+        response = llm_client.chat(
             messages=messages,
             temperature=0.3,
             max_tokens=2000
@@ -452,12 +475,15 @@ async def chat(request: ChatRequest):
         
         ai_message = response.choices[0].message.content
         
+        # Generate contextual suggestions using LLM
+        suggestions = get_follow_up_suggestions_llm(request.message, ai_message, intent)
+        
         return ChatResponse(
             message=ai_message,
             sources=get_data_source_info(intent),
             query_type=intent,
             data_source=get_data_source_info(intent),
-            follow_up_suggestions=get_follow_up_suggestions(intent),
+            follow_up_suggestions=suggestions,
             data_context={
                 "time_range": "30_days",
                 "channel": "all",
@@ -488,13 +514,13 @@ async def chat_stream(request: ChatRequest):
         
         # 4. Stream generator function
         async def generate():
+            full_response = ""  # Collect full response for suggestions
             try:
-                # Send initial metadata with data source and follow-up
+                # Send initial metadata without suggestions (will send after response completes)
                 metadata = {
                     'type': 'start',
                     'intent': intent,
                     'data_source': get_data_source_info(intent),
-                    'follow_up_suggestions': get_follow_up_suggestions(intent),
                     'data_context': {
                         'time_range': '30_days',
                         'channel': 'all'
@@ -502,20 +528,67 @@ async def chat_stream(request: ChatRequest):
                 }
                 yield f"data: {json.dumps(metadata)}\n\n"
                 
-                # Call LM Studio with streaming enabled
-                stream = lm_client.chat(
+                # Call LLM with streaming enabled
+                stream = llm_client.chat(
                     messages=messages,
                     temperature=0.3,
                     max_tokens=2000,
                     stream=True
                 )
                 
-                # Stream each chunk
-                for chunk in stream:
-                    if chunk.choices[0].delta.content:
-                        content = chunk.choices[0].delta.content
-                        content_event = json.dumps({'type': 'content', 'content': content})
-                        yield f"data: {content_event}\n\n"
+                # Stream each chunk (handle both OpenAI and Gemini formats)
+                try:
+                    for chunk in stream:
+                        content = None
+                        
+                        # Handle OpenAI format (LM Studio)
+                        if hasattr(chunk, 'choices') and chunk.choices:
+                            if hasattr(chunk.choices[0], 'delta') and hasattr(chunk.choices[0].delta, 'content'):
+                                content = chunk.choices[0].delta.content
+                        # Handle Gemini format - check multiple possible attributes
+                        elif hasattr(chunk, 'text') and chunk.text:
+                            content = chunk.text
+                        elif hasattr(chunk, 'parts') and chunk.parts:
+                            # Gemini sometimes returns parts array
+                            for part in chunk.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    content = part.text
+                                    break
+                        # Fallback: try to get content directly
+                        elif hasattr(chunk, 'content'):
+                            content = chunk.content
+                        
+                        if content:
+                            full_response += content  # Collect for suggestions
+                            content_event = json.dumps({'type': 'content', 'content': content}, ensure_ascii=False)
+                            yield f"data: {content_event}\n\n"
+                except StopIteration:
+                    # Gemini stream iterator ends with StopIteration - this is normal
+                    logger.debug("Stream ended normally (StopIteration)")
+                    pass
+                except Exception as stream_error:
+                    logger.error(f"Error during streaming: {stream_error}", exc_info=True)
+                    error_event = json.dumps({'type': 'error', 'error': f'Streaming error: {str(stream_error)}'})
+                    yield f"data: {error_event}\n\n"
+                
+                # Generate contextual suggestions using LLM after response is complete
+                if full_response:
+                    try:
+                        suggestions = get_follow_up_suggestions_llm(request.message, full_response, intent)
+                        suggestions_event = json.dumps({
+                            'type': 'suggestions',
+                            'follow_up_suggestions': suggestions
+                        }, ensure_ascii=False)
+                        yield f"data: {suggestions_event}\n\n"
+                    except Exception as sug_error:
+                        logger.error(f"Failed to generate suggestions: {sug_error}")
+                        # Send fallback suggestions
+                        fallback_suggestions = get_fallback_suggestions(intent)
+                        suggestions_event = json.dumps({
+                            'type': 'suggestions',
+                            'follow_up_suggestions': fallback_suggestions
+                        }, ensure_ascii=False)
+                        yield f"data: {suggestions_event}\n\n"
                 
                 # Send end signal
                 yield f"data: {json.dumps({'type': 'end'})}\n\n"
@@ -541,15 +614,23 @@ async def chat_stream(request: ChatRequest):
 
 @router.get("/health")
 async def health_check():
-    """Check LM Studio connection"""
-    is_connected, message = lm_client.test_connection()
+    """Check LLM provider connection"""
+    is_connected, message = llm_client.test_connection()
     
-    return {
-        "lm_studio": "connected" if is_connected else "disconnected",
+    provider_info = {
+        "provider": llm_client.provider,
+        "status": "connected" if is_connected else "disconnected",
         "message": message,
-        "model": lm_client.model,
-        "base_url": lm_client.client.base_url
+        "model": llm_client.model
     }
+    
+    # Add provider-specific info
+    if llm_client.provider == "lm_studio":
+        provider_info["base_url"] = llm_client.client.client.base_url
+    elif llm_client.provider == "gemini":
+        provider_info["api_key_configured"] = bool(llm_client.client.api_key) if hasattr(llm_client.client, 'api_key') else False
+    
+    return provider_info
 
 
 

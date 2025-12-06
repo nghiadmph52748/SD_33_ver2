@@ -212,7 +212,7 @@
           status="success"
           long
           :loading="qrSyncing"
-          :disabled="!qrSession || finalPrice <= 0"
+          :disabled="finalPrice <= 0 || !hasItems"
           @click="$emit('open-mobile')"
         >
           <template #icon>

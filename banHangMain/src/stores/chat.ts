@@ -95,6 +95,17 @@ const useChatStore = defineStore('chat', {
     // Removed ensureStaffChatAvailable - customers can now use chat
 
     async fetchConversations() {
+      const token = getToken()
+      const userStore = useUserStore()
+      
+      // Skip fetch for guest users - they don't have permission
+      if (!token || !userStore.isAuthenticated) {
+        this.conversations = []
+        this.updateTotalUnreadCount()
+        this.loadingConversations = false
+        return
+      }
+      
       this.loadingConversations = true
       try {
         const response = await layDanhSachCuocTroChuyen()
@@ -102,8 +113,17 @@ const useChatStore = defineStore('chat', {
         this.conversations = Array.isArray(data) ? data : []
         this.updateTotalUnreadCount()
       } catch (error: any) {
-        console.error('❌ Fetch conversations error:', error)
-        Message.error(`Không thể tải danh sách cuộc trò chuyện: ${error.message}`)
+        // For 403 errors (unauthorized), silently fail and return empty array
+        // This is expected for guest users or when service is unavailable
+        if (error.response?.status === 403) {
+          this.conversations = []
+          this.updateTotalUnreadCount()
+          // Don't log error for guest users - this is expected
+        } else {
+          console.error('❌ Fetch conversations error:', error)
+          // Only show error for other types of errors
+          Message.error(`Không thể tải danh sách cuộc trò chuyện: ${error.message}`)
+        }
       } finally {
         this.loadingConversations = false
       }
@@ -165,15 +185,19 @@ const useChatStore = defineStore('chat', {
 
       try {
         const userStore = useUserStore()
-        const senderId = userStore.id
-        if (!senderId) throw new Error('Không xác định được người gửi')
+        // Allow guest users to send messages (guest ID will be handled by backend)
+        // For guest users, senderId can be null or a temporary guest ID
+        const senderId = userStore.id || null
+        
+        // For guest users, create a temporary optimistic message
+        // Backend will assign proper ID when message is saved
         const tempSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
         const tempId = Number(`${Date.now()}${Math.floor(Math.random() * 1000)}`)
         const optimisticMessage: ChatMessage = {
           id: Number.isFinite(tempId) ? tempId : Date.now(),
           maTinNhan: `temp-${tempSuffix}`,
-          senderId,
-          senderName: userStore.name || '',
+          senderId: senderId || 0, // Use 0 for guest, backend will handle
+          senderName: userStore.name || 'Khách',
           receiverId: message.receiverId,
           receiverName: '',
           content: message.content,
@@ -183,6 +207,8 @@ const useChatStore = defineStore('chat', {
           readAt: null,
         }
 
+        // Add optimistic message for both authenticated and guest users
+        // This ensures the message appears immediately in the UI
         this.addMessageToState(optimisticMessage)
         this.updateConversationWithNewMessage(optimisticMessage)
 
@@ -275,19 +301,45 @@ const useChatStore = defineStore('chat', {
     },
 
     async fetchOnlineUsers() {
+      const token = getToken()
+      const userStore = useUserStore()
+      
+      // Skip fetch for guest users - they don't have permission and don't need online users list
+      // Guest can still chat, backend will assign staff automatically
+      if (!token || !userStore.isAuthenticated) {
+        this.onlineUsers = new Set()
+        return
+      }
+      
       try {
-        const token = getToken()
         const baseUrl = axios.defaults.baseURL || 'http://localhost:8080'
         const response = await fetch(`${baseUrl}/api/presence/online-users`, {
           headers: {
-            Authorization: token ? `Bearer ${token}` : '',
+            Authorization: `Bearer ${token}`,
           },
         })
-        if (!response.ok) throw new Error('Fetch online users failed')
+        if (!response.ok) {
+          // For 403 errors, silently fail and return empty set
+          // This means no staff is available or service is unavailable
+          if (response.status === 403) {
+            this.onlineUsers = new Set()
+            return
+          }
+          throw new Error('Fetch online users failed')
+        }
         const userIds: number[] = await response.json()
         this.onlineUsers = new Set(userIds)
       } catch (error: any) {
-        console.error('Lỗi khi lấy danh sách online users:', error)
+        // For 403 errors, silently fail - this is expected for guest users
+        // Check if it's a fetch error with status 403
+        if (error.message?.includes('403') || error.status === 403) {
+          this.onlineUsers = new Set()
+          // Don't log error for guest users - this is expected
+        } else {
+          console.error('Lỗi khi lấy danh sách online users:', error)
+          // Set empty set on any error to indicate no staff available
+          this.onlineUsers = new Set()
+        }
       }
     },
 
@@ -311,21 +363,26 @@ const useChatStore = defineStore('chat', {
       }
 
       const token = getToken()
-      if (!token) {
-        console.warn('No token available, cannot connect WebSocket')
-        return
-      }
-
+      const userStore = useUserStore()
+      const isGuest = !token || !userStore.isAuthenticated
+      
       this.wsConnecting = true
 
       const baseURL = axios.defaults.baseURL || 'http://localhost:8080'
       const wsUrl = `${baseURL}/ws-chat/sockjs`
 
+      // Build connect headers - include token if available, otherwise use guest chat header
+      const connectHeaders: Record<string, string> = {}
+      if (token) {
+        connectHeaders.Authorization = `Bearer ${token}`
+      } else if (isGuest) {
+        // For guest users, send special header to allow anonymous connection
+        connectHeaders['x-guest-chat'] = 'true'
+      }
+
       const client = new Client({
         webSocketFactory: () => new SockJS(wsUrl),
-        connectHeaders: {
-          Authorization: `Bearer ${token}`,
-        },
+        connectHeaders,
         debug: (str) => {
           console.log('[STOMP Debug]', str)
         },
@@ -431,11 +488,16 @@ const useChatStore = defineStore('chat', {
     async handleIncomingMessage(message: ChatMessage) {
       const userStore = useUserStore()
       const currentUserId = userStore.id
-      if (!currentUserId) return
+      const isGuest = !currentUserId || !userStore.isAuthenticated
 
-      if (message.receiverId !== currentUserId && message.senderId !== currentUserId) {
-        return
+      // For authenticated users, check if message is for them
+      if (!isGuest) {
+        if (message.receiverId !== currentUserId && message.senderId !== currentUserId) {
+          return
+        }
       }
+      // For guest users, we accept all messages and let addMessageToState filter them
+      // This allows guest users to receive messages from staff
 
       this.addMessageToState(message)
       this.updateConversationWithNewMessage(message)
@@ -456,7 +518,11 @@ const useChatStore = defineStore('chat', {
       })
 
       if (!conversationExists) {
-        this.fetchConversations()
+        // Only fetch conversations for authenticated users
+        const userStore = useUserStore()
+        if (userStore.isAuthenticated) {
+          this.fetchConversations()
+        }
       } else {
         this.updateTotalUnreadCount()
       }
@@ -489,43 +555,94 @@ const useChatStore = defineStore('chat', {
     addMessageToState(message: ChatMessage) {
       const userStore = useUserStore()
       const currentUserId = userStore.id
+      const isGuest = !currentUserId || !userStore.isAuthenticated
 
       let conversation = this.conversations.find((c) => {
         // Handle customer-staff conversations
         if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
+          // Match conversation where message direction is exact:
+          // - Guest sends to staff: senderId === khachHangId && receiverId === nhanVienId
+          // - Staff sends to guest: senderId === nhanVienId && receiverId === khachHangId
+          // Only match exact direction, not reversed, to avoid matching wrong conversations
           return (
             (c.khachHangId === message.senderId && c.nhanVienId === message.receiverId) ||
-            (c.nhanVienId === message.senderId && c.khachHangId === message.receiverId) ||
-            (c.khachHangId === message.receiverId && c.nhanVienId === message.senderId) ||
-            (c.nhanVienId === message.receiverId && c.khachHangId === message.senderId)
+            (c.nhanVienId === message.senderId && c.khachHangId === message.receiverId)
           )
         }
         // Handle staff-staff conversations
         return (
           (c.nhanVien1Id === message.senderId && c.nhanVien2Id === message.receiverId) ||
-          (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId) ||
-          (c.nhanVien1Id === message.receiverId && c.nhanVien2Id === message.senderId) ||
-          (c.nhanVien2Id === message.receiverId && c.nhanVien1Id === message.senderId)
+          (c.nhanVien2Id === message.senderId && c.nhanVien1Id === message.receiverId)
         )
       })
 
-      if (!conversation && currentUserId) {
-        const tempId = Date.now()
-        conversation = {
-          id: tempId,
-          maCuocTraoDoi: `temp-${tempId}`,
-          loaiCuocTraoDoi: 'STAFF_STAFF', // Default, will be corrected by backend
-          nhanVien1Id: currentUserId,
-          nhanVien1Name: userStore.name || '',
-          nhanVien2Id: message.senderId === currentUserId ? message.receiverId : message.senderId,
-          nhanVien2Name: message.senderId === currentUserId ? message.receiverName : message.senderName,
-          lastMessageContent: message.content,
-          lastMessageTime: message.sentAt,
-          lastSenderId: message.senderId,
-          unreadCountNv1: 0,
-          unreadCountNv2: 0,
-        } as Conversation
-        this.conversations.unshift(conversation)
+      // For guest users, create a temporary conversation if needed
+      // Guest users receive messages from staff, so we need to handle this case
+      if (!conversation) {
+        if (isGuest) {
+          // For guest users, create a temporary CUSTOMER_STAFF conversation
+          // When staff sends to guest: senderId = staff ID, receiverId = guest customer ID
+          // When guest sends to staff: senderId = guest customer ID (or 0), receiverId = staff ID
+          const isStaffToGuest = message.senderId && message.senderId !== 0 && 
+                                 message.receiverId && message.receiverId !== 0 &&
+                                 message.receiverId !== message.senderId
+          
+          if (isStaffToGuest) {
+            // Message from staff to guest - receiverId is guest customer ID
+            const tempId = Date.now()
+            conversation = {
+              id: tempId,
+              maCuocTraoDoi: `temp-guest-${tempId}`,
+              loaiCuocTraoDoi: 'CUSTOMER_STAFF',
+              khachHangId: message.receiverId, // Guest customer ID
+              khachHangName: 'Khách',
+              nhanVienId: message.senderId,
+              nhanVienName: message.senderName || 'Nhân viên',
+              lastMessageContent: message.content,
+              lastMessageTime: message.sentAt,
+              lastSenderId: message.senderId,
+              unreadCountNv1: 0,
+              unreadCountNv2: 0,
+            } as Conversation
+            this.conversations.unshift(conversation)
+          } else if (message.senderId && message.senderId !== 0 && message.receiverId && message.receiverId !== 0) {
+            // Message from guest to staff - senderId is guest customer ID
+            const tempId = Date.now()
+            conversation = {
+              id: tempId,
+              maCuocTraoDoi: `temp-guest-${tempId}`,
+              loaiCuocTraoDoi: 'CUSTOMER_STAFF',
+              khachHangId: message.senderId, // Guest customer ID
+              khachHangName: 'Khách',
+              nhanVienId: message.receiverId,
+              nhanVienName: message.receiverName || 'Nhân viên',
+              lastMessageContent: message.content,
+              lastMessageTime: message.sentAt,
+              lastSenderId: message.senderId,
+              unreadCountNv1: 0,
+              unreadCountNv2: 0,
+            } as Conversation
+            this.conversations.unshift(conversation)
+          }
+        } else if (currentUserId) {
+          // Authenticated user - create temporary conversation
+          const tempId = Date.now()
+          conversation = {
+            id: tempId,
+            maCuocTraoDoi: `temp-${tempId}`,
+            loaiCuocTraoDoi: 'STAFF_STAFF', // Default, will be corrected by backend
+            nhanVien1Id: currentUserId,
+            nhanVien1Name: userStore.name || '',
+            nhanVien2Id: message.senderId === currentUserId ? message.receiverId : message.senderId,
+            nhanVien2Name: message.senderId === currentUserId ? message.receiverName : message.senderName,
+            lastMessageContent: message.content,
+            lastMessageTime: message.sentAt,
+            lastSenderId: message.senderId,
+            unreadCountNv1: 0,
+            unreadCountNv2: 0,
+          } as Conversation
+          this.conversations.unshift(conversation)
+        }
       }
 
       if (!conversation) return
@@ -614,7 +731,11 @@ const useChatStore = defineStore('chat', {
       this.updateTotalUnreadCount()
 
       if (conversation.id > 1000000000000) {
-        this.fetchConversations()
+        // Only fetch conversations for authenticated users
+        const userStore = useUserStore()
+        if (userStore.isAuthenticated) {
+          this.fetchConversations()
+        }
       }
     },
 

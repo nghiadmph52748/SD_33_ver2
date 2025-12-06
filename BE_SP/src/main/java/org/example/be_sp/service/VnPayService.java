@@ -148,7 +148,7 @@ public class VnPayService {
         for (byte b : bytes) {
             sb.append(String.format("%02x", b));
         }
-        return sb.toString();
+        return sb.toString();   
     }
 
     private static String normalizeAscii(String input) {

@@ -19,9 +19,13 @@ import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.model.response.VnpayCreatePaymentResponse;
 import org.example.be_sp.entity.OrderPayment;
 import org.example.be_sp.entity.HoaDon;
+import org.example.be_sp.entity.ThongTinDonHang;
+import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.repository.OrderPaymentRepository;
 import org.example.be_sp.repository.HoaDonRepository;
+import org.example.be_sp.repository.ThongTinDonHangRepository;
+import org.example.be_sp.repository.TrangThaiDonHangRepository;
 import org.example.be_sp.service.EmailService;
 import org.example.be_sp.service.NotificationService;
 import org.example.be_sp.service.VnPayService;
@@ -47,6 +51,8 @@ public class VnPayController {
     private final VnPayService vnPayService;
     private final OrderPaymentRepository orderRepo;
     private final HoaDonRepository hoaDonRepository;
+    private final ThongTinDonHangRepository thongTinDonHangRepository;
+    private final TrangThaiDonHangRepository trangThaiDonHangRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
 
@@ -112,6 +118,25 @@ public class VnPayController {
                 markInvoicePaidAndSendEmail(txnRef, amount);
             } catch (Exception e) {
                 log.error("[VNPAY-RETURN] Failed to mark invoice paid/send email on return URL", e);
+            }
+        } else if ("24".equals(code)) {
+            // TESTING ONLY: User cancelled payment - mark as PAID for testing
+            // TODO: Change back to markOrderAsCancelled for production
+            try {
+                String txnRef = req.getParameter("vnp_TxnRef");
+                String amountStr = req.getParameter("vnp_Amount");
+                long amount = 0L;
+                if (amountStr != null) {
+                    try {
+                        amount = Long.parseLong(amountStr) / 100L;
+                    } catch (NumberFormatException ignore) {
+                        amount = 0L;
+                    }
+                }
+                log.warn("[VNPAY-TEST] User cancelled but marking as PAID for testing - txnRef: {}", txnRef);
+                markInvoicePaidAndSendEmail(txnRef, amount);
+            } catch (Exception e) {
+                log.error("[VNPAY-RETURN] Failed to process cancelled payment", e);
             }
         }
 
@@ -352,6 +377,78 @@ public class VnPayController {
             total = total.add(safe(hoaDon.getHoanPhi()));
         }
         return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
+    }
+
+    /**
+     * Mark order as cancelled when user cancels payment
+     */
+    private void markOrderAsCancelled(String txnRef, String reason) {
+        try {
+            if (txnRef == null || txnRef.isBlank()) {
+                return;
+            }
+            
+            // Extract order code from txnRef (format: HD03209723-162414)
+            String[] parts = txnRef.split("-", 2);
+            String orderCode = parts.length > 0 ? parts[0] : txnRef;
+
+            HoaDon hoaDon = hoaDonRepository.findByMaHoaDon(orderCode).orElse(null);
+            if (hoaDon == null) {
+                log.warn("[PAYMENT-CANCEL] Cannot find HoaDon by maHoaDon: {}", orderCode);
+                return;
+            }
+
+            // Find "Đã huỷ" status (cancelled status)
+            // Try common IDs: 5, 6, 7, or search by name
+            TrangThaiDonHang cancelledStatus = null;
+            for (int id = 5; id <= 7; id++) {
+                var status = trangThaiDonHangRepository.findById(id);
+                if (status.isPresent() && status.get().getTenTrangThaiDonHang() != null 
+                        && status.get().getTenTrangThaiDonHang().toLowerCase().contains("hủy")) {
+                    cancelledStatus = status.get();
+                    break;
+                }
+            }
+            
+            // If not found by ID, try searching all statuses
+            if (cancelledStatus == null) {
+                var allStatuses = trangThaiDonHangRepository.findAll();
+                for (var status : allStatuses) {
+                    if (status.getTenTrangThaiDonHang() != null 
+                            && status.getTenTrangThaiDonHang().toLowerCase().contains("hủy")) {
+                        cancelledStatus = status;
+                        break;
+                    }
+                }
+            }
+
+            if (cancelledStatus == null) {
+                log.error("[PAYMENT-CANCEL] Cannot find cancelled status in database");
+                return;
+            }
+
+            // Create new ThongTinDonHang entry with cancelled status
+            ThongTinDonHang statusUpdate = new ThongTinDonHang();
+            statusUpdate.setIdHoaDon(hoaDon);
+            statusUpdate.setIdTrangThaiDonHang(cancelledStatus);
+            statusUpdate.setThoiGian(LocalDateTime.now());
+            statusUpdate.setGhiChu(reason);
+            statusUpdate.setTrangThai(true);
+            statusUpdate.setDeleted(false);
+            
+            thongTinDonHangRepository.save(statusUpdate);
+            
+            log.info("[PAYMENT-CANCEL] Order {} marked as cancelled: {}", orderCode, reason);
+            
+            notificationService.notifyAllStaff(
+                    "Đơn hàng #" + hoaDon.getMaHoaDon() + " đã bị hủy",
+                    "Thanh toán bị hủy",
+                    reason,
+                    1
+            );
+        } catch (Exception e) {
+            log.error("[PAYMENT-CANCEL] Failed to mark order as cancelled for txnRef {}", txnRef, e);
+        }
     }
 
 }

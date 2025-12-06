@@ -142,22 +142,39 @@ class DatabaseClient:
             raise
     
     def get_top_selling_products(self, limit: int = 5, days: int = 365) -> List[Dict]:
-        """Get top selling products"""
+        """Get top selling products with same format as search_products"""
         query = """
-        SELECT TOP (?) 
-            sp.id,
-            sp.ten_san_pham as product_name,
-            SUM(hdct.so_luong) as total_sold,
-            SUM(hdct.thanh_tien) as total_revenue
-        FROM hoa_don_chi_tiet hdct
-        JOIN chi_tiet_san_pham ctsp ON hdct.id_chi_tiet_san_pham = ctsp.id
-        JOIN san_pham sp ON ctsp.id_san_pham = sp.id
-        JOIN hoa_don hd ON hdct.id_hoa_don = hd.id
-        WHERE hd.trang_thai = 1
-        GROUP BY sp.id, sp.ten_san_pham
-        ORDER BY total_sold DESC
+        SELECT TOP (?)
+            sp.id AS product_id,
+            sp.ten_san_pham AS product_name,
+            COUNT(DISTINCT ctsp.id) AS variant_count,
+            ISNULL(SUM(ctsp.so_luong), 0) AS total_stock,
+            MIN(ctsp.gia_ban) AS min_price,
+            MAX(ctsp.gia_ban) AS max_price,
+            (SELECT TOP 1 asp.duong_dan_anh 
+             FROM chi_tiet_san_pham_anh ctspa
+             INNER JOIN anh_san_pham asp ON ctspa.id_anh_san_pham = asp.id
+             INNER JOIN chi_tiet_san_pham ctsp_img ON ctspa.id_chi_tiet_san_pham = ctsp_img.id
+             WHERE ctsp_img.id_san_pham = sp.id 
+               AND ctspa.trang_thai = 1 
+               AND asp.trang_thai = 1
+             ORDER BY ctspa.id ASC) AS image_url,
+            nsx.ten_nha_san_xuat AS brand_name,
+            ISNULL(SUM(hdct.so_luong), 0) AS total_sold,
+            ISNULL(SUM(hdct.so_luong * hdct.gia_ban), 0) AS total_revenue
+        FROM san_pham sp
+        LEFT JOIN chi_tiet_san_pham ctsp ON ctsp.id_san_pham = sp.id AND ctsp.trang_thai = 1
+        LEFT JOIN nha_san_xuat nsx ON sp.id_nha_san_xuat = nsx.id
+        LEFT JOIN hoa_don_chi_tiet hdct ON hdct.id_chi_tiet_san_pham = ctsp.id
+        LEFT JOIN hoa_don hd ON hdct.id_hoa_don = hd.id 
+            AND hd.trang_thai = 1 
+            AND hd.trang_thai_thanh_toan = 1
+            AND hd.create_at >= DATEADD(day, -?, GETDATE())
+        WHERE sp.trang_thai = 1 AND sp.deleted = 0
+        GROUP BY sp.id, sp.ten_san_pham, nsx.ten_nha_san_xuat
+        ORDER BY total_sold DESC, total_revenue DESC, sp.ten_san_pham ASC
         """
-        return self.execute_query(query, (limit,))
+        return self.execute_query(query, (limit, days))
     
     def get_revenue_summary(self, days: int = 365) -> Dict:
         """Get revenue summary"""
@@ -316,6 +333,39 @@ class DatabaseClient:
         """
         return self.execute_query(query)
     
+    def get_products_on_sale(self, limit: int = 15) -> List[Dict]:
+        """Get products that are currently on sale (have active discount campaigns)"""
+        query = """
+        SELECT DISTINCT TOP (?)
+            sp.id AS product_id,
+            sp.ten_san_pham AS product_name,
+            COUNT(DISTINCT ctsp.id) AS variant_count,
+            ISNULL(SUM(ctsp.so_luong), 0) AS total_stock,
+            MIN(ctsp.gia_ban) AS min_price,
+            MAX(ctsp.gia_ban) AS max_price,
+            MAX(dg.gia_tri_giam_gia) AS max_discount_value,
+            (SELECT TOP 1 asp.duong_dan_anh 
+             FROM chi_tiet_san_pham_anh ctspa
+             INNER JOIN anh_san_pham asp ON ctspa.id_anh_san_pham = asp.id
+             INNER JOIN chi_tiet_san_pham ctsp_img ON ctspa.id_chi_tiet_san_pham = ctsp_img.id
+             WHERE ctsp_img.id_san_pham = sp.id 
+               AND ctspa.trang_thai = 1 
+               AND asp.trang_thai = 1
+             ORDER BY ctspa.id ASC) AS image_url,
+            nsx.ten_nha_san_xuat AS brand_name
+        FROM san_pham sp
+        INNER JOIN chi_tiet_san_pham ctsp ON ctsp.id_san_pham = sp.id AND ctsp.trang_thai = 1
+        INNER JOIN chi_tiet_dot_giam_gia ctdgg ON ctdgg.id_chi_tiet_san_pham = ctsp.id AND ctdgg.deleted = 0
+        INNER JOIN dot_giam_gia dg ON ctdgg.id_dot_giam_gia = dg.id AND dg.trang_thai = 1
+        LEFT JOIN nha_san_xuat nsx ON sp.id_nha_san_xuat = nsx.id
+        WHERE sp.trang_thai = 1 
+          AND sp.deleted = 0
+          AND GETDATE() BETWEEN dg.ngay_bat_dau AND dg.ngay_ket_thuc
+        GROUP BY sp.id, sp.ten_san_pham, nsx.ten_nha_san_xuat
+        ORDER BY max_discount_value DESC, sp.ten_san_pham ASC
+        """
+        return self.execute_query(query, (limit,))
+    
     def get_employee_sales_performance(self, limit: int = 5) -> List[Dict]:
         """Get employee sales performance"""
         query = """
@@ -380,7 +430,7 @@ class DatabaseClient:
         return results[0] if results else {}
 
     def search_products(self, keyword: str, limit: int = 10) -> List[Dict]:
-        """Search products by name with basic info, total variants/stock, and first image"""
+        """Search products by name, brand, or any keyword with basic info, total variants/stock, and first image"""
         # Handle empty keyword - return all active products
         if not keyword or not keyword.strip():
             query = """
@@ -401,12 +451,16 @@ class DatabaseClient:
                  ORDER BY ctspa.id ASC) AS image_url
             FROM san_pham sp
             LEFT JOIN chi_tiet_san_pham ctsp ON ctsp.id_san_pham = sp.id AND ctsp.trang_thai = 1
-            WHERE sp.trang_thai = 1
+            WHERE sp.trang_thai = 1 AND sp.deleted = 0
             GROUP BY sp.id, sp.ten_san_pham
             ORDER BY sp.ten_san_pham ASC
             """
             return self.execute_query(query, (limit,))
         else:
+            # Smart search: search in product name, brand name, and split keywords
+            keyword_lower = keyword.lower().strip()
+            keyword_pattern = f"%{keyword_lower}%"
+            
             query = """
             SELECT TOP (?)
                 sp.id AS product_id,
@@ -422,14 +476,35 @@ class DatabaseClient:
                  WHERE ctsp_img.id_san_pham = sp.id 
                    AND ctspa.trang_thai = 1 
                    AND asp.trang_thai = 1
-                 ORDER BY ctspa.id ASC) AS image_url
+                 ORDER BY ctspa.id ASC) AS image_url,
+                nsx.ten_nha_san_xuat AS brand_name
             FROM san_pham sp
             LEFT JOIN chi_tiet_san_pham ctsp ON ctsp.id_san_pham = sp.id AND ctsp.trang_thai = 1
-            WHERE sp.trang_thai = 1 AND sp.ten_san_pham LIKE ?
-            GROUP BY sp.id, sp.ten_san_pham
-            ORDER BY sp.ten_san_pham ASC
+            LEFT JOIN nha_san_xuat nsx ON sp.id_nha_san_xuat = nsx.id
+            WHERE sp.trang_thai = 1 
+              AND sp.deleted = 0
+              AND (
+                  LOWER(sp.ten_san_pham) LIKE ?
+                  OR LOWER(nsx.ten_nha_san_xuat) LIKE ?
+                  OR EXISTS (
+                      SELECT 1 
+                      FROM chi_tiet_san_pham ctsp_search
+                      WHERE ctsp_search.id_san_pham = sp.id
+                        AND ctsp_search.trang_thai = 1
+                        AND ctsp_search.deleted = 0
+                        AND LOWER(ctsp_search.ten_san_pham_chi_tiet) LIKE ?
+                  )
+              )
+            GROUP BY sp.id, sp.ten_san_pham, nsx.ten_nha_san_xuat
+            ORDER BY 
+                CASE 
+                    WHEN LOWER(sp.ten_san_pham) LIKE ? THEN 1
+                    WHEN LOWER(nsx.ten_nha_san_xuat) LIKE ? THEN 2
+                    ELSE 3
+                END,
+                sp.ten_san_pham ASC
             """
-            return self.execute_query(query, (limit, f"%{keyword}%"))
+            return self.execute_query(query, (limit, keyword_pattern, keyword_pattern, keyword_pattern, keyword_pattern, keyword_pattern))
 
     def get_product_variants(self, product_id: int) -> List[Dict]:
         """Get variants for a product with color/size/price/stock"""

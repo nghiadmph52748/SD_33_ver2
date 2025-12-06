@@ -180,6 +180,9 @@ watch(
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: calc(600px - 60px);
 }
 
 .empty-state {

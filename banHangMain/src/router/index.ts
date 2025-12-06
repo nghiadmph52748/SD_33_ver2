@@ -47,6 +47,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/PaymentVnpayResultView.vue")
   },
   {
+    path: "/payment/momo/result",
+    name: "payment-momo-result",
+    component: () => import("@/views/PaymentMoMoResultView.vue")
+  },
+  {
     path: "/payment/result",
     name: "payment-result",
     component: () => import("@/views/PaymentVnpayResultView.vue")

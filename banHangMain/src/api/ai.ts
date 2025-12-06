@@ -20,6 +20,7 @@ aiAxios.interceptors.request.use((config: any) => {
 export interface ChatRequest {
   message: string
   context?: string
+  chat_history?: Array<{ role: 'user' | 'assistant'; content: string }>
 }
 
 export interface Product {
@@ -58,7 +59,8 @@ export async function chatWithAIStream(
   message: string,
   onChunk: (text: string, metadata?: any) => void,
   onComplete: () => void,
-  onError: (error: string) => void
+  onError: (error: string) => void,
+  chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
 ): Promise<void> {
   try {
     const token = getToken()
@@ -68,7 +70,11 @@ export async function chatWithAIStream(
         'Content-Type': 'application/json',
         Authorization: token ? `Bearer ${token}` : '',
       },
-      body: JSON.stringify({ message, context: '' }),
+      body: JSON.stringify({ 
+        message, 
+        context: '',
+        chat_history: chatHistory || []
+      }),
     })
 
     if (!response.ok) {

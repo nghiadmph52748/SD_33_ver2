@@ -1,5 +1,6 @@
 package org.example.be_sp.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -477,5 +478,189 @@ public class ChatService {
         history.setCreatedBy(customerId);
         
         return aiChatHistoryRepository.save(history);
+    }
+
+    /**
+     * Assign an available staff member for guest chat
+     * Returns the ID of an available staff member, or null if none available
+     */
+    public Integer assignStaffForGuest(SendMessageRequest request) {
+        // If receiverId is specified and valid, use it
+        if (request.getReceiverId() != null && request.getReceiverId() > 0) {
+            Optional<NhanVien> staff = nhanVienRepository.findById(request.getReceiverId());
+            if (staff.isPresent()) {
+                return staff.get().getId();
+            }
+        }
+        
+        // Otherwise, find any available staff member
+        // Get all staff and filter for active ones
+        // In production, you might want to implement load balancing
+        List<NhanVien> allStaff = nhanVienRepository.findAll();
+        List<NhanVien> activeStaff = allStaff.stream()
+            .filter(nv -> nv.getTrangThai() != null && nv.getTrangThai())
+            .toList();
+        
+        if (activeStaff.isEmpty()) {
+            return null;
+        }
+        
+        // Return the first active staff member
+        return activeStaff.get(0).getId();
+    }
+
+    // Synchronized object for guest customer creation to avoid race conditions
+    private static final Object GUEST_CREATION_LOCK = new Object();
+    
+    /**
+     * Send message from guest user
+     * Creates a temporary guest record or uses existing guest session
+     */
+    @Transactional
+    public TinNhanResponse sendGuestMessage(String guestSessionId, Integer staffId, SendMessageRequest request) {
+        // Find or create a guest customer record for this session
+        // For simplicity, we'll use a special guest customer ID or create a temporary one
+        // For now, we'll use a special approach: create message with guest identifier
+        
+        // Find the staff member
+        NhanVien nhanVien = nhanVienRepository.findById(staffId)
+            .orElseThrow(() -> new ApiException("Không tìm thấy nhân viên", "404"));
+        
+        // Create a temporary guest customer (or use existing if session exists)
+        // For simplicity, we'll create a message with guest info in content metadata
+        // In production, you might want to create a temporary KhachHang record
+        
+        // Create the message
+        TinNhan tinNhan = new TinNhan();
+        tinNhan.setNoiDung(request.getContent());
+        tinNhan.setLoaiTinNhan(request.getMessageType());
+        tinNhan.setLoaiTinNhanType("CUSTOMER_STAFF");
+        tinNhan.setDaDoc(false);
+        tinNhan.setThoiGianGui(LocalDateTime.now());
+        tinNhan.setTrangThai(true);
+        tinNhan.setDeleted(false);
+        tinNhan.setCreateAt(LocalDateTime.now());
+        
+        // Set receiver (staff)
+        tinNhan.setNguoiNhan(nhanVien);
+        
+        // For guest, we don't have a KhachHang record, so we'll set sender as null
+        // and store guest session ID in a comment or metadata field
+        // Note: This requires database schema to allow null for khachHangGui
+        // If schema doesn't allow null, we need to create a temporary guest customer
+        
+        // Try to find or create a guest customer
+        // Use synchronized to avoid race conditions when creating guest customer
+        KhachHang guestCustomer;
+        synchronized (GUEST_CREATION_LOCK) {
+            // First, try to find existing guest customer
+            guestCustomer = khachHangRepository.findByEmail(guestSessionId);
+            if (guestCustomer == null) {
+                // Also check by tenTaiKhoan in case email search didn't find it
+                guestCustomer = khachHangRepository.findByTenTaiKhoan(guestSessionId);
+            }
+            
+            if (guestCustomer == null) {
+                // Create a temporary guest customer
+                // Set both email and tenTaiKhoan to guestSessionId to ensure uniqueness
+                // and satisfy any UNIQUE constraints
+                guestCustomer = new KhachHang();
+                
+                // Set email and tenTaiKhoan to guestSessionId (guaranteed unique)
+                guestCustomer.setEmail(guestSessionId);
+                guestCustomer.setTenTaiKhoan(guestSessionId); // Set tenTaiKhoan to avoid NULL UNIQUE constraint violation
+                
+                // Set other required fields
+                guestCustomer.setTenKhachHang("Khách");
+                guestCustomer.setTrangThai(true);
+                guestCustomer.setDeleted(false);
+                guestCustomer.setCreateAt(LocalDate.now());
+                guestCustomer.setCreateBy(null);
+                
+                // Set so_dien_thoai with unique value to avoid UNIQUE constraint violation
+                // Use guestSessionId with UUID suffix to ensure uniqueness even with same timestamp
+                String uniquePhone = "g" + guestSessionId.replace("guest-", "").replace("-", "");
+                // Add random suffix to ensure uniqueness
+                String randomSuffix = java.util.UUID.randomUUID().toString().substring(0, 4);
+                uniquePhone = uniquePhone + randomSuffix;
+                // Limit to 12 characters as per column definition
+                if (uniquePhone.length() > 12) {
+                    uniquePhone = uniquePhone.substring(0, 12);
+                }
+                guestCustomer.setSoDienThoai(uniquePhone);
+                
+                try {
+                    guestCustomer = khachHangRepository.saveAndFlush(guestCustomer);
+                } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                    // If save fails due to constraint violation, try to find existing guest
+                    // This can happen if multiple requests try to create the same guest simultaneously
+                    System.out.println("⚠️ Guest customer creation failed, trying to find existing: " + e.getMessage());
+                    
+                    // Clear the failed entity from session to avoid Hibernate assertion failure
+                    // This prevents "null identifier" error
+                    
+                    // Retry finding existing guest
+                    guestCustomer = khachHangRepository.findByEmail(guestSessionId);
+                    if (guestCustomer == null) {
+                        guestCustomer = khachHangRepository.findByTenTaiKhoan(guestSessionId);
+                    }
+                    if (guestCustomer == null) {
+                        // If still not found, try one more time with a different soDienThoai
+                        // This handles the case where soDienThoai constraint is violated
+                        try {
+                            // Create new guest customer object with different soDienThoai
+                            KhachHang retryGuest = new KhachHang();
+                            retryGuest.setEmail(guestSessionId);
+                            retryGuest.setTenTaiKhoan(guestSessionId);
+                            retryGuest.setTenKhachHang("Khách");
+                            retryGuest.setTrangThai(true);
+                            retryGuest.setDeleted(false);
+                            retryGuest.setCreateAt(LocalDate.now());
+                            retryGuest.setCreateBy(null);
+                            
+                            uniquePhone = "g" + System.currentTimeMillis() + randomSuffix;
+                            if (uniquePhone.length() > 12) {
+                                uniquePhone = uniquePhone.substring(uniquePhone.length() - 12);
+                            }
+                            retryGuest.setSoDienThoai(uniquePhone);
+                            guestCustomer = khachHangRepository.saveAndFlush(retryGuest);
+                        } catch (Exception e2) {
+                            // Final fallback: find by email/tenTaiKhoan one more time
+                            guestCustomer = khachHangRepository.findByEmail(guestSessionId);
+                            if (guestCustomer == null) {
+                                guestCustomer = khachHangRepository.findByTenTaiKhoan(guestSessionId);
+                            }
+                            if (guestCustomer == null) {
+                                throw new ApiException("Không thể tạo tài khoản khách do vi phạm ràng buộc dữ liệu. Vui lòng thử lại.", "500");
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // For other exceptions, try to find existing guest first
+                    guestCustomer = khachHangRepository.findByEmail(guestSessionId);
+                    if (guestCustomer == null) {
+                        guestCustomer = khachHangRepository.findByTenTaiKhoan(guestSessionId);
+                    }
+                    if (guestCustomer == null) {
+                        throw new ApiException("Không thể tạo tài khoản khách: " + e.getMessage(), "500");
+                    }
+                }
+            }
+        }
+        
+        // Ensure guestCustomer is not null before using it
+        if (guestCustomer == null) {
+            throw new ApiException("Không thể tạo hoặc tìm thấy tài khoản khách", "500");
+        }
+        
+        tinNhan.setKhachHangGui(guestCustomer);
+        tinNhan.setCreateBy(guestCustomer.getId());
+        
+        TinNhan savedMessage = tinNhanRepository.save(tinNhan);
+        
+        // Update or create conversation
+        updateOrCreateConversation(guestCustomer.getId(), staffId, request.getContent(), "CUSTOMER_STAFF");
+        
+        return new TinNhanResponse(savedMessage);
     }
 }

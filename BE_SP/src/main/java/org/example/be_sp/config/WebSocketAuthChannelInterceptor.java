@@ -67,9 +67,14 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
             boolean allowAnonymousQr = qrAnonHeaders != null && qrAnonHeaders.stream()
                     .anyMatch(value -> "true".equalsIgnoreCase(value));
 
+            List<String> guestChatHeaders = accessor.getNativeHeader("x-guest-chat");
+            boolean allowGuestChat = guestChatHeaders != null && guestChatHeaders.stream()
+                    .anyMatch(value -> "true".equalsIgnoreCase(value));
+
             // Trích xuất JWT token từ header trong quá trình CONNECT
             List<String> authHeaders = accessor.getNativeHeader("Authorization");
 
+            // Allow anonymous QR viewer connection
             if ((authHeaders == null || authHeaders.isEmpty()) && allowAnonymousQr) {
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         "qr-anonymous-client",
@@ -78,6 +83,21 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                 accessor.setUser(authentication);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 log.info("[WebSocket Auth] Allowing anonymous QR viewer connection");
+                return message;
+            }
+
+            // Allow guest chat connection (for customer-staff chat)
+            if ((authHeaders == null || authHeaders.isEmpty()) && allowGuestChat) {
+                // Generate a unique guest session ID
+                String guestSessionId = "guest-" + System.currentTimeMillis() + "-" + 
+                    java.util.UUID.randomUUID().toString().substring(0, 8);
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        guestSessionId,
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_GUEST")));
+                accessor.setUser(authentication);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.info("[WebSocket Auth] Allowing guest chat connection: {}", guestSessionId);
                 return message;
             }
 

@@ -205,6 +205,7 @@ export default {
   "cart.learnMore": "Learn more",
   // Payment
   "payment.title": "Payment with VNPAY",
+  "payment.titleMomo": "Payment with MoMo",
   "payment.successTitle": "Payment successful",
   "payment.successMessage":
     "Thank you! Your transaction has been confirmed. We will prepare your order shortly.",
@@ -234,6 +235,7 @@ export default {
   "payment.details.copied": "Reference copied!",
   "payment.details.orderId": "Order ID",
   "payment.details.method": "Payment method",
+  "payment.details.message": "Message",
   "payment.cod": "Cash on Delivery (COD)",
   "payment.codTitle": "Cash on Delivery (COD)",
   "payment.codSuccessTitle": "Order placed successfully",
@@ -253,6 +255,7 @@ export default {
   "checkout.cod": "Cash on Delivery (COD)",
   "checkout.codDesc": "Pay when you receive",
   "checkout.vnpayDesc": "Pay online via VNPAY",
+  "checkout.momoDesc": "Pay with MoMo e-wallet",
   "checkout.placeOrder": "Place order",
   // Validation
   "checkout.err.fullName": "Please enter your full name",

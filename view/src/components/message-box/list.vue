@@ -279,12 +279,14 @@ async function navigateToOrderDetail(item: MessageRecord) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
 .list-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  min-height: 0;
 
   &::-webkit-scrollbar {
     width: 6px;

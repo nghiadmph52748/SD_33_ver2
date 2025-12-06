@@ -3,7 +3,10 @@
     <!-- AI/Staff chat popup -->
     <div v-if="aiDrawerVisible" class="chat-popup ai-popup" :class="{ minimized: isAIMinimized }">
       <div class="popup-header">
-        <span class="popup-title">{{ isStaffChatMode ? t('chat.staffTab') : t('chat.aiTab') }}</span>
+        <div v-if="!isAIMinimized" class="popup-title-wrapper">
+          <span class="popup-title">{{ isStaffChatMode ? t('chat.staffTab') : t('chat.aiTab') }}</span>
+          <a-badge v-if="!isStaffChatMode" :status="aiConnected ? 'success' : 'error'" :text="aiConnected ? 'Online' : 'Offline'" />
+        </div>
         <div class="popup-header-actions">
           <button class="popup-btn maximize-btn" @click="toggleAIMinimize" :aria-label="isAIMinimized ? 'Maximize' : 'Minimize'">
             <svg v-if="isAIMinimized" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -146,7 +149,7 @@ function toggleAIDrawer() {
     if (!chatStore.wsConnected && !chatStore.wsConnecting) {
       chatStore.connectWebSocket()
     }
-    if (chatStore.conversations.length === 0) {
+    if (chatStore.conversations.length === 0 && isAuthenticated.value) {
       chatStore.fetchConversations()
       chatStore.fetchUnreadCount()
     }
@@ -158,15 +161,34 @@ function toggleAIMinimize() {
 }
 
 function closeAIPopup() {
-  aiDrawerVisible.value = false
-  isAIMinimized.value = false
-  isStaffChatMode.value = false
-  staffChatConversationId.value = null
-  staffChatReceiverId.value = null
-  // Reset active conversation when closing
-  if (chatStore.activeConversationId !== null) {
-    chatStore.setActiveConversation(null, { userInitiated: false })
+  // Save chat history before closing (component will unmount when aiDrawerVisible becomes false)
+  // Access the chatbot component's saveHistory method if available
+  if (chatbotRef.value && typeof (chatbotRef.value as any).saveHistory === 'function') {
+    try {
+      (chatbotRef.value as any).saveHistory()
+      // Also set flag to indicate window is closing (for guest sessions)
+      if (!userStore.isAuthenticated) {
+        sessionStorage.setItem('__ai_chat_window_closed', 'true')
+        sessionStorage.setItem('__ai_chat_close_time', Date.now().toString())
+        console.log('🏷️ Set window closed flag before closing AI popup')
+      }
+    } catch (e) {
+      console.error('Error saving history before close:', e)
+    }
   }
+  
+  // Small delay to ensure save completes before unmount
+  setTimeout(() => {
+    aiDrawerVisible.value = false
+    isAIMinimized.value = false
+    isStaffChatMode.value = false
+    staffChatConversationId.value = null
+    staffChatReceiverId.value = null
+    // Reset active conversation when closing
+    if (chatStore.activeConversationId !== null) {
+      chatStore.setActiveConversation(null, { userInitiated: false })
+    }
+  }, 50)
 }
 
 async function checkAIConnection() {
@@ -194,9 +216,21 @@ async function handleRedirectToStaff() {
     await chatStore.connectWebSocket()
   }
   
-  // Fetch conversations and online users
-  await chatStore.fetchConversations()
-  await chatStore.fetchOnlineUsers()
+  // Fetch conversations and online users (may fail silently for 403 errors)
+  // For guest users, skip fetch as they don't have permission
+  try {
+    await chatStore.fetchConversations()
+    // Only fetch online users for authenticated users
+    if (isAuthenticated.value) {
+      await chatStore.fetchOnlineUsers()
+    } else {
+      // Guest users don't need online users list
+      chatStore.onlineUsers = new Set()
+    }
+  } catch (error) {
+    // Errors are already handled in store methods
+    // Continue to check for available staff
+  }
   
   // Find an available online staff member
   const availableStaff = findAvailableStaff()
@@ -219,17 +253,25 @@ async function handleRedirectToStaff() {
       // New conversation - will be created when first message is sent
       staffChatReceiverId.value = availableStaff.nhanVienId
       staffChatConversationId.value = null
+    } else if (availableStaff.allowGuestChat) {
+      // Guest chat - backend will assign staff when first message is sent
+      staffChatReceiverId.value = null
+      staffChatConversationId.value = null
     }
   } else {
-    // Show a message that no staff is available
-    Message.info('Hiện tại không có nhân viên trực tuyến. Vui lòng thử lại sau hoặc để lại tin nhắn.')
+    // Show a friendly message that no staff is available
+    Message.warning({
+      content: 'Xin lỗi, hiện tại không có nhân viên nào đang hoạt động. Vui lòng thử lại sau hoặc để lại tin nhắn, chúng tôi sẽ phản hồi sớm nhất có thể.',
+      duration: 5000,
+    })
     isStaffChatMode.value = false
   }
 }
 
 function handleStaffMessageSent(message: string) {
   // Message was sent, refresh conversations to get the new one if needed
-  if (staffChatConversationId.value === null && staffChatReceiverId.value) {
+  // Only for authenticated users - guest users don't need conversations list
+  if (staffChatConversationId.value === null && staffChatReceiverId.value && isAuthenticated.value) {
     setTimeout(async () => {
       await chatStore.fetchConversations()
       // Find the new conversation
@@ -247,25 +289,31 @@ function handleStaffMessageSent(message: string) {
 }
 
 function findAvailableStaff(): any {
-  // First, try to find an existing conversation with an online staff member
-  const onlineStaffIds = Array.from(chatStore.onlineUsers)
-  
-  if (onlineStaffIds.length === 0) {
-    return null
+  // For guest users, always allow chat (backend will assign staff)
+  if (!isAuthenticated.value) {
+    // Guest can chat - backend will handle staff assignment when first message is sent
+    return { id: null, nhanVienId: null, allowGuestChat: true }
   }
+  
+  // For authenticated users, try to find existing conversation or online staff
+  const onlineStaffIds = Array.from(chatStore.onlineUsers)
   
   // Find conversations with online staff (customer-staff conversations)
   const staffConversations = chatStore.conversations.filter((conv) => {
     if (conv.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
-      return onlineStaffIds.includes(conv.nhanVienId || 0)
+      return onlineStaffIds.length === 0 || onlineStaffIds.includes(conv.nhanVienId || 0)
     }
     return false
   })
   
-  // If we have an existing conversation with an online staff, use it
+  // If we have an existing conversation, use it
   if (staffConversations.length > 0) {
-    // Prefer staff with fewer unread messages (less busy)
+    // Prefer online staff, then staff with fewer unread messages
     staffConversations.sort((a, b) => {
+      const aIsOnline = onlineStaffIds.includes(a.nhanVienId || 0)
+      const bIsOnline = onlineStaffIds.includes(b.nhanVienId || 0)
+      if (aIsOnline && !bIsOnline) return -1
+      if (!aIsOnline && bIsOnline) return 1
       const aUnread = getUnreadCount(a)
       const bUnread = getUnreadCount(b)
       return aUnread - bUnread
@@ -273,10 +321,14 @@ function findAvailableStaff(): any {
     return staffConversations[0]
   }
   
-  // No existing conversation, we'll need to create one
-  // For now, return the first online staff ID
-  // The conversation will be created when the first message is sent
-  return { id: null, nhanVienId: onlineStaffIds[0] }
+  // No existing conversation, but we have online staff
+  if (onlineStaffIds.length > 0) {
+    // Return first online staff ID - conversation will be created when first message is sent
+    return { id: null, nhanVienId: onlineStaffIds[0] }
+  }
+  
+  // Authenticated user but no online staff
+  return null
 }
 
 // Watch functions removed - AI chatbot handles its own message display
@@ -288,10 +340,13 @@ watch(aiDrawerVisible, async (visible) => {
       if (!chatStore.wsConnected && !chatStore.wsConnecting) {
         await chatStore.connectWebSocket()
       }
-      if (chatStore.conversations.length === 0) {
+      // Only fetch conversations for authenticated users
+      if (chatStore.conversations.length === 0 && isAuthenticated.value) {
         await chatStore.fetchConversations()
       }
-      await chatStore.fetchUnreadCount()
+      if (isAuthenticated.value) {
+        await chatStore.fetchUnreadCount()
+      }
     } else {
       // AI chat mode
       if (!aiConnected.value) {
@@ -433,15 +488,24 @@ onMounted(async () => {
 
   &.minimized {
     max-height: 60px;
+    width: 200px; /* Reduced width when minimized */
     overflow: hidden;
   }
 
   &.staff-popup {
     width: 500px;
+    
+    &.minimized {
+      width: 200px; /* Reduced width when minimized */
+    }
   }
 
   &.ai-popup {
     width: 500px;
+    
+    &.minimized {
+      width: 200px; /* Reduced width when minimized */
+    }
   }
 }
 
@@ -453,6 +517,11 @@ onMounted(async () => {
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
   flex-shrink: 0;
+  
+  .chat-popup.minimized & {
+    padding: 12px 20px;
+    justify-content: flex-end; /* Only show actions when minimized */
+  }
 }
 
 .popup-header-actions {
@@ -461,9 +530,21 @@ onMounted(async () => {
   gap: 8px;
 }
 
+.popup-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .popup-title {
   font-weight: 600;
   font-size: 16px;
+  color: #111;
+}
+
+.popup-title-minimized {
+  font-weight: 600;
+  font-size: 14px;
   color: #111;
 }
 
