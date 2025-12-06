@@ -18,13 +18,12 @@
         >
           <div class="menu-wrapper">
             <div class="left-side">
-              <a-space>
-                <img
-                  alt="logo"
-                  src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
-                />
-                <a-typography-title>GearUp</a-typography-title>
-              </a-space>
+              <img
+                v-show="!appStore.menuCollapse"
+                alt="GearUp Store"
+                class="brand-logo"
+                src="@/assets/logo-datn.png"
+              />
             </div>
             <Menu />
           </div>
@@ -145,15 +144,16 @@ onMounted(() => {
     .left-side {
       display: flex;
       align-items: center;
-      padding-left: 8px;
+      justify-content: center;
+      padding: 0 12px;
       background: var(--color-menu-dark-bg);
       height: 60px;
       transition: background-color 0.15s ease;
 
-      .arco-typography {
-        color: #fff;
-        font-size: 18px;
-        width: 200px;
+      .brand-logo {
+        height: 36px;
+        width: auto;
+        object-fit: contain;
       }
 
       &:hover {
@@ -224,11 +224,7 @@ onMounted(() => {
 
   .arco-layout-sider-collapsed {
     .left-side {
-      width: 50px;
-
-      .arco-typography {
-        color: transparent;
-      }
+      width: 48px;
     }
   }
 }
@@ -241,10 +237,6 @@ body:not([arco-theme='dark']) {
 
       .left-side {
         background: var(--color-bg-2);
-
-        .arco-typography {
-          color: var(--color-text-1);
-        }
 
         &:hover {
           background: var(--color-fill-2);

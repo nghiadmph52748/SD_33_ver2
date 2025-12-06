@@ -49,10 +49,7 @@
     <div class="mainbar">
     <div class="logo-section">
       <RouterLink to="/" class="brand-link" aria-label="Home">
-      <a-space :size="12" align="center">
-        <img src="@/assets/logo.svg" alt="logo" class="logo" />
-        <span class="brand-name">GearUp Store</span>
-      </a-space>
+        <img src="@/assets/logo-datn.png" alt="GearUp Store" class="logo-brand" />
       </RouterLink>
       </div>
       <nav v-if="!isLoginPage" class="inline-nav">
@@ -316,20 +313,13 @@ header.scrolled {
 .brand-link:hover { background: #f9fafb; border-color: #f0f0f0; }
 .brand-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #111 inset; }
 
-.logo {
-  width: 33px;
-  height: 33px;
+.logo-brand {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
 }
 
-.brand-name {
-  font-family: var(--font-family-serif);
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: .4px;
-  white-space: nowrap;
-}
-
-.inline-nav { display: flex; align-items: center; justify-content: center; margin-left: 12px; flex: 1 1 auto; min-width: 0; }
+.inline-nav { display: flex; align-items: center; justify-content: center; flex: 1 1 auto; min-width: 0; }
 .inline-nav ul { padding-left: 0; display: flex; align-items: center; gap: 0; list-style: none; margin: 0; }
 .inline-nav ul li { display: inline-flex; align-items: center; text-transform: uppercase; letter-spacing: .1em; font-size: 13px; padding: 0 16px; border-left: 1px solid #ddd; border-right: 1px solid #ddd; position: relative; }
 .inline-nav ul li:first-child { border-left: none; padding-left: 0; }
