@@ -1,6 +1,39 @@
 <template>
   <div class="promotion-create-page">
     <a-card class="promotion-card">
+      <!-- Template Selection -->
+      <div class="template-selection">
+        <div class="template-selection-header">
+          <div>
+            <div class="template-selection-title">Chọn mẫu chiến dịch</div>
+            <div class="template-selection-subtitle">Áp dụng nhanh cấu hình phổ biến cho đợt giảm giá</div>
+          </div>
+          <a-button type="text" size="mini" :disabled="!selectedTemplateId" @click="clearTemplateSelection">Bỏ chọn</a-button>
+        </div>
+        <div class="template-grid">
+          <div
+            v-for="template in promotionTemplateOptions"
+            :key="template.id"
+            class="template-card"
+            :class="[{ 'template-card-selected': selectedTemplateId === template.id }, `accent-${template.accent}`]"
+            @click="applyTemplate(template)"
+          >
+            <div class="template-card-icon">
+              <component :is="templateIconMap[template.icon]" />
+            </div>
+            <div class="template-card-body">
+              <div class="template-card-title">{{ template.title }}</div>
+              <div class="template-card-description">{{ template.description }}</div>
+              <div class="template-card-tags">
+                <a-tag v-for="tag in template.highlights" :key="tag" size="small" bordered>{{ tag }}</a-tag>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <a-divider style="margin: 24px 0" />
+
       <a-form ref="formRef" :model="formState" :rules="rules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
@@ -36,7 +69,7 @@
               <a-range-picker
                 v-model="formState.dateRange"
                 :show-time="true"
-                value-format="YYYY-MM-DD HH:mm:ss"
+                value-format="YYYY-MM-DDTHH:mm:ss"
                 format="DD/MM/YYYY HH:mm"
                 allow-clear
                 :disabled-date="disablePastDates"
@@ -296,15 +329,64 @@ import {
   type PromotionApiModel,
 } from '@/api/discount-management'
 import { getBienTheSanPhamList, type BienTheSanPham } from '@/api/san-pham'
-import { IconImage, IconDown, IconUp, IconBgColors, IconExpand, IconTag, IconApps, IconNav } from '@arco-design/web-vue/es/icon'
+import {
+  IconImage,
+  IconDown,
+  IconUp,
+  IconBgColors,
+  IconExpand,
+  IconTag,
+  IconApps,
+  IconNav,
+  IconGift,
+  IconFire,
+  IconThunderbolt,
+  IconStar,
+  IconTrophy,
+} from '@arco-design/web-vue/es/icon'
 import dayjs from 'dayjs'
 import soleIcon from '@/assets/icons/soles.png'
+import {
+  promotionTemplateOptions,
+  buildTemplatePayload,
+  type PromotionTemplateOption,
+  type PromotionTemplateIcon,
+} from './promotion-template-options'
+import type { Component } from 'vue'
 
 // eslint-disable-next-line import/no-unresolved
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const { t } = useI18n()
+
+// Template icon mapping
+const templateIconMap: Record<PromotionTemplateIcon, Component> = {
+  gift: IconGift,
+  fire: IconFire,
+  lightning: IconThunderbolt,
+  star: IconStar,
+  tag: IconTag,
+  trophy: IconTrophy,
+}
+
+const selectedTemplateId = ref<string | null>(null)
+
+const applyTemplate = (template: PromotionTemplateOption) => {
+  const payload = buildTemplatePayload(template)
+  selectedTemplateId.value = template.id
+  
+  // Apply template values to form
+  formState.discountValue = payload.discountValue
+  formState.dateRange = payload.dateRange
+  
+  Message.success(`Đã áp dụng mẫu: ${template.title}`)
+}
+
+const clearTemplateSelection = () => {
+  selectedTemplateId.value = null
+  Message.info('Đã bỏ chọn mẫu')
+}
 
 const formRef = ref<FormInstance>()
 const confirmSaveVisible = ref(false)
@@ -1004,5 +1086,128 @@ const confirmSave = async () => {
 
 .variant-stock strong {
   color: var(--color-text-2);
+}
+
+/* Template Selection Styles */
+.template-selection {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--color-fill-1);
+  border-radius: 8px;
+}
+
+.template-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.template-selection-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.template-selection-subtitle {
+  font-size: 13px;
+  color: var(--color-text-3);
+  margin-top: 4px;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.template-card {
+  padding: 16px;
+  background: var(--color-bg-2);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.template-card:hover {
+  border-color: var(--color-border-3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.template-card-selected {
+  border-color: rgb(var(--primary-6));
+  background: var(--color-primary-light-1);
+}
+
+.template-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-fill-2);
+  font-size: 20px;
+  color: var(--color-text-2);
+}
+
+.template-card-icon :deep(svg) {
+  font-size: 20px;
+}
+
+.accent-blue .template-card-icon {
+  background: var(--color-primary-light-1);
+  color: rgb(var(--primary-6));
+}
+
+.accent-green .template-card-icon {
+  background: var(--color-success-light-1);
+  color: rgb(var(--success-6));
+}
+
+.accent-orange .template-card-icon {
+  background: var(--color-warning-light-1);
+  color: rgb(var(--warning-6));
+}
+
+.accent-purple .template-card-icon {
+  background: var(--color-purple-light-1);
+  color: rgb(var(--purple-6));
+}
+
+.accent-red .template-card-icon {
+  background: var(--color-danger-light-1);
+  color: rgb(var(--danger-6));
+}
+
+.template-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.template-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-1);
+}
+
+.template-card-description {
+  font-size: 12px;
+  color: var(--color-text-3);
+  line-height: 1.5;
+}
+
+.template-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
 }
 </style>

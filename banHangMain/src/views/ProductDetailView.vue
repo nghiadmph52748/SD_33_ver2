@@ -130,8 +130,8 @@
           <label>{{ $t('product.color') }}:</label>
           <ul>
             <li v-for="(swatch, idx) in colorSwatches" :key="swatch.label" class="swatch-item">
-              <button type="button" :class="['swatch', { active: selectedColorIndex === idx }]" @click="selectedColorIndex = idx">
-                <img :src="swatch.image" :alt="`Color ${swatch.label}`" v-img-fallback />
+              <button type="button" :class="['swatch', 'swatch-color', { active: selectedColorIndex === idx }]" @click="selectedColorIndex = idx">
+                <div class="color-block" :style="{ backgroundColor: swatch.colorHex }"></div>
               </button>
               <span class="swatch-name">{{ swatch.label }}</span>
             </li>
@@ -292,6 +292,7 @@ import { formatCurrency } from "@/utils/currency";
 import { getProductById, type BackendProduct } from "@/api/products";
 import { fetchVariantsByProduct, type ProductVariantResponse } from "@/api/variants";
 import { useI18n } from "vue-i18n";
+import { getColorHex } from "@/utils/colorMapping";
 
 const route = useRoute();
 const cartStore = useCartStore();
@@ -573,6 +574,7 @@ const colorSwatches = computed(() => {
     return [{
       label: product.value?.color || 'Default',
       image: galleryImages.value[0],
+      colorHex: getColorHex(product.value?.color),
     }]
   }
   return colorOptions.value.map((color) => {
@@ -581,6 +583,7 @@ const colorSwatches = computed(() => {
     return {
       label: color,
       image: match || galleryImages.value[0],
+      colorHex: getColorHex(color),
     }
   })
 })
@@ -949,6 +952,7 @@ function setupAccordion(el: HTMLDetailsElement) {
 .swatch { width: 44px; height: 44px; border-radius: 8px; border: 1px solid #e5e7eb; padding: 2px; background: #fff; }
 .swatch.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
 .swatch img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+.swatch-color .color-block { width: 100%; height: 100%; border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.1); }
 .swatch-name { font-size: 12px; color: #4b5563; text-transform: capitalize; text-align: center; }
 
 .no-scroll {

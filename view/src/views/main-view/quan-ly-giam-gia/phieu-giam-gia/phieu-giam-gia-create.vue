@@ -88,7 +88,7 @@
               <a-range-picker
                 v-model="formState.dateRange"
                 :show-time="true"
-                value-format="YYYY-MM-DD HH:mm:ss"
+                value-format="YYYY-MM-DDTHH:mm:ss"
                 format="DD/MM/YYYY HH:mm"
                 allow-clear
                 :disabled-date="disablePastDates"
