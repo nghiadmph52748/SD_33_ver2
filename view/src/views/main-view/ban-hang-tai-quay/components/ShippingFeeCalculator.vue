@@ -21,7 +21,7 @@
             <template #label>
               <span class="shipping-fee-label">
                 <span class="shipping-fee-label-text">Phí vận chuyển (VNĐ)</span>
-                <img :src="ghnLogo" alt="GHN" class="shipping-fee-logo"/>
+                <img :src="ghnLogo" alt="GHN" class="shipping-fee-logo" />
               </span>
             </template>
             <a-input-number
