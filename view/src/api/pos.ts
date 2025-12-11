@@ -266,7 +266,6 @@ export interface CreateQrSessionPayload {
   discountAmount: number
   shippingFee: number
   finalPrice: number
-  transferAmount: number
   customerId?: string | null
 }
 
@@ -279,7 +278,6 @@ export interface QRSessionResponse {
   discountAmount: number
   shippingFee: number
   finalPrice: number
-  transferAmount: number
   status: string
   expiresAt?: string
   createdAt?: string

@@ -169,16 +169,15 @@ public class QRSessionService {
             throw new RuntimeException("Cannot generate QR for a paid session");
         }
 
-        BigDecimal transferAmount = session.getTransferAmount();
-        if (transferAmount == null || transferAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Transfer amount must be greater than zero to generate QR");
+        BigDecimal finalPrice = session.getFinalPrice();
+        if (finalPrice == null || finalPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Final price must be greater than zero to generate QR");
         }
 
         if (session.getQrCodeUrl() == null) {
             CreateQRSessionRequest request = new CreateQRSessionRequest();
             request.setOrderCode(session.getOrderCode());
             request.setFinalPrice(session.getFinalPrice());
-            request.setTransferAmount(transferAmount);
             request.setSubtotal(session.getSubtotal());
             request.setDiscountAmount(session.getDiscountAmount());
             request.setShippingFee(session.getShippingFee());
@@ -216,14 +215,6 @@ public class QRSessionService {
         session.setDiscountAmount(request.getDiscountAmount());
         session.setShippingFee(request.getShippingFee());
         session.setFinalPrice(request.getFinalPrice());
-        BigDecimal transferAmount = request.getTransferAmount();
-        if (transferAmount == null) {
-            transferAmount = request.getFinalPrice();
-        }
-        if (transferAmount == null || transferAmount.compareTo(BigDecimal.ZERO) < 0) {
-            transferAmount = BigDecimal.ZERO;
-        }
-        session.setTransferAmount(transferAmount);
     }
 
     private HoaDon resolveHoaDon(Integer invoiceId) {
@@ -249,8 +240,8 @@ public class QRSessionService {
             org.example.be_sp.model.request.VnpayCreatePaymentRequest vnpayRequest
                     = new org.example.be_sp.model.request.VnpayCreatePaymentRequest();
             vnpayRequest.setOrderId(request.getOrderCode());
-            BigDecimal transferAmount = request.getTransferAmount() != null ? request.getTransferAmount() : request.getFinalPrice();
-            vnpayRequest.setAmount(transferAmount != null ? transferAmount.longValue() : 0L);
+            BigDecimal finalPrice = request.getFinalPrice();
+            vnpayRequest.setAmount(finalPrice != null ? finalPrice.longValue() : 0L);
             vnpayRequest.setOrderInfo("Thanh toan don hang " + request.getOrderCode());
             vnpayRequest.setLocale("vn");
 
@@ -335,7 +326,6 @@ public class QRSessionService {
                 .discountAmount(session.getDiscountAmount())
                 .shippingFee(session.getShippingFee())
                 .finalPrice(session.getFinalPrice())
-                .transferAmount(session.getTransferAmount())
                 .status(session.getStatus())
                 .expiresAt(session.getExpiresAt())
                 .createdAt(session.getCreatedAt())
@@ -355,7 +345,6 @@ public class QRSessionService {
                 .orderCode(session.getOrderCode())
                 .status(session.getStatus())
                 .finalPrice(session.getFinalPrice())
-                .transferAmount(session.getTransferAmount())
                 .subtotal(session.getSubtotal())
                 .discountAmount(session.getDiscountAmount())
                 .shippingFee(session.getShippingFee())
@@ -375,7 +364,7 @@ public class QRSessionService {
         if (!"PENDING".equals(session.getStatus())) {
             return false;
         }
-        if (session.getTransferAmount() == null || session.getTransferAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (session.getFinalPrice() == null || session.getFinalPrice().compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         }
         if (session.getCartDataJson() == null || session.getCartDataJson().isBlank()) {
@@ -391,7 +380,6 @@ public class QRSessionService {
         session.setDiscountAmount(BigDecimal.ZERO);
         session.setShippingFee(BigDecimal.ZERO);
         session.setFinalPrice(BigDecimal.ZERO);
-        session.setTransferAmount(BigDecimal.ZERO);
     }
 
     @Transactional

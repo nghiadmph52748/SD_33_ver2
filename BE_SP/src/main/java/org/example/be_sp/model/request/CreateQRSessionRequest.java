@@ -15,7 +15,6 @@ public class CreateQRSessionRequest {
     private BigDecimal discountAmount;
     private BigDecimal shippingFee;
     private BigDecimal finalPrice;
-    private BigDecimal transferAmount;
     private String customerId;
 
     @Data

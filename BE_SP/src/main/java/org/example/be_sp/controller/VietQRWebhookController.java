@@ -52,10 +52,10 @@ public class VietQRWebhookController {
                             BigDecimal existingPaid = hoaDon.getSoTienDaThanhToan() != null
                                     ? hoaDon.getSoTienDaThanhToan()
                                     : BigDecimal.ZERO;
-                            BigDecimal transferAmount = session.getTransferAmount() != null
-                                    ? session.getTransferAmount()
+                            BigDecimal finalPrice = session.getFinalPrice() != null
+                                    ? session.getFinalPrice()
                                     : BigDecimal.ZERO;
-                            hoaDon.setSoTienDaThanhToan(existingPaid.add(transferAmount));
+                            hoaDon.setSoTienDaThanhToan(existingPaid.add(finalPrice));
                             hoaDon.setSoTienConLai(BigDecimal.ZERO);
                             hoaDonRepository.save(hoaDon);
                         } catch (Exception e) {

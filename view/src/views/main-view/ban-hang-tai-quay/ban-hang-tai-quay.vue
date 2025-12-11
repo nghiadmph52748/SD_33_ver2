@@ -335,7 +335,6 @@ interface QrSessionState {
   expiresAt?: string
   lastPayloadHash: string
   updatedAt: number
-  transferAmount?: number
 }
 
 interface Customer {
@@ -975,21 +974,6 @@ const syncPaymentSplit = (preferred: 'cash' | 'transfer' = lastPaymentFieldChang
   paymentForm.value.cashReceived = Math.max(0, total - transfer)
 }
 
-const computeTransferAmount = () => {
-  if (paymentForm.value.method === 'cash') return 0
-
-  const total = Math.max(0, finalPrice.value)
-  if (total <= 0) return 0
-
-  if (paymentForm.value.method === 'transfer') {
-    const raw = paymentForm.value.transferReceived ?? total
-    const sanitized = normalizePaymentValue(raw <= 0 ? total : raw)
-    return sanitized > 0 ? sanitized : total
-  }
-
-  return normalizePaymentValue(paymentForm.value.transferReceived ?? 0)
-}
-
 const handleCashAmountChange = (value: number | null) => {
   lastPaymentFieldChanged.value = 'cash'
   const sanitized = typeof value === 'number' && Number.isFinite(value) ? value : null
@@ -1451,9 +1435,6 @@ const buildQrPayload = (order: Order): CreateQrSessionPayload | null => {
   if (!displayOrderCode) return null
   if (!finalPrice.value || finalPrice.value <= 0) return null
 
-  const transferAmount = computeTransferAmount()
-  if (!transferAmount || transferAmount <= 0) return null
-
   return {
     orderCode: displayOrderCode,
     invoiceId,
@@ -1474,7 +1455,6 @@ const buildQrPayload = (order: Order): CreateQrSessionPayload | null => {
     discountAmount: discountAmount.value,
     shippingFee: shippingFee.value,
     finalPrice: finalPrice.value,
-    transferAmount,
     customerId: order.customerId || undefined,
   }
 }
@@ -1513,7 +1493,6 @@ const syncQrSession = async (force = false) => {
       expiresAt: response.expiresAt,
       lastPayloadHash: payloadHash,
       updatedAt: Date.now(),
-      transferAmount: response.transferAmount ?? payload.transferAmount,
     }
   } catch (error: any) {
     console.error('Không thể đồng bộ QR session:', error)
@@ -1591,8 +1570,7 @@ const openMobileSession = async () => {
     return
   }
 
-  const transferAmount = computeTransferAmount()
-  if (!transferAmount || transferAmount <= 0) {
+  if (paymentForm.value.method === 'cash' && paymentForm.value.cashReceived >= finalPrice.value) {
     Message.warning('Không cần tạo VietQR khi khách đã thanh toán đủ bằng tiền mặt')
     return
   }

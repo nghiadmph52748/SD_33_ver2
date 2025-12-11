@@ -23,7 +23,6 @@ public class QRSessionResponse {
     private BigDecimal discountAmount;
     private BigDecimal shippingFee;
     private BigDecimal finalPrice;
-    private BigDecimal transferAmount;
     private String status;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
