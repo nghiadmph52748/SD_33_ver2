@@ -1,5 +1,8 @@
 package org.example.be_sp.model.response.invoice;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.example.be_sp.entity.HoaDon;
 import org.example.be_sp.model.response.HoaDonResponse;
 import org.springframework.beans.BeanUtils;
@@ -10,6 +13,8 @@ import org.springframework.beans.BeanUtils;
  * enabling invoice-specific helpers.
  */
 public class InvoiceResponse extends HoaDonResponse {
+
+    private List<OrderStageResponse> orderStages = Collections.emptyList();
 
     public InvoiceResponse() {
         super();
@@ -23,5 +28,13 @@ public class InvoiceResponse extends HoaDonResponse {
         InvoiceResponse target = new InvoiceResponse();
         BeanUtils.copyProperties(source, target);
         return target;
+    }
+
+    public List<OrderStageResponse> getOrderStages() {
+        return orderStages;
+    }
+
+    public void setOrderStages(List<OrderStageResponse> orderStages) {
+        this.orderStages = orderStages != null ? orderStages : Collections.emptyList();
     }
 }

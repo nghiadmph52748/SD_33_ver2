@@ -122,6 +122,7 @@ export interface OrderStatusSnapshot {
   maDonHang?: string;
   maThongTinDonHang?: string;
   tenTrangThaiDonHang?: string;
+  idTrangThaiDonHang?: number;
   thoiGian?: string; // Latest update time from thongTinDonHang table
   ghiChu?: string;
 }
@@ -261,6 +262,12 @@ export function cancelOrder(
   }
 
   return axios.put(`/api/hoa-don-management/update/${orderId}`, payload);
+}
+
+export function confirmOrderDelivery(
+  orderId: number
+): Promise<HttpResponse<OrderResponse>> {
+  return axios.post(`/api/invoice-management/${orderId}/confirm-delivery`);
 }
 
 // Create order from cart items

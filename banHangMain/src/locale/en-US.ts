@@ -64,8 +64,13 @@ export default {
     "We could not cancel the order. Please try again.",
   "orderLookup.actions.cancelNote":
     "Customer requested cancellation via order lookup page.",
-  "orderLookup.actions.missingId":
-    "We could not determine the order ID to cancel.",
+  "orderLookup.actions.missingId": "We could not determine the order ID.",
+  "orderLookup.actions.complete": "Complete order",
+  "orderLookup.actions.completing": "Completing…",
+  "orderLookup.actions.completed": "The order has been confirmed successfully.",
+  "orderLookup.actions.completeFailed":
+    "We could not confirm the order. Please try again.",
+  "orderLookup.actions.unavailable": "No actions available",
   "orderLookup.actions.confirmTitle": "Cancel this order?",
   "orderLookup.actions.keepOrder": "Keep order",
   "orderLookup.actions.cancelNow": "Cancel now",

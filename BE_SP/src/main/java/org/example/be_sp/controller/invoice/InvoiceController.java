@@ -4,6 +4,9 @@ import org.example.be_sp.model.request.invoice.InvoiceAddressChangeRequest;
 import org.example.be_sp.model.request.invoice.InvoiceRequest;
 import org.example.be_sp.model.response.ResponseObject;
 import org.example.be_sp.service.invoice.InvoiceService;
+import org.example.be_sp.model.response.invoice.InvoiceResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.HtmlUtils;
 
 @RestController
 @RequestMapping("/api/invoice-management")
@@ -77,5 +81,42 @@ public class InvoiceController {
             @RequestBody InvoiceAddressChangeRequest request) {
         invoiceService.sendAddressChangeNotification(id, request);
         return new ResponseObject<>(true, null, "Xử lý thay đổi địa chỉ giao hàng thành công");
+    }
+
+    @PostMapping("/{id}/confirm-delivery")
+    public ResponseObject<?> confirmDelivery(@PathVariable Integer id) {
+        return new ResponseObject<>(invoiceService.confirmDelivery(id), "Xác nhận giao hàng thành công");
+    }
+
+    @GetMapping("/{id}/confirm-delivery-email")
+    public ResponseEntity<String> confirmDeliveryFromEmail(@PathVariable Integer id) {
+        InvoiceResponse response = invoiceService.confirmDelivery(id);
+        String orderCode = response != null ? response.getMaHoaDon() : null;
+        String safeCode = orderCode != null ? HtmlUtils.htmlEscape(orderCode) : "#" + id;
+
+        String html = "<!DOCTYPE html>"
+                + "<html lang=\"vi\">"
+                + "<head>"
+                + "<meta charset=\"UTF-8\" />"
+                + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />"
+                + "<title>Xác nhận giao hàng</title>"
+                + "<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f8fa;color:#1d2129;padding:40px;}"
+                + ".card{max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;box-shadow:0 12px 32px rgba(15,23,42,0.12);}"
+                + "h1{font-size:22px;margin-bottom:16px;color:#00b42a;}p{margin:0 0 12px;line-height:1.6;}"
+                + ".order-code{font-weight:600;color:#165dff;}a{color:#165dff;text-decoration:none;}"
+                + "</style>"
+                + "</head>"
+                + "<body>"
+                + "<div class=\"card\">"
+                + "<h1>✅ Xác nhận thành công</h1>"
+                + "<p>Đơn hàng <span class=\"order-code\">" + safeCode + "</span> đã được ghi nhận là giao thành công.</p>"
+                + "<p>Cảm ơn bạn đã tin tưởng GearUp! Nếu cần hỗ trợ thêm, vui lòng liên hệ hotline 1900-1234.</p>"
+                + "</div>"
+                + "</body>"
+                + "</html>";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, "text/html; charset=UTF-8")
+                .body(html);
     }
 }

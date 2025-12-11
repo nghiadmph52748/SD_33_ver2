@@ -169,7 +169,14 @@
               }}</span>
             </div>
             <div class="row muted">
-              <span>{{ $t("cart.estimatedDelivery") }}</span>
+              <span class="shipping-title">
+                <span>{{ $t("cart.estimatedDelivery") }}</span>
+                <img
+                  :src="ghnLogo"
+                  alt="GHN Express logo"
+                  class="shipping-logo"
+                />
+              </span>
               <span>
                 {{ cartCount === 0 ? "—" : formatCurrency(shippingFee) }}
                 <small
@@ -350,6 +357,7 @@ import {
 import VoucherModal from "@/components/VoucherModal.vue";
 import OrderConfirmationModal from "@/components/OrderConfirmationModal.vue";
 import type { CustomerAddress } from "@/api/auth";
+import ghnLogo from "@/assets/logo-ghn.png";
 
 // i18n
 const { t } = useI18n();
@@ -1244,6 +1252,16 @@ async function handleMoMoCheckout() {
   display: flex;
   justify-content: space-between;
   padding: 10px 0;
+}
+.shipping-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.shipping-logo {
+  height: 18px;
+  width: auto;
+  object-fit: contain;
 }
 .row.muted span:first-child {
   color: #4e5969;

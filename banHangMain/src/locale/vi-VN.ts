@@ -65,7 +65,13 @@ export default {
     "Không thể huỷ đơn hàng. Vui lòng thử lại.",
   "orderLookup.actions.cancelNote":
     "Khách hàng yêu cầu huỷ đơn qua trang tra cứu.",
-  "orderLookup.actions.missingId": "Không xác định được mã đơn để huỷ.",
+  "orderLookup.actions.missingId": "Không xác định được mã đơn hàng.",
+  "orderLookup.actions.complete": "Hoàn thành đơn hàng",
+  "orderLookup.actions.completing": "Đang xác nhận…",
+  "orderLookup.actions.completed": "Đơn hàng đã được xác nhận thành công.",
+  "orderLookup.actions.completeFailed":
+    "Không thể xác nhận đơn hàng. Vui lòng thử lại.",
+  "orderLookup.actions.unavailable": "Không có thao tác phù hợp",
   "orderLookup.actions.confirmTitle": "Huỷ đơn hàng này?",
   "orderLookup.actions.keepOrder": "Giữ đơn hàng",
   "orderLookup.actions.cancelNow": "Huỷ ngay",

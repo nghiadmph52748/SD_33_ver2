@@ -2,7 +2,12 @@ package org.example.be_sp.service.invoice;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.example.be_sp.entity.HinhThucThanhToan;
@@ -21,6 +26,7 @@ import org.example.be_sp.model.request.invoice.InvoiceRequest;
 import org.example.be_sp.model.response.PagingResponse;
 import org.example.be_sp.model.response.invoice.InvoicePaymentSyncResponse;
 import org.example.be_sp.model.response.invoice.InvoiceResponse;
+import org.example.be_sp.model.response.invoice.OrderStageResponse;
 import org.example.be_sp.repository.HinhThucThanhToanRepository;
 import org.example.be_sp.repository.HoaDonRepository;
 import org.example.be_sp.repository.PhieuGiamGiaCaNhanRepository;
@@ -50,6 +56,18 @@ public class InvoiceService {
     private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
     private static final BigDecimal VOUCHER_REFUND_THRESHOLD = new BigDecimal("40000");
     private static final String ADDRESS_CHANGE_NOTE = "Thay đổi địa chỉ giao hàng";
+    private static final List<StageBlueprint> ONLINE_STAGE_BLUEPRINTS = List.of(
+            new StageBlueprint(1, "pending", "Chờ xác nhận"),
+            new StageBlueprint(2, "confirmed", "Đã xác nhận"),
+            new StageBlueprint(3, "processing", "Đang xử lý"),
+            new StageBlueprint(9, "preparing", "Đang chuẩn bị hàng"),
+            new StageBlueprint(4, "shipping", "Đang giao hàng"),
+            new StageBlueprint(5, "delivered", "Đã giao hàng"),
+            new StageBlueprint(7, "completed", "Hoàn thành"));
+    private static final List<StageBlueprint> OFFLINE_STAGE_BLUEPRINTS = List.of(
+            new StageBlueprint(1, "pending", "Chờ xác nhận"),
+            new StageBlueprint(7, "completed", "Hoàn thành"));
+    private static final StageBlueprint CANCELLED_STAGE = new StageBlueprint(6, "cancelled", "Đã huỷ");
 
     private final HoaDonService hoaDonService;
     private final HoaDonRepository hoaDonRepository;
@@ -96,8 +114,7 @@ public class InvoiceService {
     public InvoiceResponse getById(Integer id) {
         HoaDon hoaDon = hoaDonRepository.findById(id)
                 .orElseThrow(() -> new ApiException("404", "Không tìm thấy hóa đơn"));
-        initialiseLazyCollections(hoaDon);
-        return new InvoiceResponse(hoaDon);
+        return mapToInvoiceResponse(hoaDon);
     }
 
     public InvoiceResponse getByCode(String code) {
@@ -106,8 +123,7 @@ public class InvoiceService {
         }
         HoaDon hoaDon = hoaDonRepository.findByMaHoaDon(code.trim())
                 .orElseThrow(() -> new ApiException("404", "Không tìm thấy hóa đơn"));
-        initialiseLazyCollections(hoaDon);
-        return new InvoiceResponse(hoaDon);
+        return mapToInvoiceResponse(hoaDon);
     }
 
     public InvoiceResponse create(InvoiceRequest request) {
@@ -118,6 +134,43 @@ public class InvoiceService {
     public InvoiceResponse update(Integer id, InvoiceRequest request) {
         InvoiceResponse response = InvoiceResponse.from(hoaDonService.update(id, request));
         invoicePaymentHistoryService.appendAdditionalPayment(id, request);
+        return reload(response.getId());
+    }
+
+    @Transactional
+    public InvoiceResponse confirmDelivery(Integer id) {
+        HoaDon hoaDon = hoaDonRepository.findById(id)
+                .orElseThrow(() -> new ApiException("404", "Không tìm thấy hóa đơn"));
+
+        Optional<ThongTinDonHang> latestStatus = thongTinDonHangRepository.findLatestByHoaDonId(id);
+        Integer currentStatusId = latestStatus
+                .map(info -> info.getIdTrangThaiDonHang() != null ? info.getIdTrangThaiDonHang().getId() : null)
+                .orElse(null);
+
+        if (currentStatusId != null && currentStatusId.equals(7)) {
+            return reload(id);
+        }
+
+        if (currentStatusId == null || !currentStatusId.equals(5)) {
+            throw new ApiException("400", "Chỉ có thể xác nhận khi đơn hàng đã ở trạng thái Đã giao hàng");
+        }
+
+        InvoiceRequest request = new InvoiceRequest();
+        request.setIdTrangThaiDonHang(7);
+        request.setTrangThai(true);
+
+        if (Boolean.TRUE.equals(hoaDon.getGiaoHang())) {
+            BigDecimal grandTotal = resolveGrandTotal(hoaDon);
+            BigDecimal paidAmount = safe(hoaDon.getSoTienDaThanhToan());
+            if (grandTotal.compareTo(BigDecimal.ZERO) > 0 && paidAmount.compareTo(grandTotal) < 0) {
+                request.setSoTienDaThanhToan(grandTotal);
+                if (hoaDon.getNgayThanhToan() == null) {
+                    request.setNgayThanhToan(LocalDateTime.now());
+                }
+            }
+        }
+
+        InvoiceResponse response = InvoiceResponse.from(hoaDonService.update(id, request));
         return reload(response.getId());
     }
 
@@ -227,8 +280,147 @@ public class InvoiceService {
     private InvoiceResponse reload(Integer id) {
         HoaDon entity = hoaDonRepository.findById(id)
                 .orElseThrow(() -> new ApiException("404", "Không tìm thấy hóa đơn"));
-        initialiseLazyCollections(entity);
-        return new InvoiceResponse(entity);
+        return mapToInvoiceResponse(entity);
+    }
+
+    private InvoiceResponse mapToInvoiceResponse(HoaDon hoaDon) {
+        initialiseLazyCollections(hoaDon);
+        InvoiceResponse response = new InvoiceResponse(hoaDon);
+        response.setOrderStages(buildOrderStages(hoaDon));
+        return response;
+    }
+
+    private List<OrderStageResponse> buildOrderStages(HoaDon hoaDon) {
+        if (hoaDon == null) {
+            return Collections.emptyList();
+        }
+
+        List<StageBlueprint> blueprints = Boolean.TRUE.equals(hoaDon.getGiaoHang())
+                ? ONLINE_STAGE_BLUEPRINTS
+                : OFFLINE_STAGE_BLUEPRINTS;
+
+        if (blueprints.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<ThongTinDonHang> timeline = hoaDon.getThongTinDonHangs() != null
+                ? hoaDon.getThongTinDonHangs().stream()
+                        .filter(entry -> entry != null && !Boolean.TRUE.equals(entry.getDeleted()))
+                        .sorted(Comparator.comparing(InvoiceService::resolveTimelineTimestamp,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                        .toList()
+                : Collections.emptyList();
+
+        Map<Integer, ThongTinDonHang> firstEntryByStatus = new HashMap<>();
+        for (ThongTinDonHang entry : timeline) {
+            TrangThaiDonHang status = entry.getIdTrangThaiDonHang();
+            if (status == null || status.getId() == null) {
+                continue;
+            }
+            firstEntryByStatus.merge(status.getId(), entry, InvoiceService::selectEarlierEntry);
+        }
+
+        boolean cancelled = firstEntryByStatus.containsKey(CANCELLED_STAGE.statusId());
+
+        List<OrderStageResponse> stages = new ArrayList<>();
+        int highestReachedIndex = -1;
+
+        for (int i = 0; i < blueprints.size(); i++) {
+            StageBlueprint blueprint = blueprints.get(i);
+            ThongTinDonHang matchedEntry = firstEntryByStatus.get(blueprint.statusId());
+            boolean reached = matchedEntry != null;
+            if (reached) {
+                highestReachedIndex = i;
+            }
+
+            OrderStageResponse stage = new OrderStageResponse(
+                    blueprint.statusId(),
+                    blueprint.code(),
+                    resolveStageName(blueprint, matchedEntry),
+                    matchedEntry != null ? resolveTimelineTimestamp(matchedEntry) : null,
+                    reached,
+                    false,
+                    false);
+            stages.add(stage);
+        }
+
+        OrderStageResponse cancellationStage = null;
+        if (cancelled) {
+            ThongTinDonHang cancelledEntry = firstEntryByStatus.get(CANCELLED_STAGE.statusId());
+            cancellationStage = new OrderStageResponse(
+                    CANCELLED_STAGE.statusId(),
+                    CANCELLED_STAGE.code(),
+                    resolveStageName(CANCELLED_STAGE, cancelledEntry),
+                    cancelledEntry != null ? resolveTimelineTimestamp(cancelledEntry) : null,
+                    true,
+                    true,
+                    true);
+        }
+
+        if (cancelled) {
+            for (OrderStageResponse stage : stages) {
+                stage.setCompleted(stage.isReached());
+                stage.setCurrent(false);
+            }
+            if (cancellationStage != null) {
+                cancellationStage.setCompleted(true);
+                cancellationStage.setCurrent(true);
+                stages.add(cancellationStage);
+            }
+            return stages;
+        }
+
+        int currentIndex = highestReachedIndex >= 0 ? highestReachedIndex : 0;
+        for (int i = 0; i < stages.size(); i++) {
+            OrderStageResponse stage = stages.get(i);
+            stage.setCompleted(highestReachedIndex >= 0 && i <= highestReachedIndex);
+            stage.setCurrent(i == currentIndex);
+        }
+
+        if (cancellationStage != null) {
+            stages.add(cancellationStage);
+        }
+
+        return stages;
+    }
+
+    private static String resolveStageName(StageBlueprint blueprint, ThongTinDonHang entry) {
+        if (entry != null && entry.getIdTrangThaiDonHang() != null
+                && StringUtils.hasText(entry.getIdTrangThaiDonHang().getTenTrangThaiDonHang())) {
+            return entry.getIdTrangThaiDonHang().getTenTrangThaiDonHang();
+        }
+        return blueprint.label();
+    }
+
+    private static ThongTinDonHang selectEarlierEntry(ThongTinDonHang existing, ThongTinDonHang candidate) {
+        if (existing == null) {
+            return candidate;
+        }
+        if (candidate == null) {
+            return existing;
+        }
+
+        LocalDateTime existingTime = resolveTimelineTimestamp(existing);
+        LocalDateTime candidateTime = resolveTimelineTimestamp(candidate);
+
+        if (existingTime == null) {
+            return candidate;
+        }
+        if (candidateTime == null) {
+            return existing;
+        }
+        return candidateTime.isBefore(existingTime) ? candidate : existing;
+    }
+
+    private static LocalDateTime resolveTimelineTimestamp(ThongTinDonHang entry) {
+        if (entry == null) {
+            return null;
+        }
+        return entry.getThoiGian();
+    }
+
+    private record StageBlueprint(int statusId, String code, String label) {
+
     }
 
     private void initialiseLazyCollections(HoaDon hoaDon) {

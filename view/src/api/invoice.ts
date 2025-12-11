@@ -21,6 +21,16 @@ export interface OrderStatusTimelineModel {
   deleted?: boolean
 }
 
+export interface OrderStageApiModel {
+  statusId?: number
+  code: string
+  name: string
+  timestamp?: string
+  reached?: boolean
+  completed?: boolean
+  current?: boolean
+}
+
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
@@ -106,6 +116,7 @@ export interface InvoiceApiModel {
   items?: any[]
   chiTietSanPham?: any[]
   thongTinDonHangs?: OrderStatusTimelineModel[]
+  orderStages?: OrderStageApiModel[]
 }
 
 export interface InvoiceRequestPayload {
@@ -142,8 +153,7 @@ export const fetchInvoiceList = () => requestJson<InvoiceApiModel[]>('/api/invoi
 
 export const fetchInvoiceById = (id: number) => requestJson<InvoiceApiModel>(`/api/invoice-management/${id}`)
 
-export const fetchInvoiceByCode = (code: string) =>
-  requestJson<InvoiceApiModel>(`/api/hoa-don-management/code/${encodeURIComponent(code)}`)
+export const fetchInvoiceByCode = (code: string) => requestJson<InvoiceApiModel>(`/api/hoa-don-management/code/${encodeURIComponent(code)}`)
 
 export const createInvoice = (data: Partial<InvoiceRequestPayload>) =>
   requestJson<InvoiceApiModel>('/api/invoice-management/add', {

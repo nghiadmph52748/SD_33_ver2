@@ -225,7 +225,9 @@
           </span>
         </p>
         <p v-if="orderType === 'delivery'" class="summary-row">
-          <span>Phí vận chuyển:</span>
+          <span class="shipping-label">
+            <span>Phí vận chuyển:</span>
+          </span>
           <strong style="color: #1890ff">{{ formatCurrency(shippingFee) }}</strong>
         </p>
         <p class="summary-row total">
@@ -285,6 +287,7 @@ import BestVoucherSuggestionCard from './BestVoucherSuggestionCard.vue'
 import VoucherAlmostEligible from './VoucherAlmostEligible.vue'
 import ShippingFeeCalculator from './ShippingFeeCalculator.vue'
 import { formatCurrency } from '../utils'
+import ghnLogoUrl from '@/assets/logo-ghn.png'
 
 const props = defineProps<{
   orderType: 'counter' | 'delivery'
@@ -343,6 +346,8 @@ const emit = defineEmits<{
   (e: 'open-mobile'): void
   (e: 'reset-qr-session'): void
 }>()
+
+const ghnLogo = ghnLogoUrl
 
 const parseNumericInput = (value: string) => {
   if (!value) return undefined
@@ -406,5 +411,17 @@ const handleTransferInput = (value: number | undefined) => {
 
 .reset-session-action {
   margin-top: 12px;
+}
+
+.shipping-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shipping-logo {
+  height: 18px;
+  width: auto;
+  object-fit: contain;
 }
 </style>

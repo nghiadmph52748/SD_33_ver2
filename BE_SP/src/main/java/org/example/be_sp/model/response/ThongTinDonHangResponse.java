@@ -17,6 +17,7 @@ public class ThongTinDonHangResponse {
     private Integer id;
     private String maDonHang;
     private String tenTrangThaiDonHang;
+    private Integer idTrangThaiDonHang;
     private String maThongTinDonHang;
     private LocalDateTime thoiGian;
     private String ghiChu;
@@ -93,6 +94,7 @@ public class ThongTinDonHangResponse {
         // Lấy thông tin trạng thái đơn hàng
         if (data.getIdTrangThaiDonHang() != null) {
             this.tenTrangThaiDonHang = data.getIdTrangThaiDonHang().getTenTrangThaiDonHang();
+            this.idTrangThaiDonHang = data.getIdTrangThaiDonHang().getId();
         }
     }
 

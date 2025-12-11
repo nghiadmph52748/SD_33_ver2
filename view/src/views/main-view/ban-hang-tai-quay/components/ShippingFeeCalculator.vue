@@ -17,7 +17,13 @@
           </div>
 
           <!-- Shipping fee input -->
-          <a-form-item label="Phí vận chuyển (VNĐ)">
+          <a-form-item :colon="false">
+            <template #label>
+              <span class="shipping-fee-label">
+                <span class="shipping-fee-label-text">Phí vận chuyển (VNĐ)</span>
+                <img :src="ghnLogo" alt="GHN" class="shipping-fee-logo"/>
+              </span>
+            </template>
             <a-input-number
               v-model="shippingFee"
               :min="0"
@@ -51,6 +57,7 @@
 import { ref, computed, watch } from 'vue'
 import type { ShippingLocation } from '../services/shippingFeeService'
 import { calculateShippingFee, getShippingInfo, calculateShippingFeeFromGHN } from '../services/shippingFeeService'
+import ghnLogoUrl from '@/assets/logo-ghn.png'
 
 interface Props {
   orderType: 'counter' | 'delivery'
@@ -71,6 +78,7 @@ const emit = defineEmits<Emits>()
 const isCalculating = ref(false)
 const shippingFee = ref(0)
 const apiCalculatedFee = ref(0)
+const ghnLogo = ghnLogoUrl
 
 const totalWithShipping = computed(() => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(props.subtotal + shippingFee.value)
@@ -225,5 +233,22 @@ defineExpose({ triggerRecalculation })
 <style scoped>
 :deep(.arco-statistic) {
   width: 100%;
+}
+
+.shipping-fee-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shipping-fee-label-text {
+  margin-right: 6px;
+}
+
+.shipping-fee-logo {
+  height: 16px;
+  width: auto;
+  object-fit: contain;
+  margin-left: auto;
 }
 </style>

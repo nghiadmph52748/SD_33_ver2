@@ -42,7 +42,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/payment/vnpay") 
+@RequestMapping("/api/payment/vnpay")
 @CrossOrigin(origins = "*")
 @Slf4j
 @RequiredArgsConstructor
@@ -331,6 +331,7 @@ public class VnPayController {
             }
 
             OrderEmailData emailData = OrderEmailData.builder()
+                    .orderId(hoaDon.getId())
                     .orderCode(hoaDon.getMaHoaDon())
                     .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                     .customerEmail(customerEmail)
@@ -387,7 +388,7 @@ public class VnPayController {
             if (txnRef == null || txnRef.isBlank()) {
                 return;
             }
-            
+
             // Extract order code from txnRef (format: HD03209723-162414)
             String[] parts = txnRef.split("-", 2);
             String orderCode = parts.length > 0 ? parts[0] : txnRef;
@@ -403,18 +404,18 @@ public class VnPayController {
             TrangThaiDonHang cancelledStatus = null;
             for (int id = 5; id <= 7; id++) {
                 var status = trangThaiDonHangRepository.findById(id);
-                if (status.isPresent() && status.get().getTenTrangThaiDonHang() != null 
+                if (status.isPresent() && status.get().getTenTrangThaiDonHang() != null
                         && status.get().getTenTrangThaiDonHang().toLowerCase().contains("hủy")) {
                     cancelledStatus = status.get();
                     break;
                 }
             }
-            
+
             // If not found by ID, try searching all statuses
             if (cancelledStatus == null) {
                 var allStatuses = trangThaiDonHangRepository.findAll();
                 for (var status : allStatuses) {
-                    if (status.getTenTrangThaiDonHang() != null 
+                    if (status.getTenTrangThaiDonHang() != null
                             && status.getTenTrangThaiDonHang().toLowerCase().contains("hủy")) {
                         cancelledStatus = status;
                         break;
@@ -435,11 +436,11 @@ public class VnPayController {
             statusUpdate.setGhiChu(reason);
             statusUpdate.setTrangThai(true);
             statusUpdate.setDeleted(false);
-            
+
             thongTinDonHangRepository.save(statusUpdate);
-            
+
             log.info("[PAYMENT-CANCEL] Order {} marked as cancelled: {}", orderCode, reason);
-            
+
             notificationService.notifyAllStaff(
                     "Đơn hàng #" + hoaDon.getMaHoaDon() + " đã bị hủy",
                     "Thanh toán bị hủy",

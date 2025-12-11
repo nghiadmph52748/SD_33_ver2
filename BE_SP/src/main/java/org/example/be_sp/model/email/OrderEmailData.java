@@ -10,14 +10,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Email data transfer object for order-related emails
- * Used for both order confirmation and status update emails
+ * Email data transfer object for order-related emails Used for both order
+ * confirmation and status update emails
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderEmailData {
+
+    private Integer orderId;
     private String orderCode;
     private String customerName;
     private String customerEmail;
@@ -31,7 +33,7 @@ public class OrderEmailData {
     private String phoneNumber;
     private String trackingUrl;
     private List<OrderItemData> items;
-    
+
     /**
      * Nested class for individual order items
      */
@@ -40,6 +42,7 @@ public class OrderEmailData {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OrderItemData {
+
         private String productName;
         private Integer quantity;
         private BigDecimal price;

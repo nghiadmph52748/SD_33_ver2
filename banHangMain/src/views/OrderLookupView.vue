@@ -66,21 +66,21 @@
                 <dt>{{ $t("orderLookup.results.orderCode") }}</dt>
                 <dd class="order-code-value">{{ orderCodeDisplay }}</dd>
               </div>
-              <div class="order-action-row">
+              <div class="order-action-row" v-if="hasPrimaryAction">
                 <dt>{{ $t("orderLookup.actions.label") }}</dt>
                 <dd class="cancel-action-cell">
                   <button
                     type="button"
-                    class="cancel-order-btn"
-                    :disabled="!canCancelOrder"
-                    @click="openCancelConfirm"
+                    :class="primaryActionClasses"
+                    :disabled="primaryActionDisabled"
+                    @click="handlePrimaryAction"
                   >
                     <span
-                      v-if="isCancelling"
+                      v-if="isProcessingAction"
                       class="inline-spinner"
                       aria-hidden="true"
                     ></span>
-                    <span>{{ cancelButtonLabel }}</span>
+                    <span>{{ primaryActionLabel }}</span>
                   </button>
                 </dd>
               </div>
@@ -216,7 +216,7 @@
         <button
           type="button"
           class="cancel-confirm-secondary"
-          :disabled="isCancelling"
+          :disabled="isProcessingAction"
           @click="closeCancelConfirm"
         >
           {{ t("orderLookup.actions.keepOrder") }}
@@ -224,11 +224,11 @@
         <button
           type="button"
           class="cancel-confirm-danger"
-          :disabled="isCancelling"
+          :disabled="isProcessingAction"
           @click="cancelOrder"
         >
           <span
-            v-if="isCancelling"
+            v-if="isProcessingAction"
             class="inline-spinner"
             aria-hidden="true"
           ></span>
@@ -240,10 +240,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRoute } from "vue-router";
+import type { LocationQuery } from "vue-router";
 import {
   cancelOrder as cancelOrderRequest,
+  confirmOrderDelivery,
   fetchLatestOrderStatus,
   fetchOrderById,
   fetchOrderByCode,
@@ -266,11 +269,19 @@ const timeline = ref<OrderTimelineEntry[]>([]);
 const snapshot = ref<OrderStatusSnapshot | null>(null);
 const state = ref<LookupState>("idle");
 const formErrors = reactive<{ code?: string; contact?: string }>({});
-const isCancelling = ref(false);
+const isProcessingAction = ref(false);
 const showCancelConfirm = ref(false);
 const { t } = useI18n();
 const userStore = useUserStore();
 const isAuthenticated = computed(() => userStore.isAuthenticated);
+const route = useRoute();
+
+onMounted(() => {
+  const initialCode = resolveInitialOrderCode(route.query);
+  if (!initialCode) return;
+  orderCode.value = initialCode;
+  lookupOrder();
+});
 
 function hydrateContactFromProfile() {
   if (!isAuthenticated.value) return;
@@ -387,15 +398,47 @@ const orderItems = computed(() => {
 });
 
 const timelineEvents = computed(() => {
-  // Sort by thoiGian descending (newest first)
+  // Sort newest first using robust parsing to handle non-ISO formats
   return [...timeline.value].sort((a, b) => {
-    const timeA = Date.parse(a.thoiGian || "");
-    const timeB = Date.parse(b.thoiGian || "");
-    return timeB - timeA; // DESC order (newest first)
+    const timeA = parseTimelineInstant(a.thoiGian);
+    const timeB = parseTimelineInstant(b.thoiGian);
+    return timeB - timeA;
   });
 });
 
-const latestTimelineEntry = computed(() => timelineEvents.value[0] || null);
+const latestTimelineEntry = computed(() => {
+  if (!timeline.value.length) return null;
+
+  let best = timeline.value[0];
+  let bestScore = parseTimelineInstant(best.thoiGian);
+
+  for (const item of timeline.value) {
+    const score = parseTimelineInstant(item.thoiGian);
+    if (score >= bestScore) {
+      best = item;
+      bestScore = score;
+    }
+  }
+
+  if (bestScore === Number.NEGATIVE_INFINITY) {
+    return timeline.value[timeline.value.length - 1];
+  }
+
+  return best;
+});
+
+const latestStatusId = computed(() => {
+  const fromTimeline = extractStatusId(latestTimelineEntry.value);
+  if (fromTimeline != null) return fromTimeline;
+
+  const fromSnapshot = extractStatusId(snapshot.value);
+  if (fromSnapshot != null) return fromSnapshot;
+
+  const fromOrder = extractStatusId(order.value);
+  if (fromOrder != null) return fromOrder;
+
+  return null;
+});
 
 const statusUpdatedLabel = computed(() => {
   const source =
@@ -431,9 +474,35 @@ const statusTone = computed(() => {
   return "tone-neutral";
 });
 
-const normalizedStatusText = computed(() =>
-  removeDiacritics(currentStatusLabel.value || "").toLowerCase()
-);
+const normalizedStatusTexts = computed(() => {
+  const labels = new Set<string>();
+  const pipeline = (value: unknown) => {
+    if (value == null) return;
+
+    let raw: string | null = null;
+    if (typeof value === "string") {
+      raw = value;
+    } else if (typeof value === "number") {
+      raw = String(value);
+    }
+
+    if (!raw) return;
+
+    const normalized = removeDiacritics(raw)
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+    if (normalized) labels.add(normalized);
+  };
+
+  pipeline(currentStatusLabel.value);
+  pipeline(latestTimelineEntry.value?.tenTrangThaiDonHang);
+  pipeline(snapshot.value?.tenTrangThaiDonHang);
+  pipeline(order.value?.trangThai);
+  pipeline((order.value as any)?.tenTrangThaiDonHang);
+
+  return Array.from(labels);
+});
 
 const orderIdForMutation = computed(() => {
   if (order.value?.id && order.value.id > 0) {
@@ -443,22 +512,86 @@ const orderIdForMutation = computed(() => {
   return extracted ?? null;
 });
 
-const CANCEL_KEYWORDS = ["cho xac nhan", "pending confirmation", "pending"];
+const STATUS_PENDING_KEYWORDS = [
+  "cho xac nhan",
+  "pending confirmation",
+  "pending",
+];
+const STATUS_DELIVERED_KEYWORDS = ["da giao hang", "delivered"];
+const STATUS_COMPLETED_KEYWORDS = ["hoan thanh", "completed"];
+const STATUS_DELIVERED_ID = 5;
+const STATUS_COMPLETED_ID = 9;
 
 const canCancelOrder = computed(() => {
   if (!order.value) return false;
-  if (isCancelling.value) return false;
+  if (isProcessingAction.value) return false;
   if (!orderIdForMutation.value) return false;
-  const statusText = normalizedStatusText.value;
-  if (!statusText) return false;
-  return CANCEL_KEYWORDS.some((keyword) => statusText.includes(keyword));
+  const statusTexts = normalizedStatusTexts.value;
+  const statusId = latestStatusId.value;
+  if (statusId === STATUS_COMPLETED_ID) return false;
+  if (!statusTexts.length) return false;
+  return STATUS_PENDING_KEYWORDS.some((keyword) =>
+    statusTexts.some((text) => text.includes(keyword))
+  );
 });
 
-const cancelButtonLabel = computed(() =>
-  isCancelling.value
-    ? t("orderLookup.actions.cancelling")
-    : t("orderLookup.actions.cancel")
+const canConfirmDelivery = computed(() => {
+  if (!order.value) return false;
+  if (isProcessingAction.value) return false;
+  if (!orderIdForMutation.value) return false;
+  const statusTexts = normalizedStatusTexts.value;
+  const statusId = latestStatusId.value;
+  if (!statusTexts.length && statusId == null) return false;
+
+  const deliveredById = statusId === STATUS_DELIVERED_ID;
+  const completedById = statusId === STATUS_COMPLETED_ID;
+  const deliveredByText = STATUS_DELIVERED_KEYWORDS.some((keyword) =>
+    statusTexts.some((text) => text.includes(keyword))
+  );
+  const completedByText = STATUS_COMPLETED_KEYWORDS.some((keyword) =>
+    statusTexts.some((text) => text.includes(keyword))
+  );
+
+  const delivered = deliveredById || deliveredByText;
+  const completed = completedById || completedByText;
+  return delivered && !completed;
+});
+
+const primaryActionType = computed<"confirm" | "cancel" | "none">(() => {
+  if (canConfirmDelivery.value) return "confirm";
+  if (canCancelOrder.value) return "cancel";
+  return "none";
+});
+
+const primaryActionLabel = computed(() => {
+  if (primaryActionType.value === "confirm") {
+    return isProcessingAction.value
+      ? t("orderLookup.actions.completing")
+      : t("orderLookup.actions.complete");
+  }
+  if (primaryActionType.value === "cancel") {
+    return isProcessingAction.value
+      ? t("orderLookup.actions.cancelling")
+      : t("orderLookup.actions.cancel");
+  }
+  return t("orderLookup.actions.unavailable");
+});
+
+const primaryActionDisabled = computed(
+  () => primaryActionType.value === "none" || isProcessingAction.value
 );
+
+const hasPrimaryAction = computed(() => primaryActionType.value !== "none");
+
+const primaryActionClasses = computed(() => {
+  const classes = ["order-action-btn"];
+  if (primaryActionType.value === "confirm") {
+    classes.push("order-action-btn--confirm");
+  } else if (primaryActionType.value === "cancel") {
+    classes.push("order-action-btn--cancel");
+  }
+  return classes;
+});
 
 const resultCardClass = computed(() => {
   if (state.value === "success") return "result-card--success";
@@ -561,7 +694,7 @@ async function lookupOrder() {
 }
 
 function openCancelConfirm() {
-  if (!canCancelOrder.value || isCancelling.value) return;
+  if (!canCancelOrder.value || isProcessingAction.value) return;
 
   if (!orderIdForMutation.value) {
     showMessageError(t("orderLookup.actions.missingId"));
@@ -572,12 +705,12 @@ function openCancelConfirm() {
 }
 
 function closeCancelConfirm() {
-  if (isCancelling.value) return;
+  if (isProcessingAction.value) return;
   showCancelConfirm.value = false;
 }
 
 async function cancelOrder() {
-  if (isCancelling.value) return;
+  if (isProcessingAction.value) return;
 
   const orderId = orderIdForMutation.value;
   if (!orderId) {
@@ -586,7 +719,7 @@ async function cancelOrder() {
     return;
   }
 
-  isCancelling.value = true;
+  isProcessingAction.value = true;
   try {
     const reason = t("orderLookup.actions.cancelNote");
     await cancelOrderRequest(orderId, {
@@ -603,7 +736,45 @@ async function cancelOrder() {
         : t("orderLookup.actions.cancelFailed");
     showMessageError(message);
   } finally {
-    isCancelling.value = false;
+    isProcessingAction.value = false;
+  }
+}
+
+async function completeOrder() {
+  if (isProcessingAction.value) return;
+
+  const orderId = orderIdForMutation.value;
+  if (!orderId) {
+    showMessageError(t("orderLookup.actions.missingId"));
+    return;
+  }
+
+  isProcessingAction.value = true;
+  try {
+    const response = await confirmOrderDelivery(orderId);
+    const successText = response?.message || t("orderLookup.actions.completed");
+    showMessageSuccess(successText);
+    await lookupOrder();
+  } catch (error: any) {
+    console.error("[OrderLookup] Complete order failed:", error);
+    const message =
+      error?.message && typeof error.message === "string"
+        ? error.message
+        : t("orderLookup.actions.completeFailed");
+    showMessageError(message);
+  } finally {
+    isProcessingAction.value = false;
+  }
+}
+
+function handlePrimaryAction() {
+  if (primaryActionDisabled.value) return;
+  if (primaryActionType.value === "confirm") {
+    completeOrder();
+    return;
+  }
+  if (primaryActionType.value === "cancel") {
+    openCancelConfirm();
   }
 }
 
@@ -632,6 +803,16 @@ function validateForm() {
     }
   }
   return !formErrors.code && (!isAuthenticated.value || !formErrors.contact);
+}
+
+function resolveInitialOrderCode(query: LocationQuery): string | null {
+  const candidate = query.code ?? query.orderCode;
+  if (candidate == null) return null;
+  const value = Array.isArray(candidate) ? candidate[0] : candidate;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.toUpperCase();
 }
 
 function extractOrderId(code: string) {
@@ -678,6 +859,71 @@ function matchesContact(orderData: OrderTrackingDetail, input: string) {
 function normalizePhone(value: string) {
   const digits = value.replace(/\D/g, "");
   return digits.startsWith("0") ? digits.slice(1) : digits;
+}
+
+function extractStatusId(source: unknown): number | null {
+  if (!source || typeof source !== "object") {
+    return null;
+  }
+
+  const candidateKeys = [
+    "idTrangThaiDonHang",
+    "trangThaiDonHangId",
+    "idTrangThai",
+    "statusId",
+  ];
+
+  for (const key of candidateKeys) {
+    const raw = (source as Record<string, unknown>)[key];
+    const numeric =
+      typeof raw === "number"
+        ? raw
+        : typeof raw === "string"
+        ? Number(raw)
+        : NaN;
+
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return numeric;
+    }
+  }
+
+  return null;
+}
+
+function parseTimelineInstant(value?: string | null) {
+  if (!value) return Number.NEGATIVE_INFINITY;
+
+  const raw = String(value).trim();
+  if (!raw) return Number.NEGATIVE_INFINITY;
+
+  const normalized =
+    raw.includes("T") || raw.includes("Z") ? raw : raw.replace(" ", "T");
+
+  const isoTime = Date.parse(normalized);
+  if (!Number.isNaN(isoTime)) {
+    return isoTime;
+  }
+
+  const match = raw.match(
+    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+  );
+  if (!match) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const day = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const year = Number(match[3].length === 2 ? `20${match[3]}` : match[3]);
+  const hour = Number(match[4] ?? 0);
+  const minute = Number(match[5] ?? 0);
+  const second = Number(match[6] ?? 0);
+
+  const utcTime = Date.UTC(year, month, day, hour, minute, second);
+  if (Number.isNaN(utcTime)) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  return utcTime;
 }
 
 function isEmail(value: string) {
@@ -956,36 +1202,62 @@ function formatDateTime(value?: string | null) {
   align-items: flex-start;
 }
 
-.cancel-order-btn {
+.order-action-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
   border-radius: 16px;
-  border: 1px solid rgba(214, 69, 69, 0.35);
-  background: rgba(214, 69, 69, 0.08);
-  color: #a02121;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  border: 1px solid transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.cancel-order-btn:hover:not(:disabled) {
+.order-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.order-action-btn--cancel {
+  border-color: rgba(214, 69, 69, 0.35);
+  background: rgba(214, 69, 69, 0.08);
+  color: #a02121;
+}
+
+.order-action-btn--cancel:hover:not(:disabled) {
   background: rgba(214, 69, 69, 0.16);
   border-color: rgba(214, 69, 69, 0.5);
 }
 
-.cancel-order-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.cancel-order-btn .inline-spinner {
+.order-action-btn--cancel .inline-spinner {
   width: 14px;
   height: 14px;
   border: 2px solid rgba(160, 33, 33, 0.3);
   border-top-color: #a02121;
+}
+
+.order-action-btn--confirm {
+  border-color: rgba(0, 180, 42, 0.35);
+  background: rgba(0, 180, 42, 0.12);
+  color: #087443;
+  box-shadow: 0 8px 18px rgba(0, 180, 42, 0.12);
+}
+
+.order-action-btn--confirm:hover:not(:disabled) {
+  background: rgba(0, 180, 42, 0.2);
+  border-color: rgba(0, 180, 42, 0.5);
+  box-shadow: 0 10px 22px rgba(0, 180, 42, 0.18);
+}
+
+.order-action-btn--confirm .inline-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(8, 116, 67, 0.3);
+  border-top-color: #087443;
 }
 
 .cancel-confirm-overlay {

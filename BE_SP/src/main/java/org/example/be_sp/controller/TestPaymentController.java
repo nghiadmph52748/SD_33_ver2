@@ -44,10 +44,11 @@ public class TestPaymentController {
     private final NotificationService notificationService;
 
     /**
-     * TEST ONLY: Manually mark an order as paid via browser (redirects to success page)
-     * DELETE THIS ENDPOINT IN PRODUCTION
-     * 
-     * Usage: GET http://localhost:8080/api/test/payment/complete-order/HD19179768
+     * TEST ONLY: Manually mark an order as paid via browser (redirects to
+     * success page) DELETE THIS ENDPOINT IN PRODUCTION
+     *
+     * Usage: GET
+     * http://localhost:8080/api/test/payment/complete-order/HD19179768
      */
     @GetMapping("/complete-order/{orderCode}")
     public ResponseEntity<Void> completeOrderViaBrowser(
@@ -55,17 +56,17 @@ public class TestPaymentController {
             @RequestParam(defaultValue = "momo") String provider) {
         try {
             log.warn("[TEST-PAYMENT] Browser access - marking order {} as PAID", orderCode);
-            
+
             // Mark order as paid
             markOrderAsPaid(orderCode);
-            
+
             // Redirect to success page based on provider
             String frontendUrl = "http://localhost:5174";
             String resultPath = provider.equals("vnpay") ? "/payment/vnpay/result" : "/payment/momo/result";
-            
+
             StringBuilder redirectUrl = new StringBuilder(frontendUrl);
             redirectUrl.append(resultPath).append("?");
-            
+
             if (provider.equals("vnpay")) {
                 redirectUrl.append("code=00");
                 redirectUrl.append("&txnRef=").append(URLEncoder.encode(orderCode, StandardCharsets.UTF_8));
@@ -73,12 +74,12 @@ public class TestPaymentController {
                 redirectUrl.append("resultCode=0");
                 redirectUrl.append("&orderId=").append(URLEncoder.encode(orderCode, StandardCharsets.UTF_8));
             }
-            
+
             redirectUrl.append("&amount=999999");
             redirectUrl.append("&message=").append(URLEncoder.encode("TEST: Thanh toán thành công", StandardCharsets.UTF_8));
-            
+
             return ResponseEntity.status(302).location(URI.create(redirectUrl.toString())).build();
-            
+
         } catch (Exception e) {
             log.error("[TEST-PAYMENT] Error completing order", e);
             String errorUrl = "http://localhost:5174/?error=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
@@ -87,8 +88,8 @@ public class TestPaymentController {
     }
 
     /**
-     * TEST ONLY: API endpoint to mark order as paid (returns JSON)
-     * DELETE THIS ENDPOINT IN PRODUCTION
+     * TEST ONLY: API endpoint to mark order as paid (returns JSON) DELETE THIS
+     * ENDPOINT IN PRODUCTION
      */
     @PostMapping("/mark-paid/{orderCode}")
     public ResponseEntity<Map<String, Object>> markOrderAsPaidForTesting(@PathVariable String orderCode) {
@@ -139,9 +140,9 @@ public class TestPaymentController {
             TrangThaiDonHang confirmedStatus = null;
             for (int id = 2; id <= 4; id++) {
                 var status = trangThaiDonHangRepository.findById(id);
-                if (status.isPresent() && status.get().getTenTrangThaiDonHang() != null 
+                if (status.isPresent() && status.get().getTenTrangThaiDonHang() != null
                         && (status.get().getTenTrangThaiDonHang().toLowerCase().contains("xác nhận")
-                            || status.get().getTenTrangThaiDonHang().toLowerCase().contains("giao"))) {
+                        || status.get().getTenTrangThaiDonHang().toLowerCase().contains("giao"))) {
                     confirmedStatus = status.get();
                     break;
                 }
@@ -168,6 +169,7 @@ public class TestPaymentController {
 
             if (customerEmail != null && !customerEmail.trim().isEmpty()) {
                 OrderEmailData emailData = OrderEmailData.builder()
+                        .orderId(hoaDon.getId())
                         .orderCode(hoaDon.getMaHoaDon())
                         .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                         .customerEmail(customerEmail)
@@ -211,4 +213,3 @@ public class TestPaymentController {
         return total.compareTo(BigDecimal.ZERO) > 0 ? total : BigDecimal.ZERO;
     }
 }
-

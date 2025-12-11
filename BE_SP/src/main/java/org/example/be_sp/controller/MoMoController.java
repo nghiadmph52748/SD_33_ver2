@@ -78,19 +78,19 @@ public class MoMoController {
             log.info("[MOMO-IPN] Received IPN: orderId={}, resultCode={}", req.getOrderId(), req.getResultCode());
 
             // Verify signature
-            String rawSignature = "accessKey=" + momoService.getAccessKey() +
-                    "&amount=" + req.getAmount() +
-                    "&extraData=" + (req.getExtraData() != null ? req.getExtraData() : "") +
-                    "&message=" + req.getMessage() +
-                    "&orderId=" + req.getOrderId() +
-                    "&orderInfo=" + req.getOrderInfo() +
-                    "&orderType=" + req.getOrderType() +
-                    "&partnerCode=" + req.getPartnerCode() +
-                    "&payType=" + req.getPayType() +
-                    "&requestId=" + req.getRequestId() +
-                    "&responseTime=" + req.getResponseTime() +
-                    "&resultCode=" + req.getResultCode() +
-                    "&transId=" + req.getTransId();
+            String rawSignature = "accessKey=" + momoService.getAccessKey()
+                    + "&amount=" + req.getAmount()
+                    + "&extraData=" + (req.getExtraData() != null ? req.getExtraData() : "")
+                    + "&message=" + req.getMessage()
+                    + "&orderId=" + req.getOrderId()
+                    + "&orderInfo=" + req.getOrderInfo()
+                    + "&orderType=" + req.getOrderType()
+                    + "&partnerCode=" + req.getPartnerCode()
+                    + "&payType=" + req.getPayType()
+                    + "&requestId=" + req.getRequestId()
+                    + "&responseTime=" + req.getResponseTime()
+                    + "&resultCode=" + req.getResultCode()
+                    + "&transId=" + req.getTransId();
 
             boolean isValid = momoService.verifySignature(req.getSignature(), rawSignature);
             if (!isValid) {
@@ -238,8 +238,8 @@ public class MoMoController {
 
             BigDecimal invoiceTotal = resolveInvoiceTotal(hoaDon);
             BigDecimal existingPaid = safe(hoaDon.getSoTienDaThanhToan());
-            BigDecimal incoming = paidAmount != null && paidAmount > 0 
-                    ? BigDecimal.valueOf(paidAmount) 
+            BigDecimal incoming = paidAmount != null && paidAmount > 0
+                    ? BigDecimal.valueOf(paidAmount)
                     : invoiceTotal;
 
             if (incoming.compareTo(BigDecimal.ZERO) <= 0 && invoiceTotal.compareTo(existingPaid) > 0) {
@@ -259,7 +259,7 @@ public class MoMoController {
             }
             hoaDon.setSoTienConLai(remaining);
 
-            boolean paidInFull = invoiceTotal.compareTo(BigDecimal.ZERO) > 0 
+            boolean paidInFull = invoiceTotal.compareTo(BigDecimal.ZERO) > 0
                     && remaining.compareTo(BigDecimal.ZERO) == 0;
             hoaDon.setTrangThaiThanhToan(paidInFull);
             if (hoaDon.getNgayThanhToan() == null) {
@@ -281,6 +281,7 @@ public class MoMoController {
             }
 
             OrderEmailData emailData = OrderEmailData.builder()
+                    .orderId(hoaDon.getId())
                     .orderCode(hoaDon.getMaHoaDon())
                     .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                     .customerEmail(customerEmail)
@@ -293,7 +294,7 @@ public class MoMoController {
                     .build();
 
             emailService.sendOrderConfirmationEmail(emailData);
-            log.info("[MOMO-IPN] Marked invoice {} as PAID and sent confirmation email to {}", 
+            log.info("[MOMO-IPN] Marked invoice {} as PAID and sent confirmation email to {}",
                     orderCode, customerEmail);
 
             notificationService.notifyAllStaff(
@@ -338,7 +339,7 @@ public class MoMoController {
             if (orderId == null || orderId.isBlank()) {
                 return;
             }
-            
+
             // Extract order code (format: HD03209723 or HD03209723_timestamp)
             String orderCode = orderId.split("_")[0];
 
@@ -353,18 +354,18 @@ public class MoMoController {
             TrangThaiDonHang cancelledStatus = null;
             for (int id = 5; id <= 7; id++) {
                 var status = trangThaiDonHangRepository.findById(id);
-                if (status.isPresent() && status.get().getTenTrangThaiDonHang() != null 
+                if (status.isPresent() && status.get().getTenTrangThaiDonHang() != null
                         && status.get().getTenTrangThaiDonHang().toLowerCase().contains("hủy")) {
                     cancelledStatus = status.get();
                     break;
                 }
             }
-            
+
             // If not found by ID, try searching all statuses
             if (cancelledStatus == null) {
                 var allStatuses = trangThaiDonHangRepository.findAll();
                 for (var status : allStatuses) {
-                    if (status.getTenTrangThaiDonHang() != null 
+                    if (status.getTenTrangThaiDonHang() != null
                             && status.getTenTrangThaiDonHang().toLowerCase().contains("hủy")) {
                         cancelledStatus = status;
                         break;
@@ -385,11 +386,11 @@ public class MoMoController {
             statusUpdate.setGhiChu(reason);
             statusUpdate.setTrangThai(true);
             statusUpdate.setDeleted(false);
-            
+
             thongTinDonHangRepository.save(statusUpdate);
-            
+
             log.info("[PAYMENT-CANCEL] Order {} marked as cancelled: {}", orderCode, reason);
-            
+
             notificationService.notifyAllStaff(
                     "Đơn hàng #" + hoaDon.getMaHoaDon() + " đã bị hủy",
                     "Thanh toán bị hủy",
@@ -401,4 +402,3 @@ public class MoMoController {
         }
     }
 }
-

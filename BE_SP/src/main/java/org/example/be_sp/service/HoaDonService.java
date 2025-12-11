@@ -534,6 +534,14 @@ public class HoaDonService {
         } catch (Exception e) {
         }
 
+        boolean statusChangedToDelivered = request.getIdTrangThaiDonHang() != null
+                && request.getIdTrangThaiDonHang() == 5
+                && (originalIdTrangThaiDonHang == null || originalIdTrangThaiDonHang != 5);
+
+        if (statusChangedToDelivered) {
+            saved = handleOrderDelivered(saved);
+        }
+
         // ✅ VALIDATE & DEDUCT INVENTORY when status changes to "Đã xác nhận" (idTrangThaiDonHang = 2)
         if (request.getIdTrangThaiDonHang() != null && request.getIdTrangThaiDonHang() == 2) {
             // Status is changing to "Đã xác nhận" - validate and deduct inventory
@@ -604,6 +612,9 @@ public class HoaDonService {
                                 case 7:
                                     trangThaiCu = "Hoàn thành";
                                     break;
+                                case 9:
+                                    trangThaiCu = "Đang chuẩn bị hàng";
+                                    break;
                                 default:
                                     trangThaiCu = originalStatus != null && originalStatus ? "Hoàn thành" : "Chờ xác nhận";
                                     break;
@@ -645,6 +656,9 @@ public class HoaDonService {
                             break;
                         case 7:
                             trangThaiMoi = "Hoàn thành";
+                            break;
+                        case 9:
+                            trangThaiMoi = "Đang chuẩn bị hàng";
                             break;
                         default:
                             trangThaiMoi = saved.getTrangThai() ? "Hoàn thành" : "Chờ xác nhận";
@@ -960,6 +974,44 @@ public class HoaDonService {
         }
     }
 
+    private HoaDon handleOrderDelivered(HoaDon hoaDon) {
+        if (hoaDon == null) {
+            return null;
+        }
+
+        boolean isDeliveryOrder = Boolean.TRUE.equals(hoaDon.getGiaoHang());
+        boolean isCounterSale = hoaDon.getGhiChu() != null && hoaDon.getGhiChu().contains("Bán hàng tại quầy");
+        if (!isDeliveryOrder || isCounterSale) {
+            return hoaDon;
+        }
+
+        BigDecimal grandTotal = computeGrandTotal(hoaDon);
+        BigDecimal currentPaid = safe(hoaDon.getSoTienDaThanhToan());
+
+        if (grandTotal.compareTo(BigDecimal.ZERO) > 0 && currentPaid.compareTo(grandTotal) < 0) {
+            hoaDon.setSoTienDaThanhToan(grandTotal);
+        }
+
+        BigDecimal remaining = grandTotal.subtract(safe(hoaDon.getSoTienDaThanhToan()));
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+            remaining = BigDecimal.ZERO;
+        }
+        hoaDon.setSoTienConLai(remaining);
+
+        boolean paidInFull = grandTotal.compareTo(BigDecimal.ZERO) > 0 && remaining.compareTo(BigDecimal.ZERO) == 0;
+        hoaDon.setTrangThaiThanhToan(paidInFull);
+        if (paidInFull && hoaDon.getNgayThanhToan() == null) {
+            hoaDon.setNgayThanhToan(LocalDateTime.now());
+        }
+
+        hoaDon.setUpdateAt(LocalDateTime.now());
+        HoaDon persisted = hoaDonRepository.save(hoaDon);
+
+        sendDeliveredStatusEmail(persisted);
+
+        return persisted;
+    }
+
     private String resolveCustomerEmail(HoaDon hoaDon) {
         if (hoaDon.getEmailNguoiNhan() != null && !hoaDon.getEmailNguoiNhan().trim().isEmpty()) {
             return hoaDon.getEmailNguoiNhan().trim();
@@ -1050,6 +1102,7 @@ public class HoaDonService {
         BigDecimal finalAmount = hoaDon.getTongTienSauGiam() != null ? hoaDon.getTongTienSauGiam() : totalAmount;
 
         return OrderEmailData.builder()
+                .orderId(hoaDon.getId())
                 .orderCode(hoaDon.getMaHoaDon())
                 .customerName(customerName != null ? customerName : "Khách hàng")
                 .customerEmail(customerEmail)
@@ -1063,6 +1116,28 @@ public class HoaDonService {
                 .phoneNumber(hoaDon.getSoDienThoaiNguoiNhan() != null ? hoaDon.getSoDienThoaiNguoiNhan() : "")
                 .items(items)
                 .build();
+    }
+
+    private void sendDeliveredStatusEmail(HoaDon hoaDon) {
+        try {
+            String customerEmail = resolveCustomerEmail(hoaDon);
+            if (customerEmail == null || customerEmail.isBlank()) {
+                return;
+            }
+
+            String customerName = resolveCustomerName(hoaDon);
+            List<HoaDonChiTiet> orderItems = hoaDonChiTietRepository.findAllByIdHoaDonAndTrangThai(hoaDon, true);
+            OrderEmailData deliveredEmail = buildOrderStatusEmailData(
+                    hoaDon,
+                    orderItems,
+                    "Đã giao hàng",
+                    customerName,
+                    customerEmail);
+            emailService.sendOrderStatusUpdateEmail(deliveredEmail);
+        } catch (Exception e) {
+            log.warn("Không thể gửi email xác nhận giao hàng cho đơn {}: {}",
+                    hoaDon != null ? hoaDon.getMaHoaDon() : "", e.getMessage());
+        }
     }
 
     private VoucherInfo createCancellationVoucher(HoaDon hoaDon, BigDecimal voucherValue, String customerName) {
@@ -1146,6 +1221,7 @@ public class HoaDonService {
             }
 
             OrderEmailData emailData = OrderEmailData.builder()
+                    .orderId(hoaDon.getId())
                     .orderCode(hoaDon.getMaHoaDon())
                     .customerName(hoaDon.getTenNguoiNhan() != null ? hoaDon.getTenNguoiNhan() : "Khách hàng")
                     .customerEmail(customerEmail)
@@ -1193,6 +1269,7 @@ public class HoaDonService {
 
             // Create email data object
             OrderEmailData emailData = OrderEmailData.builder()
+                    .orderId(hoaDon.getId())
                     .orderCode(hoaDon.getMaHoaDon())
                     .customerName(customerName)
                     .customerEmail(customerEmail)

@@ -37,26 +37,28 @@
     <div v-else-if="invoice" class="invoice-content">
       <!-- Horizontal Timeline Status -->
       <a-card class="timeline-status-card" :bordered="false">
-        <div class="horizontal-timeline" :key="`timeline-${timelineData.length}-${invoice?.id}`">
+        <div class="horizontal-timeline" :key="`timeline-${statusStages.length}-${invoice?.id}`">
           <div
             v-for="(stage, index) in statusStages"
-            :key="`${stage.key}-${stage.time}`"
+            :key="`${stage.key}-${stage.time}-${index}`"
             class="timeline-stage"
-            :class="{ active: stage.active, completed: stage.completed }"
+            :class="{ active: stage.active, completed: stage.completed, cancelled: stage.variant === 'cancelled' }"
           >
-            <div class="stage-connector" v-if="index > 0" :class="{ active: stage.active || stage.completed }"></div>
-            <div class="stage-icon" :class="{ active: stage.active, completed: stage.completed }">
-              <component :is="stage.icon" v-if="stage.icon" />
+            <div
+              v-if="index > 0"
+              class="stage-connector"
+              :class="{ active: statusStages[index - 1].completed, cancelled: stage.variant === 'cancelled' }"
+            ></div>
+            <div class="stage-icon" :class="{ active: stage.active, completed: stage.completed, cancelled: stage.variant === 'cancelled' }">
+              <component :is="stage.icon" />
             </div>
             <div class="stage-label">{{ stage.label }}</div>
-            <div class="stage-time" :key="`time-${stage.key}-${stage.time}`">{{ stage.time }}</div>
+            <div class="stage-time">{{ stage.time }}</div>
           </div>
         </div>
       </a-card>
 
-      <!-- Order Info and Customer Info - 2 Columns -->
-      <a-row :gutter="24" class="info-row">
-        <!-- Thông tin đơn hàng - Left Column -->
+      <a-row :gutter="16" class="info-row">
         <a-col :span="12">
           <a-card class="order-info-card" :bordered="false">
             <template #title>
@@ -67,22 +69,14 @@
             </template>
             <div class="info-list-compact">
               <div class="info-item-compact">
-                <span class="label">Mã đơn hàng:</span>
-                <a-tag color="blue" class="value-tag">
-                  {{ invoice.maHoaDon || `HD${String(invoice.id).padStart(6, '0')}` }}
+                <span class="label">Trạng thái hiện tại:</span>
+                <a-tag :color="getStatusColorByName(currentStageStatus)" size="small">
+                  {{ currentStageStatus }}
                 </a-tag>
               </div>
               <div class="info-item-compact">
                 <span class="label">Loại đơn:</span>
-                <a-tag :color="invoice.loaiDon ? 'blue' : 'green'" class="value-tag">
-                  {{ invoice.loaiDon ? 'online' : 'tại quầy' }}
-                </a-tag>
-              </div>
-              <div class="info-item-compact">
-                <span class="label">Trạng thái:</span>
-                <a-tag :color="getStatusColorByName(currentStageStatus)" class="value-tag">
-                  {{ currentStageStatus }}
-                </a-tag>
+                <span class="value">{{ invoice.loaiDon ? 'Online' : 'Tại quầy' }}</span>
               </div>
               <div class="info-item-compact">
                 <span class="label">Phiếu giảm giá:</span>
@@ -91,6 +85,10 @@
               <div class="info-item-compact">
                 <span class="label">Ngày đặt:</span>
                 <span class="value">{{ ngayDat }}</span>
+              </div>
+              <div class="info-item-compact">
+                <span class="label">Tổng tiền:</span>
+                <span class="value">{{ formatCurrency(invoice.tongTienSauGiam || invoice.tongTien || 0) }}</span>
               </div>
             </div>
           </a-card>
@@ -354,7 +352,7 @@
                 </a-option>
               </a-select>
             </a-form-item>
-            <!-- Show payment input when completing an order that still has an outstanding balance -->
+            <!-- Show payment input when moving into a status that requires collecting outstanding balance -->
             <a-form-item v-if="showPaymentInput" label="Số tiền thu thêm" required>
               <a-input-number
                 v-model="updateForm.soTienDaThanhToan"
@@ -527,6 +525,8 @@ import {
   IconUser,
   IconClockCircle,
   IconCheckCircle,
+  IconSettings,
+  IconSync,
   IconSend,
   IconCheck,
   IconEdit,
@@ -736,10 +736,18 @@ const getHighestPriorityStatusFromInvoice = (): string => {
   }
 
   const priorityMap: Record<string, number> = {
-    'Đã huỷ': 7,
-    'Hoàn thành': 6,
-    'Đã giao hàng': 5,
-    'Đang giao hàng': 4,
+    'Đã huỷ': 8,
+    'Đã hủy': 8,
+    'Hoàn thành': 7,
+    'Đã giao hàng': 6,
+    'Giao hàng thành công': 6,
+    'Giao thành công': 6,
+    'Đang giao hàng': 5,
+    'Đang giao': 5,
+    'Đang chuẩn bị hàng': 4,
+    'Đang chuẩn bị': 4,
+    'Chuẩn bị hàng': 4,
+    'Chờ giao hàng': 4,
     'Đang xử lý': 3,
     'Đã xác nhận': 2,
     'Chờ xác nhận': 1,
@@ -790,50 +798,51 @@ const TIMELINE_STAGE_DEFINITIONS: Array<{
   {
     key: 'confirmed',
     label: 'Đã xác nhận',
-    keywords: [
-      'da xac nhan',
-      'xac nhan',
-      'xac nhan don',
-      'chờ giao hàng',
-      'cho giao hang',
-      'dang xu ly',
-      'chuan bi',
-      'dang chuan bi',
-      'dong goi',
-    ],
+    keywords: ['da xac nhan', 'xac nhan', 'xac nhan don'],
     icon: IconCheckCircle,
     order: 2,
   },
   {
+    key: 'processing',
+    label: 'Đang xử lý',
+    keywords: ['dang xu ly', 'xu ly don', 'kiem tra don', 'xac minh thanh toan'],
+    icon: IconSync,
+    order: 3,
+  },
+  {
+    key: 'preparing',
+    label: 'Đang chuẩn bị hàng',
+    keywords: ['dang chuan bi hang', 'chuan bi hang', 'dang chuan bi', 'chuan bi don', 'sap xep don', 'cho giao hang'],
+    icon: IconSettings,
+    order: 4,
+  },
+  {
     key: 'shipping',
     label: 'Đang giao hàng',
-    keywords: ['dang giao', 'dang giao hang', 'dang van chuyen', 'giao hang', 'van chuyen', 'dang ship', 'ship hang'],
+    keywords: ['dang giao', 'dang giao hang', 'dang van chuyen', 'van chuyen', 'dang ship', 'ship hang'],
     icon: IconSend,
-    order: 3,
+    order: 5,
+  },
+  {
+    key: 'delivered',
+    label: 'Đã giao hàng',
+    keywords: ['da giao hang', 'giao hang thanh cong', 'giao thanh cong', 'giao hang xong'],
+    icon: IconCheckCircle,
+    order: 6,
   },
   {
     key: 'completed',
     label: 'Hoàn thành',
-    keywords: [
-      'hoan thanh',
-      'da thanh toan',
-      'thanh toan xong',
-      'hoan tat',
-      'da giao hang',
-      'giao thanh cong',
-      'giao hang thanh cong',
-      'thanh toan thanh cong',
-      'da thanh toan thanh cong',
-    ],
+    keywords: ['hoan thanh', 'da thanh toan', 'thanh toan xong', 'hoan tat', 'thanh toan thanh cong', 'da thanh toan thanh cong'],
     icon: IconCheck,
-    order: 4,
+    order: 7,
   },
   {
     key: 'cancelled',
     label: 'Đã huỷ',
     keywords: ['da huy', 'huy don', 'don huy', 'huy hang', 'huy thanh cong'],
     icon: IconClose,
-    order: 7,
+    order: 99,
     variant: 'cancelled',
   },
 ]
@@ -890,15 +899,21 @@ const resolveStageDefinitionFromStatus = (rawStatus: string) => {
 
   if (definition) {
     const shouldUseDefinitionLabel =
-      (definition.key === 'confirmed' &&
-        (normalized.includes('cho giao hang') ||
-          normalized.includes('dang xu ly') ||
-          normalized.includes('chuan bi') ||
+      (definition.key === 'confirmed' && normalized.includes('xac nhan')) ||
+      (definition.key === 'processing' &&
+        (normalized.includes('dang xu ly') ||
+          normalized.includes('xu ly don') ||
+          normalized.includes('kiem tra don') ||
+          normalized.includes('xac minh thanh toan'))) ||
+      (definition.key === 'preparing' &&
+        (normalized.includes('dang chuan bi') ||
+          normalized.includes('chuan bi hang') ||
+          normalized.includes('cho giao hang') ||
           normalized.includes('dong goi'))) ||
       (definition.key === 'shipping' &&
-        (normalized.includes('giao hang') || normalized.includes('van chuyen') || normalized.includes('ship'))) ||
-      (definition.key === 'completed' &&
-        (normalized.includes('da giao hang') || normalized.includes('giao thanh cong') || normalized.includes('giao hang thanh cong'))) ||
+        (normalized.includes('dang giao') || normalized.includes('van chuyen') || normalized.includes('ship'))) ||
+      (definition.key === 'delivered' && (normalized.includes('da giao hang') || normalized.includes('giao thanh cong'))) ||
+      (definition.key === 'completed' && (normalized.includes('hoan thanh') || normalized.includes('thanh toan'))) ||
       (definition.key === 'pending' && normalized.includes('cho thanh toan'))
 
     const customLabel = shouldUseDefinitionLabel || !rawStatus || rawStatus.trim().length === 0 ? definition.label : rawStatus.trim()
@@ -923,16 +938,20 @@ const resolveStageDefinitionFromStatus = (rawStatus: string) => {
 const STATUS_FLOW_ORDER: Record<string, number> = {
   'Chờ xác nhận': 1,
   'Chờ thanh toán': 1,
-  'Chờ giao hàng': 2,
   'Đã xác nhận': 2,
-  'Đang xử lý': 2,
-  'Đang giao hàng': 3,
-  'Đang giao': 3,
-  'Hoàn thành': 4,
-  'Đã thanh toán': 4,
-  'Đã giao hàng': 4,
-  'Đã huỷ': 5,
-  'Đã hủy': 5,
+  'Đang xử lý': 3,
+  'Chờ giao hàng': 4,
+  'Đang chuẩn bị hàng': 4,
+  'Đang chuẩn bị': 4,
+  'Chuẩn bị hàng': 4,
+  'Đang giao hàng': 5,
+  'Đang giao': 5,
+  'Đã giao hàng': 6,
+  'Giao hàng thành công': 6,
+  'Hoàn thành': 7,
+  'Đã thanh toán': 7,
+  'Đã huỷ': 99,
+  'Đã hủy': 99,
 }
 
 const normalizeStatusForFlow = (status: string) => {
@@ -943,20 +962,30 @@ const normalizeStatusForFlow = (status: string) => {
 
   const mapping: Record<string, string> = {
     'Chờ thanh toán': 'Chờ xác nhận',
-    'Chờ giao hàng': 'Đã xác nhận',
-    'Đang xử lý': 'Đã xác nhận',
+    'Chờ giao hàng': 'Đang chuẩn bị hàng',
+    'Đang xử lý': 'Đang xử lý',
+    'Đang chuẩn bị': 'Đang chuẩn bị hàng',
+    'Chuẩn bị hàng': 'Đang chuẩn bị hàng',
     'Đang giao': 'Đang giao hàng',
     'Đã hủy': 'Đã huỷ',
     'Đã thanh toán': 'Hoàn thành',
-    'Đã giao hàng': 'Hoàn thành',
-    'Giao hàng thành công': 'Hoàn thành',
-    'Giao thành công': 'Hoàn thành',
+    'Đã giao hàng': 'Đã giao hàng',
+    'Giao hàng thành công': 'Đã giao hàng',
+    'Giao thành công': 'Đã giao hàng',
   }
 
   return mapping[normalized] || normalized
 }
 
-const ONLINE_STATUS_FLOW = ['Chờ xác nhận', 'Đã xác nhận', 'Đang giao hàng', 'Hoàn thành']
+const ONLINE_STATUS_FLOW = [
+  'Chờ xác nhận',
+  'Đã xác nhận',
+  'Đang xử lý',
+  'Đang chuẩn bị hàng',
+  'Đang giao hàng',
+  'Đã giao hàng',
+  'Hoàn thành',
+]
 
 const OFFLINE_STATUS_FLOW = ['Chờ xác nhận', 'Hoàn thành']
 
@@ -968,17 +997,20 @@ const getTimeFromTimeline = (statusKey: string): string => {
   try {
     // Priority 1: Use thongTinDonHangs from invoice (most reliable)
     if (invoice.value?.thongTinDonHangs && Array.isArray(invoice.value.thongTinDonHangs)) {
-      const statusMap: Record<string, string> = {
-        pending: 'Chờ xác nhận',
-        confirmed: 'Đã xác nhận',
-        shipping: 'Đang giao hàng',
-        completed: 'Hoàn thành',
+      const statusMap: Record<string, string[]> = {
+        pending: ['Chờ xác nhận'],
+        confirmed: ['Đã xác nhận'],
+        processing: ['Đang xử lý'],
+        preparing: ['Đang chuẩn bị hàng', 'Đang chuẩn bị', 'Chuẩn bị hàng', 'Chờ giao hàng'],
+        shipping: ['Đang giao hàng', 'Đang giao'],
+        delivered: ['Đã giao hàng', 'Giao hàng thành công', 'Giao thành công'],
+        completed: ['Hoàn thành', 'Đã thanh toán'],
       }
 
-      const targetStatus = statusMap[statusKey]
-      if (targetStatus) {
+      const targetStatuses = statusMap[statusKey]
+      if (targetStatuses && targetStatuses.length > 0) {
         for (const item of invoice.value.thongTinDonHangs) {
-          if (item.tenTrangThaiDonHang === targetStatus && item.thoiGian) {
+          if (item.tenTrangThaiDonHang && targetStatuses.includes(item.tenTrangThaiDonHang) && item.thoiGian) {
             return formatDateTime(item.thoiGian)
           }
         }
@@ -1109,6 +1141,53 @@ const getTimeFromTimeline = (statusKey: string): string => {
       return 'N/A'
     }
 
+    // ========== PROCESSING: Đang xử lý ==========
+    if (statusKey === 'processing') {
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        if (excludes(item, ['hoàn thành', 'đã thanh toán'])) {
+          continue
+        }
+        if (matches(item, ['đang xử lý', 'dang xu ly', 'xu ly don', 'kiem tra don', 'xac minh thanh toan'])) {
+          if (item.thoiGian) {
+            return formatDateTime(item.thoiGian)
+          }
+        }
+      }
+
+      return 'N/A'
+    }
+
+    // ========== PREPARING: Đang chuẩn bị hàng ==========
+    if (statusKey === 'preparing') {
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        if (excludes(item, ['hoàn thành', 'đã thanh toán', 'đã giao'])) {
+          continue
+        }
+        if (
+          matches(item, [
+            'đang chuẩn bị hàng',
+            'dang chuan bi hang',
+            'đang chuẩn bị',
+            'dang chuan bi',
+            'chuẩn bị hàng',
+            'chuan bi hang',
+            'đóng gói',
+            'dong goi',
+            'chờ giao hàng',
+            'cho giao hang',
+          ])
+        ) {
+          if (item.thoiGian) {
+            return formatDateTime(item.thoiGian)
+          }
+        }
+      }
+
+      return 'N/A'
+    }
+
     // ========== SHIPPING: Đang giao ==========
     // Entry có "Đang giao hàng" hoặc "Giao hàng"
     if (statusKey === 'shipping') {
@@ -1122,7 +1201,7 @@ const getTimeFromTimeline = (statusKey: string): string => {
         }
 
         // Tìm entry "Đang giao" hoặc "Giao hàng"
-        if (matches(item, ['đang giao', 'giao hàng', 'giao hang'])) {
+        if (matches(item, ['đang giao', 'dang giao', 'dang van chuyen', 'van chuyen', 'dang ship', 'ship'])) {
           if (item.thoiGian) {
             return formatDateTime(item.thoiGian)
           }
@@ -1130,6 +1209,20 @@ const getTimeFromTimeline = (statusKey: string): string => {
       }
 
       // Không tìm thấy -> N/A (đơn tại quầy không có bước này)
+      return 'N/A'
+    }
+
+    // ========== DELIVERED: Đã giao hàng ==========
+    if (statusKey === 'delivered') {
+      for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+        const item = sortedTimeline[i]
+        if (matches(item, ['đã giao hàng', 'giao hàng thành công', 'giao hang thanh cong', 'giao thanh cong'])) {
+          if (item.thoiGian) {
+            return formatDateTime(item.thoiGian)
+          }
+        }
+      }
+
       return 'N/A'
     }
 
@@ -1265,6 +1358,8 @@ const getStatusColorByName = (statusName: string): string => {
       return 'blue'
     case 'Đang xử lý':
       return 'orange'
+    case 'Đang chuẩn bị hàng':
+      return 'blue'
     case 'Đã xác nhận':
       return 'orange'
     case 'Chờ xác nhận':
@@ -1294,6 +1389,42 @@ const currentStageStatus = computed(() => {
 
 // Computed: Status stages for horizontal timeline
 const statusStages = computed(() => {
+  const stageDataFromApi = invoice.value?.orderStages
+  if (stageDataFromApi && stageDataFromApi.length > 0) {
+    return stageDataFromApi.map((stage) => {
+      const definition = TIMELINE_STAGE_DEFINITIONS.find((def) => def.key === stage.code)
+      const parsedTimestamp = parseTimelineTimestamp(stage.timestamp)
+      return {
+        key: stage.code || definition?.key || 'pending',
+        label: stage.name || definition?.label || 'Trạng thái',
+        icon: definition?.icon || IconClockCircle,
+        time: parsedTimestamp !== null ? formatDateTime(new Date(parsedTimestamp)) : 'N/A',
+        active: Boolean(stage.current),
+        completed: Boolean(stage.completed),
+        variant: definition?.variant,
+      }
+    })
+  }
+
+  const statusToStageKey: Record<string, string> = {
+    'Chờ xác nhận': 'pending',
+    'Chờ thanh toán': 'pending',
+    'Đã xác nhận': 'confirmed',
+    'Chờ giao hàng': 'preparing',
+    'Đang xử lý': 'processing',
+    'Đang chuẩn bị hàng': 'preparing',
+    'Đang chuẩn bị': 'preparing',
+    'Chuẩn bị hàng': 'preparing',
+    'Đang giao hàng': 'shipping',
+    'Đang giao': 'shipping',
+    'Đã giao hàng': 'delivered',
+    'Giao hàng thành công': 'delivered',
+    'Giao thành công': 'delivered',
+    'Hoàn thành': 'completed',
+    'Đã thanh toán': 'completed',
+    [CANCELLATION_STATUS]: 'cancelled',
+  }
+
   const ensureLegacyStages = () => {
     const defaultStages = [
       {
@@ -1313,9 +1444,33 @@ const statusStages = computed(() => {
         time: 'N/A',
       },
       {
+        key: 'processing',
+        label: 'Đang xử lý',
+        icon: IconSync,
+        active: false,
+        completed: false,
+        time: 'N/A',
+      },
+      {
+        key: 'preparing',
+        label: 'Đang chuẩn bị hàng',
+        icon: IconSettings,
+        active: false,
+        completed: false,
+        time: 'N/A',
+      },
+      {
         key: 'shipping',
         label: 'Đang giao hàng',
         icon: IconSend,
+        active: false,
+        completed: false,
+        time: 'N/A',
+      },
+      {
+        key: 'delivered',
+        label: 'Đã giao hàng',
+        icon: IconCheckCircle,
         active: false,
         completed: false,
         time: 'N/A',
@@ -1377,79 +1532,6 @@ const statusStages = computed(() => {
         }
 
         return stages
-      }
-
-      const stages = [
-        {
-          key: 'pending',
-          label: 'Chờ xác nhận',
-          icon: IconClockCircle,
-          active: false,
-          completed: false,
-          time: getTimeFromTimeline('pending'),
-        },
-        {
-          key: 'confirmed',
-          label: 'Đã xác nhận',
-          icon: IconCheckCircle,
-          active: false,
-          completed: false,
-          time: getTimeFromTimeline('confirmed'),
-        },
-        {
-          key: 'shipping',
-          label: 'Đang giao hàng',
-          icon: IconSend,
-          active: false,
-          completed: false,
-          time: getTimeFromTimeline('shipping'),
-        },
-        {
-          key: 'completed',
-          label: 'Hoàn thành',
-          icon: IconCheck,
-          active: false,
-          completed: false,
-          time: getTimeFromTimeline('completed'),
-        },
-      ]
-
-      if (normalizedStatus === 'Chờ xác nhận') {
-        stages[0].active = true
-        stages[0].completed = true
-        stages[1].time = 'N/A'
-        stages[2].time = 'N/A'
-        stages[3].time = 'N/A'
-      } else if (normalizedStatus === 'Đã xác nhận') {
-        stages[0].completed = true
-        stages[1].active = true
-        stages[1].completed = true
-        stages[2].time = 'N/A'
-        stages[3].time = 'N/A'
-      } else if (normalizedStatus === 'Đang giao hàng') {
-        stages[0].completed = true
-        stages[1].completed = true
-        stages[2].active = true
-        stages[2].completed = true
-        stages[3].time = 'N/A'
-      } else if (normalizedStatus === 'Hoàn thành') {
-        stages.forEach((stage) => {
-          stage.completed = true
-        })
-        stages[3].active = true
-      } else if (normalizedStatus === CANCELLATION_STATUS) {
-        stages[0].completed = true
-        stages[1].completed = true
-        stages[2].completed = false
-        stages[1].time = getTimeFromTimeline('confirmed')
-        stages[2].time = 'N/A'
-        stages[3].time = 'N/A'
-      } else {
-        stages[0].completed = true
-        stages[0].active = true
-        stages[1].time = 'N/A'
-        stages[2].time = 'N/A'
-        stages[3].time = 'N/A'
       }
 
       return stages
@@ -1684,14 +1766,6 @@ const statusStages = computed(() => {
     }
 
     const resolvedActiveIndex = resolveActiveIndex()
-    const statusToStageKey: Record<string, string> = {
-      'Chờ xác nhận': 'pending',
-      'Đã xác nhận': 'confirmed',
-      'Đang giao hàng': 'shipping',
-      'Hoàn thành': 'completed',
-      [CANCELLATION_STATUS]: 'cancelled',
-    }
-
     let activeIndex = resolvedActiveIndex >= 0 ? resolvedActiveIndex : stageEntries.length - 1
 
     const normalizedInvoiceStatus = normalizeStatusForFlow(currentStageStatus.value)
@@ -2235,11 +2309,12 @@ const paymentStatusClass = computed(() => {
   return 'paid-ok'
 })
 
+const COLLECTION_REQUIRED_STATUSES = ['Đã giao hàng', 'Hoàn thành']
+const requiresCollectionForStatus = (status?: string | null): boolean => !!status && COLLECTION_REQUIRED_STATUSES.includes(status)
+
 const additionalPaymentAmount = computed(() => {
-  if (updateForm.value?.trangThaiText !== 'Hoàn thành') {
-    return 0
-  }
-  if (modalOriginalStatus.value !== 'Đang giao hàng') {
+  const targetStatus = updateForm.value?.trangThaiText
+  if (!requiresCollectionForStatus(targetStatus)) {
     return 0
   }
   const inputAmount = updateForm.value?.soTienDaThanhToan
@@ -2267,10 +2342,7 @@ const remainingAmountForCompletion = computed(() => {
 
 const paymentCompletionDelta = computed(() => paymentAmountForCompletion.value - calculatedFinalTotal.value)
 
-const showPaymentInput = computed(
-  () =>
-    updateForm.value.trangThaiText === 'Hoàn thành' && modalOriginalStatus.value === 'Đang giao hàng' && calculatedRemainingAmount.value > 0
-)
+const showPaymentInput = computed(() => requiresCollectionForStatus(updateForm.value.trangThaiText) && calculatedRemainingAmount.value > 0)
 const setPaymentAmountProgrammatically = (amount: number) => {
   isProgrammaticPaymentSync.value = true
   updateForm.value.soTienDaThanhToan = amount
@@ -2282,7 +2354,7 @@ const setPaymentAmountProgrammatically = (amount: number) => {
 watch(
   () => updateForm.value.trangThaiText,
   (newStatus) => {
-    if (newStatus === 'Hoàn thành') {
+    if (requiresCollectionForStatus(newStatus)) {
       if (!paymentAmountManuallyEdited.value) {
         setPaymentAmountProgrammatically(calculatedRemainingAmount.value)
       }
@@ -3000,6 +3072,8 @@ const handleSaveUpdate = async () => {
       'Hoàn thành': 7,
       'Đã giao hàng': 5,
       'Đang giao hàng': 4,
+      'Đang chuẩn bị hàng': 9,
+      'Đang chuẩn bị': 9,
       'Đang xử lý': 3,
       'Đã xác nhận': 2,
       'Chờ xác nhận': 1,
@@ -3024,12 +3098,13 @@ const handleSaveUpdate = async () => {
     const expectedCollection = Math.max(finalTotalRounded - paidSoFarRounded, 0)
     const projectedPaidTotal = paidSoFarRounded + additionalAmount
 
-    if (statusName === 'Hoàn thành') {
+    if (requiresCollectionForStatus(statusName)) {
       const collectionDelta = expectedCollection - additionalAmount
+      const statusLabel = statusName
 
       if (collectionDelta > 0) {
         Message.error(
-          `Đơn hàng vẫn còn thiếu ${formatCurrency(collectionDelta)} sau khi thu thêm. Thu đủ trước khi chuyển trạng thái Hoàn thành.`
+          `Đơn hàng vẫn còn thiếu ${formatCurrency(collectionDelta)} sau khi thu thêm. Thu đủ trước khi chuyển trạng thái ${statusLabel}.`
         )
         saving.value = false
         return
@@ -3049,7 +3124,7 @@ const handleSaveUpdate = async () => {
           )
         } else {
           Message.error(
-            `Đơn hàng vẫn còn thiếu ${formatCurrency(Math.abs(totalDelta))} sau khi thu thêm. Thu đủ trước khi chuyển trạng thái Hoàn thành.`
+            `Đơn hàng vẫn còn thiếu ${formatCurrency(Math.abs(totalDelta))} sau khi thu thêm. Thu đủ trước khi chuyển trạng thái ${statusLabel}.`
           )
         }
         saving.value = false
