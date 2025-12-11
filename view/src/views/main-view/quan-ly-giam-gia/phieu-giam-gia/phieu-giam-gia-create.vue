@@ -937,7 +937,7 @@ const isEditingMaxDiscount = ref(false)
 
 const handleMaxDiscountFocus = () => {
   isEditingMaxDiscount.value = true
-  displayMaxDiscount.value = String(formState.maxDiscount || 0)
+  displayMaxDiscount.value = formState.maxDiscount ? String(formState.maxDiscount) : ''
 }
 
 const handleMaxDiscountInput = () => {
@@ -994,7 +994,7 @@ const isEditingMinOrder = ref(false)
 
 const handleMinOrderFocus = () => {
   isEditingMinOrder.value = true
-  displayMinOrder.value = String(formState.minOrder || 0)
+  displayMinOrder.value = formState.minOrder ? String(formState.minOrder) : ''
 }
 
 const handleMinOrderInput = () => {

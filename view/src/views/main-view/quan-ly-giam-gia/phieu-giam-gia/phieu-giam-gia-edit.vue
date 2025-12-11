@@ -1040,7 +1040,7 @@ const isEditingMaxDiscount = ref(false)
 
 const handleMaxDiscountFocus = () => {
   isEditingMaxDiscount.value = true
-  displayMaxDiscount.value = String(couponEditForm.maxDiscount || 0)
+  displayMaxDiscount.value = couponEditForm.maxDiscount ? String(couponEditForm.maxDiscount) : ''
 }
 
 const handleMaxDiscountInput = () => {
@@ -1166,7 +1166,7 @@ const isEditingMinOrder = ref(false)
 
 const handleMinOrderFocus = () => {
   isEditingMinOrder.value = true
-  displayMinOrder.value = String(couponEditForm.minOrder || 0)
+  displayMinOrder.value = couponEditForm.minOrder ? String(couponEditForm.minOrder) : ''
 }
 
 const handleMinOrderInput = () => {

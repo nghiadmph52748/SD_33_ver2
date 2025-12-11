@@ -1,8 +1,16 @@
 // GHN API for Vietnam location data
 const GHN_TOKEN = import.meta.env.VITE_GHN_TOKEN || ''
 
+if (!GHN_TOKEN) {
+  console.warn('[LocationService] VITE_GHN_TOKEN is not set in .env.development')
+}
+
 export async function fetchProvinces() {
   try {
+    if (!GHN_TOKEN) {
+      console.error('[LocationService] Cannot fetch provinces: GHN_TOKEN is empty')
+      return []
+    }
     const res = await fetch('https://online-gateway.ghn.vn/shiip/public-api/master-data/province', {
       method: 'GET',
       headers: {
@@ -25,6 +33,10 @@ export async function fetchProvinces() {
 
 export async function fetchDistrictsByProvinceCode(code: number) {
   try {
+    if (!GHN_TOKEN) {
+      console.error('[LocationService] Cannot fetch districts: GHN_TOKEN is empty')
+      return []
+    }
     const res = await fetch('https://online-gateway.ghn.vn/shiip/public-api/master-data/district', {
       method: 'GET',
       headers: {
@@ -49,6 +61,10 @@ export async function fetchDistrictsByProvinceCode(code: number) {
 
 export async function fetchWardsByDistrictCode(code: number) {
   try {
+    if (!GHN_TOKEN) {
+      console.error('[LocationService] Cannot fetch wards: GHN_TOKEN is empty')
+      return []
+    }
     const res = await fetch('https://online-gateway.ghn.vn/shiip/public-api/master-data/ward', {
       method: 'POST',
       headers: {
