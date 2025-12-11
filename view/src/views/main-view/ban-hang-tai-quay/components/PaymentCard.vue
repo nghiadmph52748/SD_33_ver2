@@ -34,6 +34,25 @@
         </a-button>
       </a-form-item>
 
+      <a-alert
+        v-if="selectedCoupon"
+        :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`"
+        type="success"
+        closable
+        style="margin-bottom: 12px"
+        @close="$emit('clear-voucher')"
+      >
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <div>
+            <strong>{{ selectedCoupon.maPhieuGiamGia }}</strong>
+            <span style="margin-left: 8px; color: #52c41a">-{{ discountDisplay }}</span>
+          </div>
+          <div style="font-size: 12px; color: #666">
+            <span v-if="selectedCoupon.hoaDonToiThieu">Min: {{ formatCurrency(Number(selectedCoupon.hoaDonToiThieu)) }}</span>
+          </div>
+        </div>
+      </a-alert>
+
       <VoucherAlmostEligible v-if="almostEligibleSuggestion" :suggestion="almostEligibleSuggestion" @open-voucher="$emit('open-voucher')" />
 
       <BestVoucherSuggestionCard
@@ -165,25 +184,6 @@
         <p>Vui lòng chuyển khoản theo thông tin cung cấp. Mã hoá đơn: {{ orderCode }}</p>
         <p v-if="paymentForm.method === 'both'">Số tiền chuyển khoản: {{ formatCurrency(paymentForm.transferReceived || 0) }}</p>
       </a-alert>
-
-      <a-alert
-        v-if="selectedCoupon"
-        :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`"
-        type="success"
-        closable
-        @close="$emit('clear-voucher')"
-      >
-        <div style="display: flex; justify-content: space-between; align-items: center">
-          <div>
-            <strong>{{ selectedCoupon.maPhieuGiamGia }}</strong>
-            <span style="margin-left: 8px; color: #52c41a">-{{ discountDisplay }}</span>
-          </div>
-          <div style="font-size: 12px; color: #666">
-            <span v-if="selectedCoupon.hoaDonToiThieu">Min: {{ formatCurrency(Number(selectedCoupon.hoaDonToiThieu)) }}</span>
-          </div>
-        </div>
-      </a-alert>
-
       <a-divider />
       <div class="payment-summary">
         <p class="summary-row">
@@ -221,7 +221,11 @@
           Hiển thị QR
         </a-button>
         <p class="qr-hint">
-          {{ qrSession ? 'Sẵn sàng mở màn hình thanh toán cho khách quét.' : 'Hoàn tất giỏ hàng để tạo màn hình thanh toán trước khi hiển thị.' }}
+          {{
+            qrSession
+              ? 'Sẵn sàng mở màn hình thanh toán cho khách quét.'
+              : 'Hoàn tất giỏ hàng để tạo màn hình thanh toán trước khi hiển thị.'
+          }}
         </p>
         <p v-if="qrSyncError" class="qr-session-error">
           <icon-info-circle style="margin-right: 4px" />
@@ -230,14 +234,7 @@
       </div>
 
       <div class="reset-session-action">
-        <a-button
-          type="outline"
-          status="warning"
-          long
-          @click="$emit('reset-qr-session')"
-        >
-          Reset Màn Hình Thanh Toán
-        </a-button>
+        <a-button type="outline" status="warning" long @click="$emit('reset-qr-session')">Reset Màn Hình Thanh Toán</a-button>
       </div>
 
       <a-space direction="vertical" size="large" style="width: 100%; margin-top: 16px">
