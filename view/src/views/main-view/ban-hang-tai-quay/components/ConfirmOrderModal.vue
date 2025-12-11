@@ -193,8 +193,8 @@ const props = defineProps<{
   shippingFee: number
   finalPrice: number
   paymentMethod: 'cash' | 'transfer' | 'both'
-  cashReceived: number
-  transferReceived: number
+  cashReceived: number | null
+  transferReceived: number | null
   selectedCoupon?: CouponApiModel | null
   confirmLoading: boolean
 }>()
@@ -202,12 +202,12 @@ const props = defineProps<{
 defineEmits<{ (e: 'cancel'): void; (e: 'confirm'): void }>()
 
 const change = computed(() => {
-  const totalReceived = props.cashReceived + props.transferReceived
+  const totalReceived = (props.cashReceived ?? 0) + (props.transferReceived ?? 0)
   return Math.max(0, totalReceived - props.finalPrice)
 })
 
-function formatCurrency(value: number) {
-  const n = Number(value) || 0
+function formatCurrency(value: number | null | undefined) {
+  const n = Number(value ?? 0) || 0
   try {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
   } catch {

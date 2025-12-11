@@ -94,15 +94,15 @@ public class QRSessionService {
         LocalDateTime now = LocalDateTime.now();
         // Only return sessions created in the last 5 minutes to avoid stale sessions after page reload
         LocalDateTime minCreatedAt = now.minusMinutes(5);
-        
+
         while (true) {
             Optional<QRSession> sessionOpt = qrSessionRepository
                     .findFirstByStatusAndExpiresAtAfterAndCreatedAtAfterOrderByCreatedAtDesc("PENDING", now, minCreatedAt);
-            
+
             if (sessionOpt.isEmpty()) {
                 throw new RuntimeException("Không có phiên VNPAY đang hoạt động");
             }
-            
+
             QRSession session = sessionOpt.get();
 
             if (isSessionUsable(session)) {
@@ -169,14 +169,16 @@ public class QRSessionService {
             throw new RuntimeException("Cannot generate QR for a paid session");
         }
 
-        if (session.getFinalPrice() == null || session.getFinalPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Final price must be greater than zero to generate QR");
+        BigDecimal transferAmount = session.getTransferAmount();
+        if (transferAmount == null || transferAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Transfer amount must be greater than zero to generate QR");
         }
 
         if (session.getQrCodeUrl() == null) {
             CreateQRSessionRequest request = new CreateQRSessionRequest();
             request.setOrderCode(session.getOrderCode());
             request.setFinalPrice(session.getFinalPrice());
+            request.setTransferAmount(transferAmount);
             request.setSubtotal(session.getSubtotal());
             request.setDiscountAmount(session.getDiscountAmount());
             request.setShippingFee(session.getShippingFee());
@@ -214,6 +216,14 @@ public class QRSessionService {
         session.setDiscountAmount(request.getDiscountAmount());
         session.setShippingFee(request.getShippingFee());
         session.setFinalPrice(request.getFinalPrice());
+        BigDecimal transferAmount = request.getTransferAmount();
+        if (transferAmount == null) {
+            transferAmount = request.getFinalPrice();
+        }
+        if (transferAmount == null || transferAmount.compareTo(BigDecimal.ZERO) < 0) {
+            transferAmount = BigDecimal.ZERO;
+        }
+        session.setTransferAmount(transferAmount);
     }
 
     private HoaDon resolveHoaDon(Integer invoiceId) {
@@ -236,16 +246,17 @@ public class QRSessionService {
 
     private String generateQrUrl(String sessionId, CreateQRSessionRequest request) {
         try {
-            org.example.be_sp.model.request.VnpayCreatePaymentRequest vnpayRequest = 
-                new org.example.be_sp.model.request.VnpayCreatePaymentRequest();
+            org.example.be_sp.model.request.VnpayCreatePaymentRequest vnpayRequest
+                    = new org.example.be_sp.model.request.VnpayCreatePaymentRequest();
             vnpayRequest.setOrderId(request.getOrderCode());
-            vnpayRequest.setAmount(request.getFinalPrice() != null ? request.getFinalPrice().longValue() : 0L);
+            BigDecimal transferAmount = request.getTransferAmount() != null ? request.getTransferAmount() : request.getFinalPrice();
+            vnpayRequest.setAmount(transferAmount != null ? transferAmount.longValue() : 0L);
             vnpayRequest.setOrderInfo("Thanh toan don hang " + request.getOrderCode());
             vnpayRequest.setLocale("vn");
 
             String clientIp = "127.0.0.1";
-            org.example.be_sp.model.response.VnpayCreatePaymentResponse vnpayResponse = 
-                vnPayService.createPayment(vnpayRequest, clientIp, null);
+            org.example.be_sp.model.response.VnpayCreatePaymentResponse vnpayResponse
+                    = vnPayService.createPayment(vnpayRequest, clientIp, null);
 
             if (vnpayResponse != null && vnpayResponse.getPayUrl() != null) {
                 // VNPAY payment URL when encoded as QR code IS the banking QR format
@@ -261,7 +272,6 @@ public class QRSessionService {
             throw new RuntimeException("Không thể tạo mã QR thanh toán. Vui lòng cấu hình VNPAY (tmnCode/hashSecret) trong application.properties", e);
         }
     }
-
 
     private String uploadQRCodeToCloudinary(byte[] qrCodeBytes) {
         try {
@@ -302,7 +312,7 @@ public class QRSessionService {
         String customerName = null;
         String customerPhone = null;
         String customerEmail = null;
-        
+
         if (session.getIdHoaDon() != null) {
             HoaDon hoaDon = session.getIdHoaDon();
             if (hoaDon.getIdKhachHang() != null) {
@@ -325,6 +335,7 @@ public class QRSessionService {
                 .discountAmount(session.getDiscountAmount())
                 .shippingFee(session.getShippingFee())
                 .finalPrice(session.getFinalPrice())
+                .transferAmount(session.getTransferAmount())
                 .status(session.getStatus())
                 .expiresAt(session.getExpiresAt())
                 .createdAt(session.getCreatedAt())
@@ -344,6 +355,7 @@ public class QRSessionService {
                 .orderCode(session.getOrderCode())
                 .status(session.getStatus())
                 .finalPrice(session.getFinalPrice())
+                .transferAmount(session.getTransferAmount())
                 .subtotal(session.getSubtotal())
                 .discountAmount(session.getDiscountAmount())
                 .shippingFee(session.getShippingFee())
@@ -363,7 +375,7 @@ public class QRSessionService {
         if (!"PENDING".equals(session.getStatus())) {
             return false;
         }
-        if (session.getFinalPrice() == null || session.getFinalPrice().compareTo(BigDecimal.ZERO) <= 0) {
+        if (session.getTransferAmount() == null || session.getTransferAmount().compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         }
         if (session.getCartDataJson() == null || session.getCartDataJson().isBlank()) {
@@ -379,6 +391,7 @@ public class QRSessionService {
         session.setDiscountAmount(BigDecimal.ZERO);
         session.setShippingFee(BigDecimal.ZERO);
         session.setFinalPrice(BigDecimal.ZERO);
+        session.setTransferAmount(BigDecimal.ZERO);
     }
 
     @Transactional
@@ -416,4 +429,3 @@ public class QRSessionService {
         staleSessions.forEach(this::publishSessionUpdate);
     }
 }
-

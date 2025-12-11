@@ -13,10 +13,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class QRSessionEvent {
+
     private String sessionId;
     private String orderCode;
     private String status;
     private BigDecimal finalPrice;
+    private BigDecimal transferAmount;
     private BigDecimal subtotal;
     private BigDecimal discountAmount;
     private BigDecimal shippingFee;
@@ -24,4 +26,3 @@ public class QRSessionEvent {
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
 }
-

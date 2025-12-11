@@ -55,8 +55,8 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
   const paymentForm = ref({
     discountCode: null as string | null,
     method: 'cash' as 'cash' | 'transfer' | 'both',
-    cashReceived: 0,
-    transferReceived: 0,
+    cashReceived: 0 as number | null,
+    transferReceived: 0 as number | null,
   })
 
   const orderType = ref<'counter' | 'delivery'>('counter')
@@ -75,12 +75,20 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
 
   // Derived state will be computed in component to avoid circular deps
 
-  const handleCashAmountChange = (value: number) => {
-    paymentForm.value.cashReceived = value || 0
+  const handleCashAmountChange = (value: number | null | undefined) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      paymentForm.value.cashReceived = null
+      return
+    }
+    paymentForm.value.cashReceived = value
   }
 
-  const handleTransferAmountChange = (value: number) => {
-    paymentForm.value.transferReceived = value || 0
+  const handleTransferAmountChange = (value: number | null | undefined) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      paymentForm.value.transferReceived = null
+      return
+    }
+    paymentForm.value.transferReceived = value
   }
 
   const clearVoucher = () => {

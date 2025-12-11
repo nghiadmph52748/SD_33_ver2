@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QRSessionResponse {
+
     private String qrSessionId;
     private String qrCodeUrl;
     private String orderCode;
@@ -22,6 +23,7 @@ public class QRSessionResponse {
     private BigDecimal discountAmount;
     private BigDecimal shippingFee;
     private BigDecimal finalPrice;
+    private BigDecimal transferAmount;
     private String status;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
@@ -34,6 +36,7 @@ public class QRSessionResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CartItemResponse {
+
         private String productId;
         private String productName;
         private BigDecimal price;
@@ -47,5 +50,3 @@ public class QRSessionResponse {
         private String tenChatLieu;
     }
 }
-
-

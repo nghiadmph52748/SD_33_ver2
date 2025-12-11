@@ -65,6 +65,7 @@ public class QRSession {
 
     @Column(name = "final_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal finalPrice;
+
+    @Column(name = "transfer_amount", precision = 18, scale = 2)
+    private BigDecimal transferAmount;
 }
-
-

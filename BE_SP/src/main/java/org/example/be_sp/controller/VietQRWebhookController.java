@@ -49,7 +49,13 @@ public class VietQRWebhookController {
                         try {
                             HoaDon hoaDon = session.getIdHoaDon();
                             hoaDon.setTrangThaiThanhToan(true);
-                            hoaDon.setSoTienDaThanhToan(session.getFinalPrice());
+                            BigDecimal existingPaid = hoaDon.getSoTienDaThanhToan() != null
+                                    ? hoaDon.getSoTienDaThanhToan()
+                                    : BigDecimal.ZERO;
+                            BigDecimal transferAmount = session.getTransferAmount() != null
+                                    ? session.getTransferAmount()
+                                    : BigDecimal.ZERO;
+                            hoaDon.setSoTienDaThanhToan(existingPaid.add(transferAmount));
                             hoaDon.setSoTienConLai(BigDecimal.ZERO);
                             hoaDonRepository.save(hoaDon);
                         } catch (Exception e) {
@@ -81,6 +87,7 @@ public class VietQRWebhookController {
 
     @Data
     public static class VietQRWebhookRequest {
+
         private String transactionId;
         private Long amount;
         private String addInfo;
@@ -89,4 +96,3 @@ public class VietQRWebhookController {
         private String transactionDate;
     }
 }
-

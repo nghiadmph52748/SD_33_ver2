@@ -109,7 +109,7 @@
             @update:walkin-ward="updateWalkInWard"
             @open-mobile="openMobileSession"
             @sync-qr="forceSyncQrSession"
-          @reset-qr-session="handleResetQrSessionClick"
+            @reset-qr-session="handleResetQrSessionClick"
           />
         </a-col>
       </a-row>
@@ -335,6 +335,7 @@ interface QrSessionState {
   expiresAt?: string
   lastPayloadHash: string
   updatedAt: number
+  transferAmount?: number
 }
 
 interface Customer {
@@ -343,6 +344,34 @@ interface Customer {
   phone: string
   email?: string
   address?: string
+}
+
+type PaymentMethod = 'cash' | 'transfer' | 'both'
+
+interface OrderUiState {
+  paymentForm: {
+    discountCode: string | null
+    method: PaymentMethod
+    cashReceived: number | null
+    transferReceived: number | null
+  }
+  orderType: 'counter' | 'delivery'
+  shippingFee: number
+  walkInContact: {
+    name: string
+    email: string
+    phone: string
+    deliveryValid: boolean
+  }
+  walkInLocation: {
+    thanhPho: string
+    quan: string
+    phuong: string
+    diaChiCuThe: string
+    districts: Array<{ value: string; label: string; code?: number }>
+    wards: Array<{ value: string; label: string }>
+  }
+  lastPaymentField: 'cash' | 'transfer'
 }
 
 // ==================== STATE ====================
@@ -446,13 +475,16 @@ const {
   onWalkInProvinceChange,
   onWalkInDistrictChange,
   fillWalkInLocationFromCustomer,
-  handleCashAmountChange,
-  handleTransferAmountChange,
+  handleCashAmountChange: assignCashAmount,
+  handleTransferAmountChange: assignTransferAmount,
   clearVoucher,
   updateInvoicePayment,
   updateInvoiceShipping,
   updateInvoiceVoucher,
 } = usePayment({ currentOrder })
+
+const orderUiStateCache = ref<Record<string, OrderUiState>>({})
+const isRestoringOrderState = ref(false)
 
 const {
   selectedCoupon,
@@ -709,13 +741,18 @@ const selectVoucher = async (coupon: CouponApiModel) => {
     // Auto-set default payment amount to final price after voucher discount
     // This way user only needs to confirm payment without recalculating
     if (paymentForm.value.method === 'cash') {
-      paymentForm.value.cashReceived = finalPrice.value
+      assignCashAmount(finalPrice.value)
+      assignTransferAmount(0)
+      lastPaymentFieldChanged.value = 'cash'
     } else if (paymentForm.value.method === 'transfer') {
-      paymentForm.value.transferReceived = finalPrice.value
+      assignTransferAmount(finalPrice.value)
+      assignCashAmount(0)
+      lastPaymentFieldChanged.value = 'transfer'
     } else if (paymentForm.value.method === 'both') {
-      paymentForm.value.cashReceived = finalPrice.value
-      paymentForm.value.transferReceived = 0
+      // Keep current split for mixed payments; user will re-enter if needed
+      syncPaymentSplit(lastPaymentFieldChanged.value)
     }
+    syncPaymentSplit(lastPaymentFieldChanged.value)
 
     showVoucherModal.value = false
     Message.success(`Đã áp dụng voucher: ${coupon.tenPhieuGiamGia}`)
@@ -736,7 +773,240 @@ const finalPrice = computed(() => {
   return basePrice + shipping
 })
 
-const totalReceived = computed(() => (paymentForm.value?.cashReceived || 0) + (paymentForm.value?.transferReceived || 0))
+const lastPaymentFieldChanged = ref<'cash' | 'transfer'>(paymentForm.value.method === 'transfer' ? 'transfer' : 'cash')
+
+const cloneOptions = <T extends Record<string, any>>(options: T[] | null | undefined) =>
+  Array.isArray(options) ? options.map((option) => ({ ...option })) : []
+
+const createDefaultOrderUiState = (): OrderUiState => ({
+  paymentForm: {
+    discountCode: null,
+    method: 'cash',
+    cashReceived: 0,
+    transferReceived: 0,
+  },
+  orderType: 'counter',
+  shippingFee: 0,
+  walkInContact: {
+    name: '',
+    email: '',
+    phone: '',
+    deliveryValid: false,
+  },
+  walkInLocation: {
+    thanhPho: '',
+    quan: '',
+    phuong: '',
+    diaChiCuThe: '',
+    districts: [],
+    wards: [],
+  },
+  lastPaymentField: 'cash',
+})
+
+const resetOrderUiState = () => {
+  isRestoringOrderState.value = true
+  try {
+    const defaults = createDefaultOrderUiState()
+    paymentForm.value.discountCode = defaults.paymentForm.discountCode
+    paymentForm.value.method = defaults.paymentForm.method
+    paymentForm.value.cashReceived = defaults.paymentForm.cashReceived
+    paymentForm.value.transferReceived = defaults.paymentForm.transferReceived
+    orderType.value = defaults.orderType
+    shippingFee.value = defaults.shippingFee
+    walkInName.value = defaults.walkInContact.name
+    walkInEmail.value = defaults.walkInContact.email
+    walkInPhone.value = defaults.walkInContact.phone
+    walkInDeliveryValid.value = defaults.walkInContact.deliveryValid
+    walkInLocation.value = {
+      thanhPho: defaults.walkInLocation.thanhPho,
+      quan: defaults.walkInLocation.quan,
+      phuong: defaults.walkInLocation.phuong,
+      diaChiCuThe: defaults.walkInLocation.diaChiCuThe,
+      districts: cloneOptions(defaults.walkInLocation.districts),
+      wards: cloneOptions(defaults.walkInLocation.wards),
+    }
+    lastPaymentFieldChanged.value = defaults.lastPaymentField
+  } finally {
+    isRestoringOrderState.value = false
+  }
+}
+
+const snapshotOrderUiState = (orderId: string | null | undefined) => {
+  if (!orderId) return
+  orderUiStateCache.value[orderId] = {
+    paymentForm: {
+      discountCode: paymentForm.value.discountCode,
+      method: paymentForm.value.method,
+      cashReceived: paymentForm.value.cashReceived,
+      transferReceived: paymentForm.value.transferReceived,
+    },
+    orderType: orderType.value,
+    shippingFee: shippingFee.value,
+    walkInContact: {
+      name: walkInName.value,
+      email: walkInEmail.value,
+      phone: walkInPhone.value,
+      deliveryValid: walkInDeliveryValid.value,
+    },
+    walkInLocation: {
+      thanhPho: walkInLocation.value.thanhPho,
+      quan: walkInLocation.value.quan,
+      phuong: walkInLocation.value.phuong,
+      diaChiCuThe: walkInLocation.value.diaChiCuThe,
+      districts: cloneOptions(walkInLocation.value.districts),
+      wards: cloneOptions(walkInLocation.value.wards),
+    },
+    lastPaymentField: lastPaymentFieldChanged.value,
+  }
+}
+
+const applyOrderUiState = (orderId: string | null | undefined) => {
+  if (!orderId) {
+    resetOrderUiState()
+    return
+  }
+  const cached = orderUiStateCache.value[orderId] || createDefaultOrderUiState()
+  orderUiStateCache.value[orderId] = cached
+
+  isRestoringOrderState.value = true
+  try {
+    paymentForm.value.discountCode = cached.paymentForm.discountCode
+    paymentForm.value.method = cached.paymentForm.method
+    paymentForm.value.cashReceived = cached.paymentForm.cashReceived
+    paymentForm.value.transferReceived = cached.paymentForm.transferReceived
+    orderType.value = cached.orderType
+    shippingFee.value = cached.shippingFee
+    walkInName.value = cached.walkInContact.name
+    walkInEmail.value = cached.walkInContact.email
+    walkInPhone.value = cached.walkInContact.phone
+    walkInDeliveryValid.value = cached.walkInContact.deliveryValid
+    walkInLocation.value = {
+      thanhPho: cached.walkInLocation.thanhPho,
+      quan: cached.walkInLocation.quan,
+      phuong: cached.walkInLocation.phuong,
+      diaChiCuThe: cached.walkInLocation.diaChiCuThe,
+      districts: cloneOptions(cached.walkInLocation.districts),
+      wards: cloneOptions(cached.walkInLocation.wards),
+    }
+    lastPaymentFieldChanged.value = cached.lastPaymentField
+  } finally {
+    isRestoringOrderState.value = false
+  }
+}
+
+watch(
+  () => orders.value.map((order) => order.id),
+  (newIds, oldIds) => {
+    newIds.forEach((id) => {
+      if (id && !orderUiStateCache.value[id]) {
+        orderUiStateCache.value[id] = createDefaultOrderUiState()
+      }
+    })
+    if (oldIds) {
+      oldIds.forEach((id) => {
+        if (id && !newIds.includes(id)) {
+          delete orderUiStateCache.value[id]
+        }
+      })
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => currentOrder.value?.id ?? null,
+  (newId, oldId) => {
+    if (oldId) {
+      snapshotOrderUiState(oldId)
+    }
+    applyOrderUiState(newId)
+  },
+  { immediate: true }
+)
+
+const normalizePaymentValue = (value: number, options?: { allowOverpay?: boolean }) => {
+  if (!Number.isFinite(value)) return 0
+  if (value < 0) return 0
+  const allowOverpay = options?.allowOverpay ?? false
+  if (allowOverpay) {
+    return value
+  }
+  const total = Math.max(0, finalPrice.value)
+  return Math.min(value, total)
+}
+
+const syncPaymentSplit = (preferred: 'cash' | 'transfer' = lastPaymentFieldChanged.value) => {
+  const total = Math.max(0, finalPrice.value)
+  const method = paymentForm.value.method
+
+  if (method === 'cash') {
+    const cash = normalizePaymentValue(paymentForm.value.cashReceived ?? 0, { allowOverpay: true })
+    paymentForm.value.cashReceived = cash
+    paymentForm.value.transferReceived = 0
+    return
+  }
+
+  if (method === 'transfer') {
+    const rawTransfer = paymentForm.value.transferReceived ?? total
+    const transfer = normalizePaymentValue(rawTransfer <= 0 ? total : rawTransfer)
+    paymentForm.value.transferReceived = transfer > 0 ? transfer : total
+    paymentForm.value.cashReceived = 0
+    return
+  }
+
+  const cashRaw = paymentForm.value.cashReceived ?? 0
+  const transferRaw = paymentForm.value.transferReceived ?? 0
+  if (cashRaw <= 0 && transferRaw <= 0) {
+    paymentForm.value.cashReceived = 0
+    paymentForm.value.transferReceived = 0
+    return
+  }
+
+  if (preferred === 'cash') {
+    const cash = normalizePaymentValue(cashRaw)
+    paymentForm.value.cashReceived = cash
+    paymentForm.value.transferReceived = Math.max(0, total - cash)
+    return
+  }
+
+  const transfer = normalizePaymentValue(transferRaw)
+  paymentForm.value.transferReceived = transfer
+  paymentForm.value.cashReceived = Math.max(0, total - transfer)
+}
+
+const computeTransferAmount = () => {
+  if (paymentForm.value.method === 'cash') return 0
+
+  const total = Math.max(0, finalPrice.value)
+  if (total <= 0) return 0
+
+  if (paymentForm.value.method === 'transfer') {
+    const raw = paymentForm.value.transferReceived ?? total
+    const sanitized = normalizePaymentValue(raw <= 0 ? total : raw)
+    return sanitized > 0 ? sanitized : total
+  }
+
+  return normalizePaymentValue(paymentForm.value.transferReceived ?? 0)
+}
+
+const handleCashAmountChange = (value: number | null) => {
+  lastPaymentFieldChanged.value = 'cash'
+  const sanitized = typeof value === 'number' && Number.isFinite(value) ? value : null
+  assignCashAmount(sanitized)
+  if (sanitized === null) return
+  syncPaymentSplit('cash')
+}
+
+const handleTransferAmountChange = (value: number | null) => {
+  lastPaymentFieldChanged.value = 'transfer'
+  const sanitized = typeof value === 'number' && Number.isFinite(value) ? value : null
+  assignTransferAmount(sanitized)
+  if (sanitized === null) return
+  syncPaymentSplit('transfer')
+}
+
+const totalReceived = computed(() => (paymentForm.value?.cashReceived ?? 0) + (paymentForm.value?.transferReceived ?? 0))
 const change = computed(() => totalReceived.value - finalPrice.value)
 const paymentMethod = computed({
   get: () => paymentForm.value.method,
@@ -753,11 +1023,28 @@ const canConfirmOrder = computed(() => {
       if (!wl.thanhPho || !wl.quan || !wl.phuong || !wl.diaChiCuThe) return false
     }
   }
-  if (paymentForm.value.method === 'cash') return (paymentForm.value.cashReceived || 0) >= finalPrice.value
-  if (paymentForm.value.method === 'transfer') return (paymentForm.value.transferReceived || 0) >= finalPrice.value
+  if (paymentForm.value.method === 'cash') return (paymentForm.value.cashReceived ?? 0) >= finalPrice.value
+  if (paymentForm.value.method === 'transfer') return (paymentForm.value.transferReceived ?? 0) >= finalPrice.value
   if (paymentForm.value.method === 'both') return totalReceived.value >= finalPrice.value
   return true
 })
+
+watch(
+  () => finalPrice.value,
+  () => {
+    if (isRestoringOrderState.value) return
+    syncPaymentSplit()
+  }
+)
+
+watch(
+  () => paymentForm.value.method,
+  (method) => {
+    if (isRestoringOrderState.value) return
+    lastPaymentFieldChanged.value = method === 'transfer' ? 'transfer' : 'cash'
+    syncPaymentSplit(lastPaymentFieldChanged.value)
+  }
+)
 
 // ==================== QR SCANNER METHODS ====================
 
@@ -812,6 +1099,9 @@ watch(
     discountAmount: discountAmount.value,
     shippingFee: shippingFee.value,
     finalPrice: finalPrice.value,
+    paymentMethod: paymentForm.value.method,
+    cashReceived: paymentForm.value.cashReceived,
+    transferReceived: paymentForm.value.transferReceived,
   }),
   () => {
     if (!currentOrder.value) return
@@ -1078,16 +1368,22 @@ const handlePaymentMethodChange = async (value: string) => {
     }
     await updateInvoicePayment(invoiceId, value as 'cash' | 'transfer' | 'both')
     paymentForm.value.method = value as 'cash' | 'transfer' | 'both'
+
     if (value === 'cash') {
-      paymentForm.value.cashReceived = finalPrice.value
-      paymentForm.value.transferReceived = 0
+      assignCashAmount(finalPrice.value)
+      assignTransferAmount(0)
+      lastPaymentFieldChanged.value = 'cash'
     } else if (value === 'transfer') {
-      paymentForm.value.transferReceived = finalPrice.value
-      paymentForm.value.cashReceived = 0
+      assignTransferAmount(finalPrice.value)
+      assignCashAmount(0)
+      lastPaymentFieldChanged.value = 'transfer'
     } else if (value === 'both') {
-      paymentForm.value.cashReceived = finalPrice.value
-      paymentForm.value.transferReceived = 0
+      assignCashAmount(0)
+      assignTransferAmount(0)
+      lastPaymentFieldChanged.value = 'cash'
     }
+
+    syncPaymentSplit(lastPaymentFieldChanged.value)
   } catch (error: any) {
     console.error('Lỗi cập nhật phương thức thanh toán:', error)
     Message.error(error.message || 'Có lỗi xảy ra khi cập nhật phương thức thanh toán')
@@ -1155,6 +1451,9 @@ const buildQrPayload = (order: Order): CreateQrSessionPayload | null => {
   if (!displayOrderCode) return null
   if (!finalPrice.value || finalPrice.value <= 0) return null
 
+  const transferAmount = computeTransferAmount()
+  if (!transferAmount || transferAmount <= 0) return null
+
   return {
     orderCode: displayOrderCode,
     invoiceId,
@@ -1175,6 +1474,7 @@ const buildQrPayload = (order: Order): CreateQrSessionPayload | null => {
     discountAmount: discountAmount.value,
     shippingFee: shippingFee.value,
     finalPrice: finalPrice.value,
+    transferAmount,
     customerId: order.customerId || undefined,
   }
 }
@@ -1213,6 +1513,7 @@ const syncQrSession = async (force = false) => {
       expiresAt: response.expiresAt,
       lastPayloadHash: payloadHash,
       updatedAt: Date.now(),
+      transferAmount: response.transferAmount ?? payload.transferAmount,
     }
   } catch (error: any) {
     console.error('Không thể đồng bộ QR session:', error)
@@ -1242,7 +1543,7 @@ const forceSyncQrSession = () => {
 
 const triggerDeepLink = (url: string) => {
   if (typeof document === 'undefined') return
-  
+
   // Method 1: Try iframe (works for most cases)
   try {
     const iframe = document.createElement('iframe')
@@ -1259,7 +1560,7 @@ const triggerDeepLink = (url: string) => {
   } catch (e) {
     // Silent fail
   }
-  
+
   // Method 2: Try window.location (fallback)
   try {
     const link = document.createElement('a')
@@ -1275,7 +1576,7 @@ const triggerDeepLink = (url: string) => {
   } catch (e) {
     // Silent fail
   }
-  
+
   // Method 3: Try direct window.location.href (last resort)
   try {
     window.location.href = url
@@ -1287,6 +1588,12 @@ const triggerDeepLink = (url: string) => {
 const openMobileSession = async () => {
   if (finalPrice.value <= 0) {
     Message.warning('Giỏ hàng chưa có tổng tiền hợp lệ')
+    return
+  }
+
+  const transferAmount = computeTransferAmount()
+  if (!transferAmount || transferAmount <= 0) {
+    Message.warning('Không cần tạo VietQR khi khách đã thanh toán đủ bằng tiền mặt')
     return
   }
 
@@ -1330,11 +1637,11 @@ const resetQrSession = async () => {
     // Mobile app will automatically return to welcome screen (QRPaymentScreen with "Vui lòng chờ...")
     const session = currentQrSession.value
     const orderId = currentOrder.value?.id
-    
+
     // Try to find sessionId from current session or from qrSessions
     let sessionId: string | null = null
     let foundOrderId: string | null = null
-    
+
     if (session?.sessionId) {
       sessionId = session.sessionId
       foundOrderId = orderId || null
@@ -1357,7 +1664,7 @@ const resetQrSession = async () => {
         }
       }
     }
-    
+
     // Không có session nào đang hiển thị trên mobile
     if (!sessionId) {
       Message.warning('Không có màn hình thanh toán nào để reset')
@@ -1369,7 +1676,7 @@ const resetQrSession = async () => {
     if (sessionId) {
       try {
         await cancelQrPaymentSession(sessionId)
-        
+
         // Remove from local state
         const orderIdToDelete = foundOrderId || orderId
         if (orderIdToDelete && qrSessions.value[orderIdToDelete]) {
@@ -1384,7 +1691,7 @@ const resetQrSession = async () => {
       Message.warning('Không có màn hình thanh toán nào để reset')
       return
     }
-    
+
     Message.success('Đã reset màn hình thanh toán trên mobile về màn hình chính')
   } catch (error: any) {
     console.error('Lỗi khi reset màn hình mobile:', error)
@@ -1532,37 +1839,32 @@ const handleConfirmFromBetterVoucher = async () => {
 // Watch for walk-in location changes (province, district, ward, address)
 watch(
   () => walkInLocation.value,
-  (newLocation) => {
-  },
+  (newLocation) => {},
   { deep: true }
 )
 
 // Watch for province change
 watch(
   () => walkInLocation.value.thanhPho,
-  async (newProvince) => {
-  }
+  async (newProvince) => {}
 )
 
 // Watch for district change
 watch(
   () => walkInLocation.value.quan,
-  async (newDistrict) => {
-  }
+  async (newDistrict) => {}
 )
 
 // Watch for ward change
 watch(
   () => walkInLocation.value.phuong,
-  async (newWard) => {
-  }
+  async (newWard) => {}
 )
 
 // Watch for address detail change
 watch(
   () => walkInLocation.value.diaChiCuThe,
-  async (newAddress) => {
-  }
+  async (newAddress) => {}
 )
 
 onMounted(() => {

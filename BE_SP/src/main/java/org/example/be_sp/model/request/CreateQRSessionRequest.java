@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 public class CreateQRSessionRequest {
+
     private String orderCode;
     private Integer invoiceId;
     private List<CartItemDTO> items;
@@ -14,10 +15,12 @@ public class CreateQRSessionRequest {
     private BigDecimal discountAmount;
     private BigDecimal shippingFee;
     private BigDecimal finalPrice;
+    private BigDecimal transferAmount;
     private String customerId;
 
     @Data
     public static class CartItemDTO {
+
         private String productId;
         private String productName;
         private BigDecimal price;
@@ -31,5 +34,3 @@ public class CreateQRSessionRequest {
         private String tenChatLieu;
     }
 }
-
-

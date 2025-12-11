@@ -32,7 +32,12 @@ interface Customer {
 export default function useCheckout(params: {
   currentOrder: Ref<Order | null>
   selectedCustomer: Ref<Customer | null>
-  paymentForm: Ref<{ discountCode: string | null; method: 'cash' | 'transfer' | 'both'; cashReceived: number; transferReceived: number }>
+  paymentForm: Ref<{
+    discountCode: string | null
+    method: 'cash' | 'transfer' | 'both'
+    cashReceived: number | null
+    transferReceived: number | null
+  }>
   orderType: Ref<'counter' | 'delivery'>
   finalPrice: Ref<number>
   subtotal: Ref<number>
@@ -151,8 +156,9 @@ export default function useCheckout(params: {
       } else if (paymentForm.value.method === 'transfer') {
         tienChuyenKhoan = paymentForm.value.transferReceived > 0 ? paymentForm.value.transferReceived : finalPrice.value
       } else if (paymentForm.value.method === 'both') {
-        tienMat = paymentForm.value.cashReceived > 0 ? paymentForm.value.cashReceived : 0
-        tienChuyenKhoan = paymentForm.value.transferReceived > 0 ? paymentForm.value.transferReceived : 0
+        const total = Math.max(0, finalPrice.value)
+        tienMat = paymentForm.value.cashReceived > 0 ? Math.min(paymentForm.value.cashReceived, total) : 0
+        tienChuyenKhoan = Math.max(0, total - tienMat)
       }
 
       const totalReceived = tienMat + tienChuyenKhoan
