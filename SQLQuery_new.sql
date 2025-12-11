@@ -1444,6 +1444,8 @@ INSERT [dbo].[trang_thai_don_hang] ([id], [ten_trang_thai_don_hang], [trang_thai
 GO
 INSERT [dbo].[trang_thai_don_hang] ([id], [ten_trang_thai_don_hang], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (8, N'Thay đổi địa chỉ giao hàng', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
 GO
+INSERT [dbo].[trang_thai_don_hang] ([id], [ten_trang_thai_don_hang], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (9, N'Đang chuẩn bị hàng', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
+GO
 SET IDENTITY_INSERT [dbo].[trang_thai_don_hang] OFF
 GO
 SET IDENTITY_INSERT [dbo].[trong_luong] ON 
