@@ -8,14 +8,24 @@ import os
 import re
 import json
 import time
-import subprocess
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+import pyodbc
+import cloudinary
+import cloudinary.uploader
+from hashlib import md5
+from io import BytesIO
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+    print("Warning: PIL/Pillow not installed. Image dimension validation disabled.")
+    print("Install with: pip install Pillow")
 
 # Load environment variables - load from script directory
 script_dir = Path(__file__).parent
@@ -29,6 +39,18 @@ SQL_USERNAME = os.getenv('SQL_USERNAME', 'sa')
 SQL_PASSWORD = os.getenv('SQL_PASSWORD', 'Manhduy@2005')
 SQL_PORT = os.getenv('SQL_PORT', '1433')
 
+# Cloudinary configuration
+CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME', '')
+CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY', '')
+CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET', '')
+
+# Currency conversion rates
+USD_TO_VND_RATE = float(os.getenv('USD_TO_VND_RATE', '24500'))
+EUR_TO_VND_RATE = float(os.getenv('EUR_TO_VND_RATE', '26500'))
+
+# Debug mode
+DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
+
 # Debug: Show what values are being used
 if __name__ == '__main__':
     print(f"DEBUG - SQL_SERVER from env: {os.getenv('SQL_SERVER', 'NOT SET')}")
@@ -39,6 +61,8 @@ DEFAULT_ORIGIN_ID = 1  # Việt Nam
 DEFAULT_MATERIAL_ID = 1  # Da tổng hợp
 DEFAULT_SOLE_ID = 1  # Đế cao su
 DEFAULT_WEIGHT_ID = 1  # 250g
+DEFAULT_STOCK_QTY = 10  # Default stock quantity
+MIN_IMAGE_RESOLUTION = int(os.getenv('MIN_IMAGE_RESOLUTION', '800'))  # Minimum image width to consider (filters low quality)
 
 # Brand detection mapping
 BRAND_MAPPING = {
@@ -68,13 +92,345 @@ HEADERS = {
 }
 
 
-class SneakerScraper:
+class DatabaseManager:
+    """Manages database connection and operations using pyodbc"""
+    
     def __init__(self):
+        self.conn = None
+        self.cursor = None
+        self._connect()
+    
+    def _connect(self):
+        """Establish database connection"""
+        try:
+            conn_str = (
+                f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+                f"SERVER={SQL_SERVER},{SQL_PORT};"
+                f"DATABASE={SQL_DATABASE};"
+                f"UID={SQL_USERNAME};"
+                f"PWD={SQL_PASSWORD};"
+                f"TrustServerCertificate=yes;"
+            )
+            self.conn = pyodbc.connect(conn_str)
+            self.cursor = self.conn.cursor()
+        except Exception as e:
+            raise Exception(f"Failed to connect to database: {str(e)}")
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.cursor:
+            self.cursor.close()
+        if self.conn:
+            if exc_type:
+                self.conn.rollback()
+            else:
+                self.conn.commit()
+            self.conn.close()
+    
+    def get_or_create_manufacturer(self, name: str) -> int:
+        """Get or create manufacturer and return ID"""
+        self.cursor.execute(
+            "SELECT id FROM nha_san_xuat WHERE ten_nha_san_xuat = ? AND deleted = 0",
+            (name,)
+        )
+        row = self.cursor.fetchone()
+        if row:
+            return row[0]
+        
+        self.cursor.execute(
+            """INSERT INTO nha_san_xuat (ten_nha_san_xuat, trang_thai, deleted, create_at, create_by)
+               VALUES (?, 1, 0, CAST(GETDATE() AS DATE), 1)""",
+            (name,)
+        )
+        self.cursor.execute("SELECT @@IDENTITY")
+        return self.cursor.fetchone()[0]
+    
+    def get_or_create_product(self, name: str, manufacturer_id: int) -> int:
+        """Get or create product and return ID"""
+        self.cursor.execute(
+            """SELECT id FROM san_pham 
+               WHERE ten_san_pham = ? AND id_nha_san_xuat = ? AND deleted = 0""",
+            (name, manufacturer_id)
+        )
+        row = self.cursor.fetchone()
+        if row:
+            # Update the existing product
+            self.cursor.execute(
+                "UPDATE san_pham SET update_at = CAST(GETDATE() AS DATE), update_by = 1 WHERE id = ?",
+                (row[0],)
+            )
+            return row[0]
+        
+        self.cursor.execute(
+            """INSERT INTO san_pham (id_nha_san_xuat, id_xuat_xu, ten_san_pham, trang_thai, deleted, create_at, create_by)
+               VALUES (?, ?, ?, 1, 0, CAST(GETDATE() AS DATE), 1)""",
+            (manufacturer_id, DEFAULT_ORIGIN_ID, name)
+        )
+        self.cursor.execute("SELECT @@IDENTITY")
+        return self.cursor.fetchone()[0]
+    
+    def get_or_create_color(self, name: str, hex_code: str) -> int:
+        """Get or create color and return ID"""
+        self.cursor.execute(
+            "SELECT id FROM mau_sac WHERE ten_mau_sac = ? AND deleted = 0",
+            (name,)
+        )
+        row = self.cursor.fetchone()
+        if row:
+            return row[0]
+        
+        self.cursor.execute(
+            """INSERT INTO mau_sac (ten_mau_sac, ma_mau, trang_thai, deleted, create_at, create_by)
+               VALUES (?, ?, 1, 0, CAST(GETDATE() AS DATE), 1)""",
+            (name, hex_code)
+        )
+        self.cursor.execute("SELECT @@IDENTITY")
+        return self.cursor.fetchone()[0]
+    
+    def get_or_create_size(self, name: str) -> int:
+        """Get or create size and return ID"""
+        self.cursor.execute(
+            "SELECT id FROM kich_thuoc WHERE ten_kich_thuoc = ? AND deleted = 0",
+            (name,)
+        )
+        row = self.cursor.fetchone()
+        if row:
+            return row[0]
+        
+        self.cursor.execute(
+            """INSERT INTO kich_thuoc (ten_kich_thuoc, trang_thai, deleted, create_at, create_by)
+               VALUES (?, 1, 0, CAST(GETDATE() AS DATE), 1)""",
+            (name,)
+        )
+        self.cursor.execute("SELECT @@IDENTITY")
+        return self.cursor.fetchone()[0]
+    
+    def get_or_create_product_detail(self, product_id: int, color_id: int, size_id: int,
+                                     price: float, stock: int, full_name: str) -> int:
+        """Get or create product detail and return ID"""
+        self.cursor.execute(
+            """SELECT id FROM chi_tiet_san_pham 
+               WHERE id_san_pham = ? AND id_mau_sac = ? AND id_kich_thuoc = ? AND deleted = 0""",
+            (product_id, color_id, size_id)
+        )
+        row = self.cursor.fetchone()
+        if row:
+            # Update existing detail
+            self.cursor.execute(
+                """UPDATE chi_tiet_san_pham 
+                   SET gia_ban = ?, so_luong = ?, ten_san_pham_chi_tiet = ?,
+                       update_at = CAST(GETDATE() AS DATE), update_by = 1
+                   WHERE id = ?""",
+                (price, stock, full_name, row[0])
+            )
+            return row[0]
+        
+        self.cursor.execute(
+            """INSERT INTO chi_tiet_san_pham 
+               (id_san_pham, id_mau_sac, id_kich_thuoc, id_de_giay, id_chat_lieu, id_trong_luong,
+                so_luong, gia_ban, trang_thai, deleted, ten_san_pham_chi_tiet, create_at, create_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, CAST(GETDATE() AS DATE), 1)""",
+            (product_id, color_id, size_id, DEFAULT_SOLE_ID, DEFAULT_MATERIAL_ID, DEFAULT_WEIGHT_ID,
+             stock, price, full_name)
+        )
+        self.cursor.execute("SELECT @@IDENTITY")
+        return self.cursor.fetchone()[0]
+    
+    def get_or_create_image(self, url: str, name: str, color: str) -> int:
+        """Get or create image and return ID"""
+        self.cursor.execute(
+            "SELECT id FROM anh_san_pham WHERE duong_dan_anh = ? AND deleted = 0",
+            (url,)
+        )
+        row = self.cursor.fetchone()
+        if row:
+            return row[0]
+        
+        self.cursor.execute(
+            """INSERT INTO anh_san_pham (duong_dan_anh, ten_anh, mau_anh, trang_thai, deleted, create_at, create_by)
+               VALUES (?, ?, ?, 1, 0, CAST(GETDATE() AS DATE), 1)""",
+            (url, name, color)
+        )
+        self.cursor.execute("SELECT @@IDENTITY")
+        return self.cursor.fetchone()[0]
+    
+    def link_image_to_product_detail(self, detail_id: int, image_id: int):
+        """Link image to product detail"""
+        self.cursor.execute(
+            """SELECT 1 FROM chi_tiet_san_pham_anh 
+               WHERE id_chi_tiet_san_pham = ? AND id_anh_san_pham = ? AND deleted = 0""",
+            (detail_id, image_id)
+        )
+        if not self.cursor.fetchone():
+            self.cursor.execute(
+                """INSERT INTO chi_tiet_san_pham_anh (id_chi_tiet_san_pham, id_anh_san_pham, trang_thai, deleted, create_at, create_by)
+                   VALUES (?, ?, 1, 0, CAST(GETDATE() AS DATE), 1)""",
+                (detail_id, image_id)
+            )
+
+
+class CloudinaryUploader:
+    """Handles image uploads to Cloudinary"""
+    
+    def __init__(self):
+        if not CLOUDINARY_CLOUD_NAME or not CLOUDINARY_API_KEY or not CLOUDINARY_API_SECRET:
+            raise Exception("Cloudinary credentials not configured. Please set CLOUDINARY_* environment variables.")
+        
+        cloudinary.config(
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET
+        )
+        self.uploaded_count = 0
+        self.upload_cache = {}  # Cache URL by image bytes hash to avoid re-uploading
+    
+    def upload_image(self, image_bytes: bytes, product_name: str, index: int) -> str:
+        """Upload image to Cloudinary and return secure URL"""
+        try:
+            # Generate hash for caching (avoid re-uploading same image)
+            hash_id = md5(image_bytes).hexdigest()
+            
+            # Check cache first
+            if hash_id in self.upload_cache:
+                print(f"    [Cache hit] Using cached URL for duplicate image")
+                return self.upload_cache[hash_id]
+            
+            # Generate unique public_id using product name + index + timestamp
+            # This ensures each image gets a unique URL even if content is similar
+            import time
+            safe_name = re.sub(r'[^\w\-]', '_', product_name.lower()[:30])
+            timestamp = str(int(time.time() * 1000))  # Milliseconds timestamp
+            public_id = f"{safe_name}_{index}_{timestamp}"
+            
+            result = cloudinary.uploader.upload(
+                image_bytes,
+                folder="SD_73/images",
+                public_id=public_id,
+                resource_type="image",
+                colors=True,
+                unique_filename=True,  # Ensure unique filename
+                overwrite=False  # Don't overwrite existing files
+            )
+            
+            self.uploaded_count += 1
+            url = result['secure_url']
+            
+            # Cache for this session (not persistent)
+            self.upload_cache[hash_id] = url
+            
+            return url
+        except Exception as e:
+            raise Exception(f"Failed to upload image to Cloudinary: {str(e)}")
+
+
+class CurrencyConverter:
+    """Handles currency conversion to VND"""
+    
+    def __init__(self):
+        self.usd_rate = USD_TO_VND_RATE
+        self.eur_rate = EUR_TO_VND_RATE
+    
+    def detect_currency(self, price_text: str) -> str:
+        """Detect currency from price text"""
+        price_lower = price_text.lower()
+        if '€' in price_text or 'eur' in price_lower:
+            return 'EUR'
+        elif '£' in price_text or 'gbp' in price_lower:
+            return 'GBP'
+        elif 'vnd' in price_lower or '₫' in price_text or 'đ' in price_text:
+            return 'VND'
+        else:
+            return 'USD'  # Default to USD for Nike/Adidas
+    
+    def convert_to_vnd(self, amount: float, currency: str = 'USD') -> float:
+        """Convert amount to VND"""
+        if currency == 'VND':
+            return amount
+        elif currency == 'USD':
+            return amount * self.usd_rate
+        elif currency == 'EUR':
+            return amount * self.eur_rate
+        elif currency == 'GBP':
+            return amount * self.usd_rate * 1.27  # Approximate GBP to USD then to VND
+        else:
+            return amount * self.usd_rate  # Default to USD conversion
+
+
+class ColorMapper:
+    """Maps English color names to Vietnamese with hex codes"""
+    
+    COLOR_MAP = {
+        'black': ('Đen', '#000000'),
+        'white': ('Trắng', '#FFFFFF'),
+        'red': ('Đỏ', '#FF0000'),
+        'blue': ('Xanh Dương', '#0000FF'),
+        'green': ('Xanh Lá', '#008000'),
+        'grey': ('Xám', '#808080'),
+        'gray': ('Xám', '#808080'),
+        'navy': ('Xanh Đậm', '#000080'),
+        'orange': ('Cam', '#FFA500'),
+        'pink': ('Hồng', '#FFC0CB'),
+        'brown': ('Nâu', '#8B4513'),
+        'gold': ('Vàng', '#FFD700'),
+        'silver': ('Bạc', '#C0C0C0'),
+        'yellow': ('Vàng', '#FFFF00'),
+        'purple': ('Tím', '#800080'),
+        'beige': ('Be', '#F5F5DC'),
+        'tan': ('Nâu Nhạt', '#D2B48C'),
+        'olive': ('Xanh Ô Liu', '#808000'),
+        'maroon': ('Nâu Đỏ', '#800000'),
+        'cyan': ('Xanh Lơ', '#00FFFF'),
+    }
+    
+    def map_color(self, color_name: str) -> Tuple[str, str]:
+        """
+        Map English color name to Vietnamese name and hex code
+        Returns: (vietnamese_name, hex_code)
+        """
+        # Check if already has hex code
+        hex_match = re.search(r'#[0-9A-Fa-f]{6}', color_name)
+        if hex_match:
+            return (color_name.split('#')[0].strip(), hex_match.group(0))
+        
+        # Try to find a color keyword in the name
+        color_lower = color_name.lower()
+        for eng_color, (viet_name, hex_code) in self.COLOR_MAP.items():
+            if eng_color in color_lower:
+                # If it's a complex colorway like "Core Black / Cloud White"
+                if '/' in color_name or len(color_name.split()) > 2:
+                    # Keep the original name but add hex code from first color
+                    return (color_name, hex_code)
+                else:
+                    # Simple color, use Vietnamese translation
+                    return (viet_name, hex_code)
+        
+        # No match found, return original with default black hex
+        return (color_name, '#000000')
+
+
+class SneakerScraper:
+    def __init__(self, use_cloudinary: bool = True):
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
-        self.sql_commands = []
         self.processed_count = 0
         self.images_saved = 0
+        self.use_cloudinary = use_cloudinary
+        
+        # Initialize helper classes
+        self.currency_converter = CurrencyConverter()
+        self.color_mapper = ColorMapper()
+        
+        # Initialize Cloudinary uploader if enabled
+        self.cloudinary_uploader = None
+        if use_cloudinary:
+            try:
+                self.cloudinary_uploader = CloudinaryUploader()
+            except Exception as e:
+                print(f"Warning: Cloudinary not configured: {str(e)}")
+                print("Will fallback to local image storage.")
+                self.use_cloudinary = False
         
     def detect_brand(self, url: str) -> str:
         """Detect brand from URL"""
@@ -369,14 +725,58 @@ class SneakerScraper:
         if not product['sizes']:
             product['sizes'] = ['39', '40', '41', '42', '43']
         
-        # Images - try multiple selectors
+        # Images - Enhanced extraction with deduplication
         product['images'] = []
-        img_elems = (soup.find_all('img', {'data-testid': 'product-image'}) or
-                    soup.find_all('img', {'alt': lambda x: x and product['name'].lower() in x.lower()}) or
-                    soup.find_all('img', class_='product-image') or
-                    soup.find_all('img', class_=lambda x: x and 'product' in x.lower()))
+        seen_image_bases = set()  # Track base URLs to avoid duplicates with different params
         
-        # Also try to extract images from JSON data
+        def add_unique_image(url: str, source: str = "unknown"):
+            """Add image if it's unique and high quality (ignoring query parameters and resolution variants)"""
+            if not url or 'http' not in url:
+                return False
+            
+            # Clean URL - remove query parameters
+            base_url = url.split('?')[0].split('#')[0]
+            
+            # Skip very small thumbnails and icons by keyword
+            skip_keywords = ['thumbnail', 'icon', 'thumb_', '_thumb', 'favicon', 'sprite', 'preview']
+            if any(x in base_url.lower() for x in skip_keywords):
+                print(f"  [DEBUG] Skipping thumbnail/icon: {base_url[:80]}... (from {source})")
+                return False
+            
+            # Extract resolution from URL if present (e.g., _2048x, _1024x512, 800w, etc.)
+            # Common patterns: _2048x, _1024x1024, _800w, _512h, etc.
+            resolution_match = re.search(r'_(\d{3,4})(?:x(\d{3,4})?|w|h)', base_url, re.IGNORECASE)
+            if resolution_match:
+                width = int(resolution_match.group(1))
+                # Skip low-resolution images (< MIN_IMAGE_RESOLUTION)
+                if width < MIN_IMAGE_RESOLUTION:
+                    print(f"  [DEBUG] Skipping low-res image ({width}px): {base_url[:80]}... (from {source})")
+                    return False
+            
+            # Skip images explicitly marked as small/low quality
+            if any(x in base_url.lower() for x in ['_small.', '_low.', '_preview.', '_xs.', '_s.']):
+                print(f"  [DEBUG] Skipping low-quality variant: {base_url[:80]}... (from {source})")
+                return False
+            
+            # Nike/Adidas often add resolution suffixes - normalize to detect duplicates
+            # Patterns: _2048x, _1024x512, _small, _medium, etc. before .jpg/.png/.webp
+            normalized_url = re.sub(r'_(\d+x\d*|small|medium|large|xl|xxl)\.(jpg|jpeg|png|webp)', r'.\2', base_url, flags=re.IGNORECASE)
+            
+            # Skip if we've seen this normalized image already
+            if normalized_url in seen_image_bases:
+                print(f"  [DEBUG] Skipping duplicate/variant: {base_url[:80]}... (from {source})")
+                return False
+            
+            seen_image_bases.add(normalized_url)
+            product['images'].append(url)
+            
+            # Show resolution in debug output if available
+            res_info = f" ({width}px)" if resolution_match else ""
+            print(f"  [DEBUG] ✓ Added unique image #{len(product['images'])}{res_info}: {base_url[:100]}... (from {source})")
+            return True
+        
+        # 1. Try to extract images from JSON data first (most reliable)
+        print(f"  [DEBUG] Searching for images in JSON data...")
         if product_data:
             try:
                 if isinstance(product_data, dict):
@@ -387,29 +787,252 @@ class SneakerScraper:
                         if 'byId' in product_info:
                             product_info = list(product_info['byId'].values())[0] if product_info['byId'] else {}
                         
+                        # Try multiple image field names (including gallery/thumbnail fields)
                         images = (product_info.get('images') or 
                                 product_info.get('imageUrls') or
-                                product_info.get('media', {}).get('images', []))
+                                product_info.get('media', {}).get('images', []) or
+                                product_info.get('galleryImages') or
+                                product_info.get('gallery') or
+                                product_info.get('thumbnails') or
+                                product_info.get('thumbnailImages') or
+                                product_info.get('media', {}).get('thumbnails', []) or
+                                product_info.get('media', {}).get('gallery', []) or [])
+                        
+                        # Also check for nested media arrays
+                        if not images or (isinstance(images, list) and len(images) == 0):
+                            media_obj = product_info.get('media')
+                            if isinstance(media_obj, dict):
+                                # Try all possible media arrays
+                                for media_key in ['images', 'gallery', 'thumbnails', 'squarishURLs', 'portraitURLs']:
+                                    media_array = media_obj.get(media_key, [])
+                                    if isinstance(media_array, list) and len(media_array) > 0:
+                                        images = media_array
+                                        print(f"  [DEBUG] Found images in media.{media_key}")
+                                        break
+                        
+                        print(f"  [DEBUG] Found {len(images) if isinstance(images, list) else 0} images in JSON data")
+                        
                         if isinstance(images, list):
-                            for img_url in images:
-                                if isinstance(img_url, str) and 'http' in img_url:
-                                    if img_url not in product['images']:
-                                        product['images'].append(img_url)
+                            for idx, img_url in enumerate(images):
+                                if isinstance(img_url, str):
+                                    add_unique_image(img_url, f"JSON-{idx}")
                                 elif isinstance(img_url, dict):
-                                    img_src = img_url.get('url') or img_url.get('src') or img_url.get('imageUrl')
-                                    if img_src and 'http' in str(img_src):
-                                        if img_src not in product['images']:
-                                            product['images'].append(str(img_src))
-            except:
-                pass
+                                    # Try multiple URL keys (including thumbnail-specific keys)
+                                    img_src = (img_url.get('url') or 
+                                             img_url.get('src') or 
+                                             img_url.get('imageUrl') or
+                                             img_url.get('portraitURL') or
+                                             img_url.get('squarishURL') or
+                                             img_url.get('thumbnailUrl') or
+                                             img_url.get('thumbnail') or
+                                             img_url.get('fullUrl') or
+                                             img_url.get('highResUrl'))
+                                    if img_src:
+                                        add_unique_image(str(img_src), f"JSON-dict-{idx}")
+            except Exception as e:
+                print(f"  [DEBUG] Error extracting from JSON: {str(e)}")
+        else:
+            print(f"  [DEBUG] No product_data found")
         
-        for img in img_elems:
-            src = img.get('src') or img.get('data-src') or img.get('data-lazy-src') or img.get('data-zoom-src')
-            if src and 'http' in src and 'nike' in src.lower():
-                # Avoid small icons and thumbnails
-                if 'thumbnail' not in src.lower() and 'icon' not in src.lower():
-                    if src not in product['images']:
-                        product['images'].append(src)
+        # 2. Try picture elements (Nike often uses these)
+        print(f"  [DEBUG] Searching for <picture> elements...")
+        picture_elems = soup.find_all('picture')
+        print(f"  [DEBUG] Found {len(picture_elems)} picture elements")
+        for pic_idx, picture in enumerate(picture_elems):
+            # Check source elements in picture
+            sources = picture.find_all('source')
+            for src_idx, source in enumerate(sources):
+                srcset = source.get('srcset', '')
+                if srcset:
+                    # srcset can have multiple URLs - extract highest resolution
+                    urls = [u.strip().split()[0] for u in srcset.split(',') if u.strip()]
+                    # Filter for Nike URLs
+                    nike_urls = [u for u in urls if 'nike' in u.lower()]
+                    if nike_urls:
+                        # Filter out low-resolution images first
+                        high_res_urls = [u for u in nike_urls if get_resolution(u) >= MIN_IMAGE_RESOLUTION]
+                        
+                        if high_res_urls:
+                            # Sort by resolution and take highest
+                            urls_sorted = sorted(high_res_urls, key=get_resolution, reverse=True)
+                            add_unique_image(urls_sorted[0], f"picture-{pic_idx}-srcset-highres")
+                        elif nike_urls:
+                            # If no high-res found, fall back to best available
+                            urls_sorted = sorted(nike_urls, key=get_resolution, reverse=True)
+                            add_unique_image(urls_sorted[0], f"picture-{pic_idx}-srcset-best")
+            
+            # Also check img within picture
+            img = picture.find('img')
+            if img:
+                src = img.get('src') or img.get('data-src')
+                if src:
+                    add_unique_image(src, f"picture-{pic_idx}-img")
+        
+        # 3. Extract from left gallery panel (thumbnail gallery)
+        print(f"  [DEBUG] Searching for left gallery panel thumbnails...")
+        gallery_containers = [
+            soup.find('div', {'data-testid': 'gallery-thumbnails'}),
+            soup.find('div', {'data-testid': 'product-gallery'}),
+            soup.find('div', class_=lambda x: x and ('gallery' in x.lower() or 'thumbnail' in x.lower())),
+            soup.find('nav', {'aria-label': lambda x: x and 'gallery' in x.lower()}),
+            soup.find('ul', class_=lambda x: x and ('gallery' in x.lower() or 'thumbnail' in x.lower())),
+            soup.find('div', class_=lambda x: x and 'image-gallery' in x.lower()),
+        ]
+        
+        for container in gallery_containers:
+            if container:
+                print(f"  [DEBUG] Found gallery container: {container.name} with class {container.get('class', [])}")
+                # Find all images within this gallery container
+                gallery_imgs = container.find_all('img')
+                print(f"  [DEBUG] Found {len(gallery_imgs)} images in gallery container")
+                for img_idx, img in enumerate(gallery_imgs):
+                    # Try multiple src attributes
+                    src = (img.get('src') or 
+                          img.get('data-src') or 
+                          img.get('data-lazy-src') or 
+                          img.get('data-zoom-src') or
+                          img.get('data-original') or
+                          img.get('data-thumbnail') or
+                          img.get('data-image'))
+                    if src:
+                        add_unique_image(src, f"gallery-thumb-{img_idx}")
+                    
+                    # Check srcset for high-res versions
+                    srcset = img.get('srcset', '')
+                    if srcset:
+                        urls = [u.strip().split()[0] for u in srcset.split(',') if u.strip()]
+                        if urls:
+                            # Filter for high-resolution images
+                            high_res_urls = [u for u in urls if get_resolution(u) >= MIN_IMAGE_RESOLUTION]
+                            if high_res_urls:
+                                urls_sorted = sorted(high_res_urls, key=get_resolution, reverse=True)
+                                add_unique_image(urls_sorted[0], f"gallery-thumb-{img_idx}-srcset")
+                            else:
+                                urls_sorted = sorted(urls, key=get_resolution, reverse=True)
+                                add_unique_image(urls_sorted[0], f"gallery-thumb-{img_idx}-srcset-best")
+                
+                # Also check for button/clickable elements that might have image URLs
+                buttons = container.find_all(['button', 'a'], {'data-image-url': True})
+                for btn_idx, btn in enumerate(buttons):
+                    img_url = btn.get('data-image-url')
+                    if img_url:
+                        add_unique_image(img_url, f"gallery-button-{btn_idx}")
+        
+        # 4. Try multiple img selectors
+        print(f"  [DEBUG] Searching for <img> elements with various selectors...")
+        img_selectors = [
+            ({'data-testid': 'product-image'}, 'data-testid-product-image'),
+            ({'data-testid': 'gallery-thumbnail'}, 'data-testid-gallery-thumbnail'),
+            ({'data-testid': lambda x: x and 'image' in x.lower()}, 'data-testid-image'),
+            ({'class': 'product-image'}, 'class-product-image'),
+            ({'class': lambda x: x and 'gallery' in x.lower()}, 'class-gallery'),
+            ({'class': lambda x: x and 'media' in x.lower()}, 'class-media'),
+            ({'class': lambda x: x and 'thumbnail' in x.lower()}, 'class-thumbnail'),
+            ({'alt': lambda x: x and product['name'].lower() in x.lower()}, 'alt-product-name'),
+        ]
+        
+        def get_resolution(url):
+            """Extract resolution from URL (prioritizes width indicator)"""
+            # Try to find resolution indicators: 2048x, 1024x512, 800w, etc.
+            res_match = re.search(r'[_/-](\d{3,4})(?:x(\d{3,4})?|w|h|px)?', url, re.IGNORECASE)
+            if res_match:
+                try:
+                    return int(res_match.group(1))
+                except:
+                    pass
+        
+            # Default: assume medium quality if no resolution found but URL looks like product image
+            return 1000
+        
+        for selector, selector_name in img_selectors:
+            img_elems = soup.find_all('img', selector)
+            print(f"  [DEBUG] Selector '{selector_name}': found {len(img_elems)} images")
+            for img_idx, img in enumerate(img_elems):
+                # Try multiple src attributes
+                src = (img.get('src') or 
+                      img.get('data-src') or 
+                      img.get('data-lazy-src') or 
+                      img.get('data-zoom-src') or
+                      img.get('data-original'))
+                if src:
+                    add_unique_image(src, f"{selector_name}-{img_idx}")
+                
+                # Also check srcset - extract highest resolution
+                    srcset = img.get('srcset', '')
+                    if srcset:
+                        urls = [u.strip().split()[0] for u in srcset.split(',') if u.strip()]
+                        if urls:
+                            # Filter for high-resolution images only
+                            high_res_urls = [u for u in urls if get_resolution(u) >= MIN_IMAGE_RESOLUTION]
+                            
+                            if high_res_urls:
+                                # Sort by resolution and take highest
+                                urls_sorted = sorted(high_res_urls, key=get_resolution, reverse=True)
+                                add_unique_image(urls_sorted[0], f"{selector_name}-{img_idx}-srcset-highres")
+                            elif urls:
+                                # Fallback to best available
+                                urls_sorted = sorted(urls, key=get_resolution, reverse=True)
+                                add_unique_image(urls_sorted[0], f"{selector_name}-{img_idx}-srcset-best")
+        
+        # 5. If still no images, try broader search for Nike images
+        print(f"  [DEBUG] Current image count: {len(product['images'])}")
+        if len(product['images']) < 5:
+            print(f"  [DEBUG] Fewer than 5 images, doing broader search...")
+            all_imgs = soup.find_all('img')
+            print(f"  [DEBUG] Total <img> tags on page: {len(all_imgs)}")
+            for img_idx, img in enumerate(all_imgs):
+                src = img.get('src') or img.get('data-src')
+                if src and 'nike' in src.lower() and any(x in src.lower() for x in ['.jpg', '.jpeg', '.png', '.webp']):
+                    add_unique_image(src, f"broad-search-{img_idx}")
+        
+        print(f"  [DEBUG] === Total unique images found: {len(product['images'])} ===")
+        
+        # 6. Final aggressive extraction - get ALL Nike product images
+        if len(product['images']) < 5:
+            print(f"  [DEBUG] Still fewer than 5 images, extracting ALL Nike images from page...")
+            all_imgs = soup.find_all('img')
+            for img_idx, img in enumerate(all_imgs):
+                # Check all possible src attributes
+                srcs = [
+                    img.get('src'),
+                    img.get('data-src'),
+                    img.get('data-lazy-src'),
+                    img.get('data-original'),
+                    img.get('data-zoom-src'),
+                ]
+                
+                for src in srcs:
+                    if src and 'nike' in src.lower():
+                        # Check if it looks like a product image (has .jpg, .png, .webp extension)
+                        if any(ext in src.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                            # Avoid obvious non-product images
+                            if not any(x in src.lower() for x in ['logo', 'icon', 'avatar', 'banner', 'nav']):
+                                add_unique_image(src, f"aggressive-{img_idx}")
+                
+                # Also check srcset
+                srcset = img.get('srcset', '')
+                if srcset and 'nike' in srcset.lower():
+                    urls = [u.strip().split()[0] for u in srcset.split(',') if u.strip()]
+                    nike_urls = [u for u in urls if 'nike' in u.lower()]
+                    if nike_urls:
+                        # Filter for high-resolution images
+                        high_res_urls = [u for u in nike_urls if get_resolution(u) >= MIN_IMAGE_RESOLUTION]
+                        
+                        if high_res_urls:
+                            urls_sorted = sorted(high_res_urls, key=get_resolution, reverse=True)
+                            add_unique_image(urls_sorted[0], f"aggressive-srcset-{img_idx}")
+                        elif nike_urls:
+                            # Fallback to best available
+                            urls_sorted = sorted(nike_urls, key=get_resolution, reverse=True)
+                            add_unique_image(urls_sorted[0], f"aggressive-srcset-best-{img_idx}")
+        
+        print(f"  [DEBUG] === FINAL unique images found: {len(product['images'])} ===")
+        if product['images']:
+            print(f"  [DEBUG] Sample images:")
+            for i, img in enumerate(product['images'][:5]):
+                print(f"    {i+1}. {img[:120]}")
+        else:
+            print(f"  [DEBUG] WARNING: No images found! Page might use JavaScript to load images.")
         
         product['brand'] = brand
         product['url'] = url
@@ -515,7 +1138,7 @@ class SneakerScraper:
                             except:
                                 continue
                 except:
-                    continue
+                    pass
             
             # Also try to find JSON objects with product data - look for larger JSON objects
             if not product_data and ('product' in script_text.lower() or 'price' in script_text.lower() or 'pageProps' in script_text.lower()):
@@ -716,25 +1339,35 @@ class SneakerScraper:
                                         if size_str and size_str not in product.get('sizes', []):
                                             product.setdefault('sizes', []).append(size_str)
                         
-                        # Extract images
+                        # Extract images with better deduplication
                         images = (product_info.get('images') or 
                                 product_info.get('imageUrls') or
                                 product_info.get('media', {}).get('images', []) or
-                                product_info.get('gallery', []))
+                                product_info.get('gallery', []) or
+                                product_info.get('galleryImages', []))
                         
+                        if not product.get('images'):
+                            product['images'] = []
+                        
+                        seen_bases = set()
                         if isinstance(images, list):
                             for img_url in images:
                                 if isinstance(img_url, str) and 'http' in img_url:
-                                    if img_url not in product.get('images', []):
-                                        product.setdefault('images', []).append(img_url)
+                                    base = img_url.split('?')[0]
+                                    if base not in seen_bases:
+                                        seen_bases.add(base)
+                                        product['images'].append(img_url)
                                 elif isinstance(img_url, dict):
                                     img_src = (img_url.get('url') or 
                                              img_url.get('src') or 
                                              img_url.get('imageUrl') or
-                                             img_url.get('href'))
+                                             img_url.get('href') or
+                                             img_url.get('portraitURL'))
                                     if img_src and 'http' in str(img_src):
-                                        if img_src not in product.get('images', []):
-                                            product.setdefault('images', []).append(str(img_src))
+                                        base = str(img_src).split('?')[0]
+                                        if base not in seen_bases:
+                                            seen_bases.add(base)
+                                            product['images'].append(str(img_src))
             except Exception as e:
                 # Silently fail - will use fallback methods
                 pass
@@ -908,28 +1541,192 @@ class SneakerScraper:
         if not product['sizes']:
             product['sizes'] = ['39', '40', '41', '42', '43']
         
-        # Images - try multiple selectors (fallback)
-        if not product.get('images'):
-            product['images'] = []
-            img_elems = (soup.find_all('img', class_='product-image') or
-                        soup.find_all('img', {'data-testid': 'product-image'}) or
-                        soup.find_all('img', {'alt': lambda x: x and product['name'].lower() in x.lower()}) or
-                        soup.find_all('img', class_=lambda x: x and 'product' in x.lower()) or
-                        soup.find_all('img', {'src': lambda x: x and 'adidas' in x.lower() and ('product' in x.lower() or 'image' in x.lower())}))
-            for img in img_elems:
-                src = (img.get('src') or 
-                      img.get('data-src') or 
-                      img.get('data-lazy-src') or 
-                      img.get('data-zoom-src') or
-                      img.get('data-original'))
-                if src and 'http' in src:
-                    # Make sure it's a product image, not a logo or icon
-                    if ('thumbnail' not in src.lower() and 
-                        'icon' not in src.lower() and 
-                        'logo' not in src.lower() and
-                        ('product' in src.lower() or 'image' in src.lower() or 'media' in src.lower())):
-                        if src not in product['images']:
-                            product['images'].append(src)
+        # Images - Enhanced fallback with deduplication
+        print(f"  [DEBUG] Adidas image extraction starting...")
+        if not product.get('images') or len(product['images']) < 3:
+            if not product.get("images"):
+                product["images"] = []
+            
+            seen_image_bases = set(re.sub(r'_(\d+x\d*|small|medium|large|xl)\.(jpg|jpeg|png|webp)', r'.\2', img.split('?')[0], flags=re.IGNORECASE) for img in product.get('images', []))
+            
+            def add_unique_image(url: str, source: str = "unknown"):
+                """Add image if unique and high quality"""
+                if not url or 'http' not in url:
+                    return False
+                
+                base_url = url.split('?')[0].split('#')[0]
+                
+                # Skip thumbnails and icons - Expanded list
+                skip_keywords = [
+                    'thumbnail', 'icon', 'thumb_', '_thumb', 'favicon', 'sprite', 'preview', 'logo',
+                    'mini', 'small', 'tiny', 'placeholder', 'avatar', 'loading', 'spinner'
+                ]
+                if any(x in base_url.lower() for x in skip_keywords):
+                    print(f"  [DEBUG] Skipping thumbnail/icon: {base_url[:80]}... (from {source})")
+                    return False
+                
+                # Check resolution in URL - More aggressive check
+                # Matches: _2048x, 800w, 500h, 600x600, etc.
+                resolution_match = re.search(r'[_/-](\d{3,4})(?:x(\d{3,4})?|w|h|px)?', base_url, re.IGNORECASE)
+                
+                width = 0
+                if resolution_match:
+                    try:
+                        width = int(resolution_match.group(1))
+                        # Skip low-resolution images (< MIN_IMAGE_RESOLUTION)
+                        if width < MIN_IMAGE_RESOLUTION:
+                            print(f"  [DEBUG] Skipping low-res image ({width}px): {base_url[:80]}... (from {source})")
+                            return False
+                    except:
+                        pass
+                
+                # Skip images explicitly marked as small/low quality
+                if any(x in base_url.lower() for x in ['_small.', '_low.', '_preview.', '_xs.', '_s.', '_m.', '_t.']):
+                    print(f"  [DEBUG] Skipping low-quality variant: {base_url[:80]}... (from {source})")
+                    return False
+                
+                # Normalize URL to detect duplicates
+                normalized_url = re.sub(r'_(\d+x\d*|small|medium|large|xl)\.(jpg|jpeg|png|webp)', r'.\2', base_url, flags=re.IGNORECASE)
+                
+                if normalized_url in seen_image_bases:
+                    print(f"  [DEBUG] Skipping duplicate: {base_url[:80]}... (from {source})")
+                    return False
+                
+                seen_image_bases.add(normalized_url)
+                product['images'].append(url)
+                
+                res_info = f" ({width}px)" if width > 0 else " (unknown res)"
+                print(f"  [DEBUG] ✓ Added unique image #{len(product['images'])}{res_info}: {base_url[:100]}... (from {source})")
+                return True
+            
+            def get_resolution(url):
+                """Extract resolution from URL"""
+                res_match = re.search(r'[_/-](\d{3,4})(?:x(\d{3,4})?|w|h|px)?', url, re.IGNORECASE)
+                return int(res_match.group(1)) if res_match else 0
+            
+            # Extract from gallery panel (thumbnails)
+            print(f"  [DEBUG] Searching for gallery panel thumbnails...")
+            gallery_containers = [
+                soup.find('div', {'data-testid': 'gallery-thumbnails'}),
+                soup.find('div', {'data-testid': 'product-gallery'}),
+                soup.find('div', class_=lambda x: x and ('gallery' in x.lower() or 'thumbnail' in x.lower())),
+                soup.find('nav', {'aria-label': lambda x: x and 'gallery' in x.lower()}),
+                soup.find('ul', class_=lambda x: x and ('gallery' in x.lower() or 'thumbnail' in x.lower())),
+                soup.find('div', class_=lambda x: x and 'image-gallery' in x.lower()),
+            ]
+            
+            for container in gallery_containers:
+                if container:
+                    print(f"  [DEBUG] Found gallery container: {container.name}")
+                    gallery_imgs = container.find_all('img')
+                    print(f"  [DEBUG] Found {len(gallery_imgs)} images in gallery container")
+                    for img_idx, img in enumerate(gallery_imgs):
+                        src = (img.get('src') or 
+                              img.get('data-src') or 
+                              img.get('data-lazy-src') or 
+                              img.get('data-zoom-src') or
+                              img.get('data-original') or
+                              img.get('data-thumbnail') or
+                              img.get('data-image'))
+                        if src:
+                            add_unique_image(src, f"gallery-thumb-{img_idx}")
+                        
+                        srcset = img.get('srcset', '')
+                        if srcset:
+                            urls = [u.strip().split()[0] for u in srcset.split(',') if u.strip()]
+                            if urls:
+                                high_res_urls = [u for u in urls if get_resolution(u) >= MIN_IMAGE_RESOLUTION]
+                                if high_res_urls:
+                                    urls_sorted = sorted(high_res_urls, key=get_resolution, reverse=True)
+                                    add_unique_image(urls_sorted[0], f"gallery-thumb-{img_idx}-srcset")
+            
+            # Try picture elements
+            print(f"  [DEBUG] Searching for <picture> elements...")
+            picture_elems = soup.find_all('picture')
+            print(f"  [DEBUG] Found {len(picture_elems)} picture elements")
+            for pic_idx, picture in enumerate(picture_elems):
+                sources = picture.find_all('source')
+                for src_idx, source in enumerate(sources):
+                    srcset = source.get('srcset', '')
+                    if srcset:
+                        urls = [u.strip().split()[0] for u in srcset.split(',') if u.strip()]
+                        adidas_urls = [u for u in urls if 'adidas' in u.lower()]
+                        if adidas_urls:
+                            # Filter for high-resolution only
+                            high_res_urls = [u for u in adidas_urls if get_resolution(u) >= MIN_IMAGE_RESOLUTION]
+                            
+                            if high_res_urls:
+                                urls_sorted = sorted(high_res_urls, key=get_resolution, reverse=True)
+                                add_unique_image(urls_sorted[0], f"picture-{pic_idx}-srcset-highres")
+                            elif adidas_urls:
+                                # Fallback to best available
+                                urls_sorted = sorted(adidas_urls, key=get_resolution, reverse=True)
+                                add_unique_image(urls_sorted[0], f"picture-{pic_idx}-srcset-best")
+                
+                img = picture.find('img')
+                if img:
+                    src = img.get('src') or img.get('data-src')
+                    if src:
+                        add_unique_image(src, f"picture-{pic_idx}-img")
+            
+            # Try multiple img selectors
+            print(f"  [DEBUG] Searching for <img> elements...")
+            img_selectors = [
+                ({'class': 'product-image'}, 'class-product-image'),
+                ({'data-testid': 'product-image'}, 'data-testid-product-image'),
+                ({'data-testid': 'gallery-thumbnail'}, 'data-testid-gallery-thumbnail'),
+                ({'data-testid': lambda x: x and 'image' in x.lower()}, 'data-testid-image'),
+                ({'class': lambda x: x and 'gallery' in x.lower()}, 'class-gallery'),
+                ({'class': lambda x: x and 'media' in x.lower()}, 'class-media'),
+                ({'class': lambda x: x and 'thumbnail' in x.lower()}, 'class-thumbnail'),
+                ({'alt': lambda x: x and product['name'].lower() in x.lower()}, 'alt-product-name'),
+            ]
+            
+            for selector, selector_name in img_selectors:
+                img_elems = soup.find_all('img', selector)
+                print(f"  [DEBUG] Selector '{selector_name}': found {len(img_elems)} images")
+                for img_idx, img in enumerate(img_elems):
+                    src = (img.get('src') or 
+                          img.get('data-src') or 
+                          img.get('data-lazy-src') or 
+                          img.get('data-zoom-src') or
+                          img.get('data-original'))
+                    if src:
+                        add_unique_image(src, f"{selector_name}-{img_idx}")
+                    
+                    srcset = img.get('srcset', '')
+                    if srcset:
+                        urls = [u.strip().split()[0] for u in srcset.split(',') if u.strip()]
+                        if urls:
+                            # Filter for high-resolution only
+                            high_res_urls = [u for u in urls if get_resolution(u) >= MIN_IMAGE_RESOLUTION]
+                            
+                            if high_res_urls:
+                                urls_sorted = sorted(high_res_urls, key=get_resolution, reverse=True)
+                                add_unique_image(urls_sorted[0], f"{selector_name}-{img_idx}-srcset-highres")
+                            elif urls:
+                                # Fallback to best available
+                                urls_sorted = sorted(urls, key=get_resolution, reverse=True)
+                                add_unique_image(urls_sorted[0], f"{selector_name}-{img_idx}-srcset-best")
+            
+            # Broader search if still not enough
+            print(f"  [DEBUG] Current image count: {len(product['images'])}")
+            if len(product['images']) < 5:
+                print(f"  [DEBUG] Fewer than 5 images, doing broader search...")
+                all_imgs = soup.find_all('img')
+                print(f"  [DEBUG] Total <img> tags on page: {len(all_imgs)}")
+                for img_idx, img in enumerate(all_imgs):
+                    src = img.get('src') or img.get('data-src')
+                    if src and 'adidas' in src.lower() and any(x in src.lower() for x in ['.jpg', '.jpeg', '.png', '.webp']):
+                        add_unique_image(src, f"broad-search-{img_idx}")
+        
+        print(f"  [DEBUG] === FINAL unique images found: {len(product['images'])} ===")
+        if product['images']:
+            print(f"  [DEBUG] Sample images:")
+            for i, img in enumerate(product['images'][:5]):
+                print(f"    {i+1}. {img[:120]}")
+        else:
+            print(f"  [DEBUG] WARNING: No images found! Page might use JavaScript to load images.")
         
         product['brand'] = brand
         product['url'] = url
@@ -1095,257 +1892,230 @@ class SneakerScraper:
         except:
             return 0.0
     
-    def download_images(self, product: Dict) -> List[str]:
-        """Download product images and return local paths"""
+    def validate_image_dimensions(self, image_bytes: bytes, img_url: str) -> bool:
+        """Validate image meets minimum resolution requirements"""
+        if not Image:
+            # PIL not available, skip validation
+            return True
+        
+        try:
+            img = Image.open(BytesIO(image_bytes))
+            width, height = img.size
+            
+            # Check minimum resolution
+            if width < MIN_IMAGE_RESOLUTION or height < MIN_IMAGE_RESOLUTION:
+                print(f"  ✗ Skipping low-res image: {width}x{height} (min: {MIN_IMAGE_RESOLUTION}px) - {img_url[:60]}...")
+                return False
+            
+            # Check aspect ratio - reject images that are too narrow/wide (likely banners or buttons)
+            aspect_ratio = width / height if height > 0 else 0
+            if aspect_ratio > 5 or aspect_ratio < 0.2:
+                print(f"  ✗ Skipping odd aspect ratio: {width}x{height} ({aspect_ratio:.2f}) - {img_url[:60]}...")
+                return False
+            
+            print(f"  ✓ Valid image: {width}x{height}px")
+            return True
+            
+        except Exception as e:
+            print(f"  ⚠ Could not validate image dimensions: {e}")
+            # If validation fails, allow the image (fail-safe)
+            return True
+    
+    def process_images(self, product: Dict) -> List[str]:
+        """Process product images - upload to Cloudinary or download locally"""
         if not product['images']:
             return []
         
-        brand_folder = product['brand'].lower().replace(' ', '-')
-        product_folder = product['name'].lower().replace(' ', '-')[:50]  # Limit folder name length
-        product_folder = re.sub(r'[^\w\-]', '', product_folder)
+        image_urls = []
+        skipped_count = 0
         
-        image_dir = IMAGES_DIR / brand_folder / product_folder
-        image_dir.mkdir(parents=True, exist_ok=True)
+        if self.use_cloudinary and self.cloudinary_uploader:
+            # Upload to Cloudinary
+            for idx, img_url in enumerate(product['images'][:15], 1):  # Limit to 15 images (increased)
+                try:
+                    # Download image bytes
+                    parsed_url = urlparse(img_url)
+                    domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                    headers = {
+                        'Referer': domain,
+                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                    }
+                    response = self.session.get(img_url, timeout=30, headers=headers)
+                    response.raise_for_status()
+                    
+                    # Validate image dimensions
+                    if not self.validate_image_dimensions(response.content, img_url):
+                        skipped_count += 1
+                        continue
+                    
+                    # Upload to Cloudinary
+                    cloudinary_url = self.cloudinary_uploader.upload_image(
+                        response.content,
+                        product['name'],
+                        idx
+                    )
+                    image_urls.append(cloudinary_url)
+                    self.images_saved += 1
+                    print(f"  Uploaded image {idx}/{min(len(product['images']), 15)} to Cloudinary")
+                    
+                except Exception as e:
+                    print(f"  Error uploading image {idx}: {str(e)}")
+        else:
+            # Fallback: Download locally
+            brand_folder = product['brand'].lower().replace(' ', '-')
+            product_folder = product['name'].lower().replace(' ', '-')[:50]
+            product_folder = re.sub(r'[^\w\-]', '', product_folder)
+            
+            image_dir = IMAGES_DIR / brand_folder / product_folder
+            image_dir.mkdir(parents=True, exist_ok=True)
+            
+            for idx, img_url in enumerate(product['images'][:15], 1):
+                try:
+                    parsed_url = urlparse(img_url)
+                    domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                    headers = {
+                        'Referer': domain,
+                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                    }
+                    response = self.session.get(img_url, timeout=30, headers=headers)
+                    response.raise_for_status()
+                    
+                    # Validate image dimensions
+                    if not self.validate_image_dimensions(response.content, img_url):
+                        skipped_count += 1
+                        continue
+                    
+                    ext = '.jpg'
+                    if '.png' in img_url.lower():
+                        ext = '.png'
+                    elif '.webp' in img_url.lower():
+                        ext = '.webp'
+                    
+                    filename = f"image_{idx}{ext}"
+                    filepath = image_dir / filename
+                    
+                    with open(filepath, 'wb') as f:
+                        f.write(response.content)
+                    
+                    image_urls.append(str(filepath))
+                    self.images_saved += 1
+                    print(f"  Downloaded image {idx}/{min(len(product['images']), 15)}")
+                    
+                except Exception as e:
+                    print(f"  Error downloading image {idx}: {str(e)}")
         
-        local_paths = []
-        for idx, img_url in enumerate(product['images'][:10], 1):  # Limit to 10 images
-            try:
-                # Add referer header for image requests
-                parsed_url = urlparse(img_url)
-                domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
-                headers = {
-                    'Referer': domain,
-                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-                }
-                response = self.session.get(img_url, timeout=30, headers=headers)
-                response.raise_for_status()
-                
-                # Determine file extension
-                ext = '.jpg'
-                if '.png' in img_url.lower():
-                    ext = '.png'
-                elif '.webp' in img_url.lower():
-                    ext = '.webp'
-                
-                filename = f"image_{idx}{ext}"
-                filepath = image_dir / filename
-                
-                with open(filepath, 'wb') as f:
-                    f.write(response.content)
-                
-                local_paths.append(str(filepath))
-                self.images_saved += 1
-                print(f"  Downloaded image {idx}/{min(len(product['images']), 10)}")
-                
-            except Exception as e:
-                print(f"  Error downloading image {idx}: {str(e)}")
+        if skipped_count > 0:
+            print(f"  ⚠ Skipped {skipped_count} low-quality image(s)")
         
-        return local_paths
+        return image_urls
     
-    def generate_sql(self, product: Dict, image_paths: List[str]) -> str:
-        """Generate SQL script for database insertion - returns single script string"""
-        manufacturer_name = product['brand']
-        product_name = product['name'].replace("'", "''")
-        
-        # Build SQL script as single batch (all variables must be in same batch)
-        sql_parts = []
-        
-        # 1. Check/Create manufacturer
-        sql_parts.append(f"""
--- Check/Create manufacturer
-IF NOT EXISTS (SELECT 1 FROM nha_san_xuat WHERE ten_nha_san_xuat = N'{manufacturer_name}' AND deleted = 0)
-BEGIN
-    INSERT INTO nha_san_xuat (ten_nha_san_xuat, trang_thai, deleted, create_at, create_by)
-    VALUES (N'{manufacturer_name}', 1, 0, CAST(GETDATE() AS DATE), 1)
-END
-
-DECLARE @id_nha_san_xuat INT = (SELECT id FROM nha_san_xuat WHERE ten_nha_san_xuat = N'{manufacturer_name}' AND deleted = 0)
-DECLARE @id_xuat_xu INT = 1
-""")
-        
-        # 2. Check/Create product
-        sql_parts.append(f"""
--- Check/Create product (UPDATE if exists, INSERT if new)
-DECLARE @id_san_pham INT
-SELECT @id_san_pham = id FROM san_pham WHERE ten_san_pham = N'{product_name}' AND id_nha_san_xuat = @id_nha_san_xuat AND deleted = 0
-
-IF @id_san_pham IS NULL
-BEGIN
-    INSERT INTO san_pham (id_nha_san_xuat, id_xuat_xu, ten_san_pham, trang_thai, deleted, create_at, create_by)
-    VALUES (@id_nha_san_xuat, @id_xuat_xu, N'{product_name}', 1, 0, CAST(GETDATE() AS DATE), 1)
-    SET @id_san_pham = SCOPE_IDENTITY()
-END
-ELSE
-BEGIN
-    UPDATE san_pham SET update_at = CAST(GETDATE() AS DATE), update_by = 1 WHERE id = @id_san_pham
-END
-""")
-        
-        # 3. Process colors and sizes
-        colors = product.get('colors', []) or ['Unknown']
-        sizes = product.get('sizes', []) or ['39', '40', '41', '42', '43']  # Default sizes if not found
-        price = product.get('price', 0)
-        
-        # For each color
-        for color_idx, color_name in enumerate(colors):
-            color_name_clean = color_name.replace("'", "''")
-            hex_code = self._extract_hex_code(color_name) or '#000000'
-            
-            # Check/Create color
-            color_var = f"@id_mau_sac_{color_idx}"
-            sql_parts.append(f"""
--- Color {color_idx + 1}: {color_name_clean}
-IF NOT EXISTS (SELECT 1 FROM mau_sac WHERE ten_mau_sac = N'{color_name_clean}' AND deleted = 0)
-BEGIN
-    INSERT INTO mau_sac (ten_mau_sac, ma_mau, trang_thai, deleted, create_at, create_by)
-    VALUES (N'{color_name_clean}', N'{hex_code}', 1, 0, CAST(GETDATE() AS DATE), 1)
-END
-DECLARE {color_var} INT = (SELECT id FROM mau_sac WHERE ten_mau_sac = N'{color_name_clean}' AND deleted = 0)
-""")
-            
-            # For each size
-            for size_idx, size_name in enumerate(sizes):
-                size_name_clean = size_name.replace("'", "''")
+    def insert_product_to_database(self, product: Dict, image_urls: List[str], stock_quantities: Dict[str, int]) -> bool:
+        """Insert product data into database using pyodbc"""
+        try:
+            with DatabaseManager() as db:
+                # 1. Get or create manufacturer
+                manufacturer_id = db.get_or_create_manufacturer(product['brand'])
+                print(f"  ✓ Manufacturer ID: {manufacturer_id}")
                 
-                # Check/Create size
-                size_var = f"@id_kich_thuoc_{color_idx}_{size_idx}"
-                sql_parts.append(f"""
--- Size {size_idx + 1}: {size_name_clean}
-IF NOT EXISTS (SELECT 1 FROM kich_thuoc WHERE ten_kich_thuoc = N'{size_name_clean}' AND deleted = 0)
-BEGIN
-    INSERT INTO kich_thuoc (ten_kich_thuoc, trang_thai, deleted, create_at, create_by)
-    VALUES (N'{size_name_clean}', 1, 0, CAST(GETDATE() AS DATE), 1)
-END
-DECLARE {size_var} INT = (SELECT id FROM kich_thuoc WHERE ten_kich_thuoc = N'{size_name_clean}' AND deleted = 0)
-""")
+                # 2. Get or create product
+                product_id = db.get_or_create_product(product['name'], manufacturer_id)
+                print(f"  ✓ Product ID: {product_id}")
+                
+                # 3. Process colors and sizes
+                colors = product.get('colors', []) or ['Unknown']
+                sizes = product.get('sizes', []) or ['39', '40', '41', '42', '43']
+                price_vnd = product.get('price_vnd', 0)
+                
+                variant_count = 0
+                image_link_count = 0
+                
+                # Process each color-size combination
+                for color_name in colors:
+                    # Map color to Vietnamese name and hex code
+                    viet_color, hex_code = self.color_mapper.map_color(color_name)
+                    color_id = db.get_or_create_color(viet_color, hex_code)
+                    
+                    for size_name in sizes:
+                        size_id = db.get_or_create_size(size_name)
+                        
+                        # Get stock quantity for this variant
+                        variant_key = f"{color_name}_{size_name}"
+                        stock = stock_quantities.get(variant_key, DEFAULT_STOCK_QTY)
                 
                 # Create product detail
-                ten_chi_tiet = f"{product_name} - {color_name} - Size {size_name}"
-                ten_chi_tiet_clean = ten_chi_tiet.replace("'", "''")
+                        full_name = f"{product['name']} - {viet_color} - Size {size_name}"
+                        detail_id = db.get_or_create_product_detail(
+                            product_id, color_id, size_id, price_vnd, stock, full_name
+                        )
+                        variant_count += 1
+                        
+                        # Link images to this product detail
+                        for img_url in image_urls:
+                            img_name = os.path.basename(urlparse(img_url).path) or f"image_{product['name']}"
+                            image_id = db.get_or_create_image(img_url, img_name, viet_color)
+                            db.link_image_to_product_detail(detail_id, image_id)
+                            image_link_count += 1
                 
-                detail_var = f"@id_chi_tiet_san_pham_{color_idx}_{size_idx}"
-                sql_parts.append(f"""
--- Product detail: {color_name_clean} / Size {size_name_clean}
-DECLARE {detail_var} INT
-SELECT {detail_var} = id FROM chi_tiet_san_pham 
-WHERE id_san_pham = @id_san_pham 
-  AND id_mau_sac = {color_var}
-  AND id_kich_thuoc = {size_var}
-  AND deleted = 0
-
-IF {detail_var} IS NULL
-BEGIN
-    INSERT INTO chi_tiet_san_pham (id_san_pham, id_mau_sac, id_kich_thuoc, id_de_giay, id_chat_lieu, id_trong_luong, 
-                                   so_luong, gia_ban, trang_thai, deleted, ten_san_pham_chi_tiet, create_at, create_by)
-    VALUES (@id_san_pham, {color_var}, {size_var}, 
-            {DEFAULT_SOLE_ID}, {DEFAULT_MATERIAL_ID}, {DEFAULT_WEIGHT_ID}, 
-            0, {price}, 1, 0, N'{ten_chi_tiet_clean}', CAST(GETDATE() AS DATE), 1)
-    SET {detail_var} = SCOPE_IDENTITY()
-END
-ELSE
-BEGIN
-    UPDATE chi_tiet_san_pham 
-    SET gia_ban = {price}, ten_san_pham_chi_tiet = N'{ten_chi_tiet_clean}', update_at = CAST(GETDATE() AS DATE), update_by = 1
-    WHERE id = {detail_var}
-END
-""")
+                print(f"  ✓ Created {variant_count} variant(s) with {len(image_urls)} image(s) each")
+                print(f"  ✓ Total image links: {image_link_count}")
+                print(f"\n  ⚠ Note: Products with brand names (Nike, Adidas, Jordan, etc.) will show in banHangMain")
+                print(f"  ⚠ If not appearing, refresh the frontend or check browser cache")
                 
-                # Link images to product detail
-                for img_idx, img_path in enumerate(image_paths):
-                    img_name = os.path.basename(img_path)
-                    img_path_clean = img_path.replace("'", "''").replace("\\", "\\\\")
-                    color_from_name = color_name_clean
-                    
-                    img_var = f"@id_anh_{color_idx}_{size_idx}_{img_idx}"
-                    sql_parts.append(f"""
--- Image {img_idx + 1} for {color_name_clean} / Size {size_name_clean}
-DECLARE {img_var} INT
-SELECT {img_var} = id FROM anh_san_pham WHERE duong_dan_anh = N'{img_path_clean}' AND deleted = 0
-
-IF {img_var} IS NULL
-BEGIN
-    INSERT INTO anh_san_pham (duong_dan_anh, ten_anh, mau_anh, trang_thai, deleted, create_at, create_by)
-    VALUES (N'{img_path_clean}', N'{img_name}', N'{color_from_name}', 1, 0, CAST(GETDATE() AS DATE), 1)
-    SET {img_var} = SCOPE_IDENTITY()
-END
-
-IF NOT EXISTS (SELECT 1 FROM chi_tiet_san_pham_anh 
-               WHERE id_chi_tiet_san_pham = {detail_var}
-                 AND id_anh_san_pham = {img_var} AND deleted = 0)
-BEGIN
-    INSERT INTO chi_tiet_san_pham_anh (id_chi_tiet_san_pham, id_anh_san_pham, trang_thai, deleted, create_at, create_by)
-    VALUES ({detail_var}, {img_var}, 1, 0, CAST(GETDATE() AS DATE), 1)
-END
-""")
-        
-        return "".join(sql_parts)
-    
-    def _extract_hex_code(self, color_name: str) -> str:
-        """Extract hex color code from color name"""
-        hex_match = re.search(r'#[0-9A-Fa-f]{6}', color_name)
-        if hex_match:
-            return hex_match.group(0)
-        return ''
-    
-    def execute_sql(self, sql_script: str) -> bool:
-        """Execute SQL script using sqlcmd"""
-        if not sql_script or not sql_script.strip():
-            return False
-        
-        # Add required SET options at the beginning
-        set_options = """
-SET ANSI_NULLS ON
-SET QUOTED_IDENTIFIER ON
-SET ANSI_PADDING ON
-"""
-        
-        # Combine SET options with SQL script (all in one batch)
-        full_sql_script = set_options + sql_script
-        
-        # Create temporary SQL file in current script directory
-        script_dir = Path(__file__).parent
-        sql_file = script_dir / 'temp_scraper.sql'
-        with open(sql_file, 'w', encoding='utf-8') as f:
-            f.write(full_sql_script)
-        
-        try:
-            # Build sqlcmd command
-            # Add -C flag to trust server certificate (useful when WARP is enabled)
-            cmd = [
-                'sqlcmd',
-                '-S', f'{SQL_SERVER},{SQL_PORT}',
-                '-d', SQL_DATABASE,
-                '-U', SQL_USERNAME,
-                '-P', SQL_PASSWORD,
-                '-i', str(sql_file),
-                '-C',  # Trust server certificate (bypasses SSL verification for local/dev servers)
-                '-b'   # Stop on error
-            ]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-            
-            if result.returncode == 0:
                 return True
-            else:
-                # Show both stderr and stdout for better debugging
-                error_msg = result.stderr.strip() if result.stderr else result.stdout.strip()
-                if error_msg:
-                    print(f"SQL Error: {error_msg}")
-                else:
-                    print(f"SQL Error: Command failed with return code {result.returncode}")
-                    print(f"stdout: {result.stdout[:500] if result.stdout else 'None'}")
-                return False
                 
-        except FileNotFoundError:
-            print("Error: sqlcmd not found. Please install SQL Server Command Line Utilities.")
-            return False
         except Exception as e:
-            print(f"Error executing SQL: {str(e)}")
+            print(f"Database error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
-        finally:
-            # Clean up temp file
-            if sql_file.exists():
-                sql_file.unlink()
+        
+    def prompt_stock_quantities(self, product: Dict) -> Dict[str, int]:
+        """Prompt user for stock quantities for each color-size variant"""
+        colors = product.get('colors', []) or ['Unknown']
+        sizes = product.get('sizes', []) or ['39', '40', '41', '42', '43']
+        stock_quantities = {}
+        
+        print("\n" + "=" * 60)
+        print("Stock Quantity Input")
+        print("=" * 60)
+        print(f"Product: {product['name']}")
+        print(f"Colors: {len(colors)} - {', '.join(colors[:3])}{'...' if len(colors) > 3 else ''}")
+        print(f"Sizes: {len(sizes)} - {', '.join(sizes[:5])}{'...' if len(sizes) > 5 else ''}")
+        print(f"Total variants: {len(colors) * len(sizes)}")
+        print()
+        
+        # Ask if user wants to set individual or bulk quantities
+        print("Options:")
+        print("1. Set same quantity for all variants (Quick)")
+        print("2. Set quantity per color (all sizes of a color get same qty)")
+        print("3. Skip (use default quantity: 10)")
+        
+        choice = input("\nSelect option [1-3] (default: 1): ").strip() or "1"
+        
+        if choice == "1":
+            # Same quantity for all
+            qty_input = input(f"Enter stock quantity for all variants (default: {DEFAULT_STOCK_QTY}): ").strip()
+            qty = int(qty_input) if qty_input.isdigit() else DEFAULT_STOCK_QTY
+            for color in colors:
+                for size in sizes:
+                    stock_quantities[f"{color}_{size}"] = qty
+        
+        elif choice == "2":
+            # Per color
+            for color in colors:
+                qty_input = input(f"Stock quantity for color '{color}' (all sizes) [default: {DEFAULT_STOCK_QTY}]: ").strip()
+                qty = int(qty_input) if qty_input.isdigit() else DEFAULT_STOCK_QTY
+                for size in sizes:
+                    stock_quantities[f"{color}_{size}"] = qty
+        
+            else:
+                # Use default
+                for color in colors:
+                    for size in sizes:
+                        stock_quantities[f"{color}_{size}"] = DEFAULT_STOCK_QTY
+        
+        print(f"\n✓ Stock quantities configured for {len(stock_quantities)} variants")
+        return stock_quantities
     
     def process_url(self, url: str) -> bool:
         """Process a single product URL"""
@@ -1364,52 +2134,83 @@ SET ANSI_PADDING ON
             return False
         
         print(f"Product: {product['name']}")
-        price = product.get('price', 0)
-        # Check if price is likely VND (large numbers > 1000 typically indicate VND)
-        # VND prices are typically between 100,000 and 10,000,000 VND
-        if price >= 100000 and price <= 100000000:
-            print(f"Price: {price:,.0f} VND")
-        elif price > 0:
-            print(f"Price: ${price:.2f}")
+        
+        # Convert price to VND
+        original_price = product.get('price', 0)
+        if original_price > 0:
+            # Detect currency from scraped data
+            currency = 'USD'  # Default for Nike/Adidas
+            if original_price >= 100000:  # Already in VND
+                currency = 'VND'
+                price_vnd = original_price
+                print(f"Price: {price_vnd:,.0f} VND")
+            else:
+                # Convert to VND
+                price_vnd = self.currency_converter.convert_to_vnd(original_price, currency)
+                print(f"Price: ${original_price:.2f} ({currency}) → {price_vnd:,.0f} VND")
+            
+            product['price_vnd'] = price_vnd
         else:
-            print("Price: $0.00")
+            product['price_vnd'] = 0
+            print("Price: Not found")
+        
         colors = product.get('colors', [])
         sizes = product.get('sizes', [])
         print(f"Colors: {len(colors)} {f'({colors[:3]})' if colors else '(none found, using defaults)'}")
         print(f"Sizes: {len(sizes)} {f'({sizes[:5]})' if sizes else '(none found, using defaults)'}")
         
-        # Download images
-        print("Downloading images...")
-        image_paths = self.download_images(product)
-        print(f"Saving images to: {IMAGES_DIR / product['brand'].lower().replace(' ', '-') / product['name'].lower().replace(' ', '-')[:50]}")
+        # Process images (upload to Cloudinary or download locally)
+        if self.use_cloudinary:
+            print("Uploading images to Cloudinary...")
+        else:
+            print("Downloading images locally...")
         
-        # Generate SQL
-        print("Generating SQL statements...")
-        sql_script = self.generate_sql(product, image_paths)
+        image_urls = self.process_images(product)
         
-        # Execute SQL
-        print("Updating database...")
+        if not image_urls:
+            print("Warning: No images processed")
+        else:
+            if self.use_cloudinary:
+                print(f"✓ Uploaded {len(image_urls)} image(s) to Cloudinary")
+            else:
+                print(f"✓ Downloaded {len(image_urls)} image(s) locally")
+                print(f"  Saved to: {IMAGES_DIR / product['brand'].lower().replace(' ', '-') / product['name'].lower().replace(' ', '-')[:50]}")
+        
+        # Prompt for stock quantities
+        stock_quantities = self.prompt_stock_quantities(product)
+        
+        # Insert into database
+        print("\nInserting into database...")
         print(f"Connecting to: {SQL_SERVER}:{SQL_PORT}")
-        if self.execute_sql(sql_script):
+        
+        if self.insert_product_to_database(product, image_urls, stock_quantities):
             print("✓ Product processed successfully!")
             self.processed_count += 1
             return True
         else:
             print("✗ Failed to update database")
-            print(f"Tip: Make sure your .env file has SQL_SERVER=127.0.0.1 (not localhost)")
             return False
 
 
 def main():
     """Main entry point"""
     print("=" * 60)
-    print("Sneaker Scraper - SQL Server Integration")
+    print("Sneaker Scraper - Enhanced Database Integration")
     print("=" * 60)
     
     # Show connection info
     print(f"\nDatabase: {SQL_SERVER}:{SQL_PORT} | {SQL_DATABASE}")
     if SQL_SERVER == 'localhost':
         print("⚠ Warning: Using 'localhost'. If WARP is enabled, use '127.0.0.1' in .env file")
+    
+    # Check Cloudinary configuration
+    use_cloudinary = bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET)
+    if use_cloudinary:
+        print(f"Image upload: Cloudinary (configured)")
+    else:
+        print(f"Image upload: Local storage (Cloudinary not configured)")
+    
+    print(f"Currency conversion: USD→VND rate = {USD_TO_VND_RATE:,.0f}")
     
     # Get URLs from user
     urls_input = input("\nEnter product URL(s), separated by commas: ").strip()
@@ -1424,7 +2225,7 @@ def main():
         return
     
     # Initialize scraper
-    scraper = SneakerScraper()
+    scraper = SneakerScraper(use_cloudinary=use_cloudinary)
     
     # Process each URL
     for url in urls:
@@ -1436,13 +2237,18 @@ def main():
             break
         except Exception as e:
             print(f"\nError processing {url}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             continue
     
     # Summary
     print("\n" + "=" * 60)
     print("Summary:")
     print(f"Processed: {scraper.processed_count} product(s)")
-    print(f"Images saved: {scraper.images_saved}")
+    if use_cloudinary:
+        print(f"Images uploaded: {scraper.images_saved}")
+    else:
+        print(f"Images downloaded: {scraper.images_saved}")
     print(f"Database updated: {scraper.processed_count} product(s)")
     print("=" * 60)
 

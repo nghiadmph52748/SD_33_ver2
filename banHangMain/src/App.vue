@@ -37,9 +37,7 @@ let removeAfter: any;
 onMounted(async () => {
   await userStore.initFromStorage()
   // Fetch sneaker products on app mount
-  if (cartStore.products.length === 0) {
-    await cartStore.fetchProducts(true);
-  }
+  await cartStore.fetchProducts(true);
 
   removeBefore = router.beforeEach((to, from, next) => {
     isRouting.value = true;

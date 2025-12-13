@@ -199,9 +199,9 @@ function selectLocale(val: string) {
  function handleSearch() {
    const q = searchQuery.value.trim()
    if (!q) return
-   // For now, navigate to the All products page with a query param
+   // Navigate to the All products page with a query param
    // The products view can read this from the route to filter
-   window.location.href = `/all?search=${encodeURIComponent(q)}`
+   router.push({ path: '/all', query: { search: q } })
  }
 
 // Sticky header on scroll

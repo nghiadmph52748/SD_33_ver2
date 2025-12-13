@@ -35,30 +35,165 @@
       <a-empty v-if="!loading && products.length === 0" :description="$t('store.noProducts')" />
       </div>
       <a-empty v-else-if="error" :description="error" />
-    <FilterSortDrawer v-model:visible="filterVisible" :total="products.length" @apply="applyFilters" />
+    <FilterSortDrawer 
+      v-model:visible="filterVisible" 
+      :total="products.length" 
+      :max-price="maxProductPrice"
+      :brands="availableBrands"
+      @apply="applyFilters" 
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { storeToRefs } from "pinia";
+import { useRoute } from "vue-router";
 import AppStoreGrid from "@/components/AppStoreGrid.vue";
 import { useCartStore } from "@/stores/cart";
 import FilterSortDrawer from "@/components/FilterSortDrawer.vue";
+import type { Product } from "@/api/products";
 
+const route = useRoute();
 const cartStore = useCartStore();
-const { products, loading, error } = storeToRefs(cartStore);
+const { products: allProducts, loading, error } = storeToRefs(cartStore);
 const filterVisible = ref(false);
 
+const filterState = ref({
+  sort: 'featured',
+  price: [0, 50000000] as [number, number],
+  categories: [] as string[],
+  search: '' as string,
+});
+
 onMounted(async () => {
-  if (products.value.length === 0) {
-    await cartStore.fetchProducts(true); // Only sneakers
+  await cartStore.fetchProducts(true); // Only sneakers
+  
+  // Check for brand query parameter and apply filter
+  const brandQuery = route.query.brand as string | undefined;
+  if (brandQuery) {
+    filterState.value.categories = [brandQuery];
+  }
+  
+  // Check for search query parameter
+  const searchQuery = route.query.search as string | undefined;
+  if (searchQuery) {
+    filterState.value.search = searchQuery;
   }
 });
 
+// Watch for route query changes (e.g., when brand link is clicked)
+watch(() => route.query.brand, (brandQuery) => {
+  if (brandQuery) {
+    const brand = String(brandQuery);
+    if (!filterState.value.categories.includes(brand)) {
+      filterState.value.categories = [brand];
+    }
+  }
+});
+
+// Watch for search query changes
+watch(() => route.query.search, (searchQuery) => {
+  if (searchQuery) {
+    filterState.value.search = String(searchQuery);
+  } else {
+    filterState.value.search = '';
+  }
+});
+
+// Get unique brands from all products
+const availableBrands = computed(() => {
+  const brands = new Set<string>();
+  allProducts.value.forEach(p => {
+    if (p.brand) {
+      brands.add(p.brand);
+    }
+  });
+  return Array.from(brands).sort();
+});
+
+function matchesFilter(product: Product, filters: string[]): boolean {
+  if (filters.length === 0) return true;
+  
+  // Separate gender filters and brand filters
+  const genderFilters = filters.filter(f => f === 'Male' || f === 'Female');
+  const brandFilters = filters.filter(f => f !== 'Male' && f !== 'Female');
+  
+  // Check gender match (if gender filters are selected)
+  if (genderFilters.length > 0) {
+    const genderMatches = genderFilters.some(gender => product.gender === gender);
+    if (!genderMatches) return false;
+  }
+  
+  // Check brand match (if brand filters are selected)
+  if (brandFilters.length > 0) {
+    const brandMatches = brandFilters.some(brand => 
+      product.brand && product.brand.toLowerCase() === brand.toLowerCase()
+    );
+    if (!brandMatches) return false;
+  }
+  
+  return true;
+}
+
+// Calculate max price from all products (before filtering)
+const maxProductPrice = computed(() => {
+  if (allProducts.value.length === 0) return 50000000;
+  return Math.max(...allProducts.value.map(p => p.priceMax || p.price));
+});
+
+const products = computed(() => {
+  let filtered = [...allProducts.value];
+
+  // Filter by search query (name, brand, or description)
+  if (filterState.value.search) {
+    const searchLower = filterState.value.search.toLowerCase().trim();
+    filtered = filtered.filter(p => {
+      const nameMatch = p.name?.toLowerCase().includes(searchLower);
+      const brandMatch = p.brand?.toLowerCase().includes(searchLower);
+      const descMatch = p.description?.toLowerCase().includes(searchLower);
+      return nameMatch || brandMatch || descMatch;
+    });
+  }
+
+  // Filter by brands and gender
+  if (filterState.value.categories.length > 0) {
+    filtered = filtered.filter(p => matchesFilter(p, filterState.value.categories));
+  }
+
+  // Filter by price range
+  filtered = filtered.filter(p => {
+    const productPrice = p.priceMax || p.price;
+    return productPrice >= filterState.value.price[0] && productPrice <= filterState.value.price[1];
+  });
+
+  // Sort
+  switch (filterState.value.sort) {
+    case 'price_low_high':
+      filtered.sort((a, b) => (a.priceMax || a.price) - (b.priceMax || b.price));
+      break;
+    case 'price_high_low':
+      filtered.sort((a, b) => (b.priceMax || b.price) - (a.priceMax || a.price));
+      break;
+    case 'newest':
+      // Assuming newer products have higher IDs (may need adjustment based on actual data)
+      filtered.sort((a, b) => Number(b.id) - Number(a.id));
+      break;
+    case 'featured':
+    default:
+      // Keep original order (featured products first)
+      break;
+  }
+
+  return filtered;
+});
+
 function applyFilters(payload: { sort: string; price: [number, number]; categories: string[] }) {
-  // Hook for future filter logic; currently just closes drawer via v-model.
-  // Sorting and filtering can be implemented in store or locally.
+  filterState.value = {
+    sort: payload.sort,
+    price: payload.price,
+    categories: payload.categories,
+  };
 }
 </script>
 

@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import {
   getSneakerProducts,
   getAllProducts,
+  getBestSellingProducts,
   type Product,
 } from "@/api/products";
 import { useUserStore } from "./user";
@@ -88,6 +89,7 @@ export const useCartStore = defineStore("cart", {
     return {
       cartUIStatus: persisted?.cartUIStatus ?? "idle",
       products: [] as Product[],
+      bestSellingProducts: [] as Product[],
       cart: persisted?.cart ?? [],
       loading: false,
       error: null as string | null,
@@ -96,27 +98,13 @@ export const useCartStore = defineStore("cart", {
   },
   getters: {
     featuredProducts(state): Product[] {
-      const preferredOrder = ["alphafly", "vaporfly", "zoom fly", "zoom-fly"]; // order matters
+      // Return best-selling products if available, otherwise fallback to first 3 products with images
+      if (state.bestSellingProducts && state.bestSellingProducts.length > 0) {
+        return state.bestSellingProducts;
+      }
+
       const hasImage = (product: Product) =>
         typeof product.img === "string" && product.img.trim() !== "";
-      const toKey = (name: string): string | null => {
-        const lower = name.toLowerCase();
-        return preferredOrder.find((key) => lower.includes(key)) || null;
-      };
-
-      const matched = state.products
-        .filter(hasImage)
-        .filter((p) => toKey(p.name) !== null)
-        .sort((a, b) => {
-          const ak = toKey(a.name);
-          const bk = toKey(b.name);
-          const ai = ak ? preferredOrder.indexOf(ak) : Number.MAX_SAFE_INTEGER;
-          const bi = bk ? preferredOrder.indexOf(bk) : Number.MAX_SAFE_INTEGER;
-          return ai - bi;
-        })
-        .slice(0, 3);
-
-      if (matched.length > 0) return matched;
 
       // Fallback: first three products with images
       return state.products.filter(hasImage).slice(0, 3);
@@ -161,7 +149,12 @@ export const useCartStore = defineStore("cart", {
     },
   },
   actions: {
-    async fetchProducts(sneakersOnly: boolean = true) {
+    async fetchProducts(sneakersOnly: boolean = true, forceRefresh: boolean = false) {
+      // Skip fetch if products already loaded and not forcing refresh
+      if (!forceRefresh && this.products.length > 0) {
+        return;
+      }
+      
       this.loading = true;
       this.error = null;
       try {
@@ -170,14 +163,20 @@ export const useCartStore = defineStore("cart", {
         } else {
           this.products = await getAllProducts();
         }
+        // Fetch best-selling products for featured section
+        this.bestSellingProducts = await getBestSellingProducts(3);
       } catch (error: any) {
         this.error = error.message || "Failed to fetch products";
         console.error("Error fetching products:", error);
         // Fallback to empty array on error
         this.products = [];
+        this.bestSellingProducts = [];
       } finally {
         this.loading = false;
       }
+    },
+    async refreshProducts(sneakersOnly: boolean = true) {
+      await this.fetchProducts(sneakersOnly, true);
     },
     updateCartUI(status: CartStatus) {
       this.cartUIStatus = status;

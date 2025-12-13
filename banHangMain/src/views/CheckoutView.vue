@@ -357,6 +357,7 @@ import {
 import VoucherModal from "@/components/VoucherModal.vue";
 import OrderConfirmationModal from "@/components/OrderConfirmationModal.vue";
 import type { CustomerAddress } from "@/api/auth";
+import { updateProfile, getMe } from "@/api/auth";
 import ghnLogo from "@/assets/logo-ghn.png";
 
 // i18n
@@ -1031,6 +1032,24 @@ async function createOnlineOrder(paymentMethodId: number, notePrefix: string) {
 
   const plainCartItems = JSON.parse(JSON.stringify(cartItemsWithVariants));
   const orderNotes = `${notePrefix}`;
+
+  // Update customer profile with phone number if user is logged in and phone number is provided
+  if (userStore.isAuthenticated && userStore.id && contact.value.phone?.trim()) {
+    try {
+      await updateProfile({
+        soDienThoai: contact.value.phone.trim(),
+        tenKhachHang: contact.value.fullName?.trim() || undefined,
+      });
+      // Refresh user profile to get updated phone number
+      const me = await getMe();
+      if (me.data) {
+        userStore.profile = me.data;
+      }
+    } catch (error) {
+      // Log error but don't fail the order creation
+      console.warn("Failed to update customer profile with phone number:", error);
+    }
+  }
 
   const order = await createOrderFromCart(plainCartItems, {
     customerId: userStore.id || undefined,

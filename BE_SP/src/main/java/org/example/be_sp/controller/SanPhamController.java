@@ -75,4 +75,13 @@ public class SanPhamController {
             return new ResponseObject<>(false, null, "Lỗi khi cập nhật trạng thái sản phẩm: " + e.getMessage());
         }
     }
+
+    @GetMapping("/best-selling")
+    public ResponseObject<?> getBestSellingProducts(@RequestParam(defaultValue = "3", name = "limit") Integer limit) {
+        try {
+            return new ResponseObject<>(true, sanPhamService.getBestSellingProducts(limit), "Lấy danh sách sản phẩm bán chạy thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy danh sách sản phẩm bán chạy: " + e.getMessage());
+        }
+    }
 }

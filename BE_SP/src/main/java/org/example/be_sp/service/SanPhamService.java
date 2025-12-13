@@ -8,6 +8,7 @@ import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.SanPhamRequest;
 import org.example.be_sp.model.response.PagingResponse;
 import org.example.be_sp.model.response.SanPhamResponse;
+import org.example.be_sp.repository.HoaDonChiTietRepository;
 import org.example.be_sp.repository.NhaSanXuatRepository;
 import org.example.be_sp.repository.SanPhamRepository;
 import org.example.be_sp.repository.XuatXuRepository;
@@ -25,6 +26,8 @@ public class SanPhamService {
     private NhaSanXuatRepository nsxService;
     @Autowired
     private XuatXuRepository xxService;
+    @Autowired
+    private HoaDonChiTietRepository hoaDonChiTietRepository;
 
     public SanPhamResponse add(SanPhamRequest sanPhamRequest) {
         SanPham sp = MapperUtils.map(sanPhamRequest, SanPham.class);
@@ -45,14 +48,14 @@ public class SanPhamService {
     }
     
     public List<SanPhamResponse> getAll() {
-        return repository.findAll().stream()
+        return repository.findAllByDeleted(false).stream()
                 .map(SanPhamResponse::new)
                 .toList();
     }
 
     public PagingResponse<SanPhamResponse> paging(Integer no, Integer size) {
         Pageable page = PageRequest.of(no, size);
-        return new PagingResponse<>(repository.findAll(page).map(SanPhamResponse::new), no);
+        return new PagingResponse<>(repository.findAllByDeleted(false, page).map(SanPhamResponse::new), no);
     }
 
     public SanPhamResponse getById(Integer id) {
@@ -64,5 +67,18 @@ public class SanPhamService {
         SanPham sanPham = repository.findById(id).orElseThrow(()-> new ApiException("SanPham not found", "404"));
         sanPham.setDeleted(true);
         repository.save(sanPham);
+    }
+
+    public List<SanPhamResponse> getBestSellingProducts(int limit) {
+        return hoaDonChiTietRepository.findBestSellingProductIds(limit).stream()
+                .map(row -> {
+                    Integer productId = ((Number) row[0]).intValue();
+                    return repository.findById(productId);
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(sp -> sp.getDeleted() == null || !sp.getDeleted())
+                .map(SanPhamResponse::new)
+                .toList();
     }
 }

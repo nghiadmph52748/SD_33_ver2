@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { setToken, clearToken, getToken } from '@/utils/auth'
-import { loginCustomer, getMe, refreshToken, registerCustomer, type CustomerProfile, type ApiResponse, type LoginResponseData } from '@/api/auth'
+import { loginCustomer, getMe, refreshToken, registerCustomer, oauthLogin, type CustomerProfile, type ApiResponse, type LoginResponseData } from '@/api/auth'
 import { showMessageError } from '@/utils/message'
 
 type UserState = {
@@ -202,6 +202,40 @@ export const useUserStore = defineStore('user', {
         showMessageError(error.message || 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.')
         this.logout()
         return false
+      }
+    },
+    async oauthLogin(token: string, provider: 'google') {
+      this.loading = true
+      try {
+        console.log('Calling oauthLogin API with provider:', provider)
+        const res: ApiResponse<LoginResponseData> = await oauthLogin({ token, provider })
+        console.log('OAuth API response:', { success: res.success, message: res.message })
+        if (!res.success) {
+          throw new Error(res.message || 'Đăng nhập OAuth thất bại')
+        }
+        const { accessToken, refreshToken: rt, khachHang } = res.data
+        setToken(accessToken)
+        if (rt) localStorage.setItem(REFRESH_KEY, rt)
+        const normalizedProfile = normalizeProfile(khachHang)
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(normalizedProfile))
+        this.isAuthenticated = true
+        this.accessToken = accessToken
+        this.refreshToken = rt || null
+        this.profile = normalizedProfile
+        
+        if (typeof window !== 'undefined') {
+          const { useCartStore } = await import('./cart')
+          const cartStore = useCartStore()
+          cartStore.loadCartForUser(normalizedProfile?.id)
+        }
+        
+        return true
+      } catch (error: any) {
+        console.error('OAuth login error in store:', error)
+        console.error('Error response:', error.response?.data)
+        throw error
+      } finally {
+        this.loading = false
       }
     },
   },

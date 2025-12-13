@@ -90,12 +90,6 @@
             </svg>
             {{ $t('auth.continueWithGoogle') }}
           </button>
-          <button type="button" class="btn btn-social" @click="handleSocialLogin('facebook')">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#1877F2" d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.41c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94z"/>
-            </svg>
-            {{ $t('auth.continueWithFacebook') }}
-          </button>
         </div>
       </div>
     </div>
@@ -124,8 +118,77 @@ const formData = ref({
   confirmPassword: ''
 })
 
-onMounted(() => {
-  userStore.initFromStorage()
+onMounted(async () => {
+  await userStore.initFromStorage()
+  
+  // Handle Google OAuth callback (implicit flow - ID token in URL fragment)
+  const hash = window.location.hash.substring(1)
+  const hashParams = new URLSearchParams(hash)
+  const idToken = hashParams.get('id_token')
+  const state = hashParams.get('state')
+  const error = hashParams.get('error') || new URLSearchParams(window.location.search).get('error')
+  
+  if (error) {
+    Message.error('Đăng nhập Google thất bại: ' + error)
+    window.history.replaceState({}, document.title, '/login')
+    return
+  }
+  
+  if (idToken && state) {
+    const savedState = sessionStorage.getItem('google_oauth_state')
+    if (savedState !== state) {
+      Message.error('Xác thực không hợp lệ. Vui lòng thử lại.')
+      window.history.replaceState({}, document.title, '/login')
+      return
+    }
+    
+    loading.value = true
+    try {
+      console.log('Processing Google OAuth callback with idToken:', idToken?.substring(0, 20) + '...')
+      await userStore.oauthLogin(idToken, 'google')
+      console.log('OAuth login successful, redirecting...')
+      
+      // Clean up session storage
+      const redirect = sessionStorage.getItem('google_oauth_redirect')
+      sessionStorage.removeItem('google_oauth_state')
+      sessionStorage.removeItem('google_oauth_redirect')
+      
+      // Clean up URL first
+      window.history.replaceState({}, document.title, '/login')
+      
+      // Determine redirect destination (avoid redirecting back to login)
+      let redirectPath = '/'
+      if (redirect && redirect !== '/login' && !redirect.includes('/login')) {
+        redirectPath = redirect
+      }
+      
+      // Wait a moment for state to update, then redirect
+      setTimeout(() => {
+        // Use replace instead of push to avoid adding to history
+        router.replace(redirectPath).then(() => {
+          const name = userStore.profile?.tenKhachHang || userStore.profile?.tenTaiKhoan || ''
+          if (name) {
+            Message.success(t('auth.loginSuccess', { name }))
+          }
+        }).catch((err) => {
+          console.error('Redirect error', err)
+          // Fallback to home using window.location (more reliable)
+          window.location.href = redirectPath
+        })
+      }, 300)
+    } catch (error: any) {
+      console.error('OAuth callback error:', error)
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
+      const errorMessage = error.response?.data?.message || error.message || 'Đăng nhập Google thất bại'
+      Message.error(errorMessage)
+      window.history.replaceState({}, document.title, '/login')
+      loading.value = false
+    }
+  }
 })
 
 async function handleSubmit() {
@@ -183,9 +246,88 @@ async function handleSubmit() {
   }
 }
 
-function handleSocialLogin(provider: string) {
-  // Social login logic
+async function handleSocialLogin(provider: 'google') {
+  if (loading.value) return
+  
+  if (provider === 'google') {
+    // Check if Google Client ID is configured
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!googleClientId || googleClientId.trim() === '') {
+      Message.error('Google Client ID chưa được cấu hình. Vui lòng thêm VITE_GOOGLE_CLIENT_ID vào file .env')
+      return
+    }
+    // For Google, we redirect immediately, so no need to wait for token
+    // Don't await - just call and let it redirect
+    handleGoogleLogin().catch((err) => {
+      console.error('Google login redirect error:', err)
+      Message.error('Không thể chuyển hướng đến Google. Vui lòng thử lại.')
+    })
+    // handleGoogleLogin redirects, so we won't reach here
+    return
+  }
 }
+
+function handleGoogleLogin(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!clientId || clientId.trim() === '') {
+      const errorMsg = 'Google Client ID chưa được cấu hình. Vui lòng thêm VITE_GOOGLE_CLIENT_ID vào file .env'
+      Message.error(errorMsg)
+      console.error(errorMsg)
+      resolve(null)
+      return
+    }
+
+    // Generate state for CSRF protection
+    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    sessionStorage.setItem('google_oauth_state', state)
+    
+    // Store redirect path (avoid storing login page)
+    const currentPath = router.currentRoute.value.fullPath
+    const redirectPath = (currentPath && currentPath !== '/login' && !currentPath.includes('/login?')) 
+      ? currentPath 
+      : (router.currentRoute.value.query.redirect as string) || '/'
+    sessionStorage.setItem('google_oauth_redirect', redirectPath)
+
+    // Build Google OAuth URL (using implicit flow to get ID token directly)
+    const redirectUri = `${window.location.origin}/login`
+    const scope = 'openid email profile'
+    const responseType = 'id_token' // Use implicit flow to get ID token directly
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(clientId)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=${responseType}&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `state=${encodeURIComponent(state)}&` +
+      `nonce=${encodeURIComponent(Math.random().toString(36).substring(2, 15))}&` +
+      `prompt=select_account`
+
+    // Redirect to Google login page
+    window.location.href = authUrl
+    
+    // This promise will never resolve because we're redirecting
+    // The actual handling will be done in onMounted when user returns
+    resolve(null)
+  })
+}
+
+function loadGoogleScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector('script[src*="accounts.google.com"]')) {
+      resolve()
+      return
+    }
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Google script'))
+    document.head.appendChild(script)
+  })
+}
+
 </script>
 
 <style scoped lang="scss">

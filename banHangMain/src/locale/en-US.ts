@@ -164,6 +164,10 @@ export default {
   "store.categorySoccer": "Soccer",
   "store.reset": "Reset",
   "store.apply": "Apply",
+  "store.gender": "Gender",
+  "store.men": "Men",
+  "store.women": "Women",
+  "store.brands": "Brands",
   "store.menTitle": "MEN'S SHOES",
   "store.womenTitle": "WOMEN'S SHOES",
   "store.menSubtitle":

@@ -118,7 +118,7 @@
 
       <!-- Right: sticky purchase column -->
       <aside class="purchase">
-        <p class="product-category" v-if="product.gender">{{ formatGender(product.gender) }} • {{ $t('product.sportswear') }}</p>
+        <p class="product-category" v-if="product.gender">{{ formatGender(displayGender) }} • {{ $t('product.sportswear') }}</p>
         <h1 class="product-title">{{ product.name }}</h1>
 
         <div class="price">
@@ -346,6 +346,41 @@ function formatGender(gender: string): string {
 }
 
 const productId = computed(() => String(route.params.id ?? ""));
+
+// Determine source page (men/women/all) from query param, referrer, or fallback to product gender
+const sourcePage = computed(() => {
+  // Check query parameter first
+  const querySource = route.query.from as string | undefined
+  if (querySource === 'men' || querySource === 'women') {
+    return querySource
+  }
+  
+  // Check referrer
+  if (typeof document !== 'undefined' && document.referrer) {
+    const referrer = document.referrer.toLowerCase()
+    if (referrer.includes('/women')) {
+      return 'women'
+    }
+    if (referrer.includes('/men')) {
+      return 'men'
+    }
+  }
+  
+  // Fallback to product gender
+  const product = baseProduct.value
+  if (product?.gender === 'Female') {
+    return 'women'
+  }
+  if (product?.gender === 'Male') {
+    return 'men'
+  }
+  
+  return 'men' // Default
+})
+
+const displayGender = computed(() => {
+  return sourcePage.value === 'women' ? 'Female' : 'Male'
+})
 
 const baseProduct = computed(() => cartStore.products.find(item => item.id === productId.value));
 

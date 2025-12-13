@@ -68,10 +68,15 @@ public class SanPhamResponse {
         this.id = sp.getId();
         this.maSanPham = sp.getMaSanPham();
         this.tenSanPham = sp.getTenSanPham();
-        this.soLuongBienThe = sp.getChiTietSanPhams().size();
+        
+        // Filter out deleted variants for accurate count and price calculation
+        List<org.example.be_sp.entity.ChiTietSanPham> activeVariants = sp.getChiTietSanPhams().stream()
+                .filter(ct -> ct.getDeleted() == null || !ct.getDeleted())
+                .toList();
+        this.soLuongBienThe = activeVariants.size();
 
-        // Calculate min and max prices from variants
-        List<BigDecimal> giaBan = sp.getChiTietSanPhams().stream()
+        // Calculate min and max prices from active variants only
+        List<BigDecimal> giaBan = activeVariants.stream()
                 .filter(ct -> ct.getGiaBan() != null)
                 .map(ct -> ct.getGiaBan())
                 .toList();
@@ -88,8 +93,8 @@ public class SanPhamResponse {
         this.updateAt = sp.getUpdateAt();
         this.updateBy = sp.getUpdateBy();
 
-        // Build variant responses with discount info
-        this.bienThe = sp.getChiTietSanPhams().stream()
+        // Build variant responses with discount info (only active variants)
+        this.bienThe = activeVariants.stream()
                 .map(ct -> {
                     BienTheResponse bienTheResp = new BienTheResponse();
                     bienTheResp.setId(ct.getId());
@@ -123,8 +128,8 @@ public class SanPhamResponse {
                 })
                 .toList();
 
-        // Build image responses from variants
-        this.hinhAnh = sp.getChiTietSanPhams().stream()
+        // Build image responses from active variants only
+        this.hinhAnh = activeVariants.stream()
                 .flatMap(ct -> ct.getChiTietSanPhamAnhs().stream())
                 .map(ctAnh -> {
                     HinhAnhResponse hinhAnhResp = new HinhAnhResponse();

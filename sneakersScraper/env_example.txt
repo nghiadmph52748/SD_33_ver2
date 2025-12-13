@@ -1,0 +1,21 @@
+# SQL Server Configuration
+SQL_SERVER=127.0.0.1
+SQL_DATABASE=GearUp
+SQL_USERNAME=sa
+SQL_PASSWORD=your_password_here
+SQL_PORT=1433
+
+# Cloudinary Configuration (for image uploads)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Currency Conversion Rates
+USD_TO_VND_RATE=24500
+EUR_TO_VND_RATE=26500
+
+# Image Quality Settings
+MIN_IMAGE_RESOLUTION=800  # Minimum width/height in pixels (images smaller will be rejected)
+
+# Debug Mode (set to true for detailed image extraction logs)
+DEBUG_MODE=true

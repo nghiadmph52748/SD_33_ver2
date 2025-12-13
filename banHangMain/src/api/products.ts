@@ -125,6 +125,8 @@ export interface Product {
   originalPrice?: number; // Original max price (strikethrough when has discount)
   img: string;
   sizes?: string[];
+  category?: string; // Category name from backend (tenDanhMuc)
+  brand?: string; // Brand name from backend (tenNhaSanXuat)
 }
 
 // Convert backend product to frontend format
@@ -221,12 +223,19 @@ function mapBackendToFrontend(backendProduct: BackendProduct): Product {
     primaryImage
   );
 
+  // Build product name with brand prefix if brand exists
+  const brandName = backendProduct.tenNhaSanXuat?.trim();
+  const productName = backendProduct.tenSanPham?.trim() || "";
+  const displayName = brandName && productName && !productName.toLowerCase().startsWith(brandName.toLowerCase())
+    ? `${brandName} ${productName}`
+    : productName;
+
   return {
     id: String(backendProduct.id),
     color: primaryColor,
     description: backendProduct.moTa || backendProduct.tenSanPham,
     gender: determineGender(backendProduct.tenDanhMuc || ""),
-    name: backendProduct.tenSanPham,
+    name: displayName,
     review: `Quality product from ${backendProduct.tenNhaSanXuat || "GearUp"}`,
     starrating: 4,
     price: priceInfo.minPrice,
@@ -240,6 +249,8 @@ function mapBackendToFrontend(backendProduct: BackendProduct): Product {
         : undefined,
     img: imagePath,
     sizes: sizes.length > 0 ? sizes : undefined,
+    category: backendProduct.tenDanhMuc || undefined,
+    brand: backendProduct.tenNhaSanXuat || undefined,
   };
 }
 
@@ -353,6 +364,36 @@ function isSneaker(product: BackendProduct): boolean {
     "puma",
     "converse",
     "vans",
+    "jordan",
+    "air",
+    "boost",
+    "zoom",
+    "pegasus",
+    "cortez",
+    "blazer",
+    "dunk",
+    "force",
+    "max",
+    "react",
+    "alphafly",
+    "vaporfly",
+    "ultra",
+    "yeezy",
+    "superstar",
+    "stan smith",
+    "gazelle",
+    "samba",
+    "luka",
+    "kyrie",
+    "lebron",
+    "sabrina",
+    "kd",
+    "durant",
+    "giannis",
+    "curry",
+    "tatum",
+    "ja",
+    "morant",
   ];
 
   // Also exclude non-sneaker items
@@ -476,21 +517,41 @@ async function mapBackendToFrontendAsync(
       ?.filter((v, i, arr) => arr.indexOf(v) === i) || [];
 
   await ensurePlaylistImages();
-  const resolvedImage =
-    backendProduct.hinhAnh?.[0]?.urlAnh ||
-    (await resolveProductImage(backendProduct, primaryColor));
+  
+  // Use the first image from hinhAnh array (which matches the first gallery image)
+  // hinhAnh is built from active variants' images, so hinhAnh[0] should be the first variant's first image
+  let resolvedImage: string | null = null;
+  if (backendProduct.hinhAnh && backendProduct.hinhAnh.length > 0) {
+    // Use the first image from hinhAnh, which should match the first gallery thumbnail
+    const firstImageUrl = backendProduct.hinhAnh[0]?.urlAnh;
+    if (firstImageUrl) {
+      resolvedImage = firstImageUrl;
+    }
+  }
+  
+  // Fallback to resolving from product name/color if no hinhAnh
+  if (!resolvedImage) {
+    resolvedImage = await resolveProductImage(backendProduct, primaryColor);
+  }
 
   const imagePath = mapImageToLocalPath(
     backendProduct.tenSanPham,
     resolvedImage
   );
 
+  // Build product name with brand prefix if brand exists
+  const brandName = backendProduct.tenNhaSanXuat?.trim();
+  const productName = backendProduct.tenSanPham?.trim() || "";
+  const displayName = brandName && productName && !productName.toLowerCase().startsWith(brandName.toLowerCase())
+    ? `${brandName} ${productName}`
+    : productName;
+
   return {
     id: String(backendProduct.id),
     color: primaryColor,
     description: backendProduct.moTa || backendProduct.tenSanPham,
     gender: determineGender(backendProduct.tenDanhMuc || ""),
-    name: backendProduct.tenSanPham,
+    name: displayName,
     review: `Quality product from ${backendProduct.tenNhaSanXuat || "GearUp"}`,
     starrating: 4,
     price: priceInfo.minPrice,
@@ -504,6 +565,8 @@ async function mapBackendToFrontendAsync(
         : undefined,
     img: imagePath,
     sizes: sizes.length > 0 ? sizes : undefined,
+    category: backendProduct.tenDanhMuc || undefined,
+    brand: backendProduct.tenNhaSanXuat || undefined,
   };
 }
 
@@ -519,12 +582,11 @@ export async function getSneakerProducts(): Promise<Product[]> {
       return [];
     }
 
+    // Show all active products without keyword filtering
     const activeProducts = backendProducts.filter(
       (p: BackendProduct) => p.trangThai
     );
-    const sneakers = activeProducts.filter(isSneaker);
-    const productsToShow = sneakers.length > 0 ? sneakers : activeProducts;
-    return await Promise.all(productsToShow.map(mapBackendToFrontendAsync));
+    return await Promise.all(activeProducts.map(mapBackendToFrontendAsync));
   } catch (error: any) {
     console.error("Error fetching sneaker products:", error);
     console.error("Error details:", error.response?.data || error.message);
@@ -546,6 +608,28 @@ export async function getAllProducts(): Promise<Product[]> {
     return await Promise.all(activeProducts.map(mapBackendToFrontendAsync));
   } catch (error: any) {
     console.error("Error fetching products:", error);
+    console.error("Error details:", error.response?.data || error.message);
+    return [];
+  }
+}
+
+export async function getBestSellingProducts(limit: number = 3): Promise<Product[]> {
+  try {
+    await ensurePlaylistImages();
+    const response = await axios.get<HttpResponse<BackendProduct[]>>("/api/san-pham-management/best-selling", {
+      params: { limit },
+    });
+    const backendProducts: BackendProduct[] = Array.isArray(response.data?.data)
+      ? response.data.data
+      : [];
+
+    if (backendProducts.length === 0) {
+      return [];
+    }
+
+    return await Promise.all(backendProducts.map(mapBackendToFrontendAsync));
+  } catch (error: any) {
+    console.error("Error fetching best-selling products:", error);
     console.error("Error details:", error.response?.data || error.message);
     return [];
   }

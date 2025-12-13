@@ -113,7 +113,7 @@ export default {
   "product.scrollLeft": "Cuộn sang trái",
   "product.scrollRight": "Cuộn sang phải",
   "product.viewImage": "Xem ảnh {n}",
-  "product.sportswear": "Đồ thể thao",
+  "product.sportswear": "Giày thể thao",
   "product.notFound": "Không tìm thấy sản phẩm",
   "product.notFoundDesc":
     "Chúng tôi không tìm thấy sản phẩm này. Hãy khám phá bộ sưu tập của chúng tôi.",
@@ -169,6 +169,10 @@ export default {
   "store.categorySoccer": "Bóng đá",
   "store.reset": "Đặt lại",
   "store.apply": "Áp dụng",
+  "store.gender": "Giới tính",
+  "store.men": "Nam",
+  "store.women": "Nữ",
+  "store.brands": "Thương hiệu",
   "store.menTitle": "GIÀY NAM",
   "store.womenTitle": "GIÀY NỮ",
   "store.menSubtitle":
@@ -370,6 +374,8 @@ export default {
   "auth.continueWithGoogle": "Tiếp tục với Google",
   "auth.continueWithFacebook": "Tiếp tục với Facebook",
   "auth.loginSuccess": "Chào mừng {name}",
+  "auth.oauthFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
+  "auth.oauthStateMismatch": "Lỗi bảo mật: State mismatch",
   "chat.staffTab": "Chat với nhân viên",
   "chat.aiTab": "Chat AI",
   "chat.searchPlaceholder": "Tìm kiếm cuộc trò chuyện…",

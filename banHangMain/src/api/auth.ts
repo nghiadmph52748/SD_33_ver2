@@ -74,3 +74,30 @@ export function getMe(): Promise<ApiResponse<CustomerProfile>> {
     .get<ApiResponse<CustomerProfile>>("/api/khach-hang/auth/me")
     .then((res) => res as unknown as ApiResponse<CustomerProfile>);
 }
+
+export interface UpdateProfilePayload {
+  tenKhachHang?: string;
+  soDienThoai?: string;
+  email?: string;
+}
+
+export function updateProfile(
+  payload: UpdateProfilePayload
+): Promise<ApiResponse<CustomerProfile>> {
+  return axios
+    .put<ApiResponse<CustomerProfile>>("/api/khach-hang/auth/update-profile", payload)
+    .then((res) => res as unknown as ApiResponse<CustomerProfile>);
+}
+
+export interface OAuthLoginPayload {
+  token: string;
+  provider: 'google';
+}
+
+export function oauthLogin(
+  payload: OAuthLoginPayload
+): Promise<ApiResponse<LoginResponseData>> {
+  return axios
+    .post<ApiResponse<LoginResponseData>>('/api/khach-hang/auth/oauth/login', payload)
+    .then((res) => res as unknown as ApiResponse<LoginResponseData>);
+}

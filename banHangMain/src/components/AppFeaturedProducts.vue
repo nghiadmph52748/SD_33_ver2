@@ -90,6 +90,7 @@ h4 {
   margin: 10px 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 

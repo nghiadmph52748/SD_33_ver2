@@ -15,7 +15,7 @@
       </div>
       <div class="title-row">
         <div>
-          <h1 class="title">{{ $t('store.womenTitle') }} <span class="count" v-if="!loading">[{{ womenProducts.length }}]</span></h1>
+          <h1 class="title">{{ $t('store.womenTitle') }} <span class="count" v-if="!loading">[{{ products.length }}]</span></h1>
           <p class="subtitle">
             {{ $t('store.womenSubtitle') }}
           </p>
@@ -31,36 +31,147 @@
     </div>
 
     <div v-if="!error">
-      <AppStoreGrid :data="womenProducts" :loading="loading" />
-      <a-empty v-if="!loading && womenProducts.length === 0" :description="$t('store.noProducts')" />
+      <AppStoreGrid :data="products" :loading="loading" source-page="women" />
+      <a-empty v-if="!loading && products.length === 0" :description="$t('store.noProducts')" />
     </div>
     <a-empty v-else-if="error" :description="error" />
-    <FilterSortDrawer v-model:visible="filterVisible" :total="womenProducts.length" @apply="applyFilters" />
+    <FilterSortDrawer 
+      v-model:visible="filterVisible" 
+      :total="products.length" 
+      :max-price="maxProductPrice"
+      :brands="availableBrands"
+      @apply="applyFilters" 
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import AppStoreGrid from "@/components/AppStoreGrid.vue";
 import { useCartStore } from "@/stores/cart";
 import FilterSortDrawer from "@/components/FilterSortDrawer.vue";
+import type { Product } from "@/api/products";
 
 const { t } = useI18n();
 const cartStore = useCartStore();
-const { womenProducts, loading, error } = storeToRefs(cartStore);
+const { products: allProducts, loading, error } = storeToRefs(cartStore);
 const filterVisible = ref(false);
 
+const filterState = ref({
+  sort: 'featured',
+  price: [0, 50000000] as [number, number],
+  categories: [] as string[],
+});
+
 onMounted(async () => {
-  if (womenProducts.value.length === 0) {
-    await cartStore.fetchProducts(true); // Only sneakers
+  await cartStore.fetchProducts(true); // Only sneakers
+});
+
+// Get unique brands from women products
+const availableBrands = computed(() => {
+  if (!allProducts.value || !Array.isArray(allProducts.value)) {
+    return [];
   }
+  const brands = new Set<string>();
+  allProducts.value
+    .filter(p => p.gender === "Female")
+    .forEach(p => {
+      if (p.brand) {
+        brands.add(p.brand);
+      }
+    });
+  return Array.from(brands).sort();
+});
+
+function matchesFilter(product: Product, filters: string[]): boolean {
+  if (filters.length === 0) return true;
+  
+  // Separate gender filters and brand filters
+  const genderFilters = filters.filter(f => f === 'Male' || f === 'Female');
+  const brandFilters = filters.filter(f => f !== 'Male' && f !== 'Female');
+  
+  // Check gender match (if gender filters are selected)
+  // Note: We're already filtering for Female, but this allows for multiple gender selection
+  if (genderFilters.length > 0) {
+    const genderMatches = genderFilters.some(gender => product.gender === gender);
+    if (!genderMatches) return false;
+  }
+  
+  // Check brand match (if brand filters are selected)
+  if (brandFilters.length > 0) {
+    const brandMatches = brandFilters.some(brand => 
+      product.brand && product.brand.toLowerCase() === brand.toLowerCase()
+    );
+    if (!brandMatches) return false;
+  }
+  
+  return true;
+}
+
+// Calculate max price from women products (before filtering)
+const maxProductPrice = computed(() => {
+  if (!allProducts.value || !Array.isArray(allProducts.value)) {
+    return 50000000;
+  }
+  const womenProducts = allProducts.value.filter(p => p.gender === "Female");
+  if (womenProducts.length === 0) return 50000000;
+  return Math.max(...womenProducts.map(p => p.priceMax || p.price));
+});
+
+const products = computed(() => {
+  // Safety check: ensure allProducts is an array
+  if (!allProducts.value || !Array.isArray(allProducts.value)) {
+    return [];
+  }
+
+  // Start with all products filtered to Female gender
+  let filtered = allProducts.value.filter(p => p.gender === "Female");
+  
+  // If no Female products, show some products as fallback (maybe products without gender set or all products)
+  if (filtered.length === 0) {
+    // Fallback: show first few products if no Female products found
+    filtered = allProducts.value.slice(0, 10);
+  }
+
+  // Filter by brands (categories now contains brands)
+  if (filterState.value.categories.length > 0) {
+    filtered = filtered.filter(p => matchesFilter(p, filterState.value.categories));
+  }
+
+  // Filter by price range
+  filtered = filtered.filter(p => {
+    const productPrice = p.priceMax || p.price;
+    return productPrice >= filterState.value.price[0] && productPrice <= filterState.value.price[1];
+  });
+
+  // Sort
+  switch (filterState.value.sort) {
+    case 'price_low_high':
+      filtered.sort((a, b) => (a.priceMax || a.price) - (b.priceMax || b.price));
+      break;
+    case 'price_high_low':
+      filtered.sort((a, b) => (b.priceMax || b.price) - (a.priceMax || a.price));
+      break;
+    case 'newest':
+      filtered.sort((a, b) => Number(b.id) - Number(a.id));
+      break;
+    case 'featured':
+    default:
+      // Keep original order (featured products first)
+      break;
+  }
+
+  return filtered;
 });
 
 function applyFilters(payload: { sort: string; price: [number, number]; categories: string[] }) {
-  // Hook for future filter logic; currently just closes drawer via v-model.
-  // Sorting and filtering can be implemented in store or locally.
+  filterState.value = {
+    sort: payload.sort,
+    price: payload.price,
+    categories: payload.categories,
+  };
 }
 </script>
 

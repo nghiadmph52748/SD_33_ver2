@@ -22,11 +22,13 @@ const PUBLIC_ENDPOINTS: PublicEndpoint[] = [
   { path: "/api/san-pham-management/playlist" },
   { path: "/api/san-pham-management/paging" },
   { path: "/api/san-pham-management/detail" },
+  { path: "/api/san-pham-management/best-selling" },
   { path: "/api/anh-san-pham-management" }, // allow product images without token
   { path: "/api/public" },
   { path: "/api/payment/vnpay/create" },
   { path: "/api/payment/vnpay/return" },
   { path: "/api/payment/vnpay/ipn" },
+  { path: "/api/khach-hang/auth/oauth/login" }, // OAuth login endpoint
   // Guest order lookup endpoints (GET only)
   { path: "/api/hoa-don-management", methods: ["GET"] },
   { path: "/api/timeline-don-hang", methods: ["GET"] },

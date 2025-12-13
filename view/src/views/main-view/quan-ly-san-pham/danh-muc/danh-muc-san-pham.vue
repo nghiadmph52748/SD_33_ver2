@@ -277,8 +277,15 @@ const transformedDanhMucList = computed(() => {
   }
 
   // Apply status filter
-  if (filters.trangThai !== undefined && filters.trangThai !== '') {
-    filteredList = filteredList.filter((item) => item.trangThai === filters.trangThai)
+  // Only filter if trangThai is explicitly set to true or false (not empty string or null)
+  // Empty string means "show all" (Tất cả)
+  if (filters.trangThai !== undefined && filters.trangThai !== '' && filters.trangThai !== null) {
+    filteredList = filteredList.filter((item) => {
+      // Normalize both values to boolean for comparison
+      const filterValue = Boolean(filters.trangThai)
+      const itemValue = Boolean(item.trangThai)
+      return itemValue === filterValue
+    })
   }
 
   // Apply NhaSanXuat filter
@@ -292,15 +299,47 @@ const transformedDanhMucList = computed(() => {
   }
 
   // Apply price range filter
-  if (filters.giaTu !== undefined && filters.giaDen !== undefined) {
-    filteredList = filteredList.filter(
-      (item) =>
-        (item.giaNhoNhat === null || item.giaNhoNhat >= filters.giaTu) && (item.giaLonNhat === null || item.giaLonNhat <= filters.giaDen)
-    )
+  // Only apply if user has actively changed the price range from defaults
+  // Products with null prices (no active variants) should always pass
+  const isPriceFilterChanged = filters.giaTu > 0 || (filters.giaDen !== undefined && filters.giaDen < maxPrice.value)
+  
+  if (isPriceFilterChanged && filters.giaTu !== undefined && filters.giaDen !== undefined) {
+    filteredList = filteredList.filter((item) => {
+      // If product has no prices (all variants deleted), always include it
+      if ((item.giaNhoNhat === null || item.giaNhoNhat === undefined) && 
+          (item.giaLonNhat === null || item.giaLonNhat === undefined)) {
+        return true
+      }
+      // If only one price is null, check the other
+      if (item.giaNhoNhat === null || item.giaNhoNhat === undefined) {
+        return (item.giaLonNhat ?? 0) <= filters.giaDen
+      }
+      if (item.giaLonNhat === null || item.giaLonNhat === undefined) {
+        return (item.giaNhoNhat ?? 0) >= filters.giaTu
+      }
+      // Both prices exist, check range
+      return (item.giaNhoNhat ?? 0) >= filters.giaTu && (item.giaLonNhat ?? 0) <= filters.giaDen
+    })
   }
 
-  // Update total elements after filtering for frontend pagination
-  totalElements.value = danhMucList.value.totalElements || filteredList.length
+  // Check if any client-side filters are active
+  // Price filter is only active if user has changed it from default (0 to maxPrice)
+  const isPriceFilterActive = isPriceFilterChanged
+  
+  const hasActiveFilters = filters.search || 
+    (filters.trangThai !== undefined && filters.trangThai !== '' && filters.trangThai !== null) ||
+    filters.idNhaSanXuat || 
+    filters.idXuatXu ||
+    isPriceFilterActive
+
+  // Update total elements after filtering
+  // If filters are active, use filtered count; otherwise use backend total
+  totalElements.value = hasActiveFilters ? filteredList.length : (danhMucList.value.totalElements || filteredList.length)
+  
+  // Update pagination total to match filtered results when filters are active
+  if (hasActiveFilters) {
+    pagination.value.total = filteredList.length
+  }
 
   // Nếu đang sử dụng backend pagination thì không cần frontend pagination
   const result = filteredList.map((item) => ({
@@ -427,9 +466,16 @@ const loadDanhMucList = async () => {
           console.error('Error loading all danh muc for max price:', error)
         }
 
-        // Update price range max value
-        if (priceRange.value[1] < maxPrice.value) {
-          priceRange.value[1] = maxPrice.value
+        // Update price range max value and filter default
+        if (maxPrice.value > 0) {
+          // Update priceRange slider max
+          if (priceRange.value[1] < maxPrice.value) {
+            priceRange.value[1] = maxPrice.value
+          }
+          // Update filter default to match maxPrice so no products are excluded by default
+          if (filters.giaDen === 5000000 || filters.giaDen < maxPrice.value) {
+            filters.giaDen = maxPrice.value
+          }
         }
       } else {
         danhMucList.value = response.data
@@ -671,6 +717,7 @@ const resetFilters = () => {
   // Reset pagination to first page
   pagination.value.current = 1
 
+  // Reload data to restore backend pagination total
   loadDanhMucList()
 }
 

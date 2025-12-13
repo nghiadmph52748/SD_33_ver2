@@ -28,10 +28,8 @@ const cartStore = useCartStore();
 const { t, locale } = useI18n();
 
 onMounted(async () => {
-  // Fetch sneaker products on home page mount if not already loaded
-  if (cartStore.products.length === 0) {
-    await cartStore.fetchProducts(true);
-  }
+  // Fetch sneaker products on home page mount
+  await cartStore.fetchProducts(true);
   // Set dynamic page title using i18n
   document.title = t('home.title');
 });

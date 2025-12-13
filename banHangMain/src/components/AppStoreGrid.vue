@@ -27,7 +27,10 @@
           v-else
           v-for="item in filteredProducts"
           :key="item.id"
-          :to="`/product/${item.id}`"
+          :to="{
+            path: `/product/${item.id}`,
+            query: props.sourcePage && props.sourcePage !== 'all' ? { from: props.sourcePage } : {}
+          }"
           class="item"
           role="listitem"
           :aria-labelledby="`product-title-${item.id}`"
@@ -92,6 +95,7 @@ import { useI18n } from "vue-i18n";
 const props = defineProps<{
   data: Product[];
   loading?: boolean;
+  sourcePage?: 'men' | 'women' | 'all';
 }>();
 
 const skeletonCount = 8; // Number of skeleton cards to show

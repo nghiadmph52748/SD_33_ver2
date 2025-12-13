@@ -6,19 +6,19 @@
     </button>
     <ul class="brand-scroller" ref="scroller" role="list">
       <li class="brand-item">
-        <RouterLink to="/products?brand=nike" class="brand-link" aria-label="Nike">
+        <RouterLink :to="{ path: '/all', query: { brand: 'Nike' } }" class="brand-link" aria-label="Nike">
           <img src="@/assets/icons/Nike.png" alt="Nike" class="brand-img" />
           <span>Nike</span>
         </RouterLink>
       </li>
       <li class="brand-item">
-        <RouterLink to="/products?brand=jordan" class="brand-link" aria-label="Jordan">
+        <RouterLink :to="{ path: '/all', query: { brand: 'Jordan' } }" class="brand-link" aria-label="Jordan">
           <img src="@/assets/icons/Jordan.png" alt="Jordan" class="brand-img" />
           <span>Jordan</span>
         </RouterLink>
       </li>
       <li class="brand-item">
-        <RouterLink to="/products?brand=adidas" class="brand-link" aria-label="Adidas">
+        <RouterLink :to="{ path: '/all', query: { brand: 'Adidas' } }" class="brand-link" aria-label="Adidas">
           <img src="@/assets/icons/adidas.png" alt="Adidas" class="brand-img" />
           <span>Adidas</span>
         </RouterLink>
