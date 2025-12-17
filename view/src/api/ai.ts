@@ -111,6 +111,9 @@ export async function chatWithAIStream(
             if (data.type === 'start') {
               // Send metadata from start event
               onChunk('', data)
+            } else if (data.type === 'suggestions') {
+              // Forward follow-up suggestions metadata so UI can render suggestion chips
+              onChunk('', data)
             } else if (data.type === 'content') {
               onChunk(data.content)
             } else if (data.type === 'end') {

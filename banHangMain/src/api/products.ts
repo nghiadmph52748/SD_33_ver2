@@ -236,7 +236,7 @@ function mapBackendToFrontend(backendProduct: BackendProduct): Product {
     description: backendProduct.moTa || backendProduct.tenSanPham,
     gender: determineGender(backendProduct.tenDanhMuc || ""),
     name: displayName,
-    review: `Quality product from ${backendProduct.tenNhaSanXuat || "GearUp"}`,
+    review: `Sản phẩm chất lượng từ ${backendProduct.tenNhaSanXuat || "GearUp"}`,
     starrating: 4,
     price: priceInfo.minPrice,
     priceMax:
@@ -320,6 +320,14 @@ function mapImageToLocalPath(
 
   // Fallback to flat public folder by name
   return `/products/${normalizedName}.jpg`;
+}
+
+// Public helper for resolving product image path from name + optional backend URL
+export function mapProductNameToImagePath(
+  productName: string,
+  backendImageUrl?: string | null
+): string {
+  return mapImageToLocalPath(productName, backendImageUrl ?? null);
 }
 
 // Determine gender from category name
@@ -552,7 +560,7 @@ async function mapBackendToFrontendAsync(
     description: backendProduct.moTa || backendProduct.tenSanPham,
     gender: determineGender(backendProduct.tenDanhMuc || ""),
     name: displayName,
-    review: `Quality product from ${backendProduct.tenNhaSanXuat || "GearUp"}`,
+    review: `Sản phẩm chất lượng từ ${backendProduct.tenNhaSanXuat || "GearUp"}`,
     starrating: 4,
     price: priceInfo.minPrice,
     priceMax:

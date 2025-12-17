@@ -113,7 +113,12 @@ export function useProductModal(params: { allProductVariants: Ref<BienTheSanPham
       const availableProducts = await fetchAllAvailableProducts(100)
       allProductVariants.value = availableProducts
       productPagination.value.total = availableProducts.length
-      productPagination.value.current = 1
+      // Preserve current page instead of resetting to page 1
+      // Only reset if current page exceeds total pages after update
+      const maxPage = Math.ceil(availableProducts.length / (productPagination.value.pageSize || 10))
+      if (productPagination.value.current > maxPage && maxPage > 0) {
+        productPagination.value.current = maxPage
+      }
     } catch (error) {
       console.error('Error loading all products:', error)
       Message.error('Không thể tải sản phẩm')

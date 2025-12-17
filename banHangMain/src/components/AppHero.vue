@@ -8,31 +8,18 @@
       <div class="hero-overlay" :key="`overlay-${index}`">
         <h3 class="hero-title">{{ currentSlide.title }}</h3>
         <p class="hero-sub">{{ currentSlide.sub }}</p>
-        <RouterLink to="/products">
+        <RouterLink to="/all">
           <button class="btn btn-outline-light hero-cta">{{ t('buttons.shopNow') }}</button>
         </RouterLink>
       </div>
     </Transition>
-
-    <!-- Navigation arrows -->
-    <div class="hero-nav" aria-label="Hero navigation">
-      <button class="nav-btn nav-prev" aria-label="Previous slide" @click="prev">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-        </svg>
-      </button>
-      <button class="nav-btn nav-next" aria-label="Next slide" @click="next">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
-        </svg>
-      </button>
-    </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { RouterLink } from "vue-router";
 import heroNike from '@/assets/hero/Nike.png'
 import heroNikeAlt from '@/assets/hero/Nike1.png'
 import heroAdidas from '@/assets/hero/adidas.png'
@@ -156,13 +143,21 @@ onBeforeUnmount(stop);
 /* Navigation arrows */
 .hero-nav {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 16px;
   pointer-events: none; /* allow clicks only on buttons */
+  box-sizing: border-box;
+  max-width: 100vw;
+  overflow: visible;
 }
+
 .nav-btn {
   pointer-events: auto;
   width: 42px;
@@ -177,9 +172,20 @@ onBeforeUnmount(stop);
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 14px rgba(0,0,0,0.25);
   transition: transform .12s ease, background-color .12s ease, border-color .12s ease;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }
-.nav-btn:hover { background: rgba(0,0,0,0.55); border-color: #ffffff; transform: translateY(-1px); }
-.nav-btn:active { transform: translateY(0) scale(0.96); }
+
+.nav-btn:hover { 
+  background: rgba(0,0,0,0.55); 
+  border-color: #ffffff; 
+  transform: translateY(-1px); 
+}
+
+.nav-btn:active { 
+  transform: translateY(0) scale(0.96); 
+}
 
 @media (min-width: 960px) { .hero-overlay { left: 50%; } }
 </style>

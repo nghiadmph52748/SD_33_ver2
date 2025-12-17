@@ -162,6 +162,9 @@ export function useQrScanner(params: {
   }
 
   const handleQRScanSuccess = async (decodedText: string) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useQrScanner.ts:164',message:'QR scan started',data:{decodedText,decodedTextLength:decodedText.length,decodedTextTrimmed:decodedText.trim(),totalProducts:allProductVariants.value.length,productsWithQr:allProductVariants.value.filter(p=>p.qrcode).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     try {
       if (qrScannerInstance.value) {
         try {
@@ -169,27 +172,105 @@ export function useQrScanner(params: {
         } catch {}
       }
 
-      const matchedProduct = allProductVariants.value.find((product) => {
-        if (product.qrcode) {
-          const qrMatch =
-            decodedText === product.qrcode ||
-            product.qrcode === decodedText ||
-            decodedText.includes(product.qrcode) ||
-            product.qrcode.includes(decodedText) ||
-            decodedText === product.id?.toString() ||
-            decodedText === product.maChiTietSanPham
-          return qrMatch
+      // #region agent log
+      const allMatches: Array<{productId:any,productName:string,qrcode:string,maChiTietSanPham:string,matchType:string}> = [];
+      // #endregion
+
+      // First, try exact matches and product code/ID matches (most specific)
+      let matchedProduct = allProductVariants.value.find((product) => {
+        const exactQrMatch = decodedText === product.qrcode || product.qrcode === decodedText
+        const idMatch = decodedText === product.id?.toString()
+        const codeMatch = decodedText === product.maChiTietSanPham
+        const trimmedCodeMatch = decodedText.trim() === product.maChiTietSanPham?.trim()
+        
+        // #region agent log
+        if (exactQrMatch || idMatch || codeMatch || trimmedCodeMatch) {
+          const matchType = exactQrMatch ? 'exactQr' : idMatch ? 'id' : codeMatch ? 'code' : 'trimmedCode'
+          allMatches.push({
+            productId: product.id,
+            productName: product.tenSanPham || '',
+            qrcode: product.qrcode || '',
+            maChiTietSanPham: product.maChiTietSanPham || '',
+            matchType
+          })
         }
-        return false
+        // #endregion
+        
+        return exactQrMatch || idMatch || codeMatch || trimmedCodeMatch
       })
+      
+      // If no exact match found, try matching product code suffix (e.g., "85" matches "CTSP00085")
+      if (!matchedProduct) {
+        const numericMatch = /^\d+$/.test(decodedText.trim())
+        if (numericMatch) {
+          const numericValue = decodedText.trim()
+          matchedProduct = allProductVariants.value.find((product) => {
+            // Check if product code ends with the numeric value (e.g., "CTSP00085" ends with "85")
+            const codeEndsWith = product.maChiTietSanPham?.endsWith(numericValue) || false
+            // Check if product ID matches
+            const idMatch = product.id?.toString() === numericValue
+            
+            // #region agent log
+            if (codeEndsWith || idMatch) {
+              const matchType = codeEndsWith ? 'codeSuffix' : 'id'
+              allMatches.push({
+                productId: product.id,
+                productName: product.tenSanPham || '',
+                qrcode: product.qrcode || '',
+                maChiTietSanPham: product.maChiTietSanPham || '',
+                matchType
+              })
+            }
+            // #endregion
+            
+            return codeEndsWith || idMatch
+          })
+        }
+      }
+      
+      // Last resort: substring matching only if QR code is NOT a URL (to avoid false matches on image URLs)
+      if (!matchedProduct) {
+        matchedProduct = allProductVariants.value.find((product) => {
+          if (!product.qrcode) return false
+          // Skip substring matching if QR code looks like a URL (contains http:// or https://)
+          const isUrl = product.qrcode.includes('http://') || product.qrcode.includes('https://')
+          if (isUrl) return false
+          
+          const includes1 = decodedText.includes(product.qrcode)
+          const includes2 = product.qrcode.includes(decodedText)
+          
+          // #region agent log
+          if (includes1 || includes2) {
+            const matchType = includes1 ? 'decodedIncludesQr' : 'qrIncludesDecoded'
+            allMatches.push({
+              productId: product.id,
+              productName: product.tenSanPham || '',
+              qrcode: product.qrcode || '',
+              maChiTietSanPham: product.maChiTietSanPham || '',
+              matchType
+            })
+          }
+          // #endregion
+          
+          return includes1 || includes2
+        })
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useQrScanner.ts:200',message:'Product matching results',data:{decodedText,allMatchesCount:allMatches.length,allMatches,matchedProductId:matchedProduct?.id,matchedProductName:matchedProduct?.tenSanPham,matchedProductQr:matchedProduct?.qrcode,matchedProductCode:matchedProduct?.maChiTietSanPham},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D'})}).catch(()=>{});
+      // #endregion
 
       if (!matchedProduct) {
+        // #region agent log
+        const availableQrCodes = allProductVariants.value
+          .filter((p) => p.qrcode)
+          .map((p) => ({ id: p.id, qrcode: p.qrcode, maChiTietSanPham: p.maChiTietSanPham, tenSanPham: p.tenSanPham }))
+        fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useQrScanner.ts:210',message:'No product matched',data:{decodedText,availableQrCodesCount:availableQrCodes.length,availableQrCodes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+        // #endregion
         console.error('[DEBUG] No product found with QR code:', decodedText)
         console.error(
           '[DEBUG] Available QR codes in products:',
-          allProductVariants.value
-            .filter((p) => p.qrcode)
-            .map((p) => ({ id: p.id, qrcode: p.qrcode, maChiTietSanPham: p.maChiTietSanPham }))
+          availableQrCodes
         )
 
         const fallbackId = parseInt(decodedText.trim(), 10)
@@ -212,6 +293,9 @@ export function useQrScanner(params: {
         return
       }
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useQrScanner.ts:220',message:'Adding matched product to cart',data:{decodedText,matchedProductId:matchedProduct.id,matchedProductName:matchedProduct.tenSanPham,matchedProductQr:matchedProduct.qrcode,matchedProductCode:matchedProduct.maChiTietSanPham,allMatchesCount:allMatches.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D'})}).catch(()=>{});
+      // #endregion
       await addProductToCart(matchedProduct, 1)
       await closeQRScanner()
       Message.success(`Đã thêm sản phẩm "${matchedProduct.tenSanPham}" vào giỏ hàng`)

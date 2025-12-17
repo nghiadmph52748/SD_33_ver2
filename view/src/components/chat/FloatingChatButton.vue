@@ -3,11 +3,12 @@
     <!-- Chat drawer -->
     <a-drawer
       v-model:visible="drawerVisible"
-      :width="400"
+      :width="drawerWidth"
       :footer="false"
       placement="right"
       :mask-closable="true"
       unmount-on-close
+      :body-style="drawerBodyStyle"
       class="chat-drawer"
     >
       <template #title>
@@ -167,6 +168,14 @@ const chatStore = useChatStore()
 const userStore = useUserStore()
 
 const drawerVisible = ref(false)
+const drawerWidth = ref<number | string>(400)
+const drawerBodyStyle = computed(() => ({
+  padding: 0,
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  height: 'calc(100vh - 120px)',
+}))
 const searchKeyword = ref('')
 const messageInput = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -350,6 +359,18 @@ function formatMessageTime(time: string | null | undefined) {
   return dayjs(time).format('HH:mm')
 }
 
+function updateDrawerWidth() {
+  if (typeof window === 'undefined') return
+  const vw = window.innerWidth
+  if (vw <= 640) {
+    drawerWidth.value = '100vw'
+  } else if (vw <= 1024) {
+    drawerWidth.value = 480
+  } else {
+    drawerWidth.value = 560
+  }
+}
+
 async function sendMessage() {
   if (!messageInput.value.trim() || !activeConversation.value) return
 
@@ -463,6 +484,11 @@ watch(activeConversation, async (newConv) => {
 
 // Connect WebSocket when component mounts to receive real-time messages
 onMounted(async () => {
+  updateDrawerWidth()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', updateDrawerWidth)
+  }
+
   // Fetch initial data
   await chatStore.fetchConversations()
   await chatStore.fetchUnreadCount()
@@ -478,6 +504,9 @@ onMounted(async () => {
 
 // Cleanup on unmount
 onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateDrawerWidth)
+  }
   // Don't disconnect WebSocket here - keep it alive for real-time updates
   // It will be disconnected when user logs out
 })
@@ -700,6 +729,7 @@ if (typeof window !== 'undefined') {
 }
 
 /* Center header content and keep close button pinned right */
+/* Center header and keep close button on the right */
 .chat-drawer :deep(.arco-drawer-header) {
   position: relative;
   display: block;
@@ -715,10 +745,34 @@ if (typeof window !== 'undefined') {
   right: 16px;
 }
 
+/* Basic tweak for Arco drawer body; main layout is controlled via :body-style */
+.chat-drawer :deep(.arco-drawer-body) {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
 .drawer-content {
-  height: calc(100vh - 120px);
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* In the AI drawer, use flex layout: header (shrink), messages (scroll), input (fixed) */
+.chat-drawer :deep(.ai-chatbot .arco-card-header) {
+  position: static !important;
+  z-index: auto !important;
+}
+
+.chat-drawer :deep(.ai-chatbot .messages-container) {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;  /* this is the only scroll area */
+}
+
+.chat-drawer :deep(.ai-chatbot .input-container) {
+  position: static !important;
+  flex-shrink: 0 !important;
 }
 
 .ai-chat-container {
@@ -774,10 +828,10 @@ if (typeof window !== 'undefined') {
     }
 
     .messages-container {
-      overflow-y: auto;
       padding: 12px;
       flex: 1 1 auto !important;
       min-height: 0 !important;
+      overflow-y: auto !important;
     }
 
     .input-container {

@@ -36,7 +36,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,21 +60,127 @@ public class VnPayController {
     private final NotificationService notificationService;
 
     @PostMapping("/create")
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public ResponseObject<VnpayCreatePaymentResponse> createPayment(@RequestBody VnpayCreatePaymentRequest req,
             HttpServletRequest http) {
         try {
+            // Check for existing pending payment for this order (atomic check with transaction isolation)
+            if (req.getOrderId() != null && !req.getOrderId().isBlank()) {
+                var existingPendingList = orderRepo.findPendingByOrderIdPrefix(req.getOrderId());
+                if (!existingPendingList.isEmpty()) {
+                    // Check the most recent pending payment
+                    OrderPayment pending = existingPendingList.stream()
+                            .max((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
+                            .orElse(null);
+                    
+                    if (pending != null) {
+                        // Check if transaction is expired (older than 15 minutes)
+                        long minutesSinceCreation = java.time.Duration.between(
+                                pending.getCreatedAt().toInstant(),
+                                java.time.Instant.now()
+                        ).toMinutes();
+                        
+                        if (minutesSinceCreation < 15) {
+                            log.warn("[VNPAY-CREATE] Pending payment found for order {}: txnRef={}, age={} minutes", 
+                                    req.getOrderId(), pending.getTxnRef(), minutesSinceCreation);
+                            return ResponseObject.error("Bạn còn một giao dịch chưa thanh toán. Vui lòng hoàn tất giao dịch hiện tại hoặc đợi hết thời gian chờ.");
+                        } else {
+                            // Mark expired transactions as failed
+                            existingPendingList.forEach(expired -> {
+                                expired.setStatus("FAILED");
+                                orderRepo.save(expired);
+                            });
+                            log.info("[VNPAY-CREATE] Marked {} expired payment(s) as FAILED for order {}", 
+                                    existingPendingList.size(), req.getOrderId());
+                        }
+                    }
+                }
+            }
+
             String ip = getClientIp(http);
             String origin = http.getHeader("Origin");
-            VnpayCreatePaymentResponse response = vnPayService.createPayment(req, ip, origin);
-
-            // Persist a pending order for tracking
-            OrderPayment op = new OrderPayment();
-            op.setTxnRef(response.getTxnRef());
+            
+            // Generate txnRef first and save OrderPayment BEFORE calling VNPay
+            // This prevents duplicate requests to VNPay for the same orderId
+            String txnRef = null;
+            OrderPayment op = null;
+            int maxRetries = 5;
+            
+            for (int attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    // Generate unique txnRef
+                    String baseId = StringUtils.hasText(req.getOrderId()) ? req.getOrderId() : "HD";
+                    String uuid = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+                    txnRef = (baseId + "-" + uuid).replaceAll("[^A-Za-z0-9_-]", "");
+                    if (txnRef.length() > 32) {
+                        int maxBaseIdLength = 32 - uuid.length() - 1;
+                        if (maxBaseIdLength > 0 && baseId.length() > maxBaseIdLength) {
+                            baseId = baseId.substring(baseId.length() - maxBaseIdLength);
+                        }
+                        txnRef = (baseId + "-" + uuid).replaceAll("[^A-Za-z0-9_-]", "");
+                        if (txnRef.length() > 32) {
+                            txnRef = txnRef.substring(0, 32);
+                        }
+                    }
+                    
+                    // Check if txnRef already exists (shouldn't happen with UUID, but check anyway)
+                    var existingTxnRef = orderRepo.findByTxnRef(txnRef);
+                    if (existingTxnRef.isPresent()) {
+                        log.warn("[VNPAY-CREATE] txnRef collision (unlikely with UUID): {}, retrying...", txnRef);
+                        if (attempt < maxRetries - 1) {
+                            try {
+                                Thread.sleep(10);
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                            }
+                            continue;
+                        }
+                        throw new RuntimeException("Failed to generate unique txnRef after " + maxRetries + " attempts");
+                    }
+                    
+                    // Save OrderPayment FIRST to create a lock and prevent duplicate requests
+                    op = new OrderPayment();
+                    op.setTxnRef(txnRef);
             op.setAmount(req.getAmount());
             op.setStatus("PENDING");
-            orderRepo.save(op);
+                    orderRepo.saveAndFlush(op); // Flush to ensure it's committed immediately
+                    
+                    log.info("[VNPAY-CREATE] Created pending payment record: txnRef={}, orderId={}", txnRef, req.getOrderId());
+                    
+                    // Now call VNPay service with the pre-generated txnRef
+                    // This ensures we only call VNPay after we have a database record, preventing duplicates
+                    VnpayCreatePaymentResponse response = vnPayService.createPaymentWithTxnRef(req, ip, origin, txnRef);
 
             return new ResponseObject<>(response);
+                    
+                } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                    // Unique constraint violation - txnRef already exists (shouldn't happen with UUID)
+                    log.error("[VNPAY-CREATE] Unexpected txnRef collision: {}", txnRef, e);
+                    if (attempt < maxRetries - 1) {
+                        try {
+                            Thread.sleep(20 + (attempt * 10));
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                        }
+                        continue;
+                    }
+                    throw new RuntimeException("Failed to create unique transaction reference after " + maxRetries + " attempts", e);
+                } catch (Exception e) {
+                    // If VNPay call fails, mark the payment as failed
+                    if (op != null && op.getId() != null) {
+                        try {
+                            op.setStatus("FAILED");
+                            orderRepo.save(op);
+                            log.warn("[VNPAY-CREATE] Marked payment as FAILED due to error: txnRef={}", txnRef);
+                        } catch (Exception saveError) {
+                            log.error("[VNPAY-CREATE] Failed to mark payment as FAILED: txnRef={}", txnRef, saveError);
+                        }
+                    }
+                    throw e;
+                }
+            }
+            
+            throw new RuntimeException("Failed to create payment after " + maxRetries + " attempts");
         } catch (Exception e) {
             return ResponseObject.error("VNPAY create error: " + e.getMessage());
         }
@@ -99,6 +208,27 @@ public class VnPayController {
         String code = req.getParameter("vnp_ResponseCode");
         if (code == null || code.isBlank()) {
             code = "99";
+        }
+
+        // Handle error code 15: Transaction timeout or duplicate transaction
+        if ("15".equals(code)) {
+            try {
+                String txnRef = req.getParameter("vnp_TxnRef");
+                if (txnRef != null && !txnRef.isBlank()) {
+                    // Mark the order as failed due to timeout
+                    var orderOpt = orderRepo.findByTxnRef(txnRef);
+                    if (orderOpt.isPresent()) {
+                        OrderPayment order = orderOpt.get();
+                        if ("PENDING".equals(order.getStatus())) {
+                            order.setStatus("FAILED");
+                            orderRepo.save(order);
+                            log.warn("[VNPAY-RETURN] Transaction timeout (code 15) for txnRef: {}", txnRef);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("[VNPAY-RETURN] Failed to handle error code 15", e);
+            }
         }
 
         // Fallback: if payment is confirmed success (code 00), also mark invoice paid
@@ -166,6 +296,55 @@ public class VnPayController {
         return ResponseEntity.status(302).location(URI.create(redirect.toString())).build();
     }
 
+    @GetMapping("/check-pending")
+    public ResponseObject<Map<String, Object>> checkPendingPayment(@RequestParam(required = false) String orderId) {
+        try {
+            if (orderId == null || orderId.isBlank()) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("hasPending", false);
+                return ResponseObject.success(result, "No pending payment found");
+            }
+
+            var pendingPayment = orderRepo.findAll().stream()
+                    .filter(op -> "PENDING".equals(op.getStatus()))
+                    .filter(op -> op.getTxnRef() != null && op.getTxnRef().startsWith(orderId))
+                    .findFirst();
+
+            if (pendingPayment.isPresent()) {
+                OrderPayment pending = pendingPayment.get();
+                long minutesSinceCreation = java.time.Duration.between(
+                        pending.getCreatedAt().toInstant(),
+                        java.time.Instant.now()
+                ).toMinutes();
+
+                Map<String, Object> result = new HashMap<>();
+                result.put("hasPending", true);
+                result.put("txnRef", pending.getTxnRef());
+                result.put("minutesSinceCreation", minutesSinceCreation);
+                result.put("isExpired", minutesSinceCreation >= 15);
+                
+                if (minutesSinceCreation >= 15) {
+                    // Mark expired transaction as failed
+                    pending.setStatus("FAILED");
+                    orderRepo.save(pending);
+                    result.put("hasPending", false);
+                    result.put("message", "Giao dịch đã quá thời gian chờ thanh toán. Quý khách vui lòng thực hiện lại giao dịch");
+                    return ResponseObject.success(result, "Transaction expired");
+                } else {
+                    result.put("message", "Bạn còn một giao dịch chưa thanh toán");
+                    return ResponseObject.success(result, "Pending payment found");
+                }
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("hasPending", false);
+            return ResponseObject.success(result, "No pending payment found");
+        } catch (Exception e) {
+            log.error("[VNPAY-CHECK] Error checking pending payment", e);
+            return ResponseObject.error("Error checking pending payment: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/ipn")
     public ResponseEntity<Map<String, String>> handleIpn(HttpServletRequest req) throws Exception {
         String vnpHashSecret = vnPayService.getHashSecret();
@@ -216,11 +395,31 @@ public class VnPayController {
     }
 
     private static String getClientIp(HttpServletRequest req) {
-        String ip = req.getHeader("X-Forwarded-For");
-        if (ip != null && !ip.isBlank()) {
-            return ip.split(",")[0].trim();
+        // Prefer headers set by proxies/load balancers, then fallback
+        String[] headerNames = new String[]{
+                "X-Forwarded-For", "X-Real-IP", "CF-Connecting-IP", "X-Client-IP", "Fastly-Client-Ip"
+        };
+        for (String h : headerNames) {
+            String val = req.getHeader(h);
+            if (val != null && !val.isBlank()) {
+                String candidate = val.split(",")[0].trim();
+                String ipv4 = extractIpv4(candidate);
+                if (ipv4 != null) return ipv4;
+            }
         }
-        return req.getRemoteAddr();
+        String remote = req.getRemoteAddr();
+        String ipv4 = extractIpv4(remote);
+        return ipv4 != null ? ipv4 : "127.0.0.1";
+    }
+
+    private static String extractIpv4(String input) {
+        if (input == null || input.isBlank()) return null;
+        // Handle IPv6-mapped IPv4 addresses like ::ffff:192.168.1.1
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})")
+                .matcher(input);
+        if (m.find()) return m.group(1);
+        return null;
     }
 
     private static Map<String, String> extractParams(HttpServletRequest req) {

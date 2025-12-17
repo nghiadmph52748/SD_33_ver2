@@ -47,12 +47,12 @@
         <hr />
         <a-row :gutter="[12, 12]">
           <a-col :span="12">
-            <a-form-item label="Tên" :validate-status="nameError ? 'error' : undefined" :help="nameError || ''" required>
+            <a-form-item label="Tên" :validate-status="nameError ? 'error' : undefined" :help="nameError || ''" :required="orderType === 'delivery'">
               <a-input :model-value="walkInName" placeholder="Nhập tên" @update:model-value="$emit('update:walkInName', $event)" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="Số điện thoại" :validate-status="phoneError ? 'error' : undefined" :help="phoneError || ''" required>
+            <a-form-item label="Số điện thoại" :validate-status="phoneError ? 'error' : undefined" :help="phoneError || ''" :required="orderType === 'delivery'">
               <a-input
                 :model-value="walkInPhone"
                 placeholder="Nhập số điện thoại"
@@ -61,7 +61,7 @@
             </a-form-item>
           </a-col>
           <a-col :span="24">
-            <a-form-item label="Email" :validate-status="emailError ? 'error' : undefined" :help="emailError || ''" required>
+            <a-form-item label="Email" :validate-status="emailError ? 'error' : undefined" :help="emailError || ''" :required="orderType === 'delivery'">
               <a-input :model-value="walkInEmail" placeholder="Nhập email" @update:model-value="$emit('update:walkInEmail', $event)" />
             </a-form-item>
           </a-col>

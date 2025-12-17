@@ -8,7 +8,7 @@
         </a-form-item>
 
         <a-form-item :label="t('invoice.common.status')">
-          <a-select v-model="filters.status" :placeholder="t('invoice.common.selectStatus')" style="width: 150px" allow-clear>
+          <a-select v-model="filters.status" :placeholder="t('invoice.common.selectStatus')" style="width: 150px" allow-clear @change="handleStatusFilterChange">
             <a-option value="all">{{ t('invoice.common.all') }}</a-option>
             <a-option value="paid">{{ t('invoice.common.paid') }}</a-option>
             <a-option value="pending">{{ t('invoice.common.pending') }}</a-option>
@@ -402,7 +402,8 @@ const invoiceColumns = [
     slotName: 'ngayTao',
     width: 100,
     sortable: {
-      sortDirections: ['ascend', 'descend'],
+      sortDirections: ['descend', 'ascend'],
+      defaultSortOrder: 'descend',
     },
     sorter: (a: any, b: any) => {
       const dateA = new Date(a.thoiGianTao || a.ngayTao || 0).getTime()
@@ -474,27 +475,33 @@ const itemColumns = [
 const invoices = computed(() => {
   let filtered = [...invoicesList.value]
 
-  // Filter theo tab (trạng thái)
-  if (activeTab.value !== 'all') {
-    if (activeTab.value === 'paid') {
+  // Determine which status filter to use: prioritize filters.status if set and not 'all', otherwise use activeTab
+  const statusFilter = filters.value.status && filters.value.status !== 'all' ? filters.value.status : activeTab.value
+
+  // Filter theo status (từ dropdown hoặc tab)
+  if (statusFilter !== 'all') {
+    if (statusFilter === 'paid') {
       // Đã thanh toán: ngayThanhToan có giá trị
       filtered = filtered.filter((invoice) => invoice.ngayThanhToan)
-    } else if (activeTab.value === 'waiting_confirmation') {
+    } else if (statusFilter === 'waiting_confirmation') {
       // Chờ xác nhận
       filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Chờ xác nhận')
-    } else if (activeTab.value === 'confirmed') {
-      // Đã xác nhận
+    } else if (statusFilter === 'confirmed' || statusFilter === 'waiting_delivery') {
+      // Đã xác nhận hoặc chờ giao hàng
       filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Đã xác nhận')
-    } else if (activeTab.value === 'shipping') {
+    } else if (statusFilter === 'shipping') {
       // Đang giao: bao gồm "Đang giao hàng"
       filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Đang giao hàng')
-    } else if (activeTab.value === 'cancelled') {
+    } else if (statusFilter === 'cancelled') {
       // Đã hủy
       filtered = filtered.filter((invoice) => invoice.trangThaiDonHang === 'Đã huỷ')
-    } else if (activeTab.value === 'surcharge') {
+    } else if (statusFilter === 'pending') {
+      // Chờ thanh toán: ngayThanhToan không có giá trị
+      filtered = filtered.filter((invoice) => !invoice.ngayThanhToan)
+    } else if (statusFilter === 'surcharge') {
       // Có phụ phí > 0
       filtered = filtered.filter((invoice) => invoice.phuPhi && invoice.phuPhi > 0)
-    } else if (activeTab.value === 'refund') {
+    } else if (statusFilter === 'refund') {
       // Có hoàn phí > 0
       filtered = filtered.filter((invoice) => invoice.hoanPhi && invoice.hoanPhi > 0)
     }
@@ -560,9 +567,9 @@ const invoices = computed(() => {
     if (!dateStrA) return 1
     if (!dateStrB) return -1
 
-    // Parse dates
-    const dateA = new Date(dateStrA).getTime()
-    const dateB = new Date(dateStrB).getTime()
+    // Parse dates - handle both string and Date objects
+    const dateA = typeof dateStrA === 'string' ? new Date(dateStrA).getTime() : (dateStrA instanceof Date ? dateStrA.getTime() : 0)
+    const dateB = typeof dateStrB === 'string' ? new Date(dateStrB).getTime() : (dateStrB instanceof Date ? dateStrB.getTime() : 0)
 
     // Nếu parse lỗi, fallback về ID
     if (isNaN(dateA) && isNaN(dateB)) {
@@ -836,7 +843,7 @@ const resetFilters = () => {
     hasRefund: false,
   }
   activeTab.value = 'all'
-  fetchInvoices()
+  // Không cần fetch lại vì computed sẽ tự động filter
 }
 
 const handleDateChange = () => {
@@ -881,6 +888,29 @@ const handleTabChange = (key: string) => {
     filters.value.status = 'cancelled'
   }
   // Không cần fetch lại vì computed sẽ tự động filter
+}
+
+const handleStatusFilterChange = (value: string | undefined | null) => {
+  if (!value || value === 'all') {
+    activeTab.value = 'all'
+    filters.value.status = 'all'
+  } else {
+    // Sync activeTab with status filter
+    if (value === 'paid') {
+      activeTab.value = 'paid'
+    } else if (value === 'waiting_confirmation') {
+      activeTab.value = 'waiting_confirmation'
+    } else if (value === 'waiting_delivery' || value === 'confirmed') {
+      activeTab.value = 'confirmed'
+    } else if (value === 'shipping') {
+      activeTab.value = 'shipping'
+    } else if (value === 'pending') {
+      activeTab.value = 'all' // pending maps to all tab
+    } else if (value === 'cancelled') {
+      activeTab.value = 'cancelled'
+    }
+    filters.value.status = value
+  }
 }
 
 const handleTableChange = (paginationData: any) => {

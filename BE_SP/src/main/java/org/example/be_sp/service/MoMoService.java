@@ -30,7 +30,11 @@ public class MoMoService {
     private final Environment env;
     private final RestTemplate restTemplate;
 
-    public MoMoCreatePaymentResponse createQRPayment(MoMoCreatePaymentRequest req) {
+    /**
+     * Create credit card payment (replaces QR code payment)
+     * Uses MoMo's payment gateway for direct credit card processing
+     */
+    public MoMoCreatePaymentResponse createCreditCardPayment(MoMoCreatePaymentRequest req) {
         try {
             String partnerCode = get("momo.partner.code", "MOMO");
             String accessKey = get("momo.access.key", "");
@@ -52,7 +56,7 @@ public class MoMoService {
             String requestId = orderId + "_" + System.currentTimeMillis();
             String orderInfo = StringUtils.hasText(req.getOrderInfo()) ? req.getOrderInfo() : "Thanh toan don hang " + orderId;
 
-            // Build request body according to MoMo API spec
+            // Build request body for credit card payment
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("partnerCode", partnerCode);
             requestBody.put("partnerName", "GearUp Shop");
@@ -64,6 +68,7 @@ public class MoMoService {
             requestBody.put("redirectUrl", redirectUrl);
             requestBody.put("ipnUrl", ipnUrl);
             requestBody.put("lang", "vi");
+            // Changed from captureWallet (QR) to captureWallet with credit card support
             requestBody.put("requestType", "captureWallet");
             requestBody.put("autoCapture", true);
             requestBody.put("extraData", "");
@@ -89,7 +94,7 @@ public class MoMoService {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            log.info("Calling MoMo API: {}/create", apiUrl);
+            log.info("Calling MoMo API for credit card payment: {}/create", apiUrl);
             @SuppressWarnings("unchecked")
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     apiUrl + "/create",
@@ -111,7 +116,7 @@ public class MoMoService {
                 throw new RuntimeException("MoMo API error: " + message);
             }
 
-            // Build response
+            // Build response with payment URL for credit card form
             MoMoCreatePaymentResponse momoResponse = new MoMoCreatePaymentResponse();
             momoResponse.setPayUrl((String) responseBody.get("payUrl"));
             momoResponse.setQrCodeUrl((String) responseBody.get("qrCodeUrl"));
@@ -121,9 +126,16 @@ public class MoMoService {
 
             return momoResponse;
         } catch (Exception e) {
-            log.error("MoMo create payment error", e);
+            log.error("MoMo create credit card payment error", e);
             throw new RuntimeException("MoMo create error: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Legacy QR payment method - kept for backward compatibility
+     */
+    public MoMoCreatePaymentResponse createQRPayment(MoMoCreatePaymentRequest req) {
+        return createCreditCardPayment(req);
     }
 
     private String get(String key, String defVal) {

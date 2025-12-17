@@ -67,9 +67,6 @@
               {{ item.name }}
             </h3>
             <div class="item__meta">
-              <span v-if="item.gender" class="item__category">{{
-                formatCategory(item)
-              }}</span>
               <span class="item__colours">{{
                 t("store.coloursCount", { count: getColourCount(item) })
               }}</span>
@@ -583,30 +580,42 @@ function getSpecialTag(item: Product): string | null {
   flex-direction: column;
   padding: 16px;
   gap: 6px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .item__price {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 2px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 16px;
   font-weight: 700;
   color: #111;
   line-height: 1.2;
   margin: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .item__price-original {
+  font-family: "Times New Roman", Times, serif;
   font-size: 14px;
   font-weight: 400;
   color: #9ca3af;
   text-decoration: line-through;
+  white-space: nowrap;
 }
 
 .item__price-current {
-  font-size: 18px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 16px;
   font-weight: 700;
   color: #111;
+  white-space: nowrap;
 }
 
 .item__title {

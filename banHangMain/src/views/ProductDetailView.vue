@@ -72,13 +72,6 @@
           </span>
         </summary>
         <div class="accordion-panel">
-          <div class="reviews">
-            <div class="score">
-              <span class="value">{{ averageRating.toFixed(1) }}</span>
-              <span class="outof">/ 5</span>
-            </div>
-            <p class="muted" v-if="allReviews.length === 0">{{ product.review || $t('product.noReviews') || 'No reviews yet' }}</p>
-          </div>
           <form class="review-form" @submit.prevent="submitReview">
             <div class="form-row">
                   <label>{{ $t('product.name') }}</label>

@@ -37,8 +37,19 @@ Làm sao để đặt hàng?"""
         messages = [{"role": "user", "content": prompt}]
         response = llm_client.chat(messages, temperature=0.7, max_tokens=150, stream=False)
         
-        # Parse response
-        suggestions_text = response.strip()
+        # Parse response from unified LLM client (LM Studio or Gemini)
+        suggestions_text = ""
+        try:
+            if hasattr(response, "choices") and response.choices:
+                first_choice = response.choices[0]
+                if hasattr(first_choice, "message") and hasattr(first_choice.message, "content"):
+                    suggestions_text = first_choice.message.content or ""
+        except Exception:
+            suggestions_text = ""
+        
+        if not suggestions_text:
+            raise ValueError("Empty LLM suggestions response")
+        
         suggestions = [s.strip() for s in suggestions_text.split('\n') if s.strip()]
         
         # Clean up

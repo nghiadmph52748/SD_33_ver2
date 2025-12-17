@@ -270,6 +270,62 @@ export function confirmOrderDelivery(
   return axios.post(`/api/invoice-management/${orderId}/confirm-delivery`);
 }
 
+export function fetchCustomerOrders(
+  customerId: number,
+  customerEmail?: string,
+  customerPhone?: string,
+  page: number = 0,
+  size: number = 50
+): Promise<HttpResponse<{ content: OrderTrackingDetail[]; totalElements: number; totalPages: number }>> {
+  return axios.get(`/api/hoa-don-management/paging`, {
+    params: { page, size: 100 }
+  }).then((response) => {
+    const data = response.data as any
+    let allOrders: any[] = []
+    
+    if (data?.data && Array.isArray(data.data)) {
+      allOrders = data.data
+    } else if (Array.isArray(data)) {
+      allOrders = data
+    }
+    
+    const filteredOrders = allOrders.filter((order: any) => {
+      if (order.idKhachHang) {
+        const orderCustomerId = typeof order.idKhachHang === 'object' 
+          ? order.idKhachHang.id 
+          : order.idKhachHang
+        if (orderCustomerId === customerId) return true
+      }
+      if (customerEmail && order.email === customerEmail) return true
+      if (customerPhone && (order.soDienThoai === customerPhone || order.soDienThoaiNguoiNhan === customerPhone)) return true
+      return false
+    }).map((order: any) => {
+      const orderDetail: OrderTrackingDetail = {
+        id: order.id,
+        maHoaDon: order.maHoaDon,
+        tongTien: order.tongTien,
+        tongTienSauGiam: order.tongTienSauGiam,
+        phiVanChuyen: order.phiVanChuyen,
+        createAt: order.createAt || order.ngayTao,
+        ngayTao: order.ngayTao || order.createAt,
+        trangThai: order.trangThai ? 'Đã thanh toán' : 'Chưa thanh toán',
+        items: order.items || order.chiTietSanPham || [],
+        hoaDonChiTiets: order.items || order.chiTietSanPham || []
+      }
+      return orderDetail
+    })
+    
+    return {
+      ...response,
+      data: {
+        content: filteredOrders,
+        totalElements: filteredOrders.length,
+        totalPages: Math.ceil(filteredOrders.length / size)
+      }
+    }
+  })
+}
+
 // Create order from cart items
 export async function createOrderFromCart(
   cartItems: CartItem[],

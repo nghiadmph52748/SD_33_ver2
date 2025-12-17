@@ -79,6 +79,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/LoginView.vue"),
   },
   {
+    path: "/profile",
+    name: "profile",
+    component: () => import("@/views/ProfileView.vue"),
+  },
+  {
     path: "/:pathMatch(.*)*",
     name: "not-found",
     component: () => import("@/views/NotFoundView.vue"),
@@ -95,12 +100,24 @@ const router = createRouter({
 
 // Auth guard for routes with meta.requiresAuth
 router.beforeEach(async (to, _from, next) => {
-  if (!to.meta?.requiresAuth) return next();
+  if (to.meta?.requiresAuth) {
   const { useUserStore } = await import("@/stores/user");
   const userStore = useUserStore();
   await userStore.initFromStorage();
-  if (userStore.isAuthenticated) return next();
-  next({ path: "/login", query: { redirect: to.fullPath } });
+    if (!userStore.isAuthenticated) {
+      return next({ path: "/login", query: { redirect: to.fullPath } });
+    }
+  }
+  
+  if (to.name === "checkout") {
+    const { useCartStore } = await import("@/stores/cart");
+    const cartStore = useCartStore();
+    if (cartStore.cartCount === 0) {
+      return next({ path: "/cart" });
+    }
+  }
+  
+  next();
 });
 
 export default router;

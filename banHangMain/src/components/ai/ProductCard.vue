@@ -2,8 +2,8 @@
   <RouterLink :to="`/product/${product.id}`" class="product-card">
     <div class="product-card__image">
       <img
-        v-if="product.image_url"
-        :src="product.image_url"
+        v-if="resolvedImageUrl"
+        :src="resolvedImageUrl"
         :alt="product.name"
         @error="handleImageError"
       />
@@ -29,7 +29,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { mapProductNameToImagePath } from '@/api/products'
 
 interface Product {
   id: number
@@ -43,6 +45,10 @@ interface Product {
 const props = defineProps<{
   product: Product
 }>()
+
+const resolvedImageUrl = computed(() =>
+  mapProductNameToImagePath(props.product.name, props.product.image_url ?? null)
+)
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('vi-VN', {

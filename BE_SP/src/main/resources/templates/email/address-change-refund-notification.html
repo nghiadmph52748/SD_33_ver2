@@ -7,68 +7,67 @@
 	<style>
 		body {
 			margin: 0;
-			padding: 0;
-			font-family: 'Segoe UI', Arial, sans-serif;
-			background: #f2f4ff;
-			color: #2b2b2b;
+			padding: 20px;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+			background: #f7f8fa;
+			color: #1d2129;
+			line-height: 1.6;
 		}
 
 		.container {
-			max-width: 640px;
-			margin: 32px auto;
+			max-width: 600px;
+			margin: 0 auto;
 			background: #ffffff;
-			border-radius: 16px;
+			border-radius: 4px;
 			overflow: hidden;
-			box-shadow: 0 18px 36px rgba(76, 84, 117, 0.12);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 		}
 
 		.header {
-			background: radial-gradient(circle at top, #8a8df0, #5b63d8 55%, #3f48c1 90%);
+			background: #165DFF;
 			color: #ffffff;
-			padding: 36px 32px;
+			padding: 32px 24px;
 			text-align: center;
 		}
 
-		.header h1 {
-			margin: 0 0 12px;
-			font-size: 24px;
-			letter-spacing: 0.6px;
+		.logo {
+			height: 36px;
+			margin-bottom: 8px;
 		}
 
 		.header p {
 			margin: 0;
-			font-size: 15px;
+			font-size: 14px;
 			opacity: 0.9;
 		}
 
 		.content {
-			padding: 36px 32px;
+			padding: 32px 24px;
 		}
 
 		.content p {
 			margin: 0 0 16px;
 			font-size: 15px;
 			line-height: 1.7;
-			color: #454b66;
+			color: #4e5969;
 		}
 
 		.section {
-			margin-bottom: 28px;
+			margin-bottom: 24px;
 			padding: 20px 22px;
-			border-radius: 12px;
-			background: linear-gradient(145deg, #f7f8ff, #eef0ff);
-			border: 1px solid rgba(91, 99, 216, 0.12);
-			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+			border-radius: 4px;
+			background: #F7F8FA;
+			border: 1px solid #E5E6EB;
 		}
 
 		.section.neutral {
-			background: linear-gradient(145deg, #f6f6f6, #ededed);
+			background: #FFFFFF;
 		}
 
 		.section h2 {
 			margin: 0 0 12px;
-			font-size: 17px;
-			color: #3841aa;
+			font-size: 16px;
+			color: #1d2129;
 		}
 
 		.highlight {
@@ -76,20 +75,18 @@
 			align-items: baseline;
 			gap: 6px;
 			margin-top: 4px;
-			font-size: 32px;
+			font-size: 24px;
 			font-weight: 700;
-			color: #2f35a1;
+			color: #165DFF;
 			letter-spacing: 0.4px;
 		}
 
 		.voucher-card {
 			margin-bottom: 22px;
 			padding: 24px 28px;
-			border-radius: 16px;
-			background: radial-gradient(circle at 25% -10%, rgba(255, 255, 255, 0.9), rgba(126, 132, 255, 0.25)),
-				linear-gradient(125deg, rgba(63, 72, 193, 0.2), rgba(131, 140, 255, 0.45));
-			border: 1px solid rgba(86, 95, 214, 0.25);
-			box-shadow: 0 16px 24px rgba(72, 82, 196, 0.18);
+			border-radius: 4px;
+			background: #F0F9FF;
+			border: 1px solid #BAE6FD;
 			text-align: center;
 		}
 
@@ -100,18 +97,18 @@
 			margin-bottom: 16px;
 			padding: 6px 12px;
 			border-radius: 999px;
-			background: rgba(255, 255, 255, 0.6);
+			background: #FFFFFF;
 			font-size: 14px;
 			font-weight: 600;
-			color: #2f35a1;
+			color: #165DFF;
 			text-transform: uppercase;
 			letter-spacing: 1px;
 		}
 
 		.voucher-code {
-			font-size: 30px;
-			font-weight: 800;
-			color: #262b85;
+			font-size: 22px;
+			font-weight: 700;
+			color: #165DFF;
 			letter-spacing: 4px;
 			margin-bottom: 12px;
 		}
@@ -122,7 +119,7 @@
 			justify-content: center;
 			gap: 12px 24px;
 			font-size: 13px;
-			color: #303a71;
+			color: #4e5969;
 		}
 
 		.voucher-meta span {
@@ -131,24 +128,23 @@
 			gap: 6px;
 			padding: 6px 10px;
 			border-radius: 999px;
-			background: rgba(255, 255, 255, 0.65);
+			background: #FFFFFF;
 		}
 
 		.note {
 			margin-top: 18px;
 			padding: 16px 18px;
-			border-radius: 12px;
-			background: linear-gradient(135deg, #fff4df, #ffe7c1);
-			border: 1px solid rgba(255, 169, 64, 0.32);
+			border-radius: 4px;
+			background: #FFF7E6;
+			border: 1px solid #FFE7BA;
 			font-size: 14px;
-			color: #a85a05;
-			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+			color: #D46B08;
 		}
 
 		ul {
 			margin: 8px 0 0 18px;
 			padding: 0;
-			color: #454b66;
+			color: #4e5969;
 		}
 
 		ul li {
@@ -157,29 +153,26 @@
 
 		.cta {
 			display: inline-block;
-			margin-top: 30px;
-			padding: 14px 42px;
-			border-radius: 999px;
-			background: linear-gradient(135deg, #ff8f5a, #ff5f8f);
-			color: #000000;
+			margin-top: 24px;
+			padding: 12px 32px;
+			border-radius: 4px;
+			background: #165DFF;
+			color: #FFFFFF;
 			text-decoration: none;
-			font-weight: 600;
+			font-weight: 500;
 			letter-spacing: 0.5px;
-			box-shadow: 0 14px 24px rgba(255, 111, 135, 0.28);
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
 		}
 
 		.cta:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 18px 28px rgba(255, 111, 135, 0.35);
+			transform: translateY(-1px);
 		}
 
 		.footer {
 			padding: 20px 16px;
-			background: #f2f4ff;
+			background: #F7F8FA;
 			text-align: center;
 			font-size: 12px;
-			color: #616890;
+			color: #86909C;
 		}
 	</style>
 </head>
@@ -187,6 +180,7 @@
 <body>
 	<div class="container">
 		<div class="header">
+			<img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
 			<h1>Thông báo hoàn phí thay đổi địa chỉ</h1>
 			<p>Đơn hàng <strong th:text="${orderCode}"></strong></p>
 		</div>
@@ -244,7 +238,8 @@
 			<p>Nếu cần hỗ trợ thêm, bạn có thể phản hồi email này hoặc liên hệ tổng đài chăm sóc khách hàng bất cứ lúc nào.
 			</p>
 
-			<a class="cta" th:href="${baseUrl}">Xem đơn hàng</a>
+			<a class="cta" th:href="${baseUrl}"
+				style="color: #ffffff !important; text-decoration: none;">Xem đơn hàng</a>
 		</div>
 		<div class="footer">
 			© 2024 GearUp Shop. Cảm ơn bạn đã đồng hành cùng chúng tôi!

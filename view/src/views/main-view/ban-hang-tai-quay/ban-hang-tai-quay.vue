@@ -956,38 +956,41 @@ const syncPaymentSplit = (preferred: 'cash' | 'transfer' = lastPaymentFieldChang
 
   const cashRaw = paymentForm.value.cashReceived ?? 0
   const transferRaw = paymentForm.value.transferReceived ?? 0
-  if (cashRaw <= 0 && transferRaw <= 0) {
-    paymentForm.value.cashReceived = 0
-    paymentForm.value.transferReceived = 0
-    return
-  }
-
+  
   if (preferred === 'cash') {
-    const cash = normalizePaymentValue(cashRaw)
+    const cash = normalizePaymentValue(cashRaw, { allowOverpay: true })
     paymentForm.value.cashReceived = cash
-    paymentForm.value.transferReceived = Math.max(0, total - cash)
+    const remaining = Math.max(0, total - cash)
+    // Auto-calculate transfer amount based on remaining balance
+    paymentForm.value.transferReceived = remaining
     return
   }
 
-  const transfer = normalizePaymentValue(transferRaw)
+  const transfer = normalizePaymentValue(transferRaw, { allowOverpay: true })
   paymentForm.value.transferReceived = transfer
-  paymentForm.value.cashReceived = Math.max(0, total - transfer)
+  const remaining = Math.max(0, total - transfer)
+  // Auto-calculate cash amount based on remaining balance
+  paymentForm.value.cashReceived = remaining
 }
 
 const handleCashAmountChange = (value: number | null) => {
   lastPaymentFieldChanged.value = 'cash'
   const sanitized = typeof value === 'number' && Number.isFinite(value) ? value : null
   assignCashAmount(sanitized)
-  if (sanitized === null) return
-  syncPaymentSplit('cash')
+  // Always sync payment split when in "both" mode, even if value is null (to auto-calculate the other field)
+  if (paymentForm.value.method === 'both') {
+    syncPaymentSplit('cash')
+  }
 }
 
 const handleTransferAmountChange = (value: number | null) => {
   lastPaymentFieldChanged.value = 'transfer'
   const sanitized = typeof value === 'number' && Number.isFinite(value) ? value : null
   assignTransferAmount(sanitized)
-  if (sanitized === null) return
-  syncPaymentSplit('transfer')
+  // Always sync payment split when in "both" mode, even if value is null (to auto-calculate the other field)
+  if (paymentForm.value.method === 'both') {
+    syncPaymentSplit('transfer')
+  }
 }
 
 const totalReceived = computed(() => (paymentForm.value?.cashReceived ?? 0) + (paymentForm.value?.transferReceived ?? 0))
@@ -1328,7 +1331,12 @@ async function refreshProductStock() {
       }
       allProductVariants.value = availableProducts
       productPagination.value.total = availableProducts.length
-      productPagination.value.current = 1
+      // Preserve current page instead of resetting to page 1
+      // Only reset if current page exceeds total pages after update
+      const maxPage = Math.ceil(availableProducts.length / (productPagination.value.pageSize || 10))
+      if (productPagination.value.current > maxPage && maxPage > 0) {
+        productPagination.value.current = maxPage
+      }
     }
   } catch (error) {
     console.error('Error refreshing product stock:', error)
@@ -1362,7 +1370,9 @@ const handlePaymentMethodChange = async (value: string) => {
       assignCashAmount(0)
       lastPaymentFieldChanged.value = 'transfer'
     } else if (value === 'both') {
-      assignCashAmount(0)
+      // Auto-populate with default split: cash = finalPrice, transfer = 0
+      // User can then adjust either field and the other will auto-calculate
+      assignCashAmount(finalPrice.value)
       assignTransferAmount(0)
       lastPaymentFieldChanged.value = 'cash'
     }

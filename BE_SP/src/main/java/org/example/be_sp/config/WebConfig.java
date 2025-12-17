@@ -34,7 +34,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/auth/**", // Exclude auth endpoints
                         "/api/public/**", // Exclude public endpoints
-                        "/api/health/**" // Exclude health check endpoints
+                        "/api/health/**", // Exclude health check endpoints
+                        "/api/dot-giam-gia-management/**", // Allow discount campaign endpoints without token
+                        "/api/phieu-giam-gia-management/**", // Allow coupon endpoints without token
+                        "/api/chi-tiet-dot-giam-gia-management/**", // Allow discount detail endpoints without token
+                        "/api/chi-tiet-phieu-giam-gia-management/**" // Allow coupon detail endpoints without token
                 );
     }
 }

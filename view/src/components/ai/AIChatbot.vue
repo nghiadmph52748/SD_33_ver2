@@ -3,14 +3,7 @@
     <a-card class="chatbot-card" :bordered="false" :body-style="{ padding: '0' }">
       <template #title>
         <div class="chatbot-header">
-          <span class="title">
-            <img
-              src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
-              alt="AI Icon"
-              style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px"
-            />
-            Trợ Lý AI
-          </span>
+          <span class="title">Trợ Lý AI</span>
           <a-space>
             <a-badge :status="isConnected ? 'success' : 'error'" :text="isConnected ? 'Online' : 'Offline'" />
           </a-space>
@@ -40,9 +33,9 @@
               </a-avatar>
               <img
                 v-else
-                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
+                src="@/assets/logo-datn.png"
                 alt="AI"
-                style="width: 28px; height: 28px"
+                class="ai-logo"
               />
             </div>
             <div class="content">
@@ -1011,6 +1004,15 @@ defineExpose({
       height: 40px;
       font-size: 16px;
       font-weight: 600;
+    }
+
+    .ai-logo {
+      max-width: 40px;
+      max-height: 32px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
     }
   }
 

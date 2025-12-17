@@ -13,31 +13,32 @@
 		}
 
 		body {
-			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 			line-height: 1.6;
-			color: #333;
-			background-color: #f4f4f4;
+			color: #1d2129;
+			background-color: #f7f8fa;
+			padding: 20px;
 		}
 
 		.email-container {
 			max-width: 600px;
 			margin: 0 auto;
-			background-color: #ffffff;
-			border-radius: 8px;
+			background: #ffffff;
+			border-radius: 4px;
 			overflow: hidden;
-			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 		}
 
 		.header {
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			background: #165DFF;
 			color: #ffffff;
-			padding: 30px 20px;
+			padding: 32px 24px;
 			text-align: center;
 		}
 
-		.header h1 {
-			font-size: 24px;
-			margin-bottom: 5px;
+		.logo {
+			height: 36px;
+			margin-bottom: 8px;
 		}
 
 		.header p {
@@ -46,38 +47,39 @@
 		}
 
 		.content {
-			padding: 30px 20px;
+			padding: 32px 24px;
 		}
 
 		.greeting {
 			margin-bottom: 20px;
 			font-size: 16px;
+			color: #1d2129;
 		}
 
 		.greeting strong {
-			color: #667eea;
+			color: #165DFF;
 		}
 
 		.order-info {
-			background-color: #f9f9f9;
+			background-color: #F7F8FA;
 			padding: 15px;
 			border-radius: 5px;
-			margin-bottom: 25px;
-			border-left: 4px solid #667eea;
+			margin-bottom: 24px;
+			border-left: 3px solid #165DFF;
 		}
 
 		.order-code {
 			font-weight: bold;
-			color: #333;
+			color: #1d2129;
 			font-size: 15px;
 		}
 
 		.address-section {
-			margin-bottom: 25px;
+			margin-bottom: 24px;
 		}
 
 		.address-section h3 {
-			color: #667eea;
+			color: #165DFF;
 			font-size: 15px;
 			margin-bottom: 10px;
 			text-transform: uppercase;
@@ -85,7 +87,7 @@
 		}
 
 		.address-box {
-			background-color: #f9f9f9;
+			background-color: #FFFFFF;
 			padding: 15px;
 			border-radius: 5px;
 			border: 1px solid #e0e0e0;
@@ -107,14 +109,14 @@
 
 		.surcharge-info {
 			background-color: #fff3cd;
-			border-left: 4px solid #ffc107;
+			border-left: 3px solid #FF7D00;
 			padding: 15px;
 			border-radius: 5px;
 			margin-bottom: 25px;
 		}
 
 		.surcharge-info h4 {
-			color: #856404;
+			color: #D46B08;
 			font-size: 14px;
 			margin-bottom: 8px;
 		}
@@ -125,73 +127,73 @@
 		}
 
 		.surcharge-info.refund h4 {
-			color: #1f7a3f;
+			color: #00B42A;
 		}
 
 		.surcharge-amount {
 			font-size: 18px;
 			font-weight: bold;
-			color: #d39e00;
+			color: #FF7D00;
 		}
 
 		.surcharge-info.refund .surcharge-amount {
-			color: #1f7a3f;
+			color: #00B42A;
 		}
 
 		.surcharge-note {
 			font-size: 13px;
-			color: #856404;
+			color: #D46B08;
 			margin-top: 8px;
 			line-height: 1.5;
 		}
 
 		.surcharge-info.refund .surcharge-note {
-			color: #1f7a3f;
+			color: #00B42A;
 		}
 
 		.note-section {
-			background-color: #e7f3ff;
-			border-left: 4px solid #2196F3;
+			background-color: #F0F9FF;
+			border-left: 3px solid #165DFF;
 			padding: 15px;
 			border-radius: 5px;
 			margin-bottom: 25px;
 		}
 
 		.note-section h4 {
-			color: #1565c0;
+			color: #165DFF;
 			font-size: 14px;
 			margin-bottom: 8px;
 		}
 
 		.note-section p {
 			font-size: 14px;
-			color: #1565c0;
+			color: #165DFF;
 			line-height: 1.6;
 		}
 
 		.cta-button {
 			display: inline-block;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			background: #165DFF;
 			color: #ffffff;
 			text-decoration: none;
 			padding: 12px 30px;
-			border-radius: 5px;
+			border-radius: 4px;
 			font-weight: bold;
 			margin-bottom: 25px;
 			text-align: center;
 		}
 
 		.footer {
-			background-color: #f4f4f4;
+			background-color: #F7F8FA;
 			padding: 20px;
 			text-align: center;
-			border-top: 1px solid #e0e0e0;
+			border-top: 1px solid #E5E6EB;
 			font-size: 12px;
-			color: #666;
+			color: #86909C;
 		}
 
 		.footer p {
-			margin: 5px 0;
+			margin: 8px 0;
 		}
 
 		.divider {
@@ -228,8 +230,8 @@
 	<div class="email-container">
 		<!-- Header -->
 		<div class="header">
-			<h1>📍 Thay đổi địa chỉ giao hàng</h1>
-			<p>Chúng tôi đã tiếp nhận yêu cầu thay đổi địa chỉ của bạn</p>
+			<img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
+			<p>Thông báo thay đổi địa chỉ giao hàng</p>
 		</div>
 
 		<!-- Content -->
@@ -312,7 +314,8 @@
 			</div>
 
 			<!-- Call to Action -->
-			<a href="#" class="cta-button" th:href="${baseUrl}">Xem chi tiết đơn hàng</a>
+			<a href="#" class="cta-button" th:href="${baseUrl}"
+				style="color: #ffffff !important; text-decoration: none;">Xem chi tiết đơn hàng</a>
 
 			<p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
 				Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với <strong>bộ phận Chăm sóc khách hàng</strong> của chúng
@@ -322,9 +325,9 @@
 
 		<!-- Footer -->
 		<div class="footer">
-			<p><strong>Cảm ơn bạn đã tin tưởng chúng tôi!</strong></p>
-			<p>© 2024 Cửa hàng Nike. Tất cả quyền được bảo lưu.</p>
-			<p>Liên hệ: support@nike-vn.com | Hotline: 1900-1234</p>
+			<p><strong>GearUp - Gear Up Your Style!</strong></p>
+			<p>Địa chỉ: 123 Đường Sneaker, Quận Giày, TP. Thể Thao</p>
+			<p>Liên hệ: support@gearup.com | Hotline: 1900-1234</p>
 		</div>
 	</div>
 </body>

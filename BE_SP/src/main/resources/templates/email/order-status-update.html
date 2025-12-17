@@ -30,15 +30,13 @@
 		}
 
 		.email-header {
-			background: #00B42A;
+			background: #165DFF;
 			padding: 32px 24px;
 			text-align: center;
 		}
 
-		.email-header h1 {
-			color: white;
-			font-size: 24px;
-			font-weight: 600;
+		.logo {
+			height: 36px;
 			margin-bottom: 8px;
 		}
 
@@ -60,19 +58,27 @@
 
 		.status-badge {
 			display: inline-block;
-			background: #00B42A;
+			background: #165DFF;
 			color: white;
-			padding: 8px 16px;
-			border-radius: 2px;
-			font-size: 14px;
+			padding: 6px 16px;
+			border-radius: 999px;
+			font-size: 13px;
 			font-weight: 500;
 			margin: 16px 0;
+		}
+
+		.status-badge.success {
+			background: #00B42A;
+		}
+
+		.status-badge.warning {
+			background: #FF7D00;
 		}
 
 		.order-info-card {
 			background: #F7F8FA;
 			border: 1px solid #E5E6EB;
-			border-left: 3px solid #00B42A;
+			border-left: 3px solid #165DFF;
 			padding: 20px;
 			margin: 24px 0;
 			border-radius: 4px;
@@ -129,6 +135,11 @@
 			background: #4080FF;
 		}
 
+		.button-secondary {
+			background: #F2F3F5;
+			color: #1d2129;
+		}
+
 		.email-footer {
 			background: #F7F8FA;
 			padding: 24px;
@@ -164,7 +175,7 @@
 <body>
 	<div class="email-container">
 		<div class="email-header">
-			<h1>📦 GearUp</h1>
+			<img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
 			<p>Cập nhật trạng thái đơn hàng</p>
 		</div>
 		<div class="email-body">
@@ -194,14 +205,15 @@
 				</div>
 			</div>
 			<div style="text-align: center;">
-				<a th:href="|${frontend-url}/tra-cuu-hoa-don?code=${order.orderCode}|" class="button">
+				<a th:href="|${baseUrl}/tra-cuu-hoa-don?code=${order.orderCode}|" class="button"
+					style="color: #ffffff !important; text-decoration: none;">
 					👁️ Xem chi tiết đơn hàng
 				</a>
 			</div>
 			<div style="text-align: center;"
 				th:if="${order.orderId != null and order.orderStatus != null and #strings.equalsIgnoreCase(order.orderStatus, 'Đã giao hàng')}">
-				<a th:href="|${frontend-url}/order/thank-you?orderId=${order.orderId}&orderCode=${order.orderCode}|"
-					class="button" style="background: #00b42a;">
+				<a th:href="|${baseUrl}/order/thank-you?orderId=${order.orderId}&orderCode=${order.orderCode}|"
+					class="button button-secondary">
 					✅ Xác nhận đã nhận hàng
 				</a>
 			</div>

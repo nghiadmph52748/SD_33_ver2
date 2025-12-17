@@ -47,7 +47,10 @@
             <div
               v-if="index > 0"
               class="stage-connector"
-              :class="{ active: statusStages[index - 1].completed, cancelled: stage.variant === 'cancelled' }"
+              :class="{
+                active: statusStages[index - 1].completed && (stage.completed || stage.active) && stage.variant !== 'cancelled' && statusStages[index - 1].variant !== 'cancelled',
+                cancelled: stage.variant === 'cancelled' || statusStages[index - 1].variant === 'cancelled'
+              }"
             ></div>
             <div class="stage-icon" :class="{ active: stage.active, completed: stage.completed, cancelled: stage.variant === 'cancelled' }">
               <component :is="stage.icon" />
@@ -1737,15 +1740,29 @@ const statusStages = computed(() => {
     const resolveActiveIndex = () => {
       let bestIndex = -1
       let bestPriority = -1
+      let hasCancelled = false
+      let cancelledIndex = -1
 
+      // First pass: find cancelled stage
       stageEntries.forEach((stage, index) => {
         if (!stage.isReal) {
           return
         }
 
         if (stage.variant === 'cancelled' || stage.key === 'cancelled') {
-          bestIndex = index
-          bestPriority = Number.POSITIVE_INFINITY
+          cancelledIndex = index
+          hasCancelled = true
+        }
+      })
+
+      // If cancelled, return cancelled index immediately (don't check other stages)
+      if (hasCancelled && cancelledIndex >= 0) {
+        return cancelledIndex
+      }
+
+      // Otherwise, find the best non-cancelled stage
+      stageEntries.forEach((stage, index) => {
+        if (!stage.isReal) {
           return
         }
 
@@ -1768,12 +1785,18 @@ const statusStages = computed(() => {
     const resolvedActiveIndex = resolveActiveIndex()
     let activeIndex = resolvedActiveIndex >= 0 ? resolvedActiveIndex : stageEntries.length - 1
 
-    const normalizedInvoiceStatus = normalizeStatusForFlow(currentStageStatus.value)
-    const desiredStageKey = statusToStageKey[normalizedInvoiceStatus]
-    if (desiredStageKey) {
-      const invoiceStageIndex = stageEntries.findIndex((stage) => stage.key === desiredStageKey)
-      if (invoiceStageIndex >= 0) {
-        activeIndex = Math.max(activeIndex, invoiceStageIndex)
+    // Check if the resolved active index is a cancelled stage
+    const isCancelledActive = stageEntries[activeIndex]?.variant === 'cancelled' || stageEntries[activeIndex]?.key === 'cancelled'
+
+    // Only override active index if NOT cancelled (cancelled takes absolute priority)
+    if (!isCancelledActive) {
+      const normalizedInvoiceStatus = normalizeStatusForFlow(currentStageStatus.value)
+      const desiredStageKey = statusToStageKey[normalizedInvoiceStatus]
+      if (desiredStageKey) {
+        const invoiceStageIndex = stageEntries.findIndex((stage) => stage.key === desiredStageKey)
+        if (invoiceStageIndex >= 0) {
+          activeIndex = Math.max(activeIndex, invoiceStageIndex)
+        }
       }
     }
 
@@ -3788,6 +3811,20 @@ onMounted(() => {
   background-color: #165dff;
 }
 
+.stage-connector.cancelled {
+  background-color: #e5e6eb;
+}
+
+.stage-icon.cancelled {
+  background-color: #f53f3f;
+  color: white;
+}
+
+.timeline-stage.cancelled .stage-label {
+  color: #f53f3f;
+  font-weight: 600;
+}
+
 .stage-icon {
   width: 40px;
   height: 40px;
@@ -4646,7 +4683,6 @@ onMounted(() => {
   .arco-menu-item,
   .arco-menu-group,
   .arco-menu-submenu,
-  .arco-layout-content,
   .simple-breadcrumb,
   .page-header,
   .header-right,

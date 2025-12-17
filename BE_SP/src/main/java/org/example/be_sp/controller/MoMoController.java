@@ -55,7 +55,8 @@ public class MoMoController {
     @PostMapping("/create")
     public ResponseObject<MoMoCreatePaymentResponse> createPayment(@RequestBody MoMoCreatePaymentRequest req) {
         try {
-            MoMoCreatePaymentResponse response = momoService.createQRPayment(req);
+            // Use credit card payment method
+            MoMoCreatePaymentResponse response = momoService.createCreditCardPayment(req);
 
             // Persist a pending order for tracking
             OrderPayment op = new OrderPayment();
@@ -67,6 +68,25 @@ public class MoMoController {
             return new ResponseObject<>(response);
         } catch (Exception e) {
             log.error("MoMo create payment error", e);
+            return ResponseObject.error("MoMo create error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/create-credit-card")
+    public ResponseObject<MoMoCreatePaymentResponse> createCreditCardPayment(@RequestBody MoMoCreatePaymentRequest req) {
+        try {
+            MoMoCreatePaymentResponse response = momoService.createCreditCardPayment(req);
+
+            // Persist a pending order for tracking
+            OrderPayment op = new OrderPayment();
+            op.setTxnRef(response.getOrderId());
+            op.setAmount(req.getAmount());
+            op.setStatus("PENDING");
+            orderRepo.save(op);
+
+            return new ResponseObject<>(response);
+        } catch (Exception e) {
+            log.error("MoMo create credit card payment error", e);
             return ResponseObject.error("MoMo create error: " + e.getMessage());
         }
     }

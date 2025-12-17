@@ -52,31 +52,35 @@
               <div class="row two">
                 <div>
                   <label for="province">{{ $t("checkout.province") }}</label>
-                  <a-select
+                  <select
                     id="province"
                     v-model="address.province"
                     @change="onProvinceChange"
-                    :options="provinces"
-                    :allow-search="true"
-                    :placeholder="'----'"
                     :class="{ invalid: errs.province }"
-                  />
+                  >
+                    <option disabled value="">----</option>
+                    <option v-for="p in provinces" :key="p.code" :value="p.value">
+                      {{ p.label }}
+                    </option>
+                  </select>
                   <small v-if="errs.province" class="error-text">{{
                     errs.province
                   }}</small>
                 </div>
                 <div>
                   <label for="district">{{ $t("checkout.district") }}</label>
-                  <a-select
+                  <select
                     id="district"
                     v-model="address.district"
                     @change="onDistrictChange"
-                    :options="districts"
-                    :allow-search="true"
                     :disabled="!districts.length"
-                    :placeholder="'----'"
                     :class="{ invalid: errs.district }"
-                  />
+                  >
+                    <option disabled value="">----</option>
+                    <option v-for="d in districts" :key="d.code" :value="d.value">
+                      {{ d.label }}
+                    </option>
+                  </select>
                   <small v-if="errs.district" class="error-text">{{
                     errs.district
                   }}</small>
@@ -85,15 +89,17 @@
               <div class="row two">
                 <div>
                   <label for="ward">{{ $t("checkout.ward") }}</label>
-                  <a-select
+                  <select
                     id="ward"
                     v-model="address.ward"
-                    :options="wards"
-                    :allow-search="true"
                     :disabled="!wards.length"
-                    :placeholder="'----'"
                     :class="{ invalid: errs.ward }"
-                  />
+                  >
+                    <option disabled value="">----</option>
+                    <option v-for="w in wards" :key="w.value" :value="w.value">
+                      {{ w.label }}
+                    </option>
+                  </select>
                   <small v-if="errs.ward" class="error-text">{{
                     errs.ward
                   }}</small>
@@ -337,10 +343,9 @@ import { storeToRefs } from "pinia";
 import { useCartStore } from "@/stores/cart";
 import { useUserStore } from "@/stores/user";
 import { formatCurrency } from "@/utils/currency";
-import { createVnPayPayment, createMoMoPayment } from "@/api/payment";
+import { createVnPayPayment, createMoMoPayment, checkPendingVnPayPayment } from "@/api/payment";
 import { createOrderFromCart } from "@/api/orders";
 import { fetchVariantsByProduct } from "@/api/variants";
-import { Select as ASelect } from "@arco-design/web-vue";
 import {
   fetchGHNDistrictsByProvince,
   fetchGHNWards,
@@ -794,8 +799,12 @@ function validateDetails(): boolean {
     street: "",
   };
   let ok = true;
-  if (!contact.value.fullName.trim()) {
-    errs.value.fullName = t("checkout.err.fullName") as string;
+  const fullName = contact.value.fullName.trim();
+  const fullNameParts = fullName.split(/\s+/).filter(Boolean);
+  if (!fullName || fullNameParts.length < 2) {
+    errs.value.fullName =
+      ((t("checkout.err.fullName") as string) ||
+        "Vui lòng nhập đầy đủ họ và tên (tối thiểu 2 từ)") ?? "";
     ok = false;
   }
   const email = contact.value.email.trim();
@@ -831,9 +840,13 @@ function validateDetails(): boolean {
 function validateField(field: keyof typeof errs.value) {
   switch (field) {
     case "fullName": {
-      errs.value.fullName = contact.value.fullName.trim()
-        ? ""
-        : (t("checkout.err.fullName") as string);
+      const fullName = contact.value.fullName.trim();
+      const fullNameParts = fullName.split(/\s+/).filter(Boolean);
+      errs.value.fullName =
+        fullName && fullNameParts.length >= 2
+          ? ""
+          : ((t("checkout.err.fullName") as string) ||
+              "Vui lòng nhập đầy đủ họ và tên (tối thiểu 2 từ)") ?? "";
       break;
     }
     case "email": {
@@ -1100,15 +1113,54 @@ async function handleVnpayCheckout() {
   try {
     // VNPAY payment method ID in backend (adjust if needed)
     const vnpayPaymentMethodId = 2;
+    
+    // Check for pending payment BEFORE creating order to avoid duplicate orders
+    // Use a temporary identifier based on cart contents or customer info
+    // Note: This is a best-effort check. The backend will also validate.
+    let tempOrderId = userStore.id ? `USER-${userStore.id}` : contact.value.phone ? `PHONE-${contact.value.phone}` : null;
+    if (tempOrderId) {
+      try {
+        const pendingCheck = await checkPendingVnPayPayment(tempOrderId);
+        if (pendingCheck.hasPending && !pendingCheck.isExpired) {
+          throw new Error(pendingCheck.message || "Bạn còn một giao dịch chưa thanh toán. Vui lòng hoàn tất giao dịch hiện tại hoặc đợi hết thời gian chờ.");
+        }
+      } catch (checkError: any) {
+        // If check fails with a message about pending transaction, show it
+        if (checkError.message && (checkError.message.includes("giao dịch") || checkError.message.includes("thời gian") || checkError.message.includes("thanh toán"))) {
+          throw checkError;
+        }
+        // Otherwise, continue (check might have failed due to network, etc.)
+      }
+    }
+    
     const order = await createOnlineOrder(
       vnpayPaymentMethodId,
       "Đơn hàng online - Thanh toán VNPAY"
     );
 
+    const orderId = order.maHoaDon || order.id.toString();
+    
+    // Check for pending payment again with actual order ID (double-check)
+    try {
+      const pendingCheck = await checkPendingVnPayPayment(orderId);
+      if (pendingCheck.hasPending && !pendingCheck.isExpired) {
+        throw new Error(pendingCheck.message || "Bạn còn một giao dịch chưa thanh toán");
+      }
+      if (pendingCheck.message && pendingCheck.isExpired) {
+        // Transaction expired, continue with new payment
+      }
+    } catch (checkError: any) {
+      // If check fails with a message, show it to user
+      if (checkError.message && (checkError.message.includes("giao dịch") || checkError.message.includes("thời gian"))) {
+        throw checkError;
+      }
+      // Otherwise, continue with payment creation (check might have failed due to network, etc.)
+    }
+
     const res = await createVnPayPayment({
       amount: Math.round(orderTotal.value),
-      orderId: order.maHoaDon || order.id.toString(),
-      orderInfo: `Thanh toan don hang ${order.maHoaDon || order.id.toString()}`,
+      orderId: orderId,
+      orderInfo: `Thanh toan don hang ${orderId}`,
       locale: "vn",
       bankCode: bankCode.value || undefined,
     });
@@ -1154,123 +1206,203 @@ async function handleMoMoCheckout() {
 }
 
 .checkout-page {
-  padding: 24px 0 48px;
+  padding: 32px 0 64px;
 }
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.container h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 32px 0;
+  letter-spacing: -0.02em;
+}
+
 .grid {
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 24px;
+  grid-template-columns: 1fr 420px;
+  gap: 32px;
+  align-items: start;
 }
+
 .details {
   background: #ffffff;
-  border: 1px solid #f0f0f0;
-  border-radius: 16px;
-  padding: 20px;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
+
 .form-alert {
-  margin-top: 8px;
-  padding: 10px 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
   border-radius: 8px;
-  background: #fff7f7;
+  background: #fef2f2;
   border: 1px solid #fecaca;
   color: #b91c1c;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
+
 .form {
   display: grid;
-  gap: 12px;
+  gap: 20px;
 }
+
 .row {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
+
 .row.two {
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 16px;
 }
+
 .row.two > div {
   min-width: 0;
 }
+
 .row label {
-  font-size: 13px;
-  color: #4e5969;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 2px;
 }
+
 .row input,
 .row select {
   width: 100%;
-  border: 1px solid #e5e5e5;
+  border: 1.5px solid #e5e7eb;
   border-radius: 8px;
-  padding: 10px 12px;
-  font: inherit;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #111;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
 }
+
+.row input:focus,
+.row select:focus {
+  outline: none;
+  border-color: #111;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.row input::placeholder {
+  color: #9ca3af;
+}
+
 .row .invalid {
   border-color: #dc2626;
-  outline: 0;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
+
+.row .invalid:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
 .error-text {
   color: #dc2626;
-  font-size: 12px;
+  font-size: 13px;
+  margin-top: 4px;
+  display: block;
 }
 .payment-methods {
   display: grid;
   gap: 12px;
+  margin-top: 4px;
 }
+
 .payment-option {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  border: 2px solid #e5e5e5;
-  border-radius: 8px;
+  gap: 14px;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: all 0.2s ease;
+  background: #ffffff;
 }
+
 .payment-option:hover {
   border-color: #d1d5db;
   background-color: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
+
 .payment-option input[type="radio"] {
-  width: auto;
+  width: 18px;
+  height: 18px;
   margin-top: 2px;
   cursor: pointer;
+  accent-color: #111;
+  flex-shrink: 0;
 }
+
 .payment-option input[type="radio"]:checked + .payment-label {
   color: #111;
 }
+
 .payment-option:has(input[type="radio"]:checked) {
   border-color: #111;
-  background-color: #f9fafb;
+  background-color: #fafafa;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
+
 .payment-label {
   display: flex;
   flex-direction: column;
   gap: 4px;
   flex: 1;
 }
+
 .payment-label strong {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #111;
+  letter-spacing: -0.01em;
 }
+
 .payment-label small {
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
+  line-height: 1.4;
 }
 .summary {
   background: #ffffff;
-  border: 1px solid #f0f0f0;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 24px;
 }
+
 .summary h2 {
-  margin: 0 0 12px 0;
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -0.01em;
 }
-.row {
+
+.summary .row {
   display: flex;
   justify-content: space-between;
-  padding: 10px 0;
+  align-items: center;
+  padding: 12px 0;
+  font-size: 15px;
 }
 .shipping-title {
   display: inline-flex;
@@ -1282,90 +1414,138 @@ async function handleMoMoCheckout() {
   width: auto;
   object-fit: contain;
 }
-.row.muted span:first-child {
-  color: #4e5969;
+.summary .row.muted span:first-child {
+  color: #6b7280;
 }
-.row.total span:first-child {
+
+.summary .row.total {
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 2px solid #e5e7eb;
+  font-size: 18px;
+}
+
+.summary .row.total span:first-child {
   font-weight: 700;
+  color: #111;
 }
-.row.voucher-section {
+
+.summary .row.total span:last-child {
+  font-weight: 700;
+  color: #111;
+  font-size: 20px;
+}
+.summary .row.voucher-section {
   display: flex !important;
   justify-content: space-between;
   align-items: center;
+  margin-top: 4px;
 }
+
 .btn-select-voucher {
   background: #ffffff;
-  border: 1px solid #111111;
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 13px;
-  color: #111111;
+  border: 1.5px solid #111;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #111;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .btn-select-voucher:hover {
-  border-color: #111111;
   background: #f5f5f5;
+  transform: translateY(-1px);
 }
+
 .btn-clear-voucher {
-  background: white;
-  border: 1px solid #e5e5e5;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
   border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 16px;
-  color: #666;
+  padding: 8px 12px;
+  font-size: 20px;
+  color: #6b7280;
   cursor: pointer;
   transition: all 0.2s ease;
   line-height: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
 .btn-clear-voucher:hover:not(:disabled) {
   border-color: #dc2626;
   color: #dc2626;
-  background: #fff7f7;
+  background: #fef2f2;
 }
+
 .btn-clear-voucher:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
+
 .voucher-apply-row {
   display: flex;
   flex-direction: row;
   gap: 10px;
+  margin-top: 8px;
 }
 
 .voucher-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
+
 .voucher-input {
   flex: 1;
   min-width: 0;
-  border: 1px solid #e5e5e5;
+  border: 1.5px solid #e5e7eb;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px 16px;
   font-size: 14px;
-}
-.btn-apply-voucher {
-  background: #111111;
-  color: #fff;
-  border: 1px solid #111111;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 14px;
-  cursor: pointer;
   transition: all 0.2s ease;
 }
+
+.voucher-input:focus {
+  outline: none;
+  border-color: #111;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-apply-voucher {
+  background: #111;
+  color: #fff;
+  border: 1.5px solid #111;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-apply-voucher:hover:not(:disabled) {
+  background: #000;
+  transform: translateY(-1px);
+}
+
 .btn-apply-voucher:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
+
 .voucher-error {
   color: #dc2626;
-  font-size: 12px;
-  margin-top: -6px;
-  margin-bottom: 6px;
+  font-size: 13px;
+  margin-top: 6px;
+  margin-bottom: 0;
+  display: block;
 }
 .discount {
   color: #f77234 !important;
@@ -1394,21 +1574,60 @@ async function handleMoMoCheckout() {
   }
 }
 .actions {
-  margin-top: 12px;
+  margin-top: 24px;
 }
+
+.actions .btn {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: -0.01em;
+}
+
+.actions .btn.btn-block {
+  background: #111;
+  color: #ffffff;
+}
+
+.actions .btn.btn-block:hover:not(:disabled) {
+  background: #000;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.actions .btn.btn-block:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.actions .btn.btn-block:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .error {
-  color: #c53030;
-  margin: 12px 0 0;
+  color: #dc2626;
+  font-size: 14px;
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
 }
 
 /* ArcoDesign Select Styles */
 :deep(.arco-select) {
-  width: 100%;
-  font-size: 14px;
-  border: 1px solid #e5e5e5 !important;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #ffffff;
+  width: 100% !important;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 15px;
 }
 
 :deep(
@@ -1422,65 +1641,120 @@ async function handleMoMoCheckout() {
 }
 
 :deep(.arco-select .arco-select-view) {
+  width: 100% !important;
+  box-sizing: border-box !important;
   border-radius: 8px !important;
   padding: 0 !important;
   height: auto !important;
-  min-height: 38px;
+  min-height: 48px;
   background: #ffffff;
+  border: 1.5px solid #e5e7eb !important;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: #d4d4d4 !important;
+    border-color: #d1d5db !important;
   }
 
   .arco-select-view-single {
-    padding: 10px 12px;
-    font-size: 14px;
+    padding: 12px 16px;
+    font-size: 15px;
     line-height: 1.4;
+    width: 100%;
+    box-sizing: border-box;
+    color: #111;
   }
 }
 
 :deep(.arco-select.arco-select-open .arco-select-view) {
-  border-color: #333 !important;
-  box-shadow: none;
+  border-color: #111 !important;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05) !important;
 }
 
 :deep(.arco-select.arco-select-disabled .arco-select-view) {
-  background: #f5f5f5 !important;
-  border-color: #e5e5e5 !important;
-  color: #999 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: #f9fafb !important;
+  border-color: #e5e7eb !important;
+  color: #9ca3af !important;
+  cursor: not-allowed;
+}
+
+:deep(.arco-select.arco-select-error .arco-select-view) {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
 }
 
 :deep(.arco-select-popup) {
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e5e7eb;
+  margin-top: 4px;
 }
 
 :deep(.arco-select-option) {
-  padding: 10px 12px;
-  font-size: 14px;
+  padding: 12px 16px;
+  font-size: 15px;
   line-height: 1.4;
+  transition: background-color 0.15s ease;
 
   &:hover {
-    background-color: #f5f5f5;
+    background-color: #f9fafb;
   }
 
   &.arco-select-option-selected {
-    background-color: #fff7e6;
+    background-color: #fef3c7;
     color: #f77234;
     font-weight: 500;
   }
 }
 
-:deep(.arco-select.arco-select-error .arco-select-view) {
-  border-color: #dc2626 !important;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
-}
-
 @media (max-width: 980px) {
+  .checkout-page {
+    padding: 24px 0 48px;
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+
+  .container h1 {
+    font-size: 24px;
+    margin-bottom: 24px;
+  }
+
   .grid {
     grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .details,
+  .summary {
+    padding: 24px;
+  }
+
+  .summary {
+    position: static;
+  }
+
+  .row.two {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .details,
+  .summary {
+    padding: 20px;
+    border-radius: 10px;
+  }
+
+  .form {
+    gap: 16px;
+  }
+
+  .payment-option {
+    padding: 14px;
   }
 }
 </style>

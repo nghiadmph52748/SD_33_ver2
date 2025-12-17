@@ -257,7 +257,7 @@ function onCancel() {
   background: rgba(0, 0, 0, 0.45);
   z-index: 1000;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start; /* show drawer from the left instead of the right */
 }
 
 .drawer {
@@ -267,7 +267,7 @@ function onCancel() {
   background: #fff;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15); /* shadow on the right side when drawer is on the left */
   overflow: hidden;
 }
 
@@ -585,11 +585,11 @@ function onCancel() {
 }
 
 .drawer-slide-enter-from {
-  transform: translateX(100%);
+  transform: translateX(-100%);
 }
 
 .drawer-slide-leave-to {
-  transform: translateX(100%);
+  transform: translateX(-100%);
 }
 
 @media (max-width: 640px) {

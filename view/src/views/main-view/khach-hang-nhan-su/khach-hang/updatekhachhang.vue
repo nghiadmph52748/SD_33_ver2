@@ -16,7 +16,13 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="Ngày sinh">
-              <a-date-picker v-model="form.birthday" format="YYYY-MM-DD" placeholder="Chọn ngày sinh" style="width: 100%" />
+              <a-date-picker
+                v-model="form.birthday"
+                format="YYYY-MM-DD"
+                placeholder="Chọn ngày sinh"
+                style="width: 100%"
+                :disabled-date="(current: Date) => current && current > new Date()"
+              />
             </a-form-item>
           </a-col>
         </a-row>

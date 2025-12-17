@@ -156,12 +156,13 @@
           placeholder="Nhập số tiền mặt"
           style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
           :precision="0"
-          :formatter="(value: number | string | undefined) => formatCurrency(Number(value) || 0)"
+          :formatter="formatNumber"
           :parser="parseNumericInput"
           hide-button
           @update:model-value="handleCashInput"
         >
           <template #suffix>
+            <span class="currency-text">đ</span>
             <a-button
               type="text"
               size="mini"
@@ -189,12 +190,13 @@
           placeholder="Nhập số tiền chuyển khoản"
           style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
           :precision="0"
-          :formatter="(value: number | string | undefined) => formatCurrency(Number(value) || 0)"
+          :formatter="formatNumber"
           :parser="parseNumericInput"
           hide-button
           @update:model-value="handleTransferInput"
         >
           <template #suffix>
+            <span class="currency-text">đ</span>
             <a-button
               type="text"
               size="mini"
@@ -349,6 +351,16 @@ const emit = defineEmits<{
 
 const ghnLogo = ghnLogoUrl
 
+const formatNumber = (value: number | string | undefined) => {
+  if (value === undefined || value === null || value === '') return ''
+  const numeric =
+    typeof value === 'number'
+      ? value
+      : Number(String(value).replace(/[^\d]/g, ''))
+  if (!Number.isFinite(numeric)) return ''
+  return Math.round(numeric).toLocaleString('vi-VN')
+}
+
 const parseNumericInput = (value: string) => {
   if (!value) return undefined
   const digits = value.replace(/[^\d]/g, '')
@@ -369,7 +381,13 @@ const handleTransferInput = (value: number | undefined) => {
   :deep(.arco-input-number-suffix) {
     display: flex;
     align-items: center;
+    gap: 4px;
   }
+}
+
+.currency-text {
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .clear-suffix-btn {

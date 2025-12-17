@@ -29,7 +29,13 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="Ngày sinh" name="ngaySinh">
-              <a-date-picker v-model="formData.ngaySinh" format="YYYY-MM-DD" placeholder="Chọn ngày sinh" style="width: 100%" />
+              <a-date-picker
+                v-model="formData.ngaySinh"
+                format="YYYY-MM-DD"
+                placeholder="Chọn ngày sinh"
+                style="width: 100%"
+                :disabled-date="(current: Date) => current && current > new Date()"
+              />
             </a-form-item>
             <a-form-item name="soDienThoai">
               <template #label>

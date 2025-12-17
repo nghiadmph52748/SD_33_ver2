@@ -41,7 +41,9 @@
           <li><RouterLink to="/login" :aria-label="$t('nav.signIn')">{{ $t('nav.signIn') }}</RouterLink></li>
         </template>
         <template v-else>
-          <li class="customer-name" aria-label="customer-name">{{ customerName }}</li>
+          <li class="customer-name" aria-label="customer-name">
+            <RouterLink to="/profile">{{ customerName }}</RouterLink>
+          </li>
           <li><a href="#" @click.prevent="openLogoutConfirm">{{ $t('nav.logout') }}</a></li>
         </template>
       </ul>

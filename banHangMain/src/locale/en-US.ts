@@ -101,6 +101,7 @@ export default {
   "product.name": "Name",
   "product.rating": "Rating",
   "product.comment": "Comment",
+  "product.reviewNamePlaceholder": "Your name (optional)",
   "product.reviewCommentPlaceholder": "How does it fit? Share your experience.",
   "product.submitReview": "Submit review",
   "product.reviewAnonymous": "Anonymous",
@@ -223,7 +224,10 @@ export default {
     "The transaction was declined. Please review the details below and try again.",
   "payment.cancelTitle": "Payment cancelled",
   "payment.cancelMessage":
-    "You cancelled the transaction on VNPAY. No money was charged.",
+    "You cancelled the transaction. No money was charged.",
+  "payment.timeoutTitle": "Transaction timeout",
+  "payment.timeoutMessage":
+    "The transaction has exceeded the waiting time. Please perform the transaction again.",
   "payment.unknownTitle": "Payment status pending",
   "payment.unknownMessage":
     "We could not confirm the transaction yet. Keep this reference and contact support if needed.",
@@ -264,7 +268,7 @@ export default {
   "checkout.cod": "Cash on Delivery (COD)",
   "checkout.codDesc": "Pay when you receive",
   "checkout.vnpayDesc": "Pay online via VNPAY",
-  "checkout.momoDesc": "Pay with MoMo e-wallet",
+  "checkout.momoDesc": "Pay online via MoMo",
   "checkout.placeOrder": "Place order",
   // Validation
   "checkout.err.fullName": "Please enter your full name",

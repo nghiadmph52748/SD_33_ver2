@@ -15,11 +15,11 @@
     <!-- Header -->
     <div class="invoice-header">
       <div class="company-info">
-        <h1 class="company-name">GearUp</h1>
+        <img src="/src/assets/logo-datn.png" alt="GearUp" class="company-logo" />
         <p class="company-subtitle">Cửa hàng giày thể thao</p>
         <div class="company-details">
           <p>Địa chỉ: FPT polytechnic, Hà Nội</p>
-          <p>Hotline: 0559 849 124</p>
+          <p>Hotline: 0332 050 542</p>
           <p>Email: truongtqph50260@gearup.com</p>
         </div>
       </div>
@@ -66,10 +66,6 @@
           <div class="info-item">
             <span class="label">Tên nhân viên:</span>
             <span class="value">{{ invoice?.tenNhanVien || 'Admin' }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Mã nhân viên:</span>
-            <span class="value">{{ invoice?.maNhanVien || 'NV001' }}</span>
           </div>
           <div class="info-item">
             <span class="label">Ngày thanh toán:</span>
@@ -170,7 +166,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 
@@ -242,6 +238,142 @@ const calculateFinalTotal = (invoice: any) => {
   return Math.max(0, manualTotal)
 }
 
+const printStyles = `
+  @page {
+    size: A4;
+    margin: 8mm 10mm 10mm;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .invoice-print-page {
+    width: 190mm;
+    margin: 0 auto;
+    padding: 20px 10mm 10mm 10mm;
+    background: #fff;
+    color: #333;
+    line-height: 1.6;
+  }
+
+  .invoice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid #2c3e50;
+  }
+
+  .company-info { flex: 1; }
+  .company-logo { display: block; max-width: 180px; height: auto; margin: 0 0 5px 0; }
+  .company-subtitle { font-size: 16px; color: #7f8c8d; margin: 0 0 15px 0; }
+  .company-details p { margin: 5px 0; font-size: 14px; color: #555; }
+  .invoice-title { text-align: right; flex: 1; }
+  .invoice-title h2 { font-size: 24px; font-weight: bold; color: #2c3e50; margin: 0 0 15px 0; text-transform: uppercase; }
+  .invoice-number p { margin: 5px 0; font-size: 14px; }
+
+  .invoice-section { margin-bottom: 30px; }
+  .section-title { font-size: 18px; font-weight: bold; color: #2c3e50; margin: 0 0 15px 0; padding: 10px 0; border-bottom: 2px solid #3498db; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .info-column h4 { font-size: 16px; font-weight: bold; color: #34495e; margin: 0 0 15px 0; padding: 8px 12px; background: #ecf0f1; border-left: 4px solid #3498db; }
+  .info-item { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; }
+  .label { font-weight: 500; color: #555; min-width: 120px; }
+  .value { font-weight: 600; color: #2c3e50; }
+  .status-paid { color: #27ae60; font-weight: bold; }
+
+  .products-table { width: 100%; }
+  .products-table table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .products-table th, .products-table td { border: 1px solid #bdc3c7; padding: 10px 6px; text-align: left; }
+  .products-table th { background: #34495e; color: #fff; font-weight: bold; text-align: center; }
+  .products-table tr:nth-child(even) { background: #f8f9fa; }
+  .center { text-align: center; }
+  .right { text-align: right; }
+  .product-name { font-weight: 600; color: #2c3e50; }
+  .product-attributes { font-size: 12px; }
+  .attribute { margin: 2px 0; color: #555; }
+  .total { font-weight: bold; color: #e74c3c; }
+
+  .summary-table { max-width: 400px; margin-left: auto; }
+  .summary-table table { width: 100%; border-collapse: collapse; }
+  .summary-table td { padding: 10px 15px; border-bottom: 1px solid #bdc3c7; }
+  .summary-table .label { font-weight: 500; color: #555; }
+  .summary-table .value { font-weight: 600; color: #2c3e50; text-align: right; }
+  .summary-table .discount { color: #e74c3c; }
+  .summary-table .total-row { background: #ecf0f1; border-top: 2px solid #2c3e50; border-bottom: 2px solid #2c3e50; }
+  .summary-table .total-row .label, .summary-table .total-row .value { font-size: 16px; color: #2c3e50; }
+
+  .invoice-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; padding-top: 20px; border-top: 2px solid #bdc3c7; }
+  .thank-you { flex: 1; }
+  .thank-you p { margin: 5px 0; color: #555; }
+  .signature { text-align: center; min-width: 200px; }
+  .signature-line { width: 150px; height: 1px; background: #333; margin: 20px auto 10px; }
+  .signature-name { font-weight: bold; color: #2c3e50; }
+
+  @media print {
+    .invoice-header,
+    .invoice-section,
+    .products-table,
+    .summary-table,
+    .invoice-footer {
+      page-break-inside: avoid;
+    }
+
+    .products-table table,
+    .products-table tr,
+    .products-table td,
+    .summary-table table,
+    .summary-table tr,
+    .summary-table td {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+  }
+`
+
+const openPrintWindow = () => {
+  const invoiceEl = document.querySelector('.invoice-print-page') as HTMLElement | null
+
+  if (!invoiceEl) {
+    return
+  }
+
+  const html = `<!doctype html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>${invoice.value?.maHoaDon || 'Invoice'}</title>
+      <style>${printStyles}</style>
+    </head>
+    <body>${invoiceEl.outerHTML}</body>
+  </html>`
+
+  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1200')
+
+  if (!printWindow) {
+    return
+  }
+
+  printWindow.document.open()
+  printWindow.document.write(html)
+  printWindow.document.close()
+
+  printWindow.onload = () => {
+    printWindow.focus()
+    printWindow.print()
+    setTimeout(() => {
+      printWindow.close()
+    }, 300)
+  }
+}
+
 const loadInvoiceData = async () => {
   try {
     const invoiceId = route.params.id as string
@@ -295,47 +427,17 @@ const loadInvoiceData = async () => {
     ]
   } finally {
     loading.value = false
+    await nextTick()
+    openPrintWindow()
   }
 }
 
 onMounted(() => {
   loadInvoiceData()
 })
-
-// Watch loading state để tự động in khi dữ liệu đã load xong
-watch(loading, (newLoading) => {
-  if (!newLoading) {
-    // Dữ liệu đã load xong, tự động in sau 500ms
-    setTimeout(() => {
-      window.print()
-
-      // Sau khi in xong, reload trang
-      window.addEventListener('afterprint', () => {
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000) // Đợi 1 giây trước khi reload
-      })
-    }, 500)
-  }
-})
 </script>
 
 <style scoped>
-/* Ẩn hoàn toàn menu và navbar */
-:global(.arco-layout-header),
-:global(.arco-layout-sider),
-:global(.arco-layout-aside),
-:global(.arco-menu),
-:global(.arco-menu-item),
-:global(.arco-menu-group),
-:global(.arco-menu-submenu),
-:global(.layout-navbar),
-:global(.layout-sider),
-:global(.menu-wrapper),
-:global(.left-side) {
-  display: none !important;
-}
-
 /* Loading Styles */
 .loading-container {
   display: flex;
@@ -381,12 +483,6 @@ watch(loading, (newLoading) => {
   font-family: 'Arial', sans-serif;
   line-height: 1.6;
   color: #333;
-  min-height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 9999;
 }
 
 /* Back Button */
@@ -426,10 +522,10 @@ watch(loading, (newLoading) => {
   flex: 1;
 }
 
-.company-name {
-  font-size: 32px;
-  font-weight: bold;
-  color: #2c3e50;
+.company-logo {
+  display: block;
+  max-width: 180px;
+  height: auto;
   margin: 0 0 5px 0;
 }
 
@@ -531,7 +627,7 @@ watch(loading, (newLoading) => {
 .products-table th,
 .products-table td {
   border: 1px solid #bdc3c7;
-  padding: 12px 8px;
+  padding: 10px 6px;
   text-align: left;
 }
 
@@ -654,47 +750,41 @@ watch(loading, (newLoading) => {
 
 /* Print Styles */
 @media print {
-  /* Ẩn hoàn toàn menu và navbar */
-  .arco-layout-header,
-  .arco-layout-sider,
-  .arco-layout-aside,
-  .arco-menu,
-  .arco-menu-item,
-  .arco-menu-group,
-  .arco-menu-submenu,
-  .arco-layout-content,
-  .layout-navbar,
-  .layout-sider,
-  .menu-wrapper,
-  .left-side {
-    display: none !important;
+  @page {
+    size: A4;
+    margin: 8mm 10mm 10mm;
   }
 
   .invoice-print-page {
-    margin: 0;
-    padding: 0;
-    max-width: none;
-    width: 100%;
+    width: 190mm;
+    margin: 0 auto;
+    padding: 0 10mm 10mm 10mm;
+    box-shadow: none;
+    font-size: 11px;
+    line-height: 1.3;
+    background: #fff;
+    page-break-after: avoid;
+    page-break-before: avoid;
   }
 
-  .invoice-header {
+  .invoice-header,
+  .invoice-section,
+  .products-table,
+  .summary-table,
+  .invoice-footer,
+ :global(.back-button-container),
+ .back-button-container {
     page-break-inside: avoid;
   }
 
-  .invoice-section {
+  .products-table table,
+  .products-table tr,
+  .products-table td,
+  .summary-table table,
+  .summary-table tr,
+  .summary-table td {
     page-break-inside: avoid;
-  }
-
-  .products-table {
-    page-break-inside: avoid;
-  }
-
-  .summary-table {
-    page-break-inside: avoid;
-  }
-
-  .invoice-footer {
-    page-break-inside: avoid;
+    page-break-after: auto;
   }
 }
 

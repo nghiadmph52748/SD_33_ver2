@@ -117,6 +117,20 @@ const status = computed<StatusConfig>(() => {
     }
   }
 
+  if (code.value === '15') {
+    // Transaction timeout or expired
+    return {
+      titleKey: 'payment.timeoutTitle',
+      messageKey: 'payment.timeoutMessage',
+      primaryRoute: '/checkout',
+      primaryLabelKey: 'payment.actions.retryCheckout',
+      secondaryRoute: '/',
+      secondaryLabelKey: 'payment.actions.continueShopping',
+      variant: 'failure',
+      icon: '⏰',
+    }
+  }
+
   if (code.value === '24') {
     // User cancelled on VNPAY UI
     return {

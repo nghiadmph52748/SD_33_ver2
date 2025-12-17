@@ -24,15 +24,15 @@
               </a-avatar>
               <img
                 v-else
-                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
+                src="@/assets/logo-datn.png"
                 alt="AI"
-                style="width: 28px; height: 28px"
+                class="ai-logo"
               />
             </div>
             <div class="content">
-              <!-- Spinning animation - show FIRST when processing but no content yet -->
+              <!-- Spinning animation - keep visible while AI is processing, even if content starts streaming -->
               <div
-                v-if="msg.role === 'assistant' && (msg.processingStatus === 'querying' || msg.processingStatus === 'analyzing') && (!msg.content || msg.content.trim().length === 0)"
+                v-if="msg.role === 'assistant' && (msg.processingStatus === 'querying' || msg.processingStatus === 'analyzing')"
                 class="processing-indicator"
               >
                 <a-spin :size="16" />
@@ -75,7 +75,7 @@
                 </a-space>
               </div>
 
-              <div v-if="msg.timestamp" class="timestamp">{{ msg.timestamp }}</div>
+              <!-- Timestamp hidden for both user and assistant messages in AI popup -->
             </div>
           </div>
         </div>
@@ -85,9 +85,9 @@
           <div class="message-wrapper">
             <div class="avatar">
               <img
-                src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/dfdba5317c0c20ce20e64fac803d52bc.svg~tplv-49unhts6dw-image.image"
+                src="@/assets/logo-datn.png"
                 alt="AI"
-                style="width: 28px; height: 28px"
+                class="ai-logo"
               />
             </div>
             <div class="content">
@@ -815,7 +815,7 @@ async function sendMessage(text: string = input.value) {
             // Keep content empty to show spinner until real content arrives
             messages.value[msgIndex].content = ''
           }
-          
+
           nextTick(() => scrollToBottom())
         }
       },
@@ -827,14 +827,34 @@ async function sendMessage(text: string = input.value) {
         if (msgIndex !== -1) {
           const msg = messages.value[msgIndex]
           msg.content = fullContent.trim()
-          msg.processingStatus = 'ready'
           
-          // Ensure products and queryType are set from received data
-          if (receivedProducts.length > 0 && !msg.products) {
-            msg.products = [...receivedProducts]
-          }
-          if (receivedQueryType && !msg.queryType) {
-            msg.queryType = receivedQueryType
+          // If we already have streamed content, mark as ready immediately
+          if (msg.content && msg.content.trim().length > 0) {
+            msg.processingStatus = 'ready'
+          } else {
+            // No content yet: keep spinner visible while we call fallback API
+            msg.processingStatus = 'analyzing'
+            try {
+              const fallback = await chatWithAI(text)
+              if (fallback && fallback.message && fallback.message.trim().length > 0) {
+                msg.content = fallback.message.trim()
+                if (fallback.queryType) {
+                  msg.queryType = fallback.queryType
+                  receivedQueryType = receivedQueryType || fallback.queryType
+                }
+                if (fallback.redirect_to_staff) {
+                  shouldRedirectToStaff = true
+                }
+                if (Array.isArray(fallback.products) && fallback.products.length > 0) {
+                  msg.products = fallback.products
+                  receivedProducts = [...fallback.products]
+                }
+              }
+            } catch (fallbackError) {
+              console.error('Fallback chatWithAI failed:', fallbackError)
+            } finally {
+              msg.processingStatus = 'ready'
+            }
           }
         }
 
@@ -855,20 +875,16 @@ async function sendMessage(text: string = input.value) {
 
         // Check if we should redirect to staff chat
         if (shouldRedirectToStaff) {
-          // Wait a bit for the message to be displayed, then redirect
           setTimeout(() => {
             emit('redirect-to-staff')
           }, 1500)
           return
         }
-        
-        // Check if we should show product cards in a separate message
-        // Always show for explicit product suggestions OR discount/availability questions
+
+        // Product cards & suggestions logic unchanged
         const userMessageLower = text.toLowerCase().trim()
-        
-        // Check for explicit suggestion request with product keywords
+
         const hasExplicitSuggestionRequest = 
-          // Vietnamese patterns: "gợi ý" + product keywords
           (userMessageLower.includes('gợi ý') && (
             userMessageLower.includes('giày') ||
             userMessageLower.includes('shoe') ||
@@ -884,7 +900,6 @@ async function sendMessage(text: string = input.value) {
             userMessageLower.includes('thể thao') ||
             userMessageLower.includes('sport')
           )) ||
-          // English patterns: "suggest" + product keywords
           (userMessageLower.includes('suggest') && (
             userMessageLower.includes('shoe') ||
             userMessageLower.includes('product') ||
@@ -895,7 +910,6 @@ async function sendMessage(text: string = input.value) {
             userMessageLower.includes('converse') ||
             userMessageLower.includes('running')
           )) ||
-          // Alternative patterns: "cho tôi xem" + product keywords
           ((userMessageLower.includes('cho tôi') || userMessageLower.includes('show me')) && (
             userMessageLower.includes('giày') ||
             userMessageLower.includes('shoe') ||
@@ -903,7 +917,6 @@ async function sendMessage(text: string = input.value) {
             userMessageLower.includes('product')
           ))
 
-        // Discount / promotion keywords (e.g., "sản phẩm nào đang giảm giá")
         const discountKeywords = [
           'giảm giá',
           'đang giảm',
@@ -920,7 +933,6 @@ async function sendMessage(text: string = input.value) {
         ]
         const mentionsDiscount = discountKeywords.some((keyword) => userMessageLower.includes(keyword))
 
-        // Availability / stock keywords (e.g., "sản phẩm này còn hàng không")
         const availabilityKeywords = [
           'còn hàng',
           'còn hàng không',
@@ -942,7 +954,6 @@ async function sendMessage(text: string = input.value) {
         const isPromotionIntent = resolvedQueryType === 'promotion_inquiry'
         const isProductIntent = resolvedQueryType === 'product_inquiry'
 
-        // Check if AI response actually mentions products/discounts (not an error message)
         const aiResponseLower = (aiMsg?.content || fullContent).toLowerCase()
         const isErrorResponse = aiResponseLower.includes('lỗi') || 
                                aiResponseLower.includes('sự cố') || 
@@ -965,14 +976,12 @@ async function sendMessage(text: string = input.value) {
           (isProductIntent && (hasExplicitSuggestionRequest || mentionsAvailability))
         ) && !isErrorResponse && aiMentionsProducts
         
-        // Use products from aiMsg or receivedProducts
         const productsToCheck = aiMsg?.products || receivedProducts
         const filteredProducts = filterProductsByMention(
           aiMsg?.content || fullContent,
           productsToCheck || []
         )
         
-        // If this is a product suggestion query AND we have products AND AI response is relevant, create a separate message for EACH product
         if (isProductSuggestionQuery && filteredProducts && filteredProducts.length > 0) {
           console.log('📦 Creating separate product cards messages (one per product):', {
             queryType: aiMsg?.queryType || receivedQueryType,
@@ -982,12 +991,10 @@ async function sendMessage(text: string = input.value) {
             products: filteredProducts
           })
           
-          // Remove products from the main message
           if (aiMsg) {
             aiMsg.products = undefined
           }
           
-          // Create a separate message for EACH product (one product per bubble)
           let baseId = Date.now()
           for (const product of filteredProducts) {
             const productMessage: ChatMessage = {
@@ -995,7 +1002,7 @@ async function sendMessage(text: string = input.value) {
               role: 'assistant',
               content: '',
               timestamp: new Date().toLocaleTimeString('vi-VN'),
-              products: [product], // Only one product per message
+              products: [product],
               processingStatus: 'ready',
               isProductSuggestion: true,
             }
@@ -1005,7 +1012,6 @@ async function sendMessage(text: string = input.value) {
           await nextTick()
           scrollToBottom()
         } else if (aiMsg && aiMsg.products && aiMsg.products.length > 0) {
-          // If we have products but it's not a suggestion query, remove them from the message
           console.log('📦 Products received but not a suggestion query, removing from message', {
             queryType: aiMsg.queryType,
             hasExplicitSuggestionRequest,
@@ -1014,24 +1020,18 @@ async function sendMessage(text: string = input.value) {
           aiMsg.products = undefined
         }
         
-        // Always show suggestions card after AI response (unless redirecting to staff)
         if (aiMsg && aiMsg.content && aiMsg.content.trim()) {
-          // Get suggestions from metadata or use default suggestions
           let suggestions: string[] = []
           
           if (aiMsg.followUpSuggestions && aiMsg.followUpSuggestions.length > 0) {
-            // Use suggestions from backend
             suggestions = [...aiMsg.followUpSuggestions]
           } else {
-            // Generate default suggestions based on conversation context
             suggestions = generateDefaultSuggestions(aiMsg.content, messages.value)
           }
           
-          // Remove suggestions from the AI message
           aiMsg.followUpSuggestions = undefined
           aiMsg.isSuggestionsOnly = false
           
-          // Create a separate suggestions card message
           const suggestionsMessage: ChatMessage = {
             id: Date.now() + 2,
             role: 'assistant',
@@ -1045,7 +1045,7 @@ async function sendMessage(text: string = input.value) {
 
         nextTick(() => scrollToBottom())
       },
-      (error: string) => {
+      async (error: string) => {
         loading.value = false
         isProcessing.value = false
         Message.error(`Lỗi khi gửi tin nhắn: ${error}`)
@@ -1699,60 +1699,20 @@ onMounted(async () => {
   if (userStore.isAuthenticated) {
     loadHistory()
   } else {
-    // For guest users, detect page reload vs component remount
-    // Strategy: PRIORITIZE flag check first (more reliable for component remount)
-    // Then use Performance API as secondary check for page reload
-    
-    // Check if window was closed recently (component remount, not page reload)
-    const wasWindowClosed = sessionStorage.getItem('__ai_chat_window_closed') === 'true'
-    const closeTime = sessionStorage.getItem('__ai_chat_close_time')
-    const now = Date.now()
-    const wasRecentlyClosed = wasWindowClosed && closeTime && (now - parseInt(closeTime)) < 30000 // 30 seconds
-    
-    if (wasRecentlyClosed) {
-      // Window was recently closed - this is definitely a component remount, keep history
-      // Don't check Performance API here because it can be unreliable for component remounts
-      loadHistory()
-      sessionStorage.removeItem('__ai_chat_window_closed')
-      sessionStorage.removeItem('__ai_chat_close_time')
-      console.log('📂 Window reopen detected (recently closed) - loaded guest chat history')
-    } else {
-      // No recent close flag - could be page reload or first visit
-      // Try to detect page reload using Performance API
-      let isPageReload = false
+    // Guest users:
+    // - If page was truly reloaded (F5), clear history once
+    // - If chat popup was just closed/reopened, keep history
+    const wasActualReload = sessionStorage.getItem('__ai_chat_actual_reload') === 'true'
+    if (wasActualReload) {
       try {
-        const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-        isPageReload = navigationType?.type === 'reload'
-      } catch (e) {
-        // Fallback for older browsers
-        try {
-          isPageReload = (window.performance.navigation && (window.performance.navigation as any).type === 1)
-        } catch (e2) {
-          // Can't detect, will check history instead
-        }
-      }
-      
-      // Check if there's history in localStorage
-      const hasHistory = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(CHAT_SESSIONS_KEY)
-      
-      if (isPageReload && hasHistory) {
-        // This is a page reload with history - clear it
         clearChatHistory()
-        // Clear any stale flags
-        sessionStorage.removeItem('__ai_chat_window_closed')
-        sessionStorage.removeItem('__ai_chat_close_time')
-        console.log('🔄 Page reload detected (Performance API + has history) - cleared guest chat history')
-      } else if (hasHistory && !isPageReload) {
-        // Has history but not detected as reload and no close flag
-        // This could be a component remount where flag was lost
-        // For safety, keep history (better to keep than lose)
-        loadHistory()
-        console.log('📂 Component remount (has history, no close flag, not reload) - loaded guest chat history')
-      } else {
-        // No history or first visit - just load (will be empty if no history)
-        loadHistory()
-        console.log('📂 First visit or no history - loaded guest chat history')
+      } catch (e) {
+        console.error('Error clearing guest chat history on reload:', e)
+      } finally {
+        sessionStorage.removeItem('__ai_chat_actual_reload')
       }
+    } else {
+      loadHistory()
     }
   }
   
@@ -2157,6 +2117,15 @@ defineExpose({
       height: 40px;
       font-size: 16px;
       font-weight: 600;
+    }
+
+    .ai-logo {
+      max-width: 40px;
+      max-height: 32px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
     }
   }
 

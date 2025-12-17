@@ -12,7 +12,14 @@ export interface HttpResponse<T = unknown> {
 }
 
 // Set API base URL for backend
-axios.defaults.baseURL = 'http://localhost:8080'
+// Axios paths already include /api prefix, so strip it from baseURL if present
+const resolvedApiBase =
+  ((import.meta as any).env?.VITE_API_BASE_URL as string | undefined)?.trim() || 'http://localhost:8080'
+// Remove /api suffix if present since axios paths already include it
+const baseURL = resolvedApiBase.endsWith('/api') 
+  ? resolvedApiBase.slice(0, -4) 
+  : resolvedApiBase.replace(/\/api\/?$/, '')
+axios.defaults.baseURL = baseURL
 
 axios.interceptors.request.use(
   (config: any) => {

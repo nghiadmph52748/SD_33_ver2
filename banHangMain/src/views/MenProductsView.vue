@@ -20,28 +20,24 @@
             {{ $t('store.menSubtitle') }}
           </p>
         </div>
-        <button type="button" class="filter-btn" @click="filterVisible = true">
-          <!-- Filter & sort inline SVG icon -->
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path fill="currentColor" d="M10 18h4v-2h-4v2ZM3 6v2h18V6H3Zm3 7h12v-2H6v2Z"/>
-          </svg>
-          <span>{{ $t('store.filterSort') }}</span>
-        </button>
       </div>
     </div>
 
-    <div v-if="!error">
-      <AppStoreGrid :data="products" :loading="loading" source-page="men" />
-      <a-empty v-if="!loading && products.length === 0" :description="$t('store.noProducts')" />
+    <div class="page__content">
+      <FilterSidebar
+        ref="filterSidebarRef"
+        :max-price="maxProductPrice"
+        :brands="availableBrands"
+        @change="applyFilters"
+      />
+      <div class="page__main">
+        <div v-if="!error">
+          <AppStoreGrid :data="products" :loading="loading" source-page="men" />
+          <a-empty v-if="!loading && products.length === 0" :description="$t('store.noProducts')" />
+        </div>
+        <a-empty v-else-if="error" :description="error" />
+      </div>
     </div>
-    <a-empty v-else-if="error" :description="error" />
-    <FilterSortDrawer 
-      v-model:visible="filterVisible" 
-      :total="products.length" 
-      :max-price="maxProductPrice"
-      :brands="availableBrands"
-      @apply="applyFilters" 
-    />
   </div>
 </template>
 
@@ -51,14 +47,14 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import AppStoreGrid from "@/components/AppStoreGrid.vue";
 import { useCartStore } from "@/stores/cart";
-import FilterSortDrawer from "@/components/FilterSortDrawer.vue";
+import FilterSidebar from "@/components/FilterSidebar.vue";
 import type { Product } from "@/api/products";
 
 const { t } = useI18n();
 
 const cartStore = useCartStore();
 const { products: allProducts, loading, error } = storeToRefs(cartStore);
-const filterVisible = ref(false);
+const filterSidebarRef = ref<InstanceType<typeof FilterSidebar> | null>(null);
 
 const filterState = ref({
   sort: 'featured',
@@ -67,7 +63,10 @@ const filterState = ref({
 });
 
 onMounted(async () => {
-  await cartStore.fetchProducts(true); // Only sneakers
+  // Only fetch if products haven't been loaded yet
+  if (allProducts.value.length === 0) {
+    await cartStore.fetchProducts(true); // Only sneakers
+  }
 });
 
 // Get unique brands from men products
@@ -166,23 +165,24 @@ const products = computed(() => {
 });
 
 function applyFilters(payload: { sort: string; price: [number, number]; categories: string[] }) {
-  filterState.value = {
-    sort: payload.sort,
-    price: payload.price,
-    categories: payload.categories,
-  };
+  filterState.value.sort = payload.sort;
+  filterState.value.price = payload.price;
+  filterState.value.categories = payload.categories;
 }
 </script>
 
 <style scoped>
 .page {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .page__header {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto 24px auto;
-  padding: 16px 12px 0 12px;
+  padding: 16px 16px 0 16px;
 }
 
 .back {
@@ -239,24 +239,30 @@ function applyFilters(payload: { sort: string; price: [number, number]; categori
   color: #374151;
 }
 
-.filter-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid #d1d5db;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color .15s ease, background-color .15s ease, transform .08s ease, box-shadow .08s ease;
+.page__content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px 24px 16px;
+  gap: 24px;
 }
 
-.filter-btn:hover { border-color: #9ca3af; background: #f9fafb; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-.filter-btn:active { transform: translateY(0) scale(0.98); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+.page__main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
 
 @media (max-width: 768px) {
   .title { font-size: 30px; }
   .count { font-size: 16px; }
+  .page__content {
+    flex-direction: column;
+  }
+  .page__main {
+    padding: 12px;
+  }
 }
 </style>

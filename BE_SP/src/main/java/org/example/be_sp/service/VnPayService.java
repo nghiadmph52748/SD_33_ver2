@@ -32,6 +32,11 @@ public class VnPayService {
     private final Environment env;
 
     public VnpayCreatePaymentResponse createPayment(VnpayCreatePaymentRequest req, String clientIp, String origin) {
+        // Generate txnRef internally
+        return createPaymentWithTxnRef(req, clientIp, origin, null);
+    }
+    
+    public VnpayCreatePaymentResponse createPaymentWithTxnRef(VnpayCreatePaymentRequest req, String clientIp, String origin, String providedTxnRef) {
         try {
             String vnpTmnCode = get("vnp.tmnCode", "");
             String vnpHashSecret = get("vnp.hashSecret", "");
@@ -48,21 +53,43 @@ public class VnPayService {
             }
 
             String locale = StringUtils.hasText(req.getLocale()) ? req.getLocale() : "vn";
-            String orderInfoRaw = StringUtils.hasText(req.getOrderInfo()) ? req.getOrderInfo() : "Thanh toan don hang";
-            String orderInfo = normalizeAscii(orderInfoRaw);
 
+            // Use provided txnRef or generate new one
+            String txnRef;
+            if (StringUtils.hasText(providedTxnRef)) {
+                txnRef = providedTxnRef;
+            } else {
             String baseId = StringUtils.hasText(req.getOrderId()) ? req.getOrderId() : "HD";
-            String attempt = String.valueOf(System.currentTimeMillis() % 1_000_000L);
-            String txnRef = (baseId + "-" + attempt).replaceAll("[^A-Za-z0-9_-]", "");
+                // Generate unique txnRef using UUID to guarantee uniqueness
+                // Format: baseId-UUID (truncated to 32 chars max for VNPay)
+                String uuid = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+                txnRef = (baseId + "-" + uuid).replaceAll("[^A-Za-z0-9_-]", "");
+                if (txnRef.length() > 32) {
+                    // If baseId is too long, use just the last part of baseId + UUID
+                    int maxBaseIdLength = 32 - uuid.length() - 1; // -1 for the dash
+                    if (maxBaseIdLength > 0 && baseId.length() > maxBaseIdLength) {
+                        baseId = baseId.substring(baseId.length() - maxBaseIdLength);
+                    }
+                    txnRef = (baseId + "-" + uuid).replaceAll("[^A-Za-z0-9_-]", "");
             if (txnRef.length() > 32) {
                 txnRef = txnRef.substring(0, 32);
             }
+                }
+            }
+            
+            // Make orderInfo unique by including txnRef to prevent VNPay deduplication
+            String orderInfoRaw = StringUtils.hasText(req.getOrderInfo()) 
+                    ? req.getOrderInfo() + " " + txnRef 
+                    : "Thanh toan don hang " + txnRef;
+            String orderInfo = normalizeAscii(orderInfoRaw);
 
             String ip = StringUtils.hasText(clientIp) ? clientIp : "127.0.0.1";
-            String createDate = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT+7"));
-            cal.add(Calendar.MINUTE, 15);
-            String expireDate = new SimpleDateFormat("yyyyMMddHHmmss").format(cal.getTime());
+            // VNPay expects times in GMT+7 (Asia/Ho_Chi_Minh). Docker often defaults to UTC, so we format explicitly.
+            java.time.ZoneId vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+            java.time.format.DateTimeFormatter vnpFmt = java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+            java.time.ZonedDateTime nowVn = java.time.ZonedDateTime.now(vnZone);
+            String createDate = nowVn.format(vnpFmt);
+            String expireDate = nowVn.plusMinutes(15).format(vnpFmt);
 
             // Detect frontend URL from Origin header, or use configured default
             // banHangMain runs on port 5174, admin view runs on 5173

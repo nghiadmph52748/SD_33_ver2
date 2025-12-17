@@ -60,12 +60,20 @@ const payDate = computed(() => route.query.payDate)
 const isSuccess = computed(() => code.value === '00')
 
 const resultStatus = computed(() => (isSuccess.value ? 'success' : 'error'))
-const resultTitle = computed(() => (isSuccess.value ? 'Thanh toán thành công' : 'Thanh toán thất bại'))
-const resultSubtitle = computed(() =>
-  isSuccess.value
-    ? 'Đơn hàng đã được thanh toán qua VNPAY (sandbox). Vui lòng kiểm tra lại tình trạng hóa đơn trong hệ thống.'
-    : 'Hệ thống chưa ghi nhận thanh toán hợp lệ. Kiểm tra lại mã giao dịch hoặc thử thanh toán lại.'
-)
+const resultTitle = computed(() => {
+  if (isSuccess.value) return 'Thanh toán thành công'
+  if (code.value === '15') return 'Giao dịch đã quá thời gian chờ thanh toán'
+  return 'Thanh toán thất bại'
+})
+const resultSubtitle = computed(() => {
+  if (isSuccess.value) {
+    return 'Đơn hàng đã được thanh toán qua VNPAY (sandbox). Vui lòng kiểm tra lại tình trạng hóa đơn trong hệ thống.'
+  }
+  if (code.value === '15') {
+    return 'Giao dịch đã quá thời gian chờ thanh toán. Quý khách vui lòng thực hiện lại giao dịch'
+  }
+  return 'Hệ thống chưa ghi nhận thanh toán hợp lệ. Kiểm tra lại mã giao dịch hoặc thử thanh toán lại.'
+})
 
 const formattedAmount = computed(() => {
   const value = Number.isFinite(amount.value) ? amount.value : 0
@@ -121,6 +129,7 @@ const descriptionsColumn = computed(() => columns.value)
 const statusLabel = computed(() => {
   if (!code.value) return 'Không xác định'
   if (code.value === '00') return 'Thành công'
+  if (code.value === '15') return 'Hết thời gian chờ'
   return `Mã lỗi: ${code.value}`
 })
 </script>

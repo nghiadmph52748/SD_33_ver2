@@ -105,6 +105,7 @@ export default {
   "product.name": "Tên",
   "product.rating": "Xếp hạng",
   "product.comment": "Bình luận",
+  "product.reviewNamePlaceholder": "Tên của bạn (tùy chọn)",
   "product.reviewCommentPlaceholder":
     "Đôi giày vừa vặn thế nào? Chia sẻ trải nghiệm của bạn.",
   "product.submitReview": "Gửi đánh giá",
@@ -236,7 +237,10 @@ export default {
     "Giao dịch bị từ chối. Vui lòng kiểm tra thông tin bên dưới và thử lại.",
   "payment.cancelTitle": "Đã hủy thanh toán",
   "payment.cancelMessage":
-    "Bạn đã hủy giao dịch trên VNPAY. Không có khoản tiền nào bị trừ.",
+    "Bạn đã hủy giao dịch. Không có khoản tiền nào bị trừ.",
+  "payment.timeoutTitle": "Giao dịch đã quá thời gian chờ thanh toán",
+  "payment.timeoutMessage":
+    "Giao dịch đã quá thời gian chờ thanh toán. Quý khách vui lòng thực hiện lại giao dịch.",
   "payment.unknownTitle": "Trạng thái thanh toán đang chờ",
   "payment.unknownMessage":
     "Chúng tôi chưa thể xác nhận giao dịch. Hãy lưu mã tham chiếu và liên hệ hỗ trợ khi cần.",
@@ -277,7 +281,7 @@ export default {
   "checkout.cod": "Giao hàng tận nơi (COD)",
   "checkout.codDesc": "Thanh toán khi nhận hàng",
   "checkout.vnpayDesc": "Thanh toán online qua VNPAY",
-  "checkout.momoDesc": "Thanh toán qua ví điện tử MoMo",
+  "checkout.momoDesc": "Thanh toán qua MoMo",
   "checkout.placeOrder": "Đặt hàng",
   // Validation
   "checkout.err.fullName": "Vui lòng nhập họ và tên",

@@ -111,6 +111,10 @@ export async function chatWithAIStream(
             const data = JSON.parse(jsonStr)
 
             if (data.type === 'start') {
+              // Initial metadata (intent, data_source, etc.)
+              onChunk('', data)
+            } else if (data.type === 'suggestions') {
+              // Follow-up suggestions / extra metadata
               onChunk('', data)
             } else if (data.type === 'content') {
               onChunk(data.content)

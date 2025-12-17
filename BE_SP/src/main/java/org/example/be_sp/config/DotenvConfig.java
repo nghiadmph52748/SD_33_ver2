@@ -15,32 +15,41 @@ public class DotenvConfig implements ApplicationContextInitializer<ConfigurableA
     public void initialize(ConfigurableApplicationContext applicationContext) {
         try {
             // Try multiple locations: current directory, parent directory, and user home
+            String userDir = System.getProperty("user.dir");
             String[] possiblePaths = {
                 "./",
                 "../",
-                System.getProperty("user.dir"),
-                System.getProperty("user.dir") + "/BE_SP",
+                userDir,
+                userDir + "/BE_SP",
+                userDir + "/..",
                 System.getProperty("user.home")
             };
             
             Dotenv dotenv = null;
+            String loadedFrom = null;
             for (String path : possiblePaths) {
                 try {
+                    java.io.File envFile = new java.io.File(path, ".env");
+                    if (envFile.exists() && envFile.isFile()) {
                     dotenv = Dotenv.configure()
                             .directory(path)
                             .ignoreIfMissing()
                             .load();
                     if (dotenv != null && dotenv.entries().size() > 0) {
-                        System.out.println("Loaded .env file from: " + path);
+                            loadedFrom = envFile.getAbsolutePath();
+                            System.out.println("Loaded .env file from: " + loadedFrom);
                         break;
+                        }
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
                     // Try next path
+                    System.out.println("Tried path " + path + ": " + e.getMessage());
                 }
             }
             
             if (dotenv == null || dotenv.entries().size() == 0) {
-                System.out.println("No .env file found, using default configuration");
+                System.out.println("WARNING: No .env file found or .env file is empty. Using default configuration.");
+                System.out.println("Searched in: " + java.util.Arrays.toString(possiblePaths));
                 return;
             }
 

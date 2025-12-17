@@ -4,14 +4,17 @@ import java.util.List;
 import java.util.Map;
 
 import org.example.be_sp.entity.KhachHang;
+import org.example.be_sp.entity.DiaChiKhachHang;
 import org.example.be_sp.model.request.CustomerLoginRequest;
 import org.example.be_sp.model.request.CustomerRefreshTokenRequest;
 import org.example.be_sp.model.request.CustomerRegisterRequest;
 import org.example.be_sp.model.request.OAuthLoginRequest;
 import org.example.be_sp.model.request.UpdateCustomerProfileRequest;
+import org.example.be_sp.model.DiaChi;
 import org.example.be_sp.model.response.CustomerLoginResponse;
 import org.example.be_sp.model.response.CustomerProfileResponse;
 import org.example.be_sp.model.response.ResponseObject;
+import org.example.be_sp.repository.DiaChiKhachHangRepository;
 import org.example.be_sp.repository.KhachHangRepository;
 import org.example.be_sp.security.JwtUtils;
 import org.example.be_sp.service.OAuthService;
@@ -39,6 +42,7 @@ public class CustomerAuthController {
     private final JwtUtils jwtUtils;
     private final TokenBlacklistService tokenBlacklistService;
     private final OAuthService oAuthService;
+    private final DiaChiKhachHangRepository diaChiKhachHangRepository;
 
     @PostMapping("/login")
     public ResponseObject<CustomerLoginResponse> login(@RequestBody CustomerLoginRequest request) {
@@ -164,6 +168,7 @@ public class CustomerAuthController {
             }
 
             CustomerProfileResponse profile = new CustomerProfileResponse(khachHang);
+            profile.setListDiaChi(mapAddresses(khachHang.getId()));
             return ResponseEntity.ok(new ResponseObject<>(true, profile, "Thông tin khách hàng"));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(new ResponseObject<>(false, null, "Token không hợp lệ"));
@@ -204,9 +209,44 @@ public class CustomerAuthController {
                 khachHang.setEmail(request.getEmail().trim().toLowerCase());
             }
 
+            // Cập nhật hoặc tạo địa chỉ mặc định nếu có thông tin địa chỉ gửi lên
+            if (request.getThanhPho() != null || request.getQuan() != null
+                    || request.getPhuong() != null || request.getDiaChiCuThe() != null) {
+
+                DiaChiKhachHang diaChi = diaChiKhachHangRepository.findAllByIdKhachHang_Id(khachHang.getId())
+                        .stream()
+                        .filter(dc -> !Boolean.TRUE.equals(dc.getDeleted()))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            DiaChiKhachHang dcNew = new DiaChiKhachHang();
+                            dcNew.setIdKhachHang(khachHang);
+                            dcNew.setTenDiaChi("Địa chỉ mặc định");
+                            dcNew.setMacDinh(true);
+                            dcNew.setTrangThai(true);
+                            dcNew.setDeleted(false);
+                            return dcNew;
+                        });
+
+                if (request.getThanhPho() != null && !request.getThanhPho().isBlank()) {
+                    diaChi.setThanhPho(request.getThanhPho().trim());
+                }
+                if (request.getQuan() != null && !request.getQuan().isBlank()) {
+                    diaChi.setQuan(request.getQuan().trim());
+                }
+                if (request.getPhuong() != null && !request.getPhuong().isBlank()) {
+                    diaChi.setPhuong(request.getPhuong().trim());
+                }
+                if (request.getDiaChiCuThe() != null && !request.getDiaChiCuThe().isBlank()) {
+                    diaChi.setDiaChiCuThe(request.getDiaChiCuThe().trim());
+                }
+
+                diaChiKhachHangRepository.save(diaChi);
+            }
+
             khachHangRepository.save(khachHang);
 
             CustomerProfileResponse profile = new CustomerProfileResponse(khachHang);
+            profile.setListDiaChi(mapAddresses(khachHang.getId()));
             return ResponseEntity.ok(new ResponseObject<>(true, profile, "Cập nhật thông tin thành công"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ResponseObject<>(false, null, "Lỗi khi cập nhật thông tin: " + e.getMessage()));
@@ -262,6 +302,21 @@ public class CustomerAuthController {
             return byUsername;
         }
         return khachHangRepository.findByEmail(identifier);
+    }
+
+    private List<DiaChi> mapAddresses(Integer khachHangId) {
+        return diaChiKhachHangRepository.findAllByIdKhachHang_Id(khachHangId)
+                .stream()
+                .filter(dc -> !Boolean.TRUE.equals(dc.getDeleted()))
+                .map(dc -> new DiaChi(
+                        dc.getTenDiaChi(),
+                        dc.getDiaChiCuThe(),
+                        dc.getThanhPho(),
+                        dc.getQuan(),
+                        dc.getPhuong(),
+                        dc.getMacDinh()
+                ))
+                .toList();
     }
 }
 

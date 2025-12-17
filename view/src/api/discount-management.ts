@@ -4,7 +4,11 @@ const DEFAULT_API_BASE = 'http://localhost:8080/api'
 const resolveBaseUrl = () => {
   const configured = (import.meta as any).env?.VITE_API_BASE_URL?.trim?.()
   if (configured && configured.length > 0) {
-    return configured.replace(/\/$/, '')
+    let base = configured.replace(/\/$/, '')
+    if (!base.endsWith('/api')) {
+      base = base.endsWith('/') ? `${base}api` : `${base}/api`
+    }
+    return base
   }
   return DEFAULT_API_BASE
 }

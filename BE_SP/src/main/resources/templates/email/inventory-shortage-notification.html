@@ -30,15 +30,13 @@
 		}
 
 		.email-header {
-			background: linear-gradient(135deg, #FFA940 0%, #FF7A45 100%);
+			background: #FFA940;
 			padding: 32px 24px;
 			text-align: center;
 		}
 
-		.email-header h1 {
-			color: white;
-			font-size: 24px;
-			font-weight: 600;
+		.logo {
+			height: 36px;
 			margin-bottom: 8px;
 		}
 
@@ -244,7 +242,7 @@
 <body>
 	<div class="email-container">
 		<div class="email-header">
-			<h1>⚠️ GearUp</h1>
+			<img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
 			<p>Thông báo về tình trạng đơn hàng</p>
 		</div>
 		<div class="email-body">
@@ -315,7 +313,11 @@
 			</div>
 
 			<div style="text-align: center; margin: 20px 0;">
-				<p style="font-size: 14px; color: #1d2129;">
+				<a href="#" class="button" th:href="${baseUrl}"
+					style="color: #ffffff !important; text-decoration: none;">
+					Xem chi tiết đơn hàng
+				</a>
+				<p style="font-size: 14px; color: #1d2129; margin-top: 12px;">
 					Cảm ơn bạn đã tin tưởng <strong>GearUp</strong> - Nơi mua sắm sản phẩm chính hãng!
 				</p>
 			</div>

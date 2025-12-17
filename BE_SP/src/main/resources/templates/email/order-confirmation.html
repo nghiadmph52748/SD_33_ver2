@@ -34,10 +34,8 @@
             text-align: center;
         }
         
-        .email-header h1 {
-            color: white;
-            font-size: 24px;
-            font-weight: 600;
+        .logo {
+            height: 36px;
             margin-bottom: 8px;
         }
         
@@ -248,7 +246,7 @@
     <div class="email-container">
         <!-- Header -->
         <div class="email-header">
-            <h1>🛍️ GearUp</h1>
+            <img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
             <p>Cảm ơn bạn đã đặt hàng!</p>
         </div>
         
@@ -309,7 +307,8 @@
             
             <!-- CTA Button -->
             <div style="text-align: center;">
-                <a th:href="${baseUrl + '/orders/' + order.orderCode}" class="button">
+                <a th:href="${baseUrl + '/orders/' + order.orderCode}" class="button"
+                   style="color: #ffffff !important; text-decoration: none;">
                     👁️ Xem chi tiết đơn hàng
                 </a>
             </div>

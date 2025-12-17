@@ -79,6 +79,10 @@ export interface UpdateProfilePayload {
   tenKhachHang?: string;
   soDienThoai?: string;
   email?: string;
+  thanhPho?: string;
+  quan?: string;
+  phuong?: string;
+  diaChiCuThe?: string;
 }
 
 export function updateProfile(

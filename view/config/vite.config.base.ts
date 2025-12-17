@@ -34,6 +34,7 @@ export default defineConfig({
     global: 'globalThis',
   },
   css: {
+    transformer: 'postcss',
     preprocessorOptions: {
       less: {
         modifyVars: {

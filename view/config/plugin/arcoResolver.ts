@@ -13,7 +13,12 @@ export default function configArcoResolverPlugin() {
   const arcoResolverPlugin = Components({
     dirs: [], // Avoid parsing src/components.  避免解析到src/components
     deep: false,
-    resolvers: [ArcoResolver()],
+    // Exclude SelectOption as it's a template-only component, not exported from Arco Design
+    exclude: [/[Ss]elect[Oo]ption/, /[Aa]-select-option/],
+    resolvers: [ArcoResolver({
+      sideEffect: false, // Disable automatic style imports to avoid build issues
+      exclude: /^(SelectOption|Option)$/, // Exclude SelectOption from Arco resolver
+    })],
   })
   return arcoResolverPlugin
 }
