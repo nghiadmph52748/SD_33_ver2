@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <title>Biên lai bán hàng</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 8mm 12mm 10mm 12mm;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Inter", Helvetica, Arial, Verdana, sans-serif;
+            font-size: 11px;
+            color: #333333;
+        }
+
+        .invoice-page {
+            width: 100%;
+            min-height: 100%;
+        }
+
+        .invoice-header {
+            display: table;
+            width: 100%;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .company-info,
+        .invoice-title {
+            display: table-cell;
+            vertical-align: top;
+            width: 50%;
+        }
+
+        .company-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .company-logo {
+            height: 28px;
+            margin-bottom: 6px;
+        }
+
+        .company-subtitle {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin: 2px 0 8px 0;
+        }
+
+        .company-details p {
+            margin: 2px 0;
+        }
+
+        .invoice-title h2 {
+            text-align: right;
+            font-size: 18px;
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+        }
+
+        .invoice-number {
+            text-align: right;
+            font-size: 11px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 6px 0;
+            margin: 0 0 6px 0;
+            border-bottom: 1px solid #3498db;
+        }
+
+        .info-grid {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .info-grid td {
+            vertical-align: top;
+            padding-right: 10px;
+            width: 50%;
+        }
+
+        .info-box-title {
+            font-size: 12px;
+            font-weight: bold;
+            background: #ecf0f1;
+            padding: 5px 8px;
+            border-left: 3px solid #3498db;
+            margin-bottom: 6px;
+        }
+
+        .info-item {
+            font-size: 11px;
+            margin-bottom: 3px;
+        }
+
+        .info-label {
+            display: inline-block;
+            min-width: 80px;
+            color: #555555;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        table.products {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            margin-bottom: 10px;
+        }
+
+        table.products th,
+        table.products td {
+            border: 1px solid #bdc3c7;
+            padding: 5px 4px;
+        }
+
+        table.products th {
+            background: #34495e;
+            color: #ffffff;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        table.products td.center {
+            text-align: center;
+        }
+
+        table.products td.right {
+            text-align: right;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .product-attrs {
+            font-size: 10px;
+            color: #555555;
+            margin-top: 2px;
+        }
+
+        table.summary {
+            width: 45%;
+            margin-left: auto;
+            border-collapse: collapse;
+            margin-top: 4px;
+        }
+
+        table.summary td {
+            padding: 6px 4px;
+            border-bottom: 1px solid #bdc3c7;
+            font-size: 11px;
+        }
+
+        table.summary td.label {
+            color: #555555;
+        }
+
+        table.summary td.value {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        table.summary tr.total-row td {
+            font-weight: bold;
+            background: #ecf0f1;
+        }
+
+        .footer {
+        position: fixed;
+        bottom: 12mm;
+        left: 12mm;
+        right: 12mm;
+        border-top: 1px solid #bdc3c7;
+        padding-top: 10px;
+        font-size: 11px;
+        }
+
+        .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .footer-table td {
+            vertical-align: middle;
+        }
+
+        .footer-left {
+            width: 60%;
+            text-align: left;
+        }
+
+        .footer-right {
+            width: 40%;
+            text-align: right;
+        }
+
+        .footer-right .signature-title {
+            margin-bottom: 4px;
+            font-weight: normal;
+        }
+
+        .footer-right .signature-name {
+            font-weight: bold;
+        }
+
+        .footer-right .signature-title,
+        .footer-right .signature-name {
+            text-align: center;
+        }
+
+        .signature-title {
+            margin-bottom: 4px;
+            font-weight: normal;
+        }
+
+        .signature-name {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="invoice-page">
+    <div class="invoice-header">
+        <div class="company-info">
+            <img src="logo-datn.png" alt="GearUp" class="company-logo" />
+            <div class="company-subtitle">Cửa hàng giày thể thao</div>
+            <div class="company-details">
+                <p>Địa chỉ: FPT polytechnic, Hà Nội</p>
+                <p>Hotline: 0332 050 542</p>
+                <p>Email: truongtqph50260@gearup.com</p>
+            </div>
+        </div>
+        <div class="invoice-title">
+            <h2>BIÊN LAI BÁN HÀNG</h2>
+            <div class="invoice-number">
+                <div><strong>Mã hóa đơn:</strong> <span th:text="${invoice.maHoaDon}">HD00001</span></div>
+                <div><strong>Ngày tạo:</strong>
+                    <span th:text="${#temporals.format(invoice.ngayTao, 'dd/MM/yyyy HH:mm')}">17/12/2025 12:09</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="invoice-section">
+        <div class="section-title">THÔNG TIN ĐƠN HÀNG</div>
+        <table class="info-grid">
+            <tr>
+                <td>
+                    <div class="info-box-title">Thông tin khách hàng</div>
+                    <div class="info-item">
+                        <span class="info-label">Tên khách hàng:</span>
+                        <span class="info-value"
+                              th:text="${invoice.tenKhachHang != null ? invoice.tenKhachHang : 'Khách lẻ'}">Khách lẻ</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Số điện thoại:</span>
+                        <span class="info-value"
+                              th:text="${invoice.soDienThoaiNguoiNhan != null ? invoice.soDienThoaiNguoiNhan : (invoice.soDienThoai != null ? invoice.soDienThoai : 'N/A')}">
+                            0123 456 789
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value"
+                              th:text="${invoice.emailNguoiNhan != null ? invoice.emailNguoiNhan : (invoice.email != null ? invoice.email : 'N/A')}">
+                            email@example.com
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Địa chỉ:</span>
+                        <span class="info-value"
+                              th:text="${invoice.diaChiNhanHang != null ? invoice.diaChiNhanHang : 'N/A'}">N/A</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="info-box-title">Thông tin nhân viên</div>
+                    <div class="info-item">
+                        <span class="info-label">Tên nhân viên:</span>
+                        <span class="info-value"
+                              th:text="${invoice.tenNhanVien != null ? invoice.tenNhanVien : 'Admin'}">Nguyễn Đại Ca</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Ngày thanh toán:</span>
+                        <span class="info-value"
+                              th:text="${invoice.ngayThanhToan != null ? #temporals.format(invoice.ngayThanhToan, 'dd/MM/yyyy HH:mm') : ''}">
+                            17/12/2025 12:18
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Trạng thái:</span>
+                        <span class="info-value">Đã thanh toán</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="invoice-section">
+        <div class="section-title">DANH SÁCH SẢN PHẨM ĐÃ BÁN</div>
+        <table class="products">
+            <thead>
+            <tr>
+                <th>STT</th>
+                <th>Tên sản phẩm</th>
+                <th>Thuộc tính</th>
+                <th>Số lượng</th>
+                <th>Đơn giá</th>
+                <th>Thành tiền</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="p, idx : ${products}">
+                <td class="center" th:text="${idx.index + 1}">1</td>
+                <td>
+                    <div class="product-name"
+                         th:text="${p.tenSanPham != null ? p.tenSanPham : 'N/A'}">
+                        Abc
+                    </div>
+                </td>
+                <td>
+                    <div class="product-attrs" th:if="${p.tenMauSac != null}">Màu: <span th:text="${p.tenMauSac}">Đen</span></div>
+                    <div class="product-attrs" th:if="${p.tenKichThuoc != null}">Size: <span th:text="${p.tenKichThuoc}">42</span></div>
+                    <div class="product-attrs" th:if="${p.tenChatLieu != null}">Chất liệu: <span th:text="${p.tenChatLieu}">Da tổng hợp</span></div>
+                    <div class="product-attrs" th:if="${p.tenDeGiay != null}">Đế: <span th:text="${p.tenDeGiay}">Đế cao su</span></div>
+                </td>
+                <td class="center" th:text="${p.soLuong}">1</td>
+                <td class="right"
+                    th:text="${#numbers.formatDecimal(p.giaBan, 0, 'POINT', 0, 'COMMA')}">
+                    123 ₫
+                </td>
+                <td class="right"
+                    th:text="${#numbers.formatDecimal(p.thanhTien, 0, 'POINT', 0, 'COMMA')}">
+                    123 ₫
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="invoice-section">
+        <div class="section-title">TỔNG KẾT ĐƠN HÀNG</div>
+        <table class="summary">
+            <tbody>
+            <tr>
+                <td class="label">Tổng tiền hàng:</td>
+                <td class="value"
+                    th:text="${#numbers.formatDecimal(orderInfo != null && orderInfo.tongTienHang != null ? orderInfo.tongTienHang : (invoice.tongTien != null ? invoice.tongTien : 0), 0, 'POINT', 0, 'COMMA') + ' ₫'}">
+                    0 ₫
+                </td>
+            </tr>
+            <tr th:if="${invoice.phiVanChuyen != null && invoice.phiVanChuyen > 0}">
+                <td class="label">Phí vận chuyển:</td>
+                <td class="value"
+                    th:text="${#numbers.formatDecimal(invoice.phiVanChuyen, 0, 'POINT', 0, 'COMMA') + ' ₫'}">
+                    0 ₫
+                </td>
+            </tr>
+            <tr th:if="${invoice.giaTriGiamGia != null && invoice.giaTriGiamGia > 0}">
+                <td class="label">Giảm giá:</td>
+                <td class="value"
+                    th:text="${'-' + #numbers.formatDecimal(invoice.giaTriGiamGia, 0, 'POINT', 0, 'COMMA') + ' ₫'}">
+                    -0 ₫
+                </td>
+            </tr>
+            <tr th:if="${invoice.phuPhi != null && invoice.phuPhi > 0}">
+                <td class="label">Phụ phí:</td>
+                <td class="value"
+                    th:text="${#numbers.formatDecimal(invoice.phuPhi, 0, 'POINT', 0, 'COMMA') + ' ₫'}">
+                    0 ₫
+                </td>
+            </tr>
+            <tr th:if="${invoice.hoanPhi != null && invoice.hoanPhi > 0}">
+                <td class="label">Hoàn phí:</td>
+                <td class="value"
+                    th:text="${'-' + #numbers.formatDecimal(invoice.hoanPhi, 0, 'POINT', 0, 'COMMA') + ' ₫'}">
+                    -0 ₫
+                </td>
+            </tr>
+            <tr class="total-row">
+                <td class="label">THÀNH TIỀN:</td>
+                <td class="value"
+                    th:text="${#numbers.formatDecimal(invoice.tongTienSauGiam != null ? invoice.tongTienSauGiam : (invoice.tongTien != null ? invoice.tongTien : 0), 0, 'POINT', 0, 'COMMA') + ' ₫'}">
+                    0 ₫
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        <table class="footer-table">
+          <tr>
+            <td class="footer-left">
+              <p><strong>Cảm ơn quý khách đã mua hàng!</strong></p>
+              <p>Hẹn gặp lại quý khách lần sau.</p>
+            </td>
+            <td class="footer-right">
+              <div class="signature-title">Người bán</div>
+              <div class="signature-name"
+                   th:text="${invoice.tenNhanVien != null ? invoice.tenNhanVien : 'Admin'}">
+                Nguyễn Đại Ca
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+</div>
+</body>
+</html>
+
+

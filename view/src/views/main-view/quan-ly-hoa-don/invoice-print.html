@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Biên lai bán hàng</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.5;
+      background: #fff;
+      color: #333;
+    }
+
+    .invoice-page {
+      max-width: 190mm;
+      min-height: calc(297mm - 20mm); /* full A4 height minus page margins */
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .invoice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #2c3e50;
+      margin-bottom: 12px;
+    }
+
+    .company-name {
+      display: block;
+      max-width: 30mm;
+      height: auto;
+      margin: 0 0 4px 0;
+    }
+
+    .company-subtitle {
+      margin: 0 0 6px 0;
+      font-size: 11px;
+      color: #555;
+    }
+
+    .company-details p {
+      margin: 0;
+    }
+
+    .invoice-title {
+      text-align: right;
+    }
+
+    .invoice-title h2 {
+      margin: 0 0 6px 0;
+      font-size: 16px;
+      text-transform: uppercase;
+    }
+
+    .invoice-title p {
+      margin: 0;
+    }
+
+    h3.section-title {
+      margin: 0 0 6px 0;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #3498db;
+      font-size: 13px;
+      text-transform: uppercase;
+      color: #2c3e50;
+    }
+
+    .section {
+      margin-bottom: 14px;
+    }
+
+    .info-grid {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .info-column {
+      display: table-cell;
+      vertical-align: top;
+      padding-right: 8px;
+    }
+
+    .info-column:last-child {
+      padding-right: 0;
+      padding-left: 8px;
+    }
+
+    .info-column h4 {
+      margin: 0 0 4px 0;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    .info-item .label {
+      color: #555;
+      min-width: 70px;
+    }
+
+    .info-item .value {
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .status-paid {
+      color: #27ae60;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th, td {
+      border: 1px solid #bdc3c7;
+      padding: 6px 5px;
+    }
+
+    th {
+      background: #34495e;
+      color: #fff;
+      text-align: center;
+    }
+
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+
+    .product-name {
+      font-weight: 600;
+    }
+
+    .product-attrs {
+      font-size: 10px;
+      color: #555;
+    }
+
+    .product-attrs div {
+      margin: 1px 0;
+    }
+
+    .total {
+      font-weight: bold;
+      color: #e74c3c;
+    }
+
+    .summary-table {
+      width: 60%;
+      margin-left: auto;
+      margin-top: 6px;
+    }
+
+    .summary-table td {
+      border: none;
+      padding: 3px 2px;
+    }
+
+    .summary-table .label {
+      text-align: left;
+    }
+
+    .summary-table .value {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .summary-table .discount {
+      color: #e74c3c;
+    }
+
+    .summary-table .row-total td {
+      border-top: 1px solid #2c3e50;
+      border-bottom: 1px solid #2c3e50;
+      padding-top: 4px;
+      padding-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: auto; /* push footer to bottom of page */
+      padding-top: 10px;
+    }
+
+    .thank-you p {
+      margin: 0;
+    }
+
+    .signature {
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .signature-line {
+      width: 80px;
+      height: 1px;
+      background: #333;
+      margin: 18px auto 6px;
+    }
+
+    .signature-name {
+      font-weight: bold;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-page">
+    <!-- Header -->
+    <div class="invoice-header">
+      <div>
+        <img src="/src/assets/logo-datn.png" alt="GearUp" class="company-name" />
+        <p class="company-subtitle">Cửa hàng giày thể thao</p>
+        <div class="company-details">
+          <p>Địa chỉ: FPT polytechnic, Hà Nội</p>
+          <p>Hotline: 0332 050 542</p>
+          <p>Email: truongtqph50260@gearup.com</p>
+        </div>
+      </div>
+      <div class="invoice-title">
+        <h2>Biên lai bán hàng</h2>
+        <p><strong>Mã hóa đơn:</strong> HD20240501</p>
+        <p><strong>Ngày tạo:</strong> 12:09 17/12/2025</p>
+      </div>
+    </div>
+
+    <!-- Order info -->
+    <div class="section">
+      <h3 class="section-title">Thông tin đơn hàng</h3>
+      <div class="info-grid">
+        <div class="info-column">
+          <h4>Thông tin khách hàng</h4>
+          <div class="info-item">
+            <span class="label">Tên khách hàng:</span>
+            <span class="value">Khách lẻ</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Số điện thoại:</span>
+            <span class="value">N/A</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Email:</span>
+            <span class="value">N/A</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Địa chỉ:</span>
+            <span class="value">N/A</span>
+          </div>
+        </div>
+        <div class="info-column">
+          <h4>Thông tin nhân viên</h4>
+          <div class="info-item">
+            <span class="label">Tên nhân viên:</span>
+            <span class="value">Nguyễn Đại Ca</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Ngày thanh toán:</span>
+            <span class="value">12:18 17/12/2025</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Trạng thái:</span>
+            <span class="value status-paid">Đã thanh toán</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products -->
+    <div class="section">
+      <h3 class="section-title">Danh sách sản phẩm đã bán</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Tên sản phẩm</th>
+            <th>Thuộc tính</th>
+            <th>Số lượng</th>
+            <th>Đơn giá</th>
+            <th>Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Repeat this <tr> for each product -->
+          <tr>
+            <td class="text-center">1</td>
+            <td class="product-name">Nike Air Max 270</td>
+            <td class="product-attrs">
+              <div>Màu: Đen</div>
+              <div>Size: 42</div>
+              <div>Chất liệu: Da tổng hợp</div>
+            </td>
+            <td class="text-center">1</td>
+            <td class="text-right">2.125.000 ₫</td>
+            <td class="text-right total">2.125.000 ₫</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary -->
+    <div class="section">
+      <h3 class="section-title">Tổng kết đơn hàng</h3>
+      <table class="summary-table">
+        <tbody>
+          <tr>
+            <td class="label">Tổng tiền hàng:</td>
+            <td class="value">2.125.000 ₫</td>
+          </tr>
+          <tr>
+            <td class="label">Giảm giá:</td>
+            <td class="value discount">-0 ₫</td>
+          </tr>
+          <tr class="row-total">
+            <td class="label"><strong>THÀNH TIỀN:</strong></td>
+            <td class="value"><strong>2.125.000 ₫</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="thank-you">
+        <p><strong>Cảm ơn quý khách đã mua hàng!</strong></p>
+        <p>Hẹn gặp lại quý khách lần sau.</p>
+      </div>
+      <div class="signature">
+        <p>Người bán</p>
+        <div class="signature-line"></div>
+        <p class="signature-name">Nguyễn Đại Ca</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

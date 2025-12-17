@@ -2730,11 +2730,14 @@ const printInvoice = () => {
 }
 
 const goToPrintPage = () => {
-  if (invoice.value && invoice.value.id) {
-    router.push({ name: 'InHoaDon', params: { id: invoice.value.id } })
-  } else {
+  if (!invoice.value || !invoice.value.id) {
     console.error('No invoice ID available')
+    return
   }
+
+  const backendBaseUrl = 'http://localhost:8080'
+  const url = `${backendBaseUrl}/api/invoice-management/${invoice.value.id}/pdf`
+  window.open(url, '_blank')
 }
 
 const handleViewProductDetail = (product: any) => {

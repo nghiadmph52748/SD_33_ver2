@@ -3,6 +3,7 @@ package org.example.be_sp.controller.invoice;
 import org.example.be_sp.model.request.invoice.InvoiceAddressChangeRequest;
 import org.example.be_sp.model.request.invoice.InvoiceRequest;
 import org.example.be_sp.model.response.ResponseObject;
+import org.example.be_sp.service.invoice.InvoicePdfService;
 import org.example.be_sp.service.invoice.InvoiceService;
 import org.example.be_sp.model.response.invoice.InvoiceResponse;
 import org.springframework.http.HttpHeaders;
@@ -26,10 +27,12 @@ import org.springframework.web.util.HtmlUtils;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final InvoicePdfService invoicePdfService;
 
     @Autowired
-    public InvoiceController(InvoiceService invoiceService) {
+    public InvoiceController(InvoiceService invoiceService, InvoicePdfService invoicePdfService) {
         this.invoiceService = invoiceService;
+        this.invoicePdfService = invoicePdfService;
     }
 
     @GetMapping("/playlist")
@@ -46,6 +49,18 @@ public class InvoiceController {
     @GetMapping("/{id}")
     public ResponseObject<?> getById(@PathVariable Integer id) {
         return new ResponseObject<>(invoiceService.getById(id), "Lấy chi tiết hóa đơn thành công");
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> getInvoicePdf(@PathVariable Integer id) {
+        byte[] pdfBytes = invoicePdfService.generateInvoicePdf(id);
+
+        String fileName = "invoice-" + id + ".pdf";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, "application/pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
+                .body(pdfBytes);
     }
 
     @GetMapping("/code/{code}")
