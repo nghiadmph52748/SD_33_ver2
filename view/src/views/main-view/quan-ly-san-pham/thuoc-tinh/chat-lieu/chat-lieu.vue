@@ -485,7 +485,7 @@ const getChatLieuPage = async (page) => {
     loading.value = true
     const res = await getChatLieuList(page, pagination.value.pageSize || 10)
     if (res.success) {
-      materials.value = res.data.data
+      materials.value = (res.data.data || []).sort((a, b) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
