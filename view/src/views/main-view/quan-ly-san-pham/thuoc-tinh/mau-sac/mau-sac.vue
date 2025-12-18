@@ -804,7 +804,7 @@ const getMauSacPage = async (page: number) => {
   try {
     const res = await getMauSacList(page, pagination.value.pageSize)
     if (res.success) {
-      colors.value = res.data.data
+      colors.value = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1

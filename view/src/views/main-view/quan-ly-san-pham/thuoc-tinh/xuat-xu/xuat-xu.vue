@@ -478,7 +478,7 @@ const getXuatXuPage = async (page) => {
     loading.value = true
     const res = await getXuatXuList(page, pagination.value.pageSize || 10)
     if (res.success) {
-      origins.value = res.data.data
+      origins.value = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
