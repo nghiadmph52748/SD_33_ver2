@@ -536,22 +536,19 @@ const autoCalculateShippingFeeForCurrentOrder = async () => {
 
   const cachedState = orderUiStateCache.value[orderId]
   const existingFee = normalizeNumber(shippingFee.value ?? cachedState?.shippingFee ?? 0, 0)
-  if (existingFee > 0) {
+  const signature = buildLocationSignature(locationSnapshot)
+  const previousSignature = lastAutoShippingSignature.get(orderId)
+  if (existingFee > 0 && previousSignature === signature) {
     if (cachedState) cachedState.shippingFee = existingFee
-    lastAutoShippingSignature.set(orderId, buildLocationSignature(locationSnapshot))
+    lastAutoShippingSignature.set(orderId, signature)
     return
   }
 
   if (shippingFeeAutoCalcLocks.has(orderId)) return
 
-  const signature = buildLocationSignature(locationSnapshot)
-  const previousSignature = lastAutoShippingSignature.get(orderId)
-  if (previousSignature === signature && existingFee === 0) {
-    return
-  }
   shippingFeeAutoCalcLocks.add(orderId)
   try {
-    const calculatedFee = await recalculateShippingFee()
+    const calculatedFee = await recalculateShippingFee('POS:auto-calc')
     const normalizedFee = normalizeNumber(calculatedFee ?? shippingFee.value ?? 0, 0)
     const currentOrderId = currentOrder.value?.id
     const currentSignature = buildLocationSignature(walkInLocation.value)
@@ -580,6 +577,12 @@ const scheduleAutoShippingFeeCalculation = () => {
     autoShippingFeeTimeout = null
     void autoCalculateShippingFeeForCurrentOrder()
   }, 300)
+}
+
+const triggerImmediateShippingFeeRecalculationIfReady = () => {
+  if (orderType.value !== 'delivery') return
+  if (!hasCompleteWalkInAddress(walkInLocation.value)) return
+  void autoCalculateShippingFeeForCurrentOrder()
 }
 
 // Cache for last confirmed order (for printing after checkout)
@@ -717,6 +720,7 @@ const handleCustomerChange = async (customerId: string) => {
 
     // Wait a moment for Vue to process the location updates
     await nextTick()
+    triggerImmediateShippingFeeRecalculationIfReady()
 
     // Call API to update customer - pass walkInLocation for walk-in customers
     await updateInvoiceCustomer(invoiceId, walkInLocation, {
@@ -1541,6 +1545,8 @@ const applyOrderUiState = (orderId: string | null | undefined) => {
   } finally {
     isRestoringOrderState.value = false
   }
+
+  triggerImmediateShippingFeeRecalculationIfReady()
 }
 
 watch(
@@ -2127,10 +2133,12 @@ const updateShippingFeeValue = (value: number) => {
 
 const updateWalkInAddress = (value: string) => {
   walkInLocation.value.diaChiCuThe = value
+  triggerImmediateShippingFeeRecalculationIfReady()
 }
 
 const updateWalkInWard = (value: string) => {
   walkInLocation.value.phuong = value
+  triggerImmediateShippingFeeRecalculationIfReady()
 }
 
 const buildQrPayload = (order: Order): CreateQrSessionPayload | null => {

@@ -47,6 +47,59 @@ interface WardOption {
   label: string
 }
 
+const normalizeLocationText = (value?: string | null) => {
+  if (!value) return ''
+  return value
+    .toString()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/\b(tp\.?|thanh pho|tinh|quan|q\.?|huyen|phuong|p\.?|xa|thi tran|tt\.?)\b/giu, ' ')
+    .replace(/[^a-zA-Z0-9]+/g, '')
+    .toLowerCase()
+}
+
+const findBestOptionMatch = <T extends { value: string }>(options: T[], target?: string | null): T | null => {
+  if (!Array.isArray(options) || options.length === 0 || !target) return null
+  const trimmed = target.trim()
+  if (!trimmed) return null
+  const directMatch = options.find((opt) => opt.value.localeCompare(trimmed, undefined, { sensitivity: 'accent' }) === 0)
+  if (directMatch) return directMatch
+
+  const normalizedTarget = normalizeLocationText(trimmed)
+  if (!normalizedTarget) return null
+
+  const normalizedMap = options.map((opt) => ({ option: opt, normalized: normalizeLocationText(opt.value) }))
+  const exactNormalized = normalizedMap.find((item) => item.normalized === normalizedTarget)
+  if (exactNormalized) return exactNormalized.option
+
+  const partialMatches = normalizedMap
+    .filter((item) => item.normalized && (item.normalized.includes(normalizedTarget) || normalizedTarget.includes(item.normalized)))
+    .sort((a, b) => b.normalized.length - a.normalized.length)
+  return partialMatches.length > 0 ? partialMatches[0].option : null
+}
+
+const parseAddressString = (raw?: string | null) => {
+  const defaults = { diaChiCuThe: '', phuong: '', quan: '', thanhPho: '' }
+  if (!raw) return defaults
+  const segments = raw
+    .split(',')
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0)
+  if (segments.length === 0) return defaults
+  const parts = [...segments]
+  const result = { ...defaults }
+  result.thanhPho = parts.pop() ?? ''
+  result.quan = parts.pop() ?? ''
+  result.phuong = parts.length >= 1 ? (parts.pop() ?? '') : ''
+  result.diaChiCuThe = parts.length > 0 ? parts.join(', ') : ''
+  if (!result.diaChiCuThe && segments.length === 1) {
+    result.diaChiCuThe = segments[0]
+  }
+  return result
+}
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export default function usePayment(params: { currentOrder: Ref<Order | null> }) {
   const { currentOrder } = params
   const userStore = useUserStore()
@@ -142,20 +195,22 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
     }
 
     // Recalculate shipping fee when district changes
-    await recalculateShippingFee()
+    await recalculateShippingFee('POS:district-change')
   }
 
-  const recalculateShippingFee = async (): Promise<number> => {
+  const recalculateShippingFee = async (reason?: string): Promise<number> => {
+    const logContext = reason || 'POS:unknown'
+    const locationSnapshot = { ...walkInLocation.value }
     try {
-      if (!walkInLocation.value.thanhPho || !walkInLocation.value.quan || !walkInLocation.value.phuong) {
+      if (!locationSnapshot.thanhPho || !locationSnapshot.quan || !locationSnapshot.phuong) {
         shippingFee.value = 0
         return 0
       }
-      const result = await calculateShippingFeeFromGHN(walkInLocation.value)
+      const result = await calculateShippingFeeFromGHN(locationSnapshot)
       shippingFee.value = result.fee
       return result.fee
     } catch (error) {
-      console.error('[Payment] Error recalculating shipping fee:', error)
+      console.error('[Payment] Error recalculating shipping fee:', error, { context: logContext })
       return shippingFee.value ?? 0
     }
   }
@@ -177,71 +232,65 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
       }
       return
     }
-    // Prefer structured address data if available
-    if (customer.addressInfo) {
-      walkInLocation.value.thanhPho = customer.addressInfo.thanhPho || ''
-      walkInLocation.value.quan = customer.addressInfo.quan || ''
-      walkInLocation.value.phuong = customer.addressInfo.phuong || ''
+    const structuredAddress = customer.addressInfo || parseAddressString(customer.address)
 
-      // Extract only specific address (Số nhà, Đường) - remove ward/district if present
-      let specificAddress = customer.addressInfo.diaChiCuThe || ''
-      // If address contains ward/district names, try to remove them
-      if (specificAddress && (customer.addressInfo.phuong || customer.addressInfo.quan)) {
-        const phuongName = customer.addressInfo.phuong
-        const quanName = customer.addressInfo.quan
-        // Remove ward and district from end of address
-        if (phuongName) {
-          specificAddress = specificAddress.replace(`, ${phuongName}`, '').replace(`${phuongName}`, '')
-        }
-        if (quanName) {
-          specificAddress = specificAddress.replace(`, ${quanName}`, '').replace(`${quanName}`, '')
-        }
-        // Clean up extra commas
-        specificAddress = specificAddress.replace(/,\s*$/, '').trim()
-      }
-      walkInLocation.value.diaChiCuThe = specificAddress
-
-      // Load districts and wards for the selected province
-      const province = provinces.value.find((p) => p.value === customer.addressInfo!.thanhPho)
-      if (province) {
-        try {
-          const districts = await fetchDistrictsByProvinceCode(province.code)
-          walkInLocation.value.districts = [...districts]
-
-          // Load wards for the selected district
-          const district = districts.find((d: DistrictOption) => d.value === customer.addressInfo!.quan)
-          if (district) {
-            try {
-              const wards = await fetchWardsByDistrictCode(district.code)
-              walkInLocation.value.wards = [...wards]
-            } catch {
-              console.warn('Failed to load wards')
-            }
-          }
-        } catch {
-          console.warn('Failed to load districts')
-        }
-      }
-      return
+    if (!provinces.value.length) {
+      await loadProvinces()
     }
 
-    // Fallback to parsing address string
-    if (!customer.address) {
-      walkInLocation.value.diaChiCuThe = ''
-      return
-    }
-    // Store address in diaChiCuThe (already should be just specific address from loadCustomers)
-    walkInLocation.value.diaChiCuThe = customer.address
+    const matchedProvince = findBestOptionMatch(provinces.value, structuredAddress.thanhPho)
+    walkInLocation.value.thanhPho = matchedProvince?.value || structuredAddress.thanhPho || ''
 
-    // Try to extract province from address by matching with provinces list
-    const addressParts = customer.address.split(',').map((p) => p.trim())
-    const matchedProvince = addressParts
-      .map((part) => provinces.value.find((p) => p.value.toLowerCase() === part.toLowerCase()))
-      .find((p) => p !== undefined)
-
+    let matchedDistrict: DistrictOption | null = null
     if (matchedProvince) {
-      walkInLocation.value.thanhPho = matchedProvince.value
+      try {
+        const districts = await fetchDistrictsByProvinceCode(matchedProvince.code)
+        walkInLocation.value.districts = [...districts]
+        matchedDistrict = findBestOptionMatch(districts, structuredAddress.quan)
+        walkInLocation.value.quan = matchedDistrict?.value || ''
+      } catch {
+        walkInLocation.value.districts = []
+        walkInLocation.value.quan = ''
+      }
+    } else {
+      walkInLocation.value.districts = []
+      walkInLocation.value.quan = ''
     }
+    if (!walkInLocation.value.quan) {
+      walkInLocation.value.quan = structuredAddress.quan || ''
+    }
+
+    if (matchedDistrict) {
+      try {
+        const wards = await fetchWardsByDistrictCode(matchedDistrict.code)
+        walkInLocation.value.wards = [...wards]
+        const matchedWard = findBestOptionMatch(wards, structuredAddress.phuong)
+        walkInLocation.value.phuong = matchedWard?.value || ''
+      } catch {
+        walkInLocation.value.wards = []
+        walkInLocation.value.phuong = ''
+      }
+    } else {
+      walkInLocation.value.wards = []
+      walkInLocation.value.phuong = ''
+    }
+    if (!walkInLocation.value.phuong) {
+      walkInLocation.value.phuong = structuredAddress.phuong || ''
+    }
+
+    const phuongLabel = walkInLocation.value.phuong || structuredAddress.phuong
+    const quanLabel = walkInLocation.value.quan || structuredAddress.quan
+    let specificAddress = structuredAddress.diaChiCuThe || ''
+    if (specificAddress && (phuongLabel || quanLabel)) {
+      if (phuongLabel) {
+        specificAddress = specificAddress.replace(new RegExp(`,?\\s*${escapeRegex(phuongLabel)}$`, 'i'), '').trim()
+      }
+      if (quanLabel) {
+        specificAddress = specificAddress.replace(new RegExp(`,?\\s*${escapeRegex(quanLabel)}$`, 'i'), '').trim()
+      }
+      specificAddress = specificAddress.replace(/,\s*$/, '').trim()
+    }
+    walkInLocation.value.diaChiCuThe = specificAddress
   }
 
   const updateInvoicePayment = async (invoiceId: number, paymentMethod: 'cash' | 'transfer' | 'both') => {

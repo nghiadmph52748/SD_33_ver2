@@ -214,8 +214,11 @@ watch(
   (newFee) => {
     if (newFee !== undefined && newFee !== null) {
       shippingFee.value = newFee
+    } else {
+      shippingFee.value = 0
     }
-  }
+  },
+  { immediate: true }
 )
 
 /**
