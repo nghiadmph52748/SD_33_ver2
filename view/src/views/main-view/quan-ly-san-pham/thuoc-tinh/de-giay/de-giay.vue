@@ -498,9 +498,9 @@ const loadSolesWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean 
     loading.value = true
     const res = await getDeGiayList(0, 9)
     if (res.success) {
-      let solesData = res.data.data
+      let solesData = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
-      pagination.value.pageSize = res.data.size || 10
+      pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
 
       // If there's an updated item and it's not a new item, move it to the front
@@ -508,7 +508,7 @@ const loadSolesWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean 
         const updatedIndex = solesData.findIndex((sole) => sole.id === updatedId)
         if (updatedIndex > 0) {
           const updatedItem = solesData.splice(updatedIndex, 1)[0]
-          solesData = [updatedItem, ...solesData.slice(0, updatedIndex), ...solesData.slice(updatedIndex)]
+          solesData = [updatedItem, ...solesData]
         }
       }
 

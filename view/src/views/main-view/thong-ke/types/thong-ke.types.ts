@@ -80,6 +80,7 @@ export interface SanPhamBanChay {
   name: string
   value: number
   revenue: number
+  image?: string
 }
 
 export interface DuLieuTrangThaiDonHang {

@@ -477,7 +477,7 @@ const loadWeightsWithUpdatedFirst = async (updatedId?: number, isNewItem: boolea
   try {
     const res = await getTrongLuongList(0, 9)
     if (res.success) {
-      let weightsData = res.data.data
+      let weightsData = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
@@ -487,7 +487,7 @@ const loadWeightsWithUpdatedFirst = async (updatedId?: number, isNewItem: boolea
         const updatedIndex = weightsData.findIndex((weight) => weight.id === updatedId)
         if (updatedIndex > 0) {
           const updatedItem = weightsData.splice(updatedIndex, 1)[0]
-          weightsData = [updatedItem, ...weightsData.slice(0, updatedIndex), ...weightsData.slice(updatedIndex)]
+          weightsData = [updatedItem, ...weightsData]
         }
       }
 

@@ -485,7 +485,7 @@ const getChatLieuPage = async (page) => {
     loading.value = true
     const res = await getChatLieuList(page, pagination.value.pageSize || 10)
     if (res.success) {
-      materials.value = (res.data.data || []).sort((a, b) => (b.id || 0) - (a.id || 0))
+      materials.value = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
@@ -510,7 +510,7 @@ const loadMaterialsWithUpdatedFirst = async (updatedId?: number, isNewItem: bool
     loading.value = true
     const res = await getChatLieuList(0, 9)
     if (res.success) {
-      let materialsData = res.data.data
+      let materialsData = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
@@ -520,7 +520,7 @@ const loadMaterialsWithUpdatedFirst = async (updatedId?: number, isNewItem: bool
         const updatedIndex = materialsData.findIndex((material) => material.id === updatedId)
         if (updatedIndex > 0) {
           const updatedItem = materialsData.splice(updatedIndex, 1)[0]
-          materialsData = [updatedItem, ...materialsData.slice(0, updatedIndex), ...materialsData.slice(updatedIndex)]
+          materialsData = [updatedItem, ...materialsData]
         }
       }
 

@@ -502,17 +502,17 @@ const loadOriginsWithUpdatedFirst = async (updatedId?: number, isNewItem: boolea
   try {
     const res = await getXuatXuList(0, 9)
     if (res.success) {
-      let originsData = res.data.data
+      let originsData = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
-      pagination.value.pageSize = res.data.pageSize
-      pagination.value.current = res.data.currentPage + 1
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
 
       // If there's an updated item and it's not a new item, move it to the front
       if (updatedId && !isNewItem) {
         const updatedIndex = originsData.findIndex((origin) => origin.id === updatedId)
         if (updatedIndex > 0) {
           const updatedItem = originsData.splice(updatedIndex, 1)[0]
-          originsData = [updatedItem, ...originsData.slice(0, updatedIndex), ...originsData.slice(updatedIndex)]
+          originsData = [updatedItem, ...originsData]
         }
       }
 

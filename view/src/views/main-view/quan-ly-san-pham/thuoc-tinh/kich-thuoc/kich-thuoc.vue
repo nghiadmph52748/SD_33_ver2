@@ -503,7 +503,7 @@ const loadSizesWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean 
     loading.value = true
     const res = await getKichThuocList(0, 9)
     if (res.success) {
-      let sizesData = res.data.data
+      let sizesData = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1
@@ -513,7 +513,7 @@ const loadSizesWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean 
         const updatedIndex = sizesData.findIndex((size) => size.id === updatedId)
         if (updatedIndex > 0) {
           const updatedItem = sizesData.splice(updatedIndex, 1)[0]
-          sizesData = [updatedItem, ...sizesData.slice(0, updatedIndex), ...sizesData.slice(updatedIndex)]
+          sizesData = [updatedItem, ...sizesData]
         }
       }
 

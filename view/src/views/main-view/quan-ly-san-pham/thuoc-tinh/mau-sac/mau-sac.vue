@@ -800,14 +800,15 @@ const cancelToggleStatus = () => {
   colorToToggleStatus.value = null
 }
 
-const getMauSacPage = async (page: number) => {
+const getMauSacPage = async (page: any) => {
   try {
-    const res = await getMauSacList(page, pagination.value.pageSize)
+    loading.value = true
+    const res = await getMauSacList(page, pagination.value.pageSize || 10)
     if (res.success) {
       colors.value = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
-      pagination.value.pageSize = res.data.pageSize
-      pagination.value.current = res.data.currentPage + 1
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
     } else {
       console.error('Failed to fetch colors:', res.message)
       colors.value = []
@@ -817,24 +818,29 @@ const getMauSacPage = async (page: number) => {
     }
   } catch (error) {
     console.error('Failed to fetch colors:', error)
+    colors.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
   }
 }
 
 const loadColorsWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean = false) => {
   try {
+    loading.value = true
     const res = await getMauSacList(0, 9)
     if (res.success) {
-      let colorsData = res.data.data
+      let colorsData = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1
 
       // If there's an updated item and it's not a new item, move it to the front
       if (updatedId && !isNewItem) {
-        const updatedIndex = colorsData.findIndex((color) => color.id === updatedId)
+        const updatedIndex = colorsData.findIndex((color: any) => color.id === updatedId)
         if (updatedIndex > 0) {
           const updatedItem = colorsData.splice(updatedIndex, 1)[0]
-          colorsData = [updatedItem, ...colorsData.slice(0, updatedIndex), ...colorsData.slice(updatedIndex)]
+          colorsData = [updatedItem, ...colorsData]
         }
       }
 
@@ -848,13 +854,16 @@ const loadColorsWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean
     }
   } catch (error) {
     console.error('Failed to fetch colors:', error)
+    colors.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
   }
 }
 
 const executeConfirmedAction = async () => {
   try {
     if (confirmAction.value === 'add') {
-      // TODO: Implement add API call
       const data = {
         tenMauSac: colorForm.tenMauSac,
         maMau: colorForm.maMau,
@@ -865,13 +874,14 @@ const executeConfirmedAction = async () => {
       }
       const res = await createMauSac(data)
       closeAddModal()
-      // Load data with new item first (always load from page 0 for new items)
       loadColorsWithUpdatedFirst(undefined, true)
       Message.success('Thêm màu sắc thành công!')
     } else if (confirmAction.value === 'update') {
-      if (!selectedColor.value) return
+      if (!selectedColor.value) {
+        console.error('No color selected for update')
+        return
+      }
 
-      // TODO: Implement update API call
       const colorId = selectedColor.value.id
       const data = {
         tenMauSac: colorForm.tenMauSac,
@@ -885,15 +895,15 @@ const executeConfirmedAction = async () => {
       }
       await updateMauSac(colorId, data)
       closeUpdateModal()
-      // Load data with updated item first
       loadColorsWithUpdatedFirst(colorId, false)
       Message.success('Cập nhật màu sắc thành công!')
     } else if (confirmAction.value === 'delete') {
-      if (!selectedColor.value) return
+      if (!selectedColor.value) {
+        console.error('No color selected for delete')
+        return
+      }
 
-      // TODO: Implement delete API call
       await deleteMauSac(selectedColor.value.id)
-      // Refresh data
       loadColorsWithUpdatedFirst()
       Message.success('Xóa màu sắc thành công!')
     }
@@ -906,6 +916,7 @@ const executeConfirmedAction = async () => {
     confirmAction.value = null
   }
 }
+
 
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A'
