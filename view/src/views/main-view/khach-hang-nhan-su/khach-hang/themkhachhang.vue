@@ -29,13 +29,8 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="Ngày sinh" name="ngaySinh">
-              <a-date-picker
-                v-model="formData.ngaySinh"
-                format="YYYY-MM-DD"
-                placeholder="Chọn ngày sinh"
-                style="width: 100%"
-                :disabled-date="(current: Date) => current && current > new Date()"
-              />
+              <a-date-picker v-model="formData.ngaySinh" format="YYYY-MM-DD" placeholder="Chọn ngày sinh"
+                style="width: 100%" :disabled-date="(current: Date) => current && current > new Date()" />
             </a-form-item>
             <a-form-item name="soDienThoai">
               <template #label>
@@ -74,7 +69,8 @@
         <a-card size="small" :title="`${diaChi.tenDiaChi}`">
           <template #extra>
             <a-space size="small">
-              <a-button v-if="danhSachFormDiaChi.length > 1 && !diaChi.macDinh" @click="setDefaultAddress(index)" type="text" size="small">
+              <a-button v-if="danhSachFormDiaChi.length > 1 && !diaChi.macDinh" @click="setDefaultAddress(index)"
+                type="text" size="small">
                 <template #icon>
                   <icon-star />
                 </template>
@@ -103,40 +99,20 @@
               </a-col>
               <a-col :span="6">
                 <a-form-item label="Thành phố">
-                  <a-select
-                    v-model="diaChi.thanhPho"
-                    placeholder="-- Chọn tỉnh/thành phố --"
-                    :options="provinces"
-                    @change="onProvinceChange(index, $event)"
-                    option-label-prop="label"
-                    allow-search
-                    allow-clear
-                  />
+                  <a-select v-model="diaChi.thanhPho" placeholder="-- Chọn tỉnh/thành phố --" :options="provinces"
+                    @change="onProvinceChange(index, $event)" option-label-prop="label" allow-search allow-clear />
                 </a-form-item>
               </a-col>
               <a-col :span="6">
                 <a-form-item label="Quận">
-                  <a-select
-                    v-model="diaChi.quan"
-                    placeholder="-- Chọn quận/huyện --"
-                    :options="diaChi.districts"
-                    @change="onDistrictChange(index, $event)"
-                    option-label-prop="label"
-                    allow-search
-                    allow-clear
-                  />
+                  <a-select v-model="diaChi.quan" placeholder="-- Chọn quận/huyện --" :options="diaChi.districts"
+                    @change="onDistrictChange(index, $event)" option-label-prop="label" allow-search allow-clear />
                 </a-form-item>
               </a-col>
               <a-col :span="6">
                 <a-form-item label="Phường">
-                  <a-select
-                    v-model="diaChi.phuong"
-                    placeholder="-- Chọn phường/xã --"
-                    :options="diaChi.wards"
-                    option-label-prop="label"
-                    allow-search
-                    allow-clear
-                  />
+                  <a-select v-model="diaChi.phuong" placeholder="-- Chọn phường/xã --" :options="diaChi.wards"
+                    option-label-prop="label" allow-search allow-clear />
                 </a-form-item>
               </a-col>
             </a-row>
@@ -152,7 +128,8 @@
       </div>
 
       <!-- Thông báo khi chưa có địa chỉ -->
-      <a-empty v-if="danhSachFormDiaChi.length === 0" description="Chưa có địa chỉ nào. Nhấn 'Thêm địa chỉ' để bắt đầu." />
+      <a-empty v-if="danhSachFormDiaChi.length === 0"
+        description="Chưa có địa chỉ nào. Nhấn 'Thêm địa chỉ' để bắt đầu." />
     </a-card>
 
     <!-- Card 3: Thao tác -->
@@ -174,14 +151,8 @@
     </a-card>
 
     <!-- Delete Address Confirm Modal -->
-    <a-modal
-      v-model:visible="showDeleteConfirm"
-      title="Xác nhận xóa địa chỉ"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmDeleteAddress"
-      @cancel="cancelDeleteAddress"
-    >
+    <a-modal v-model:visible="showDeleteConfirm" title="Xác nhận xóa địa chỉ" ok-text="Xác nhận" cancel-text="Huỷ"
+      @ok="confirmDeleteAddress" @cancel="cancelDeleteAddress">
       <template #default>
         <div v-if="addressToDelete !== null">
           <div>Bạn có chắc chắn muốn xóa địa chỉ này?</div>
@@ -201,14 +172,8 @@
     </a-modal>
 
     <!-- Set Default Address Confirm Modal -->
-    <a-modal
-      v-model:visible="showDefaultConfirm"
-      title="Xác nhận đặt địa chỉ mặc định"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmSetDefaultAddress"
-      @cancel="cancelSetDefaultAddress"
-    >
+    <a-modal v-model:visible="showDefaultConfirm" title="Xác nhận đặt địa chỉ mặc định" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmSetDefaultAddress" @cancel="cancelSetDefaultAddress">
       <template #default>
         <div v-if="addressToSetDefault !== null">
           <div>Bạn có chắc chắn muốn đặt địa chỉ này làm mặc định?</div>
@@ -219,8 +184,10 @@
           <div>
             Địa chỉ:
             <strong>
-              {{ danhSachFormDiaChi[addressToSetDefault]?.diaChiCuThe }}, {{ danhSachFormDiaChi[addressToSetDefault]?.phuong }},
-              {{ danhSachFormDiaChi[addressToSetDefault]?.quan }}, {{ danhSachFormDiaChi[addressToSetDefault]?.thanhPho }}
+              {{ danhSachFormDiaChi[addressToSetDefault]?.diaChiCuThe }}, {{
+                danhSachFormDiaChi[addressToSetDefault]?.phuong }},
+              {{ danhSachFormDiaChi[addressToSetDefault]?.quan }}, {{ danhSachFormDiaChi[addressToSetDefault]?.thanhPho
+              }}
             </strong>
           </div>
         </div>
@@ -228,14 +195,8 @@
     </a-modal>
 
     <!-- Save Customer Confirm Modal -->
-    <a-modal
-      v-model:visible="showSaveConfirm"
-      title="Xác nhận thêm khách hàng"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmSaveCustomer"
-      @cancel="cancelSaveCustomer"
-    >
+    <a-modal v-model:visible="showSaveConfirm" title="Xác nhận thêm khách hàng" ok-text="Xác nhận" cancel-text="Huỷ"
+      @ok="confirmSaveCustomer" @cancel="cancelSaveCustomer">
       <template #default>
         <div>
           <div>Bạn có chắc chắn muốn thêm khách hàng này?</div>
@@ -272,7 +233,7 @@ const router = useRouter()
 
 const formRef = ref()
 
-const provinces = ref<{ value: string; label: string; code: number }[]>([])
+const provinces = ref<{ value: string; label: string; code: string }[]>([])
 
 const formData = ref({
   tenKhachHang: '',
@@ -293,7 +254,7 @@ const danhSachFormDiaChi = ref<
     phuong: string
     diaChiCuThe: string
     macDinh: boolean
-    districts: { value: string; label: string; code: number }[]
+    districts: { value: string; label: string; code: string }[]
     wards: { value: string; label: string }[]
   }[]
 >([])
@@ -368,13 +329,19 @@ const formRules = {
   diaChiCuThe: [{ required: true, message: 'Vui lòng nhập địa chỉ cụ thể', trigger: 'blur' }],
 }
 const loadProvinces = async () => {
-  const res = await fetch('https://provinces.open-api.vn/api/p/')
-  const data = await res.json()
-  provinces.value = data.map((p: any) => ({
-    value: p.name,
-    label: p.name,
-    code: p.code,
-  }))
+  try {
+    const res = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+    const responseData = await res.json()
+    if (responseData.error === 0) {
+      provinces.value = responseData.data.map((p: any) => ({
+        value: p.full_name,
+        label: p.full_name,
+        code: p.id,
+      }))
+    }
+  } catch (error) {
+    console.error('Lỗi tải tỉnh thành:', error)
+  }
 }
 loadProvinces()
 
@@ -386,13 +353,19 @@ const onProvinceChange = async (formIndex: number, value: string) => {
 
   const province = provinces.value.find((p) => p.value === value)
   if (province) {
-    const res = await fetch(`https://provinces.open-api.vn/api/p/${province.code}?depth=2`)
-    const data = await res.json()
-    danhSachFormDiaChi.value[formIndex].districts = data.districts.map((d: any) => ({
-      value: d.name,
-      label: d.name,
-      code: d.code,
-    }))
+    try {
+      const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${province.code}.htm`)
+      const responseData = await res.json()
+      if (responseData.error === 0) {
+        danhSachFormDiaChi.value[formIndex].districts = responseData.data.map((d: any) => ({
+          value: d.full_name,
+          label: d.full_name,
+          code: d.id,
+        }))
+      }
+    } catch (error) {
+      console.error('Lỗi tải quận huyện:', error)
+    }
   }
 }
 
@@ -402,12 +375,18 @@ const onDistrictChange = async (formIndex: number, value: string) => {
 
   const district = danhSachFormDiaChi.value[formIndex].districts.find((d) => d.value === value)
   if (district) {
-    const res = await fetch(`https://provinces.open-api.vn/api/d/${district.code}?depth=2`)
-    const data = await res.json()
-    danhSachFormDiaChi.value[formIndex].wards = data.wards.map((w: any) => ({
-      value: w.name,
-      label: w.name,
-    }))
+    try {
+      const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${district.code}.htm`)
+      const responseData = await res.json()
+      if (responseData.error === 0) {
+        danhSachFormDiaChi.value[formIndex].wards = responseData.data.map((w: any) => ({
+          value: w.full_name,
+          label: w.full_name,
+        }))
+      }
+    } catch (error) {
+      console.error('Lỗi tải phường xã:', error)
+    }
   }
 }
 
@@ -470,6 +449,37 @@ const handleSubmit = async () => {
       return
     }
 
+    // Validate danh sách địa chỉ
+    if (danhSachFormDiaChi.value.length === 0) {
+      Message.error('Vui lòng thêm ít nhất một địa chỉ.')
+      return
+    }
+
+    for (let i = 0; i < danhSachFormDiaChi.value.length; i++) {
+      const addr = danhSachFormDiaChi.value[i]
+      const index = i + 1
+      if (!addr.tenDiaChi) {
+        Message.error(`Vui lòng nhập tên địa chỉ cho Địa chỉ ${index}`)
+        return
+      }
+      if (!addr.thanhPho) {
+        Message.error(`Vui lòng chọn tỉnh/thành phố cho ${addr.tenDiaChi}`)
+        return
+      }
+      if (!addr.quan) {
+        Message.error(`Vui lòng chọn quận/huyện cho ${addr.tenDiaChi}`)
+        return
+      }
+      if (!addr.phuong) {
+        Message.error(`Vui lòng chọn phường/xã cho ${addr.tenDiaChi}`)
+        return
+      }
+      if (!addr.diaChiCuThe) {
+        Message.error(`Vui lòng nhập địa chỉ cụ thể cho ${addr.tenDiaChi}`)
+        return
+      }
+    }
+
     const emailUsername = formData.value.email.split('@')[0]
 
     const payload = {
@@ -494,6 +504,7 @@ const handleSubmit = async () => {
     }
 
     await themKhachHang(payload)
+    Message.success('Thêm khách hàng thành công!')
     router.push({ name: 'QuanLyKhachHang' }) //  SPA routing với route name
   } catch (error) {
     Message.error('Thêm khách hàng thất bại. Vui lòng kiểm tra lại thông tin.')

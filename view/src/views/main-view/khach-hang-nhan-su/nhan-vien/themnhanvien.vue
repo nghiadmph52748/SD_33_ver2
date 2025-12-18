@@ -22,7 +22,8 @@
                 Ngày sinh
                 <span style="color: red">*</span>
               </template>
-              <a-date-picker v-model="formData.ngaySinh" format="YYYY-MM-DD" placeholder="Chọn ngày sinh" style="width: 100%" />
+              <a-date-picker v-model="formData.ngaySinh" format="YYYY-MM-DD" placeholder="Chọn ngày sinh"
+                style="width: 100%" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -45,9 +46,11 @@
                 <span style="color: red">*</span>
               </template>
 
-             <div style="display: flex; gap: 8px; align-items: center">
+              <div style="display: flex; gap: 8px; align-items: center">
                 <!-- CCCD: only accept via QR scan or image upload. Manual typing disabled. -->
-                <a-input v-model="formData.cccd" placeholder="Vui lòng quét QR hoặc tải ảnh CCCD (không cho phép nhập tay)" style="flex: 1" readonly @keydown.prevent />
+                <a-input v-model="formData.cccd"
+                  placeholder="Vui lòng quét QR hoặc tải ảnh CCCD (không cho phép nhập tay)" style="flex: 1" readonly
+                  @keydown.prevent />
 
                 <!-- Nút quét CCCD -->
                 <a-button type="outline" @click="openQRModal">
@@ -65,7 +68,8 @@
                   Tải ảnh
                 </a-button>
 
-                <input ref="cccdFileInputRef" type="file" accept="image/*" style="display: none" @change="handleCCCDImageUpload" />
+                <input ref="cccdFileInputRef" type="file" accept="image/*" style="display: none"
+                  @change="handleCCCDImageUpload" />
               </div>
             </a-form-item>
           </a-col>
@@ -105,14 +109,10 @@
                 Quyền hạn
                 <span style="color: red">*</span>
               </template>
-              <a-select
-                v-model="formData.idQuyenHan"
-                placeholder="-- Chọn quyền hạn --"
-                :options="[
-                  { value: 1, label: 'Admin' },
-                  { value: 2, label: 'Nhân Viên' },
-                ]"
-              />
+              <a-select v-model="formData.idQuyenHan" placeholder="-- Chọn quyền hạn --" :options="[
+                { value: 1, label: 'Admin' },
+                { value: 2, label: 'Nhân Viên' },
+              ]" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -124,13 +124,10 @@
               <div class="upload-container">
                 <!-- Native Input File Upload - Chỉ hiển thị khi chưa có ảnh -->
                 <div v-if="!previewUrl">
-                  <input ref="fileInputRef" type="file" accept="image/*" @change="handleNativeFileChange" style="display: none" />
-                  <a-button
-                    :loading="loading"
-                    type="dashed"
-                    @click="() => fileInputRef?.click()"
-                    style="width: 100%; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center"
-                  >
+                  <input ref="fileInputRef" type="file" accept="image/*" @change="handleNativeFileChange"
+                    style="display: none" />
+                  <a-button :loading="loading" type="dashed" @click="() => fileInputRef?.click()"
+                    style="width: 100%; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center">
                     <template #icon>
                       <icon-upload style="font-size: 24px; margin-bottom: 8px" />
                     </template>
@@ -160,10 +157,8 @@
                 </div>
 
                 <!-- Fallback nếu không có preview -->
-                <div
-                  v-else-if="selectedFiles.length > 0"
-                  style="margin-top: 16px; padding: 16px; border: 1px dashed #ccc; text-align: center; color: #666"
-                >
+                <div v-else-if="selectedFiles.length > 0"
+                  style="margin-top: 16px; padding: 16px; border: 1px dashed #ccc; text-align: center; color: #666">
                   <div>⚠️ Không thể hiển thị preview</div>
                   <div style="font-size: 12px; margin-top: 4px">File: {{ selectedFiles[0].name }}</div>
                 </div>
@@ -181,28 +176,14 @@
         <a-row :gutter="24">
           <a-col :span="12">
             <a-form-item label="Thành phố" name="thanhPho">
-              <a-select
-                v-model="formData.thanhPho"
-                placeholder="-- Chọn tỉnh/thành phố --"
-                :options="provinces"
-                allow-search
-                allow-clear
-                @change="onProvinceChange"
-                option-label-prop="name"
-              />
+              <a-select v-model="formData.thanhPho" placeholder="-- Chọn tỉnh/thành phố --" :options="provinces"
+                allow-search allow-clear @change="onProvinceChange" option-label-prop="name" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="Quận/Huyện" name="quan">
-              <a-select
-                v-model="formData.quan"
-                placeholder="-- Chọn quận/huyện --"
-                :options="districts"
-                allow-search
-                allow-clear
-                @change="onDistrictChange"
-                option-label-prop="name"
-              />
+              <a-select v-model="formData.quan" placeholder="-- Chọn quận/huyện --" :options="districts" allow-search
+                allow-clear @change="onDistrictChange" option-label-prop="name" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -211,14 +192,8 @@
         <a-row :gutter="24">
           <a-col :span="12">
             <a-form-item label="Phường/Xã" name="phuong">
-              <a-select
-                v-model="formData.phuong"
-                placeholder="-- Chọn phường/xã --"
-                :options="wards"
-                allow-search
-                allow-clear
-                option-label-prop="name"
-              />
+              <a-select v-model="formData.phuong" placeholder="-- Chọn phường/xã --" :options="wards" allow-search
+                allow-clear option-label-prop="name" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -253,14 +228,8 @@
     </a-card>
 
     <!-- Save Employee Confirm Modal -->
-    <a-modal
-      v-model:visible="showSaveConfirm"
-      title="Xác nhận thêm nhân viên"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmSaveEmployee"
-      @cancel="cancelSaveEmployee"
-    >
+    <a-modal v-model:visible="showSaveConfirm" title="Xác nhận thêm nhân viên" ok-text="Xác nhận" cancel-text="Huỷ"
+      @ok="confirmSaveEmployee" @cancel="cancelSaveEmployee">
       <template #default>
         <div>
           <div>Bạn có chắc chắn muốn thêm nhân viên này?</div>
@@ -284,16 +253,8 @@
       </template>
     </a-modal>
     <!-- Modal quét QR -->
-    <a-modal
-      v-model:visible="showQRModal"
-      title="Quét mã QR CCCD"
-      ok-text="Đóng"
-      cancel-text="Hủy"
-      hide-cancel
-      width="400px"
-      @ok="closeQRModal"
-      @cancel="closeQRModal"
-    >
+    <a-modal v-model:visible="showQRModal" title="Quét mã QR CCCD" ok-text="Đóng" cancel-text="Hủy" hide-cancel
+      width="400px" @ok="closeQRModal" @cancel="closeQRModal">
       <div style="text-align: center">
         <video ref="videoRef" autoplay playsinline style="width: 100%; border-radius: 8px" />
       </div>
@@ -320,8 +281,8 @@ const cccdFileInputRef = ref<HTMLInputElement | null>(null)
 const router = useRouter()
 const { breadcrumbItems } = useBreadcrumb()
 
-const provinces = ref<{ value: string; label: string; code: number }[]>([])
-const districts = ref<{ value: string; label: string; code: number }[]>([])
+const provinces = ref<{ value: string; label: string; code: string }[]>([])
+const districts = ref<{ value: string; label: string; code: string }[]>([])
 const wards = ref<{ value: string; label: string }[]>([])
 
 // Form data
@@ -377,13 +338,19 @@ const formRules = {
 }
 
 const loadProvinces = async () => {
-  const res = await fetch('https://provinces.open-api.vn/api/p/')
-  const data = await res.json()
-  provinces.value = data.map((p: any) => ({
-    value: p.name,
-    label: p.name,
-    code: p.code,
-  }))
+  try {
+    const res = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+    const responseData = await res.json()
+    if (responseData.error === 0) {
+      provinces.value = responseData.data.map((p: any) => ({
+        value: p.full_name,
+        label: p.full_name,
+        code: p.id,
+      }))
+    }
+  } catch (error) {
+    console.error('Lỗi tải tỉnh thành:', error)
+  }
 }
 loadProvinces()
 
@@ -395,13 +362,19 @@ const onProvinceChange = async (value: string) => {
 
   const province = provinces.value.find((p) => p.value === value)
   if (province) {
-    const res = await fetch(`https://provinces.open-api.vn/api/p/${province.code}?depth=2`)
-    const data = await res.json()
-    districts.value = data.districts.map((d: any) => ({
-      value: d.name,
-      label: d.name,
-      code: d.code,
-    }))
+    try {
+      const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${province.code}.htm`)
+      const responseData = await res.json()
+      if (responseData.error === 0) {
+        districts.value = responseData.data.map((d: any) => ({
+          value: d.full_name,
+          label: d.full_name,
+          code: d.id,
+        }))
+      }
+    } catch (error) {
+      console.error('Lỗi tải quận huyện:', error)
+    }
   }
 }
 
@@ -411,12 +384,18 @@ const onDistrictChange = async (value: string) => {
 
   const district = districts.value.find((d) => d.value === value)
   if (district) {
-    const res = await fetch(`https://provinces.open-api.vn/api/d/${district.code}?depth=2`)
-    const data = await res.json()
-    wards.value = data.wards.map((w: any) => ({
-      value: w.name,
-      label: w.name,
-    }))
+    try {
+      const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${district.code}.htm`)
+      const responseData = await res.json()
+      if (responseData.error === 0) {
+        wards.value = responseData.data.map((w: any) => ({
+          value: w.full_name,
+          label: w.full_name,
+        }))
+      }
+    } catch (error) {
+      console.error('Lỗi tải phường xã:', error)
+    }
   }
 }
 
@@ -901,11 +880,13 @@ const handleCancel = () => {
   border-color: #165dff;
   color: #165dff;
 }
+
 .qr-container {
   position: relative;
   width: 100%;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.8); /* nền mờ xung quanh */
+  background: rgba(0, 0, 0, 0.8);
+  /* nền mờ xung quanh */
   display: flex;
   justify-content: center;
   align-items: center;
