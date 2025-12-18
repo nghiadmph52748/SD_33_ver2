@@ -2,6 +2,7 @@ package org.example.be_sp.repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.example.be_sp.entity.DiaChiKhachHang;
 import org.example.be_sp.entity.KhachHang;
@@ -10,9 +11,17 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface DiaChiKhachHangRepository extends JpaRepository<DiaChiKhachHang, Integer> {
+
     // Find all addresses by customer id (id_khach_hang)
     List<DiaChiKhachHang> findAllByIdKhachHang_Id(Integer idKhachHang);
 
     ArrayList<DiaChiKhachHang> findAllByIdKhachHangAndTrangThaiAndDeleted(KhachHang idKhachHang, Boolean trangThai,
-                                                                          Boolean deleted);
+            Boolean deleted);
+
+    Optional<DiaChiKhachHang> findFirstByIdKhachHang_IdAndThanhPhoIgnoreCaseAndQuanIgnoreCaseAndPhuongIgnoreCaseAndDiaChiCuTheIgnoreCase(
+            Integer idKhachHang,
+            String thanhPho,
+            String quan,
+            String phuong,
+            String diaChiCuThe);
 }

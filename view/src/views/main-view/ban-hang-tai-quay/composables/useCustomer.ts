@@ -1,6 +1,6 @@
 import { ref, computed, type Ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import type { KhachHangResponse } from '@/api/khach-hang'
+import type { DiaChi, KhachHangResponse } from '@/api/khach-hang'
 import { useUserStore } from '@/store'
 import { fetchCustomers } from '../services/customerService'
 import { updateCustomerForInvoice, type UpdateCustomerRequest } from '../services/posService'
@@ -20,6 +20,7 @@ interface Customer {
   address?: string
   addressInfo?: AddressInfo
   code?: string
+  addresses?: DiaChi[]
 }
 
 interface Order {
@@ -86,6 +87,7 @@ export default function useCustomer(params: { currentOrder: Ref<Order | null> })
               phuong: defaultAddress?.phuong || '',
               diaChiCuThe: defaultAddress?.diaChiCuThe || '',
             },
+            addresses: Array.isArray(c.listDiaChi) ? c.listDiaChi : [],
           }
         })
       }

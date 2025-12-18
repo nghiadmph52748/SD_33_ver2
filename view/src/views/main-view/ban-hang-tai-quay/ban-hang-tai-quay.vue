@@ -258,7 +258,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import { type BienTheSanPham, type ChatLieu, type DeGiay, type MauSac, type KichThuoc } from '@/api/san-pham/bien-the'
 import { type CouponApiModel } from '@/api/discount-management'
-import { themKhachHangNhanh, type KhachHangResponse } from '@/api/khach-hang'
+import { themKhachHangNhanh, type DiaChi, type KhachHangResponse } from '@/api/khach-hang'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useUserStore } from '@/store'
 import type { CreateQrSessionPayload } from '@/api/pos'
@@ -287,6 +287,7 @@ import { useOrdersManager } from './composables/useOrdersManager'
 import { useStock } from './composables/useStock'
 import useRealTimePriceSync from './composables/useRealTimePriceSync'
 import { createQrPaymentSession, updateQrPaymentSession, cancelQrPaymentSession, generateQrPayment } from './services/qrSessionService'
+import { saveCustomerAddressIfMissing } from './services/customerService'
 import CartTable from './components/CartTable.vue'
 import CustomerCard from './components/CustomerCard.vue'
 import PaymentCard from './components/PaymentCard.vue'
@@ -346,6 +347,13 @@ interface Customer {
   phone: string
   email?: string
   address?: string
+  addressInfo?: {
+    thanhPho: string
+    quan: string
+    phuong: string
+    diaChiCuThe: string
+  }
+  addresses?: DiaChi[]
 }
 
 type PaymentMethod = 'cash' | 'transfer' | 'both'
@@ -495,13 +503,29 @@ const shippingFeeAutoCalcLocks = new Set<string>()
 const lastAutoShippingSignature = new Map<string, string>()
 let autoShippingFeeTimeout: ReturnType<typeof setTimeout> | null = null
 
+type AddressSignatureSource = Partial<Record<'thanhPho' | 'quan' | 'phuong' | 'diaChiCuThe', string>>
+
+const normalizeAddressValue = (value: unknown) => {
+  if (typeof value === 'string') return value.trim()
+  if (value === null || value === undefined) return ''
+  return String(value).trim()
+}
+
+const buildAddressSignature = (source: AddressSignatureSource) =>
+  ['thanhPho', 'quan', 'phuong', 'diaChiCuThe']
+    .map((key) => normalizeAddressValue(source[key as keyof AddressSignatureSource]).toLowerCase())
+    .join('|')
+
+const formatAddressFromSource = (source: AddressSignatureSource) =>
+  ['diaChiCuThe', 'phuong', 'quan', 'thanhPho']
+    .map((key) => normalizeAddressValue(source[key as keyof AddressSignatureSource]))
+    .filter((part) => part.length > 0)
+    .join(', ')
+
 const hasCompleteWalkInAddress = (location: WalkInLocationState) =>
   Boolean(location.thanhPho && location.quan && location.phuong && location.diaChiCuThe)
 
-const buildLocationSignature = (location: WalkInLocationState) =>
-  ['thanhPho', 'quan', 'phuong', 'diaChiCuThe']
-    .map((key) => (location[key as keyof WalkInLocationState] || '').toString().trim().toLowerCase())
-    .join('|')
+const buildLocationSignature = (location: WalkInLocationState) => buildAddressSignature(location)
 
 const autoCalculateShippingFeeForCurrentOrder = async () => {
   const orderId = currentOrder.value?.id
@@ -702,6 +726,7 @@ const handleCustomerChange = async (customerId: string) => {
     })
 
     Message.success('Khách hàng đã được cập nhật')
+    await maybeSaveSelectedCustomerAddress()
   } catch (error: any) {
     Message.error(error.message || 'Có lỗi xảy ra khi cập nhật khách hàng')
   }
@@ -768,9 +793,7 @@ const printOrder = () => {
 
   try {
     // Generate invoice HTML - pass cached data if current order is empty
-    const invoiceHTML = hasCurrentOrder
-      ? generateInvoiceHTML()
-      : generateInvoiceHTML(lastConfirmedOrder.value)
+    const invoiceHTML = hasCurrentOrder ? generateInvoiceHTML() : generateInvoiceHTML(lastConfirmedOrder.value)
 
     // Open print window
     const printWindow = window.open('', '_blank', 'width=800,height=600')
@@ -1250,12 +1273,112 @@ const parseAddressComponents = (raw?: string) => {
   return result
 }
 
+const customerAddressSignatureCache = new Map<string, Set<string>>()
+const pendingCustomerAddressSaves = new Set<string>()
+
+const hydrateCustomerAddressSignatureSet = (customerId: string | null | undefined) => {
+  if (!customerId) return null
+  if (!customerAddressSignatureCache.has(customerId)) {
+    const signatureSet = new Set<string>()
+    const customerRecord = customers.value.find((c) => c.id === customerId)
+    const appendSignature = (source?: AddressSignatureSource) => {
+      if (!source) return
+      if (!source.thanhPho && !source.quan && !source.phuong && !source.diaChiCuThe) return
+      const signature = buildAddressSignature(source)
+      signatureSet.add(signature)
+    }
+    if (customerRecord) {
+      if (Array.isArray(customerRecord.addresses)) {
+        customerRecord.addresses.forEach((addr) => appendSignature(addr))
+      }
+      if (signatureSet.size === 0 && customerRecord.addressInfo) {
+        appendSignature(customerRecord.addressInfo)
+      }
+      if (signatureSet.size === 0 && customerRecord.address) {
+        appendSignature(parseAddressComponents(customerRecord.address))
+      }
+    }
+    customerAddressSignatureCache.set(customerId, signatureSet)
+  }
+  return customerAddressSignatureCache.get(customerId) ?? null
+}
+
+const maybeSaveSelectedCustomerAddress = async () => {
+  if (orderType.value !== 'delivery') return
+  const customer = selectedCustomer.value
+  if (!customer?.id) return
+  if (!hasCompleteWalkInAddress(walkInLocation.value)) return
+  const numericCustomerId = Number.parseInt(customer.id, 10)
+  if (Number.isNaN(numericCustomerId)) return
+
+  const signature = buildLocationSignature(walkInLocation.value)
+  const signatureSet = hydrateCustomerAddressSignatureSet(customer.id) ?? new Set<string>()
+  if (signatureSet.has(signature)) return
+
+  const cacheKey = `${customer.id}|${signature}`
+  if (pendingCustomerAddressSaves.has(cacheKey)) return
+
+  pendingCustomerAddressSaves.add(cacheKey)
+  try {
+    const savedAddress = await saveCustomerAddressIfMissing({
+      customerId: numericCustomerId,
+      tenDiaChi: `${customer.name || 'Khách'} - POS`,
+      location: {
+        thanhPho: walkInLocation.value.thanhPho,
+        quan: walkInLocation.value.quan,
+        phuong: walkInLocation.value.phuong,
+        diaChiCuThe: walkInLocation.value.diaChiCuThe,
+      },
+    })
+
+    if (savedAddress) {
+      signatureSet.add(signature)
+      customerAddressSignatureCache.set(customer.id, signatureSet)
+
+      const target = customers.value.find((c) => c.id === customer.id)
+      if (target) {
+        if (!Array.isArray(target.addresses)) {
+          target.addresses = []
+        }
+        const newAddress: DiaChi = {
+          tenDiaChi: savedAddress.tenDiaChi,
+          thanhPho: savedAddress.thanhPho,
+          quan: savedAddress.quan,
+          phuong: savedAddress.phuong,
+          diaChiCuThe: savedAddress.diaChiCuThe,
+          macDinh: target.addresses.length === 0,
+          deleted: false,
+        }
+        target.addresses.push(newAddress)
+        target.address = formatAddressFromSource(newAddress)
+        target.addressInfo = {
+          thanhPho: savedAddress.thanhPho || '',
+          quan: savedAddress.quan || '',
+          phuong: savedAddress.phuong || '',
+          diaChiCuThe: savedAddress.diaChiCuThe || '',
+        }
+      }
+
+      Message.success('Đã lưu địa chỉ giao hàng cho khách hàng')
+    }
+  } catch (error) {
+    console.error('[POS] Không thể lưu địa chỉ khách hàng:', error)
+  } finally {
+    pendingCustomerAddressSaves.delete(cacheKey)
+  }
+}
+
 const mapInvoiceItemToCartItem = (detail: PendingInvoiceItem, orderId: string, index: number): CartItem => {
   const quantity = Math.max(1, normalizeNumber(detail.soLuong, 1))
-  const fallbackUnitPrice = normalizeNumber(detail.giaBan ?? (detail.thanhTien && quantity ? Number(detail.thanhTien) / quantity : undefined), 0)
+  const fallbackUnitPrice = normalizeNumber(
+    detail.giaBan ?? (detail.thanhTien && quantity ? Number(detail.thanhTien) / quantity : undefined),
+    0
+  )
   const fallbackReferencePrice = normalizeNumber(detail.giaBanSanPham ?? fallbackUnitPrice, fallbackUnitPrice)
   const fallbackDiscountPercent =
-    fallbackReferencePrice > 0 ? Math.max(0, Math.min(100, ((fallbackReferencePrice - fallbackUnitPrice) / fallbackReferencePrice) * 100)) : 0
+    fallbackReferencePrice > 0
+      ? Math.max(0, Math.min(100, ((fallbackReferencePrice - fallbackUnitPrice) / fallbackReferencePrice) * 100))
+      : 0
 
   const price = fallbackUnitPrice
   const discount = fallbackDiscountPercent
@@ -1592,6 +1715,10 @@ watch(
 
 // Watch for customer selection change - load customer-specific vouchers
 watch(selectedCustomer, async (newCustomer) => {
+  if (newCustomer?.id) {
+    customerAddressSignatureCache.delete(newCustomer.id)
+    hydrateCustomerAddressSignatureSet(newCustomer.id)
+  }
   if (newCustomer && newCustomer.id) {
     walkInName.value = ''
     walkInEmail.value = ''
@@ -1612,6 +1739,25 @@ watch(selectedCustomer, async (newCustomer) => {
     await refreshVouchers()
   }
 })
+
+watch(
+  () => ({
+    orderType: orderType.value,
+    customerId: selectedCustomer.value?.id ?? null,
+    signature: buildLocationSignature(walkInLocation.value),
+  }),
+  async ({ orderType, customerId }) => {
+    if (orderType !== 'delivery' || !customerId) return
+    await maybeSaveSelectedCustomerAddress()
+  }
+)
+
+watch(
+  () => customers.value,
+  () => {
+    customerAddressSignatureCache.clear()
+  }
+)
 
 watch(
   () => orders.value.length,

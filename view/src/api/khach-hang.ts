@@ -6,7 +6,30 @@ export interface DiaChi {
   quan: string
   phuong: string
   diaChiCuThe: string
-  macDinh: boolean
+  macDinh?: boolean
+  deleted?: boolean
+}
+
+export interface DiaChiKhachHangResponse {
+  id: number
+  idKhachHang: number
+  maDiaChi: string
+  tenDiaChi: string
+  thanhPho: string
+  quan: string
+  phuong: string
+  diaChiCuThe: string
+  deleted: boolean
+}
+
+export interface SaveCustomerAddressRequest {
+  idKhachHang: number
+  tenDiaChi?: string
+  thanhPho: string
+  quan: string
+  phuong: string
+  diaChiCuThe: string
+  deleted?: boolean
 }
 
 export interface KhachHangRequest {
@@ -78,4 +101,8 @@ export const xuatExcelKhachHang = () => {
   return axios.get('/api/khach-hang-management/export-excel', {
     responseType: 'blob',
   })
+}
+
+export const luuDiaChiKhachHangNeuChuaCo = (data: SaveCustomerAddressRequest) => {
+  return axios.post<{ data: DiaChiKhachHangResponse }>('/api/dia-chi-khach-hang-management/save-if-missing', data)
 }

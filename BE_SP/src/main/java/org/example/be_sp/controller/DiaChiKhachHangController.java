@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/dia-chi-khach-hang-management")
 @CrossOrigin(origins = "*")
 public class DiaChiKhachHangController {
+
     @Autowired
     DiaChiKhachHangService service;
 
@@ -52,5 +53,10 @@ public class DiaChiKhachHangController {
     public ResponseObject<?> updateStatus(@PathVariable Integer id) {
         service.updateStatus(id);
         return new ResponseObject<>(true, null, "Cập nhật trạng thái địa chỉ khách hàng thành công");
+    }
+
+    @PostMapping("/save-if-missing")
+    public ResponseObject<?> saveAddressIfMissing(@RequestBody DiaChiKhachHangRequest request) {
+        return new ResponseObject<>(service.saveIfMissing(request), "Địa chỉ giao hàng đã được lưu lại");
     }
 }
