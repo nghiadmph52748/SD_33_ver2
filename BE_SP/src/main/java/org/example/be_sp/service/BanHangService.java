@@ -534,6 +534,11 @@ public class BanHangService {
         // hasn't been updated
         updateTongTienHoaDon(hoaDon);
 
+        // Refresh the entity from database to get the updated tongTien value
+        // This ensures we have the latest data after updateTongTienHoaDon has saved
+        hoaDon = hdRepository.findById(idHoaDon)
+                .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
+
         // Check if tongTien is null (invoice with no items yet)
         if (hoaDon.getTongTien() == null || hoaDon.getTongTien().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ApiException("Hóa đơn chưa có sản phẩm nào, không thể áp dụng voucher", "400");

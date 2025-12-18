@@ -3,7 +3,7 @@ import { Message } from '@arco-design/web-vue'
 import type { KhachHangResponse } from '@/api/khach-hang'
 import { useUserStore } from '@/store'
 import { fetchCustomers } from '../services/customerService'
-import { updateCustomerForInvoice } from '../services/posService'
+import { updateCustomerForInvoice, type UpdateCustomerRequest } from '../services/posService'
 
 interface AddressInfo {
   thanhPho: string
@@ -125,7 +125,7 @@ export default function useCustomer(params: { currentOrder: Ref<Order | null> })
         soDienThoai: selectedCustomer.value?.phone ?? (isWalkIn ? contactPhone || null : null),
         diaChiKhachHang: selectedCustomer.value?.address || walkInAddress || null,
         emailKhachHang: selectedCustomer.value?.email ?? (isWalkIn ? contactEmail || null : null),
-        idNhanVien: userStore.id,
+        idNhanVien: userStore.id || 1,
       }
 
       await updateCustomerForInvoice(updateCustomerRequest)

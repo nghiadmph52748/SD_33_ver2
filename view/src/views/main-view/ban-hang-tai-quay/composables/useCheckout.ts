@@ -62,6 +62,19 @@ export default function useCheckout(params: {
   walkInPhone: Ref<string>
   walkInDeliveryValid: Ref<boolean>
   confirmPosOrder: (req: ConfirmBanHangRequest) => Promise<any>
+  onBeforeOrderRemoved?: (orderData: {
+    order: Order
+    customer: Customer | null
+    voucher: CouponApiModel | null
+    orderType: 'counter' | 'delivery'
+    shippingFee: number
+    walkInData: {
+      name: string
+      email: string
+      phone: string
+      location: any
+    }
+  }) => void
 }) {
   const {
     currentOrder,
@@ -84,6 +97,7 @@ export default function useCheckout(params: {
     walkInPhone,
     walkInDeliveryValid,
     confirmPosOrder,
+    onBeforeOrderRemoved,
   } = params
 
   const showConfirmOrderModal = ref(false)
@@ -255,12 +269,33 @@ export default function useCheckout(params: {
         console.warn('BroadcastChannel broadcast failed:', error)
       }
 
+      // Cache order data before removal for post-checkout operations (e.g., printing)
+      if (onBeforeOrderRemoved && currentOrder.value) {
+        onBeforeOrderRemoved({
+          order: currentOrder.value,
+          customer: selectedCustomer.value,
+          voucher: selectedCoupon.value,
+          orderType: orderType.value,
+          shippingFee: shippingFee.value,
+          walkInData: {
+            name: walkInName.value,
+            email: walkInEmail.value,
+            phone: walkInPhone.value,
+            location: walkInLocation.value,
+          },
+        })
+      }
+
       const currentOrderIdx = parseInt(currentOrderIndex.value, 10)
       if (currentOrderIdx >= 0 && currentOrderIdx < orders.value.length) {
         orders.value.splice(currentOrderIdx, 1)
       }
       if (orders.value.length > 0) {
-        currentOrderIndex.value = Math.max(0, currentOrderIdx - 1).toString()
+        // After removing an order, select the next available order:
+        // - If we removed the last order, select the new last order (length - 1)
+        // - Otherwise, keep the same index (which now points to the next order)
+        const newIndex = Math.min(currentOrderIdx, orders.value.length - 1)
+        currentOrderIndex.value = newIndex.toString()
       }
 
       paymentForm.value = { discountCode: null, method: 'cash', cashReceived: 0, transferReceived: 0 }

@@ -19,6 +19,9 @@ import {
   type TimelineEntry,
 } from '@/api/pos'
 
+// Re-export types for use in composables
+export type { UpdateCustomerRequest, UpdatePaymentMethodRequest, UpdateVoucherRequest, ConfirmBanHangRequest, TimelineEntry }
+
 // Thin wrappers + convenience helpers for POS-related server operations
 export async function createInvoice(userId: number) {
   return apiCreateInvoice(userId)

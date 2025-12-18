@@ -32,8 +32,9 @@ export default function useCartActions(params: {
   cartTableKey: Ref<number>
   userId: number
   refreshProductStock: () => Promise<void>
+  pendingProductOperations: Ref<number>
 }) {
-  const { currentOrder, allProductVariants, cartTableKey, userId, refreshProductStock } = params
+  const { currentOrder, allProductVariants, cartTableKey, userId, refreshProductStock, pendingProductOperations } = params
 
   const showAddProductConfirmModal = ref(false)
   const selectedProductForAdd = ref<BienTheSanPham | null>(null)
@@ -94,56 +95,65 @@ export default function useCartActions(params: {
         throw new Error('Vui lòng tạo đơn hàng trước khi thêm sản phẩm')
       }
 
-      const idHoaDonChiTiet = await addProductToInvoice(invoiceId, productId, quantity, userId)
-
-      const existingItem = currentOrder.value.items.find((item) => {
-        if (item.productId !== productId.toString()) return false
-        const samePrice = Math.abs((item.price ?? 0) - unitPrice) < 0.0001
-        const sameDiscount = Math.abs((item.discount ?? 0) - unitDiscount) < 0.0001
-        return samePrice && sameDiscount
-      })
-      if (existingItem) {
-        existingItem.quantity += quantity
-        if (idHoaDonChiTiet) {
-          if (!existingItem.idHoaDonChiTiets) existingItem.idHoaDonChiTiets = []
-          existingItem.idHoaDonChiTiets.push(idHoaDonChiTiet)
-        }
-        Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${existingItem.quantity}`)
-      } else {
-        const item: CartItem = {
-          id: `${Date.now()}_${Math.random()}`,
-          idHoaDonChiTiets: idHoaDonChiTiet ? [idHoaDonChiTiet] : [],
-          productId: productId.toString(),
-          productName: selectedProductForAdd.value.tenSanPham || '',
-          price: unitPrice,
-          discount: unitDiscount,
-          quantity,
-          image: selectedProductForAdd.value.anhSanPham?.[0] || '',
-          images: selectedProductForAdd.value.anhSanPham || [],
-          tenChiTietSanPham: selectedProductForAdd.value.tenChiTietSanPham || '',
-          tenMauSac: selectedProductForAdd.value.tenMauSac || '',
-          maMau: selectedProductForAdd.value.maMau || '',
-          tenKichThuoc: selectedProductForAdd.value.tenKichThuoc || '',
-          tenDeGiay: selectedProductForAdd.value.tenDeGiay || '',
-          tenChatLieu: selectedProductForAdd.value.tenChatLieu || '',
-        }
-        currentOrder.value.items.push(item)
-        Message.success('Thêm sản phẩm thành công')
-      }
-
-      await refreshProductStock()
-
+      // Track pending operation
+      pendingProductOperations.value++
+      console.log('[confirmAddProduct] Incremented pending operations to:', pendingProductOperations.value)
       try {
-        const bc = new BroadcastChannel('stock-update-channel')
-        bc.postMessage({ type: 'STOCK_CHANGE', productId, needsRefresh: true })
-        bc.close()
-      } catch {
-        /* empty */
-      }
+        const idHoaDonChiTiet = await addProductToInvoice(invoiceId, productId, quantity, userId)
+        console.log('[confirmAddProduct] Product added successfully, idHoaDonChiTiet:', idHoaDonChiTiet)
 
-      showAddProductConfirmModal.value = false
-      selectedProductForAdd.value = null
-      productQuantityInput.value = 1
+        const existingItem = currentOrder.value.items.find((item) => {
+          if (item.productId !== productId.toString()) return false
+          const samePrice = Math.abs((item.price ?? 0) - unitPrice) < 0.0001
+          const sameDiscount = Math.abs((item.discount ?? 0) - unitDiscount) < 0.0001
+          return samePrice && sameDiscount
+        })
+        if (existingItem) {
+          existingItem.quantity += quantity
+          if (idHoaDonChiTiet) {
+            if (!existingItem.idHoaDonChiTiets) existingItem.idHoaDonChiTiets = []
+            existingItem.idHoaDonChiTiets.push(idHoaDonChiTiet)
+          }
+          Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${existingItem.quantity}`)
+        } else {
+          const item: CartItem = {
+            id: `${Date.now()}_${Math.random()}`,
+            idHoaDonChiTiets: idHoaDonChiTiet ? [idHoaDonChiTiet] : [],
+            productId: productId.toString(),
+            productName: selectedProductForAdd.value.tenSanPham || '',
+            price: unitPrice,
+            discount: unitDiscount,
+            quantity,
+            image: selectedProductForAdd.value.anhSanPham?.[0] || '',
+            images: selectedProductForAdd.value.anhSanPham || [],
+            tenChiTietSanPham: selectedProductForAdd.value.tenChiTietSanPham || '',
+            tenMauSac: selectedProductForAdd.value.tenMauSac || '',
+            maMau: selectedProductForAdd.value.maMau || '',
+            tenKichThuoc: selectedProductForAdd.value.tenKichThuoc || '',
+            tenDeGiay: selectedProductForAdd.value.tenDeGiay || '',
+            tenChatLieu: selectedProductForAdd.value.tenChatLieu || '',
+          }
+          currentOrder.value.items.push(item)
+          Message.success('Thêm sản phẩm thành công')
+        }
+
+        await refreshProductStock()
+
+        try {
+          const bc = new BroadcastChannel('stock-update-channel')
+          bc.postMessage({ type: 'STOCK_CHANGE', productId, needsRefresh: true })
+          bc.close()
+        } catch {
+          /* empty */
+        }
+
+        showAddProductConfirmModal.value = false
+        selectedProductForAdd.value = null
+        productQuantityInput.value = 1
+      } finally {
+        pendingProductOperations.value--
+        console.log('[confirmAddProduct] Decremented pending operations to:', pendingProductOperations.value)
+      }
     } catch (error: any) {
       Message.error(error.message || 'Có lỗi xảy ra khi thêm sản phẩm')
     } finally {
@@ -195,13 +205,19 @@ export default function useCartActions(params: {
       }
 
       if (item.idHoaDonChiTiets && item.idHoaDonChiTiets.length > 0) {
-        const quantityPerDetail = Math.max(1, Math.floor(newQuantity / item.idHoaDonChiTiets.length))
-        const remainingQuantity = newQuantity % item.idHoaDonChiTiets.length
-        for (let idx = 0; idx < item.idHoaDonChiTiets.length; idx += 1) {
-          const detailId = item.idHoaDonChiTiets[idx]
-          const detailQuantity = idx === item.idHoaDonChiTiets.length - 1 ? quantityPerDetail + remainingQuantity : quantityPerDetail
-          // eslint-disable-next-line no-await-in-loop
-          await updateProductQuantityInInvoice(detailId, detailQuantity, userId)
+        // Track pending operation
+        pendingProductOperations.value++
+        try {
+          const quantityPerDetail = Math.max(1, Math.floor(newQuantity / item.idHoaDonChiTiets.length))
+          const remainingQuantity = newQuantity % item.idHoaDonChiTiets.length
+          for (let idx = 0; idx < item.idHoaDonChiTiets.length; idx += 1) {
+            const detailId = item.idHoaDonChiTiets[idx]
+            const detailQuantity = idx === item.idHoaDonChiTiets.length - 1 ? quantityPerDetail + remainingQuantity : quantityPerDetail
+            // eslint-disable-next-line no-await-in-loop
+            await updateProductQuantityInInvoice(detailId, detailQuantity, userId)
+          }
+        } finally {
+          pendingProductOperations.value--
         }
       }
 
