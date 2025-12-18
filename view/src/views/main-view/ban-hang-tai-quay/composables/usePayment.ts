@@ -145,15 +145,18 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
     await recalculateShippingFee()
   }
 
-  const recalculateShippingFee = async () => {
+  const recalculateShippingFee = async (): Promise<number> => {
     try {
       if (!walkInLocation.value.thanhPho || !walkInLocation.value.quan || !walkInLocation.value.phuong) {
-        return
+        shippingFee.value = 0
+        return 0
       }
       const result = await calculateShippingFeeFromGHN(walkInLocation.value)
       shippingFee.value = result.fee
+      return result.fee
     } catch (error) {
       console.error('[Payment] Error recalculating shipping fee:', error)
+      return shippingFee.value ?? 0
     }
   }
 
@@ -302,5 +305,6 @@ export default function usePayment(params: { currentOrder: Ref<Order | null> }) 
     updateInvoicePayment,
     updateInvoiceShipping,
     updateInvoiceVoucher,
+    recalculateShippingFee,
   }
 }

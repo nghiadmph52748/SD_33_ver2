@@ -27,6 +27,15 @@ public class PosController {
     @Autowired
     private BanHangService banHangService;
 
+    @GetMapping("/get/hoa-don-cho")
+    public ResponseObject<?> getHoaDonCho() {
+        try {
+            return new ResponseObject<>(true, banHangService.getHoaDonCho(), "Lấy hóa đơn chờ thành công");
+        } catch (Exception e) {
+            return new ResponseObject<>(false, null, "Lỗi khi lấy hóa đơn chờ: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/coupons")
     public ResponseObject<?> getActiveCoupons() {
         try {

@@ -19,6 +19,7 @@ interface Customer {
   email?: string
   address?: string
   addressInfo?: AddressInfo
+  code?: string
 }
 
 interface Order {
@@ -74,6 +75,7 @@ export default function useCustomer(params: { currentOrder: Ref<Order | null> })
 
           return {
             id: c.id.toString(),
+            code: c.maKhachHang,
             name: c.tenKhachHang,
             phone: c.soDienThoai,
             email: c.email,

@@ -1,8 +1,10 @@
 package org.example.be_sp.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.example.be_sp.entity.HoaDon;
+import org.example.be_sp.model.response.HoaDonResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,4 +21,5 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Integer> {
 
     Optional<HoaDon> findByMaHoaDon(String maHoaDon);
 
+    List<HoaDon> findAllByTrangThaiAndDeleted(Boolean trangThai, Boolean deleted);
 }

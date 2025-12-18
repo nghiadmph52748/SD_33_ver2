@@ -11,12 +11,14 @@ import {
   confirmPosOrder as apiConfirmPosOrder,
   getPosActiveCoupons as apiGetPosActiveCoupons,
   getPosActiveCouponsForCustomer as apiGetPosActiveCouponsForCustomer,
+  getPendingInvoices as apiGetPendingInvoices,
   getInvoiceTimeline as apiGetInvoiceTimeline,
   type UpdatePaymentMethodRequest,
   type UpdateVoucherRequest,
   type UpdateCustomerRequest,
   type ConfirmBanHangRequest,
   type TimelineEntry,
+  type PendingInvoiceResponse,
 } from '@/api/pos'
 
 // Thin wrappers + convenience helpers for POS-related server operations
@@ -75,3 +77,9 @@ export async function getPosActiveCouponsForCustomer(customerId: number) {
 export async function getInvoiceTimeline(invoiceId: number) {
   return apiGetInvoiceTimeline(invoiceId)
 }
+
+export async function getPendingInvoices() {
+  return apiGetPendingInvoices()
+}
+
+export type { PendingInvoiceResponse }

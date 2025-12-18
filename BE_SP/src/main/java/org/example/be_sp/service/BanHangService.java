@@ -25,6 +25,7 @@ import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.exception.ApiException;
 import org.example.be_sp.model.request.banHang.ConfirmBanHangRequest;
 import org.example.be_sp.model.response.CreateInvoiceResponse;
+import org.example.be_sp.model.response.HoaDonResponse;
 import org.example.be_sp.repository.ChiTietSanPhamRepository;
 import org.example.be_sp.repository.DiaChiKhachHangRepository;
 import org.example.be_sp.repository.HinhThucThanhToanRepository;
@@ -48,7 +49,6 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class BanHangService {
-
     @Autowired
     ChiTietSanPhamRepository ctspRepository;
     @Autowired
@@ -84,6 +84,10 @@ public class BanHangService {
     @Autowired
     QRSessionRepository qrSessionRepository;
 
+    public List<HoaDonResponse> getHoaDonCho() {
+        return hdRepository.findAllByTrangThaiAndDeleted(false, false).stream().map(HoaDonResponse::new).toList();
+    }
+
     private BigDecimal normalizeCurrency(BigDecimal amount) {
         BigDecimal nonNullAmount = amount != null ? amount : BigDecimal.ZERO;
         BigDecimal nonNegative = nonNullAmount.max(BigDecimal.ZERO);
@@ -94,7 +98,7 @@ public class BanHangService {
      * Helper method to create timeline entry automatically
      */
     private void addTimeline(HoaDon hoaDon, String trangThaiCu, String trangThaiMoi,
-            String hanhDong, String moTa, Integer idNhanVien) {
+                             String hanhDong, String moTa, Integer idNhanVien) {
         TimelineDonHang timeline = new TimelineDonHang();
         timeline.setIdHoaDon(hoaDon);
         timeline.setIdNhanVien(nvRepository.findById(idNhanVien)
@@ -170,7 +174,7 @@ public class BanHangService {
         hd.setCreateBy(idNhanVien);
         hd.setGiaoHang(false);
         hd.setGhiChu("Tạo hóa đơn bán hàng tại quầy");
-        hd.setTrangThai(true);
+        hd.setTrangThai(false);
         hd.setDeleted(false);
         HoaDon saved = hdRepository.save(hd);
 
@@ -393,7 +397,7 @@ public class BanHangService {
     }
 
     public Integer updateKhachHang(Integer idHoaDon, Integer idKhachHang, String tenKhachHang, String soDienThoai,
-            String diaChiKhachHang, String emailKhachHang, Integer idNhanVien) {
+                                   String diaChiKhachHang, String emailKhachHang, Integer idNhanVien) {
         HoaDon hoaDon = hdRepository.findById(idHoaDon)
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
 
@@ -605,6 +609,7 @@ public class BanHangService {
         if (hoaDon.getCreateAt() == null) {
             hoaDon.setCreateAt(LocalDateTime.now());
         }
+        hoaDon.setTrangThai(true);
 
         // Recalculate tongTien and tongTienSauGiam from cart items BEFORE final save
         // This ensures all invoice fields are properly set and prevents CHECK
@@ -774,7 +779,7 @@ public class BanHangService {
     }
 
     public void kiemTra(Map<Integer, Integer> listIdChiTietSanPham, Integer idPhieuGiamGia, Integer idNhanVien,
-            Integer idKhachHang, Integer idPhuongThucThanhToan) {
+                        Integer idKhachHang, Integer idPhuongThucThanhToan) {
         listIdChiTietSanPham.forEach((id, soLuong) -> {
             ChiTietSanPham ctsp = ctspRepository.findById(id)
                     .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + id, "404"));

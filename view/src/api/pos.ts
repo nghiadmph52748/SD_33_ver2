@@ -87,6 +87,75 @@ export const getPosActiveCouponsForCustomer = (idKhachHang: number) =>
     method: 'GET',
   })
 
+export interface InvoiceItemResponse {
+  id?: number
+  maHoaDon?: string
+  maHoaDonChiTiet?: string
+  soLuong?: number
+  giaBan?: number
+  giaBanSanPham?: number
+  thanhTien?: number
+  trangThai?: boolean
+  ghiChu?: string
+  tenSanPham?: string
+  maSanPham?: string
+  tenSanPhamChiTiet?: string
+  maSanPhamChiTiet?: string
+  tenMauSac?: string
+  maMauSac?: string
+  tenKichThuoc?: string
+  maKichThuoc?: string
+  tenDeGiay?: string
+  tenChatLieu?: string
+  sanPhamId?: number
+  anhSanPham?: string[]
+  deleted?: boolean
+}
+
+export interface PendingInvoiceResponse {
+  id: number
+  maKhachHang?: string
+  tenKhachHang?: string
+  maHoaDon?: string
+  email?: string
+  soDienThoai?: string
+  maPhieuGiamGia?: string
+  tenPhieuGiamGia?: string
+  loaiPhieuGiamGia?: boolean
+  giaTriGiamGia?: number
+  tenNhanVien?: string
+  maNhanVien?: string
+  tenHoaDon?: string
+  loaiDon?: boolean
+  phiVanChuyen?: number
+  tongTien?: number
+  tongTienSauGiam?: number
+  ghiChu?: string
+  tenNguoiNhan?: string
+  diaChiNhanHang?: string
+  diaChiNguoiNhan?: string
+  soDienThoaiNguoiNhan?: string
+  emailNguoiNhan?: string
+  ngayTao?: string
+  ngayThanhToan?: string
+  phuPhi?: number
+  hoanPhi?: number
+  trangThai?: boolean
+  deleted?: boolean
+  createAt?: string
+  createBy?: number
+  updateAt?: string
+  updateBy?: number
+  items?: InvoiceItemResponse[]
+  idNhanVien?: number
+  soTienDaThanhToan?: number
+}
+
+export const getPendingInvoices = () =>
+  requestJson<PendingInvoiceResponse[]>('/api/pos/get/hoa-don-cho', {
+    method: 'GET',
+  })
+
 /** Invoice creation response */
 export interface CreateInvoiceResponse {
   id: number
