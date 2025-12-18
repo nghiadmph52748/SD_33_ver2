@@ -6,7 +6,8 @@
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên màu sắc..." allow-clear @input="searchColors" />
+              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên màu sắc..." allow-clear
+                @input="searchColors" />
             </a-form-item>
           </a-col>
 
@@ -48,7 +49,13 @@
 
     <!-- Colors Table -->
     <a-card title="Danh sách màu sắc" class="table-card">
-      <a-table :columns="columns" :data="filteredColors" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
+      <a-table :columns="columns" :data="colors" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }"
+        @page-change="getMauSacPage($event - 1)" @page-size-change="
+          (size) => {
+            pagination.pageSize = size
+            getMauSacPage(0)
+          }
+        ">
         <template #stt="{ rowIndex }">
           <div>{{ rowIndex + 1 }}</div>
         </template>
@@ -77,7 +84,8 @@
         <template #action="{ record }">
           <a-space>
             <a-tooltip content="Thay đổi trạng thái">
-              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)"
+                :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -107,15 +115,8 @@
     </a-card>
 
     <!-- Add Color Modal -->
-    <a-modal
-      v-model:visible="addModalVisible"
-      title="Thêm màu sắc"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeAddModal"
-      @ok="confirmAddColor"
-    >
+    <a-modal v-model:visible="addModalVisible" title="Thêm màu sắc" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeAddModal" @ok="confirmAddColor">
       <a-form :model="colorForm" :rules="formRules" layout="vertical" ref="addFormRef">
         <a-form-item>
           <template #label>
@@ -127,23 +128,16 @@
           <template #label>
             <span class="required-field">Mã màu</span>
           </template>
-          <input type="color" v-model="colorForm.maMau" class="arco-input" style="width: 100%; height: 32px" @input="onColorChange" />
+          <input type="color" v-model="colorForm.maMau" class="arco-input" style="width: 100%; height: 32px"
+            @input="onColorChange" />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- Detail Color Modal -->
-    <a-modal
-      v-model:visible="detailModalVisible"
-      title="Chi tiết màu sắc"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeDetailModal"
-      @ok="closeDetailModal"
-      ok-text="Đóng"
-      :cancel-button-props="{ style: { display: 'none' } }"
-    >
+    <a-modal v-model:visible="detailModalVisible" title="Chi tiết màu sắc" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeDetailModal" @ok="closeDetailModal" ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }">
       <a-descriptions :column="1" size="small">
         <a-descriptions-item label="Mã màu sắc">{{ selectedColor?.maMauSac }}</a-descriptions-item>
         <a-descriptions-item label="Tên màu sắc">{{ selectedColor?.tenMauSac }}</a-descriptions-item>
@@ -157,15 +151,8 @@
     </a-modal>
 
     <!-- Update Color Modal -->
-    <a-modal
-      v-model:visible="updateModalVisible"
-      title="Cập nhật màu sắc"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeUpdateModal"
-      @ok="confirmUpdateColor"
-    >
+    <a-modal v-model:visible="updateModalVisible" title="Cập nhật màu sắc" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeUpdateModal" @ok="confirmUpdateColor">
       <a-form :model="colorForm" :rules="formRules" layout="vertical" ref="updateFormRef">
         <a-form-item>
           <template #label>
@@ -177,7 +164,8 @@
           <template #label>
             <span class="required-field">Mã màu</span>
           </template>
-          <input type="color" v-model="colorForm.maMau" class="arco-input" style="width: 100%; height: 32px" @input="onColorChange" />
+          <input type="color" v-model="colorForm.maMau" class="arco-input" style="width: 100%; height: 32px"
+            @input="onColorChange" />
         </a-form-item>
         <a-form-item>
           <template #label>
@@ -192,27 +180,14 @@
     </a-modal>
 
     <!-- Confirmation Modal -->
-    <a-modal
-      v-model:visible="confirmModalVisible"
-      title="Xác nhận"
-      width="400px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="cancelConfirm"
-      @ok="executeConfirmedAction"
-    >
+    <a-modal v-model:visible="confirmModalVisible" title="Xác nhận" width="400px" :mask-closable="false"
+      :closable="true" @cancel="cancelConfirm" @ok="executeConfirmedAction">
       <p>{{ confirmMessage }}</p>
     </a-modal>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="colorToToggleStatus">
           <div>Bạn có chắc chắn muốn {{ colorToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} màu sắc này?</div>

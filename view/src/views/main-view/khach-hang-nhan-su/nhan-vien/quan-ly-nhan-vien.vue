@@ -9,7 +9,8 @@
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="boLoc.timKiem" placeholder="Mã, tên, SĐT, email..." allow-clear @change="timKiemNhanVien" />
+              <a-input v-model="boLoc.timKiem" placeholder="Mã, tên, SĐT, email..." allow-clear
+                @change="timKiemNhanVien" />
             </a-form-item>
           </a-col>
 
@@ -73,25 +74,16 @@
 
     <!-- Staff Table -->
     <a-card title="Danh sách nhân viên" class="table-card">
-      <a-table
-        :columns="columns"
-        :data="danhSachNhanVienPhanTrang"
-        :pagination="phanTrang"
-        :loading="loading"
-        :scroll="{ x: 1200 }"
-        @change="handleTableChange"
-      >
+      <a-table :columns="columns" :data="danhSachNhanVienPhanTrang" :pagination="phanTrang" :loading="loading"
+        :scroll="{ x: 1200 }" @change="handleTableChange">
         <template #position="{ record }">
           <a-tag :color="getPositionColor(record.position)">
             {{ getPositionText(record.position) }}
           </a-tag>
         </template>
         <template #anhNhanVien="{ record }">
-          <img
-            :src="record.anhNhanVien || '/images/default-avatar.png'"
-            alt="Ảnh nhân viên"
-            style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover"
-          />
+          <img :src="record.anhNhanVien || '/images/default-avatar.png'" alt="Ảnh nhân viên"
+            style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover" />
         </template>
         <template #diaChi="{ record }">
           {{ [record.diaChi, record.phuong, record.quan, record.thanhPho].filter(Boolean).join(', ') }}
@@ -101,7 +93,8 @@
         </template>
         <template #gioiTinh="{ record }">
           <span>
-            {{ record.gioiTinh === null || record.gioiTinh === undefined ? 'Chưa xác định' : record.gioiTinh ? 'Nam' : 'Nữ' }}
+            {{ record.gioiTinh === null || record.gioiTinh === undefined ? 'Chưa xác định' : record.gioiTinh ? 'Nam' :
+              'Nữ' }}
           </span>
         </template>
 
@@ -118,7 +111,8 @@
                 <icon-edit />
               </template>
             </a-button>
-            <a-switch :model-value="record.trangThai" type="round" @click="onToggleStatus(record)" :loading="record.updating">
+            <a-switch :model-value="record.trangThai" type="round" @click="onToggleStatus(record)"
+              :loading="record.updating">
               <template #checked-icon>
                 <icon-check />
               </template>
@@ -132,17 +126,12 @@
     </a-card>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="nhanVienToToggleStatus">
-          <div>Bạn có chắc chắn muốn {{ nhanVienToToggleStatus.trangThai ? 'nghỉ việc' : 'đang làm việc' }} nhân viên này?</div>
+          <div>Bạn có chắc chắn muốn {{ nhanVienToToggleStatus.trangThai ? 'nghỉ việc' : 'đang làm việc' }} nhân viên
+            này?</div>
           <div>
             Tên nhân viên:
             <strong>{{ nhanVienToToggleStatus.tenNhanVien }}</strong>
@@ -174,13 +163,10 @@ import { useRouter } from 'vue-router'
 // Reactive data - định nghĩa trước khi sử dụng
 const loading = ref(false)
 const danhSachNhanVien = ref<any[]>([])
-const phanTrang = reactive({
+const phanTrang = ref({
   current: 1,
   pageSize: 10,
   total: 0,
-  showTotal: true,
-  showJumper: true,
-  showPageSize: true,
 })
 
 // Modal confirm state
@@ -392,7 +378,7 @@ const timKiemNhanVien = async () => {
         item.stt = index + 1
       })
       danhSachNhanVien.value = mappedData
-      phanTrang.total = mappedData.length
+      phanTrang.value.total = mappedData.length
     }
     // } catch (_) {
     //   Message.error('Không thể tải dữ liệu nhân viên')
@@ -403,8 +389,8 @@ const timKiemNhanVien = async () => {
 
 // Computed danh sách nhân viên với phân trang
 const danhSachNhanVienPhanTrang = computed(() => {
-  const startIndex = (phanTrang.current - 1) * phanTrang.pageSize
-  const endIndex = startIndex + phanTrang.pageSize
+  const startIndex = (phanTrang.value.current - 1) * phanTrang.value.pageSize
+  const endIndex = startIndex + phanTrang.value.pageSize
   return danhSachNhanVien.value.slice(startIndex, endIndex)
 })
 
@@ -494,6 +480,7 @@ onMounted(async () => {
 :deep(.arco-table .arco-table-cell) {
   padding: 6px 8px;
 }
+
 .staff-management-page {
   padding: 0 20px 20px 20px;
 }

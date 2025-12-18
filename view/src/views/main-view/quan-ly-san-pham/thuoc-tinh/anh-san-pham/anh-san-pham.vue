@@ -96,7 +96,7 @@
       </div>
 
       <div v-else class="images-list">
-        <a-table :columns="listColumns" :data="filteredImages" :pagination="pagination" :loading="loading" size="middle">
+        <a-table :columns="listColumns" :data="images" :pagination="pagination" :loading="loading" size="middle">
           <template #stt="{ rowIndex }">
             <div>{{ rowIndex + 1 }}</div>
           </template>
@@ -144,16 +144,15 @@
             <a-descriptions-item label="Kích thước">{{ formatFileSize(selectedImage.size) }}</a-descriptions-item>
             <a-descriptions-item label="Thư mục">{{ getFolderName(selectedImage.folder) }}</a-descriptions-item>
             <a-descriptions-item label="Ngày upload">{{ formatDate(selectedImage.uploaded_at) }}</a-descriptions-item>
-            <a-descriptions-item label="Mô tả" :span="2">{{ selectedImage.description || 'Không có' }}</a-descriptions-item>
+            <a-descriptions-item label="Mô tả" :span="2">{{ selectedImage.description || 'Không có'
+              }}</a-descriptions-item>
           </a-descriptions>
         </div>
       </div>
     </a-modal>
 
     <!-- Upload Modal -->
-    <div
-      v-if="uploadVisible"
-      style="
+    <div v-if="uploadVisible" style="
         position: fixed;
         top: 0;
         left: 0;
@@ -164,9 +163,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-      "
-    >
-      <div style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto">
+      ">
+      <div
+        style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto">
         <h3>Upload ảnh sản phẩm</h3>
         <a-form :model="uploadForm" layout="vertical">
           <a-form-item>
@@ -179,7 +178,8 @@
             <template #label>
               <span class="required-field">Upload ảnh</span>
             </template>
-            <a-upload v-model:file-list="fileList" :multiple="true" :before-upload="beforeUpload" accept=".jpg,.jpeg,.png,.gif,.webp" drag>
+            <a-upload v-model:file-list="fileList" :multiple="true" :before-upload="beforeUpload"
+              accept=".jpg,.jpeg,.png,.gif,.webp" drag>
               <div style="padding: 20px; text-align: center; border: 2px dashed #d9d9d9; border-radius: 6px">
                 <p style="font-size: 24px; margin-bottom: 8px">
                   <icon-folder />
@@ -216,9 +216,7 @@
     </div>
 
     <!-- Edit Modal -->
-    <div
-      v-if="editVisible"
-      style="
+    <div v-if="editVisible" style="
         position: fixed;
         top: 0;
         left: 0;
@@ -229,9 +227,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-      "
-    >
-      <div style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto">
+      ">
+      <div
+        style="background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto">
         <h3>Chỉnh sửa ảnh sản phẩm</h3>
         <a-form :model="editForm" layout="vertical">
           <a-form-item>
@@ -263,9 +261,7 @@
     </div>
 
     <!-- Confirmation Modal -->
-    <div
-      v-if="confirmModalVisible"
-      style="
+    <div v-if="confirmModalVisible" style="
         position: fixed;
         top: 0;
         left: 0;
@@ -276,9 +272,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-      "
-    >
-      <div style="background: white; padding: 20px; border-radius: 8px; width: 400px; max-height: 80vh; overflow-y: auto">
+      ">
+      <div
+        style="background: white; padding: 20px; border-radius: 8px; width: 400px; max-height: 80vh; overflow-y: auto">
         <h3>Xác nhận</h3>
         <p style="margin: 16px 0">{{ confirmMessage }}</p>
 
@@ -677,7 +673,7 @@ const beforeUpload = (file: File) => {
   }
 
   // Create preview URL for the file
-  ;(file as FileWithUrl).url = URL.createObjectURL(file)
+  ; (file as FileWithUrl).url = URL.createObjectURL(file)
   return false
 }
 

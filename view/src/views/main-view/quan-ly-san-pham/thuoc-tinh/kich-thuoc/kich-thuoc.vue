@@ -6,7 +6,8 @@
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên kích thước..." allow-clear @input="searchSizes" />
+              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên kích thước..." allow-clear
+                @input="searchSizes" />
             </a-form-item>
           </a-col>
 
@@ -48,21 +49,13 @@
 
     <!-- Sizes Table -->
     <a-card title="Danh sách kích thước" class="table-card">
-      <a-table
-        :columns="columns"
-        :data="filteredSizes"
-        :pagination="pagination"
-        :loading="loading"
-        :scroll="{ x: 1000 }"
-        @page-change="getKichThuocPage($event - 1)"
-        @page-size-change="
+      <a-table :columns="columns" :data="sizes" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }"
+        @page-change="getKichThuocPage($event - 1)" @page-size-change="
           (size) => {
             pagination.pageSize = size
             getKichThuocPage(0)
           }
-        "
-        row-key="id"
-      >
+        " row-key="id">
         <template #stt="{ rowIndex }">
           <div>{{ rowIndex + 1 }}</div>
         </template>
@@ -84,7 +77,8 @@
         <template #action="{ record }">
           <a-space>
             <a-tooltip content="Thay đổi trạng thái">
-              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)"
+                :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -114,15 +108,8 @@
     </a-card>
 
     <!-- Add Size Modal -->
-    <a-modal
-      v-model:visible="addModalVisible"
-      title="Thêm kích thước"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeAddModal"
-      @ok="confirmAddSize"
-    >
+    <a-modal v-model:visible="addModalVisible" title="Thêm kích thước" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeAddModal" @ok="confirmAddSize">
       <a-form :model="sizeForm" :rules="formRules" layout="vertical" ref="addFormRef">
         <a-form-item>
           <template #label>
@@ -134,17 +121,9 @@
     </a-modal>
 
     <!-- Detail Size Modal -->
-    <a-modal
-      v-model:visible="detailModalVisible"
-      title="Chi tiết kích thước"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeDetailModal"
-      @ok="closeDetailModal"
-      ok-text="Đóng"
-      :cancel-button-props="{ style: { display: 'none' } }"
-    >
+    <a-modal v-model:visible="detailModalVisible" title="Chi tiết kích thước" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeDetailModal" @ok="closeDetailModal" ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }">
       <a-descriptions :column="1" size="small">
         <a-descriptions-item label="Mã kích thước">{{ selectedSize?.maKichThuoc }}</a-descriptions-item>
         <a-descriptions-item label="Tên kích thước">{{ selectedSize?.tenKichThuoc }}</a-descriptions-item>
@@ -157,15 +136,8 @@
     </a-modal>
 
     <!-- Update Size Modal -->
-    <a-modal
-      v-model:visible="updateModalVisible"
-      title="Cập nhật kích thước"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeUpdateModal"
-      @ok="confirmUpdateSize"
-    >
+    <a-modal v-model:visible="updateModalVisible" title="Cập nhật kích thước" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeUpdateModal" @ok="confirmUpdateSize">
       <a-form :model="sizeForm" :rules="formRules" layout="vertical" ref="updateFormRef">
         <a-form-item>
           <template #label>
@@ -186,30 +158,18 @@
     </a-modal>
 
     <!-- Confirmation Modal -->
-    <a-modal
-      v-model:visible="confirmModalVisible"
-      title="Xác nhận"
-      width="400px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="cancelConfirm"
-      @ok="executeConfirmedAction"
-    >
+    <a-modal v-model:visible="confirmModalVisible" title="Xác nhận" width="400px" :mask-closable="false"
+      :closable="true" @cancel="cancelConfirm" @ok="executeConfirmedAction">
       <p>{{ confirmMessage }}</p>
     </a-modal>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="sizeToToggleStatus">
-          <div>Bạn có chắc chắn muốn {{ sizeToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} kích thước này?</div>
+          <div>Bạn có chắc chắn muốn {{ sizeToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} kích thước này?
+          </div>
           <div>
             Tên kích thước:
             <strong>{{ sizeToToggleStatus.tenKichThuoc }}</strong>
@@ -516,7 +476,7 @@ const cancelToggleStatus = () => {
 const getKichThuocPage = async (page) => {
   try {
     loading.value = true
-    const res = await getKichThuocList(page, pagination.value.pageSize)
+    const res = await getKichThuocList(page, pagination.value.pageSize || 10)
     if (res.success) {
       sizes.value = res.data.data
       pagination.value.total = res.data.totalElements

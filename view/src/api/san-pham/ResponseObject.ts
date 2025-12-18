@@ -7,8 +7,8 @@ export interface ResponseObject {
 export interface PagingResponse {
   data: any[]
   totalPages: number
-  currentPage: number
-  pageSize: number
+  number: number  // Spring Boot uses 'number' for current page (0-indexed)
+  size: number    // Spring Boot uses 'size' for page size
   totalElements: number
 }
 

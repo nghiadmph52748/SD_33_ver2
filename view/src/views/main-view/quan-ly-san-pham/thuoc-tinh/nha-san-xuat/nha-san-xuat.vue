@@ -6,12 +6,8 @@
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input
-                v-model="filters.search"
-                placeholder="Tìm theo mã hoặc tên nhà sản xuất..."
-                allow-clear
-                @input="searchManufacturers"
-              />
+              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên nhà sản xuất..." allow-clear
+                @input="searchManufacturers" />
             </a-form-item>
           </a-col>
 
@@ -53,7 +49,13 @@
 
     <!-- Manufacturers Table -->
     <a-card title="Danh sách nhà sản xuất" class="table-card">
-      <a-table :columns="columns" :data="filteredManufacturers" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
+      <a-table :columns="columns" :data="manufacturers" :pagination="pagination" :loading="loading"
+        :scroll="{ x: 1000 }" @page-change="getNhaSanXuatPage($event - 1)" @page-size-change="
+          (size) => {
+            pagination.pageSize = size
+            getNhaSanXuatPage(0)
+          }
+        ">
         <template #stt="{ rowIndex }">
           <div>{{ rowIndex + 1 }}</div>
         </template>
@@ -75,7 +77,8 @@
         <template #action="{ record }">
           <a-space>
             <a-tooltip content="Thay đổi trạng thái">
-              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)"
+                :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -105,15 +108,8 @@
     </a-card>
 
     <!-- Add Manufacturer Modal -->
-    <a-modal
-      v-model:visible="addModalVisible"
-      title="Thêm nhà sản xuất"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeAddModal"
-      @ok="confirmAddManufacturer"
-    >
+    <a-modal v-model:visible="addModalVisible" title="Thêm nhà sản xuất" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeAddModal" @ok="confirmAddManufacturer">
       <a-form :model="manufacturerForm" :rules="formRules" layout="vertical" ref="addFormRef">
         <a-form-item>
           <template #label>
@@ -125,17 +121,9 @@
     </a-modal>
 
     <!-- Detail Manufacturer Modal -->
-    <a-modal
-      v-model:visible="detailModalVisible"
-      title="Chi tiết nhà sản xuất"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeDetailModal"
-      @ok="closeDetailModal"
-      ok-text="Đóng"
-      :cancel-button-props="{ style: { display: 'none' } }"
-    >
+    <a-modal v-model:visible="detailModalVisible" title="Chi tiết nhà sản xuất" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeDetailModal" @ok="closeDetailModal" ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }">
       <a-descriptions :column="1" size="small">
         <a-descriptions-item label="Mã nhà sản xuất">{{ selectedManufacturer?.maNhaSanXuat }}</a-descriptions-item>
         <a-descriptions-item label="Tên nhà sản xuất">{{ selectedManufacturer?.tenNhaSanXuat }}</a-descriptions-item>
@@ -148,15 +136,8 @@
     </a-modal>
 
     <!-- Update Manufacturer Modal -->
-    <a-modal
-      v-model:visible="updateModalVisible"
-      title="Cập nhật nhà sản xuất"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeUpdateModal"
-      @ok="confirmUpdateManufacturer"
-    >
+    <a-modal v-model:visible="updateModalVisible" title="Cập nhật nhà sản xuất" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeUpdateModal" @ok="confirmUpdateManufacturer">
       <a-form :model="manufacturerForm" :rules="formRules" layout="vertical" ref="updateFormRef">
         <a-form-item>
           <template #label>
@@ -178,30 +159,18 @@
     </a-modal>
 
     <!-- Confirmation Modal -->
-    <a-modal
-      v-model:visible="confirmModalVisible"
-      title="Xác nhận"
-      width="400px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="cancelConfirm"
-      @ok="executeConfirmedAction"
-    >
+    <a-modal v-model:visible="confirmModalVisible" title="Xác nhận" width="400px" :mask-closable="false"
+      :closable="true" @cancel="cancelConfirm" @ok="executeConfirmedAction">
       <p>{{ confirmMessage }}</p>
     </a-modal>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="manufacturerToToggleStatus">
-          <div>Bạn có chắc chắn muốn {{ manufacturerToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} nhà sản xuất này?</div>
+          <div>Bạn có chắc chắn muốn {{ manufacturerToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} nhà sản xuất
+            này?</div>
           <div>
             Tên nhà sản xuất:
             <strong>{{ manufacturerToToggleStatus.tenNhaSanXuat }}</strong>

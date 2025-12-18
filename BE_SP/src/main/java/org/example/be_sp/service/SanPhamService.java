@@ -16,6 +16,7 @@ import org.example.be_sp.util.MapperUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -46,7 +47,7 @@ public class SanPhamService {
         Optional<SanPham> s = Optional.of(repository.save(existing));
         return s.map(SanPhamResponse::new).orElse(null);
     }
-    
+
     public List<SanPhamResponse> getAll() {
         return repository.findAllByDeleted(false).stream()
                 .map(SanPhamResponse::new)
@@ -54,7 +55,7 @@ public class SanPhamService {
     }
 
     public PagingResponse<SanPhamResponse> paging(Integer no, Integer size) {
-        Pageable page = PageRequest.of(no, size);
+        Pageable page = PageRequest.of(no, size, Sort.by("id").descending());
         return new PagingResponse<>(repository.findAllByDeleted(false, page).map(SanPhamResponse::new), no);
     }
 
@@ -64,7 +65,7 @@ public class SanPhamService {
     }
 
     public void updateStatus(Integer id) {
-        SanPham sanPham = repository.findById(id).orElseThrow(()-> new ApiException("SanPham not found", "404"));
+        SanPham sanPham = repository.findById(id).orElseThrow(() -> new ApiException("SanPham not found", "404"));
         sanPham.setDeleted(true);
         repository.save(sanPham);
     }

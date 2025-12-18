@@ -6,7 +6,8 @@
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên xuất xứ..." allow-clear @input="searchOrigins" />
+              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên xuất xứ..." allow-clear
+                @input="searchOrigins" />
             </a-form-item>
           </a-col>
 
@@ -48,7 +49,13 @@
 
     <!-- Origins Table -->
     <a-card title="Danh sách xuất xứ" class="table-card">
-      <a-table :columns="columns" :data="filteredOrigins" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }">
+      <a-table :columns="columns" :data="origins" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }"
+        @page-change="getXuatXuPage($event - 1)" @page-size-change="
+          (size) => {
+            pagination.pageSize = size
+            getXuatXuPage(0)
+          }
+        ">
         <template #stt="{ rowIndex }">
           <div>{{ rowIndex + 1 }}</div>
         </template>
@@ -70,7 +77,8 @@
         <template #action="{ record }">
           <a-space>
             <a-tooltip content="Thay đổi trạng thái">
-              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)"
+                :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -100,15 +108,8 @@
     </a-card>
 
     <!-- Add Origin Modal -->
-    <a-modal
-      v-model:visible="addModalVisible"
-      title="Thêm xuất xứ"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeAddModal"
-      @ok="confirmAddOrigin"
-    >
+    <a-modal v-model:visible="addModalVisible" title="Thêm xuất xứ" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeAddModal" @ok="confirmAddOrigin">
       <a-form :model="originForm" :rules="formRules" layout="vertical" ref="addFormRef">
         <a-form-item>
           <template #label>
@@ -120,17 +121,9 @@
     </a-modal>
 
     <!-- Detail Origin Modal -->
-    <a-modal
-      v-model:visible="detailModalVisible"
-      title="Chi tiết xuất xứ"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeDetailModal"
-      @ok="closeDetailModal"
-      ok-text="Đóng"
-      :cancel-button-props="{ style: { display: 'none' } }"
-    >
+    <a-modal v-model:visible="detailModalVisible" title="Chi tiết xuất xứ" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeDetailModal" @ok="closeDetailModal" ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }">
       <a-descriptions :column="1" size="small">
         <a-descriptions-item label="Mã xuất xứ">{{ selectedOrigin?.maXuatXu }}</a-descriptions-item>
         <a-descriptions-item label="Tên xuất xứ">{{ selectedOrigin?.tenXuatXu }}</a-descriptions-item>
@@ -143,15 +136,8 @@
     </a-modal>
 
     <!-- Update Origin Modal -->
-    <a-modal
-      v-model:visible="updateModalVisible"
-      title="Cập nhật xuất xứ"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeUpdateModal"
-      @ok="confirmUpdateOrigin"
-    >
+    <a-modal v-model:visible="updateModalVisible" title="Cập nhật xuất xứ" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeUpdateModal" @ok="confirmUpdateOrigin">
       <a-form :model="originForm" :rules="formRules" layout="vertical" ref="updateFormRef">
         <a-form-item>
           <template #label>
@@ -172,27 +158,14 @@
     </a-modal>
 
     <!-- Confirmation Modal -->
-    <a-modal
-      v-model:visible="confirmModalVisible"
-      title="Xác nhận"
-      width="400px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="cancelConfirm"
-      @ok="executeConfirmedAction"
-    >
+    <a-modal v-model:visible="confirmModalVisible" title="Xác nhận" width="400px" :mask-closable="false"
+      :closable="true" @cancel="cancelConfirm" @ok="executeConfirmedAction">
       <p>{{ confirmMessage }}</p>
     </a-modal>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="originToToggleStatus">
           <div>Bạn có chắc chắn muốn {{ originToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} xuất xứ này?</div>
@@ -502,12 +475,13 @@ const cancelToggleStatus = () => {
 
 const getXuatXuPage = async (page) => {
   try {
-    const res = await getXuatXuList(page, pagination.value.pageSize)
+    loading.value = true
+    const res = await getXuatXuList(page, pagination.value.pageSize || 10)
     if (res.success) {
       origins.value = res.data.data
       pagination.value.total = res.data.totalElements
-      pagination.value.pageSize = res.data.pageSize
-      pagination.value.current = res.data.currentPage + 1
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
     } else {
       console.error('Failed to fetch origins:', res.message)
       origins.value = []
@@ -517,6 +491,10 @@ const getXuatXuPage = async (page) => {
     }
   } catch (error) {
     console.error('Failed to fetch origins:', error)
+    origins.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
   }
 }
 

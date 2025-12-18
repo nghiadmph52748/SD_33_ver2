@@ -132,13 +132,13 @@ public class BanHangService {
         LocalDateTime now = LocalDateTime.now();
         ChiTietDotGiamGia bestDiscount = chiTietSanPham.getChiTietDotGiamGias().stream()
                 .filter(ctdg -> ctdg != null
-                && Boolean.TRUE.equals(ctdg.getTrangThai())
-                && !Boolean.TRUE.equals(ctdg.getDeleted())
-                && ctdg.getIdDotGiamGia() != null
-                && ctdg.getIdDotGiamGia().getNgayBatDau() != null
-                && ctdg.getIdDotGiamGia().getNgayKetThuc() != null
-                && !ctdg.getIdDotGiamGia().getNgayBatDau().isAfter(now)
-                && ctdg.getIdDotGiamGia().getNgayKetThuc().isAfter(now))
+                        && Boolean.TRUE.equals(ctdg.getTrangThai())
+                        && !Boolean.TRUE.equals(ctdg.getDeleted())
+                        && ctdg.getIdDotGiamGia() != null
+                        && ctdg.getIdDotGiamGia().getNgayBatDau() != null
+                        && ctdg.getIdDotGiamGia().getNgayKetThuc() != null
+                        && !ctdg.getIdDotGiamGia().getNgayBatDau().isAfter(now)
+                        && ctdg.getIdDotGiamGia().getNgayKetThuc().isAfter(now))
                 .max(Comparator.comparingInt(ctdg -> ctdg.getIdDotGiamGia().getGiaTriGiamGia()))
                 .orElse(null);
 
@@ -234,7 +234,8 @@ public class BanHangService {
         HoaDon hoaDon = hdRepository.findById(idHoaDon)
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
         ChiTietSanPham chiTietSanPham = ctspRepository.findById(idChiTietSanPham)
-                .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + idChiTietSanPham, "404"));
+                .orElseThrow(
+                        () -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + idChiTietSanPham, "404"));
         kiemTra(Map.of(idChiTietSanPham, soLuong), null, idNhanVien, null, null);
         kiemTraTonKhoBienThe(idChiTietSanPham, soLuong);
 
@@ -322,7 +323,8 @@ public class BanHangService {
             BigDecimal tongTienSauGiam = normalizedTongTien;
             if (hoaDon.getIdPhieuGiamGia() != null && hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia() != null) {
                 BigDecimal discountPercent = hoaDon.getIdPhieuGiamGia().getGiaTriGiamGia();
-                BigDecimal discountAmount = tongTienHang.multiply(discountPercent).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                BigDecimal discountAmount = tongTienHang.multiply(discountPercent).divide(BigDecimal.valueOf(100), 2,
+                        java.math.RoundingMode.HALF_UP);
                 tongTienSauGiam = normalizedTongTien.subtract(discountAmount);
             }
             hoaDon.setTongTienSauGiam(normalizeCurrency(tongTienSauGiam));
@@ -344,7 +346,8 @@ public class BanHangService {
 
     public void updateSoLuongSanPham(Integer idHoaDonChiTiet, Integer soLuong, Integer idNhanVien) {
         HoaDonChiTiet hdct = hdctRepository.findById(idHoaDonChiTiet)
-                .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết hóa đơn với id: " + idHoaDonChiTiet, "404"));
+                .orElseThrow(
+                        () -> new ApiException("Không tìm thấy chi tiết hóa đơn với id: " + idHoaDonChiTiet, "404"));
 
         // Lấy số lượng cũ và tính diff
         Integer oldQuantity = hdct.getSoLuong();
@@ -417,7 +420,8 @@ public class BanHangService {
             if (diaChiKhachHang != null) {
                 hoaDon.setDiaChiNguoiNhan(diaChiKhachHang);
             } else {
-                ArrayList<DiaChiKhachHang> dckh = dckhRepository.findAllByIdKhachHangAndTrangThaiAndDeleted(khachHang, true,
+                ArrayList<DiaChiKhachHang> dckh = dckhRepository.findAllByIdKhachHangAndTrangThaiAndDeleted(khachHang,
+                        true,
                         false);
                 if (dckh != null) {
                     for (DiaChiKhachHang dc : dckh) {
@@ -482,7 +486,7 @@ public class BanHangService {
         // Create timeline: Cập nhật hình thức giao hàng
         addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
                 "Cập nhật hình thức giao hàng: " + (giaohangCu ? "Không giao" : "Giao hàng")
-                + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
+                        + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
                 idNhanVien);
     }
 
@@ -520,7 +524,15 @@ public class BanHangService {
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
         PhieuGiamGia pgg = pggRepository.findById(idPhieuGiamGia)
                 .orElseThrow(() -> new ApiException("Không tìm thấy phiếu giảm giá với id: " + idPhieuGiamGia, "404"));
-        kiemTra(Map.of(), idPhieuGiamGia, idNhanVien, null, null);
+
+        // Get customer ID from invoice for personal voucher validation
+        Integer customerId = hoaDon.getIdKhachHang() != null ? hoaDon.getIdKhachHang().getId() : null;
+        kiemTra(Map.of(), idPhieuGiamGia, idNhanVien, customerId, null);
+
+        // Recalculate tongTien from current cart items BEFORE validation
+        // This prevents false "no products" errors when cart has items but tongTien
+        // hasn't been updated
+        updateTongTienHoaDon(hoaDon);
 
         // Check if tongTien is null (invoice with no items yet)
         if (hoaDon.getTongTien() == null || hoaDon.getTongTien().compareTo(BigDecimal.ZERO) <= 0) {
@@ -532,7 +544,8 @@ public class BanHangService {
             hoaDon.setTongTienSauGiam(normalizeCurrency(hoaDon.getTongTien().subtract(pgg.getGiaTriGiamGia())));
         } else {
             hoaDon.setTongTienSauGiam(normalizeCurrency(hoaDon.getTongTien().multiply(
-                    BigDecimal.valueOf((BigDecimal.valueOf(100).subtract(pgg.getGiaTriGiamGia()).doubleValue()) / 100.0))));
+                    BigDecimal.valueOf(
+                            (BigDecimal.valueOf(100).subtract(pgg.getGiaTriGiamGia()).doubleValue()) / 100.0))));
         }
         hoaDon.setUpdateAt(LocalDateTime.now());
         hoaDon.setUpdateBy(idNhanVien);
@@ -550,7 +563,6 @@ public class BanHangService {
         HoaDon hoaDon = hdRepository.findById(request.getIdHoaDon())
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + request.getIdHoaDon(), "404"));
         ArrayList<HoaDonChiTiet> chiTiets = hdctRepository.findAllByIdHoaDonAndTrangThai(hoaDon, true);
-        updateTongTienHoaDon(hoaDon);
         // Build map of products for validation
         Map<Integer, Integer> danhSachSanPham = new HashMap<>();
         if (chiTiets != null && !chiTiets.isEmpty()) {
@@ -579,7 +591,8 @@ public class BanHangService {
         if (request.getPhiVanChuyen() != null) {
             hoaDon.setPhiVanChuyen(request.getPhiVanChuyen());
         }
-        // Set tongTienSauGiam from request (voucher discount already calculated on frontend)
+        // Set tongTienSauGiam from request (voucher discount already calculated on
+        // frontend)
         if (request.getTongTienSauGiam() != null) {
             hoaDon.setTongTienSauGiam(request.getTongTienSauGiam());
         }
@@ -592,6 +605,12 @@ public class BanHangService {
         if (hoaDon.getCreateAt() == null) {
             hoaDon.setCreateAt(LocalDateTime.now());
         }
+
+        // Recalculate tongTien and tongTienSauGiam from cart items BEFORE final save
+        // This ensures all invoice fields are properly set and prevents CHECK
+        // constraint violations
+        updateTongTienHoaDon(hoaDon);
+
         HoaDon saved = hdRepository.save(hoaDon);
 
         // Handle voucher (only process if provided)
@@ -699,8 +718,9 @@ public class BanHangService {
                     return false;
                 }
             } else {
-                PhieuGiamGiaCaNhan pggcn = pggcnRepository.findFirstByIdKhachHangIsNullAndIdPhieuGiamGiaAndTrangThaiAndDeleted(
-                        pgg, true, false);
+                PhieuGiamGiaCaNhan pggcn = pggcnRepository
+                        .findFirstByIdKhachHangIsNullAndIdPhieuGiamGiaAndTrangThaiAndDeleted(
+                                pgg, true, false);
                 if (pggcn == null || !Boolean.TRUE.equals(pggcn.getTrangThai())) {
                     return false;
                 }
@@ -764,7 +784,8 @@ public class BanHangService {
         });
         if (idPhieuGiamGia != null) {
             Boolean pggTT = pggRepository.findById(idPhieuGiamGia)
-                    .orElseThrow(() -> new ApiException("Không tìm thấy phiếu giảm giá với id: " + idPhieuGiamGia, "404"))
+                    .orElseThrow(
+                            () -> new ApiException("Không tìm thấy phiếu giảm giá với id: " + idPhieuGiamGia, "404"))
                     .getTrangThai();
             if (!pggTT) {
                 throw new ApiException("Phiếu giảm giá với id: " + idPhieuGiamGia + " không hoạt động", "400");

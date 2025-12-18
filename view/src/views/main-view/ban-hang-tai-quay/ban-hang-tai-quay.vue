@@ -3,45 +3,29 @@
     <!-- Main Layout -->
     <a-card class="main-pos-card">
       <!-- <template #title> -->
-      <OrdersTabs
-        :orders="orders as any"
-        :active-key="currentOrderIndex"
-        :can-add="orders.length < 8"
-        @change="handleOrderChange"
-        @delete="showDeleteConfirm"
-        @add="createNewOrder"
-      />
+      <OrdersTabs :orders="orders as any" :active-key="currentOrderIndex" :can-add="orders.length < 8"
+        @change="handleOrderChange" @delete="showDeleteConfirm" @add="createNewOrder" />
       <!-- </template> -->
       <a-row :gutter="16" class="pos-main">
         <!-- Left: Orders & Cart -->
         <a-col :xs="24" :lg="16" class="pos-left">
           <a-empty v-if="orders.length === 0" description="Chưa có đơn hàng nào" />
           <div v-else>
-            <OrderHeaderCard
-              :order-code="currentOrder?.orderCode || ''"
-              :ma-hoa-don="currentOrder?.maHoaDon"
-              :has-items="!!currentOrder?.items.length"
-              @clear-cart="clearCart"
-              @open-qr="showQRScanner = true"
-              @open-product="openProductModal"
-            >
+            <OrderHeaderCard :order-code="currentOrder?.orderCode || ''" :ma-hoa-don="currentOrder?.maHoaDon"
+              :has-items="!!currentOrder?.items.length" @clear-cart="clearCart" @open-qr="showQRScanner = true"
+              @open-product="openProductModal">
               <a-card class="cart-card">
                 <template #title>Giỏ Hàng</template>
-                <CartTable
-                  :items="paginatedCartItems as any"
-                  :table-key="cartTableKey"
-                  :pagination="{
-                    current: (cartPagination as any).value?.current || 1,
-                    pageSize: (cartPagination as any).value?.pageSize || 5,
-                    total: currentOrder?.items.length || 0,
-                    showTotal: true,
-                    showPageSize: true,
-                  }"
-                  :over-stock-items="overStockItems"
+                <CartTable :items="paginatedCartItems as any" :table-key="cartTableKey" :pagination="{
+                  current: (cartPagination as any).value?.current || 1,
+                  pageSize: (cartPagination as any).value?.pageSize || 5,
+                  total: currentOrder?.items.length || 0,
+                  showTotal: true,
+                  showPageSize: true,
+                }" :over-stock-items="overStockItems"
                   @paginate="(page) => ((cartPagination as any).value.current = page)"
                   @update-quantity="({ id, value }) => updateQuantity(id, value)"
-                  @delete="(record: any) => showDeleteProductConfirm(record)"
-                />
+                  @delete="(record: any) => showDeleteProductConfirm(record)" />
               </a-card>
             </OrderHeaderCard>
           </div>
@@ -50,195 +34,105 @@
         <!-- Right: Customer & Payment -->
         <a-col :xs="24" :lg="8" class="pos-right">
           <!-- Customer Section -->
-          <CustomerCard
-            :customer-id="currentOrder?.customerId || ''"
-            :customers="filteredCustomers"
-            :selected-customer="selectedCustomer"
-            :order-type="orderType as any"
-            :is-walk-in="isWalkIn"
-            :walk-in-name="walkInName"
-            :walk-in-email="walkInEmail"
-            :walk-in-phone="walkInPhone"
-            @update:customerId="updateCustomerId"
-            @change:customer="handleCustomerChange"
-            @add-new="showAddCustomerModal = true"
-            @change:orderType="handleOrderTypeChange"
-            @update:walkInName="walkInName = $event"
-            @update:walkInEmail="walkInEmail = $event"
-            @update:walkInPhone="walkInPhone = $event"
-            @update:walkInDeliveryValid="walkInDeliveryValid = $event"
-          />
+          <CustomerCard :customer-id="currentOrder?.customerId || ''" :customers="filteredCustomers"
+            :selected-customer="selectedCustomer" :order-type="orderType as any" :is-walk-in="isWalkIn"
+            :walk-in-name="walkInName" :walk-in-email="walkInEmail" :walk-in-phone="walkInPhone"
+            @update:customerId="updateCustomerId" @change:customer="handleCustomerChange"
+            @add-new="showAddCustomerModal = true" @change:orderType="handleOrderTypeChange"
+            @update:walkInName="walkInName = $event" @update:walkInEmail="walkInEmail = $event"
+            @update:walkInPhone="walkInPhone = $event" @update:walkInDeliveryValid="walkInDeliveryValid = $event" />
           <!-- Payment Section -->
-          <PaymentCard
-            :order-type="orderType as any"
-            :order-code="currentOrder?.orderCode || ''"
-            :payment-form="paymentForm as any"
-            :subtotal="subtotal"
-            :discount-amount="discountAmount"
-            :shipping-fee="shippingFee"
-            :final-price="finalPrice"
-            :can-confirm-order="canConfirmOrder"
-            :confirm-loading="confirmLoading"
-            :has-items="!!currentOrder?.items.length"
-            :has-eligible-vouchers="hasEligibleVouchers"
-            :eligible-vouchers-count="eligibleVouchersCount"
-            :selected-customer="selectedCustomer as any"
-            :is-walk-in="isWalkIn"
-            :provinces="provinces"
-            :walk-in-location="walkInLocation as any"
-            :selected-coupon="selectedCoupon as any"
+          <PaymentCard :order-type="orderType as any" :order-code="currentOrder?.orderCode || ''"
+            :payment-form="paymentForm as any" :subtotal="subtotal" :discount-amount="discountAmount"
+            :shipping-fee="shippingFee" :final-price="finalPrice" :can-confirm-order="canConfirmOrder"
+            :confirm-loading="confirmLoading" :has-items="!!currentOrder?.items.length"
+            :has-eligible-vouchers="hasEligibleVouchers" :eligible-vouchers-count="eligibleVouchersCount"
+            :selected-customer="selectedCustomer as any" :is-walk-in="isWalkIn" :provinces="provinces"
+            :walk-in-location="walkInLocation as any" :selected-coupon="selectedCoupon as any"
             :discount-display="selectedCoupon ? getDiscountDisplay(selectedCoupon as any) : ''"
-            :best-voucher="bestVoucher as any"
-            :calculate-voucher-discount="calculateVoucherDiscount as any"
-            :qr-session="currentQrSession"
-            :qr-syncing="qrSyncing"
-            :qr-sync-error="qrSyncError"
-            @change:orderType="handleOrderTypeChange"
-            @open-voucher="showVoucherModal = true"
-            @change:paymentMethod="handlePaymentMethodChange"
-            @update:cash="handleCashAmountChange"
-            @update:transfer="handleTransferAmountChange"
-            @clear-voucher="clearVoucher"
-            @confirm-order="confirmOrder"
-            @select-best="bestVoucher && selectVoucher(bestVoucher as any)"
-            @print="printOrder"
-            @update:shippingFee="updateShippingFeeValue"
-            @change:province="onWalkInProvinceChange"
-            @change:district="onWalkInDistrictChange"
-            @update:walkin-address="updateWalkInAddress"
-            @update:walkin-ward="updateWalkInWard"
-            @open-mobile="openMobileSession"
-            @sync-qr="forceSyncQrSession"
-            @reset-qr-session="handleResetQrSessionClick"
-          />
+            :best-voucher="bestVoucher as any" :calculate-voucher-discount="calculateVoucherDiscount as any"
+            :qr-session="currentQrSession" :qr-syncing="qrSyncing" :qr-sync-error="qrSyncError"
+            @change:orderType="handleOrderTypeChange" @open-voucher="showVoucherModal = true"
+            @change:paymentMethod="handlePaymentMethodChange" @update:cash="handleCashAmountChange"
+            @update:transfer="handleTransferAmountChange" @clear-voucher="clearVoucher" @confirm-order="confirmOrder"
+            @select-best="bestVoucher && selectVoucher(bestVoucher as any)" @print="printOrder"
+            @update:shippingFee="updateShippingFeeValue" @change:province="onWalkInProvinceChange"
+            @change:district="onWalkInDistrictChange" @update:walkin-address="updateWalkInAddress"
+            @update:walkin-ward="updateWalkInWard" @open-mobile="openMobileSession" @sync-qr="forceSyncQrSession"
+            @reset-qr-session="handleResetQrSessionClick" />
         </a-col>
       </a-row>
     </a-card>
 
     <!-- Modals -->
     <!-- Product Selection Modal -->
-    <ProductModal
-      :visible="showProductModal"
-      :search-text="productSearchText"
-      :product-filters="productFilters as any"
-      :product-material-options="productMaterialOptions"
-      :product-sole-options="productSoleOptions"
-      :product-manufacturer-options="productManufacturerOptions"
-      :product-origin-options="productOriginOptions"
-      :product-color-options="productColorOptions"
-      :product-size-options="productSizeOptions"
-      :filtered-product-variants="filteredProductVariants as any"
-      :product-pagination="productPagination as any"
-      @update:visible="(v) => (showProductModal = v)"
-      @cancel="handleProductModalCancel"
+    <ProductModal :visible="showProductModal" :search-text="productSearchText" :product-filters="productFilters as any"
+      :product-material-options="productMaterialOptions" :product-sole-options="productSoleOptions"
+      :product-manufacturer-options="productManufacturerOptions" :product-origin-options="productOriginOptions"
+      :product-color-options="productColorOptions" :product-size-options="productSizeOptions"
+      :filtered-product-variants="filteredProductVariants as any" :product-pagination="productPagination as any"
+      @update:visible="(v) => (showProductModal = v)" @cancel="handleProductModalCancel"
       @update:searchText="(v) => (productSearchText = v)"
       @update-filter="({ key, value }) => ((productFilters as any)[key] = value)"
-      @page-change="(page) => loadProductPage(page)"
-      @select-product="(record) => showAddProductConfirm(record)"
-    />
+      @page-change="(page) => loadProductPage(page)" @select-product="(record) => showAddProductConfirm(record)" />
 
     <!-- QR Scanner Modal -->
     <QrScannerModal :visible="showQRScanner" @update:visible="(v) => (showQRScanner = v)" />
 
     <!-- Add Customer Modal -->
-    <AddCustomerModal
-      :visible="showAddCustomerModal"
-      :name="newCustomerForm?.name || ''"
-      :phone="newCustomerForm?.phone || ''"
-      :email="newCustomerForm?.email || ''"
+    <AddCustomerModal :visible="showAddCustomerModal" :name="newCustomerForm?.name || ''"
+      :phone="newCustomerForm?.phone || ''" :email="newCustomerForm?.email || ''"
       @update:visible="(v) => (showAddCustomerModal = v)"
       @update:name="(v) => newCustomerForm && (newCustomerForm.name = v)"
       @update:phone="(v) => newCustomerForm && (newCustomerForm.phone = v)"
-      @update:email="(v) => newCustomerForm && (newCustomerForm.email = v)"
-      @ok="addNewCustomer"
-    />
+      @update:email="(v) => newCustomerForm && (newCustomerForm.email = v)" @ok="addNewCustomer" />
 
     <!-- Voucher Selection Modal -->
-    <VoucherModal
-      :visible="showVoucherModal"
-      :coupons="coupons as any"
-      :eligible-vouchers-count="eligibleVouchersCount"
-      :show-order-summary="!!(currentOrder && currentOrder.items.length > 0)"
-      :subtotal="subtotal"
+    <VoucherModal :visible="showVoucherModal" :coupons="coupons as any" :eligible-vouchers-count="eligibleVouchersCount"
+      :show-order-summary="!!(currentOrder && currentOrder.items.length > 0)" :subtotal="subtotal"
       :total-quantity="currentOrder?.items.reduce((sum, item) => sum + item.quantity, 0) || 0"
-      :best-voucher-id="bestVoucher ? bestVoucher.id : null"
-      :is-voucher-eligible-fn="isVoucherEligible as any"
-      :get-voucher-status-fn="getVoucherStatus as any"
-      :get-discount-display-fn="getDiscountDisplay as any"
-      @update:visible="(v) => (showVoucherModal = v)"
-      @select-voucher="(c) => selectVoucher(c as any)"
-    />
+      :best-voucher-id="bestVoucher ? bestVoucher.id : null" :is-voucher-eligible-fn="isVoucherEligible as any"
+      :get-voucher-status-fn="getVoucherStatus as any" :get-discount-display-fn="getDiscountDisplay as any"
+      @update:visible="(v) => (showVoucherModal = v)" @select-voucher="(c) => selectVoucher(c as any)" />
 
     <!-- Delete Product Confirm Modal -->
-    <DeleteProductModal
-      :visible="showDeleteProductModal"
-      :product="productToDelete as any"
-      @update:visible="(v) => (showDeleteProductModal = v)"
-      @ok="confirmDeleteProduct"
-    />
+    <DeleteProductModal :visible="showDeleteProductModal" :product="productToDelete as any"
+      @update:visible="(v) => (showDeleteProductModal = v)" @ok="confirmDeleteProduct" />
 
     <!-- Delete Order Confirm Modal -->
-    <DeleteOrderModal :visible="showDeleteConfirmModal" @update:visible="(v) => (showDeleteConfirmModal = v)" @ok="confirmDeleteOrder" />
+    <DeleteOrderModal :visible="showDeleteConfirmModal" @update:visible="(v) => (showDeleteConfirmModal = v)"
+      @ok="confirmDeleteOrder" />
 
     <!-- Price Change Notification Modal -->
-    <PriceChangeNotificationModal
-      :visible="showPriceChangeModal"
-      :price-changes="priceChanges"
-      :confirm-loading="priceChangeConfirmLoading"
-      @update:visible="(v) => (showPriceChangeModal = v)"
-      @confirm="confirmPriceChangeModal"
-      @cancel="() => (showPriceChangeModal = false)"
-    />
+    <PriceChangeNotificationModal :visible="showPriceChangeModal" :price-changes="priceChanges"
+      :confirm-loading="priceChangeConfirmLoading" @update:visible="(v) => (showPriceChangeModal = v)"
+      @confirm="confirmPriceChangeModal" @cancel="() => (showPriceChangeModal = false)" />
 
     <!-- Add Product Confirm Modal -->
-    <AddProductConfirmModal
-      :visible="showAddProductConfirmModal"
-      :product="selectedProductForAdd as any"
-      :quantity="productQuantityInput"
-      :is-quantity-valid="isQuantityValid"
-      :confirm-loading="addProductConfirmLoading"
-      @update:visible="(v) => (showAddProductConfirmModal = v)"
-      @update:quantity="handleQuantityChange"
-      @ok="confirmAddProduct"
-    />
+    <AddProductConfirmModal :visible="showAddProductConfirmModal" :product="selectedProductForAdd as any"
+      :quantity="productQuantityInput" :is-quantity-valid="isQuantityValid" :confirm-loading="addProductConfirmLoading"
+      @update:visible="(v) => (showAddProductConfirmModal = v)" @update:quantity="handleQuantityChange"
+      @ok="confirmAddProduct" />
 
     <!-- Confirm Order Modal -->
-    <ConfirmOrderModal
-      :visible="showConfirmOrderModal"
-      :order-code="currentOrder?.orderCode || ''"
-      :order-type="orderType as any"
-      :customer-name="selectedCustomer?.name || walkInName || 'Khách lẻ'"
-      :customer-phone="selectedCustomer?.phone || walkInPhone || ''"
-      :customer-address="getCustomerAddress()"
-      :items="currentOrder?.items || []"
-      :subtotal="subtotal"
-      :discount-amount="discountAmount"
-      :shipping-fee="shippingFee"
-      :final-price="finalPrice"
-      :payment-method="paymentForm.method"
-      :cash-received="paymentForm.cashReceived"
-      :transfer-received="paymentForm.transferReceived"
-      :selected-coupon="selectedCoupon as any"
-      :confirm-loading="confirmLoading"
-      @cancel="cancelConfirmOrder"
-      @confirm="handleConfirmOrderFromModal"
-    />
+    <ConfirmOrderModal :visible="showConfirmOrderModal" :order-code="currentOrder?.orderCode || ''"
+      :order-type="orderType as any" :customer-name="selectedCustomer?.name || walkInName || 'Khách lẻ'"
+      :customer-phone="selectedCustomer?.phone || walkInPhone || ''" :customer-address="getCustomerAddress()"
+      :items="currentOrder?.items || []" :subtotal="subtotal" :discount-amount="discountAmount"
+      :shipping-fee="shippingFee" :final-price="finalPrice" :payment-method="paymentForm.method"
+      :cash-received="paymentForm.cashReceived" :transfer-received="paymentForm.transferReceived"
+      :selected-coupon="selectedCoupon as any" :confirm-loading="confirmLoading" @cancel="cancelConfirmOrder"
+      @confirm="handleConfirmOrderFromModal" />
 
     <!-- Confirm Order - Better Voucher Modal -->
-    <ConfirmBetterVoucherModal
-      :visible="showBetterVoucherModal"
-      :suggested-better-vouchers="checkBetterVouchers()"
-      :selected-coupon="selectedCoupon as any"
-      :calculate-voucher-discount="calculateVoucherDiscount as any"
-      :confirm-loading="confirmLoading"
-      @cancel="
+    <ConfirmBetterVoucherModal :visible="showBetterVoucherModal" :suggested-better-vouchers="checkBetterVouchers()"
+      :selected-coupon="selectedCoupon as any" :calculate-voucher-discount="calculateVoucherDiscount as any"
+      :confirm-loading="confirmLoading" @cancel="
         () => {
           showBetterVoucherModal = false
           showConfirmOrderModal = true
         }
-      "
-      @confirm="handleConfirmFromBetterVoucher"
-    />
+      " @confirm="handleConfirmFromBetterVoucher" />
   </div>
 </template>
 
@@ -485,6 +379,22 @@ const {
 const orderUiStateCache = ref<Record<string, OrderUiState>>({})
 const isRestoringOrderState = ref(false)
 
+// Cache for last confirmed order (for printing after checkout)
+const lastConfirmedOrder = ref<{
+  order: Order
+  customer: Customer | null
+  voucher: CouponApiModel | null
+  orderType: 'counter' | 'delivery'
+  shippingFee: number
+  walkInData: {
+    name: string
+    email: string
+    phone: string
+    location: any
+  }
+  confirmedAt: Date
+} | null>(null)
+
 const {
   selectedCoupon,
   eligibleVouchersCount,
@@ -653,8 +563,308 @@ const addNewCustomer = async () => {
 // cancelConfirmOrder moved to useCheckout
 
 const printOrder = () => {
-  if (!currentOrder.value?.items.length) return
-  Message.info('In hoá đơn thành công')
+  if (!currentOrder.value?.items.length) {
+    Message.warning('Vui lòng thêm sản phẩm vào giỏ hàng trước khi in hóa đơn')
+    return
+  }
+
+  try {
+    // Generate invoice HTML
+    const invoiceHTML = generateInvoiceHTML()
+
+    // Open print window
+    const printWindow = window.open('', '_blank', 'width=800,height=600')
+    if (!printWindow) {
+      Message.error('Không thể mở cửa sổ in. Vui lòng kiểm tra trình chặn popup.')
+      return
+    }
+
+    // Write HTML to new window
+    printWindow.document.write(invoiceHTML)
+    printWindow.document.close()
+
+    // Wait for content to load, then print
+    printWindow.onload = () => {
+      printWindow.focus()
+      printWindow.print()
+      // Close window after printing (user can cancel)
+      printWindow.onafterprint = () => {
+        printWindow.close()
+      }
+    }
+
+    Message.success('Đang mở cửa sổ in hóa đơn...')
+  } catch (error: any) {
+    console.error('Lỗi khi in hóa đơn:', error)
+    Message.error('Có lỗi xảy ra khi in hóa đơn')
+  }
+}
+
+// Helper function to generate invoice HTML from template
+const generateInvoiceHTML = (cachedData?: typeof lastConfirmedOrder.value): string => {
+  // Use cached data if provided, otherwise use current state
+  const order = cachedData?.order || currentOrder.value
+  if (!order) return ''
+
+  // Get customer info (from cache or current)
+  const customer = cachedData?.customer || selectedCustomer.value
+  const walkIn = cachedData?.walkInData || {
+    name: walkInName.value,
+    email: walkInEmail.value,
+    phone: walkInPhone.value,
+    location: walkInLocation.value
+  }
+  const customerName = (customer as any)?.tenKhachHang || customer?.name || walkIn.name || 'Khách lẻ'
+  const customerPhone = (customer as any)?.soDienThoai || customer?.phone || walkIn.phone || 'N/A'
+  const customerEmail = selectedCustomer.value?.email || walkInEmail.value || 'N/A'
+
+  // Get address for delivery orders (from cache or current)
+  let customerAddress = 'N/A'
+  const currentOrderType = cachedData?.orderType || orderType.value
+  if (currentOrderType === 'delivery') {
+    const loc = walkInLocation.value
+    const parts = [loc.diaChiCuThe, loc.phuong, loc.quan, loc.thanhPho].filter(Boolean)
+    customerAddress = parts.length > 0 ? parts.join(', ') : 'N/A'
+  }
+
+  // Format dates
+  const now = cachedData?.confirmedAt || new Date()
+  const formatDate = (date: Date) => {
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${hours}:${minutes} ${day}/${month}/${year}`
+  }
+
+  // Generate invoice code
+  const invoiceCode = order.id ? `HD${String(order.id).padStart(6, '0')}` : 'DRAFT'
+
+  // Format currency
+  const formatMoney = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫'
+  }
+
+  // Calculate totals (from cache or current)
+  const currentVoucher = cachedData?.voucher || selectedCoupon.value
+  const subtotalAmount = cachedData ? cachedData.order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) : subtotal.value
+  const discountAmount = currentVoucher ? calculateVoucherDiscount(currentVoucher) : 0
+  const shippingAmount = cachedData?.shippingFee || (orderType.value === 'delivery' ? shippingFee.value : 0)
+  const finalAmount = subtotalAmount - discountAmount + shippingAmount
+
+  // Generate product rows
+  const productRows = order.items
+    .map((item: any, index: number) => {
+      const attrs = []
+      if (item.mauSac) attrs.push(`Màu: ${item.mauSac}`)
+      if (item.kichThuoc) attrs.push(`Size: ${item.kichThuoc}`)
+      if (item.chatLieu) attrs.push(`Chất liệu: ${item.chatLieu}`)
+
+      const attrsHTML = attrs.length > 0
+        ? attrs.map(attr => `<div>${attr}</div>`).join('')
+        : '<div>-</div>'
+
+      const itemTotal = item.price * item.quantity
+
+      return `
+          <tr>
+            <td class="text-center">${index + 1}</td>
+            <td class="product-name">${item.productName || item.tenSanPham || 'Sản phẩm'}</td>
+            <td class="product-attrs">${attrsHTML}</td>
+            <td class="text-center">${item.quantity}</td>
+            <td class="text-right">${formatMoney(item.price)}</td>
+            <td class="text-right total">${formatMoney(itemTotal)}</td>
+          </tr>`
+    })
+    .join('')
+
+  // Get voucher info (from cache or current)
+  const voucherInfo = currentVoucher
+    ? `<tr>
+         <td class="label">Mã giảm giá (${currentVoucher.maPhieuGiamGia}):</td>
+         <td class="value discount">-${formatMoney(discountAmount)}</td>
+       </tr>`
+    : `<tr>
+         <td class="label">Giảm giá:</td>
+         <td class="value discount">-0 ₫</td>
+       </tr>`
+
+  // Shipping fee row (only for delivery)
+  const shippingRow = currentOrderType === 'delivery'
+    ? `<tr>
+         <td class="label">Phí vận chuyển:</td>
+         <td class="value">${formatMoney(shippingAmount)}</td>
+       </tr>`
+    : ''
+
+  // Payment status (check if order has been confirmed/paid)
+  // If using cached data, it's always confirmed
+  const isConfirmed = cachedData ? true : (order as any).confirmed || false
+  const paymentStatus = isConfirmed ? 'Đã thanh toán' : 'Chưa thanh toán'
+  const statusClass = isConfirmed ? 'status-paid' : ''
+
+  // Generate complete HTML
+  return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Biên lai bán hàng - ${invoiceCode}</title>
+  <style>
+    @page { size: A4; margin: 10mm; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.5; background: #fff; color: #333; }
+    .invoice-page { max-width: 190mm; min-height: calc(297mm - 20mm); margin: 0 auto; display: flex; flex-direction: column; }
+    .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 10px; border-bottom: 2px solid #2c3e50; margin-bottom: 12px; }
+    .company-name { display: block; max-width: 30mm; height: auto; margin: 0 0 4px 0; }
+    .company-subtitle { margin: 0 0 6px 0; font-size: 11px; color: #555; }
+    .company-details p { margin: 0; }
+    .invoice-title { text-align: right; }
+    .invoice-title h2 { margin: 0 0 6px 0; font-size: 16px; text-transform: uppercase; }
+    .invoice-title p { margin: 0; }
+    h3.section-title { margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 1px solid #3498db; font-size: 13px; text-transform: uppercase; color: #2c3e50; }
+    .section { margin-bottom: 14px; }
+    .info-grid { display: table; width: 100%; table-layout: fixed; }
+    .info-column { display: table-cell; vertical-align: top; padding-right: 8px; }
+    .info-column:last-child { padding-right: 0; padding-left: 8px; }
+    .info-column h4 { margin: 0 0 4px 0; font-size: 12px; font-weight: bold; }
+    .info-item { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    .info-item .label { color: #555; min-width: 70px; }
+    .info-item .value { font-weight: 600; text-align: right; }
+    .status-paid { color: #27ae60; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #bdc3c7; padding: 6px 5px; }
+    th { background: #34495e; color: #fff; text-align: center; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .product-name { font-weight: 600; }
+    .product-attrs { font-size: 10px; color: #555; }
+    .product-attrs div { margin: 1px 0; }
+    .total { font-weight: bold; color: #e74c3c; }
+    .summary-table { width: 60%; margin-left: auto; margin-top: 6px; }
+    .summary-table td { border: none; padding: 3px 2px; }
+    .summary-table .label { text-align: left; }
+    .summary-table .value { text-align: right; font-weight: 600; }
+    .summary-table .discount { color: #e74c3c; }
+    .summary-table .row-total td { border-top: 1px solid #2c3e50; border-bottom: 1px solid #2c3e50; padding-top: 4px; padding-bottom: 4px; font-size: 12px; }
+    .footer { display: flex; justify-content: space-between; margin-top: auto; padding-top: 10px; }
+    .thank-you p { margin: 0; }
+    .signature { text-align: center; min-width: 120px; }
+    .signature-line { width: 80px; height: 1px; background: #333; margin: 18px auto 6px; }
+    .signature-name { font-weight: bold; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <div class="invoice-page">
+    <div class="invoice-header">
+      <div>
+        <img src="/src/assets/logo-datn.png" alt="GearUp" class="company-name" />
+        <p class="company-subtitle">Cửa hàng giày thể thao</p>
+        <div class="company-details">
+          <p>Địa chỉ: FPT polytechnic, Hà Nội</p>
+          <p>Hotline: 0332 050 542</p>
+          <p>Email: truongtqph50260@gearup.com</p>
+        </div>
+      </div>
+      <div class="invoice-title">
+        <h2>Biên lai bán hàng</h2>
+        <p><strong>Mã hóa đơn:</strong> ${invoiceCode}</p>
+        <p><strong>Ngày tạo:</strong> ${formatDate(now)}</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 class="section-title">Thông tin đơn hàng</h3>
+      <div class="info-grid">
+        <div class="info-column">
+          <h4>Thông tin khách hàng</h4>
+          <div class="info-item">
+            <span class="label">Tên khách hàng:</span>
+            <span class="value">${customerName}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Số điện thoại:</span>
+            <span class="value">${customerPhone}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Email:</span>
+            <span class="value">${customerEmail}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Địa chỉ:</span>
+            <span class="value">${customerAddress}</span>
+          </div>
+        </div>
+        <div class="info-column">
+          <h4>Thông tin nhân viên</h4>
+          <div class="info-item">
+            <span class="label">Tên nhân viên:</span>
+            <span class="value">${useUserStore().name || 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Ngày thanh toán:</span>
+            <span class="value">${isConfirmed ? formatDate(now) : 'Chưa thanh toán'}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Trạng thái:</span>
+            <span class="value ${statusClass}">${paymentStatus}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 class="section-title">Danh sách sản phẩm đã bán</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Tên sản phẩm</th>
+            <th>Thuộc tính</th>
+            <th>Số lượng</th>
+            <th>Đơn giá</th>
+            <th>Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${productRows}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3 class="section-title">Tổng kết đơn hàng</h3>
+      <table class="summary-table">
+        <tbody>
+          <tr>
+            <td class="label">Tổng tiền hàng:</td>
+            <td class="value">${formatMoney(subtotalAmount)}</td>
+          </tr>
+          ${voucherInfo}
+          ${shippingRow}
+          <tr class="row-total">
+            <td class="label"><strong>THÀNH TIỀN:</strong></td>
+            <td class="value"><strong>${formatMoney(finalAmount)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      <div class="thank-you">
+        <p><strong>Cảm ơn quý khách đã mua hàng!</strong></p>
+        <p>Hẹn gặp lại quý khách lần sau.</p>
+      </div>
+      <div class="signature">
+        <p>Người bán</p>
+        <div class="signature-line"></div>
+        <p class="signature-name">${useUserStore().name || 'Nhân viên'}</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
 }
 
 // ==================== LIFECYCLE ====================
@@ -751,7 +961,6 @@ const selectVoucher = async (coupon: CouponApiModel) => {
       // Keep current split for mixed payments; user will re-enter if needed
       syncPaymentSplit(lastPaymentFieldChanged.value)
     }
-    syncPaymentSplit(lastPaymentFieldChanged.value)
 
     showVoucherModal.value = false
     Message.success(`Đã áp dụng voucher: ${coupon.tenPhieuGiamGia}`)
@@ -956,7 +1165,7 @@ const syncPaymentSplit = (preferred: 'cash' | 'transfer' = lastPaymentFieldChang
 
   const cashRaw = paymentForm.value.cashReceived ?? 0
   const transferRaw = paymentForm.value.transferReceived ?? 0
-  
+
   if (preferred === 'cash') {
     const cash = normalizePaymentValue(cashRaw, { allowOverpay: true })
     paymentForm.value.cashReceived = cash
@@ -1120,7 +1329,7 @@ watch(
 // Watch for isWalkIn changes to debug reactivity
 watch(
   () => [isWalkIn.value, orderType.value, currentOrder.value?.customerId],
-  ([walkIn, type, custId]) => {},
+  ([walkIn, type, custId]) => { },
   { immediate: true }
 )
 
@@ -1376,8 +1585,6 @@ const handlePaymentMethodChange = async (value: string) => {
       assignTransferAmount(0)
       lastPaymentFieldChanged.value = 'cash'
     }
-
-    syncPaymentSplit(lastPaymentFieldChanged.value)
   } catch (error: any) {
     console.error('Lỗi cập nhật phương thức thanh toán:', error)
     Message.error(error.message || 'Có lỗi xảy ra khi cập nhật phương thức thanh toán')
@@ -1827,32 +2034,32 @@ const handleConfirmFromBetterVoucher = async () => {
 // Watch for walk-in location changes (province, district, ward, address)
 watch(
   () => walkInLocation.value,
-  (newLocation) => {},
+  (newLocation) => { },
   { deep: true }
 )
 
 // Watch for province change
 watch(
   () => walkInLocation.value.thanhPho,
-  async (newProvince) => {}
+  async (newProvince) => { }
 )
 
 // Watch for district change
 watch(
   () => walkInLocation.value.quan,
-  async (newDistrict) => {}
+  async (newDistrict) => { }
 )
 
 // Watch for ward change
 watch(
   () => walkInLocation.value.phuong,
-  async (newWard) => {}
+  async (newWard) => { }
 )
 
 // Watch for address detail change
 watch(
   () => walkInLocation.value.diaChiCuThe,
-  async (newAddress) => {}
+  async (newAddress) => { }
 )
 
 onMounted(() => {
@@ -1960,9 +2167,9 @@ onMounted(() => {
     }
   )
 
-  // Store interval IDs for cleanup
-  ;(window as any).__stockRefreshInterval = stockRefreshInterval
-  ;(window as any).__productModalRefreshInterval = productModalRefreshInterval
+    // Store interval IDs for cleanup
+    ; (window as any).__stockRefreshInterval = stockRefreshInterval
+    ; (window as any).__productModalRefreshInterval = productModalRefreshInterval
 
   // Huỷ QR session hiện tại khi reload/đóng tab
   window.addEventListener('beforeunload', cancelCurrentQrSession)
@@ -2221,11 +2428,13 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
     box-shadow: 0 0 0 0 rgba(250, 140, 22, 0.4);
   }
+
   50% {
     opacity: 0.95;
     box-shadow: 0 0 0 8px rgba(250, 140, 22, 0);
@@ -2237,6 +2446,7 @@ onBeforeUnmount(() => {
     opacity: 0.8;
     transform: scaleX(1);
   }
+
   50% {
     opacity: 1;
     transform: scaleX(1.02);
@@ -2244,11 +2454,13 @@ onBeforeUnmount(() => {
 }
 
 @keyframes paymentCheckPulse {
+
   0%,
   100% {
     opacity: 0.7;
     transform: scale(1);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1);
@@ -2269,6 +2481,7 @@ onBeforeUnmount(() => {
     opacity: 0;
     transform: scale(0.95);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -2290,6 +2503,7 @@ onBeforeUnmount(() => {
   0% {
     box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.4);
   }
+
   100% {
     box-shadow: 0 2px 8px 0 rgba(82, 196, 26, 0.4);
   }
@@ -2307,13 +2521,16 @@ onBeforeUnmount(() => {
 }
 
 @keyframes cashNegativeShake {
+
   0%,
   100% {
     transform: translateX(0);
   }
+
   25% {
     transform: translateX(-2px);
   }
+
   75% {
     transform: translateX(2px);
   }

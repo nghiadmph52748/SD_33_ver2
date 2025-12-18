@@ -50,7 +50,7 @@
     <a-card title="Danh sách đế giày" class="table-card">
       <a-table
         :columns="columns"
-        :data="filteredSoles"
+        :data="soles"
         :pagination="pagination"
         :loading="loading"
         :scroll="{ x: 1000 }"
@@ -512,11 +512,11 @@ const cancelToggleStatus = () => {
 const getDeGiayPage = async (page) => {
   try {
     loading.value = true
-    const res = await getDeGiayList(page, pagination.value.pageSize)
+    const res = await getDeGiayList(page, pagination.value.pageSize || 10)
     if (res.success) {
       soles.value = res.data.data
       pagination.value.total = res.data.totalElements
-      pagination.value.pageSize = res.data.size
+      pagination.value.pageSize = res.data.size || 10
       pagination.value.current = res.data.number + 1
     } else {
       console.error('Failed to fetch soles:', res.message)
@@ -541,7 +541,7 @@ const loadSolesWithUpdatedFirst = async (updatedId?: number, isNewItem: boolean 
     if (res.success) {
       let solesData = res.data.data
       pagination.value.total = res.data.totalElements
-      pagination.value.pageSize = res.data.size
+      pagination.value.pageSize = res.data.size || 10
       pagination.value.current = res.data.number + 1
 
       // If there's an updated item and it's not a new item, move it to the front

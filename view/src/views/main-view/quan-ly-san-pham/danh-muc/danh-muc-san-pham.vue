@@ -7,9 +7,32 @@
           <!-- Row 1 -->
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tìm theo mã, tên hoặc khoảng giá..." allow-clear @input="searchCategories" />
+              <a-input v-model="filters.search" placeholder="Tìm theo mã, tên hoặc khoảng giá..." allow-clear
+                @input="searchCategories" />
             </a-form-item>
           </a-col>
+          <a-col :span="8">
+            <a-form-item label="Nhà sản xuất">
+              <a-select v-model="filters.idNhaSanXuat" placeholder="Chọn nhà sản xuất" allow-clear
+                @change="searchCategories">
+                <a-option v-for="item in nhaSanXuatOptions" :key="item.id" :value="item.id">
+                  {{ item.tenNhaSanXuat }}
+                </a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="Xuất xứ">
+              <a-select v-model="filters.idXuatXu" placeholder="Chọn xuất xứ" allow-clear @change="searchCategories">
+                <a-option v-for="item in xuatXuOptions" :key="item.id" :value="item.id">
+                  {{ item.tenXuatXu }}
+                </a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-row :gutter="16" style="margin-top: 16px;">
+          <!-- Row 2 -->
           <a-col :span="8">
             <a-form-item label="Trạng thái">
               <a-radio-group v-model="filters.trangThai" type="button" @change="searchCategories">
@@ -22,17 +45,8 @@
           <a-col :span="8">
             <a-form-item label="Khoảng giá">
               <div class="price-range-container">
-                <a-slider
-                  v-model="priceRange"
-                  :min="0"
-                  :max="maxPrice"
-                  :step="50000"
-                  range
-                  tooltip-visible
-                  :tooltip-formatter="formatPrice"
-                  @change="updatePriceRangeAndSearch"
-                  style="width: 100%"
-                />
+                <a-slider v-model="priceRange" :min="0" :max="maxPrice" :step="50000" range tooltip-visible
+                  :tooltip-formatter="formatPrice" @change="updatePriceRangeAndSearch" style="width: 100%" />
               </div>
             </a-form-item>
           </a-col>
@@ -73,20 +87,12 @@
           Hoàn thành cập nhật
         </a-button>
       </template>
-      <a-table
-        :columns="columns"
-        :data="transformedDanhMucList || []"
-        :pagination="{
-          ...pagination,
-          onChange: handlePageChange,
-          onShowSizeChange: handlePageChange,
-        }"
-        :loading="loading"
-        :scroll="{ x: 800 }"
-        :row-class="(record) => (isRowSelected(record.id) ? 'editing-row' : '')"
-      >
+      <a-table :columns="columns" :data="transformedDanhMucList || []" :pagination="pagination" :loading="loading"
+        :scroll="{ x: 800 }" :row-class="(record) => (isRowSelected(record.id) ? 'editing-row' : '')"
+        @page-change="handlePageChange" @page-size-change="handlePageSizeChange">
         <template #checkbox="{ record }">
-          <a-checkbox :model-value="isRowSelected(record.id)" @change="(checked) => handleCheckboxChange(checked, record)" />
+          <a-checkbox :model-value="isRowSelected(record.id)"
+            @change="(checked) => handleCheckboxChange(checked, record)" />
         </template>
         <template #index="{ rowIndex }">
           {{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}
@@ -94,16 +100,11 @@
         <template #status="{ record }">
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode -->
-            <a-select
-              :model-value="editingData[record.id]?.trangThai ? 'active' : 'inactive'"
-              @update:model-value="
-                (value) => {
-                  editingData[record.id] = { ...(editingData[record.id] || {}), trangThai: value === 'active' }
-                }
-              "
-              size="mini"
-              style="width: 120px"
-            >
+            <a-select :model-value="editingData[record.id]?.trangThai ? 'active' : 'inactive'" @update:model-value="
+              (value) => {
+                editingData[record.id] = { ...(editingData[record.id] || {}), trangThai: value === 'active' }
+              }
+            " size="mini" style="width: 120px">
               <a-option value="active">Đang bán</a-option>
               <a-option value="inactive">Tạm ngưng bán</a-option>
             </a-select>
@@ -115,16 +116,11 @@
         <template #name="{ record }">
           <div v-if="isRowSelected(record.id)">
             <!-- Edit mode for name -->
-            <a-input
-              :model-value="editingData[record.id]?.tenSanPham || record.tenSanPham"
-              @update:model-value="
-                (value) => {
-                  editingData[record.id] = { ...(editingData[record.id] || {}), tenSanPham: value }
-                }
-              "
-              size="mini"
-              style="width: 100%"
-            />
+            <a-input :model-value="editingData[record.id]?.tenSanPham || record.tenSanPham" @update:model-value="
+              (value) => {
+                editingData[record.id] = { ...(editingData[record.id] || {}), tenSanPham: value }
+              }
+            " size="mini" style="width: 100%" />
           </div>
           <span v-else class="custom-name">{{ record.tenSanPham }}</span>
         </template>
@@ -140,7 +136,8 @@
         <template #action="{ record }">
           <a-space>
             <a-tooltip content="Thay đổi trạng thái">
-              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)"
+                :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -164,17 +161,12 @@
       </a-table>
     </a-card>
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="categoryToToggleStatus">
-          <div>Bạn có chắc chắn muốn {{ categoryToToggleStatus.trangThai ? 'tạm ngưng bán' : 'kích hoạt bán' }} sản phẩm này?</div>
+          <div>Bạn có chắc chắn muốn {{ categoryToToggleStatus.trangThai ? 'tạm ngưng bán' : 'kích hoạt bán' }} sản phẩm
+            này?</div>
           <div>
             Tên sản phẩm:
             <strong>{{ categoryToToggleStatus.tenSanPham }}</strong>
@@ -302,12 +294,12 @@ const transformedDanhMucList = computed(() => {
   // Only apply if user has actively changed the price range from defaults
   // Products with null prices (no active variants) should always pass
   const isPriceFilterChanged = filters.giaTu > 0 || (filters.giaDen !== undefined && filters.giaDen < maxPrice.value)
-  
+
   if (isPriceFilterChanged && filters.giaTu !== undefined && filters.giaDen !== undefined) {
     filteredList = filteredList.filter((item) => {
       // If product has no prices (all variants deleted), always include it
-      if ((item.giaNhoNhat === null || item.giaNhoNhat === undefined) && 
-          (item.giaLonNhat === null || item.giaLonNhat === undefined)) {
+      if ((item.giaNhoNhat === null || item.giaNhoNhat === undefined) &&
+        (item.giaLonNhat === null || item.giaLonNhat === undefined)) {
         return true
       }
       // If only one price is null, check the other
@@ -322,20 +314,23 @@ const transformedDanhMucList = computed(() => {
     })
   }
 
+  // Apply sorting - Latest (highest ID) on top
+  filteredList.sort((a, b) => (b.id || 0) - (a.id || 0))
+
   // Check if any client-side filters are active
   // Price filter is only active if user has changed it from default (0 to maxPrice)
   const isPriceFilterActive = isPriceFilterChanged
-  
-  const hasActiveFilters = filters.search || 
+
+  const hasActiveFilters = filters.search ||
     (filters.trangThai !== undefined && filters.trangThai !== '' && filters.trangThai !== null) ||
-    filters.idNhaSanXuat || 
+    filters.idNhaSanXuat ||
     filters.idXuatXu ||
     isPriceFilterActive
 
   // Update total elements after filtering
   // If filters are active, use filtered count; otherwise use backend total
   totalElements.value = hasActiveFilters ? filteredList.length : (danhMucList.value.totalElements || filteredList.length)
-  
+
   // Update pagination total to match filtered results when filters are active
   if (hasActiveFilters) {
     pagination.value.total = filteredList.length
@@ -439,47 +434,39 @@ const loadDanhMucList = async () => {
   try {
     loading.value = true
     const response = await getDanhMucSanPhamList(pagination.value.current - 1, pagination.value.pageSize)
+
     if (response.data) {
-      const apiData = response.data
+      danhMucList.value = response.data
+      pagination.value.total = response.data?.totalElements || 0
 
-      if (apiData && apiData.data && Array.isArray(apiData.data)) {
-        danhMucList.value = apiData
-        pagination.value.total = apiData.totalElements || 0
-        pagination.value.current = (apiData.currentPage || 0) + 1
-        pagination.value.pageSize = apiData.pageSize || 10
-
-        // Load all data to calculate max price
-        try {
-          const allResponse = await getAllDanhMucSanPham()
-          if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data)) {
-            let allMaxPrice = 0
-            allResponse.data.data.forEach((item: any) => {
-              if (item.giaLonNhat && item.giaLonNhat > allMaxPrice) {
-                allMaxPrice = item.giaLonNhat
-              }
-            })
-            if (allMaxPrice > 0) {
-              maxPrice.value = allMaxPrice
+      // Load all data to calculate max price
+      try {
+        const allResponse = await getAllDanhMucSanPham()
+        if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data)) {
+          let allMaxPrice = 0
+          allResponse.data.data.forEach((item: any) => {
+            if (item.giaLonNhat && item.giaLonNhat > allMaxPrice) {
+              allMaxPrice = item.giaLonNhat
             }
+          })
+          if (allMaxPrice > 0) {
+            maxPrice.value = allMaxPrice
           }
-        } catch (error) {
-          console.error('Error loading all danh muc for max price:', error)
         }
+      } catch (error) {
+        console.error('Error loading all danh muc for max price:', error)
+      }
 
-        // Update price range max value and filter default
-        if (maxPrice.value > 0) {
-          // Update priceRange slider max
-          if (priceRange.value[1] < maxPrice.value) {
-            priceRange.value[1] = maxPrice.value
-          }
-          // Update filter default to match maxPrice so no products are excluded by default
-          if (filters.giaDen === 5000000 || filters.giaDen < maxPrice.value) {
-            filters.giaDen = maxPrice.value
-          }
+      // Update price range max value and filter default
+      if (maxPrice.value > 0) {
+        // Update priceRange slider max
+        if (priceRange.value[1] < maxPrice.value) {
+          priceRange.value[1] = maxPrice.value
         }
-      } else {
-        danhMucList.value = response.data
-        pagination.value.total = response.data?.totalElements || 0
+        // Update filter default to match maxPrice so no products are excluded by default
+        if (filters.giaDen === 5000000 || filters.giaDen < maxPrice.value) {
+          filters.giaDen = maxPrice.value
+        }
       }
     }
   } catch (error) {
@@ -494,9 +481,15 @@ const loadDanhMucList = async () => {
 }
 
 // Pagination change handler
-const handlePageChange = (page: number, size: number) => {
+const handlePageChange = (page: number) => {
   pagination.value.current = page
+  loadDanhMucList()
+}
+
+// Page size change handler
+const handlePageSizeChange = (size: number) => {
   pagination.value.pageSize = size
+  pagination.value.current = 1 // Reset to first page when changing page size
   loadDanhMucList()
 }
 
@@ -714,6 +707,9 @@ const resetFilters = () => {
     giaDen: maxPrice.value,
   })
 
+  // Reset price slider
+  priceRange.value = [0, maxPrice.value]
+
   // Reset pagination to first page
   pagination.value.current = 1
 
@@ -798,19 +794,14 @@ const exportExcel = () => {
     }
 
     exportToExcel(transformedDanhMucList.value, EXPORT_HEADERS.DANH_MUC, 'danh-muc-san-pham')
-  } catch {
-    // eslint-disable-next-line no-console
+  } catch (error) {
     // console.error('Lỗi khi xuất Excel:', error)
-    Message.error('Có lỗi xảy ra khi xuất Excel')
+    Message.error('Không thể xuất file Excel')
   }
 }
 
 onMounted(async () => {
   try {
-    // Ensure reactive state is properly initialized
-    selectedRowKeys.value = Array.isArray(selectedRowKeys.value) ? selectedRowKeys.value : []
-    editingData.value = editingData.value && typeof editingData.value === 'object' ? editingData.value : {}
-
     // Load dữ liệu ban đầu
     await Promise.all([loadOptions(), loadDanhMucList()])
   } catch {
@@ -937,6 +928,7 @@ onMounted(async () => {
 .action-buttons {
   display: flex;
 }
+
 .action-buttons .arco-space {
   flex-direction: row !important;
 }
