@@ -21,6 +21,7 @@ import org.example.be_sp.util.MapperUtils;
 import org.example.be_sp.util.QRGeneration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.google.zxing.WriterException;
@@ -63,12 +64,16 @@ public class ChiTietSanPhamService {
     }
 
     public PagingResponse<ChiTietSanPhamFullResponse> getAllWithPage(int page, int size) {
-        return new PagingResponse<>(repository.findAll(PageRequest.of(page, size))
+        return new PagingResponse<>(repository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))
                 .map(ChiTietSanPhamFullResponse::new), page);
     }
 
     public PagingResponse<ChiTietSanPhamFullResponse> getAllByIdSanPhamWithPage(Integer idSanPham, int page, int size) {
-        return new PagingResponse<>(repository.findAllByIdSanPham_Id(idSanPham, PageRequest.of(page, size)).map(ChiTietSanPhamFullResponse::new),
+        return new PagingResponse<>(
+                repository
+                        .findAllByIdSanPham_Id(idSanPham,
+                                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))
+                        .map(ChiTietSanPhamFullResponse::new),
                 page);
     }
 
@@ -164,7 +169,8 @@ public class ChiTietSanPhamService {
                 }
                 log.info("Sent out-of-stock alert for product: {}", product.getTenSanPhamChiTiet());
             } // Low stock alert (medium priority)
-            else if (currentQuantity > 0 && currentQuantity < 10 && (originalQuantity == null || originalQuantity >= 10)) {
+            else if (currentQuantity > 0 && currentQuantity < 10
+                    && (originalQuantity == null || originalQuantity >= 10)) {
                 for (org.example.be_sp.entity.NhanVien admin : admins) {
                     notificationService.createNotification(
                             admin.getId(),
@@ -175,7 +181,8 @@ public class ChiTietSanPhamService {
                             2 // in progress / warning
                     );
                 }
-                log.info("Sent low-stock alert for product: {} (quantity: {})", product.getTenSanPhamChiTiet(), currentQuantity);
+                log.info("Sent low-stock alert for product: {} (quantity: {})", product.getTenSanPhamChiTiet(),
+                        currentQuantity);
             }
         } catch (Exception e) {
             log.error("Failed to send stock alert: {}", e.getMessage());
@@ -184,7 +191,8 @@ public class ChiTietSanPhamService {
 
     /**
      * Auto-update variant status immediately when quantity changes. Called by
-     * BanHangService when adding/removing products from cart. If quantity <= 0, status = false (disabled)
+     * BanHangService when adding/removing products from cart. If quantity <= 0,
+     * status = false (disabled)
      * If quantity > 0, status = true (enabled)
      */
     public void updateVariantStatusByQuantity(ChiTietSanPham variant) {
@@ -201,12 +209,14 @@ public class ChiTietSanPhamService {
             if ((quantity == null || quantity <= 0) && Boolean.TRUE.equals(currentStatus)) {
                 variant.setTrangThai(false);
                 needsUpdate = true;
-                log.info("Auto-disabled variant {} (ID: {}) due to zero/negative quantity", variant.getId(), variant.getTenSanPhamChiTiet());
+                log.info("Auto-disabled variant {} (ID: {}) due to zero/negative quantity", variant.getId(),
+                        variant.getTenSanPhamChiTiet());
             } // If quantity is positive, status should be true (enabled)
             else if (quantity != null && quantity > 0 && Boolean.FALSE.equals(currentStatus)) {
                 variant.setTrangThai(true);
                 needsUpdate = true;
-                log.info("Auto-enabled variant {} (ID: {}) due to positive quantity", variant.getId(), variant.getTenSanPhamChiTiet());
+                log.info("Auto-enabled variant {} (ID: {}) due to positive quantity", variant.getId(),
+                        variant.getTenSanPhamChiTiet());
             }
 
             if (needsUpdate) {
