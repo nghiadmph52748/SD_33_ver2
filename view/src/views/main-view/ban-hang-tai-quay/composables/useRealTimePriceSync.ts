@@ -26,6 +26,11 @@ interface PriceChange {
   newDiscount: number
 }
 
+const normalizeNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 export default function useRealTimePriceSync(params: {
   currentOrder: Ref<Order | null>
   allProductVariants: Ref<BienTheSanPham[]>
@@ -51,14 +56,23 @@ export default function useRealTimePriceSync(params: {
 
       const currentPrice = cartItem.price
       const currentDiscount = cartItem.discount
-      const serverPrice = serverProduct.giaBan || 0
-      const serverDiscount = serverProduct.giaTriGiamGia || 0
+      const serverPrice = normalizeNumber(serverProduct.giaBan, currentPrice)
+      const serverDiscount = normalizeNumber(serverProduct.giaTriGiamGia, currentDiscount)
+      const currentNetPrice = currentPrice * (1 - (currentDiscount > 0 ? currentDiscount / 100 : 0))
+      const serverNetPrice = serverPrice * (1 - (serverDiscount > 0 ? serverDiscount / 100 : 0))
+      const netPriceUnchanged = Math.abs(currentNetPrice - serverNetPrice) < 0.0001
 
       if (cartItem.lastServerPriceNotified === serverPrice && cartItem.lastServerDiscountNotified === serverDiscount) {
         return
       }
 
       if (currentPrice === serverPrice && currentDiscount === serverDiscount) {
+        cartItem.lastServerPriceNotified = serverPrice
+        cartItem.lastServerDiscountNotified = serverDiscount
+        return
+      }
+
+      if (netPriceUnchanged) {
         cartItem.lastServerPriceNotified = serverPrice
         cartItem.lastServerDiscountNotified = serverDiscount
         return

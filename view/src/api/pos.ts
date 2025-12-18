@@ -108,6 +108,9 @@ export interface InvoiceItemResponse {
   tenDeGiay?: string
   tenChatLieu?: string
   sanPhamId?: number
+  idChiTietSanPham?: number | { id?: number }
+  sanPham?: { id?: number }
+  chiTietSanPham?: { id?: number }
   anhSanPham?: string[]
   deleted?: boolean
 }

@@ -1094,7 +1094,6 @@ const selectVoucher = async (coupon: CouponApiModel) => {
 
     // IMPORTANT: Wait for any pending product operations to complete before applying voucher
     // This prevents race conditions where voucher is applied before products are fully saved to database
-    console.log('[selectVoucher] Pending operations:', pendingProductOperations.value)
     if (pendingProductOperations.value > 0) {
       Message.info('Đang xử lý sản phẩm, vui lòng đợi...')
       // Wait up to 3 seconds for pending operations to complete
@@ -1105,7 +1104,6 @@ const selectVoucher = async (coupon: CouponApiModel) => {
       while (pendingProductOperations.value > 0 && waitTime < maxWaitTime) {
         await new Promise((resolve) => setTimeout(resolve, checkInterval))
         waitTime += checkInterval
-        console.log('[selectVoucher] Still waiting, pending:', pendingProductOperations.value, 'waitTime:', waitTime)
       }
 
       if (pendingProductOperations.value > 0) {
@@ -1117,13 +1115,11 @@ const selectVoucher = async (coupon: CouponApiModel) => {
 
     // Add additional safety delay to ensure database transaction is committed
     // Even after API returns, the database transaction might not be fully committed
-    console.log('[selectVoucher] Adding safety delay before voucher application')
     await new Promise((resolve) => setTimeout(resolve, 300))
 
     const invoiceId = parseInt(currentOrder.value.id)
     const voucherId = coupon.id
 
-    console.log('[selectVoucher] Applying voucher. InvoiceId:', invoiceId, 'VoucherId:', voucherId)
     // Call API to update voucher
     await updateInvoiceVoucher(invoiceId, voucherId)
 
@@ -1256,22 +1252,28 @@ const parseAddressComponents = (raw?: string) => {
 
 const mapInvoiceItemToCartItem = (detail: PendingInvoiceItem, orderId: string, index: number): CartItem => {
   const quantity = Math.max(1, normalizeNumber(detail.soLuong, 1))
-  const unitPrice = normalizeNumber(detail.giaBan ?? (detail.thanhTien && quantity ? Number(detail.thanhTien) / quantity : undefined), 0)
-  const referencePrice = normalizeNumber(detail.giaBanSanPham ?? detail.giaBan, unitPrice)
-  const discount = Math.max(0, referencePrice - unitPrice)
+  const fallbackUnitPrice = normalizeNumber(detail.giaBan ?? (detail.thanhTien && quantity ? Number(detail.thanhTien) / quantity : undefined), 0)
+  const fallbackReferencePrice = normalizeNumber(detail.giaBanSanPham ?? fallbackUnitPrice, fallbackUnitPrice)
+  const fallbackDiscountPercent =
+    fallbackReferencePrice > 0 ? Math.max(0, Math.min(100, ((fallbackReferencePrice - fallbackUnitPrice) / fallbackReferencePrice) * 100)) : 0
+
+  const price = fallbackUnitPrice
+  const discount = fallbackDiscountPercent
+
   const baseProductId = detail.sanPhamId ?? detail.maSanPhamChiTiet ?? detail.maHoaDonChiTiet ?? detail.id
   const productId = baseProductId ? String(baseProductId) : `${orderId}-item-${index}`
+  const productName = detail.tenSanPhamChiTiet || detail.tenSanPham || 'Sản phẩm'
 
   return {
     id: detail.maHoaDonChiTiet || detail.id?.toString() || `${orderId}-detail-${index}`,
     idHoaDonChiTiets: detail.id ? [detail.id] : [],
     productId,
-    productName: detail.tenSanPhamChiTiet || detail.tenSanPham || 'Sản phẩm',
-    price: unitPrice,
+    productName,
+    price,
     discount,
     quantity,
     image: detail.anhSanPham?.[0],
-    images: detail.anhSanPham && detail.anhSanPham.length > 0 ? detail.anhSanPham : undefined,
+    images: detail.anhSanPham,
     tenChiTietSanPham: detail.tenSanPhamChiTiet || detail.tenSanPham,
     tenMauSac: detail.tenMauSac,
     maMau: detail.maMauSac,
@@ -1284,6 +1286,14 @@ const mapInvoiceItemToCartItem = (detail: PendingInvoiceItem, orderId: string, i
 const mapInvoiceToOrder = (invoice: PendingInvoiceResponse, index: number): Order => {
   const orderId = invoice.id ? invoice.id.toString() : `draft-${Date.now()}-${index}`
   const rawItems = Array.isArray(invoice.items) ? invoice.items.filter((detail) => detail && detail.deleted !== true) : []
+  rawItems.sort((a, b) => {
+    const aId = Number(a?.id ?? a?.maHoaDonChiTiet ?? 0)
+    const bId = Number(b?.id ?? b?.maHoaDonChiTiet ?? 0)
+    if (Number.isNaN(aId) && Number.isNaN(bId)) return 0
+    if (Number.isNaN(aId)) return 1
+    if (Number.isNaN(bId)) return -1
+    return aId - bId
+  })
   const items = rawItems.map((detail, detailIndex) => mapInvoiceItemToCartItem(detail, orderId, detailIndex))
 
   const cachedState = createDefaultOrderUiState()
@@ -2330,6 +2340,7 @@ const loadInitialData = async () => {
       })
       orders.value = mappedOrders
       currentOrderIndex.value = '0'
+      cartPagination.value.current = 1
 
       const soldMap: Record<string | number, number> = {}
       mappedOrders.forEach((order) => {
@@ -2346,6 +2357,7 @@ const loadInitialData = async () => {
     } else {
       orders.value = []
       currentOrderIndex.value = '0'
+      cartPagination.value.current = 1
       soldQuantitiesByProductId.value = {}
     }
   } catch (error: any) {
