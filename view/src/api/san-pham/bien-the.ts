@@ -117,10 +117,10 @@ export function getBienTheSanPhamList(page: number, productId?: number) {
 export function getBienTheSanPhamPage(page: number, productId?: number, size: number = 10) {
   if (productId) {
     // Lấy biến thể theo sản phẩm
-    return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/${productId}?page=${page}&size=${size}`)
+    return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/${productId}?page=${page}&size=${size}&sort=id,desc`)
   }
   // Lấy tất cả biến thể
-  return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/all?page=${page}&size=${size}`)
+  return axios.get<ApiResponse<BienTheResponse>>(`/api/chi-tiet-san-pham-management/paging/all?page=${page}&size=${size}&sort=id,desc`)
 }
 
 export function getBienTheSanPhamById(id: number) {
