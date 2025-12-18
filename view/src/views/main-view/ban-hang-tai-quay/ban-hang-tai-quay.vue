@@ -1239,6 +1239,28 @@ const normalizeNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000
+
+const resolveInvoiceLastUpdatedAt = (invoice: PendingInvoiceResponse): Date | null => {
+  const source = invoice as Record<string, any>
+  const candidateFields = ['ngayCapNhat', 'ngayChinhSua', 'ngaySua', 'ngayThanhToan', 'updatedAt', 'lastModified', 'ngayTao', 'createdAt']
+  for (const field of candidateFields) {
+    const rawValue = source[field]
+    if (!rawValue) continue
+    const date = new Date(rawValue)
+    if (!Number.isNaN(date.getTime())) {
+      return date
+    }
+  }
+  return null
+}
+
+const isPendingInvoiceStale = (invoice: PendingInvoiceResponse, thresholdMs = ONE_DAY_IN_MS) => {
+  const lastUpdated = resolveInvoiceLastUpdatedAt(invoice)
+  if (!lastUpdated) return false
+  return Date.now() - lastUpdated.getTime() >= thresholdMs
+}
+
 const formatOrderCode = (maHoaDon: string | undefined, fallbackId: string) => {
   if (maHoaDon && maHoaDon.trim()) return maHoaDon
   if (/^\d+$/.test(fallbackId)) {
@@ -2472,26 +2494,54 @@ const loadInitialData = async () => {
         })
       : []
 
+    const staleInvoiceIds = new Set<string>()
+    if (waitingInvoices.length > 0) {
+      const staleInvoices = waitingInvoices.filter((invoice) => isPendingInvoiceStale(invoice))
+      if (staleInvoices.length > 0) {
+        const currentUserId = userStoreInstance.id || 1
+        for (const invoice of staleInvoices) {
+          const invoiceId = invoice?.id
+          const numericId = Number(invoiceId)
+          if (!invoiceId || Number.isNaN(numericId)) continue
+          try {
+            await deleteInvoice(numericId, currentUserId)
+            staleInvoiceIds.add(String(invoiceId))
+          } catch (error) {
+            console.warn('[POS] Không thể xoá hóa đơn chờ quá hạn:', invoiceId, error)
+          }
+        }
+        if (staleInvoiceIds.size > 0) {
+          Message.info(`Đã tự động xoá ${staleInvoiceIds.size} hóa đơn chờ quá hạn (>24h)`)
+        }
+      }
+    }
+
     orderUiStateCache.value = {}
 
-    if (waitingInvoices.length > 0) {
+    if (waitingInvoices.length - staleInvoiceIds.size > 0) {
       const customerCodeLookup = new Map<string, string>()
       customers.value.forEach((customer) => {
         const code = customer.code?.trim()
         if (code) customerCodeLookup.set(code, customer.id)
       })
 
-      const mappedOrders = waitingInvoices.map((invoice, idx) => {
-        const order = mapInvoiceToOrder(invoice, idx)
-        const normalizedCode = typeof order.customerId === 'string' ? order.customerId.trim() : ''
-        if (normalizedCode) {
-          const matchedCustomerId = customerCodeLookup.get(normalizedCode)
-          order.customerId = matchedCustomerId ?? ''
-        } else {
-          order.customerId = ''
-        }
-        return order
-      })
+      const mappedOrders = waitingInvoices
+        .filter((invoice) => {
+          const invoiceId = invoice?.id
+          if (invoiceId === undefined || invoiceId === null) return true
+          return !staleInvoiceIds.has(String(invoiceId))
+        })
+        .map((invoice, idx) => {
+          const order = mapInvoiceToOrder(invoice, idx)
+          const normalizedCode = typeof order.customerId === 'string' ? order.customerId.trim() : ''
+          if (normalizedCode) {
+            const matchedCustomerId = customerCodeLookup.get(normalizedCode)
+            order.customerId = matchedCustomerId ?? ''
+          } else {
+            order.customerId = ''
+          }
+          return order
+        })
       orders.value = mappedOrders
       currentOrderIndex.value = '0'
       cartPagination.value.current = 1
@@ -2509,6 +2559,9 @@ const loadInitialData = async () => {
 
       Message.success(`Đã tải ${mappedOrders.length} hóa đơn chờ`)
     } else {
+      if (staleInvoiceIds.size > 0 && waitingInvoices.length > 0) {
+        Message.info('Tất cả hóa đơn chờ đã quá hạn và đã được xoá tự động')
+      }
       orders.value = []
       currentOrderIndex.value = '0'
       cartPagination.value.current = 1

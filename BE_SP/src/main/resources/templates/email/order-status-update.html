@@ -210,13 +210,6 @@
 					👁️ Xem chi tiết đơn hàng
 				</a>
 			</div>
-			<div style="text-align: center;"
-				th:if="${order.orderId != null and order.orderStatus != null and #strings.equalsIgnoreCase(order.orderStatus, 'Đã giao hàng')}">
-				<a th:href="|${baseUrl}/order/thank-you?orderId=${order.orderId}&orderCode=${order.orderCode}|"
-					class="button button-secondary">
-					✅ Xác nhận đã nhận hàng
-				</a>
-			</div>
 			<div
 				style="background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 4px; padding: 16px; margin: 20px 0;">
 				<p style="color: #0369A1; font-size: 14px; margin: 0;">

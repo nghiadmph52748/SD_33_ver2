@@ -49,6 +49,8 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class BanHangService {
+
+    private static final long PENDING_INVOICE_EXPIRY_HOURS = 24L;
     @Autowired
     ChiTietSanPhamRepository ctspRepository;
     @Autowired
@@ -85,7 +87,55 @@ public class BanHangService {
     QRSessionRepository qrSessionRepository;
 
     public List<HoaDonResponse> getHoaDonCho() {
-        return hdRepository.findAllByTrangThaiAndDeleted(false, false).stream().map(HoaDonResponse::new).toList();
+        List<HoaDon> pendingInvoices = hdRepository.findAllByTrangThaiAndDeleted(false, false);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiryThreshold = now.minusHours(PENDING_INVOICE_EXPIRY_HOURS);
+        List<HoaDonResponse> activeInvoices = new ArrayList<>();
+
+        for (HoaDon hoaDon : pendingInvoices) {
+            if (isPendingInvoiceStale(hoaDon, expiryThreshold)) {
+                handleStalePendingInvoice(hoaDon);
+            } else {
+                activeInvoices.add(new HoaDonResponse(hoaDon));
+            }
+        }
+        return activeInvoices;
+    }
+
+    private boolean isPendingInvoiceStale(HoaDon hoaDon, LocalDateTime expiryThreshold) {
+        LocalDateTime lastActivity = resolveInvoiceLastActivity(hoaDon);
+        if (lastActivity == null) {
+            return true;
+        }
+        return lastActivity.isBefore(expiryThreshold);
+    }
+
+    private LocalDateTime resolveInvoiceLastActivity(HoaDon hoaDon) {
+        if (hoaDon.getUpdateAt() != null) {
+            return hoaDon.getUpdateAt();
+        }
+        return hoaDon.getCreateAt();
+    }
+
+    private void handleStalePendingInvoice(HoaDon hoaDon) {
+        Integer staffId = resolveResponsibleStaffId(hoaDon);
+        if (staffId == null) {
+            log.warn("Skip auto delete invoice {} because staff id is missing", hoaDon.getId());
+            return;
+        }
+        try {
+            // Use existing deletion path to make sure stock is returned before removing invoice
+            xoaHoaDon(hoaDon.getId(), staffId);
+        } catch (Exception e) {
+            log.error("Failed to auto delete stale invoice {}: {}", hoaDon.getId(), e.getMessage(), e);
+        }
+    }
+
+    private Integer resolveResponsibleStaffId(HoaDon hoaDon) {
+        if (hoaDon.getIdNhanVien() != null) {
+            return hoaDon.getIdNhanVien().getId();
+        }
+        return hoaDon.getCreateBy();
     }
 
     private BigDecimal normalizeCurrency(BigDecimal amount) {
@@ -98,7 +148,7 @@ public class BanHangService {
      * Helper method to create timeline entry automatically
      */
     private void addTimeline(HoaDon hoaDon, String trangThaiCu, String trangThaiMoi,
-                             String hanhDong, String moTa, Integer idNhanVien) {
+            String hanhDong, String moTa, Integer idNhanVien) {
         TimelineDonHang timeline = new TimelineDonHang();
         timeline.setIdHoaDon(hoaDon);
         timeline.setIdNhanVien(nvRepository.findById(idNhanVien)
@@ -136,13 +186,13 @@ public class BanHangService {
         LocalDateTime now = LocalDateTime.now();
         ChiTietDotGiamGia bestDiscount = chiTietSanPham.getChiTietDotGiamGias().stream()
                 .filter(ctdg -> ctdg != null
-                        && Boolean.TRUE.equals(ctdg.getTrangThai())
-                        && !Boolean.TRUE.equals(ctdg.getDeleted())
-                        && ctdg.getIdDotGiamGia() != null
-                        && ctdg.getIdDotGiamGia().getNgayBatDau() != null
-                        && ctdg.getIdDotGiamGia().getNgayKetThuc() != null
-                        && !ctdg.getIdDotGiamGia().getNgayBatDau().isAfter(now)
-                        && ctdg.getIdDotGiamGia().getNgayKetThuc().isAfter(now))
+                && Boolean.TRUE.equals(ctdg.getTrangThai())
+                && !Boolean.TRUE.equals(ctdg.getDeleted())
+                && ctdg.getIdDotGiamGia() != null
+                && ctdg.getIdDotGiamGia().getNgayBatDau() != null
+                && ctdg.getIdDotGiamGia().getNgayKetThuc() != null
+                && !ctdg.getIdDotGiamGia().getNgayBatDau().isAfter(now)
+                && ctdg.getIdDotGiamGia().getNgayKetThuc().isAfter(now))
                 .max(Comparator.comparingInt(ctdg -> ctdg.getIdDotGiamGia().getGiaTriGiamGia()))
                 .orElse(null);
 
@@ -397,7 +447,7 @@ public class BanHangService {
     }
 
     public Integer updateKhachHang(Integer idHoaDon, Integer idKhachHang, String tenKhachHang, String soDienThoai,
-                                   String diaChiKhachHang, String emailKhachHang, Integer idNhanVien) {
+            String diaChiKhachHang, String emailKhachHang, Integer idNhanVien) {
         HoaDon hoaDon = hdRepository.findById(idHoaDon)
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
 
@@ -490,7 +540,7 @@ public class BanHangService {
         // Create timeline: Cập nhật hình thức giao hàng
         addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
                 "Cập nhật hình thức giao hàng: " + (giaohangCu ? "Không giao" : "Giao hàng")
-                        + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
+                + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
                 idNhanVien);
     }
 
@@ -784,7 +834,7 @@ public class BanHangService {
     }
 
     public void kiemTra(Map<Integer, Integer> listIdChiTietSanPham, Integer idPhieuGiamGia, Integer idNhanVien,
-                        Integer idKhachHang, Integer idPhuongThucThanhToan) {
+            Integer idKhachHang, Integer idPhuongThucThanhToan) {
         listIdChiTietSanPham.forEach((id, soLuong) -> {
             ChiTietSanPham ctsp = ctspRepository.findById(id)
                     .orElseThrow(() -> new ApiException("Không tìm thấy chi tiết sản phẩm với id: " + id, "404"));
