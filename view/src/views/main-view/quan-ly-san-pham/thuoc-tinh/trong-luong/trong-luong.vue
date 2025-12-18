@@ -6,7 +6,8 @@
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên trọng lượng..." allow-clear @input="searchWeights" />
+              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên trọng lượng..." allow-clear
+                @input="searchWeights" />
             </a-form-item>
           </a-col>
 
@@ -48,21 +49,13 @@
 
     <!-- Weights Table -->
     <a-card title="Danh sách trọng lượng" class="table-card">
-      <a-table
-        :columns="columns"
-        :data="weights"
-        :pagination="pagination"
-        :loading="loading"
-        :scroll="{ x: 1000 }"
-        @page-change="getTrongLuongPage($event - 1)"
-        @page-size-change="
+      <a-table :columns="columns" :data="weights" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }"
+        @page-change="getTrongLuongPage($event - 1)" @page-size-change="
           (size) => {
             pagination.pageSize = size
             getTrongLuongPage(0)
           }
-        "
-        row-key="id"
-      >
+        " row-key="id">
         <template #stt="{ record, rowIndex }">
           <span>{{ rowIndex + 1 }}</span>
         </template>
@@ -84,7 +77,8 @@
         <template #action="{ record }">
           <a-space>
             <a-tooltip content="Thay đổi trạng thái">
-              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)"
+                :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -114,15 +108,8 @@
     </a-card>
 
     <!-- Add Weight Modal -->
-    <a-modal
-      v-model:visible="addModalVisible"
-      title="Thêm trọng lượng"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeAddModal"
-      @ok="confirmAddWeight"
-    >
+    <a-modal v-model:visible="addModalVisible" title="Thêm trọng lượng" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeAddModal" @ok="confirmAddWeight">
       <a-form :model="weightForm" :rules="formRules" layout="vertical" ref="addFormRef">
         <a-form-item>
           <template #label>
@@ -134,17 +121,9 @@
     </a-modal>
 
     <!-- Detail Weight Modal -->
-    <a-modal
-      v-model:visible="detailModalVisible"
-      title="Chi tiết trọng lượng"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeDetailModal"
-      @ok="closeDetailModal"
-      ok-text="Đóng"
-      :cancel-button-props="{ style: { display: 'none' } }"
-    >
+    <a-modal v-model:visible="detailModalVisible" title="Chi tiết trọng lượng" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeDetailModal" @ok="closeDetailModal" ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }">
       <a-descriptions :column="1" size="small">
         <a-descriptions-item label="Mã trọng lượng">{{ selectedWeight?.maTrongLuong }}</a-descriptions-item>
         <a-descriptions-item label="Tên trọng lượng">{{ selectedWeight?.tenTrongLuong }}</a-descriptions-item>
@@ -157,15 +136,8 @@
     </a-modal>
 
     <!-- Update Weight Modal -->
-    <a-modal
-      v-model:visible="updateModalVisible"
-      title="Cập nhật trọng lượng"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeUpdateModal"
-      @ok="confirmUpdateWeight"
-    >
+    <a-modal v-model:visible="updateModalVisible" title="Cập nhật trọng lượng" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeUpdateModal" @ok="confirmUpdateWeight">
       <a-form :model="weightForm" :rules="formRules" layout="vertical" ref="updateFormRef">
         <a-form-item>
           <template #label>
@@ -186,30 +158,18 @@
     </a-modal>
 
     <!-- Confirmation Modal -->
-    <a-modal
-      v-model:visible="confirmModalVisible"
-      title="Xác nhận"
-      width="400px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="cancelConfirm"
-      @ok="executeConfirmedAction"
-    >
+    <a-modal v-model:visible="confirmModalVisible" title="Xác nhận" width="400px" :mask-closable="false"
+      :closable="true" @cancel="cancelConfirm" @ok="executeConfirmedAction">
       <p>{{ confirmMessage }}</p>
     </a-modal>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="weightToToggleStatus">
-          <div>Bạn có chắc chắn muốn {{ weightToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} trọng lượng này?</div>
+          <div>Bạn có chắc chắn muốn {{ weightToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} trọng lượng này?
+          </div>
           <div>
             Tên trọng lượng:
             <strong>{{ weightToToggleStatus.tenTrongLuong }}</strong>
@@ -493,7 +453,7 @@ const getTrongLuongPage = async (page) => {
     loading.value = true
     const res = await getTrongLuongList(page, pagination.value.pageSize)
     if (res.success) {
-      weights.value = res.data.data
+      weights.value = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1

@@ -9,7 +9,8 @@
           <a-col :span="8">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
               <a-form-item label="Tìm kiếm" style="flex: 1; margin-bottom: 0">
-                <a-input v-model="filters.search" placeholder="Tên sản phẩm, mã SKU..." allow-clear @input="onSearchInput" />
+                <a-input v-model="filters.search" placeholder="Tên sản phẩm, mã SKU..." allow-clear
+                  @input="onSearchInput" />
               </a-form-item>
               <a-button @click="showScanQRModal = true" type="primary" style="margin-top: 30px; padding: 0 12px">
                 <template #icon>
@@ -20,7 +21,8 @@
           </a-col>
           <a-col :span="8">
             <a-form-item label="Nhà sản xuất">
-              <a-select v-model="filters.manufacturer" placeholder="Chọn nhà sản xuất" allow-clear @change="performSearch">
+              <a-select v-model="filters.manufacturer" placeholder="Chọn nhà sản xuất" allow-clear
+                @change="performSearch">
                 <a-option value="">Tất cả</a-option>
                 <a-option v-for="option in manufacturerOptions" :key="option.value" :value="option.value">
                   {{ option.label }}
@@ -88,17 +90,8 @@
           <a-col :span="8">
             <a-form-item label="Khoảng giá">
               <div class="price-range-container">
-                <a-slider
-                  v-model="filters.priceRange"
-                  :min="0"
-                  :max="5000000"
-                  :step="50000"
-                  range
-                  tooltip-visible
-                  :tooltip-formatter="formatPrice"
-                  @change="performSearch"
-                  style="width: 100%"
-                />
+                <a-slider v-model="filters.priceRange" :min="0" :max="5000000" :step="50000" range tooltip-visible
+                  :tooltip-formatter="formatPrice" @change="performSearch" style="width: 100%" />
               </div>
             </a-form-item>
           </a-col>
@@ -127,7 +120,8 @@
       <template #extra>
         <a-space>
           <!-- New variants highlighting notification -->
-          <a-tag v-if="shouldHighlight && newVariantIds.length > 0" color="green" size="large" closable @close="clearHighlighting">
+          <a-tag v-if="shouldHighlight && newVariantIds.length > 0" color="green" size="large" closable
+            @close="clearHighlighting">
             <template #icon>
               <icon-check />
             </template>
@@ -149,61 +143,44 @@
           </a-button>
         </a-space>
       </template>
-      <a-table
-        :columns="columns"
-        :data="sortedVariants"
-        :pagination="{
-          current: pagination.current,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          showSizeChanger: pagination.showSizeChanger,
-          showQuickJumper: pagination.showQuickJumper,
-          showTotal: true,
-        }"
-        :loading="loading"
-        size="small"
-        :row-class="getRowClass"
-        @page-change="handlePageChange"
-        @page-size-change="handlePageChange"
-      >
+      <a-table :columns="columns" :data="sortedVariants" :pagination="{
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        total: pagination.total,
+        showSizeChanger: pagination.showSizeChanger,
+        showQuickJumper: pagination.showQuickJumper,
+        showTotal: true,
+      }" :loading="loading" size="small" :row-class="getRowClass" @page-change="handlePageChange"
+        @page-size-change="handlePageChange">
         <template #checkbox-title>
           <a-checkbox v-model="selectAllCheckbox" :indeterminate="isPartialSelected" />
         </template>
         <template #selection="{ record }">
-          <a-checkbox
-            :model-value="selectedVariants.includes(String(record.id))"
-            @change="
-              (checked) => {
-                const id = String(record.id)
-                if (checked) {
-                  if (!selectedVariants.includes(id)) {
-                    selectedVariants.push(id)
-                  }
-                } else {
-                  const idx = selectedVariants.indexOf(id)
-                  if (idx > -1) {
-                    selectedVariants.splice(idx, 1)
-                  }
+          <a-checkbox :model-value="selectedVariants.includes(String(record.id))" @change="
+            (checked) => {
+              const id = String(record.id)
+              if (checked) {
+                if (!selectedVariants.includes(id)) {
+                  selectedVariants.push(id)
+                }
+              } else {
+                const idx = selectedVariants.indexOf(id)
+                if (idx > -1) {
+                  selectedVariants.splice(idx, 1)
                 }
               }
-            "
-          />
+            }
+          " />
         </template>
         <template #stt="{ rowIndex }">
           <div>{{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}</div>
         </template>
 
         <template #product_image="{ record }">
-          <div
-            v-if="record.anhSanPham && record.anhSanPham.length > 0"
-            @click="openImageSlideshow(record.anhSanPham)"
-            style="cursor: pointer; position: relative"
-            class="image-slideshow-trigger"
-          >
+          <div v-if="record.anhSanPham && record.anhSanPham.length > 0" @click="openImageSlideshow(record.anhSanPham)"
+            style="cursor: pointer; position: relative" class="image-slideshow-trigger">
             <MiniCarousel :images="record.anhSanPham" :autoplay-interval="2500" />
-            <div
-              v-if="record.anhSanPham.length > 1"
-              style="
+            <div v-if="record.anhSanPham.length > 1" style="
                 position: absolute;
                 top: 2px;
                 right: 2px;
@@ -213,12 +190,12 @@
                 border-radius: 2px;
                 font-size: 10px;
                 font-weight: bold;
-              "
-            >
+              ">
               +{{ record.anhSanPham.length - 1 }}
             </div>
           </div>
-          <div v-else style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 4px">
+          <div v-else
+            style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 4px">
             <a-image src="" :width="70" :height="70" :preview="false" />
           </div>
         </template>
@@ -285,8 +262,10 @@
         </template>
 
         <template #status="{ record }">
-          <a-tag :color="record.trangThai && !record.deleted ? 'green' : record.trangThai && record.deleted ? 'orange' : 'red'">
-            {{ record.trangThai && !record.deleted ? 'Đang bán' : !record.trangThai && !record.deleted ? 'Hết hàng' : 'Tạm ngưng bán' }}
+          <a-tag
+            :color="record.trangThai && !record.deleted ? 'green' : record.trangThai && record.deleted ? 'orange' : 'red'">
+            {{ record.trangThai && !record.deleted ? 'Đang bán' : !record.trangThai && !record.deleted ? 'Hết hàng' :
+            'Tạm ngưng bán' }}
           </a-tag>
         </template>
 
@@ -294,7 +273,8 @@
           <a-space>
             <!-- Status Toggle Switch -->
             <a-tooltip content="Thay đổi trạng thái bán">
-              <a-switch :model-value="!record.deleted" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="!record.deleted" type="round" @click="toggleStatus(record)"
+                :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -327,14 +307,8 @@
     </a-card>
 
     <!-- Delete Confirm Modal -->
-    <a-modal
-      v-model:visible="showDeleteConfirm"
-      title="Xác nhận xoá"
-      ok-text="Xoá"
-      cancel-text="Huỷ"
-      @ok="confirmDelete"
-      @cancel="cancelDelete"
-    >
+    <a-modal v-model:visible="showDeleteConfirm" title="Xác nhận xoá" ok-text="Xoá" cancel-text="Huỷ"
+      @ok="confirmDelete" @cancel="cancelDelete">
       <template #default>
         <div>Bạn có chắc chắn muốn xoá biến thể này?</div>
         <div v-if="variantToDelete">
@@ -345,17 +319,12 @@
     </a-modal>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="variantToToggleStatus">
-          <div>Bạn có chắc chắn muốn {{ !variantToToggleStatus.deleted ? 'tạm ngưng bán' : 'kích hoạt bán' }} biến thể này?</div>
+          <div>Bạn có chắc chắn muốn {{ !variantToToggleStatus.deleted ? 'tạm ngưng bán' : 'kích hoạt bán' }} biến thể
+            này?</div>
           <div>
             Mã biến thể:
             <strong>{{ variantToToggleStatus.maChiTietSanPham }}</strong>
@@ -371,9 +340,11 @@
     <!-- Image Slideshow Modal -->
     <a-modal v-model:visible="showImageSlideshow" title="Xem ảnh sản phẩm" width="900px" :footer="false">
       <div style="display: flex; flex-direction: column; align-items: center">
-        <a-carousel :autoplay="true" :autoplay-interval="3000" show-arrow="always" style="width: 100%; height: 600px; background: #f5f5f5">
+        <a-carousel :autoplay="true" :autoplay-interval="3000" show-arrow="always"
+          style="width: 100%; height: 600px; background: #f5f5f5">
           <a-carousel-item v-for="(img, index) in currentSlideImages" :key="index">
-            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f5f5f5">
+            <div
+              style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f5f5f5">
               <img :src="img" style="max-width: 100%; max-height: 100%; object-fit: contain" />
             </div>
           </a-carousel-item>
@@ -385,12 +356,12 @@
     </a-modal>
 
     <!-- QR Code Scanner Modal -->
-    <a-modal v-model:visible="showScanQRModal" title="Quét Mã QR Sản Phẩm" width="600px" :footer="false" @open="initQRScanner">
+    <a-modal v-model:visible="showScanQRModal" title="Quét Mã QR Sản Phẩm" width="600px" :footer="false"
+      @open="initQRScanner">
       <div class="qr-scanner-container" style="display: flex; flex-direction: column; align-items: center">
-        <div
-          id="qr-scanner"
-          style="width: 100%; max-width: 500px; height: 500px; border: 2px solid #1890ff; border-radius: 4px; overflow: hidden"
-        ></div>
+        <div id="qr-scanner"
+          style="width: 100%; max-width: 500px; height: 500px; border: 2px solid #1890ff; border-radius: 4px; overflow: hidden">
+        </div>
         <div style="margin-top: 16px; text-align: center; color: #86909c">
           <div style="font-size: 12px; margin-bottom: 8px">Hướng camera vào mã QR để quét</div>
           <a-button @click="stopQRScanner" type="secondary">Đóng Quét</a-button>
@@ -501,25 +472,28 @@ const variants = ref<BienTheSanPham[]>([])
 
 // Computed for sorted variants with new variants on top
 const sortedVariants = computed(() => {
+  // First, sort all variants by ID descending (newest first)
+  const sorted = [...variants.value].sort((a, b) => (b.id || 0) - (a.id || 0))
+
+  // If highlighting is active, bubble highlighted variants to the top
   if (!shouldHighlight.value || newVariantIds.value.length === 0) {
-    return variants.value
+    return sorted
   }
 
   // Convert all IDs to numbers for consistent comparison
   const newIds = newVariantIds.value.map((id) => Number(id))
 
-  // Separate new and existing variants
-  const newVariants = variants.value.filter((v) => {
+  // Separate new and existing variants, maintaining sort order
+  const newVariants = sorted.filter((v) => {
     const variantId = Number(v.id)
-    const isNew = newIds.includes(variantId)
-    return isNew
+    return newIds.includes(variantId)
   })
-  const existingVariants = variants.value.filter((v) => {
+  const existingVariants = sorted.filter((v) => {
     const variantId = Number(v.id)
     return !newIds.includes(variantId)
   })
 
-  // Return new variants first, then existing variants
+  // Return new variants first, then existing variants (both already sorted)
   return [...newVariants, ...existingVariants]
 })
 
@@ -1817,9 +1791,11 @@ watch(
     background-color: #d9f7be;
     box-shadow: 0 0 10px rgba(82, 196, 26, 0.3);
   }
+
   50% {
     background-color: #f6ffed;
   }
+
   100% {
     background-color: #f6ffed;
   }

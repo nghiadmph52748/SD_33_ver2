@@ -79,7 +79,7 @@
             :final-price="finalPrice"
             :can-confirm-order="canConfirmOrder"
             :confirm-loading="confirmLoading"
-            :has-items="!!currentOrder?.items.length"
+            :has-items="hasItems"
             :has-eligible-vouchers="hasEligibleVouchers"
             :eligible-vouchers-count="eligibleVouchersCount"
             :selected-customer="selectedCustomer as any"
@@ -399,6 +399,8 @@ const walkInName = ref('')
 const walkInEmail = ref('')
 const walkInPhone = ref('')
 const walkInDeliveryValid = ref(false)
+// Track pending product operations (add/update) to prevent race conditions with voucher application
+const pendingProductOperations = ref(0)
 const QR_SYNC_DEBOUNCE_MS = 200
 let qrSyncTimeout: number | null = null
 
@@ -608,6 +610,7 @@ const {
   cartTableKey,
   userId: userStoreInstance.id || 1,
   refreshProductStock,
+  pendingProductOperations,
 })
 
 const { showDeleteConfirmModal, showDeleteConfirm, confirmDeleteOrder, createNewOrder, handleOrderChange } = useOrdersManager({
@@ -651,6 +654,20 @@ const totalRevenue = computed(() => {
 
 const totalItemsSold = computed(() => {
   return orders.value.reduce((sum, order) => sum + order.items.reduce((subtotal, item) => subtotal + item.quantity, 0), 0)
+})
+
+// Check if we have items to print (either current order or recently confirmed order)
+const hasItems = computed(() => {
+  // Check if current order has items
+  if (currentOrder.value?.items?.length && currentOrder.value.items.length > 0) {
+    return true
+  }
+  // Or check if we have a recently confirmed order (within last 5 minutes)
+  if (lastConfirmedOrder.value) {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+    return lastConfirmedOrder.value.confirmedAt > fiveMinutesAgo
+  }
+  return false
 })
 
 // ==================== METHODS ====================
@@ -740,14 +757,20 @@ const addNewCustomer = async () => {
 // cancelConfirmOrder moved to useCheckout
 
 const printOrder = () => {
-  if (!currentOrder.value?.items.length) {
+  // Check if we have a current order with items OR a recently confirmed order
+  const hasCurrentOrder = currentOrder.value?.items?.length && currentOrder.value.items.length > 0
+  const hasConfirmedOrder = lastConfirmedOrder.value !== null
+
+  if (!hasCurrentOrder && !hasConfirmedOrder) {
     Message.warning('Vui lòng thêm sản phẩm vào giỏ hàng trước khi in hóa đơn')
     return
   }
 
   try {
-    // Generate invoice HTML
-    const invoiceHTML = generateInvoiceHTML()
+    // Generate invoice HTML - pass cached data if current order is empty
+    const invoiceHTML = hasCurrentOrder
+      ? generateInvoiceHTML()
+      : generateInvoiceHTML(lastConfirmedOrder.value)
 
     // Open print window
     const printWindow = window.open('', '_blank', 'width=800,height=600')
@@ -805,7 +828,7 @@ const generateInvoiceHTML = (cachedData?: typeof lastConfirmedOrder.value): stri
   }
 
   // Format dates
-  const now = cachedData?.confirmedAt || new Date()
+  const printTime = new Date() // Always use current time when printing
   const formatDate = (date: Date) => {
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
@@ -874,11 +897,9 @@ const generateInvoiceHTML = (cachedData?: typeof lastConfirmedOrder.value): stri
        </tr>`
       : ''
 
-  // Payment status (check if order has been confirmed/paid)
-  // If using cached data, it's always confirmed
-  const isConfirmed = cachedData ? true : (order as any).confirmed || false
-  const paymentStatus = isConfirmed ? 'Đã thanh toán' : 'Chưa thanh toán'
-  const statusClass = isConfirmed ? 'status-paid' : ''
+  // Payment status - always show as paid when printing invoice
+  const paymentStatus = 'Đã thanh toán'
+  const statusClass = 'status-paid'
 
   // Generate complete HTML
   return `<!DOCTYPE html>
@@ -946,7 +967,7 @@ const generateInvoiceHTML = (cachedData?: typeof lastConfirmedOrder.value): stri
       <div class="invoice-title">
         <h2>Biên lai bán hàng</h2>
         <p><strong>Mã hóa đơn:</strong> ${invoiceCode}</p>
-        <p><strong>Ngày tạo:</strong> ${formatDate(now)}</p>
+        <p><strong>Ngày tạo:</strong> ${formatDate(printTime)}</p>
       </div>
     </div>
 
@@ -980,7 +1001,7 @@ const generateInvoiceHTML = (cachedData?: typeof lastConfirmedOrder.value): stri
           </div>
           <div class="info-item">
             <span class="label">Ngày thanh toán:</span>
-            <span class="value">${isConfirmed ? formatDate(now) : 'Chưa thanh toán'}</span>
+            <span class="value">${formatDate(printTime)}</span>
           </div>
           <div class="info-item">
             <span class="label">Trạng thái:</span>
@@ -1071,9 +1092,38 @@ const selectVoucher = async (coupon: CouponApiModel) => {
       return
     }
 
+    // IMPORTANT: Wait for any pending product operations to complete before applying voucher
+    // This prevents race conditions where voucher is applied before products are fully saved to database
+    console.log('[selectVoucher] Pending operations:', pendingProductOperations.value)
+    if (pendingProductOperations.value > 0) {
+      Message.info('Đang xử lý sản phẩm, vui lòng đợi...')
+      // Wait up to 3 seconds for pending operations to complete
+      let waitTime = 0
+      const maxWaitTime = 3000 // 3 seconds
+      const checkInterval = 100 // Check every 100ms
+
+      while (pendingProductOperations.value > 0 && waitTime < maxWaitTime) {
+        await new Promise((resolve) => setTimeout(resolve, checkInterval))
+        waitTime += checkInterval
+        console.log('[selectVoucher] Still waiting, pending:', pendingProductOperations.value, 'waitTime:', waitTime)
+      }
+
+      if (pendingProductOperations.value > 0) {
+        console.error('[selectVoucher] Timeout waiting for pending operations')
+        Message.warning('Sản phẩm đang được xử lý. Vui lòng thử lại sau vài giây.')
+        return
+      }
+    }
+
+    // Add additional safety delay to ensure database transaction is committed
+    // Even after API returns, the database transaction might not be fully committed
+    console.log('[selectVoucher] Adding safety delay before voucher application')
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
     const invoiceId = parseInt(currentOrder.value.id)
     const voucherId = coupon.id
 
+    console.log('[selectVoucher] Applying voucher. InvoiceId:', invoiceId, 'VoucherId:', voucherId)
     // Call API to update voucher
     await updateInvoiceVoucher(invoiceId, voucherId)
 
@@ -2335,6 +2385,13 @@ const {
   walkInPhone,
   walkInDeliveryValid,
   confirmPosOrder,
+  onBeforeOrderRemoved: (orderData) => {
+    // Cache confirmed order data for post-checkout operations (e.g., printing)
+    lastConfirmedOrder.value = {
+      ...orderData,
+      confirmedAt: new Date(),
+    }
+  },
 })
 
 const { showQRScanner, initQRScanner, closeQRScanner } = useQrScanner({
@@ -2342,6 +2399,9 @@ const { showQRScanner, initQRScanner, closeQRScanner } = useQrScanner({
   currentOrder,
   loadAllProducts,
   refreshProductStock,
+  userId: userStoreInstance.id || 1,
+  addProductToInvoiceApi: addProductToInvoice,
+  pendingProductOperations,
 })
 
 // Better voucher modal state (separate from main confirm modal)

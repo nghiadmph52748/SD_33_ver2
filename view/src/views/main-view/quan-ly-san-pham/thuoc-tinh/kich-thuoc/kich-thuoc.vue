@@ -478,7 +478,7 @@ const getKichThuocPage = async (page) => {
     loading.value = true
     const res = await getKichThuocList(page, pagination.value.pageSize || 10)
     if (res.success) {
-      sizes.value = res.data.data
+      sizes.value = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size
       pagination.value.current = res.data.number + 1

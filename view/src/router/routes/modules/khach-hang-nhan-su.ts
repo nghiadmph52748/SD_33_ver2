@@ -18,7 +18,7 @@ const KHACH_HANG_NHAN_SU: AppRouteRecordRaw = {
     icon: 'IconUser',
     order: 5,
     roles: ['admin'], // Chỉ admin mới thấy menu này
-    hideInMenu: true, // Ẩn hoàn toàn menu này trên sidebar
+    hideInMenu: false, // Ẩn hoàn toàn menu này trên sidebar
   },
   children: [
     {

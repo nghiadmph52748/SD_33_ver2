@@ -23,7 +23,8 @@
                 Ngày sinh
                 <span style="color: red">*</span>
               </template>
-              <a-date-picker v-model="formData.ngaySinh" format="YYYY-MM-DD" placeholder="Chọn ngày sinh" style="width: 100%" />
+              <a-date-picker v-model="formData.ngaySinh" format="YYYY-MM-DD" placeholder="Chọn ngày sinh"
+                style="width: 100%" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -119,13 +120,10 @@
               <div class="upload-container">
                 <!-- Native Input File Upload - Chỉ hiển thị khi chưa có ảnh -->
                 <div v-if="!previewUrl && !formData.anhNhanVien">
-                  <input ref="fileInputRef" type="file" accept="image/*" @change="handleNativeFileChange" style="display: none" />
-                  <a-button
-                    :loading="loading"
-                    type="dashed"
-                    @click="() => fileInputRef?.click()"
-                    style="width: 100%; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center"
-                  >
+                  <input ref="fileInputRef" type="file" accept="image/*" @change="handleNativeFileChange"
+                    style="display: none" />
+                  <a-button :loading="loading" type="dashed" @click="() => fileInputRef?.click()"
+                    style="width: 100%; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center">
                     <template #icon>
                       <icon-upload style="font-size: 24px; margin-bottom: 8px" />
                     </template>
@@ -242,14 +240,8 @@
     </a-card>
 
     <!-- Update Employee Confirm Modal -->
-    <a-modal
-      v-model:visible="showUpdateConfirm"
-      title="Xác nhận cập nhật nhân viên"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmUpdateEmployee"
-      @cancel="cancelUpdateEmployee"
-    >
+    <a-modal v-model:visible="showUpdateConfirm" title="Xác nhận cập nhật nhân viên" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmUpdateEmployee" @cancel="cancelUpdateEmployee">
       <template #default>
         <div>
           <div>Bạn có chắc chắn muốn cập nhật thông tin nhân viên này?</div>
@@ -294,8 +286,8 @@ const formRef = ref<any>(null)
 const selectedFiles = ref<File[]>([])
 const previewUrl = ref<string>('')
 const fileInputRef = ref<HTMLInputElement>()
-const provinces = ref<{ value: string; label: string; code: number }[]>([])
-const districts = ref<{ value: string; label: string; code: number }[]>([])
+const provinces = ref<{ value: string; label: string; code: string }[]>([])
+const districts = ref<{ value: string; label: string; code: string }[]>([])
 const wards = ref<{ value: string; label: string }[]>([])
 
 // lấy id từ params
@@ -346,13 +338,19 @@ const formRules = {
 }
 
 const loadProvinces = async () => {
-  const res = await fetch('https://provinces.open-api.vn/api/p/')
-  const data = await res.json()
-  provinces.value = data.map((p: any) => ({
-    value: p.name,
-    label: p.name,
-    code: p.code,
-  }))
+  try {
+    const res = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+    const responseData = await res.json()
+    if (responseData.error === 0) {
+      provinces.value = responseData.data.map((p: any) => ({
+        value: p.full_name,
+        label: p.full_name,
+        code: p.id,
+      }))
+    }
+  } catch (error) {
+    console.error('Lỗi tải tỉnh thành:', error)
+  }
 }
 loadProvinces()
 
@@ -364,13 +362,19 @@ const onProvinceChange = async (value: string) => {
 
   const province = provinces.value.find((p) => p.value === value)
   if (province) {
-    const res = await fetch(`https://provinces.open-api.vn/api/p/${province.code}?depth=2`)
-    const data = await res.json()
-    districts.value = data.districts.map((d: any) => ({
-      value: d.name,
-      label: d.name,
-      code: d.code,
-    }))
+    try {
+      const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${province.code}.htm`)
+      const responseData = await res.json()
+      if (responseData.error === 0) {
+        districts.value = responseData.data.map((d: any) => ({
+          value: d.full_name,
+          label: d.full_name,
+          code: d.id,
+        }))
+      }
+    } catch (error) {
+      console.error('Lỗi tải quận huyện:', error)
+    }
   }
 }
 
@@ -380,12 +384,18 @@ const onDistrictChange = async (value: string) => {
 
   const district = districts.value.find((d) => d.value === value)
   if (district) {
-    const res = await fetch(`https://provinces.open-api.vn/api/d/${district.code}?depth=2`)
-    const data = await res.json()
-    wards.value = data.wards.map((w: any) => ({
-      value: w.name,
-      label: w.name,
-    }))
+    try {
+      const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${district.code}.htm`)
+      const responseData = await res.json()
+      if (responseData.error === 0) {
+        wards.value = responseData.data.map((w: any) => ({
+          value: w.full_name,
+          label: w.full_name,
+        }))
+      }
+    } catch (error) {
+      console.error('Lỗi tải phường xã:', error)
+    }
   }
 }
 
@@ -500,16 +510,16 @@ onMounted(async () => {
 const handleSubmit = async () => {
   try {
     loading.value = true
-    
+
     // Validate form ref
     if (!formRef.value) {
       Message.error('Form không hợp lệ')
       loading.value = false
       return
     }
-    
+
     await formRef.value.validate()
-    
+
     // Validate tất cả các trường
     if (!formData.value.tenNhanVien) {
       Message.error('Vui lòng nhập tên nhân viên.')
@@ -638,10 +648,10 @@ const handleSubmit = async () => {
       // Chỉ gửi password nếu user nhập password mới (không rỗng)
       // Nếu password rỗng, backend sẽ tự động generate password mới
       const passwordValue = formData.value.matKhau?.trim() || ''
-      const isBcryptHash = passwordValue.startsWith('$2a$') || 
-                          passwordValue.startsWith('$2b$') || 
-                          passwordValue.startsWith('$2y$')
-      
+      const isBcryptHash = passwordValue.startsWith('$2a$') ||
+        passwordValue.startsWith('$2b$') ||
+        passwordValue.startsWith('$2y$')
+
       const payload: NhanVienRequest = {
         tenNhanVien: formData.value.tenNhanVien,
         tenTaiKhoan: formData.value.tenTaiKhoan,

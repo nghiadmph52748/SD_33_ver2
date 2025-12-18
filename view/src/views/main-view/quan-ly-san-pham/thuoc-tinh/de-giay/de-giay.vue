@@ -6,7 +6,8 @@
         <a-row :gutter="12">
           <a-col :span="8">
             <a-form-item label="Tìm kiếm">
-              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên đế giày..." allow-clear @input="searchSoles" />
+              <a-input v-model="filters.search" placeholder="Tìm theo mã hoặc tên đế giày..." allow-clear
+                @input="searchSoles" />
             </a-form-item>
           </a-col>
 
@@ -48,21 +49,13 @@
 
     <!-- Soles Table -->
     <a-card title="Danh sách đế giày" class="table-card">
-      <a-table
-        :columns="columns"
-        :data="soles"
-        :pagination="pagination"
-        :loading="loading"
-        :scroll="{ x: 1000 }"
-        @page-change="getDeGiayPage($event - 1)"
-        @page-size-change="
+      <a-table :columns="columns" :data="soles" :pagination="pagination" :loading="loading" :scroll="{ x: 1000 }"
+        @page-change="getDeGiayPage($event - 1)" @page-size-change="
           (size) => {
             pagination.pageSize = size
             getDeGiayPage(0)
           }
-        "
-        row-key="id"
-      >
+        " row-key="id">
         <template #stt="{ record, rowIndex }">
           <span>{{ rowIndex + 1 }}</span>
         </template>
@@ -84,7 +77,8 @@
         <template #action="{ record }">
           <a-space>
             <a-tooltip content="Thay đổi trạng thái">
-              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)" :loading="record.updating">
+              <a-switch :model-value="record.trangThai" type="round" @click="toggleStatus(record)"
+                :loading="record.updating">
                 <template #checked-icon>
                   <icon-check />
                 </template>
@@ -114,15 +108,8 @@
     </a-card>
 
     <!-- Add Sole Modal -->
-    <a-modal
-      v-model:visible="addModalVisible"
-      title="Thêm đế giày"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeAddModal"
-      @ok="confirmAddSole"
-    >
+    <a-modal v-model:visible="addModalVisible" title="Thêm đế giày" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeAddModal" @ok="confirmAddSole">
       <a-form :model="soleForm" :rules="formRules" layout="vertical" ref="addFormRef">
         <a-form-item>
           <template #label>
@@ -134,17 +121,9 @@
     </a-modal>
 
     <!-- Detail Sole Modal -->
-    <a-modal
-      v-model:visible="detailModalVisible"
-      title="Chi tiết đế giày"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeDetailModal"
-      @ok="closeDetailModal"
-      ok-text="Đóng"
-      :cancel-button-props="{ style: { display: 'none' } }"
-    >
+    <a-modal v-model:visible="detailModalVisible" title="Chi tiết đế giày" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeDetailModal" @ok="closeDetailModal" ok-text="Đóng"
+      :cancel-button-props="{ style: { display: 'none' } }">
       <a-descriptions :column="1" size="small">
         <a-descriptions-item label="Mã đế giày">{{ selectedSole?.maDeGiay }}</a-descriptions-item>
         <a-descriptions-item label="Tên đế giày">{{ selectedSole?.tenDeGiay }}</a-descriptions-item>
@@ -157,15 +136,8 @@
     </a-modal>
 
     <!-- Update Sole Modal -->
-    <a-modal
-      v-model:visible="updateModalVisible"
-      title="Cập nhật đế giày"
-      width="600px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="closeUpdateModal"
-      @ok="confirmUpdateSole"
-    >
+    <a-modal v-model:visible="updateModalVisible" title="Cập nhật đế giày" width="600px" :mask-closable="false"
+      :closable="true" @cancel="closeUpdateModal" @ok="confirmUpdateSole">
       <a-form :model="soleForm" :rules="formRules" layout="vertical" ref="updateFormRef">
         <a-form-item>
           <template #label>
@@ -186,27 +158,14 @@
     </a-modal>
 
     <!-- Confirmation Modal -->
-    <a-modal
-      v-model:visible="confirmModalVisible"
-      title="Xác nhận"
-      width="400px"
-      :mask-closable="false"
-      :closable="true"
-      @cancel="cancelConfirm"
-      @ok="executeConfirmedAction"
-    >
+    <a-modal v-model:visible="confirmModalVisible" title="Xác nhận" width="400px" :mask-closable="false"
+      :closable="true" @cancel="cancelConfirm" @ok="executeConfirmedAction">
       <p>{{ confirmMessage }}</p>
     </a-modal>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal
-      v-model:visible="showStatusConfirm"
-      title="Xác nhận thay đổi trạng thái"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmToggleStatus"
-      @cancel="cancelToggleStatus"
-    >
+    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
+      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
       <template #default>
         <div v-if="soleToToggleStatus">
           <div>Bạn có chắc chắn muốn {{ soleToToggleStatus.trangThai ? 'tạm ngưng' : 'kích hoạt' }} đế giày này?</div>
@@ -514,7 +473,7 @@ const getDeGiayPage = async (page) => {
     loading.value = true
     const res = await getDeGiayList(page, pagination.value.pageSize || 10)
     if (res.success) {
-      soles.value = res.data.data
+      soles.value = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.size || 10
       pagination.value.current = res.data.number + 1

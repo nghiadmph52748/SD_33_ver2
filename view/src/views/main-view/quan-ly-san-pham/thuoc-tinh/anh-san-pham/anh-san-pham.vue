@@ -145,7 +145,7 @@
             <a-descriptions-item label="Thư mục">{{ getFolderName(selectedImage.folder) }}</a-descriptions-item>
             <a-descriptions-item label="Ngày upload">{{ formatDate(selectedImage.uploaded_at) }}</a-descriptions-item>
             <a-descriptions-item label="Mô tả" :span="2">{{ selectedImage.description || 'Không có'
-              }}</a-descriptions-item>
+            }}</a-descriptions-item>
           </a-descriptions>
         </div>
       </div>
@@ -492,7 +492,7 @@ const loadImages = async () => {
         updateAt: item.updateAt,
         updateBy: item.updateBy,
         deleted: item.deleted,
-      }))
+      })).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
       pagination.value.pageSize = res.data.pageSize
       pagination.value.current = res.data.currentPage + 1

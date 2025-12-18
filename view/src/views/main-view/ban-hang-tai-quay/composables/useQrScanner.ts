@@ -34,8 +34,11 @@ export function useQrScanner(params: {
   currentOrder: Ref<Order | null>
   loadAllProducts: () => Promise<void>
   refreshProductStock: () => Promise<void>
+  userId: number
+  addProductToInvoiceApi: (invoiceId: number, productId: number, quantity: number, userId: number) => Promise<number>
+  pendingProductOperations: Ref<number>
 }) {
-  const { allProductVariants, currentOrder, loadAllProducts, refreshProductStock } = params
+  const { allProductVariants, currentOrder, loadAllProducts, refreshProductStock, userId, addProductToInvoiceApi, pendingProductOperations } = params
 
   const showQRScanner = ref(false)
   const qrScannerInstance = ref<Html5Qrcode | null>(null)
@@ -163,17 +166,17 @@ export function useQrScanner(params: {
 
   const handleQRScanSuccess = async (decodedText: string) => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useQrScanner.ts:164',message:'QR scan started',data:{decodedText,decodedTextLength:decodedText.length,decodedTextTrimmed:decodedText.trim(),totalProducts:allProductVariants.value.length,productsWithQr:allProductVariants.value.filter(p=>p.qrcode).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useQrScanner.ts:164', message: 'QR scan started', data: { decodedText, decodedTextLength: decodedText.length, decodedTextTrimmed: decodedText.trim(), totalProducts: allProductVariants.value.length, productsWithQr: allProductVariants.value.filter(p => p.qrcode).length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
     // #endregion
     try {
       if (qrScannerInstance.value) {
         try {
           await qrScannerInstance.value.stop()
-        } catch {}
+        } catch { }
       }
 
       // #region agent log
-      const allMatches: Array<{productId:any,productName:string,qrcode:string,maChiTietSanPham:string,matchType:string}> = [];
+      const allMatches: Array<{ productId: any, productName: string, qrcode: string, maChiTietSanPham: string, matchType: string }> = [];
       // #endregion
 
       // First, try exact matches and product code/ID matches (most specific)
@@ -182,7 +185,7 @@ export function useQrScanner(params: {
         const idMatch = decodedText === product.id?.toString()
         const codeMatch = decodedText === product.maChiTietSanPham
         const trimmedCodeMatch = decodedText.trim() === product.maChiTietSanPham?.trim()
-        
+
         // #region agent log
         if (exactQrMatch || idMatch || codeMatch || trimmedCodeMatch) {
           const matchType = exactQrMatch ? 'exactQr' : idMatch ? 'id' : codeMatch ? 'code' : 'trimmedCode'
@@ -195,10 +198,10 @@ export function useQrScanner(params: {
           })
         }
         // #endregion
-        
+
         return exactQrMatch || idMatch || codeMatch || trimmedCodeMatch
       })
-      
+
       // If no exact match found, try matching product code suffix (e.g., "85" matches "CTSP00085")
       if (!matchedProduct) {
         const numericMatch = /^\d+$/.test(decodedText.trim())
@@ -209,7 +212,7 @@ export function useQrScanner(params: {
             const codeEndsWith = product.maChiTietSanPham?.endsWith(numericValue) || false
             // Check if product ID matches
             const idMatch = product.id?.toString() === numericValue
-            
+
             // #region agent log
             if (codeEndsWith || idMatch) {
               const matchType = codeEndsWith ? 'codeSuffix' : 'id'
@@ -222,12 +225,12 @@ export function useQrScanner(params: {
               })
             }
             // #endregion
-            
+
             return codeEndsWith || idMatch
           })
         }
       }
-      
+
       // Last resort: substring matching only if QR code is NOT a URL (to avoid false matches on image URLs)
       if (!matchedProduct) {
         matchedProduct = allProductVariants.value.find((product) => {
@@ -235,10 +238,10 @@ export function useQrScanner(params: {
           // Skip substring matching if QR code looks like a URL (contains http:// or https://)
           const isUrl = product.qrcode.includes('http://') || product.qrcode.includes('https://')
           if (isUrl) return false
-          
+
           const includes1 = decodedText.includes(product.qrcode)
           const includes2 = product.qrcode.includes(decodedText)
-          
+
           // #region agent log
           if (includes1 || includes2) {
             const matchType = includes1 ? 'decodedIncludesQr' : 'qrIncludesDecoded'
@@ -251,13 +254,13 @@ export function useQrScanner(params: {
             })
           }
           // #endregion
-          
+
           return includes1 || includes2
         })
       }
 
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useQrScanner.ts:200',message:'Product matching results',data:{decodedText,allMatchesCount:allMatches.length,allMatches,matchedProductId:matchedProduct?.id,matchedProductName:matchedProduct?.tenSanPham,matchedProductQr:matchedProduct?.qrcode,matchedProductCode:matchedProduct?.maChiTietSanPham},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useQrScanner.ts:200', message: 'Product matching results', data: { decodedText, allMatchesCount: allMatches.length, allMatches, matchedProductId: matchedProduct?.id, matchedProductName: matchedProduct?.tenSanPham, matchedProductQr: matchedProduct?.qrcode, matchedProductCode: matchedProduct?.maChiTietSanPham }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,B,D' }) }).catch(() => { });
       // #endregion
 
       if (!matchedProduct) {
@@ -265,7 +268,7 @@ export function useQrScanner(params: {
         const availableQrCodes = allProductVariants.value
           .filter((p) => p.qrcode)
           .map((p) => ({ id: p.id, qrcode: p.qrcode, maChiTietSanPham: p.maChiTietSanPham, tenSanPham: p.tenSanPham }))
-        fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useQrScanner.ts:210',message:'No product matched',data:{decodedText,availableQrCodesCount:availableQrCodes.length,availableQrCodes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useQrScanner.ts:210', message: 'No product matched', data: { decodedText, availableQrCodesCount: availableQrCodes.length, availableQrCodes }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,B' }) }).catch(() => { });
         // #endregion
         console.error('[DEBUG] No product found with QR code:', decodedText)
         console.error(
@@ -294,7 +297,7 @@ export function useQrScanner(params: {
       }
 
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useQrScanner.ts:220',message:'Adding matched product to cart',data:{decodedText,matchedProductId:matchedProduct.id,matchedProductName:matchedProduct.tenSanPham,matchedProductQr:matchedProduct.qrcode,matchedProductCode:matchedProduct.maChiTietSanPham,allMatchesCount:allMatches.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/3405a138-a1a6-40cb-a8cf-af962051dc96', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useQrScanner.ts:220', message: 'Adding matched product to cart', data: { decodedText, matchedProductId: matchedProduct.id, matchedProductName: matchedProduct.tenSanPham, matchedProductQr: matchedProduct.qrcode, matchedProductCode: matchedProduct.maChiTietSanPham, allMatchesCount: allMatches.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A,B,D' }) }).catch(() => { });
       // #endregion
       await addProductToCart(matchedProduct, 1)
       await closeQRScanner()
@@ -316,53 +319,71 @@ export function useQrScanner(params: {
         throw new Error('Không tìm thấy đơn hàng hiện tại')
       }
 
-      const existingItem = currentOrder.value.items.find((item) => item.productId === product.id?.toString())
-
-      if (existingItem) {
-        const newQuantity = existingItem.quantity + quantity
-        if (product.soLuong !== undefined && newQuantity > product.soLuong) {
-          throw new Error(`Tổng số lượng (${newQuantity}) vượt quá tồn kho (${product.soLuong})`)
-        }
-        existingItem.quantity = newQuantity
-        Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${newQuantity}`)
-      } else {
-        const item: CartItem = {
-          id: `${Date.now()}_${Math.random()}`,
-          productId: product.id?.toString() || '',
-          productName: product.tenSanPham || '',
-          price: product.giaBan || 0,
-          discount: product.giaTriGiamGia || 0,
-          quantity,
-          image: product.anhSanPham?.[0] || '',
-          tenChiTietSanPham: product.tenChiTietSanPham || '',
-          tenMauSac: product.tenMauSac || '',
-          maMau: product.maMau || '',
-          tenKichThuoc: product.tenKichThuoc || '',
-          tenDeGiay: product.tenDeGiay || '',
-          tenChatLieu: product.tenChatLieu || '',
-        }
-        currentOrder.value.items.push(item)
-        Message.success('Thêm sản phẩm vào giỏ hàng thành công')
+      const invoiceId = parseInt(currentOrder.value.id, 10)
+      const productId = product.id
+      if (!productId || Number.isNaN(invoiceId)) {
+        throw new Error('Dữ liệu đơn hàng không hợp lệ')
       }
 
-      const productInVariants = allProductVariants.value.find((p) => p.id === product.id)
-      if (productInVariants && typeof productInVariants.soLuong === 'number') {
-        productInVariants.soLuong = Math.max(0, productInVariants.soLuong - quantity)
-      }
+      // Track pending operation to prevent race conditions with voucher application
+      pendingProductOperations.value++
+      console.log('[QR Scanner] Incremented pending operations to:', pendingProductOperations.value)
 
       try {
-        const qrStockBroadcastChannel = new BroadcastChannel('stock-update-channel')
-        qrStockBroadcastChannel.postMessage({
-          type: 'STOCK_CHANGE',
-          productId: product.id,
-          needsRefresh: true,
-        })
-        qrStockBroadcastChannel.close()
-      } catch (error) {
-        console.warn('BroadcastChannel broadcast failed:', error)
-      }
+        // Call backend API to save product to database
+        const idHoaDonChiTiet = await addProductToInvoiceApi(invoiceId, productId, quantity, userId)
+        console.log('[QR Scanner] Product saved to database, idHoaDonChiTiet:', idHoaDonChiTiet)
 
-      await refreshProductStock()
+        // Update local cart state after successful API call
+        const existingItem = currentOrder.value.items.find((item) => item.productId === product.id?.toString())
+
+        if (existingItem) {
+          existingItem.quantity += quantity
+          if (idHoaDonChiTiet) {
+            if (!existingItem.idHoaDonChiTiets) existingItem.idHoaDonChiTiets = []
+            existingItem.idHoaDonChiTiets.push(idHoaDonChiTiet)
+          }
+          Message.success(`Cập nhật số lượng sản phẩm. Tổng cộng: ${existingItem.quantity}`)
+        } else {
+          const item: CartItem = {
+            id: `${Date.now()}_${Math.random()}`,
+            idHoaDonChiTiets: idHoaDonChiTiet ? [idHoaDonChiTiet] : [],
+            productId: product.id?.toString() || '',
+            productName: product.tenSanPham || '',
+            price: product.giaBan || 0,
+            discount: product.giaTriGiamGia || 0,
+            quantity,
+            image: product.anhSanPham?.[0] || '',
+            tenChiTietSanPham: product.maChiTietSanPham || '',
+            tenMauSac: product.tenMauSac || '',
+            maMau: product.maMau || '',
+            tenKichThuoc: product.tenKichThuoc || '',
+            tenDeGiay: product.tenDeGiay || '',
+            tenChatLieu: product.tenChatLieu || '',
+          }
+          currentOrder.value.items.push(item)
+          Message.success('Thêm sản phẩm vào giỏ hàng thành công')
+        }
+
+        // Refresh product stock
+        await refreshProductStock()
+
+        // Broadcast stock change
+        try {
+          const qrStockBroadcastChannel = new BroadcastChannel('stock-update-channel')
+          qrStockBroadcastChannel.postMessage({
+            type: 'STOCK_CHANGE',
+            productId: product.id,
+            needsRefresh: true,
+          })
+          qrStockBroadcastChannel.close()
+        } catch (error) {
+          console.warn('BroadcastChannel broadcast failed:', error)
+        }
+      } finally {
+        pendingProductOperations.value--
+        console.log('[QR Scanner] Decremented pending operations to:', pendingProductOperations.value)
+      }
     } catch (error) {
       console.error('Error adding product to cart:', error)
       throw error
