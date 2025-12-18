@@ -535,17 +535,17 @@ const loadManufacturersWithUpdatedFirst = async (updatedId?: number, isNewItem: 
   try {
     const res = await getNhaSanXuatList(0, 9)
     if (res.success) {
-      let manufacturersData = res.data.data
+      let manufacturersData = (res.data.data || []).sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
       pagination.value.total = res.data.totalElements
-      pagination.value.pageSize = res.data.pageSize
-      pagination.value.current = res.data.currentPage + 1
+      pagination.value.pageSize = res.data.size
+      pagination.value.current = res.data.number + 1
 
       // If there's an updated item and it's not a new item, move it to the front
       if (updatedId && !isNewItem) {
         const updatedIndex = manufacturersData.findIndex((manufacturer) => manufacturer.id === updatedId)
         if (updatedIndex > 0) {
           const updatedItem = manufacturersData.splice(updatedIndex, 1)[0]
-          manufacturersData = [updatedItem, ...manufacturersData.slice(0, updatedIndex), ...manufacturersData.slice(updatedIndex)]
+          manufacturersData = [updatedItem, ...manufacturersData]
         }
       }
 

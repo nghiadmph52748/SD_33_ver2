@@ -2,6 +2,8 @@ package org.example.be_sp.model.response;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.Collections;
 
 import org.example.be_sp.entity.HoaDonChiTiet;
 
@@ -127,6 +129,22 @@ public class HoaDonChiTietResponse {
             this.tenSanPham = d.getGhiChu();
         }
 
+        // Link variant ID and images
+        if (d.getIdChiTietSanPham() != null) {
+            this.sanPhamId = d.getIdChiTietSanPham().getId();
+
+            if (d.getIdChiTietSanPham().getChiTietSanPhamAnhs() != null) {
+                this.anhSanPham = d.getIdChiTietSanPham().getChiTietSanPhamAnhs().stream()
+                        .filter(anh -> anh != null && anh.getIdAnhSanPham() != null
+                                && Boolean.TRUE.equals(anh.getTrangThai()) && Boolean.FALSE.equals(anh.getDeleted()))
+                        .map(anh -> anh.getIdAnhSanPham().getDuongDanAnh())
+                        .filter(url -> url != null)
+                        .collect(Collectors.toList());
+            } else {
+                this.anhSanPham = Collections.emptyList();
+            }
+        }
+
         // Thông tin chi tiết hóa đơn
         this.soLuong = d.getSoLuong();
         this.giaBan = d.getGiaBan();
@@ -137,9 +155,9 @@ public class HoaDonChiTietResponse {
         this.tenSanPhamChiTiet = d.getTenSanPhamChiTiet();
         this.maSanPhamChiTiet = d.getMaSanPhamChiTiet();
         this.deleted = d.getDeleted();
-//        if (d.getIdChiTietSanPham() != null) {
-//            this.sanPham = new ChiTietSanPhamFullResponse(d.getIdChiTietSanPham());
-//        }
+        // if (d.getIdChiTietSanPham() != null) {
+        // this.sanPham = new ChiTietSanPhamFullResponse(d.getIdChiTietSanPham());
+        // }
 
     }
 

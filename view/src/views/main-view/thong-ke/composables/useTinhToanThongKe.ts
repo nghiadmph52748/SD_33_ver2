@@ -416,11 +416,62 @@ export function useTinhToanThongKe(
         const giaBan = Number(item?.giaBan ?? item?.donGia ?? 0)
         const thanhTien = Number(item?.thanhTien ?? giaBan * soLuong)
 
-        console.log('🛍️ Sản phẩm:', tenSanPham, '- SL:', soLuong, '- Giá:', giaBan, '- Thành tiền:', thanhTien)
+        // Lấy thông tin ảnh
+        let anhSanPham = '/default-product.png'
+
+        // 1. Thử lấy từ item trực tiếp (ưu tiên anhSanPham từ backend mới trả về)
+        if (item?.anhSanPham) {
+          if (Array.isArray(item.anhSanPham) && item.anhSanPham.length > 0) {
+            anhSanPham = item.anhSanPham[0]
+          } else if (typeof item.anhSanPham === 'string' && item.anhSanPham !== '') {
+            anhSanPham = item.anhSanPham
+          }
+        }
+
+        if (anhSanPham === '/default-product.png') {
+          if (item?.anh) anhSanPham = item.anh
+          else if (item?.image) anhSanPham = item.image
+          else if (item?.idChiTietSanPham?.idSanPham?.anh) anhSanPham = item.idChiTietSanPham.idSanPham.anh
+        }
+
+        // 2. Nếu chưa có, thử tìm trong danhSachChiTietSanPham
+        // item.idChiTietSanPham có thể là object hoặc id. item.sanPhamId là id từ backend mới (nếu có)
+        const idChiTiet = item?.sanPhamId || (typeof item?.idChiTietSanPham === 'object' ? item?.idChiTietSanPham?.id : item?.idChiTietSanPham)
+
+        if (idChiTiet && anhSanPham === '/default-product.png') {
+          const detail = danhSachChiTietSanPham.value.find((ct) => ct.id === idChiTiet)
+          if (detail) {
+            // Kiểm tra các trường ảnh có thể có
+            if (detail.anhSanPham) {
+              // Nếu là mảng ảnh (link cloud), lấy cái đầu tiên
+              if (Array.isArray(detail.anhSanPham) && detail.anhSanPham.length > 0) {
+                anhSanPham = detail.anhSanPham[0]
+              }
+              // Nếu là string (1 link)
+              else if (typeof detail.anhSanPham === 'string' && detail.anhSanPham.trim() !== '') {
+                anhSanPham = detail.anhSanPham
+              }
+            }
+
+            // Nếu vẫn chưa có ảnh, thử các trường khác
+            if (anhSanPham === '/default-product.png') {
+              if (detail.anh) anhSanPham = detail.anh
+              else if (detail.hinhAnh) anhSanPham = detail.hinhAnh
+              else if (detail.idSanPham?.anh) anhSanPham = detail.idSanPham.anh
+            }
+          }
+        }
+
+        console.log('🛍️ Sản phẩm:', tenSanPham, '- SL:', soLuong, '- Giá:', giaBan, '- Thành tiền:', thanhTien, '- Ảnh:', anhSanPham)
 
         if (tenSanPham && tenSanPham !== 'Sản phẩm không xác định' && soLuong > 0) {
           if (!map[tenSanPham]) {
-            map[tenSanPham] = { name: tenSanPham, value: 0, revenue: 0 }
+            map[tenSanPham] = { name: tenSanPham, value: 0, revenue: 0, image: anhSanPham }
+          } else {
+            // Nếu sản phẩm đã tồn tại nhưng chưa có ảnh (hoặc ảnh default), cập nhật ảnh mới nếu có
+            if (map[tenSanPham].image === '/default-product.png' && anhSanPham !== '/default-product.png') {
+              map[tenSanPham].image = anhSanPham
+            }
           }
           map[tenSanPham].value += soLuong
           map[tenSanPham].revenue += thanhTien
@@ -645,7 +696,7 @@ export function useTinhToanThongKe(
       sanPhamBanChayNhat.value = duLieuSanPhamBanChay.value.map((sp, index) => ({
         id: index + 1,
         tenSanPham: sp.name,
-        anh: '/default-product.png',
+        anh: sp.image || '/default-product.png',
         giaBan: sp.revenue / sp.value || 0,
         soLuongDaBan: sp.value,
       }))
