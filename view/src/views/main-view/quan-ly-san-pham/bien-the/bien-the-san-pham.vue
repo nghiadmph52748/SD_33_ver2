@@ -157,7 +157,7 @@
         </template>
         <template #selection="{ record }">
           <a-checkbox :model-value="selectedVariants.includes(String(record.id))" @change="
-            (checked) => {
+            (checked: boolean | string | number | any) => {
               const id = String(record.id)
               if (checked) {
                 if (!selectedVariants.includes(id)) {
@@ -265,7 +265,7 @@
           <a-tag
             :color="record.trangThai && !record.deleted ? 'green' : record.trangThai && record.deleted ? 'orange' : 'red'">
             {{ record.trangThai && !record.deleted ? 'Đang bán' : !record.trangThai && !record.deleted ? 'Hết hàng' :
-            'Tạm ngưng bán' }}
+              'Tạm ngưng bán' }}
           </a-tag>
         </template>
 
@@ -294,48 +294,77 @@
                 <icon-edit />
               </template>
             </a-button>
-            <!-- <a-tooltip content="Xóa/Khôi phục biến thể">
+            <a-tooltip content="Xóa/Khôi phục biến thể">
               <a-button type="text" danger @click="onDeleteClick(record)">
                 <template #icon>
                   <icon-delete />
                 </template>
               </a-button>
-            </a-tooltip> -->
+            </a-tooltip>
           </a-space>
         </template>
       </a-table>
     </a-card>
 
     <!-- Delete Confirm Modal -->
-    <a-modal v-model:visible="showDeleteConfirm" title="Xác nhận xoá" ok-text="Xoá" cancel-text="Huỷ"
-      @ok="confirmDelete" @cancel="cancelDelete">
-      <template #default>
-        <div>Bạn có chắc chắn muốn xoá biến thể này?</div>
-        <div v-if="variantToDelete">
-          Mã biến thể:
-          <strong>{{ variantToDelete.maChiTietSanPham }}</strong>
+    <!-- Delete Confirm Modal -->
+    <Transition name="confirm-fade">
+      <div v-if="showDeleteConfirm" class="confirm-modal-overlay" @click.self="cancelDelete">
+        <div class="confirm-modal">
+          <div class="modal-header">
+            <h3>Xác nhận xóa biến thể</h3>
+            <button class="close-btn" @click="cancelDelete">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="warning-box">
+              <div class="warning-icon">🗑️</div>
+              <div class="warning-text">
+                Bạn có chắc chắn muốn xóa biến thể này? Hành động này không thể hoàn tác.
+              </div>
+            </div>
+            <div v-if="variantToDelete" class="item-details">
+              <p><strong>Mã biến thể:</strong> {{ variantToDelete.maChiTietSanPham }}</p>
+              <p><strong>Tên sản phẩm:</strong> {{ variantToDelete.tenSanPham }}</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-cancel" @click="cancelDelete">Hủy</button>
+            <button class="btn-confirm" @click="confirmDelete">Xác nhận xóa</button>
+          </div>
         </div>
-      </template>
-    </a-modal>
+      </div>
+    </Transition>
 
     <!-- Status Toggle Confirm Modal -->
-    <a-modal v-model:visible="showStatusConfirm" title="Xác nhận thay đổi trạng thái" ok-text="Xác nhận"
-      cancel-text="Huỷ" @ok="confirmToggleStatus" @cancel="cancelToggleStatus">
-      <template #default>
-        <div v-if="variantToToggleStatus">
-          <div>Bạn có chắc chắn muốn {{ !variantToToggleStatus.deleted ? 'tạm ngưng bán' : 'kích hoạt bán' }} biến thể
-            này?</div>
-          <div>
-            Mã biến thể:
-            <strong>{{ variantToToggleStatus.maChiTietSanPham }}</strong>
+    <Transition name="confirm-fade">
+      <div v-if="showStatusConfirm" class="confirm-modal-overlay" @click.self="cancelToggleStatus">
+        <div class="confirm-modal">
+          <div class="modal-header">
+            <h3>Thay đổi trạng thái bán</h3>
+            <button class="close-btn" @click="cancelToggleStatus">✕</button>
           </div>
-          <div>
-            Trạng thái hiện tại:
-            <strong>{{ !variantToToggleStatus.deleted ? 'Đang bán' : 'Tạm ngưng bán' }}</strong>
+          <div class="modal-body" v-if="variantToToggleStatus">
+            <div class="warning-box info">
+              <div class="warning-icon">ℹ️</div>
+              <div class="warning-text">
+                Bạn có chắc chắn muốn {{ !variantToToggleStatus.deleted ? 'tạm ngưng bán' : 'kích hoạt bán' }} biến thể
+                này?
+              </div>
+            </div>
+            <div class="item-details">
+              <p><strong>Mã biến thể:</strong> {{ variantToToggleStatus.maChiTietSanPham }}</p>
+              <p><strong>Trạng thái hiện tại:</strong> {{ !variantToToggleStatus.deleted ? 'Đang bán' : 'Tạm ngưng bán'
+                }}
+              </p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-cancel" @click="cancelToggleStatus">Hủy</button>
+            <button class="btn-confirm primary" @click="confirmToggleStatus">Xác nhận</button>
           </div>
         </div>
-      </template>
-    </a-modal>
+      </div>
+    </Transition>
 
     <!-- Image Slideshow Modal -->
     <a-modal v-model:visible="showImageSlideshow" title="Xem ảnh sản phẩm" width="900px" :footer="false">
@@ -377,7 +406,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import MiniCarousel from '@/components/MiniCarousel.vue'
 import { exportToExcel, EXPORT_HEADERS } from '@/utils/export-excel'
-import { IconEdit, IconCheck, IconClose, IconRefresh, IconDownload, IconEye, IconScan } from '@arco-design/web-vue/es/icon'
+import { IconEdit, IconCheck, IconClose, IconRefresh, IconDownload, IconEye, IconScan, IconDelete } from '@arco-design/web-vue/es/icon'
 import {
   getSanPhamOptions,
   getMauSacOptions,
@@ -1309,7 +1338,7 @@ const viewDetail = (variant: any) => {
 
 // Confirm modal states
 const showStatusConfirm = ref(false)
-const variantToToggleStatus = ref(null)
+const variantToToggleStatus = ref<any>(null)
 
 const editVariant = (variant: any) => {
   router.push(`/quan-ly-san-pham/bien-the/update/${variant.id}`)
@@ -1434,7 +1463,12 @@ const deleteVariant = async (variant: any) => {
 
 // Delete confirm modal state
 const showDeleteConfirm = ref(false)
-const variantToDelete = ref(null)
+const variantToDelete = ref<any>(null)
+
+const onDeleteClick = (variant: any) => {
+  variantToDelete.value = variant
+  showDeleteConfirm.value = true
+}
 
 const confirmDelete = async () => {
   deleteVariant(variantToDelete.value)
@@ -1832,5 +1866,169 @@ watch(
   opacity: 0.85;
   box-shadow: 0 0 8px rgba(24, 144, 255, 0.4);
   transform: scale(1.02);
+}
+
+/* Custom Modal Styles */
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.confirm-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modal-pop {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.confirm-fade-enter-active,
+.confirm-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.confirm-fade-enter-from,
+.confirm-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #333;
+    }
+  }
+}
+
+.modal-body {
+  padding: 24px;
+
+  .warning-box {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: #fff1f0;
+    border: 1px solid #ffa39e;
+    border-radius: 12px;
+    margin-bottom: 20px;
+
+    &.info {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+
+      .warning-text {
+        color: #0050b3;
+      }
+    }
+
+    .warning-icon {
+      font-size: 20px;
+    }
+
+    .warning-text {
+      font-size: 14px;
+      color: #cf1322;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+  }
+
+  .item-details {
+    padding: 12px 16px;
+    background: #f5f5f5;
+    border-radius: 8px;
+
+    p {
+      margin: 4px 0;
+      font-size: 13px;
+      color: #434343;
+    }
+  }
+}
+
+.modal-footer {
+  padding: 16px 24px 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+
+  button {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel {
+    background: #f0f0f0;
+    color: #666;
+
+    &:hover {
+      background: #e5e5e5;
+    }
+  }
+
+  .btn-confirm {
+    background: #ff4d4f;
+    color: white;
+
+    &:hover {
+      background: #ff7875;
+      box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+    }
+
+    &.primary {
+      background: #1890ff;
+
+      &:hover {
+        background: #40a9ff;
+        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+      }
+    }
+  }
 }
 </style>

@@ -1,4 +1,5 @@
 @import './custom.less';
+
 * {
   box-sizing: border-box;
 }
@@ -22,6 +23,7 @@ body {
   /* Note: backdrop-filter has minimal browser support */
 
   border-radius: 6px !important;
+
   .content-panel {
     display: flex;
     justify-content: space-between;
@@ -34,12 +36,15 @@ body {
     border-radius: 4px;
     margin-bottom: 4px;
   }
+
   .tooltip-title {
     margin: 0 0 10px 0;
   }
+
   p {
     margin: 0;
   }
+
   .tooltip-title,
   .tooltip-value {
     font-size: 13px;
@@ -50,6 +55,7 @@ body {
     color: #1d2129;
     font-weight: bold;
   }
+
   .tooltip-item-icon {
     display: inline-block;
     margin-right: 8px;
@@ -62,12 +68,14 @@ body {
 .general-card {
   border-radius: 4px;
   border: none;
-  & > .arco-card-header {
+
+  &>.arco-card-header {
     height: auto;
     padding: 20px;
     border: none;
   }
-  & > .arco-card-body {
+
+  &>.arco-card-body {
     padding: 0 0 20px 0;
   }
 }
@@ -84,6 +92,7 @@ body {
     height: 6px;
     border-radius: 50%;
     background-color: rgb(var(--blue-6));
+
     &.pass {
       background-color: rgb(var(--green-6));
     }

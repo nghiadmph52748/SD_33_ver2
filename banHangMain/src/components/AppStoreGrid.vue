@@ -1,66 +1,39 @@
 <template>
   <div class="storegrid">
     <section class="content-wrapper">
-      <header class="content-header">
+      <header class="content-header" :class="{ simple: eyebrow === '' }">
         <div>
-          <p class="eyebrow">{{ $t("store.allSneakers") }}</p>
-          <h2>{{ $t("store.browseCollection") }}</h2>
+          <p class="eyebrow" v-if="eyebrow !== ''">{{ eyebrow || $t("store.allSneakers") }}</p>
+          <h2>{{ title || $t("store.browseCollection") }}</h2>
         </div>
-        <p class="content-meta">
+        <div class="content-meta" v-if="eyebrow !== ''">
           {{ contentMeta }}
-        </p>
+        </div>
       </header>
-      <TransitionGroup
-        name="items"
-        tag="div"
-        class="content"
-        role="list"
-        :aria-label="t('store.productListAria')"
-      >
+      <TransitionGroup name="items" tag="div" class="content" role="list" :aria-label="t('store.productListAria')">
         <template v-if="loading">
-          <ProductCardSkeleton
-            v-for="n in skeletonCount"
-            :key="`skeleton-${n}`"
-          />
+          <ProductCardSkeleton v-for="n in skeletonCount" :key="`skeleton-${n}`" />
         </template>
-        <RouterLink
-          v-else
-          v-for="item in filteredProducts"
-          :key="item.id"
-          :to="{
-            path: `/product/${item.id}`,
-            query: props.sourcePage && props.sourcePage !== 'all' ? { from: props.sourcePage } : {}
-          }"
-          class="item"
-          role="listitem"
-          :aria-labelledby="`product-title-${item.id}`"
-        >
+        <RouterLink v-else v-for="item in filteredProducts" :key="item.id" :to="{
+          path: `/product/${item.id}`,
+          query: props.sourcePage && props.sourcePage !== 'all' ? { from: props.sourcePage } : {}
+        }" class="item" role="listitem" :aria-labelledby="`product-title-${item.id}`">
           <div class="item__media">
             <div v-if="!imageLoaded[item.id]" class="image-skeleton">
               <div class="skeleton-shimmer"></div>
             </div>
-            <img
-              :src="item.img"
-              :alt="item.name"
-              loading="lazy"
-              crossorigin="anonymous"
-              :class="{ loaded: imageLoaded[item.id] }"
-              @load="(event) => handleImageLoad(String(item.id), event)"
-              v-img-fallback
-            />
+            <img :src="item.img" :alt="item.name" loading="lazy" crossorigin="anonymous"
+              :class="{ loaded: imageLoaded[item.id] }" @load="(event) => handleImageLoad(String(item.id), event)"
+              v-img-fallback />
           </div>
           <div class="item__body">
             <div class="item__price">
-              <span
-                v-if="item.originalPrice && item.originalPrice > item.price"
-                class="item__price-original"
-                >{{ formatCurrency(item.originalPrice) }}</span
-              >
+              <span v-if="item.originalPrice && item.originalPrice > item.price" class="item__price-original">{{
+                formatCurrency(item.originalPrice) }}</span>
               <span class="item__price-current">
                 {{ formatCurrency(item.price)
                 }}<span v-if="item.priceMax && item.priceMax !== item.price">
-                  - {{ formatCurrency(item.priceMax) }}</span
-                >
+                  - {{ formatCurrency(item.priceMax) }}</span>
               </span>
             </div>
             <h3 class="item__title" :id="`product-title-${item.id}`">
@@ -93,6 +66,8 @@ const props = defineProps<{
   data: Product[];
   loading?: boolean;
   sourcePage?: 'men' | 'women' | 'all';
+  title?: string;
+  eyebrow?: string;
 }>();
 
 const skeletonCount = 8; // Number of skeleton cards to show
@@ -194,14 +169,14 @@ function handleImageLoad(productId: string, event: Event) {
   // Mark image as loaded
   imageLoaded[productId] = true;
 
-  // Crop surrounding background so the product fills the card better
-  if (!target.dataset.cropped) {
-    const cropped = cropToContent(target);
-    if (cropped) {
-      target.src = cropped;
-      target.dataset.cropped = "true";
-    }
-  }
+  // Disable cropping as it might cut off parts of the image
+  // if (!target.dataset.cropped) {
+  //   const cropped = cropToContent(target);
+  //   if (cropped) {
+  //     target.src = cropped;
+  //     target.dataset.cropped = "true";
+  //   }
+  // }
 
   const extractedColor = extractAverageColor(target);
   if (extractedColor) {
@@ -452,89 +427,98 @@ function getSpecialTag(item: Product): string | null {
 
 <style scoped lang="scss">
 .storegrid {
-  width: min(1240px, 100%);
-  margin: clamp(32px, 6vw, 64px) auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: clamp(28px, 4vw, 48px);
-  align-items: start;
-  padding-inline: clamp(16px, 4vw, 32px);
+  width: min(1320px, 100%);
+  margin: 0 auto;
+  display: block;
+  padding-inline: 24px;
 }
 
 .content-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
 }
 
 .content-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .content-header h2 {
-  margin: 4px 0 0;
-  font-family: var(--font-family-serif);
-  font-size: var(--font-size-2xl);
-  line-height: var(--line-height-tight);
-  color: var(--color-text-primary);
+  margin: 0;
+  /* font-family: var(--font-family-serif, "Times New Roman", serif); - Removed to start using Inter */
+  font-size: 24px;
+  line-height: 1.2;
+  color: #111;
+  font-weight: 500;
 }
 
 .content-header .eyebrow {
-  margin: 0;
+  margin: 0 0 6px 0;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
 }
 
 .content-meta {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.content-header.simple {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 32px;
+}
+
+.content-header.simple h2 {
+  font-size: 24px;
 }
 
 .content {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(24px, 3vw, 32px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Bigger cards -> Bigger images */
+  gap: 40px 24px;
 }
 
 .item {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 16px;
+  background: transparent;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
-    outline 0.2s ease;
-  overflow: hidden;
-  aspect-ratio: 1 / 1.2;
+  transition: all 0.3s ease;
+  border-radius: 12px;
 }
 
+/* Hover Effect: Lift */
 .item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  border-color: #b0b0b0;
-  outline: 1px solid rgba(0, 0, 0, 0.12);
-  outline-offset: -1px;
-  z-index: 1;
+  transform: translateY(-6px);
 }
 
 .item__media {
   position: relative;
-  flex: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f5f5f5;
+  width: 100%;
+  /* Fluid height based on image */
+  display: block;
+  background: transparent;
   overflow: hidden;
-  min-height: 0;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  transition: box-shadow 0.3s ease;
+}
+
+.item:hover .item__media {
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.12);
 }
 
 .image-skeleton {
@@ -543,79 +527,45 @@ function getSpecialTag(item: Product): string | null {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: #ffffff;
 }
 
 .image-skeleton .skeleton-shimmer {
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-.item__media.image-loading img.image-placeholder,
-.item__media img.image-placeholder {
-  background: linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
+  background: linear-gradient(90deg, #f3f4f6 0%, #ffffff 50%, #f3f4f6 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
 .item__media img {
   width: 100%;
-  height: 100%;
+  height: auto;
+  /* Natural height */
+  display: block;
   object-fit: contain;
-  object-position: center;
+  padding: 0;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease, transform 0.5s ease;
 }
 
 .item__media img.loaded {
   opacity: 1;
 }
 
+.item:hover .item__media img {
+  transform: scale(1.05);
+  /* Subtle zoom */
+}
+
 .item__body {
   flex: 1;
+  /* Ensure body fills space for alignment */
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 6px;
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.item__price {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  column-gap: 8px;
-  row-gap: 2px;
-  font-family: "Times New Roman", Times, serif;
-  font-size: 16px;
-  font-weight: 700;
-  color: #111;
-  line-height: 1.2;
-  margin: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.item__price-original {
-  font-family: "Times New Roman", Times, serif;
-  font-size: 14px;
-  font-weight: 400;
-  color: #9ca3af;
-  text-decoration: line-through;
-  white-space: nowrap;
-}
-
-.item__price-current {
-  font-family: "Times New Roman", Times, serif;
-  font-size: 16px;
-  font-weight: 700;
-  color: #111;
-  white-space: nowrap;
+  gap: 4px;
+  padding: 0 4px;
+  /* Minimal side padding */
 }
 
 .item__title {
@@ -623,47 +573,110 @@ function getSpecialTag(item: Product): string | null {
   font-size: 15px;
   font-weight: 600;
   color: #111;
-  line-height: 1.3;
+  line-height: 1.4;
+  /* Truncate to 2 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.2s;
+}
+
+.item:hover .item__title {
+  color: #2563eb;
+  /* Brand color on hover */
+}
+
+.item__price {
+  display: flex;
+  flex-direction: column-reverse;
+  /* Current price on top, easy readability */
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: 4px;
+  font-family: inherit;
+  font-weight: 700;
+  color: #111;
+}
+
+.item__price-current {
+  white-space: nowrap;
+  font-size: 16px;
+  /* Primary emphasis */
+  color: #000;
+}
+
+.item__price-original {
+  font-size: 12px;
+  color: #9ca3af;
+  text-decoration: line-through;
+  font-weight: 400;
 }
 
 .item__meta {
+  margin-top: auto;
+  /* Push to bottom */
+  padding-top: 8px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 2px;
-}
-
-.item__category,
-.item__colours {
-  font-size: 13px;
-  font-weight: 400;
+  gap: 8px;
+  font-size: 12px;
   color: #6b7280;
-  line-height: 1.4;
 }
 
 .item__tag {
-  font-size: 13px;
-  font-weight: 400;
-  color: #6b7280;
-  line-height: 1.4;
-  margin-top: 2px;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 2;
+  color: #111;
 }
-
-/* removed aside filter-card and slider styling */
 
 @media (max-width: 1024px) {
-  .storegrid {
-    grid-template-columns: 1fr;
-  }
-
   .content {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 768px) {
+  .storegrid {
+    padding-inline: 16px;
+    margin-top: 24px;
+  }
+
   .content {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px 12px;
+  }
+
+  .content-header h2 {
+    font-size: 20px;
+  }
+
+  .item__media {
+    aspect-ratio: 1/1.15;
+  }
+
+  .item__tag {
+    top: 8px;
+    left: 8px;
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  .item__title {
+    font-size: 14px;
+  }
+
+  .item__price {
+    font-size: 15px;
   }
 }
 
@@ -671,6 +684,7 @@ function getSpecialTag(item: Product): string | null {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }

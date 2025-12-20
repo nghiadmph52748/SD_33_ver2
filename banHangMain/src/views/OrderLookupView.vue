@@ -11,31 +11,20 @@
         <form class="lookup-form" @submit.prevent="lookupOrder">
           <label class="field">
             <span>{{ $t("orderLookup.form.codeLabel") }}</span>
-            <input
-              v-model.trim="orderCode"
-              type="text"
-              :placeholder="$t('orderLookup.form.codePlaceholder')"
-              autocomplete="off"
-              inputmode="text"
-              @blur="orderCode = orderCode.toUpperCase()"
-            />
+            <input v-model.trim="orderCode" type="text" :placeholder="$t('orderLookup.form.codePlaceholder')"
+              autocomplete="off" inputmode="text" @blur="orderCode = orderCode.toUpperCase()" />
             <small v-if="formErrors.code" class="field-error">{{
               formErrors.code
-            }}</small>
+              }}</small>
           </label>
 
           <label class="field" v-if="isAuthenticated">
             <span>{{ $t("orderLookup.form.contactLabel") }}</span>
-            <input
-              v-model.trim="contactValue"
-              type="text"
-              :placeholder="$t('orderLookup.form.contactPlaceholder')"
-              autocomplete="off"
-              inputmode="text"
-            />
+            <input v-model.trim="contactValue" type="text" :placeholder="$t('orderLookup.form.contactPlaceholder')"
+              autocomplete="off" inputmode="text" />
             <small v-if="formErrors.contact" class="field-error">{{
               formErrors.contact
-            }}</small>
+              }}</small>
           </label>
           <p v-else class="form-hint">
             {{ $t("orderLookup.form.guestHint") }}
@@ -43,11 +32,7 @@
 
           <button class="submit-btn" type="submit" :disabled="isLoading">
             <span class="btn-content">
-              <span
-                v-if="isLoading"
-                class="inline-spinner"
-                aria-hidden="true"
-              ></span>
+              <span v-if="isLoading" class="inline-spinner" aria-hidden="true"></span>
               {{
                 isLoading
                   ? $t("orderLookup.form.checking")
@@ -69,17 +54,9 @@
               <div class="order-action-row" v-if="hasPrimaryAction">
                 <dt>{{ $t("orderLookup.actions.label") }}</dt>
                 <dd class="cancel-action-cell">
-                  <button
-                    type="button"
-                    :class="primaryActionClasses"
-                    :disabled="primaryActionDisabled"
-                    @click="handlePrimaryAction"
-                  >
-                    <span
-                      v-if="isProcessingAction"
-                      class="inline-spinner"
-                      aria-hidden="true"
-                    ></span>
+                  <button type="button" :class="primaryActionClasses" :disabled="primaryActionDisabled"
+                    @click="handlePrimaryAction">
+                    <span v-if="isProcessingAction" class="inline-spinner" aria-hidden="true"></span>
                     <span>{{ primaryActionLabel }}</span>
                   </button>
                 </dd>
@@ -98,7 +75,7 @@
               </div>
               <div v-if="isAuthenticated">
                 <dt>{{ $t("orderLookup.results.contact") }}</dt>
-                <dd>{{ contactSummary }}</dd>
+                <dd style="white-space: pre-line">{{ contactSummary }}</dd>
               </div>
               <div>
                 <dt>Trạng thái gần nhất</dt>
@@ -121,7 +98,7 @@
             </p>
             <RouterLink to="/" class="text-link">{{
               $t("orderLookup.help")
-            }}</RouterLink>
+              }}</RouterLink>
           </template>
 
           <template v-else>
@@ -129,7 +106,7 @@
             <p class="muted">{{ $t("orderLookup.empty.subtitle") }}</p>
             <RouterLink to="/" class="text-link">{{
               $t("orderLookup.help")
-            }}</RouterLink>
+              }}</RouterLink>
           </template>
         </div>
       </div>
@@ -137,18 +114,12 @@
       <section class="timeline-section" v-if="state === 'success'">
         <div class="section-heading">
           <h2>{{ $t("orderLookup.timeline.heading") }}</h2>
-          <span class="muted"
-            >{{ timelineEvents.length }}
-            {{ $t("orderLookup.timeline.updates") }}</span
-          >
+          <span class="muted">{{ timelineEvents.length }}
+            {{ $t("orderLookup.timeline.updates") }}</span>
         </div>
 
         <div v-if="timelineEvents.length" class="timeline-list">
-          <article
-            v-for="item in timelineEvents"
-            :key="item.id"
-            class="timeline-item"
-          >
+          <article v-for="item in timelineEvents" :key="item.id" class="timeline-item">
             <div class="timeline-marker"></div>
             <div class="timeline-body">
               <div class="timeline-meta">
@@ -168,10 +139,8 @@
       <section class="items-section" v-if="state === 'success'">
         <div class="section-heading">
           <h2>{{ $t("orderLookup.items.heading") }}</h2>
-          <span class="muted" v-if="orderItems.length"
-            >{{ orderItems.length }}
-            {{ $t("orderLookup.items.itemsCount") }}</span
-          >
+          <span class="muted" v-if="orderItems.length">{{ orderItems.length }}
+            {{ $t("orderLookup.items.itemsCount") }}</span>
         </div>
 
         <div v-if="orderItems.length" class="items-table">
@@ -185,8 +154,7 @@
             <div class="product-details">
               <div class="product-main">
                 {{ item.productName
-                }}<span v-if="item.color"> - {{ item.color }}</span
-                ><span v-if="item.size"> - {{ item.size }}</span>
+                }}<span v-if="item.color"> - {{ item.color }}</span><span v-if="item.size"> - {{ item.size }}</span>
               </div>
               <div v-if="item.productCode" class="product-code">
                 {{ item.productCode }}
@@ -204,34 +172,17 @@
     </div>
   </div>
 
-  <div
-    v-if="showCancelConfirm"
-    class="cancel-confirm-overlay"
-    @click.self="closeCancelConfirm"
-  >
+  <div v-if="showCancelConfirm" class="cancel-confirm-overlay" @click.self="closeCancelConfirm">
     <div class="cancel-confirm-dialog">
       <h3>{{ t("orderLookup.actions.confirmTitle") }}</h3>
       <p>{{ t("orderLookup.actions.cancelConfirm") }}</p>
       <div class="cancel-confirm-actions">
-        <button
-          type="button"
-          class="cancel-confirm-secondary"
-          :disabled="isProcessingAction"
-          @click="closeCancelConfirm"
-        >
+        <button type="button" class="cancel-confirm-secondary" :disabled="isProcessingAction"
+          @click="closeCancelConfirm">
           {{ t("orderLookup.actions.keepOrder") }}
         </button>
-        <button
-          type="button"
-          class="cancel-confirm-danger"
-          :disabled="isProcessingAction"
-          @click="cancelOrder"
-        >
-          <span
-            v-if="isProcessingAction"
-            class="inline-spinner"
-            aria-hidden="true"
-          ></span>
+        <button type="button" class="cancel-confirm-danger" :disabled="isProcessingAction" @click="cancelOrder">
+          <span v-if="isProcessingAction" class="inline-spinner" aria-hidden="true"></span>
           <span>{{ t("orderLookup.actions.cancelNow") }}</span>
         </button>
       </div>
@@ -337,8 +288,13 @@ const contactSummary = computed(() => {
     order.value?.soDienThoaiNguoiNhan ||
     order.value?.soDienThoai ||
     order.value?.soDienThoaiKhachHang;
-  if (email && phone) return `${email} · ${phone}`;
-  return email || phone || "—";
+
+  // Format with line break for better display
+  const parts: string[] = [];
+  if (email) parts.push(email);
+  if (phone) parts.push(phone);
+
+  return parts.length > 0 ? parts.join('\n') : "—";
 });
 
 const orderItems = computed(() => {
@@ -523,6 +479,8 @@ const STATUS_DELIVERED_ID = 5;
 const STATUS_COMPLETED_ID = 9;
 
 const canCancelOrder = computed(() => {
+  // Only authenticated users can cancel orders
+  if (!isAuthenticated.value) return false;
   if (!order.value) return false;
   if (isProcessingAction.value) return false;
   if (!orderIdForMutation.value) return false;
@@ -710,6 +668,13 @@ function closeCancelConfirm() {
 }
 
 async function cancelOrder() {
+  // Security: Only authenticated users can cancel orders
+  if (!isAuthenticated.value) {
+    showMessageError(t("orderLookup.actions.loginRequired"));
+    showCancelConfirm.value = false;
+    return;
+  }
+
   if (isProcessingAction.value) return;
 
   const orderId = orderIdForMutation.value;
@@ -879,8 +844,8 @@ function extractStatusId(source: unknown): number | null {
       typeof raw === "number"
         ? raw
         : typeof raw === "string"
-        ? Number(raw)
-        : NaN;
+          ? Number(raw)
+          : NaN;
 
     if (Number.isFinite(numeric) && numeric > 0) {
       return numeric;
@@ -988,11 +953,9 @@ function formatDateTime(value?: string | null) {
 <style scoped lang="scss">
 .order-lookup {
   padding: clamp(12px, 6vw, 12px) 0 clamp(12px, 8vw, 12px);
-  background: linear-gradient(
-    180deg,
-    rgba(17, 17, 17, 0.02),
-    rgba(17, 17, 17, 0)
-  );
+  background: linear-gradient(180deg,
+      rgba(17, 17, 17, 0.02),
+      rgba(17, 17, 17, 0));
 }
 
 .lookup-hero {
@@ -1010,7 +973,7 @@ function formatDateTime(value?: string | null) {
   h1 {
     margin: 12px 0 12px;
     font-size: clamp(32px, 6vw, 44px);
-    font-family: var(--font-family-serif);
+    /* font-family: var(--font-family-serif); - Removed to switch to Inter */
     color: #111;
   }
 
@@ -1193,6 +1156,9 @@ function formatDateTime(value?: string | null) {
     font-size: 15px;
     font-weight: 600;
     color: #111;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    /* modern syntax */
   }
 }
 
@@ -1358,6 +1324,7 @@ function formatDateTime(value?: string | null) {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1368,6 +1335,7 @@ function formatDateTime(value?: string | null) {
     transform: translateY(16px) scale(0.98);
     opacity: 0;
   }
+
   to {
     transform: translateY(0) scale(1);
     opacity: 1;
@@ -1527,6 +1495,7 @@ function formatDateTime(value?: string | null) {
   from {
     transform: rotate(0);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -1547,19 +1516,19 @@ function formatDateTime(value?: string | null) {
       "subtotal";
   }
 
-  .items-row > div:nth-child(1) {
+  .items-row>div:nth-child(1) {
     grid-area: details;
   }
 
-  .items-row > span:nth-child(2) {
+  .items-row>span:nth-child(2) {
     grid-area: qty;
   }
 
-  .items-row > span:nth-child(3) {
+  .items-row>span:nth-child(3) {
     grid-area: price;
   }
 
-  .items-row > span:nth-child(4) {
+  .items-row>span:nth-child(4) {
     grid-area: subtotal;
     font-weight: 600;
   }

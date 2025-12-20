@@ -16,14 +16,9 @@
                 </div>
               </template>
               <div class="product-name-autocomplete">
-                <a-input
-                  v-model="formData.name"
-                  placeholder="Nhập tên sản phẩm"
-                  class="product-name-input"
-                  @input="handleProductNameInput"
-                  @focus="() => handleProductNameInput(formData.name || '')"
-                  @blur="handleProductNameBlur"
-                />
+                <a-input v-model="formData.name" placeholder="Nhập tên sản phẩm" class="product-name-input"
+                  @input="handleProductNameInput" @focus="() => handleProductNameInput(formData.name || '')"
+                  @blur="handleProductNameBlur" />
 
                 <!-- New Product Indicator -->
                 <div v-if="formData.selectedProductId === 'pending' && pendingNewProduct" class="new-product-indicator">
@@ -36,7 +31,8 @@
                 </div>
 
                 <div v-if="showProductNameInputs" class="autocomplete-dropdown">
-                  <div v-for="input in filteredProductInputs" :key="input.id" class="autocomplete-input" @click="selectProductName(input)">
+                  <div v-for="input in filteredProductInputs" :key="input.id" class="autocomplete-input"
+                    @click="selectProductName(input)">
                     <div class="input-name">{{ input.label }}</div>
                     <div class="input-details">
                       <span v-if="input.nhaSanXuat">{{ input.nhaSanXuat.tenNhaSanXuat }}</span>
@@ -60,29 +56,22 @@
                 </div>
               </template>
               <div class="search-input-container">
-                <a-input
-                  v-model="manufacturerSearchValue"
-                  placeholder="Nhập để tìm kiếm nhà sản xuất"
-                  class="search-input"
-                  @input="handleManufacturerInput"
+                <a-input v-model="manufacturerSearchValue" placeholder="Nhập để tìm kiếm nhà sản xuất"
+                  class="search-input" @input="handleManufacturerInput"
                   @focus="() => handleManufacturerInput(manufacturerSearchValue || '')"
-                  @blur="handleManufacturerBlur"
-                />
+                  @blur="handleManufacturerBlur" />
                 <a-button type="text" size="mini" @click="showAddManufacturerModal" class="input-add-btn">
                   <template #icon>
                     <icon-plus />
                   </template>
                 </a-button>
                 <div v-if="showManufacturerInputs" class="search-dropdown">
-                  <div
-                    v-for="input in filteredManufacturerInputs"
-                    :key="input.value"
-                    class="search-option"
-                    @click="selectManufacturer(input)"
-                  >
+                  <div v-for="input in filteredManufacturerInputs" :key="input.value" class="search-option"
+                    @click="selectManufacturer(input)">
                     {{ input.label }}
                   </div>
-                  <div v-if="filteredManufacturerInputs.length === 0" class="no-results">Không tìm thấy kết quả phù hợp</div>
+                  <div v-if="filteredManufacturerInputs.length === 0" class="no-results">Không tìm thấy kết quả phù hợp
+                  </div>
                 </div>
               </div>
             </a-form-item>
@@ -95,21 +84,17 @@
                 </div>
               </template>
               <div class="search-input-container">
-                <a-input
-                  v-model="originSearchValue"
-                  placeholder="Nhập để tìm kiếm xuất xứ"
-                  class="search-input"
-                  @input="handleOriginInput"
-                  @focus="() => handleOriginInput(originSearchValue || '')"
-                  @blur="handleOriginBlur"
-                />
+                <a-input v-model="originSearchValue" placeholder="Nhập để tìm kiếm xuất xứ" class="search-input"
+                  @input="handleOriginInput" @focus="() => handleOriginInput(originSearchValue || '')"
+                  @blur="handleOriginBlur" />
                 <a-button type="text" size="mini" @click="showAddOriginModal" class="input-add-btn">
                   <template #icon>
                     <icon-plus />
                   </template>
                 </a-button>
                 <div v-if="showOriginInputs" class="search-dropdown">
-                  <div v-for="input in filteredOriginInputs" :key="input.value" class="search-option" @click="selectOrigin(input)">
+                  <div v-for="input in filteredOriginInputs" :key="input.value" class="search-option"
+                    @click="selectOrigin(input)">
                     {{ input.label }}
                   </div>
                   <div v-if="filteredOriginInputs.length === 0" class="no-results">Không tìm thấy kết quả phù hợp</div>
@@ -129,24 +114,21 @@
                 </div>
               </template>
               <div class="search-input-container">
-                <a-input
-                  v-model="materialSearchValue"
-                  placeholder="Nhập để tìm kiếm chất liệu"
-                  class="search-input"
-                  @input="handleMaterialInput"
-                  @focus="() => handleMaterialInput(materialSearchValue || '')"
-                  @blur="handleMaterialBlur"
-                />
+                <a-input v-model="materialSearchValue" placeholder="Nhập để tìm kiếm chất liệu" class="search-input"
+                  @input="handleMaterialInput" @focus="() => handleMaterialInput(materialSearchValue || '')"
+                  @blur="handleMaterialBlur" />
                 <a-button type="text" size="mini" @click="showAddMaterialModal" class="input-add-btn">
                   <template #icon>
                     <icon-plus />
                   </template>
                 </a-button>
                 <div v-if="showMaterialInputs" class="search-dropdown">
-                  <div v-for="input in filteredMaterialInputs" :key="input.value" class="search-option" @click="selectMaterial(input)">
+                  <div v-for="input in filteredMaterialInputs" :key="input.value" class="search-option"
+                    @click="selectMaterial(input)">
                     {{ input.label }}
                   </div>
-                  <div v-if="filteredMaterialInputs.length === 0" class="no-results">Không tìm thấy kết quả phù hợp</div>
+                  <div v-if="filteredMaterialInputs.length === 0" class="no-results">Không tìm thấy kết quả phù hợp
+                  </div>
                 </div>
               </div>
             </a-form-item>
@@ -159,24 +141,21 @@
                 </div>
               </template>
               <div class="search-input-container">
-                <a-input
-                  v-model="shoeSoleSearchValue"
-                  placeholder="Nhập để tìm kiếm đế giày"
-                  class="search-input"
-                  @input="handleShoeSoleInput"
-                  @focus="() => handleShoeSoleInput(shoeSoleSearchValue || '')"
-                  @blur="handleShoeSoleBlur"
-                />
+                <a-input v-model="shoeSoleSearchValue" placeholder="Nhập để tìm kiếm đế giày" class="search-input"
+                  @input="handleShoeSoleInput" @focus="() => handleShoeSoleInput(shoeSoleSearchValue || '')"
+                  @blur="handleShoeSoleBlur" />
                 <a-button type="text" size="mini" @click="showAddShoeSoleModal" class="input-add-btn">
                   <template #icon>
                     <icon-plus />
                   </template>
                 </a-button>
                 <div v-if="showShoeSoleInputs" class="search-dropdown">
-                  <div v-for="input in filteredShoeSoleInputs" :key="input.value" class="search-option" @click="selectShoeSole(input)">
+                  <div v-for="input in filteredShoeSoleInputs" :key="input.value" class="search-option"
+                    @click="selectShoeSole(input)">
                     {{ input.label }}
                   </div>
-                  <div v-if="filteredShoeSoleInputs.length === 0" class="no-results">Không tìm thấy kết quả phù hợp</div>
+                  <div v-if="filteredShoeSoleInputs.length === 0" class="no-results">Không tìm thấy kết quả phù hợp
+                  </div>
                 </div>
               </div>
             </a-form-item>
@@ -210,8 +189,9 @@
                   Chọn màu sắc ({{ formData.colors.length }})
                 </a-button>
                 <div class="selected-items">
-                  <a-tag v-for="color in formData.colors" :key="color" closable @close="removeColor(color)" class="color-tag">
-                    {{ colorInputs.find((c) => String(c.value) === String(color))?.label }}
+                  <a-tag v-for="color in formData.colors" :key="color" closable @close="removeColor(color)"
+                    class="color-tag">
+                    {{colorInputs.find((c) => String(c.value) === String(color))?.label}}
                   </a-tag>
                 </div>
               </div>
@@ -242,7 +222,7 @@
                 </a-button>
                 <div class="selected-items">
                   <a-tag v-for="size in formData.sizes" :key="size" closable @close="removeSize(size)" class="size-tag">
-                    {{ sizeInputs.find((s) => String(s.value) === String(size))?.label }}
+                    {{sizeInputs.find((s) => String(s.value) === String(size))?.label}}
                   </a-tag>
                 </div>
               </div>
@@ -250,6 +230,32 @@
           </a-col>
         </a-row>
       </a-form>
+    </a-card>
+
+    <!-- Product Description -->
+    <a-card title="Mô tả sản phẩm" class="product-form-card" style="margin-top: 16px">
+      <a-row :gutter="16">
+        <a-col :span="14">
+          <a-form-item>
+            <template #label>
+              <span>Nội dung mô tả</span>
+            </template>
+            <a-textarea v-model="formData.moTa" placeholder="Nhập mô tả sản phẩm..." :rows="10" allow-clear />
+          </a-form-item>
+          <div style="margin-top: 8px; color: #86909c; font-size: 12px">
+            <icon-info-circle /> Sử dụng các công cụ phía trên để định dạng văn bản (in đậm, in nghiêng, danh sách,
+            v.v.)
+          </div>
+        </a-col>
+        <a-col :span="10">
+          <div class="preview-panel">
+            <div class="preview-header">
+              <icon-eye /> Xem trước
+            </div>
+            <div class="preview-content" v-html="previewContent"></div>
+          </div>
+        </a-col>
+      </a-row>
     </a-card>
 
     <!-- Product Variants -->
@@ -275,49 +281,34 @@
         </div>
       </div>
       <div v-for="colorVariant in variants" :key="colorVariant.color" class="color-variant">
-        <h4>{{ colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label }}</h4>
-        <a-table
-          :columns="variantColumns"
-          :data="colorVariant.variants"
-          :pagination="{
-            showTotal: true,
-            showSizeChanger: true,
-            pageSizeOptions: ['5', '10', '20'],
-            defaultPageSize: 10,
-            size: 'small',
-          }"
-          size="small"
-          class="variant-table"
-        >
+        <h4>{{colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label}}</h4>
+        <a-table :columns="variantColumns" :data="colorVariant.variants" :pagination="{
+          showTotal: true,
+          showSizeChanger: true,
+          pageSizeOptions: ['5', '10', '20'],
+          defaultPageSize: 10,
+          size: 'small',
+        }" size="small" class="variant-table">
           <template #checkbox-title>
-            <a-checkbox
-              :model-value="isAllColorVariantsSelected(colorVariant.variants)"
+            <a-checkbox :model-value="isAllColorVariantsSelected(colorVariant.variants)"
               :indeterminate="isSomeColorVariantsSelected(colorVariant.variants)"
-              @update:model-value="(checked) => handleSelectAllColorVariants(colorVariant.variants, checked)"
-            />
+              @update:model-value="(checked) => handleSelectAllColorVariants(colorVariant.variants, checked)" />
           </template>
           <template #checkbox="{ record }">
-            <a-checkbox
-              :model-value="selectedVariants.has(record.sku)"
-              @update:model-value="(checked) => handleVariantSelection(record.sku, checked)"
-            />
+            <a-checkbox :model-value="selectedVariants.has(record.sku)"
+              @update:model-value="(checked) => handleVariantSelection(record.sku, checked)" />
           </template>
           <template #weight="{ record }">
-            <a-input-number v-model="record.weight" :min="0" :step="0.1" size="small" style="width: 100px" :precision="1" />
+            <a-input-number v-model="record.weight" :min="0" :step="0.1" size="small" style="width: 100px"
+              :precision="1" />
           </template>
           <template #stock="{ record }">
             <a-input-number v-model="record.stock" :min="0" size="small" style="width: 80px" />
           </template>
           <template #price="{ record }">
-            <a-input-number
-              v-model="record.price"
-              :min="0"
-              :step="1000"
-              size="small"
-              style="width: 100px"
+            <a-input-number v-model="record.price" :min="0" :step="1000" size="small" style="width: 100px"
               :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
-              :parser="(value) => value.replace(/,/g, '')"
-            />
+              :parser="(value) => value.replace(/,/g, '')" />
           </template>
           <template #tenSanPhamChiTiet="{ record }">
             <div class="product-detail-name">
@@ -344,18 +335,17 @@
     </a-card>
 
     <!-- Image Management Card -->
-    <a-card v-if="variants.length > 0" title="Quản lý ảnh sản phẩm theo màu" class="image-management-card" style="margin-top: 16px">
+    <a-card v-if="variants.length > 0" title="Quản lý ảnh sản phẩm theo màu" class="image-management-card"
+      style="margin-top: 16px">
       <div class="color-image-grid">
         <div v-for="colorVariant in variants" :key="colorVariant.color" class="color-image-section">
           <div class="color-header">
             <div class="color-info">
-              <div
-                class="color-preview"
-                :style="{
-                  backgroundColor: colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.maMau || '#ccc',
-                }"
-              ></div>
-              <span class="color-name">{{ colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label }}</span>
+              <div class="color-preview" :style="{
+                backgroundColor: colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.maMau || '#ccc',
+              }"></div>
+              <span class="color-name">{{colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label
+              }}</span>
             </div>
             <a-button type="outline" size="small" @click="showImageModal(colorVariant.color)">
               <template #icon>
@@ -405,14 +395,8 @@
     </a-card>
 
     <!-- Confirm Modal for Adding Variants -->
-    <a-modal
-      v-model:visible="showSubmitConfirm"
-      title="Xác nhận thêm biến thể"
-      ok-text="Xác nhận"
-      cancel-text="Huỷ"
-      @ok="confirmSubmit"
-      @cancel="cancelSubmit"
-    >
+    <a-modal v-model:visible="showSubmitConfirm" title="Xác nhận thêm biến thể" ok-text="Xác nhận" cancel-text="Huỷ"
+      @ok="confirmSubmit" @cancel="cancelSubmit">
       <template #default>
         <div>
           <div style="margin-bottom: 12px">
@@ -436,7 +420,8 @@
     </a-modal>
 
     <!-- Quick Add Modal -->
-    <a-modal v-model:visible="quickAddVisible" title="Thêm nhanh biến thể" width="600px" @ok="handleQuickAdd" @cancel="resetQuickAddForm">
+    <a-modal v-model:visible="quickAddVisible" title="Thêm nhanh biến thể" width="600px" @ok="handleQuickAdd"
+      @cancel="resetQuickAddForm">
       <a-form :model="quickAddForm" :rules="quickAddRules" ref="quickAddFormRef" layout="vertical">
         <!-- Color Selection -->
         <a-form-item>
@@ -444,13 +429,9 @@
             <span class="required-field">Chọn màu sắc áp dụng</span>
           </template>
           <a-checkbox-group v-model="quickAddForm.selectedColors" @change="handleColorSelectionChange">
-            <a-checkbox
-              v-for="color in formData.colors"
-              :key="color"
-              :value="color"
-              :disabled="quickAddForm.selectedColors.includes('all')"
-            >
-              {{ colorInputs.find((c) => String(c.value) === String(color))?.label }}
+            <a-checkbox v-for="color in formData.colors" :key="color" :value="color"
+              :disabled="quickAddForm.selectedColors.includes('all')">
+              {{colorInputs.find((c) => String(c.value) === String(color))?.label}}
             </a-checkbox>
             <a-checkbox value="all" style="margin-top: 8px; font-weight: 500">Chọn tất cả màu</a-checkbox>
           </a-checkbox-group>
@@ -461,14 +442,8 @@
           <template #label>
             <span class="required-field">Trọng lượng (g)</span>
           </template>
-          <a-input-number
-            v-model="quickAddForm.weight"
-            :min="0"
-            :step="0.1"
-            placeholder="Nhập trọng lượng"
-            :precision="1"
-            style="width: 100%"
-          />
+          <a-input-number v-model="quickAddForm.weight" :min="0" :step="0.1" placeholder="Nhập trọng lượng"
+            :precision="1" style="width: 100%" />
         </a-form-item>
 
         <!-- Stock -->
@@ -484,27 +459,16 @@
           <template #label>
             <span class="required-field">Đơn giá (VNĐ)</span>
           </template>
-          <a-input-number
-            v-model="quickAddForm.price"
-            :min="0"
-            :step="1000"
-            placeholder="Nhập đơn giá"
+          <a-input-number v-model="quickAddForm.price" :min="0" :step="1000" placeholder="Nhập đơn giá"
             :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
-            :parser="(value) => value.replace(/\$\s?|(,*)/g, '')"
-            style="width: 100%"
-          />
+            :parser="(value) => value.replace(/\$\s?|(,*)/g, '')" style="width: 100%" />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- Bulk Apply Modal -->
-    <a-modal
-      v-model:visible="bulkApplyVisible"
-      title="Áp dụng giá trị hàng loạt"
-      width="600px"
-      @ok="handleBulkApplyOk"
-      @cancel="resetBulkApplyForm"
-    >
+    <a-modal v-model:visible="bulkApplyVisible" title="Áp dụng giá trị hàng loạt" width="600px" @ok="handleBulkApplyOk"
+      @cancel="resetBulkApplyForm">
       <a-alert type="info" show-icon style="margin-bottom: 16px">
         Đang áp dụng cho
         <strong>{{ selectedVariants.size }} biến thể</strong>
@@ -514,55 +478,34 @@
       <a-form :model="bulkValues" ref="bulkApplyFormRef" layout="vertical">
         <!-- Weight -->
         <a-form-item label="Trọng lượng (g)">
-          <a-input-number
-            v-model="bulkValues.weight"
-            :min="0"
-            :step="0.1"
-            placeholder="Nhập trọng lượng (bỏ trống nếu không thay đổi)"
-            :precision="1"
-            style="width: 100%"
-          />
+          <a-input-number v-model="bulkValues.weight" :min="0" :step="0.1"
+            placeholder="Nhập trọng lượng (bỏ trống nếu không thay đổi)" :precision="1" style="width: 100%" />
         </a-form-item>
 
         <!-- Stock -->
         <a-form-item label="Số lượng">
-          <a-input-number
-            v-model="bulkValues.stock"
-            :min="0"
-            placeholder="Nhập số lượng (bỏ trống nếu không thay đổi)"
-            style="width: 100%"
-          />
+          <a-input-number v-model="bulkValues.stock" :min="0" placeholder="Nhập số lượng (bỏ trống nếu không thay đổi)"
+            style="width: 100%" />
         </a-form-item>
 
         <!-- Price -->
         <a-form-item label="Đơn giá (VNĐ)">
-          <a-input-number
-            v-model="bulkValues.price"
-            :min="0"
-            :step="1000"
+          <a-input-number v-model="bulkValues.price" :min="0" :step="1000"
             placeholder="Nhập đơn giá (bỏ trống nếu không thay đổi)"
             :formatter="(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
-            :parser="(value) => value.replace(/\$\s?|(,*)/g, '')"
-            style="width: 100%"
-          />
+            :parser="(value) => value.replace(/\$\s?|(,*)/g, '')" style="width: 100%" />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- Color Selection Modal -->
-    <a-modal
-      v-model:visible="colorModalVisible"
-      title="Chọn màu sắc"
-      width="500px"
-      :mask-closable="true"
-      :closable="true"
-      @ok="handleColorModalOk"
-      @cancel="handleColorModalCancel"
-    >
+    <a-modal v-model:visible="colorModalVisible" title="Chọn màu sắc" width="500px" :mask-closable="true"
+      :closable="true" @ok="handleColorModalOk" @cancel="handleColorModalCancel">
       <div class="attribute-modal-content">
         <!-- Search Input for Colors -->
         <div class="search-section">
-          <a-input v-model="colorSearchText" placeholder="Tìm kiếm màu sắc..." allow-clear @clear="colorSearchText = ''">
+          <a-input v-model="colorSearchText" placeholder="Tìm kiếm màu sắc..." allow-clear
+            @clear="colorSearchText = ''">
             <template #prefix>
               <icon-search />
             </template>
@@ -571,11 +514,9 @@
 
         <div class="attribute-inputs-list">
           <div v-for="color in filteredColorInputs" :key="color.value" class="color-input-item">
-            <a-checkbox
-              :model-value="tempColors.map(String).includes(String(color.value))"
+            <a-checkbox :model-value="tempColors.map(String).includes(String(color.value))"
               @update:model-value="(checked) => handleColorInputChange(color.value, checked)"
-              class="attribute-input-checkbox"
-            >
+              class="attribute-input-checkbox">
               {{ color.label }}
               <!-- Debug: {{ tempColors.map(String).includes(String(color.value)) ? '' : '' }} -->
             </a-checkbox>
@@ -587,19 +528,13 @@
     </a-modal>
 
     <!-- Size Selection Modal -->
-    <a-modal
-      v-model:visible="sizeModalVisible"
-      title="Chọn kích thước"
-      width="500px"
-      :mask-closable="true"
-      :closable="true"
-      @ok="handleSizeModalOk"
-      @cancel="handleSizeModalCancel"
-    >
+    <a-modal v-model:visible="sizeModalVisible" title="Chọn kích thước" width="500px" :mask-closable="true"
+      :closable="true" @ok="handleSizeModalOk" @cancel="handleSizeModalCancel">
       <div class="attribute-modal-content">
         <!-- Search Input for Sizes -->
         <div class="search-section">
-          <a-input v-model="sizeSearchText" placeholder="Tìm kiếm kích thước..." allow-clear @clear="sizeSearchText = ''">
+          <a-input v-model="sizeSearchText" placeholder="Tìm kiếm kích thước..." allow-clear
+            @clear="sizeSearchText = ''">
             <template #prefix>
               <icon-search />
             </template>
@@ -607,13 +542,10 @@
         </div>
 
         <div class="attribute-inputs-list">
-          <a-checkbox
-            v-for="size in filteredSizeInputs"
-            :key="size.value"
+          <a-checkbox v-for="size in filteredSizeInputs" :key="size.value"
             :model-value="tempSizes.map(String).includes(String(size.value))"
             @update:model-value="(checked) => handleSizeInputChange(size.value, checked)"
-            class="attribute-input-checkbox"
-          >
+            class="attribute-input-checkbox">
             {{ size.label }}
           </a-checkbox>
           <div v-if="filteredSizeInputs.length === 0" class="no-results">Không tìm thấy kích thước phù hợp</div>
@@ -621,15 +553,8 @@
       </div>
     </a-modal>
     <!-- Add Manufacturer Modal -->
-    <a-modal
-      v-model:visible="addManufacturerModalVisible"
-      title="Thêm nhà sản xuất"
-      width="500px"
-      :mask-closable="false"
-      :closable="true"
-      @ok="handleAddManufacturer"
-      @cancel="closeAddManufacturerModal"
-    >
+    <a-modal v-model:visible="addManufacturerModalVisible" title="Thêm nhà sản xuất" width="500px"
+      :mask-closable="false" :closable="true" @ok="handleAddManufacturer" @cancel="closeAddManufacturerModal">
       <a-form :model="newManufacturerForm" :rules="newAttributeRules" ref="newManufacturerFormRef" layout="vertical">
         <a-form-item>
           <template #label>
@@ -641,15 +566,8 @@
     </a-modal>
 
     <!-- Add Origin Modal -->
-    <a-modal
-      v-model:visible="addOriginModalVisible"
-      title="Thêm xuất xứ"
-      width="500px"
-      :mask-closable="false"
-      :closable="true"
-      @ok="handleAddOrigin"
-      @cancel="closeAddOriginModal"
-    >
+    <a-modal v-model:visible="addOriginModalVisible" title="Thêm xuất xứ" width="500px" :mask-closable="false"
+      :closable="true" @ok="handleAddOrigin" @cancel="closeAddOriginModal">
       <a-form :model="newOriginForm" :rules="newAttributeRules" ref="newOriginFormRef" layout="vertical">
         <a-form-item>
           <template #label>
@@ -661,15 +579,8 @@
     </a-modal>
 
     <!-- Add Material Modal -->
-    <a-modal
-      v-model:visible="addMaterialModalVisible"
-      title="Thêm chất liệu"
-      width="500px"
-      :mask-closable="false"
-      :closable="true"
-      @ok="handleAddMaterial"
-      @cancel="closeAddMaterialModal"
-    >
+    <a-modal v-model:visible="addMaterialModalVisible" title="Thêm chất liệu" width="500px" :mask-closable="false"
+      :closable="true" @ok="handleAddMaterial" @cancel="closeAddMaterialModal">
       <a-form :model="newMaterialForm" :rules="newAttributeRules" ref="newMaterialFormRef" layout="vertical">
         <a-form-item>
           <template #label>
@@ -681,15 +592,8 @@
     </a-modal>
 
     <!-- Add Shoe Sole Modal -->
-    <a-modal
-      v-model:visible="addShoeSoleModalVisible"
-      title="Thêm đế giày"
-      width="500px"
-      :mask-closable="false"
-      :closable="true"
-      @ok="handleAddShoeSole"
-      @cancel="closeAddShoeSoleModal"
-    >
+    <a-modal v-model:visible="addShoeSoleModalVisible" title="Thêm đế giày" width="500px" :mask-closable="false"
+      :closable="true" @ok="handleAddShoeSole" @cancel="closeAddShoeSoleModal">
       <a-form :model="newShoeSoleForm" :rules="newAttributeRules" ref="newShoeSoleFormRef" layout="vertical">
         <a-form-item>
           <template #label>
@@ -701,24 +605,15 @@
     </a-modal>
 
     <!-- Add Color Modal -->
-    <a-modal
-      v-model:visible="addColorModalVisible"
-      title="Thêm màu sắc mới"
-      width="400px"
-      @ok="handleAddColor"
-      @cancel="closeAddColorModal"
-    >
+    <a-modal v-model:visible="addColorModalVisible" title="Thêm màu sắc mới" width="400px" @ok="handleAddColor"
+      @cancel="closeAddColorModal">
       <a-form ref="newColorFormRef" :model="newColorForm" :rules="newColorFormRules" layout="vertical">
         <a-form-item>
           <template #label>
             <span class="required-field">Chọn màu</span>
           </template>
-          <input
-            type="color"
-            :value="newColorForm.maMau"
-            @input="onColorChange($event.target.value)"
-            style="width: 100%; height: 40px; border: 1px solid #d9d9d9; border-radius: 6px; cursor: pointer"
-          />
+          <input type="color" :value="newColorForm.maMau" @input="onColorChange($event.target.value)"
+            style="width: 100%; height: 40px; border: 1px solid #d9d9d9; border-radius: 6px; cursor: pointer" />
         </a-form-item>
         <a-form-item field="tenMauSac" label="Tên màu sắc">
           <a-input v-model="newColorForm.tenMauSac" placeholder="Tên màu sẽ tự động điền" readonly />
@@ -727,13 +622,8 @@
     </a-modal>
 
     <!-- Add Size Modal -->
-    <a-modal
-      v-model:visible="addSizeModalVisible"
-      title="Thêm kích thước mới"
-      width="400px"
-      @ok="handleAddSize"
-      @cancel="closeAddSizeModal"
-    >
+    <a-modal v-model:visible="addSizeModalVisible" title="Thêm kích thước mới" width="400px" @ok="handleAddSize"
+      @cancel="closeAddSizeModal">
       <a-form ref="newSizeFormRef" :model="newSizeForm" :rules="newSizeFormRules" layout="vertical">
         <a-form-item>
           <template #label>
@@ -745,15 +635,10 @@
     </a-modal>
 
     <!-- Image Management Modal -->
-    <a-modal
-      v-model:visible="imageModalVisible"
+    <a-modal v-model:visible="imageModalVisible"
       :title="`Quản lý ảnh - ${imageModalColor ? colorInputs.find((c) => String(c.value) === String(imageModalColor))?.label : ''}`"
-      width="700px"
-      :ok-loading="uploadingImages"
-      :cancel-button-props="{ disabled: uploadingImages }"
-      @ok="handleImageModalOk"
-      @cancel="handleImageModalCancel"
-    >
+      width="700px" :ok-loading="uploadingImages" :cancel-button-props="{ disabled: uploadingImages }"
+      @ok="handleImageModalOk" @cancel="handleImageModalCancel">
       <div class="image-modal-content">
         <!-- Existing Images from Database -->
         <div class="existing-images-section">
@@ -763,13 +648,9 @@
             <span v-else>Không có ảnh nào cho màu này</span>
           </div>
           <div v-else class="existing-images-grid">
-            <div
-              v-for="(image, index) in existingImages"
-              :key="index"
-              class="existing-image-item"
+            <div v-for="(image, index) in existingImages" :key="index" class="existing-image-item"
               :class="{ selected: selectedExistingImages.includes(image.id) }"
-              @click="handleExistingImageSelect(image.id)"
-            >
+              @click="handleExistingImageSelect(image.id)">
               <img :src="image.duongDanAnh" :alt="image.tenAnh || 'Ảnh sản phẩm'" />
               <div class="image-check-overlay" v-if="selectedExistingImages.includes(image.id)">
                 <icon-check />
@@ -782,17 +663,9 @@
         <a-divider />
         <div class="upload-new-section">
           <h4>Upload ảnh mới</h4>
-          <a-upload
-            v-model:file-list="newUploadImages"
-            list-type="picture-card"
-            :multiple="true"
-            :max="5"
-            accept="image/*"
-            :before-upload="handleBeforeUpload"
-            :custom-request="() => {}"
-            :show-upload-list="{ showPreviewIcon: true, showRemoveIcon: true }"
-            class="new-image-upload"
-          >
+          <a-upload v-model:file-list="newUploadImages" list-type="picture-card" :multiple="true" :max="5"
+            accept="image/*" :before-upload="handleBeforeUpload" :custom-request="() => { }"
+            :show-upload-list="{ showPreviewIcon: true, showRemoveIcon: true }" class="new-image-upload">
             <template #upload-button>
               <div v-if="newUploadImages.length < 5" class="upload-button">
                 <icon-plus />
@@ -829,6 +702,8 @@
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
+import { QuillEditor } from '@vueup/vue-quill'
+import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import {
   IconCheck,
   IconClose,
@@ -840,6 +715,8 @@ import {
   IconFolder,
   IconSearch,
   IconEdit,
+  IconEye,
+  IconInfoCircle,
 } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store'
 // Import API functions
@@ -870,10 +747,24 @@ import { hasErrorBeenNotified, mapApiErrorToMessage, markErrorAsNotified } from 
 const router = useRouter()
 const userStore = useUserStore()
 
-// Form state
+//Form state
 const loading = ref(false)
 const formRef = ref()
 const attributesFormRef = ref()
+
+// Rich text editor toolbar configuration
+const editorToolbar = [
+  ['bold', 'italic', 'underline', 'strike'],
+  [{ list: 'ordered' }, { list: 'bullet' }],
+  [{ header: [1, 2, 3, false] }],
+  ['link'],
+  ['clean'],
+]
+
+// Preview computed property
+const previewContent = computed(() => {
+  return formData.moTa || "<p style='color: #86909c;'>Nội dung mô tả sẽ hiển thị ở đây...</p>"
+})
 
 // Confirm modal state
 const showSubmitConfirm = ref(false)
@@ -1058,6 +949,7 @@ const formData = reactive({
   origin: '',
   material: '',
   shoeSole: '',
+  moTa: '', // Product description in HTML format
   // Product attributes
   colors: [] as string[],
   sizes: [] as string[],
@@ -2756,6 +2648,7 @@ const confirmSubmit = async () => {
       if (productId === 'pending' && pendingNewProduct.value) {
         const productData = {
           tenSanPham: pendingNewProduct.value.tenSanPham,
+          moTa: formData.moTa,
           idNhaSanXuat: formData.manufacturer || 1,
           idXuatXu: formData.origin || 1,
           trangThai: true,
@@ -3150,7 +3043,8 @@ watch(
   position: absolute;
   top: 100%;
   left: 0;
-  right: 40px; /* Leave space for the button */
+  right: 40px;
+  /* Leave space for the button */
   background: white;
   border: 1px solid var(--color-border-2);
   border-radius: 4px;
@@ -3944,5 +3838,64 @@ watch(
   color: #1890ff;
   font-size: 13px;
   font-weight: 500;
+}
+
+/* Preview Panel Styles */
+.preview-panel {
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.preview-header {
+  background-color: var(--color-fill-2);
+  padding: 8px 12px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  border-bottom: 1px solid var(--color-border-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-content {
+  padding: 16px;
+  min-height: 300px;
+  background-color: var(--color-bg-1);
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+.preview-content :deep(p) {
+  margin-bottom: 8px;
+}
+
+.preview-content :deep(ul),
+.preview-content :deep(ol) {
+  margin-bottom: 8px;
+  padding-left: 24px;
+}
+
+.preview-content :deep(h1) {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.preview-content :deep(h2) {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.preview-content :deep(h3) {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.preview-content :deep(a) {
+  color: rgb(var(--primary-6));
+  text-decoration: underline;
 }
 </style>

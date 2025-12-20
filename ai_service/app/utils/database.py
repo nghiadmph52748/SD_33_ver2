@@ -17,6 +17,7 @@ class DatabaseClient:
             f"UID={settings.db_user};"
             f"PWD={settings.db_password};"
             f"TrustServerCertificate=yes;"
+            f"Connection Timeout=30;"
         )
         logger.info(f"Using ODBC driver: {self.driver}")
     
@@ -68,19 +69,19 @@ class DatabaseClient:
     def test_connection(self) -> tuple[bool, str]:
         """Test database connection and return (success, message)"""
         try:
-            with pyodbc.connect(self.connection_string, timeout=5) as conn:
+            with pyodbc.connect(self.connection_string, timeout=30) as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT 1")
                 cursor.fetchone()
                 return True, "Connection successful"
         except pyodbc.Error as e:
             error_msg = f"ODBC Error: {str(e)}"
-            if "IM002" in str(e) or "driver" in str(e).lower():
+            if ("IM002" in str(e) or "Data source name not found" in str(e)) and "timeout" not in str(e).lower():
                 error_msg += f"\nDriver '{self.driver}' not found. Please install ODBC Driver for SQL Server."
             elif "08001" in str(e) or "login" in str(e).lower() or "authentication" in str(e).lower():
                 error_msg += f"\nCheck database credentials: host={settings.db_host}, port={settings.db_port}, database={settings.db_name}"
-            elif "network" in str(e).lower() or "timeout" in str(e).lower():
-                error_msg += f"\nCannot reach database server at {settings.db_host}:{settings.db_port}"
+            elif "network" in str(e).lower() or "timeout" in str(e).lower() or "HYT00" in str(e):
+                error_msg += f"\nCannot reach database server at {settings.db_host}:{settings.db_port} (Timeout)"
             logger.error(error_msg)
             return False, error_msg
         except Exception as e:
@@ -91,7 +92,7 @@ class DatabaseClient:
     def execute_query(self, query: str, params: tuple = None) -> List[Dict[str, Any]]:
         """Execute SQL query and return results as list of dicts"""
         try:
-            with pyodbc.connect(self.connection_string, timeout=10) as conn:
+            with pyodbc.connect(self.connection_string, timeout=30) as conn:
                 cursor = conn.cursor()
                 
                 if params:
@@ -111,7 +112,7 @@ class DatabaseClient:
                 return results
         except pyodbc.Error as e:
             error_msg = f"Database query error: {str(e)}"
-            if "IM002" in str(e) or "driver" in str(e).lower():
+            if ("IM002" in str(e) or "Data source name not found" in str(e)) and "timeout" not in str(e).lower():
                 error_msg += f"\nODBC Driver issue: '{self.driver}' may not be installed or configured correctly."
                 error_msg += f"\nAvailable drivers: {[d for d in pyodbc.drivers()]}"
             logger.error(error_msg)
@@ -123,7 +124,7 @@ class DatabaseClient:
     def execute_non_query(self, query: str, params: tuple = None) -> int:
         """Execute INSERT/UPDATE/DELETE and return affected row count"""
         try:
-            with pyodbc.connect(self.connection_string, timeout=10) as conn:
+            with pyodbc.connect(self.connection_string, timeout=30) as conn:
                 cursor = conn.cursor()
                 if params:
                     cursor.execute(query, params)

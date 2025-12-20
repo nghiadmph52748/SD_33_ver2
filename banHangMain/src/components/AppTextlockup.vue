@@ -39,13 +39,13 @@
     grid-area: 2 / 2 / 3 / 4;
     font-size: 6.5vmin;
     color: #d96528;
-    font-family: var(--font-family-serif);
+    /* font-family: var(--font-family-serif); - Removed to switch to Inter */
   }
 
   .collection {
     grid-area: 3 / 3 / 4 / 4;
     font-size: 8.5vmin;
-    font-family: var(--font-family-serif);
+    /* font-family: var(--font-family-serif); - Removed to switch to Inter */
   }
 
   .details {

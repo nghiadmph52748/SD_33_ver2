@@ -1,0 +1,39 @@
+SQL SERVER AUTOMATIC INITIALIZATION - PERMANENT FIX
+====================================================
+
+PROBLEM SOLVED:
+Stored procedure 'sp_GenerateMaHoaDon' missing in Docker causing order creation failures
+
+SOLUTION:
+Added automatic database initialization using sidecar container pattern
+
+HOW IT WORKS:
+1. SQL Server starts -> creates init flag
+2. DB Init container (with SQL tools) executes SQLQuery_new.sql  
+3. Backend waits for DB Init to complete
+4. All stored procedures automatically created on first startup
+
+USAGE - FIRST TIME SETUP:
+-------------------------
+docker-compose down
+docker volume rm sd_33_ver2_sqlserver_data
+docker-compose up -d
+
+# Check logs to verify
+docker-compose logs -f db-init
+
+USAGE - NORMAL OPERATIONS:
+--------------------------
+docker-compose up -d    # Initialization skipped, uses existing DB
+docker-compose down
+
+VERIFICATION:
+------------
+Run this to check if stored procedure exists:
+docker run --rm --network sd_33_ver2_gearup-network mcr.microsoft.com/mssql-tools /opt/mssql-tools/bin/sqlcmd -S gearup-sqlserver -U sa -P "YourPassword" -d GearUp -Q "SELECT OBJECT_ID('dbo.sp_GenerateMaHoaDon', 'P')"
+
+FILES CHANGED:
+- docker-compose.yml (added db-init service)
+- docker/sqlserver/init-db.sh (coordination logic)
+- docker/sqlserver/init-helper.sh (NEW - executes SQL)
+

@@ -33,6 +33,7 @@ const VALID_CART_STATUSES: CartStatus[] = [
 
 type PersistableCartState = {
   cart: CartItem[];
+  favorites: CartItem[];
   cartUIStatus: CartStatus;
 };
 
@@ -54,11 +55,12 @@ function loadPersistedCartState(
     const parsed = JSON.parse(cached);
     const status =
       typeof parsed.cartUIStatus === "string" &&
-      VALID_CART_STATUSES.includes(parsed.cartUIStatus)
+        VALID_CART_STATUSES.includes(parsed.cartUIStatus)
         ? (parsed.cartUIStatus as CartStatus)
         : "idle";
     return {
       cart: Array.isArray(parsed.cart) ? parsed.cart : [],
+      favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
       cartUIStatus: status,
     };
   } catch (error) {
@@ -91,6 +93,7 @@ export const useCartStore = defineStore("cart", {
       products: [] as Product[],
       bestSellingProducts: [] as Product[],
       cart: persisted?.cart ?? [],
+      favorites: persisted?.favorites ?? [],
       loading: false,
       error: null as string | null,
       sizeMapping: {} as Record<string, string[]>,
@@ -108,6 +111,12 @@ export const useCartStore = defineStore("cart", {
 
       // Fallback: first three products with images
       return state.products.filter(hasImage).slice(0, 3);
+    },
+    newProducts(state): Product[] {
+      // Sort by ID descending to get newest products
+      return [...state.products]
+        .sort((a, b) => Number(b.id) - Number(a.id))
+        .slice(0, 10);
     },
     womenProducts(state): Product[] {
       return state.products.filter((product) => product.gender === "Female");
@@ -154,7 +163,7 @@ export const useCartStore = defineStore("cart", {
       if (!forceRefresh && this.products.length > 0) {
         return;
       }
-      
+
       this.loading = true;
       this.error = null;
       try {
@@ -187,6 +196,7 @@ export const useCartStore = defineStore("cart", {
       persistCartStateSnapshot(
         {
           cart: this.cart,
+          favorites: this.favorites,
           cartUIStatus: this.cartUIStatus,
         },
         userStore.id
@@ -196,9 +206,11 @@ export const useCartStore = defineStore("cart", {
       const persisted = loadPersistedCartState(userId);
       if (persisted) {
         this.cart = persisted.cart ?? [];
+        this.favorites = persisted.favorites ?? [];
         this.cartUIStatus = persisted.cartUIStatus ?? "idle";
       } else {
         this.cart = [];
+        this.favorites = [];
         this.cartUIStatus = "idle";
       }
       this.sizeMapping = {};
@@ -263,6 +275,26 @@ export const useCartStore = defineStore("cart", {
     },
     removeAllFromCart(payload: CartItem) {
       this.cart = this.cart.filter((item) => item.id !== payload.id);
+      this.persistState();
+    },
+    addToFavorites(payload: CartItem) {
+      const existing = this.favorites.find((item) => item.id === payload.id);
+      if (!existing) {
+        this.favorites.push(payload);
+        this.persistState();
+      }
+    },
+    removeFromFavorites(payload: CartItem) {
+      this.favorites = this.favorites.filter((item) => item.id !== payload.id);
+      this.persistState();
+    },
+    toggleFavorite(payload: CartItem) {
+      const index = this.favorites.findIndex((item) => item.id === payload.id);
+      if (index !== -1) {
+        this.favorites.splice(index, 1);
+      } else {
+        this.favorites.push(payload);
+      }
       this.persistState();
     },
   },

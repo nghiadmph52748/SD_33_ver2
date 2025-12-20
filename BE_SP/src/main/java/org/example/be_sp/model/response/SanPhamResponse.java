@@ -19,6 +19,7 @@ public class SanPhamResponse {
     private Integer id;
     private String maSanPham;
     private String tenSanPham;
+    private String moTa;
     private Integer soLuongBienThe;
     private BigDecimal giaNhoNhat;
     private BigDecimal giaLonNhat;
@@ -68,7 +69,8 @@ public class SanPhamResponse {
         this.id = sp.getId();
         this.maSanPham = sp.getMaSanPham();
         this.tenSanPham = sp.getTenSanPham();
-        
+        this.moTa = sp.getMoTa();
+
         // Filter out deleted variants for accurate count and price calculation
         List<org.example.be_sp.entity.ChiTietSanPham> activeVariants = sp.getChiTietSanPhams().stream()
                 .filter(ct -> ct.getDeleted() == null || !ct.getDeleted())
@@ -110,15 +112,16 @@ public class SanPhamResponse {
                     // Check: trangThai = true, not deleted, and within valid date range
                     ct.getChiTietDotGiamGias().stream()
                             .filter(cdgg -> cdgg.getTrangThai() != null && cdgg.getTrangThai()
-                            && (cdgg.getDeleted() == null || !cdgg.getDeleted())
-                            && cdgg.getIdDotGiamGia() != null
-                            && cdgg.getIdDotGiamGia().getTrangThai() != null
-                            && cdgg.getIdDotGiamGia().getTrangThai()
-                            && isDiscountActive(cdgg.getIdDotGiamGia().getNgayBatDau(),
-                                    cdgg.getIdDotGiamGia().getNgayKetThuc()))
+                                    && (cdgg.getDeleted() == null || !cdgg.getDeleted())
+                                    && cdgg.getIdDotGiamGia() != null
+                                    && cdgg.getIdDotGiamGia().getTrangThai() != null
+                                    && cdgg.getIdDotGiamGia().getTrangThai()
+                                    && isDiscountActive(cdgg.getIdDotGiamGia().getNgayBatDau(),
+                                            cdgg.getIdDotGiamGia().getNgayKetThuc()))
                             .findFirst()
                             .ifPresent(cdgg -> {
-                                bienTheResp.setGiaTriGiamGia(BigDecimal.valueOf(cdgg.getIdDotGiamGia().getGiaTriGiamGia()));
+                                bienTheResp.setGiaTriGiamGia(
+                                        BigDecimal.valueOf(cdgg.getIdDotGiamGia().getGiaTriGiamGia()));
                                 bienTheResp.setIdDotGiamGia(cdgg.getIdDotGiamGia().getId());
                                 bienTheResp.setTenDotGiamGia(cdgg.getIdDotGiamGia().getTenDotGiamGia());
                             });
@@ -143,7 +146,8 @@ public class SanPhamResponse {
                 .toList();
     }
 
-    // Check if discount is within valid date range (today is between ngayBatDau and ngayKetThuc)
+    // Check if discount is within valid date range (today is between ngayBatDau and
+    // ngayKetThuc)
     private boolean isDiscountActive(LocalDateTime ngayBatDau, LocalDateTime ngayKetThuc) {
         if (ngayBatDau == null || ngayKetThuc == null) {
             return false;

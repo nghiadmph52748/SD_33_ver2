@@ -16,11 +16,8 @@
             <RouterLink :to="status.primaryRoute" class="btn btn-block">
               {{ $t(status.primaryLabelKey) }}
             </RouterLink>
-            <RouterLink
-              v-if="status.secondaryRoute && status.secondaryLabelKey"
-              :to="status.secondaryRoute!"
-              class="btn btn-outline btn-block"
-            >
+            <RouterLink v-if="status.secondaryRoute && status.secondaryLabelKey" :to="status.secondaryRoute!"
+              class="btn btn-outline btn-block">
               {{ $t(status.secondaryLabelKey!) }}
             </RouterLink>
           </div>
@@ -28,13 +25,7 @@
           <section class="details">
             <header class="details-header">
               <h2>{{ $t('payment.detailsHeading') }}</h2>
-              <button
-                v-if="orderId"
-                type="button"
-                class="copy-btn pill-btn"
-                @click="copyOrderId"
-                :disabled="copying"
-              >
+              <button v-if="orderId" type="button" class="copy-btn pill-btn" @click="copyOrderId" :disabled="copying">
                 {{ copying ? $t('payment.details.copied') : $t('payment.details.copyRef') }}
               </button>
             </header>
@@ -88,7 +79,7 @@ const status = computed<StatusConfig>(() => {
       icon: '✅',
     }
   }
-  
+
   return {
     titleKey: 'payment.failureTitle',
     messageKey: 'payment.failureMessage',
@@ -103,12 +94,12 @@ const status = computed<StatusConfig>(() => {
 
 const detailItems = computed(() => {
   const rows: { label: string; value: string }[] = []
-  
+
   if (orderId.value) {
     rows.push({ label: 'payment.details.orderId', value: orderId.value })
   }
   rows.push({ label: 'payment.details.method', value: t('payment.cod') })
-  
+
   return rows.filter(row => row.value && row.value !== '—')
 })
 
@@ -116,7 +107,7 @@ const copying = ref(false)
 
 async function copyOrderId() {
   if (copying.value || !orderId.value) return
-  
+
   copying.value = true
   try {
     const text = `${t('payment.details.orderId')}: ${orderId.value}`
@@ -146,7 +137,7 @@ async function copyOrderId() {
 <style scoped lang="scss">
 .payment-result {
   padding: clamp(32px, 6vw, 72px) 0 clamp(48px, 8vw, 120px);
-  background: linear-gradient(180deg, rgba(17,17,17,0.04), rgba(17,17,17,0.02));
+  background: linear-gradient(180deg, rgba(17, 17, 17, 0.04), rgba(17, 17, 17, 0.02));
 }
 
 .status-card {
@@ -155,7 +146,7 @@ async function copyOrderId() {
   background: #ffffff;
   border-radius: 24px;
   padding: clamp(32px, 5vw, 48px);
-  border: 1px solid rgba(17,17,17,0.08);
+  border: 1px solid rgba(17, 17, 17, 0.08);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
   transition: border-color .2s ease, box-shadow .2s ease;
 }
@@ -164,7 +155,7 @@ async function copyOrderId() {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at top right, rgba(17,17,17,0.06), transparent 60%);
+  background: radial-gradient(circle at top right, rgba(17, 17, 17, 0.06), transparent 60%);
   pointer-events: none;
 }
 
@@ -204,12 +195,12 @@ async function copyOrderId() {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 12px;
-  color: rgba(17,17,17,0.55);
+  color: rgba(17, 17, 17, 0.55);
 }
 
 h1 {
   margin: 8px 0 12px;
-  font-family: var(--font-family-serif);
+  /* font-family: var(--font-family-serif); - Removed to switch to Inter */
   font-size: clamp(30px, 5vw, 38px);
   line-height: 1.1;
   color: #111111;
@@ -217,7 +208,7 @@ h1 {
 
 .lead {
   margin: 0;
-  color: rgba(17,17,17,0.7);
+  color: rgba(17, 17, 17, 0.7);
   font-size: 16px;
   line-height: 1.6;
 }
@@ -231,7 +222,7 @@ h1 {
 .details {
   margin-top: clamp(28px, 4vw, 40px);
   padding-top: 24px;
-  border-top: 1px solid rgba(17,17,17,0.08);
+  border-top: 1px solid rgba(17, 17, 17, 0.08);
 }
 
 .details-header {
@@ -262,7 +253,7 @@ h1 {
 
 .copy-btn:hover {
   background: #ebebeb;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .copy-btn:disabled {
@@ -286,7 +277,7 @@ dt {
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: rgba(17,17,17,0.55);
+  color: rgba(17, 17, 17, 0.55);
 }
 
 dd {
@@ -297,9 +288,20 @@ dd {
 }
 
 @keyframes confetti {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: .6; }
-  50% { transform: translate3d(12px, 6px, 0) rotate(1deg); opacity: .4; }
-  100% { transform: translate3d(-12px, -6px, 0) rotate(-1deg); opacity: .6; }
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: .6;
+  }
+
+  50% {
+    transform: translate3d(12px, 6px, 0) rotate(1deg);
+    opacity: .4;
+  }
+
+  100% {
+    transform: translate3d(-12px, -6px, 0) rotate(-1deg);
+    opacity: .6;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -333,4 +335,3 @@ dd {
   }
 }
 </style>
-

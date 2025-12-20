@@ -12,17 +12,34 @@ services:
       - sqlserver_data:/var/opt/mssql
       - ./docker/sqlserver/init:/docker-entrypoint-initdb.d:ro
       - ./docker/sqlserver/init-db.sh:/usr/local/bin/init-db.sh:ro
+      - ./SQLQuery_new.sql:/SQLQuery_new.sql:ro
+      - ./docker/sqlserver:/docker-sqlserver:ro
     networks:
       - gearup-network
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q 'SELECT 1' || exit 1" ]
+      test: [ "CMD-SHELL", "timeout 1 bash -c '</dev/tcp/localhost/1433' || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 60s
-    command: >
-      /bin/bash -c " /opt/mssql/bin/sqlservr & sleep 60 && /usr/local/bin/init-db.sh && wait "
+
+  db-init:
+    image: mcr.microsoft.com/mssql-tools
+    container_name: gearup-db-init
+    environment:
+      MSSQL_SA_PASSWORD: ${SQL_PASSWORD}
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./SQLQuery_new.sql:/SQLQuery_new.sql:ro
+      - ./docker/sqlserver/init-helper.sh:/init-helper.sh:ro
+    networks:
+      - gearup-network
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    command: /bin/bash /init-helper.sh
+    restart: "no" # Only run once
 
   backend:
     build:
@@ -77,6 +94,8 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       ai-service:
         condition: service_started
 

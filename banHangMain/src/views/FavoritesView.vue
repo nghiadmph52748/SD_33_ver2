@@ -1,30 +1,35 @@
 <template>
-  <section class="favorites">
-    <h1>Yêu thích</h1>
-    <p class="hint">Wishlist sắp ra mắt. Tạm thời, xem các sản phẩm nổi bật bên dưới.</p>
-    <AppFeaturedProducts />
-    <div class="cta">
-      <RouterLink to="/all"><button class="btn">Tiếp tục mua sắm</button></RouterLink>
+  <div class="favorites-page">
+    <div class="container">
+      <div v-if="favorites.length > 0">
+        <AppStoreGrid :data="favorites" :title="$t('cart.favourites')" :eyebrow="''" />
+      </div>
+      <AppEmptyState v-else :title="$t('cart.favourites')" :description="$t('cart.viewFavourites')">
+        <div class="actions">
+          <RouterLink to="/all" class="btn primary">{{ $t("cart.browse") }}</RouterLink>
+        </div>
+      </AppEmptyState>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import AppFeaturedProducts from "@/components/AppFeaturedProducts.vue";
+import { storeToRefs } from "pinia";
+import { useCartStore } from "@/stores/cart";
+import AppStoreGrid from "@/components/AppStoreGrid.vue";
+import AppEmptyState from "@/components/AppEmptyState.vue";
+
+const cartStore = useCartStore();
+const { favorites } = storeToRefs(cartStore);
 </script>
 
 <style scoped lang="scss">
-.favorites {
-  padding: 24px 16px;
-  max-width: 1180px;
-  margin: 0 auto;
-  display: grid;
-  gap: 16px;
+.favorites-page {
+  padding: 40px 0 80px;
+  min-height: 60vh;
 }
 
-.hint { color: #4e5969; text-align: center; }
-.cta { text-align: center; }
-
-h1 { margin: 0 0 16px 0; }
+.actions {
+  margin-top: 24px;
+}
 </style>
-

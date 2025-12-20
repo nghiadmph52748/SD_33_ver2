@@ -278,21 +278,25 @@ export function fetchCustomerOrders(
   size: number = 50
 ): Promise<HttpResponse<{ content: OrderTrackingDetail[]; totalElements: number; totalPages: number }>> {
   return axios.get(`/api/hoa-don-management/paging`, {
-    params: { page, size: 100 }
+    params: {
+      page,
+      size: 100,
+      sort: 'createAt,desc' // Request backend to sort by createAt descending (newest first)
+    }
   }).then((response) => {
     const data = response.data as any
     let allOrders: any[] = []
-    
+
     if (data?.data && Array.isArray(data.data)) {
       allOrders = data.data
     } else if (Array.isArray(data)) {
       allOrders = data
     }
-    
+
     const filteredOrders = allOrders.filter((order: any) => {
       if (order.idKhachHang) {
-        const orderCustomerId = typeof order.idKhachHang === 'object' 
-          ? order.idKhachHang.id 
+        const orderCustomerId = typeof order.idKhachHang === 'object'
+          ? order.idKhachHang.id
           : order.idKhachHang
         if (orderCustomerId === customerId) return true
       }
@@ -314,7 +318,7 @@ export function fetchCustomerOrders(
       }
       return orderDetail
     })
-    
+
     return {
       ...response,
       data: {

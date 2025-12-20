@@ -11,6 +11,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class SanPhamRequest {
     private String tenSanPham;
+    private String moTa;
     private Integer idNhaSanXuat;
     private Integer idXuatXu;
     private Boolean deleted;

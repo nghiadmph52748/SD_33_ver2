@@ -34,24 +34,31 @@ if [ -f "$INIT_FLAG_FILE" ]; then
     exit 0
 fi
 
-echo "Running initialization scripts..."
+echo "Running basic initialization scripts..."
 
-# Run all SQL scripts in the init directory
+# Run basic SQL scripts in the init directory (if sqlcmd is available)
 for sql_file in /docker-entrypoint-initdb.d/*.sql; do
     if [ -f "$sql_file" ]; then
-        echo "Executing: $sql_file"
-        /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -i "$sql_file"
-        
-        if [ $? -eq 0 ]; then
-            echo "✓ Successfully executed: $sql_file"
+        echo "Attempting to execute: $sql_file"
+        # Note: sqlcmd may not be available in Azure SQL Edge
+        if command -v /opt/mssql-tools/bin/sqlcmd &> /dev/null; then
+            /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -i "$sql_file" || true
+        elif command -v /opt/mssql-tools18/bin/sqlcmd &> /dev/null; then
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -i "$sql_file" || true
         else
-            echo "✗ Failed to execute: $sql_file"
-            exit 1
+            echo "  ⚠ sqlcmd not found in container, skipping"
         fi
     fi
 done
 
-# Mark initialization as complete
+echo ""
+echo "================================================"
+echo "NOTE: Main database schema (stored procedures, etc.)"
+echo "will be initialized by the db-init container."
+echo "Check 'docker-compose logs db-init' for details."
+echo "================================================"
+
+# Mark basic initialization as complete
 touch "$INIT_FLAG_FILE"
-echo "Database initialization completed successfully!"
+echo "Basic initialization completed!"
 echo "==================================="

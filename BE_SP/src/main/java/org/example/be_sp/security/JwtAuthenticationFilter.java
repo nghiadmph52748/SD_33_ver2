@@ -40,12 +40,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         final String path = request.getServletPath();
 
-        //Bỏ qua filter cho các endpoint public (không yêu cầu đăng nhập)
+        // Bỏ qua filter cho các endpoint public (không yêu cầu đăng nhập)
         if (path.startsWith("/api/auth/")
                 || path.startsWith("/api/khach-hang/auth/")
                 || path.startsWith("/api/khach-hang/me")
@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt;
         final String username;
 
-        //Bỏ qua nếu không có header hoặc không bắt đầu bằng "Bearer "
+        // Bỏ qua nếu không có header hoặc không bắt đầu bằng "Bearer "
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -98,7 +98,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UserDetails userDetails;
                 String usernameForValidation;
-                
+
                 if (isCustomer) {
                     // Load customer từ KhachHangRepository
                     KhachHang khachHang = khachHangRepository.findByTenTaiKhoan(username);
@@ -112,7 +112,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         return;
                     }
                     // Tạo UserDetails cho customer
-                    usernameForValidation = khachHang.getTenTaiKhoan() != null ? khachHang.getTenTaiKhoan() : khachHang.getEmail();
+                    usernameForValidation = khachHang.getTenTaiKhoan() != null ? khachHang.getTenTaiKhoan()
+                            : khachHang.getEmail();
                     userDetails = User.builder()
                             .username(usernameForValidation)
                             .password(khachHang.getMatKhau() != null ? khachHang.getMatKhau() : "")
@@ -134,7 +135,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Nếu token được refresh, gửi token mới về header
                     if (!refreshedToken.equals(jwt)) {
                         response.setHeader("New-Token", refreshedToken);
-                        response.setHeader("Access-Control-Expose-Headers", "New-Token");
                     }
 
                     // Gán quyền cho user từ token
@@ -142,12 +142,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .map(SimpleGrantedAuthority::new)
                             .toList();
 
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    authorities
-                            );
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            authorities);
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);

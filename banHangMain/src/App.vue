@@ -43,9 +43,21 @@ onMounted(async () => {
     isRouting.value = true;
     next();
   });
+
   removeAfter = router.afterEach(() => {
     // small delay to avoid flicker on fast transitions
     setTimeout(() => (isRouting.value = false), 150);
+  });
+
+  // Handle router errors to prevent stuck loading state
+  router.onError((error) => {
+    console.error('Router error:', error);
+    isRouting.value = false;
+
+    // Check for chunk load error and reload if necessary
+    if (error.message.includes('Loading chunk') || error.message.includes('Importing a module script failed')) {
+      window.location.reload();
+    }
   });
 });
 
@@ -94,10 +106,21 @@ onUnmounted(() => {
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-.fade-enter-active, .fade-leave-active { transition: opacity 180ms ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 
 /* Page transitions */
 .page-enter-active {

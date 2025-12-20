@@ -32,7 +32,7 @@ public class SanPham {
     @JoinColumn(name = "id_xuat_xu", nullable = false)
     private XuatXu idXuatXu;
 
-    @Generated(event = {EventType.INSERT, EventType.UPDATE})
+    @Generated(event = { EventType.INSERT, EventType.UPDATE })
     @ColumnDefault("'SP'+right('00000'+CONVERT([varchar](5), [ID]), 5)")
     @Column(name = "ma_san_pham", length = 7, updatable = false, insertable = false)
     private String maSanPham;
@@ -40,6 +40,11 @@ public class SanPham {
     @Nationalized
     @Column(name = "ten_san_pham")
     private String tenSanPham;
+
+    @Lob
+    @Nationalized
+    @Column(name = "mo_ta")
+    private String moTa;
 
     @ColumnDefault("1")
     @Column(name = "trang_thai")

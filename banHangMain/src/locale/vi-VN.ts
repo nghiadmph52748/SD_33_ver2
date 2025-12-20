@@ -66,6 +66,7 @@ export default {
   "orderLookup.actions.cancelNote":
     "Khách hàng yêu cầu huỷ đơn qua trang tra cứu.",
   "orderLookup.actions.missingId": "Không xác định được mã đơn hàng.",
+  "orderLookup.actions.loginRequired": "Bạn cần đăng nhập để hủy đơn hàng",
   "orderLookup.actions.complete": "Hoàn thành đơn hàng",
   "orderLookup.actions.completing": "Đang xác nhận…",
   "orderLookup.actions.completed": "Đơn hàng đã được xác nhận thành công.",
@@ -220,12 +221,17 @@ export default {
   "cart.itemSize": "Size {size}",
   "cart.remove": "Xóa",
   "cart.removeItem": "Xóa sản phẩm",
+  "cart.removeConfirmTitle": "Xác nhận xóa",
+  "cart.removeConfirmMessage": "Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?",
+  "cart.removeConfirmOk": "Xóa",
+  "cart.removeConfirmCancel": "Huỷ",
   "cart.decreaseQuantity": "Giảm số lượng",
   "cart.increaseQuantity": "Tăng số lượng",
   "cart.saveForLater": "Lưu để sau",
   "cart.valueUnknown": "—",
   "cart.totalItems": "Tổng số sản phẩm",
   "cart.savings": "Tiết kiệm",
+  "cart.relatedProducts": "Bạn có thể quan tâm",
   // Thanh toán
   "payment.title": "Thanh toán qua VNPAY",
   "payment.titleMomo": "Thanh toán qua MoMo",
@@ -345,6 +351,7 @@ export default {
   "home.meta":
     "Khám phá giày sneaker thịnh hành, lựa chọn nổi bật và ưu đãi tại GearUp.",
   "home.sections.trending": "Xu hướng",
+  "home.sections.newProducts": "Mới về hàng",
   "home.sections.featured": "Nổi bật",
   "home.sections.sales": "Khuyến mãi",
   // Hộp tiện ích

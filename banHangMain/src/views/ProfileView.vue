@@ -1,133 +1,165 @@
 <template>
   <div class="profile-page" v-if="userStore.isAuthenticated">
-    <div class="card">
-      <header class="card__header">
-        <h1>Hồ sơ của tôi</h1>
-        <p>Cập nhật tên, số điện thoại và địa chỉ giao hàng.</p>
-      </header>
+    <div class="profile-container">
+      <div class="card profile-card">
+        <header class="card__header">
+          <h1>Hồ sơ của tôi</h1>
+          <p>Cập nhật tên, số điện thoại và địa chỉ giao hàng.</p>
+        </header>
 
-<form class="form" @submit.prevent="onSave">
-        <div class="form__group">
-          <label for="name">Họ và tên</label>
-          <input
-            id="name"
-            type="text"
-            v-model.trim="form.name"
-            autocomplete="name"
-            required
-          />
-        </div>
+        <form class="form" @submit.prevent="onSave">
+          <div class="form__group">
+            <label for="name">Họ và tên</label>
+            <input id="name" type="text" v-model.trim="form.name" autocomplete="name" required />
+          </div>
 
-        <div class="form__group">
-          <label for="phone">Số điện thoại</label>
-          <input
-            id="phone"
-            type="tel"
-            v-model.trim="form.phone"
-            autocomplete="tel"
-            required
-          />
-        </div>
+          <div class="form__group">
+            <label for="phone">Số điện thoại</label>
+            <input id="phone" type="tel" v-model.trim="form.phone" autocomplete="tel" required />
+          </div>
 
-        <div class="form__group">
-          <label for="province">Tỉnh/Thành phố</label>
-          <select id="province" v-model="address.province" @change="onProvinceChange">
-            <option disabled value="">Chọn tỉnh/thành</option>
-            <option v-for="p in provinces" :key="p.code" :value="p.value">
-              {{ p.label }}
-            </option>
-          </select>
-        </div>
+          <div class="form__group">
+            <label>{{ $t("checkout.province") }}</label>
+            <AddressSearchSelect v-model="address.province" :options="provinces" :placeholder="$t('checkout.province')"
+              @change="onProvinceChange" />
+          </div>
 
-        <div class="form__group">
-          <label for="district">Quận/Huyện</label>
-          <select
-            id="district"
-            v-model="address.district"
-            :disabled="!districts.length"
-            @change="onDistrictChange"
-          >
-            <option disabled value="">Chọn quận/huyện</option>
-            <option v-for="d in districts" :key="d.code" :value="d.value">
-              {{ d.label }}
-            </option>
-          </select>
-        </div>
+          <div class="form__group">
+            <label>{{ $t("checkout.district") }}</label>
+            <AddressSearchSelect v-model="address.district" :options="districts" :placeholder="$t('checkout.district')"
+              :disabled="!districts.length && !address.district" @change="onDistrictChange" />
+          </div>
 
-        <div class="form__group">
-          <label for="ward">Phường/Xã</label>
-          <select id="ward" v-model="address.ward" :disabled="!wards.length">
-            <option disabled value="">Chọn phường/xã</option>
-            <option v-for="w in wards" :key="w.value" :value="w.value">
-              {{ w.label }}
-            </option>
-          </select>
-        </div>
+          <div class="form__group">
+            <label>{{ $t("checkout.ward") }}</label>
+            <AddressSearchSelect v-model="address.ward" :options="wards" :placeholder="$t('checkout.ward')"
+              :disabled="!wards.length" />
+          </div>
 
-        <div class="form__group">
-          <label for="street">Địa chỉ cụ thể</label>
-          <input
-            id="street"
-            type="text"
-            v-model.trim="address.street"
-            autocomplete="street-address"
-            placeholder="Số nhà, đường..."
-          />
-        </div>
+          <div class="form__group">
+            <label for="street">Địa chỉ cụ thể</label>
+            <input id="street" type="text" v-model.trim="address.street" autocomplete="street-address"
+              placeholder="Số nhà, đường..." />
+          </div>
 
-        <div class="form__actions">
-          <button type="button" @click="openConfirm" :disabled="saving">
-            {{ saving ? 'Đang lưu...' : 'Lưu thay đổi' }}
-          </button>
-        </div>
+          <div class="form__actions">
+            <button type="button" @click="openConfirm" :disabled="saving">
+              {{ saving ? 'Đang lưu...' : 'Lưu thay đổi' }}
+            </button>
+          </div>
 
-        <p v-if="message" class="form__message">{{ message }}</p>
-      </form>
-      <div v-if="showConfirm" class="modal-backdrop">
-        <div class="modal-dialog" role="dialog" aria-modal="true">
-          <h3>Xác nhận lưu</h3>
-          <p>Bạn có chắc muốn lưu thay đổi hồ sơ?</p>
-          <div class="dialog-actions">
-            <button type="button" class="ghost" @click="closeConfirm">Hủy</button>
-            <button type="button" class="primary" @click="onSave">Lưu</button>
+          <p v-if="message" class="form__message">{{ message }}</p>
+        </form>
+        <div v-if="showConfirm" class="modal-backdrop">
+          <div class="modal-dialog" role="dialog" aria-modal="true">
+            <h3>Xác nhận lưu</h3>
+            <p>Bạn có chắc muốn lưu thay đổi hồ sơ?</p>
+            <div class="dialog-actions">
+              <button type="button" class="ghost" @click="closeConfirm">Hủy</button>
+              <button type="button" class="primary" @click="onSave">Lưu</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="card order-history" v-if="userStore.isAuthenticated">
-      <header class="card__header">
-        <h2>Lịch sử mua hàng</h2>
-      </header>
-      <div v-if="loadingOrders" class="order-history__loading">Đang tải...</div>
-      <div v-else-if="orders.length === 0" class="order-history__empty">
-        <p>Bạn chưa có đơn hàng nào.</p>
-      </div>
-      <div v-else class="order-history__list">
-        <div v-for="order in orders" :key="order.id" class="order-item">
-          <div class="order-item__header">
-            <div class="order-item__info">
-              <span class="order-item__code">Mã đơn: {{ order.maHoaDon || '—' }}</span>
-              <span class="order-item__date">{{ formatDate(order.createAt || order.ngayTao) }}</span>
-            </div>
-            <span class="order-item__status">{{ order.trangThai || '—' }}</span>
+      <!-- Right Column: Order History -->
+      <div class="card order-history">
+        <header class="card__header">
+          <div class="header-content">
+            <h2>Lịch sử mua hàng</h2>
+            <span v-if="!loadingOrders && orders.length > 0" class="order-count">{{ orders.length }} đơn hàng</span>
           </div>
-          <div class="order-item__details">
-            <div class="order-item__total">
-              <span>Tổng tiền:</span>
-              <strong>{{ formatCurrency(order.tongTienSauGiam || order.tongTien || 0) }}</strong>
+        </header>
+        <div v-if="loadingOrders" class="order-history__loading">
+          <div class="spinner"></div>
+          <p>Đang tải đơn hàng...</p>
+        </div>
+        <div v-else-if="orders.length === 0" class="order-history__empty">
+          <svg class="empty-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.5">
+            <path d="M9 2L3 8v13c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8l-6-6H9z" />
+            <path d="M9 2v6H3" />
+            <path d="M9 13h6" />
+            <path d="M9 17h6" />
+          </svg>
+          <p class="empty-title">Chưa có đơn hàng nào</p>
+          <p class="empty-subtitle">Khi bạn đặt hàng, chúng sẽ hiển thị ở đây</p>
+          <RouterLink to="/" class="shop-now-button">Mua sắm ngay</RouterLink>
+        </div>
+        <div v-else>
+          <!-- Search box -->
+          <div class="order-search">
+            <div class="search-input-wrapper">
+              <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input type="text" v-model="orderSearchQuery"
+                placeholder="Tìm kiếm theo mã đơn, ngày tạo hoặc trạng thái..." class="search-input" />
+              <button v-if="orderSearchQuery" @click="orderSearchQuery = ''" class="clear-search" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
-            <div v-if="order.hoaDonChiTiets?.length || order.items?.length" class="order-item__products">
-              <span class="order-item__products-label">Sản phẩm:</span>
-              <span class="order-item__products-count">
-                {{ (order.hoaDonChiTiets || order.items || []).length }} sản phẩm
-              </span>
+            <div v-if="orderSearchQuery && filteredOrders.length === 0" class="search-no-results">
+              Không tìm thấy đơn hàng phù hợp
             </div>
           </div>
-          <div class="order-item__actions">
-            <RouterLink :to="`/order-lookup?code=${order.maHoaDon}`" class="order-item__link">
-              Xem chi tiết
-            </RouterLink>
+
+          <!-- Order list -->
+          <div class="order-history__list">
+            <div v-for="order in filteredOrders" :key="order.id" class="order-card">
+              <div class="order-card__header">
+                <div class="order-code">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 2L3 8v13c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8l-6-6H9z" />
+                    <path d="M9 2v6H3" />
+                  </svg>
+                  <span>{{ order.maHoaDon || '—' }}</span>
+                </div>
+                <span :class="['order-status', getStatusClass(order.trangThai)]">
+                  {{ order.trangThai || 'Chưa xác định' }}
+                </span>
+              </div>
+
+              <div class="order-card__body">
+                <div class="order-meta">
+                  <div class="meta-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 6v6l4 2" />
+                    </svg>
+                    <span>{{ formatDate(order.createAt || order.ngayTao) }}</span>
+                  </div>
+                  <div class="meta-item" v-if="order.hoaDonChiTiets?.length || order.items?.length">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M6 2L3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6l-3-4H6z" />
+                      <line x1="3" y1="6" x2="21" y2="6" />
+                      <path d="M16 10c0 2.2-1.8 4-4 4s-4-1.8-4-4" />
+                    </svg>
+                    <span>{{ (order.hoaDonChiTiets || order.items || []).length }} sản phẩm</span>
+                  </div>
+                </div>
+
+                <div class="order-total">
+                  <span class="total-label">Tổng tiền:</span>
+                  <span class="total-amount">{{ formatCurrency(order.tongTienSauGiam || order.tongTien || 0) }}</span>
+                </div>
+              </div>
+
+              <div class="order-card__footer">
+                <RouterLink :to="`/order-lookup?code=${order.maHoaDon}`" class="view-details-btn">
+                  <span>Xem chi tiết</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14" />
+                    <path d="M12 5l7 7-7 7" />
+                  </svg>
+                </RouterLink>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -142,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { RouterLink } from 'vue-router'
 import { useUserStore } from '@/stores/user'
@@ -150,6 +182,8 @@ import { updateProfile, getMe } from '@/api/auth'
 import { fetchGHNProvinces, fetchGHNDistrictsByProvince, fetchGHNWards } from '@/api/shipping'
 import { fetchCustomerOrders, type OrderTrackingDetail } from '@/api/orders'
 import { formatCurrency } from '@/utils/currency'
+import AddressSearchSelect from '@/components/common/AddressSearchSelect.vue'
+
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -175,6 +209,19 @@ const message = ref('')
 const showConfirm = ref(false)
 const orders = ref<OrderTrackingDetail[]>([])
 const loadingOrders = ref(false)
+const orderSearchQuery = ref('')
+
+const filteredOrders = computed(() => {
+  if (!orderSearchQuery.value) return orders.value
+  const query = orderSearchQuery.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return orders.value.filter(order => {
+    const invoiceCode = (order.maHoaDon || '').toLowerCase()
+    const status = (order.trangThai || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const dateStr = formatDate(order.createAt || order.ngayTao).toLowerCase()
+    return invoiceCode.includes(query) || status.includes(query) || dateStr.includes(query)
+  })
+})
+
 
 async function loadProvinces() {
   try {
@@ -289,7 +336,13 @@ async function loadOrders() {
     )
     if (res?.data) {
       const data = res.data as any
-      orders.value = Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : [])
+      const orderList = Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : [])
+      // Sort by creation date descending (latest first)
+      orders.value = orderList.sort((a: any, b: any) => {
+        const dateA = new Date(a.createAt || a.ngayTao || 0).getTime()
+        const dateB = new Date(b.createAt || b.ngayTao || 0).getTime()
+        return dateB - dateA // Descending order
+      })
     }
   } catch {
     orders.value = []
@@ -312,6 +365,16 @@ function formatDate(dateStr?: string): string {
   } catch {
     return dateStr
   }
+}
+
+function getStatusClass(status?: string): string {
+  if (!status) return 'status-unknown'
+  const normalized = status.toLowerCase()
+  if (normalized.includes('hoàn thành') || normalized.includes('đã giao')) return 'status-completed'
+  if (normalized.includes('đang') || normalized.includes('xử lý')) return 'status-processing'
+  if (normalized.includes('hủy')) return 'status-cancelled'
+  if (normalized.includes('chờ')) return 'status-pending'
+  return 'status-default'
 }
 
 onMounted(() => {
@@ -369,9 +432,27 @@ async function onSave() {
 
 <style scoped>
 .profile-page {
-  max-width: 720px;
+  max-width: 1400px;
   margin: 32px auto;
   padding: 0 16px;
+}
+
+.profile-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .profile-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-card {
+  position: sticky;
+  top: 24px;
 }
 
 .card {
@@ -515,110 +596,342 @@ button:disabled {
 }
 
 .order-history {
-  margin-top: 32px;
+  /* No margin-top needed since we're in a grid */
 }
 
-.order-history__loading,
-.order-history__empty {
-  padding: 24px;
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-count {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+  padding: 4px 12px;
+  background: #f3f4f6;
+  border-radius: 20px;
+}
+
+.order-history__loading {
+  padding: 48px 24px;
   text-align: center;
   color: #6b7280;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f4f6;
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.order-history__empty {
+  padding: 64px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty-icon {
+  color: #d1d5db;
+  margin-bottom: 8px;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
+  margin: 0;
+}
+
+.empty-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.shop-now-button {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.shop-now-button:hover {
+  background: #000;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Order Search */
+.order-search {
+  margin-bottom: 20px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 14px 48px 14px 48px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  background: #fff;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #111;
+  box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.04);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.clear-search {
+  position: absolute;
+  right: 12px;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.clear-search:hover {
+  background: rgba(17, 17, 17, 0.05);
+  color: #111;
+}
+
+.search-no-results {
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  margin-top: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
 }
 
 .order-history__list {
   display: grid;
   gap: 16px;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
-.order-item {
+.order-card {
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 20px;
   background: #fff;
+  transition: all 0.2s ease;
 }
 
-.order-item__header {
+.order-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+.order-card__header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
-.order-item__info {
+.order-code {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.order-item__code {
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
   color: #111;
   font-size: 15px;
 }
 
-.order-item__date {
-  font-size: 13px;
+.order-code svg {
   color: #6b7280;
+  flex-shrink: 0;
 }
 
-.order-item__status {
-  font-size: 13px;
-  color: #6b7280;
-  padding: 4px 8px;
+.order-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-processing {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-default,
+.status-unknown {
   background: #f3f4f6;
-  border-radius: 4px;
+  color: #4b5563;
 }
 
-.order-item__details {
+.order-card__body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.order-item__total {
+.order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.meta-item svg {
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+.order-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.total-label {
   font-size: 14px;
-}
-
-.order-item__total strong {
-  font-size: 16px;
-  color: #111;
-}
-
-.order-item__products {
-  display: flex;
-  gap: 8px;
-  font-size: 13px;
   color: #6b7280;
-}
-
-.order-item__products-label {
   font-weight: 500;
 }
 
-.order-item__actions {
-  display: flex;
-  justify-content: flex-end;
+.total-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
 }
 
-.order-item__link {
+.order-card__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.view-details-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fff;
   color: #111;
   text-decoration: none;
   font-size: 14px;
-  font-weight: 500;
-  padding: 6px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  transition: all 0.15s ease;
+  font-weight: 600;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
-.order-item__link:hover {
-  background: #f9fafb;
+.view-details-btn:hover {
+  background: #111;
+  color: #fff;
   border-color: #111;
 }
-</style>
 
+.view-details-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.view-details-btn:hover svg {
+  transform: translateX(3px);
+}
+
+@media (max-width: 640px) {
+  .order-card {
+    padding: 16px;
+  }
+
+  .order-code {
+    font-size: 14px;
+  }
+
+  .order-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .total-amount {
+    font-size: 16px;
+  }
+}
+</style>

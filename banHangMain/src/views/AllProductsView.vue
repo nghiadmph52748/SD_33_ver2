@@ -1,36 +1,33 @@
 <template>
   <div class="page">
-    <div class="page__header">
-      <router-link class="back" to="/">
-        <!-- Back chevron SVG -->
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" class="back__icon">
-          <path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-        </svg>
-        <span>{{ $t('store.back') }}</span>
-      </router-link>
-      <div class="breadcrumbs">
-        <router-link to="/" class="breadcrumbs__link">{{ $t('nav.home') }}</router-link>
-        <span class="breadcrumbs__sep">/</span>
-        <span class="breadcrumbs__current">{{ $t('store.shoes') }}</span>
-      </div>
-      <div class="title-row">
-        <div>
-          <h1 class="title">{{ $t('store.shoesTitle') }} <span class="count" v-if="!loading">[{{ products.length }}]</span></h1>
-          <p class="subtitle">
-            {{ $t('store.shoesSubtitle') }}
-          </p>
-        </div>
-      </div>
-    </div>
-
     <div class="page__content">
-      <FilterSidebar
-        ref="filterSidebarRef"
-        :max-price="maxProductPrice"
-        :brands="availableBrands"
-        @change="applyFilters"
-      />
+      <FilterSidebar ref="filterSidebarRef" :max-price="maxProductPrice" :brands="availableBrands"
+        @change="applyFilters" />
       <div class="page__main">
+        <div class="main__header">
+          <router-link class="back" to="/">
+            <!-- Back chevron SVG -->
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" class="back__icon">
+              <path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+            </svg>
+            <span>{{ $t('store.back') }}</span>
+          </router-link>
+          <div class="breadcrumbs">
+            <router-link to="/" class="breadcrumbs__link">{{ $t('nav.home') }}</router-link>
+            <span class="breadcrumbs__sep">/</span>
+            <span class="breadcrumbs__current">{{ $t('store.shoes') }}</span>
+          </div>
+          <div class="title-row">
+            <div>
+              <h1 class="title">{{ $t('store.shoesTitle') }} <span class="count" v-if="!loading">[{{ products.length
+              }}]</span></h1>
+              <p class="subtitle">
+                {{ $t('store.shoesSubtitle') }}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div v-if="!error">
           <AppStoreGrid :data="products" :loading="loading" />
           <a-empty v-if="!loading && products.length === 0" :description="$t('store.noProducts')" />
@@ -67,7 +64,7 @@ onMounted(async () => {
   if (allProducts.value.length === 0) {
     await cartStore.fetchProducts(true); // Only sneakers
   }
-  
+
   // Check for brand query parameter and apply filter
   const brandQuery = route.query.brand as string | undefined;
   if (brandQuery) {
@@ -80,7 +77,7 @@ onMounted(async () => {
       });
     }
   }
-  
+
   // Check for search query parameter
   const searchQuery = route.query.search as string | undefined;
   if (searchQuery) {
@@ -127,25 +124,25 @@ const availableBrands = computed(() => {
 
 function matchesFilter(product: Product, filters: string[]): boolean {
   if (filters.length === 0) return true;
-  
+
   // Separate gender filters and brand filters
   const genderFilters = filters.filter(f => f === 'Male' || f === 'Female');
   const brandFilters = filters.filter(f => f !== 'Male' && f !== 'Female');
-  
+
   // Check gender match (if gender filters are selected)
   if (genderFilters.length > 0) {
     const genderMatches = genderFilters.some(gender => product.gender === gender);
     if (!genderMatches) return false;
   }
-  
+
   // Check brand match (if brand filters are selected)
   if (brandFilters.length > 0) {
-    const brandMatches = brandFilters.some(brand => 
+    const brandMatches = brandFilters.some(brand =>
       product.brand && product.brand.toLowerCase() === brand.toLowerCase()
     );
     if (!brandMatches) return false;
   }
-  
+
   return true;
 }
 
@@ -214,75 +211,100 @@ function applyFilters(payload: { sort: string; price: [number, number]; categori
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: #ffffff;
 }
 
-.page__header {
-  max-width: 1280px;
-  margin: 0 auto 24px auto;
-  padding: 16px 16px 0 16px;
-}
+/* .page__header removed */
 
 .back {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: #111;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 13px;
   text-transform: uppercase;
   font-weight: 600;
-  letter-spacing: .02em;
+  letter-spacing: 0.05em;
+  transition: color 0.2s;
+}
+
+.back:hover {
+  color: #111;
 }
 
 .back__icon {
   display: inline-block;
+  opacity: 0.7;
 }
 
 .breadcrumbs {
-  margin-top: 12px;
-  color: #6b7280;
-  font-size: 14px;
+  margin-top: 16px;
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .breadcrumbs__link {
   color: #6b7280;
+  transition: color 0.2s;
+}
+
+.breadcrumbs__link:hover {
+  color: #111;
 }
 
 .breadcrumbs__sep {
-  margin: 0 6px;
+  margin: 0 8px;
+  color: #d1d5db;
+}
+
+.breadcrumbs__current {
+  color: #111;
 }
 
 .title-row {
-  margin-top: 16px;
+  margin-top: 24px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
 }
 
 .title {
   margin: 0;
-  font-size: 40px;
+  /* font-family: var(--font-family-serif, "Times New Roman", serif); - Removed to start using Inter */
+  font-size: 48px;
   line-height: 1.1;
-  letter-spacing: .01em;
+  letter-spacing: -0.02em;
+  color: #111;
 }
 
 .count {
   font-weight: 400;
-  font-size: 20px;
-  color: #6b7280;
+  font-size: 24px;
+  color: #9ca3af;
+  vertical-align: super;
+  font-size: 16px;
+  margin-left: 4px;
 }
 
 .subtitle {
   margin: 12px 0 0 0;
-  color: #374151;
+  color: #4b5563;
+  font-size: 16px;
+  font-weight: 400;
+  max-width: 600px;
+  line-height: 1.6;
 }
 
 .page__content {
   display: flex;
   flex: 1;
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 0 16px 24px 16px;
-  gap: 24px;
+  /* Increased top padding to 40px */
+  padding: 40px 24px 64px 24px;
+  gap: 48px;
   align-items: flex-start;
 }
 
@@ -291,14 +313,33 @@ function applyFilters(payload: { sort: string; price: [number, number]; categori
   padding: 0;
 }
 
+.main__header {
+  margin-bottom: 32px;
+}
+
+.page__main {
+  flex: 1;
+  padding: 0;
+}
+
 @media (max-width: 768px) {
-  .title { font-size: 30px; }
-  .count { font-size: 16px; }
-  .page__content {
-    flex-direction: column;
+  .page__header {
+    padding: 24px 16px 0 16px;
+    margin-bottom: 24px;
   }
-  .page__main {
-    padding: 12px;
+
+  .title {
+    font-size: 32px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+  }
+
+  .page__content {
+    padding: 0 16px 40px 16px;
+    gap: 32px;
+    flex-direction: column;
   }
 }
 </style>

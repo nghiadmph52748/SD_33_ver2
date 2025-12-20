@@ -2,12 +2,17 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies and Microsoft SQL Server ODBC Driver 18
 RUN apt-get update && apt-get install -y \
-    gcc \
-    unixodbc-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+  gcc \
+  unixodbc-dev \
+  curl \
+  gnupg2 \
+  && curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+  && echo "deb [arch=arm64,amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+  && apt-get update \
+  && ACCEPT_EULA=Y apt-get install -y msodbcsql18 \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .

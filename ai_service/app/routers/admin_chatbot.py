@@ -143,7 +143,15 @@ Tạo mã giảm giá?"""
         response = llm_client.chat(messages, temperature=0.7, max_tokens=150, stream=False)
         
         # Parse response into list of suggestions
-        suggestions_text = response.strip()
+        # Handle both OpenAI (LM Studio) and Gemini response formats
+        if hasattr(response, 'choices') and response.choices:
+            suggestions_text = response.choices[0].message.content
+        elif hasattr(response, 'text'):
+            suggestions_text = response.text
+        else:
+            suggestions_text = str(response)
+            
+        suggestions_text = suggestions_text.strip()
         suggestions = [s.strip() for s in suggestions_text.split('\n') if s.strip()]
         
         # Filter out numbering, bullets, and ensure max 3 suggestions

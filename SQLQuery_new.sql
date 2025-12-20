@@ -1230,45 +1230,13 @@ SET IDENTITY_INSERT [dbo].[chat_lieu] OFF
 GO
 SET IDENTITY_INSERT [dbo].[chi_tiet_dot_giam_gia] ON 
 GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 1, 2, 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, 2, 1, 1, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, 2, 3, 1, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (5, 3, 2, 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (6, 3, 3, 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (7, 4, 1, 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (8, 4, 2, 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[chi_tiet_dot_giam_gia] ([id], [id_dot_giam_gia], [id_chi_tiet_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (9, 4, 3, 1, 0, CAST(N'2025-10-01' AS Date), 1, NULL, NULL)
+-- Product discount details cleared - will be added when products are created
 GO
 SET IDENTITY_INSERT [dbo].[chi_tiet_dot_giam_gia] OFF
 GO
 SET IDENTITY_INSERT [dbo].[chi_tiet_san_pham] ON 
 GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (1, 1, 1, 1, 1, 1, 1, NULL, 47, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', NULL, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Đen - Size 39')
-GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (2, 1, 2, 2, 1, 1, 1, NULL, 44, CAST(2500000.00 AS Decimal(18, 2)), 1, N'Giày thể thao cao cấp Nike', NULL, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Trắng - Size 40')
-GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (3, 2, 3, 3, 2, 2, 2, NULL, 40, CAST(3200000.00 AS Decimal(18, 2)), 1, N'Giày chạy bộ Adidas', NULL, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL, N'Giày Adidas Ultraboost 22 - Đỏ - Size 41')
-GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (4, 4, 1, 3, 1, 1, 1, NULL, 1, CAST(100.00 AS Decimal(18, 2)), 1, NULL, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Abc - Đen - Size 41')
-GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (5, 4, 1, 2, 1, 1, 1, NULL, 1, CAST(100.00 AS Decimal(18, 2)), 1, NULL, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Abc - Đen - Size 40')
-GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (6, 1, 1, 3, 1, 1, 1, NULL, 6, CAST(100.00 AS Decimal(18, 2)), 1, NULL, NULL, 0, CAST(N'2025-10-11' AS Date), 1, CAST(N'2025-10-11' AS Date), 1, N'Giày Nike Air Max 270 - Đen - Size 41')
-GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (7, 1, 1, 2, 1, 1, 1, NULL, 5, CAST(100.00 AS Decimal(18, 2)), 1, NULL, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Đen - Size 40')
-GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (8, 1, 2, 2, 2, 1, 1, NULL, 1, CAST(1.00 AS Decimal(18, 2)), 1, NULL, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Giày Nike Air Max 270 - Trắng - Size 40')
-GO
-INSERT [dbo].[chi_tiet_san_pham] ([id], [id_san_pham], [id_mau_sac], [id_kich_thuoc], [id_de_giay], [id_chat_lieu], [id_trong_luong], [ten_chi_tiet_san_pham], [so_luong], [gia_ban], [trang_thai], [ghi_chu], [qrcode], [deleted], [create_at], [create_by], [update_at], [update_by], [ten_san_pham_chi_tiet]) VALUES (9, 4, 2, 4, 2, 1, 1, NULL, 2, CAST(3.00 AS Decimal(18, 2)), 1, NULL, NULL, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL, N'Abc + Trắng + 38')
+-- Product details cleared - will be added when products are created
 GO
 SET IDENTITY_INSERT [dbo].[chi_tiet_san_pham] OFF
 GO
@@ -1416,13 +1384,7 @@ SET IDENTITY_INSERT [dbo].[quyen_han] OFF
 GO
 SET IDENTITY_INSERT [dbo].[san_pham] ON 
 GO
-INSERT [dbo].[san_pham] ([id], [id_nha_san_xuat], [id_xuat_xu], [ten_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (1, 1, 1, N'Giày Nike Air Max 270', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[san_pham] ([id], [id_nha_san_xuat], [id_xuat_xu], [ten_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (2, 2, 2, N'Giày Adidas Ultraboost 22', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[san_pham] ([id], [id_nha_san_xuat], [id_xuat_xu], [ten_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (3, 3, 3, N'Giày Puma RS-X', 1, 0, CAST(N'2025-09-27' AS Date), 1, NULL, NULL)
-GO
-INSERT [dbo].[san_pham] ([id], [id_nha_san_xuat], [id_xuat_xu], [ten_san_pham], [trang_thai], [deleted], [create_at], [create_by], [update_at], [update_by]) VALUES (4, 1, 1, N'Abc', 1, 0, CAST(N'2025-10-11' AS Date), 1, NULL, NULL)
+-- Products cleared - add your products here via the admin panel
 GO
 SET IDENTITY_INSERT [dbo].[san_pham] OFF
 GO

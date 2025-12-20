@@ -65,6 +65,7 @@ export default {
   "orderLookup.actions.cancelNote":
     "Customer requested cancellation via order lookup page.",
   "orderLookup.actions.missingId": "We could not determine the order ID.",
+  "orderLookup.actions.loginRequired": "You need to sign in to cancel an order",
   "orderLookup.actions.complete": "Complete order",
   "orderLookup.actions.completing": "Completing…",
   "orderLookup.actions.completed": "The order has been confirmed successfully.",
@@ -75,10 +76,12 @@ export default {
   "orderLookup.actions.keepOrder": "Keep order",
   "orderLookup.actions.cancelNow": "Cancel now",
   "orderLookup.timeline.heading": "Latest status updates",
+  "orderLookup.timeline.updates": "updates",
   "orderLookup.timeline.emptyTitle": "No timeline entries yet",
   "orderLookup.timeline.emptySubtitle":
     "Updates will appear here as soon as the order progresses.",
   "orderLookup.items.heading": "Items in this order",
+  "orderLookup.items.itemsCount": "items",
   "orderLookup.items.product": "Product",
   "orderLookup.items.variant": "Variant",
   "orderLookup.items.quantity": "Qty",
@@ -202,6 +205,10 @@ export default {
   "cart.itemSize": "Size {size}",
   "cart.remove": "Remove",
   "cart.removeItem": "Remove item",
+  "cart.removeConfirmTitle": "Confirm removal",
+  "cart.removeConfirmMessage": "Are you sure you want to remove this item from your cart?",
+  "cart.removeConfirmOk": "Remove",
+  "cart.removeConfirmCancel": "Cancel",
   "cart.decreaseQuantity": "Decrease quantity",
   "cart.increaseQuantity": "Increase quantity",
   "cart.saveForLater": "Save for later",
@@ -213,6 +220,7 @@ export default {
   "cart.memberReturnsAria": "Member returns policy",
   "cart.memberReturns": "Free returns for Members within 30 days.",
   "cart.learnMore": "Learn more",
+  "cart.relatedProducts": "You might be interested in",
   // Payment
   "payment.title": "Payment with VNPAY",
   "payment.titleMomo": "Payment with MoMo",
@@ -332,6 +340,7 @@ export default {
   "home.meta":
     "Discover trending sneakers, featured picks, and great sales at GearUp.",
   "home.sections.trending": "Trending",
+  "home.sections.newProducts": "New Arrivals",
   "home.sections.featured": "Featured",
   "home.sections.sales": "Sales",
   // Sales boxes

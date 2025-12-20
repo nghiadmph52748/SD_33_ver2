@@ -33,35 +33,57 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // Allow login and logout endpoints (including reset-admin-password)
-                .requestMatchers("/api/khach-hang/auth/**").permitAll() // Allow storefront customer auth
-                .requestMatchers("/api/ca-lam-viec/**").permitAll()
-                .requestMatchers("/api/lich-lam-viec/**").permitAll()
-                .requestMatchers("/api/giao-ca/**").permitAll()
-                .requestMatchers("/api/content-data", "/api/popular/**").permitAll() // Allow dashboard mock data
-                .requestMatchers("/api/payment/vnpay/**").permitAll() // Allow VNPAY redirect/IPN without auth
-                .requestMatchers("/api/payment/momo/**").permitAll() // Allow MoMo redirect/IPN without auth
-                .requestMatchers("/ws-chat/**").permitAll() // Allow WebSocket connection (auth handled by interceptor)
-                .requestMatchers("/api/invoice-management/**").permitAll() // Allow new invoice module endpoints
-                .requestMatchers("/api/hoa-don-management/**").permitAll() // Allow invoice management without auth for testing
-                .requestMatchers("/api/hoa-don-chi-tiet-management/**").permitAll() // Allow invoice detail management without auth for testing
-                .requestMatchers("/api/thong-tin-hoa-don-management/**").permitAll() // Allow order info management without auth for testing
-                .requestMatchers("/api/timeline-don-hang/**").permitAll() // Allow order timeline for customer tracking
-                .requestMatchers("/api/san-pham-management/**").permitAll() // Allow product management without auth for testing
-                .requestMatchers("/api/chi-tiet-san-pham-management/**").permitAll() // Allow product detail management without auth for testing
-                .requestMatchers("/api/khach-hang-management/**").permitAll() // Allow customer management without auth for testing
-                .requestMatchers("/api/pos/**").permitAll() // Allow POS endpoints without auth for testing
-                .requestMatchers("/api/test/**").permitAll() // Allow test endpoints without auth
-                .requestMatchers("/api/email-test/**").permitAll() // Allow email test endpoints without auth
-                .requestMatchers("/api/nhan-vien-management/**").permitAll() // Allow employee management without auth for testing
-                .requestMatchers("/api/dot-giam-gia-management/**").permitAll() // Allow discount management without auth for testing
-                .requestMatchers("/api/phieu-giam-gia-management/**").permitAll() // Allow coupon management without auth for testing
-                .requestMatchers("/api/chi-tiet-phieu-giam-gia-management/**").permitAll() // Allow coupon detail management without auth for testing
-                .requestMatchers("/api/anh-san-pham-management/**").permitAll() // Allow product images without auth for storefront
-                .requestMatchers("/api/bien-the/**").permitAll() // Allow product variants without auth for testing
-                .requestMatchers("/api/ai/**").permitAll()
-                .requestMatchers("/api/anh-san-pham-management/**").permitAll() // Allow AI service endpoints without auth
-                .anyRequest().authenticated())
+                        .requestMatchers("/api/auth/**").permitAll() // Allow login and logout endpoints (including
+                                                                     // reset-admin-password)
+                        .requestMatchers("/api/khach-hang/auth/**").permitAll() // Allow storefront customer auth
+                        .requestMatchers("/api/ca-lam-viec/**").permitAll()
+                        .requestMatchers("/api/lich-lam-viec/**").permitAll()
+                        .requestMatchers("/api/giao-ca/**").permitAll()
+                        .requestMatchers("/api/content-data", "/api/popular/**").permitAll() // Allow dashboard mock
+                                                                                             // data
+                        .requestMatchers("/api/payment/vnpay/**").permitAll() // Allow VNPAY redirect/IPN without auth
+                        .requestMatchers("/api/payment/momo/**").permitAll() // Allow MoMo redirect/IPN without auth
+                        .requestMatchers("/ws-chat/**").permitAll() // Allow WebSocket connection (auth handled by
+                                                                    // interceptor)
+                        .requestMatchers("/api/invoice-management/**").permitAll() // Allow new invoice module endpoints
+                        .requestMatchers("/api/hoa-don-management/**").permitAll() // Allow invoice management without
+                                                                                   // auth for testing
+                        .requestMatchers("/api/hoa-don-chi-tiet-management/**").permitAll() // Allow invoice detail
+                                                                                            // management without auth
+                                                                                            // for testing
+                        .requestMatchers("/api/thong-tin-hoa-don-management/**").permitAll() // Allow order info
+                                                                                             // management without auth
+                                                                                             // for testing
+                        .requestMatchers("/api/timeline-don-hang/**").permitAll() // Allow order timeline for customer
+                                                                                  // tracking
+                        .requestMatchers("/api/san-pham-management/**").permitAll() // Allow product management without
+                                                                                    // auth for testing
+                        .requestMatchers("/api/chi-tiet-san-pham-management/**").permitAll() // Allow product detail
+                                                                                             // management without auth
+                                                                                             // for testing
+                        .requestMatchers("/api/khach-hang-management/**").permitAll() // Allow customer management
+                                                                                      // without auth for testing
+                        .requestMatchers("/api/pos/**").permitAll() // Allow POS endpoints without auth for testing
+                        .requestMatchers("/api/test/**").permitAll() // Allow test endpoints without auth
+                        .requestMatchers("/api/email-test/**").permitAll() // Allow email test endpoints without auth
+                        .requestMatchers("/api/nhan-vien-management/**").permitAll() // Allow employee management
+                                                                                     // without auth for testing
+                        .requestMatchers("/api/dot-giam-gia-management/**").permitAll() // Allow discount management
+                                                                                        // without auth for testing
+                        .requestMatchers("/api/phieu-giam-gia-management/**").permitAll() // Allow coupon management
+                                                                                          // without auth for testing
+                        .requestMatchers("/api/chi-tiet-phieu-giam-gia-management/**").permitAll() // Allow coupon
+                                                                                                   // detail management
+                                                                                                   // without auth for
+                                                                                                   // testing
+                        .requestMatchers("/api/anh-san-pham-management/**").permitAll() // Allow product images without
+                                                                                        // auth for storefront
+                        .requestMatchers("/api/bien-the/**").permitAll() // Allow product variants without auth for
+                                                                         // testing
+                        .requestMatchers("/api/ai/**").permitAll()
+                        .requestMatchers("/api/anh-san-pham-management/**").permitAll() // Allow AI service endpoints
+                                                                                        // without auth
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
@@ -69,11 +91,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:8080", "http://localhost:5173", "http://localhost:5174")); // Add port 5174
+        configuration
+                .setAllowedOrigins(List.of("http://localhost:8080", "http://localhost:5173", "http://localhost:5174")); // Add
+                                                                                                                        // port
+                                                                                                                        // 5174
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);  // Required for auth cookies/headers
-        configuration.setExposedHeaders(List.of("*")); // Expose all headers
+        configuration.setAllowCredentials(true); // Required for auth cookies/headers
+        // Explicitly expose headers needed by client instead of wildcard
+        configuration.setExposedHeaders(List.of("Authorization", "New-Token", "Content-Disposition"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

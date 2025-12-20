@@ -9,26 +9,16 @@
               <div class="row two">
                 <div>
                   <label for="fullName">{{ $t("checkout.fullName") }}</label>
-                  <input
-                    id="fullName"
-                    v-model.trim="contact.fullName"
-                    :class="{ invalid: errs.fullName }"
-                    type="text"
-                    placeholder="Nguyen Van A"
-                  />
+                  <input id="fullName" v-model.trim="contact.fullName" :class="{ invalid: errs.fullName }" type="text"
+                    placeholder="Nguyen Van A" />
                   <small v-if="errs.fullName" class="error-text">{{
                     errs.fullName
                   }}</small>
                 </div>
                 <div>
                   <label for="phone">{{ $t("checkout.phone") }}</label>
-                  <input
-                    id="phone"
-                    v-model.trim="contact.phone"
-                    :class="{ invalid: errs.phone }"
-                    type="tel"
-                    placeholder="090..."
-                  />
+                  <input id="phone" v-model.trim="contact.phone" :class="{ invalid: errs.phone }" type="tel"
+                    placeholder="090..." />
                   <small v-if="errs.phone" class="error-text">{{
                     errs.phone
                   }}</small>
@@ -37,13 +27,8 @@
               <div class="row">
                 <div style="width: 100%">
                   <label for="email">{{ $t("checkout.email") }}</label>
-                  <input
-                    id="email"
-                    v-model.trim="contact.email"
-                    :class="{ invalid: errs.email }"
-                    type="email"
-                    placeholder="you@example.com"
-                  />
+                  <input id="email" v-model.trim="contact.email" :class="{ invalid: errs.email }" type="email"
+                    placeholder="you@example.com" />
                   <small v-if="errs.email" class="error-text">{{
                     errs.email
                   }}</small>
@@ -52,35 +37,17 @@
               <div class="row two">
                 <div>
                   <label for="province">{{ $t("checkout.province") }}</label>
-                  <select
-                    id="province"
-                    v-model="address.province"
-                    @change="onProvinceChange"
-                    :class="{ invalid: errs.province }"
-                  >
-                    <option disabled value="">----</option>
-                    <option v-for="p in provinces" :key="p.code" :value="p.value">
-                      {{ p.label }}
-                    </option>
-                  </select>
+                  <AddressSearchSelect v-model="address.province" :options="provinces" :placeholder="'----'"
+                    :status="errs.province ? 'error' : 'normal'" @change="onProvinceChange" />
                   <small v-if="errs.province" class="error-text">{{
                     errs.province
                   }}</small>
                 </div>
                 <div>
                   <label for="district">{{ $t("checkout.district") }}</label>
-                  <select
-                    id="district"
-                    v-model="address.district"
-                    @change="onDistrictChange"
-                    :disabled="!districts.length"
-                    :class="{ invalid: errs.district }"
-                  >
-                    <option disabled value="">----</option>
-                    <option v-for="d in districts" :key="d.code" :value="d.value">
-                      {{ d.label }}
-                    </option>
-                  </select>
+                  <AddressSearchSelect v-model="address.district" :options="districts" :placeholder="'----'"
+                    :disabled="!districts.length && !address.district" :status="errs.district ? 'error' : 'normal'"
+                    @change="onDistrictChange" />
                   <small v-if="errs.district" class="error-text">{{
                     errs.district
                   }}</small>
@@ -89,30 +56,16 @@
               <div class="row two">
                 <div>
                   <label for="ward">{{ $t("checkout.ward") }}</label>
-                  <select
-                    id="ward"
-                    v-model="address.ward"
-                    :disabled="!wards.length"
-                    :class="{ invalid: errs.ward }"
-                  >
-                    <option disabled value="">----</option>
-                    <option v-for="w in wards" :key="w.value" :value="w.value">
-                      {{ w.label }}
-                    </option>
-                  </select>
+                  <AddressSearchSelect v-model="address.ward" :options="wards" :placeholder="'----'"
+                    :disabled="!wards.length && !address.ward" :status="errs.ward ? 'error' : 'normal'" />
                   <small v-if="errs.ward" class="error-text">{{
                     errs.ward
                   }}</small>
                 </div>
                 <div>
                   <label for="street">{{ $t("checkout.street") }}</label>
-                  <input
-                    id="street"
-                    v-model.trim="address.street"
-                    :class="{ invalid: errs.street }"
-                    type="text"
-                    placeholder="123 Street"
-                  />
+                  <input id="street" v-model.trim="address.street" :class="{ invalid: errs.street }" type="text"
+                    placeholder="123 Street" />
                   <small v-if="errs.street" class="error-text">{{
                     errs.street
                   }}</small>
@@ -148,11 +101,7 @@
                 <label for="bank">{{ $t("checkout.bankOptional") }}</label>
                 <select id="bank" v-model="bankCode">
                   <option value="">{{ "—" }}</option>
-                  <option
-                    v-for="bank in vnpayBanks"
-                    :key="bank.code"
-                    :value="bank.code"
-                  >
+                  <option v-for="bank in vnpayBanks" :key="bank.code" :value="bank.code">
                     {{ bank.label }}
                   </option>
                 </select>
@@ -177,23 +126,16 @@
             <div class="row muted">
               <span class="shipping-title">
                 <span>{{ $t("cart.estimatedDelivery") }}</span>
-                <img
-                  :src="ghnLogo"
-                  alt="GHN Express logo"
-                  class="shipping-logo"
-                />
+                <img :src="ghnLogo" alt="GHN Express logo" class="shipping-logo" />
               </span>
               <span>
                 {{ cartCount === 0 ? "—" : formatCurrency(shippingFee) }}
-                <small
-                  v-if="isCalculatingShipping"
-                  style="
+                <small v-if="isCalculatingShipping" style="
                     display: block;
                     font-size: 11px;
                     color: #6b7280;
                     margin-top: 2px;
-                  "
-                >
+                  ">
                   Đang tính...
                 </small>
               </span>
@@ -210,32 +152,17 @@
                       : "Chọn phiếu"
                   }}
                 </button>
-                <button
-                  v-if="selectedVoucher"
-                  class="btn-clear-voucher"
-                  :aria-label="'Xoá voucher đã chọn'"
-                  :title="'Xoá voucher đã chọn'"
-                  :disabled="applyingVoucher"
-                  @click="clearVoucher"
-                >
+                <button v-if="selectedVoucher" class="btn-clear-voucher" :aria-label="'Xoá voucher đã chọn'"
+                  :title="'Xoá voucher đã chọn'" :disabled="applyingVoucher" @click="clearVoucher">
                   ×
                 </button>
               </div>
             </div>
             <div class="voucher-apply-row">
-              <input
-                v-model.trim="voucherCode"
-                type="text"
-                class="voucher-input"
-                placeholder="Nhập mã"
-                :disabled="applyingVoucher || cartCount === 0"
-                @keydown.enter.prevent="applyVoucherCode"
-              />
-              <button
-                class="btn-apply-voucher"
-                :disabled="!voucherCode || applyingVoucher || cartCount === 0"
-                @click="applyVoucherCode"
-              >
+              <input v-model.trim="voucherCode" type="text" class="voucher-input" placeholder="Nhập mã"
+                :disabled="applyingVoucher || cartCount === 0" @keydown.enter.prevent="applyVoucherCode" />
+              <button class="btn-apply-voucher" :disabled="!voucherCode || applyingVoucher || cartCount === 0"
+                @click="applyVoucherCode">
                 {{ applyingVoucher ? "Đang kiểm tra..." : "Áp dụng" }}
               </button>
             </div>
@@ -247,10 +174,7 @@
             <div v-if="selectedVoucher" class="voucher-details-display">
               <div class="row muted">
                 <span>Loại giảm</span>
-                <span
-                  class="type-badge"
-                  :class="{ percentage: !selectedVoucher.loaiPhieuGiamGia }"
-                >
+                <span class="type-badge" :class="{ percentage: !selectedVoucher.loaiPhieuGiamGia }">
                   {{
                     selectedVoucher.loaiPhieuGiamGia
                       ? `Giảm ${formatCurrency(selectedVoucher.giaTriGiamGia)}`
@@ -264,19 +188,13 @@
                   -{{ formatCurrency(voucherDiscount) }}
                 </span>
               </div>
-              <div
-                v-if="
-                  selectedVoucher.hoaDonToiThieu &&
-                  selectedVoucher.hoaDonToiThieu > 0
-                "
-                class="row muted"
-                style="font-size: 12px; color: #999"
-              >
+              <div v-if="
+                selectedVoucher.hoaDonToiThieu &&
+                selectedVoucher.hoaDonToiThieu > 0
+              " class="row muted" style="font-size: 12px; color: #999">
                 <span>Điều kiện</span>
-                <span
-                  >Tối thiểu
-                  {{ formatCurrency(selectedVoucher.hoaDonToiThieu) }}</span
-                >
+                <span>Tối thiểu
+                  {{ formatCurrency(selectedVoucher.hoaDonToiThieu) }}</span>
               </div>
             </div>
 
@@ -288,21 +206,12 @@
               }}</span>
             </div>
             <div class="actions">
-              <button
-                class="btn btn-block"
-                :disabled="cartCount === 0 || paying || !paymentMethod"
-                @click="handleCheckout"
-              >
+              <button class="btn btn-block" :disabled="cartCount === 0 || paying || !paymentMethod"
+                @click="handleCheckout">
                 <span v-if="!paying">
-                  <span v-if="paymentMethod === 'cod'"
-                    >{{ $t("checkout.placeOrder") }} — COD</span
-                  >
-                  <span v-else-if="paymentMethod === 'vnpay'"
-                    >{{ $t("cart.checkout") }} — VNPAY</span
-                  >
-                  <span v-else-if="paymentMethod === 'momo'"
-                    >{{ $t("cart.checkout") }} — MoMo</span
-                  >
+                  <span v-if="paymentMethod === 'cod'">{{ $t("checkout.placeOrder") }} — COD</span>
+                  <span v-else-if="paymentMethod === 'vnpay'">{{ $t("cart.checkout") }} — VNPAY</span>
+                  <span v-else-if="paymentMethod === 'momo'">{{ $t("cart.checkout") }} — MoMo</span>
                   <span v-else>{{ $t("cart.checkout") }}</span>
                 </span>
                 <span v-else>{{ $t("cart.processing") }}</span>
@@ -315,23 +224,12 @@
     </div>
 
     <!-- Voucher Selection Modal -->
-    <VoucherModal
-      :is-open="voucherModalOpen"
-      :customer-id="userStore.id || 0"
-      :subtotal="cartTotal"
-      :current-voucher-id="selectedVoucher?.id"
-      @close="closeVoucherModal"
-      @select="selectVoucher"
-    />
+    <VoucherModal :is-open="voucherModalOpen" :customer-id="userStore.id || 0" :subtotal="cartTotal"
+      :current-voucher-id="selectedVoucher?.id" @close="closeVoucherModal" @select="selectVoucher" />
 
     <!-- Order Confirmation Modal -->
-    <OrderConfirmationModal
-      :is-open="orderConfirmationOpen"
-      :order-info="orderConfirmationInfo"
-      :loading="paying"
-      @close="closeOrderConfirmation"
-      @confirm="finalizeOrder"
-    />
+    <OrderConfirmationModal :is-open="orderConfirmationOpen" :order-info="orderConfirmationInfo" :loading="paying"
+      @close="closeOrderConfirmation" @confirm="finalizeOrder" />
   </div>
 </template>
 
@@ -364,6 +262,8 @@ import OrderConfirmationModal from "@/components/OrderConfirmationModal.vue";
 import type { CustomerAddress } from "@/api/auth";
 import { updateProfile, getMe } from "@/api/auth";
 import ghnLogo from "@/assets/logo-ghn.png";
+import AddressSearchSelect from "@/components/common/AddressSearchSelect.vue";
+
 
 // i18n
 const { t } = useI18n();
@@ -846,7 +746,7 @@ function validateField(field: keyof typeof errs.value) {
         fullName && fullNameParts.length >= 2
           ? ""
           : ((t("checkout.err.fullName") as string) ||
-              "Vui lòng nhập đầy đủ họ và tên (tối thiểu 2 từ)") ?? "";
+            "Vui lòng nhập đầy đủ họ và tên (tối thiểu 2 từ)") ?? "";
       break;
     }
     case "email": {
@@ -1113,7 +1013,7 @@ async function handleVnpayCheckout() {
   try {
     // VNPAY payment method ID in backend (adjust if needed)
     const vnpayPaymentMethodId = 2;
-    
+
     // Check for pending payment BEFORE creating order to avoid duplicate orders
     // Use a temporary identifier based on cart contents or customer info
     // Note: This is a best-effort check. The backend will also validate.
@@ -1132,14 +1032,14 @@ async function handleVnpayCheckout() {
         // Otherwise, continue (check might have failed due to network, etc.)
       }
     }
-    
+
     const order = await createOnlineOrder(
       vnpayPaymentMethodId,
       "Đơn hàng online - Thanh toán VNPAY"
     );
 
     const orderId = order.maHoaDon || order.id.toString();
-    
+
     // Check for pending payment again with actual order ID (double-check)
     try {
       const pendingCheck = await checkPendingVnPayPayment(orderId);
@@ -1264,7 +1164,7 @@ async function handleMoMoCheckout() {
   gap: 16px;
 }
 
-.row.two > div {
+.row.two>div {
   min-width: 0;
 }
 
@@ -1316,6 +1216,7 @@ async function handleMoMoCheckout() {
   margin-top: 4px;
   display: block;
 }
+
 .payment-methods {
   display: grid;
   gap: 12px;
@@ -1350,7 +1251,7 @@ async function handleMoMoCheckout() {
   flex-shrink: 0;
 }
 
-.payment-option input[type="radio"]:checked + .payment-label {
+.payment-option input[type="radio"]:checked+.payment-label {
   color: #111;
 }
 
@@ -1379,6 +1280,7 @@ async function handleMoMoCheckout() {
   color: #6b7280;
   line-height: 1.4;
 }
+
 .summary {
   background: #ffffff;
   border: 1px solid #e8e8e8;
@@ -1404,16 +1306,19 @@ async function handleMoMoCheckout() {
   padding: 12px 0;
   font-size: 15px;
 }
+
 .shipping-title {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
+
 .shipping-logo {
   height: 18px;
   width: auto;
   object-fit: contain;
 }
+
 .summary .row.muted span:first-child {
   color: #6b7280;
 }
@@ -1435,6 +1340,7 @@ async function handleMoMoCheckout() {
   color: #111;
   font-size: 20px;
 }
+
 .summary .row.voucher-section {
   display: flex !important;
   justify-content: space-between;
@@ -1547,10 +1453,12 @@ async function handleMoMoCheckout() {
   margin-bottom: 0;
   display: block;
 }
+
 .discount {
   color: #f77234 !important;
   font-weight: 600;
 }
+
 .voucher-details-display {
   background: #fff8f2;
   border-left: 3px solid #f77234;
@@ -1573,6 +1481,7 @@ async function handleMoMoCheckout() {
     }
   }
 }
+
 .actions {
   margin-top: 24px;
 }
@@ -1630,12 +1539,8 @@ async function handleMoMoCheckout() {
   font-size: 15px;
 }
 
-:deep(
-    .arco-select-view-single.arco-select-view-size-medium
-      .arco-select-view-input,
-    .arco-select-view-single.arco-select-view-size-medium
-      .arco-select-view-value
-  ) {
+:deep(.arco-select-view-single.arco-select-view-size-medium .arco-select-view-input,
+  .arco-select-view-single.arco-select-view-size-medium .arco-select-view-value) {
   padding: 1.06px 0;
   font-size: 15px;
 }
@@ -1743,6 +1648,7 @@ async function handleMoMoCheckout() {
 }
 
 @media (max-width: 640px) {
+
   .details,
   .summary {
     padding: 20px;

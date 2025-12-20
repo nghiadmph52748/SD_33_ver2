@@ -2,221 +2,223 @@
   <div class="product-detail-view">
     <div class="pdp" v-if="product">
       <section class="pdp-hero">
-      <!-- Left: Gallery and Accordion -->
-      <div class="left-panel">
-        <!-- Gallery: left vertical thumbnails, right main image -->
-      <div class="gallery" :aria-label="product.name">
-          <div class="thumbs" role="list">
-            <button
-              v-for="(imgSrc, i) in galleryImages"
-              :key="i"
-              class="thumb"
-              :class="{ active: activeImageIndex === i }"
-              type="button"
-              @click="activeImageIndex = i"
-              :aria-label="$t('product.viewImage', { n: i + 1 })"
-            >
-              <img :src="imgSrc" :alt="`${product.name} thumbnail ${i+1}`" v-img-fallback />
-            </button>
-          </div>
-          <div class="main" @mousemove="onMainImageMove" @mouseenter="onMainImageEnter" @mouseleave="onMainImageLeave">
-            <transition name="pdp-fade-image" mode="out-in">
-              <img
-                ref="mainImgRef"
-                :key="galleryImages[activeImageIndex]"
-                :src="galleryImages[activeImageIndex]"
-                :alt="`${product.name} main view`"
-                v-img-fallback
-              />
-            </transition>
-              </div>
-        </div>
-
-        <!-- Accordion: moved to left panel -->
-    <section class="accordion" ref="accordionRef">
-      <details open class="accordion-item">
-        <summary class="accordion-summary">
-              <span>{{ $t('product.description') }}</span>
-          <span class="icons">
-            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
-            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
-          </span>
-        </summary>
-        <div class="accordion-panel">
-          <p class="muted">{{ product.description }}</p>
-        </div>
-      </details>
-      <details class="accordion-item">
-        <summary class="accordion-summary">
-              <span>{{ $t('product.details') }}</span>
-          <span class="icons">
-            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
-            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
-          </span>
-        </summary>
-        <div class="accordion-panel">
-          <ul class="specs">
-            <li v-for="spec in productSpecs" :key="spec.label">
-              <span class="label">{{ spec.label }}</span>
-              <span class="value">{{ spec.value }}</span>
-            </li>
-          </ul>
-        </div>
-      </details>
-      <details class="accordion-item">
-        <summary class="accordion-summary">
-          <span>{{ $t('product.reviews') }}</span>
-          <span class="icons">
-            <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
-            <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14z"/></svg>
-          </span>
-        </summary>
-        <div class="accordion-panel">
-          <form class="review-form" @submit.prevent="submitReview">
-            <div class="form-row">
-                  <label>{{ $t('product.name') }}</label>
-              <input class="input" v-model.trim="reviewName" :placeholder="$t('product.reviewNamePlaceholder')" />
-            </div>
-            <div class="form-row">
-                  <label>{{ $t('product.rating') }}</label>
-                  <div class="stars" role="radiogroup" :aria-label="$t('product.rating')">
-                <button v-for="n in 5" :key="n" type="button" class="star-btn" :class="{ active: reviewRating >= n }" @click="reviewRating = n" :aria-label="$t('product.rateStars', { n })">
-                  <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :fill="reviewRating >= n ? '#f59e0b' : '#d1d5db'" d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                  </button>
-              </div>
-            </div>
-            <div class="form-row">
-                  <label>{{ $t('product.comment') }}</label>
-              <textarea class="textarea" v-model.trim="reviewComment" rows="3" :placeholder="$t('product.reviewCommentPlaceholder')" />
-            </div>
-            <div class="form-actions">
-                  <button class="btn-submit" :disabled="!canSubmitReview">{{ $t('product.submitReview') }}</button>
-          </div>
-          </form>
-
-          <ul v-if="allReviews.length" class="review-list">
-            <li v-for="(r, idx) in allReviews" :key="idx" class="review-item">
-              <div class="review-head">
-                <strong class="review-name">{{ r.name || $t('product.reviewAnonymous') }}</strong>
-                <span class="review-date">{{ r.date }}</span>
-                <span class="review-stars">{{ '★'.repeat(r.rating) }}{{ '☆'.repeat(5 - r.rating) }}</span>
-              </div>
-              <p class="review-text">{{ r.comment }}</p>
-            </li>
-          </ul>
-        </div>
-      </details>
-    </section>
-      </div>
-
-      <!-- Right: sticky purchase column -->
-      <aside class="purchase">
-        <p class="product-category" v-if="product.gender">{{ formatGender(displayGender) }} • {{ $t('product.sportswear') }}</p>
-        <h1 class="product-title">{{ product.name }}</h1>
-
-        <div class="price">
-          <span v-if="product.originalPrice && product.originalPrice > product.price" class="price-original">{{ formatCurrency(product.originalPrice) }}</span>
-          <span class="price-current">{{ formatCurrency(product.price) }}</span>
-        </div>
-
-        <div class="color-selector" v-if="colorSwatches.length">
-          <label>{{ $t('product.color') }}:</label>
-          <ul>
-            <li v-for="(swatch, idx) in colorSwatches" :key="swatch.label" class="swatch-item">
-              <button type="button" :class="['swatch', 'swatch-color', { active: selectedColorIndex === idx }]" @click="selectedColorIndex = idx">
-                <div class="color-block" :style="{ backgroundColor: swatch.colorHex }"></div>
+        <!-- Left: Gallery and Accordion -->
+        <div class="left-panel">
+          <!-- Gallery: left vertical thumbnails, right main image -->
+          <div class="gallery" :aria-label="product.name">
+            <div class="thumbs" role="list">
+              <button v-for="(imgSrc, i) in galleryImages" :key="i" class="thumb"
+                :class="{ active: activeImageIndex === i }" type="button" @click="activeImageIndex = i"
+                :aria-label="$t('product.viewImage', { n: i + 1 })">
+                <img :src="imgSrc" :alt="`${product.name} thumbnail ${i + 1}`" v-img-fallback />
               </button>
-              <span class="swatch-name">{{ swatch.label }}</span>
-            </li>
-          </ul>
+            </div>
+            <div class="main" @mousemove="onMainImageMove" @mouseenter="onMainImageEnter"
+              @mouseleave="onMainImageLeave">
+              <transition name="pdp-fade-image" mode="out-in">
+                <img ref="mainImgRef" :key="galleryImages[activeImageIndex]" :src="galleryImages[activeImageIndex]"
+                  :alt="`${product.name} main view`" v-img-fallback />
+              </transition>
+            </div>
+          </div>
+
+          <!-- Accordion: moved to left panel -->
+          <section class="accordion" ref="accordionRef">
+            <details open class="accordion-item">
+              <summary class="accordion-summary">
+                <span>{{ $t('product.description') }}</span>
+                <span class="icons">
+                  <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
+                  </svg>
+                  <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M19 13H5v-2h14z" />
+                  </svg>
+                </span>
+              </summary>
+              <div class="accordion-panel">
+                <p class="muted">{{ product.description }}</p>
+              </div>
+            </details>
+            <details class="accordion-item">
+              <summary class="accordion-summary">
+                <span>{{ $t('product.details') }}</span>
+                <span class="icons">
+                  <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
+                  </svg>
+                  <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M19 13H5v-2h14z" />
+                  </svg>
+                </span>
+              </summary>
+              <div class="accordion-panel">
+                <ul class="specs">
+                  <li v-for="spec in productSpecs" :key="spec.label">
+                    <span class="label">{{ spec.label }}</span>
+                    <span class="value">{{ spec.value }}</span>
+                  </li>
+                </ul>
+              </div>
+            </details>
+            <details class="accordion-item">
+              <summary class="accordion-summary">
+                <span>{{ $t('product.reviews') }}</span>
+                <span class="icons">
+                  <svg class="icon icon--plus" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
+                  </svg>
+                  <svg class="icon icon--minus" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M19 13H5v-2h14z" />
+                  </svg>
+                </span>
+              </summary>
+              <div class="accordion-panel">
+                <form class="review-form" @submit.prevent="submitReview">
+                  <div class="form-row">
+                    <label>{{ $t('product.name') }}</label>
+                    <input class="input" v-model.trim="reviewName" :placeholder="$t('product.reviewNamePlaceholder')" />
+                  </div>
+                  <div class="form-row">
+                    <label>{{ $t('product.rating') }}</label>
+                    <div class="stars" role="radiogroup" :aria-label="$t('product.rating')">
+                      <button v-for="n in 5" :key="n" type="button" class="star-btn"
+                        :class="{ active: reviewRating >= n }" @click="reviewRating = n"
+                        :aria-label="$t('product.rateStars', { n })">
+                        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                          <path :fill="reviewRating >= n ? '#f59e0b' : '#d1d5db'"
+                            d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <label>{{ $t('product.comment') }}</label>
+                    <textarea class="textarea" v-model.trim="reviewComment" rows="3"
+                      :placeholder="$t('product.reviewCommentPlaceholder')" />
+                  </div>
+                  <div class="form-actions">
+                    <button class="btn-submit" :disabled="!canSubmitReview">{{ $t('product.submitReview') }}</button>
+                  </div>
+                </form>
+
+                <ul v-if="allReviews.length" class="review-list">
+                  <li v-for="(r, idx) in allReviews" :key="idx" class="review-item">
+                    <div class="review-head">
+                      <strong class="review-name">{{ r.name || $t('product.reviewAnonymous') }}</strong>
+                      <span class="review-date">{{ r.date }}</span>
+                      <span class="review-stars">{{ '★'.repeat(r.rating) }}{{ '☆'.repeat(5 - r.rating) }}</span>
+                    </div>
+                    <p class="review-text">{{ r.comment }}</p>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </section>
         </div>
 
-        <div class="size-selector" v-if="sizeOptions.length">
-          <div class="size-row">
-            <label>{{ $t('product.sizes') }}:</label>
-            <button class="size-guide" type="button" @click="toggleSizeGuide(true)">{{ $t('product.sizeGuide') }}</button>
+        <!-- Right: sticky purchase column -->
+        <aside class="purchase">
+          <p class="product-category" v-if="product.gender">{{ formatGender(displayGender) }} • {{
+            $t('product.sportswear') }}</p>
+          <h1 class="product-title">{{ product.name }}</h1>
+
+          <div class="price">
+            <span v-if="product.originalPrice && product.originalPrice > product.price" class="price-original">{{
+              formatCurrency(product.originalPrice) }}</span>
+            <span class="price-current">{{ formatCurrency(product.price) }}</span>
           </div>
-          <div class="size-grid">
-            <button
-              v-for="productSize in sizeOptions"
-              :key="productSize"
-              type="button"
-              class="size-btn"
-              :disabled="isOutOfStock(productSize)"
-              :class="{ active: size === productSize, disabled: isOutOfStock(productSize) }"
-              @click="!isOutOfStock(productSize) && (size = productSize) && (showSizeRequiredMessage = false)"
-            >
-              <span class="size-label">{{ productSize }}</span>
-              <span v-if="getStockForSize(productSize) !== null" class="size-stock">
-                ({{ getStockForSize(productSize) }})
-              </span>
+
+          <div class="color-selector" v-if="colorSwatches.length">
+            <label>{{ $t('product.color') }}:</label>
+            <ul>
+              <li v-for="(swatch, idx) in colorSwatches" :key="swatch.label" class="swatch-item">
+                <button type="button" :class="['swatch', 'swatch-color', { active: selectedColorIndex === idx }]"
+                  @click="selectedColorIndex = idx">
+                  <div class="color-block" :style="{ backgroundColor: swatch.colorHex }"></div>
+                </button>
+                <span class="swatch-name">{{ swatch.label }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="size-selector" v-if="sizeOptions.length">
+            <div class="size-row">
+              <label>{{ $t('product.sizes') }}:</label>
+              <button class="size-guide" type="button" @click="toggleSizeGuide(true)">{{ $t('product.sizeGuide')
+                }}</button>
+            </div>
+            <div class="size-grid">
+              <button v-for="productSize in sizeOptions" :key="productSize" type="button" class="size-btn"
+                :disabled="isOutOfStock(productSize)"
+                :class="{ active: size === productSize, disabled: isOutOfStock(productSize) }"
+                @click="!isOutOfStock(productSize) && (size = productSize) && (showSizeRequiredMessage = false)">
+                <span class="size-label">{{ productSize }}</span>
+                <span v-if="getStockForSize(productSize) !== null" class="size-stock">
+                  ({{ getStockForSize(productSize) }})
+                </span>
+              </button>
+            </div>
+            <p v-if="showSizeRequiredMessage" class="size-error">{{ $t('product.sizeRequired') }}</p>
+          </div>
+
+          <div class="qty">
+            <label>{{ $t('product.quantity') }}</label>
+            <div class="pill">
+              <button class="pill-btn" @click="quantity = Math.max(1, quantity - 1)">−</button>
+              <span class="qty-val">{{ quantity }}</span>
+              <button class="pill-btn"
+                @click="quantity = Math.min(availableStock !== null ? availableStock : 99, quantity + 1)">+</button>
+            </div>
+          </div>
+
+          <div v-if="availableStock !== null" class="stock-info">
+            <span v-if="availableStock > 0" class="stock-available">
+              {{ $t('product.stockAvailable', { count: availableStock }) }}
+            </span>
+            <span v-else class="stock-out">
+              {{ $t('product.outOfStock') }}
+            </span>
+          </div>
+
+          <div class="cta-block">
+            <button class="add-to-bag" @click="cartAdd">{{ $t('product.addToBag') }}</button>
+            <button class="wishlist" @click="$router.push('/all')">{{ $t('product.browseMore') }}</button>
+          </div>
+
+          <ul class="product-meta">
+            <li v-for="highlight in serviceHighlights" :key="highlight.titleKey">{{ $t(highlight.titleKey) }}</li>
+          </ul>
+        </aside>
+      </section>
+
+
+
+      <!-- Recommendations -->
+      <section class="recommendations">
+        <div class="recommendations-header">
+          <h2>{{ $t('product.youMayAlsoLike') }}</h2>
+          <div class="recommendations-controls">
+            <button type="button" class="nav-btn nav-btn--prev" @click="scrollRecommendations(-1)"
+              :aria-label="$t('product.scrollLeft')">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+              </svg>
+            </button>
+            <button type="button" class="nav-btn nav-btn--next" @click="scrollRecommendations(1)"
+              :aria-label="$t('product.scrollRight')">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+              </svg>
             </button>
           </div>
-          <p v-if="showSizeRequiredMessage" class="size-error">{{ $t('product.sizeRequired') }}</p>
         </div>
-
-        <div class="qty">
-          <label>{{ $t('product.quantity') }}</label>
-                <div class="pill">
-                  <button class="pill-btn" @click="quantity = Math.max(1, quantity - 1)">−</button>
-                  <span class="qty-val">{{ quantity }}</span>
-                  <button class="pill-btn" @click="quantity = Math.min(availableStock !== null ? availableStock : 99, quantity + 1)">+</button>
-                </div>
-              </div>
-
-        <div v-if="availableStock !== null" class="stock-info">
-          <span v-if="availableStock > 0" class="stock-available">
-            {{ $t('product.stockAvailable', { count: availableStock }) }}
-          </span>
-          <span v-else class="stock-out">
-            {{ $t('product.outOfStock') }}
-          </span>
-        </div>
-
-        <div class="cta-block">
-          <button class="add-to-bag" @click="cartAdd">{{ $t('product.addToBag') }}</button>
-          <button class="wishlist" @click="$router.push('/all')">{{ $t('product.browseMore') }}</button>
-        </div>
-
-        <ul class="product-meta">
-          <li v-for="highlight in serviceHighlights" :key="highlight.titleKey">{{ $t(highlight.titleKey) }}</li>
-        </ul>
-      </aside>
-    </section>
-
-    
-
-    <!-- Recommendations -->
-    <section class="recommendations">
-      <div class="recommendations-header">
-        <h2>{{ $t('product.youMayAlsoLike') }}</h2>
-        <div class="recommendations-controls">
-          <button 
-            type="button" 
-            class="nav-btn nav-btn--prev" 
-            @click="scrollRecommendations(-1)"
-            :aria-label="$t('product.scrollLeft')"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-            </svg>
-          </button>
-          <button 
-            type="button" 
-            class="nav-btn nav-btn--next" 
-            @click="scrollRecommendations(1)"
-            :aria-label="$t('product.scrollRight')"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-      <AppRecommendationsCarousel ref="recommendationsCarouselRef" />
-    </section>
+        <AppRecommendationsCarousel ref="recommendationsCarouselRef" />
+      </section>
       <!-- Service cards at the very bottom -->
-      <div class="container"><AppSalesBoxes /></div>
+      <div class="container">
+        <AppSalesBoxes />
+      </div>
     </div>
 
     <div v-else class="pdp-not-found">
@@ -226,22 +228,12 @@
 
     <teleport to="body">
       <transition name="modal-fade">
-        <div
-          v-if="showSizeGuideModal"
-          class="modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="size-guide-title"
-        >
+        <div v-if="showSizeGuideModal" class="modal-overlay" role="dialog" aria-modal="true"
+          aria-labelledby="size-guide-title">
           <div class="modal">
             <header class="modal-header">
               <h2 id="size-guide-title">{{ $t('product.sizeGuide') }}</h2>
-              <button
-                class="modal-close"
-                type="button"
-                @click="toggleSizeGuide(false)"
-                aria-label="Close size guide"
-              >
+              <button class="modal-close" type="button" @click="toggleSizeGuide(false)" aria-label="Close size guide">
                 ×
               </button>
             </header>
@@ -347,7 +339,7 @@ const sourcePage = computed(() => {
   if (querySource === 'men' || querySource === 'women') {
     return querySource
   }
-  
+
   // Check referrer
   if (typeof document !== 'undefined' && document.referrer) {
     const referrer = document.referrer.toLowerCase()
@@ -358,7 +350,7 @@ const sourcePage = computed(() => {
       return 'men'
     }
   }
-  
+
   // Fallback to product gender
   const product = baseProduct.value
   if (product?.gender === 'Female') {
@@ -367,7 +359,7 @@ const sourcePage = computed(() => {
   if (product?.gender === 'Male') {
     return 'men'
   }
-  
+
   return 'men' // Default
 })
 
@@ -381,19 +373,19 @@ const baseProduct = computed(() => cartStore.products.find(item => item.id === p
 const selectedVariant = computed(() => {
   const color = selectedColor.value
   const sizeValue = size.value
-  
+
   if (!color || !sizeValue || variants.value.length === 0) {
     // If no color/size selected, return first variant
     return variants.value[0] || null
   }
-  
+
   // Find variant matching both color and size
   const matched = variants.value.find(v => {
     const variantColor = (v.tenMauSac || "").trim()
     const variantSize = (v.tenKichThuoc || "").trim()
     return variantColor === color && variantSize === sizeValue
   })
-  
+
   // If no exact match, try to find by color only
   if (!matched) {
     const colorMatch = variants.value.find(v => {
@@ -402,7 +394,7 @@ const selectedVariant = computed(() => {
     })
     return colorMatch || variants.value[0] || null
   }
-  
+
   return matched
 })
 
@@ -410,25 +402,25 @@ const selectedVariant = computed(() => {
 const product = computed(() => {
   const base = baseProduct.value
   if (!base) return null
-  
+
   // Get price from selected variant
   const variant = selectedVariant.value
   if (variant && variant.giaBan != null) {
     const originalPrice = variant.giaBan
     let discountedPrice = originalPrice
-    
+
     // Calculate discounted price if there's a discount
     if (variant.giaTriGiamGia != null && variant.giaTriGiamGia > 0) {
       discountedPrice = originalPrice * (100 - variant.giaTriGiamGia) / 100
     }
-    
+
     return {
       ...base,
       price: discountedPrice,
       originalPrice: discountedPrice < originalPrice ? originalPrice : undefined
     }
   }
-  
+
   // Fallback to base product price
   return base
 });
@@ -461,17 +453,21 @@ watch(productId, () => {
 }, { immediate: true })
 
 const variantsByColor = computed(() => {
-  const map: Record<string, { sizes: Set<string>; image?: string | null }> = {}
+  const map: Record<string, { sizes: Set<string>; image?: string | null; colorHex?: string }> = {}
   const variantList = variants.value || []
 
   variantList.forEach((variant) => {
     const colorName = (variant.tenMauSac || "").trim() || product.value?.color || "Default"
     const sizeValue = variant.tenKichThuoc?.trim() || ""
     if (!map[colorName]) {
-      map[colorName] = { sizes: new Set(), image: undefined }
+      map[colorName] = { sizes: new Set(), image: undefined, colorHex: undefined }
     }
     if (sizeValue) {
       map[colorName].sizes.add(sizeValue)
+    }
+    // Store the actual hex color code from the variant
+    if (!map[colorName].colorHex && variant.maMau) {
+      map[colorName].colorHex = variant.maMau
     }
     if (!map[colorName].image && Array.isArray(variant.anhSanPham) && variant.anhSanPham.length > 0) {
       const firstImage = variant.anhSanPham[0]
@@ -608,10 +604,12 @@ const colorSwatches = computed(() => {
   return colorOptions.value.map((color) => {
     const preferred = variantsByColor.value[color]?.image
     const match = preferred || galleryImages.value.find((src) => src?.toLowerCase().includes(color.toLowerCase()))
+    // Use the actual hex code from variant data, fallback to color name mapping
+    const hexCode = variantsByColor.value[color]?.colorHex || getColorHex(color)
     return {
       label: color,
       image: match || galleryImages.value[0],
-      colorHex: getColorHex(color),
+      colorHex: hexCode,
     }
   })
 })
@@ -709,7 +707,7 @@ const cartAdd = () => {
 
   // Find variant ID from selected variant
   const variantId = selectedVariant.value?.id
-  
+
   // Check stock availability
   const stock = availableStock.value
   if (stock !== null && stock < quantity.value) {
@@ -737,7 +735,7 @@ const cartAdd = () => {
 function getStockForSize(sizeVal: string | number): number | null {
   const color = selectedColor.value
   const sizeStr = String(sizeVal).trim()
-  
+
   // Find variant matching color and size
   const variant = variants.value.find(v => {
     const variantColor = (v.tenMauSac || "").trim()
@@ -745,11 +743,11 @@ function getStockForSize(sizeVal: string | number): number | null {
     const colorMatch = color ? variantColor === color : true
     return colorMatch && variantSize === sizeStr
   })
-  
+
   if (variant && variant.soLuong !== undefined) {
     return variant.soLuong
   }
-  
+
   // If no exact match, try to find by size only (aggregate all colors)
   if (!color) {
     const sizeVariants = variants.value.filter(v => {
@@ -761,7 +759,7 @@ function getStockForSize(sizeVal: string | number): number | null {
       return totalStock > 0 ? totalStock : 0
     }
   }
-  
+
   return null
 }
 
@@ -777,7 +775,7 @@ const availableStock = computed(() => {
     const stock = getStockForSize(size.value)
     return stock
   }
-  
+
   // If only color is selected, sum stock for all sizes of that color
   if (selectedColor.value) {
     const colorVariants = variants.value.filter(v => {
@@ -789,7 +787,7 @@ const availableStock = computed(() => {
       return totalStock > 0 ? totalStock : 0
     }
   }
-  
+
   // If no selection, calculate total stock from all variants
   if (variants.value.length > 0) {
     const totalStock = variants.value.reduce((sum, v) => {
@@ -862,7 +860,7 @@ function setupAccordion(el: HTMLDetailsElement) {
   if (!panel) return
   panel.style.overflow = 'hidden'
   panel.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease'
-  
+
   // Set initial height
   if (el.open) {
     panel.style.height = panel.scrollHeight + 'px'
@@ -871,14 +869,14 @@ function setupAccordion(el: HTMLDetailsElement) {
     panel.style.height = '0px'
     panel.style.opacity = '0'
   }
-  
+
   el.addEventListener('toggle', () => {
     if (el.open) {
       // expanding
       const targetHeight = panel.scrollHeight
       panel.style.height = targetHeight + 'px'
       panel.style.opacity = '1'
-      
+
       const after = () => {
         panel.style.height = 'auto'
         panel.removeEventListener('transitionend', after)
@@ -889,12 +887,12 @@ function setupAccordion(el: HTMLDetailsElement) {
       const currentHeight = panel.scrollHeight
       panel.style.height = currentHeight + 'px'
       panel.style.opacity = '0'
-      
+
       // Force reflow to ensure height is set before transition
       void panel.offsetHeight
-      
+
       requestAnimationFrame(() => {
-      panel.style.height = '0px'
+        panel.style.height = '0px'
       })
     }
   })
@@ -907,6 +905,7 @@ function setupAccordion(el: HTMLDetailsElement) {
   max-width: 1240px;
   margin: 0 auto;
 }
+
 .pdp-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
@@ -920,39 +919,100 @@ function setupAccordion(el: HTMLDetailsElement) {
   gap: 32px;
 }
 
-.gallery { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: stretch; }
-.gallery .main { position: relative; overflow: hidden; min-height: 500px; }
-.gallery .main img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 10px; background: #f5f5f5; cursor: zoom-in; will-change: transform, transform-origin; }
-.thumbs { display: flex; flex-direction: column; gap: 8px; }
-.thumb { padding: 0; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; overflow: hidden; cursor: pointer; }
-.thumb.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
-.thumb img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #f5f5f5; }
+.gallery {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
 
-.purchase { 
-  position: sticky; 
-  top: 80px; 
-  align-self: start; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 16px; 
+.gallery .main {
+  position: relative;
+  overflow: hidden;
+  min-height: 500px;
+}
+
+.gallery .main img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #f5f5f5;
+  cursor: zoom-in;
+  will-change: transform, transform-origin;
+}
+
+.thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.thumb {
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.thumb.active {
+  border-color: #111;
+  box-shadow: 0 0 0 2px #111 inset;
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: #f5f5f5;
+}
+
+.purchase {
+  position: sticky;
+  top: 80px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
 }
+
 .purchase::-webkit-scrollbar {
   width: 6px;
 }
+
 .purchase::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .purchase::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 3px;
 }
+
 .purchase::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
-.product-category { margin: 0; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; font-size: 12px; }
-.product-title { margin: 0; font-size: 32px; line-height: 1.2; }
+
+.product-category {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.product-title {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.2;
+}
+
 .price {
   display: flex;
   align-items: center;
@@ -974,18 +1034,68 @@ function setupAccordion(el: HTMLDetailsElement) {
   color: #111;
 }
 
-.color-selector label { display: block; margin-bottom: 8px; color: #374151; }
-.color-selector ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 12px; flex-wrap: wrap; }
-.swatch-item { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px; }
-.swatch { width: 44px; height: 44px; border-radius: 8px; border: 1px solid #e5e7eb; padding: 2px; background: #fff; }
-.swatch.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
-.swatch img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
-.swatch-color .color-block { width: 100%; height: 100%; border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.1); }
-.swatch-name { font-size: 12px; color: #4b5563; text-transform: capitalize; text-align: center; }
+.color-selector label {
+  display: block;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.color-selector ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.swatch-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 60px;
+}
+
+.swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 2px;
+  background: #fff;
+}
+
+.swatch.active {
+  border-color: #111;
+  box-shadow: 0 0 0 2px #111 inset;
+}
+
+.swatch img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.swatch-color .color-block {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.swatch-name {
+  font-size: 12px;
+  color: #4b5563;
+  text-transform: capitalize;
+  text-align: center;
+}
 
 .no-scroll {
   overflow: hidden;
 }
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -996,6 +1106,7 @@ function setupAccordion(el: HTMLDetailsElement) {
   z-index: 1300;
   padding: 24px;
 }
+
 .modal {
   background: #fff;
   border-radius: 16px;
@@ -1007,6 +1118,7 @@ function setupAccordion(el: HTMLDetailsElement) {
   display: flex;
   flex-direction: column;
 }
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -1014,11 +1126,13 @@ function setupAccordion(el: HTMLDetailsElement) {
   padding: 18px 24px;
   border-bottom: 1px solid #f1f5f9;
 }
+
 .modal-header h2 {
   margin: 0;
   font-size: 20px;
   letter-spacing: 0.05em;
 }
+
 .modal-close {
   border: none;
   background: transparent;
@@ -1026,15 +1140,18 @@ function setupAccordion(el: HTMLDetailsElement) {
   cursor: pointer;
   line-height: 1;
 }
+
 .modal-body {
   padding: 24px;
   overflow-y: auto;
 }
+
 .size-guide-table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 16px;
 }
+
 .size-guide-table th,
 .size-guide-table td {
   padding: 10px 12px;
@@ -1042,26 +1159,35 @@ function setupAccordion(el: HTMLDetailsElement) {
   border: 1px solid #e2e8f0;
   font-size: 14px;
 }
+
 .size-guide-table th {
   background: #f8fafc;
   font-weight: 700;
   letter-spacing: .04em;
 }
+
 .modal-note {
   color: #475569;
   font-size: 13px;
   margin: 0;
 }
+
 .modal-fade-enter-active,
 .modal-fade-leave-active {
   transition: opacity 0.2s ease;
 }
+
 .modal-fade-enter-from,
 .modal-fade-leave-to {
   opacity: 0;
 }
 
-.size-row { display: flex; align-items: baseline; justify-content: space-between; }
+.size-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
 .size-guide {
   color: #111;
   text-decoration: underline;
@@ -1072,103 +1198,394 @@ function setupAccordion(el: HTMLDetailsElement) {
   cursor: pointer;
   font-weight: 600;
 }
+
 .size-guide:hover {
   color: #000;
 }
-.size-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.size-btn { 
-  padding: 8px 0; 
-  border: 1px solid #e5e7eb; 
-  border-radius: 8px; 
+
+.size-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.size-btn {
+  padding: 8px 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   background: #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
 }
-.size-btn.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
-.size-btn.disabled { color: #9ca3af; text-decoration: line-through; background: #fafafa; }
-.size-label { font-weight: 600; font-size: 14px; }
-.size-stock { font-size: 10px; color: #6b7280; font-weight: 400; line-height: 1; }
-.size-btn.disabled .size-stock { color: #9ca3af; }
-.size-error { color: #dc2626; margin: 0; font-size: 13px; }
 
-.qty { display: flex; align-items: center; gap: 12px; }
-.pill { display: inline-flex; align-items: center; gap: 12px; border: 1px solid #e8e8e8; background: #fff; border-radius: 40px; padding: 8px 12px; }
-.pill-btn { width: 36px; height: 36px; border-radius: 999px; border: 1px solid #e8e8e8; background: #fff; display: inline-flex; align-items: center; justify-content: center; }
-.qty-val { min-width: 18px; text-align: center; font-weight: 600; font-size: 16px; }
+.size-btn.active {
+  border-color: #111;
+  box-shadow: 0 0 0 2px #111 inset;
+}
 
-.cta-block { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.add-to-bag { width: 100%; padding: 14px 18px; background: #111; color: #fff; border: 1px solid #111; border-radius: 8px; font-weight: 700; transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .15s ease; }
-.add-to-bag:hover { background: #000; border-color: #000; transform: translateY(-1px); }
-.wishlist { width: 100%; padding: 14px 18px; background: #fff; color: #111; border: 1px solid #111; border-radius: 8px; font-weight: 700; transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .15s ease; }
-.wishlist:hover { background: #111; color: #fff; border-color: #111; transform: translateY(-1px); }
+.size-btn.disabled {
+  color: #9ca3af;
+  text-decoration: line-through;
+  background: #fafafa;
+}
 
-.product-meta { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
-.product-meta li { font-size: 12px; letter-spacing: .06em; color: #374151; }
+.size-label {
+  font-weight: 600;
+  font-size: 14px;
+}
 
-.accordion { display: grid; gap: 12px; }
-.accordion-item { border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; overflow: hidden; }
-.accordion-summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; font-weight: 700; cursor: pointer; transition: background-color .2s ease; }
-.accordion-summary:hover { background: #f9fafb; }
-.accordion-item summary::-webkit-details-marker { display: none; }
-.icons { display: inline-flex; gap: 8px; }
-.accordion-item[open] .icon--plus { display: none; }
-.accordion-item:not([open]) .icon--minus { display: none; }
-.accordion-panel { padding: 0 18px; color: #4b5563; height: 0; overflow: hidden; transition: height .28s cubic-bezier(.2,.8,.2,1), opacity .28s ease; opacity: 0; }
-.accordion-item[open] .accordion-panel { padding: 4px 18px 18px 18px; opacity: 1; }
-.muted { color: #4b5563; line-height: 1.7; margin: 0; }
-.specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; padding: 0; margin: 0; list-style: none; }
-.specs .label { display: block; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; }
-.specs .value { font-weight: 600; color: #111; }
-.reviews { display: flex; align-items: center; gap: 16px; }
-.reviews .score { display: flex; align-items: baseline; gap: 6px; }
-.reviews .value { font-size: 32px; font-weight: 800; }
-.reviews .outof { color: #9ca3af; }
+.size-stock {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 400;
+  line-height: 1;
+}
 
-.review-form { display: grid; gap: 12px; margin-top: 8px; }
-.form-row { display: grid; gap: 6px; }
-.input, .textarea { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; font: inherit; }
-.textarea { resize: vertical; }
-.stars { display: inline-flex; gap: 4px; }
-.star-btn { background: transparent; border: none; padding: 0; cursor: pointer; }
-.star-btn.active svg path { fill: #f59e0b; }
-.form-actions { display: flex; justify-content: flex-end; }
-.btn-submit { background: #111; color: #fff; border: 1px solid #111; border-radius: 8px; padding: 10px 14px; font-weight: 700; }
-.btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+.size-btn.disabled .size-stock {
+  color: #9ca3af;
+}
 
-.review-list { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
-.review-item { border-top: 1px solid #eee; padding-top: 12px; }
-.review-head { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; }
-.review-name { font-weight: 700; }
-.review-date { color: #9ca3af; font-size: 12px; }
-.review-stars { color: #f59e0b; font-size: 14px; }
-.review-text { margin: 6px 0 0; color: #374151; }
+.size-error {
+  color: #dc2626;
+  margin: 0;
+  font-size: 13px;
+}
 
- 
+.qty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-.recommendations { max-width: 1240px; margin: 48px auto; padding: 0 16px; position: relative; }
-.recommendations-header { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  margin-bottom: 16px; 
-  gap: 16px; 
-  position: relative; 
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  border-radius: 40px;
+  padding: 8px 12px;
+}
+
+.pill-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qty-val {
+  min-width: 18px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.cta-block {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.add-to-bag {
+  width: 100%;
+  padding: 14px 18px;
+  background: #111;
+  color: #fff;
+  border: 1px solid #111;
+  border-radius: 8px;
+  font-weight: 700;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.add-to-bag:hover {
+  background: #000;
+  border-color: #000;
+  transform: translateY(-1px);
+}
+
+.wishlist {
+  width: 100%;
+  padding: 14px 18px;
+  background: #fff;
+  color: #111;
+  border: 1px solid #111;
+  border-radius: 8px;
+  font-weight: 700;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.wishlist:hover {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+  transform: translateY(-1px);
+}
+
+.product-meta {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.product-meta li {
+  font-size: 12px;
+  letter-spacing: .06em;
+  color: #374151;
+}
+
+.accordion {
+  display: grid;
+  gap: 12px;
+}
+
+.accordion-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.accordion-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color .2s ease;
+}
+
+.accordion-summary:hover {
+  background: #f9fafb;
+}
+
+.accordion-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.icons {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.accordion-item[open] .icon--plus {
+  display: none;
+}
+
+.accordion-item:not([open]) .icon--minus {
+  display: none;
+}
+
+.accordion-panel {
+  padding: 0 18px;
+  color: #4b5563;
+  height: 0;
+  overflow: hidden;
+  transition: height .28s cubic-bezier(.2, .8, .2, 1), opacity .28s ease;
+  opacity: 0;
+}
+
+.accordion-item[open] .accordion-panel {
+  padding: 4px 18px 18px 18px;
+  opacity: 1;
+}
+
+.muted {
+  color: #4b5563;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.specs .label {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.specs .value {
+  font-weight: 600;
+  color: #111;
+}
+
+.reviews {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.reviews .score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.reviews .value {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.reviews .outof {
+  color: #9ca3af;
+}
+
+.review-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.form-row {
+  display: grid;
+  gap: 6px;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.stars {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.star-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.star-btn.active svg path {
+  fill: #f59e0b;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-submit {
+  background: #111;
+  color: #fff;
+  border: 1px solid #111;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+.btn-submit:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.review-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.review-item {
+  border-top: 1px solid #eee;
+  padding-top: 12px;
+}
+
+.review-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.review-name {
+  font-weight: 700;
+}
+
+.review-date {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.review-stars {
+  color: #f59e0b;
+  font-size: 14px;
+}
+
+.review-text {
+  margin: 6px 0 0;
+  color: #374151;
+}
+
+
+
+.recommendations {
+  max-width: 1240px;
+  margin: 48px auto;
+  padding: 0 16px;
+  position: relative;
+}
+
+.recommendations-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 16px;
+  position: relative;
   z-index: 0;
   pointer-events: none;
 }
+
 .recommendations-header h2 {
   pointer-events: auto;
 }
-.recommendations h2 { margin: 0; font-size: 18px; letter-spacing: .08em; }
-.recommendations-controls { 
-  display: flex; 
-  gap: 8px; 
+
+.recommendations h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: .08em;
+}
+
+.recommendations-controls {
+  display: flex;
+  gap: 8px;
   pointer-events: auto;
   position: relative;
   z-index: 1;
 }
+
 .nav-btn {
   width: 40px;
   height: 40px;
@@ -1182,6 +1599,7 @@ function setupAccordion(el: HTMLDetailsElement) {
   transition: all 0.2s ease;
   color: #111;
 }
+
 .nav-btn:hover {
   border-color: #111;
   background: #111;
@@ -1189,25 +1607,74 @@ function setupAccordion(el: HTMLDetailsElement) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
+
 .nav-btn:active {
   transform: translateY(0) scale(0.95);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 900px) {
-  .pdp-hero { grid-template-columns: 1fr; align-items: start; }
-  .purchase { position: static; max-height: none; overflow-y: visible; }
-  .gallery { grid-template-columns: 1fr; }
-  .thumbs { flex-direction: row; overflow-x: auto; padding-bottom: 6px; }
-  .thumb { min-width: 80px; }
-  .gallery .main { min-height: auto; }
-  .gallery .main img { border-radius: 0; height: auto; aspect-ratio: 4 / 3; }
+  .pdp-hero {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .purchase {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .thumbs {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+
+  .thumb {
+    min-width: 80px;
+  }
+
+  .gallery .main {
+    min-height: auto;
+  }
+
+  .gallery .main img {
+    border-radius: 0;
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
 }
 
 /* Image crossfade */
-.pdp-fade-image-enter-active, .pdp-fade-image-leave-active { transition: opacity .25s ease, transform .25s ease; }
-.pdp-fade-image-enter-from { opacity: 0; transform: scale(.985); }
-.pdp-fade-image-enter-to { opacity: 1; transform: scale(1); }
-.pdp-fade-image-leave-from { opacity: 1; transform: scale(1); position: absolute; inset: 0; }
-.pdp-fade-image-leave-to { opacity: 0; transform: scale(1.015); }
+.pdp-fade-image-enter-active,
+.pdp-fade-image-leave-active {
+  transition: opacity .25s ease, transform .25s ease;
+}
+
+.pdp-fade-image-enter-from {
+  opacity: 0;
+  transform: scale(.985);
+}
+
+.pdp-fade-image-enter-to {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pdp-fade-image-leave-from {
+  opacity: 1;
+  transform: scale(1);
+  position: absolute;
+  inset: 0;
+}
+
+.pdp-fade-image-leave-to {
+  opacity: 0;
+  transform: scale(1.015);
+}
 </style>

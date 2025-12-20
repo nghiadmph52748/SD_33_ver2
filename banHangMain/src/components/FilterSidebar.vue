@@ -7,7 +7,8 @@
     <div class="filter-sidebar__footer">
       <button type="button" class="btn btn--secondary" @click="onReset">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-          <path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          <path fill="currentColor"
+            d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
         </svg>
         <span>{{ t('store.reset') }}</span>
       </button>
@@ -29,57 +30,26 @@
         <div class="price-range-container">
           <div class="slider-wrapper">
             <div class="slider-track">
-              <div 
-                class="slider-range" 
-                :style="{ 
-                  left: `${(localState.price[0] / maxPrice) * 100}%`,
-                  width: `${((localState.price[1] - localState.price[0]) / maxPrice) * 100}%`
-                }"
-              ></div>
-              <input
-                type="range"
-                :min="0"
-                :max="maxPrice"
-                :step="50000"
-                :value="localState.price[0]"
-                @input="updateMinPrice($event)"
-                class="slider slider--min"
-              />
-              <input
-                type="range"
-                :min="0"
-                :max="maxPrice"
-                :step="50000"
-                :value="localState.price[1]"
-                @input="updateMaxPrice($event)"
-                class="slider slider--max"
-              />
+              <div class="slider-range" :style="{
+                left: `${(localState.price[0] / maxPrice) * 100}%`,
+                width: `${((localState.price[1] - localState.price[0]) / maxPrice) * 100}%`
+              }"></div>
+              <input type="range" :min="0" :max="maxPrice" :step="50000" :value="localState.price[0]"
+                @input="updateMinPrice($event)" class="slider slider--min" />
+              <input type="range" :min="0" :max="maxPrice" :step="50000" :value="localState.price[1]"
+                @input="updateMaxPrice($event)" class="slider slider--max" />
             </div>
           </div>
           <div class="price-inputs">
             <div class="price-input-wrapper">
-              <input
-                type="number"
-                v-model.number="localState.price[0]"
-                :min="0"
-                :max="localState.price[1]"
-                :step="50000"
-                class="price-input"
-                @input="validatePriceRange"
-              />
+              <input type="number" v-model.number="localState.price[0]" :min="0" :max="localState.price[1]"
+                :step="50000" class="price-input" @input="validatePriceRange" />
               <span class="price-suffix">đ</span>
             </div>
             <span class="price-separator">—</span>
             <div class="price-input-wrapper">
-              <input
-                type="number"
-                v-model.number="localState.price[1]"
-                :min="localState.price[0]"
-                :max="maxPrice"
-                :step="50000"
-                class="price-input"
-                @input="validatePriceRange"
-              />
+              <input type="number" v-model.number="localState.price[1]" :min="localState.price[0]" :max="maxPrice"
+                :step="50000" class="price-input" @input="validatePriceRange" />
               <span class="price-suffix">đ</span>
             </div>
           </div>
@@ -90,23 +60,13 @@
         <label class="section__label">{{ t('store.gender') }}</label>
         <div class="checkbox-group">
           <label class="checkbox-item">
-            <input
-              type="checkbox"
-              value="Male"
-              v-model="localState.categories"
-              @change="onChange"
-              class="checkbox-input"
-            />
+            <input type="checkbox" value="Male" v-model="localState.categories" @change="onChange"
+              class="checkbox-input" />
             <span class="checkbox-label">{{ t('store.men') }}</span>
           </label>
           <label class="checkbox-item">
-            <input
-              type="checkbox"
-              value="Female"
-              v-model="localState.categories"
-              @change="onChange"
-              class="checkbox-input"
-            />
+            <input type="checkbox" value="Female" v-model="localState.categories" @change="onChange"
+              class="checkbox-input" />
             <span class="checkbox-label">{{ t('store.women') }}</span>
           </label>
         </div>
@@ -115,18 +75,9 @@
       <div class="section" v-if="availableBrands.length > 0">
         <label class="section__label">{{ t('store.brands') }}</label>
         <div class="checkbox-group">
-          <label 
-            v-for="brand in availableBrands" 
-            :key="brand"
-            class="checkbox-item"
-          >
-            <input
-              type="checkbox"
-              :value="brand"
-              v-model="localState.categories"
-              @change="onChange"
-              class="checkbox-input"
-            />
+          <label v-for="brand in availableBrands" :key="brand" class="checkbox-item">
+            <input type="checkbox" :value="brand" v-model="localState.categories" @change="onChange"
+              class="checkbox-input" />
             <span class="checkbox-label">{{ brand }}</span>
           </label>
         </div>
@@ -141,7 +92,7 @@ import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-const props = defineProps<{ 
+const props = defineProps<{
   maxPrice?: number
   brands?: string[]
 }>()
@@ -237,44 +188,37 @@ defineExpose({
 
 <style scoped>
 .filter-sidebar {
-  width: 320px;
-  min-width: 280px;
-  max-width: 320px;
+  width: 280px;
+  /* Slightly narrower */
+  min-width: 260px;
+  max-width: 280px;
   background: transparent;
-  border-right: 1px solid #e5e7eb;
+  /* Removed border-right for a cleaner floating look, or keep it subtle */
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   position: sticky;
-  top: 24px;
+  top: 110px;
+  /* Offset to clear the global sticky header */
   align-self: flex-start;
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 130px);
   overflow: hidden;
+  padding-right: 24px;
+  /* Space between sidebar and grid */
 }
 
-.filter-sidebar__header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.filter-sidebar__title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #111;
-  letter-spacing: 0.01em;
-}
-
+/* Custom Scrollbar */
 .filter-sidebar__content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 24px;
+  padding: 4px 4px 24px 4px;
+  /* Inner padding */
   box-sizing: border-box;
 }
 
 .filter-sidebar__content::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .filter-sidebar__content::-webkit-scrollbar-track {
@@ -282,199 +226,52 @@ defineExpose({
 }
 
 .filter-sidebar__content::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+  background: #e5e7eb;
+  border-radius: 4px;
 }
 
 .filter-sidebar__content::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #d1d5db;
+}
+
+.filter-sidebar__header {
+  padding: 0 0 24px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-sidebar__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -0.02em;
+}
+
+.filter-sidebar__footer {
+  /* Moved reset button to header maybe? Or keep at bottom? */
+  padding: 24px 0;
+  border-top: 1px solid #f3f4f6;
+  margin-top: auto;
 }
 
 .section {
-  margin-bottom: 32px;
+  margin-bottom: 40px;
   width: 100%;
-  box-sizing: border-box;
-  min-width: 0;
-}
-
-.section:last-child {
-  margin-bottom: 0;
 }
 
 .section__label {
   display: block;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: #111;
-  margin-bottom: 12px;
-  letter-spacing: 0.01em;
+  margin-bottom: 16px;
 }
 
-.select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  font-size: 14px;
-  color: #111;
-  cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 36px;
-}
-
-.select:focus {
-  outline: none;
-  border-color: #111;
-  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
-}
-
-.price-range-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.slider-wrapper {
-  position: relative;
-  margin: 20px 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.slider-track {
-  position: relative;
-  width: 100%;
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 3px;
-  box-sizing: border-box;
-}
-
-.slider-range {
-  position: absolute;
-  height: 100%;
-  background: #111;
-  border-radius: 3px;
-  pointer-events: none;
-}
-
-.slider {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 6px;
-  margin: 0;
-  padding: 0;
-  transform: translateY(-50%);
-  background: transparent;
-  outline: none;
-  appearance: none;
-  cursor: pointer;
-  z-index: 2;
-  box-sizing: border-box;
-}
-
-.slider--min {
-  z-index: 3;
-}
-
-.slider--max {
-  z-index: 2;
-}
-
-.slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #111;
-  cursor: pointer;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  position: relative;
-}
-
-.slider::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #111;
-  cursor: pointer;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.slider::-moz-range-thumb:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.slider::-moz-range-track {
-  background: transparent;
-}
-
-.price-inputs {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  box-sizing: border-box;
-  min-width: 0;
-}
-
-.price-input-wrapper {
-  flex: 1;
-  position: relative;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.price-input {
-  width: 100%;
-  padding: 10px 36px 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #111;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.price-input:focus {
-  outline: none;
-  border-color: #111;
-  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1);
-}
-
-.price-suffix {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  color: #6b7280;
-  pointer-events: none;
-}
-
-.price-separator {
-  color: #6b7280;
-  font-size: 14px;
-}
-
+/* Custom Checkboxes */
 .checkbox-group {
   display: flex;
   flex-direction: column;
@@ -484,20 +281,29 @@ defineExpose({
 .checkbox-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
+  transition: opacity 0.2s;
+}
+
+.checkbox-item:hover {
+  opacity: 0.8;
 }
 
 .checkbox-input {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #d1d5db;
-  border-radius: 4px;
-  cursor: pointer;
   appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 4px;
+  /* Soft square */
+  background: #fff;
+  cursor: pointer;
   position: relative;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .checkbox-input:checked {
@@ -508,71 +314,208 @@ defineExpose({
 .checkbox-input:checked::after {
   content: '';
   position: absolute;
-  left: 4px;
-  top: 1px;
+  top: 45%;
+  left: 50%;
   width: 5px;
-  height: 10px;
-  border: solid #fff;
+  height: 9px;
+  border: solid white;
   border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.checkbox-input:hover {
-  border-color: #9ca3af;
+  transform: translate(-50%, -60%) rotate(45deg);
 }
 
 .checkbox-label {
-  font-size: 14px;
-  color: #111;
-  line-height: 1.5;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.4;
+  font-weight: 400;
 }
 
-.filter-sidebar__footer {
-  padding: 20px 24px;
+.checkbox-input:checked+.checkbox-label {
+  color: #111;
+  font-weight: 500;
+}
+
+/* Price Slider */
+.price-range-container {
+  padding: 0 4px;
+}
+
+.slider-wrapper {
+  height: 30px;
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.slider-track {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+}
+
+.slider-range {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #111;
+  border-radius: 2px;
+}
+
+.slider {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 4px;
+  background: transparent;
+  appearance: none;
+  pointer-events: none;
+  /* Allow click through to track */
+  z-index: 10;
+}
+
+.slider--min {
+  z-index: 12;
+  /* Min slider on top */
+}
+
+.slider--max {
+  z-index: 11;
+}
+
+/* Thumb Styling */
+.slider::-webkit-slider-thumb {
+  pointer-events: auto;
+  /* Re-enable pointer on thumb */
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid #111;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  cursor: grab;
+  transition: transform 0.1s;
+}
+
+.slider::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+  cursor: grabbing;
+}
+
+.slider::-moz-range-thumb {
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid #111;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  cursor: grab;
+  border: none;
+}
+
+.price-inputs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.price-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.price-input {
+  width: 100%;
+  padding: 8px 0;
+  border: none;
   border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111;
+  background: transparent;
+  padding-right: 20px;
+  transition: border-color 0.2s;
+}
+
+.price-input:focus {
+  outline: none;
+  border-bottom-color: #111;
+}
+
+.price-suffix {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111;
+  background-color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23111111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+
+.select:hover {
+  border-color: #d1d5db;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #111;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
+  transition: all 0.2s ease;
   border: none;
+  font-family: inherit;
 }
 
 .btn--secondary {
   width: 100%;
-  justify-content: center;
-  background: #f3f4f6;
+  background: #fff;
+  border: 1px solid #e5e7eb;
   color: #111;
+  padding: 12px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .btn--secondary:hover {
-  background: #e5e7eb;
-  transform: translateY(-1px);
-}
-
-.btn--secondary:active {
-  transform: translateY(0);
+  border-color: #111;
+  background: #111;
+  color: #fff;
 }
 
 @media (max-width: 1024px) {
   .filter-sidebar {
-    width: 280px;
-  }
-}
-
-@media (max-width: 768px) {
-  .filter-sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #e5e7eb;
+    display: none;
+    /* Hide styled sidebar on tablet, assumes Drawer is used */
   }
 }
 </style>
-

@@ -5,6 +5,9 @@
     <div class="container" :aria-label="t('home.sections.trending')">
       <AppTrendingCarousel />
     </div>
+    <div class="container" :aria-label="t('home.sections.newProducts')">
+      <AppNewProducts />
+    </div>
     <div class="container" :aria-label="t('home.sections.featured')">
       <AppFeaturedProducts />
         </div>
@@ -22,6 +25,7 @@ import AppSalesBoxes from "@/components/AppSalesBoxes.vue";
 import AppHero from "@/components/AppHero.vue";
 import AppBrandStrip from "@/components/AppBrandStrip.vue";
 import AppTrendingCarousel from "@/components/AppTrendingCarousel.vue";
+import AppNewProducts from "@/components/AppNewProducts.vue";
 import { useCartStore } from "@/stores/cart";
 
 const cartStore = useCartStore();

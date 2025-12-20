@@ -68,10 +68,12 @@ axios.interceptors.request.use(
 // Add response interceptors
 axios.interceptors.response.use(
   (response: any) => {
-    // Check for new token from server
-    const newToken = response.headers["new-token"];
-    if (newToken) {
-      setToken(newToken);
+    // Check for new token from server (with null safety)
+    if (response?.headers) {
+      const newToken = response.headers["new-token"];
+      if (newToken) {
+        setToken(newToken);
+      }
     }
 
     const res = response.data;
