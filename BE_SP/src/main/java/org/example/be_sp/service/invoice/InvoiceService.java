@@ -19,6 +19,7 @@ import org.example.be_sp.entity.PhieuGiamGiaCaNhan;
 import org.example.be_sp.entity.ThongTinDonHang;
 import org.example.be_sp.entity.TrangThaiDonHang;
 import org.example.be_sp.exception.ApiException;
+import org.example.be_sp.model.email.OrderEmailData;
 import org.example.be_sp.model.email.RefundNotificationEmailData;
 import org.example.be_sp.model.request.AddressChangeNotificationRequest;
 import org.example.be_sp.model.request.invoice.InvoiceAddressChangeRequest;
@@ -78,6 +79,7 @@ public class InvoiceService {
     private final PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository;
     private final EmailService emailService;
     private final InvoicePaymentHistoryService invoicePaymentHistoryService;
+    private final org.example.be_sp.service.NotificationService notificationService;
 
     @Autowired
     public InvoiceService(
@@ -89,7 +91,8 @@ public class InvoiceService {
             PhieuGiamGiaRepository phieuGiamGiaRepository,
             PhieuGiamGiaCaNhanRepository phieuGiamGiaCaNhanRepository,
             EmailService emailService,
-            InvoicePaymentHistoryService invoicePaymentHistoryService) {
+            InvoicePaymentHistoryService invoicePaymentHistoryService,
+            org.example.be_sp.service.NotificationService notificationService) {
         this.hoaDonService = hoaDonService;
         this.hoaDonRepository = hoaDonRepository;
         this.hinhThucThanhToanRepository = hinhThucThanhToanRepository;
@@ -99,6 +102,7 @@ public class InvoiceService {
         this.phieuGiamGiaCaNhanRepository = phieuGiamGiaCaNhanRepository;
         this.emailService = emailService;
         this.invoicePaymentHistoryService = invoicePaymentHistoryService;
+        this.notificationService = notificationService;
     }
 
     public List<InvoiceResponse> getAll() {
@@ -131,9 +135,62 @@ public class InvoiceService {
         return reload(response.getId());
     }
 
+    @Transactional
     public InvoiceResponse update(Integer id, InvoiceRequest request) {
+        // Fetch HoaDon for notification/logging purposes
+        HoaDon hoaDon = hoaDonRepository.findById(id).orElseThrow(() -> new ApiException("Invoice not found", "404"));
+
+        // Capture old status before update
+        Integer oldStatusId = null;
+        Optional<ThongTinDonHang> latestStatus = thongTinDonHangRepository.findLatestByHoaDonId(id);
+        if (latestStatus.isPresent() && latestStatus.get().getIdTrangThaiDonHang() != null) {
+            oldStatusId = latestStatus.get().getIdTrangThaiDonHang().getId();
+        }
+
         InvoiceResponse response = InvoiceResponse.from(hoaDonService.update(id, request));
         invoicePaymentHistoryService.appendAdditionalPayment(id, request);
+
+        // Check status change for email triggers
+        Integer newStatusId = request.getIdTrangThaiDonHang();
+
+        log.info("Invoice Update - Order ID: {}, Old Status: {}, New Status: {}", id, oldStatusId, newStatusId);
+
+        if (newStatusId != null && !newStatusId.equals(oldStatusId)) {
+            String statusText = null;
+            if (newStatusId.equals(9)) {
+                statusText = "Đang chuẩn bị hàng";
+            } else if (newStatusId.equals(4)) {
+                statusText = "Đang giao hàng";
+            } else if (newStatusId.equals(7)) {
+                statusText = "Hoàn thành";
+            }
+
+            if (statusText != null) {
+                log.info("Status transition to '{}' (ID: {}) matched. Attempting to send email for order {}",
+                        statusText, newStatusId, id);
+                try {
+                    sendOrderStatusUpdateEmail(id, statusText);
+                } catch (Exception e) {
+                    log.error("Failed to send status update email for order {}", id, e);
+                }
+            } else {
+                log.info("Status transition to ID {} NOT matched for email trigger.", newStatusId);
+            }
+
+            // Real-time notification for staff
+            try {
+                String notifTitle = "Cập nhật đơn hàng " + hoaDon.getMaHoaDon();
+                String notifContent = "Đơn hàng " + hoaDon.getMaHoaDon() + " đã chuyển sang trạng thái: " +
+                        (statusText != null ? statusText : "Trạng thái mới (" + newStatusId + ")");
+
+                // Use type 'todo' and messageType 2 (system/order update)
+                notificationService.notifyAllStaff(notifTitle, "Trạng thái đơn hàng", notifContent, 2);
+                log.info("🔔 Sent staff notification for order {} status update to {}", id, newStatusId);
+            } catch (Exception e) {
+                log.error("Failed to send staff notification for order {}", id, e);
+            }
+        }
+
         return reload(response.getId());
     }
 
@@ -190,7 +247,8 @@ public class InvoiceService {
         }
 
         if (currentStatusId != null && !currentStatusId.equals(1)) {
-            throw new ApiException("Chỉ có thể thay đổi địa chỉ giao hàng khi đơn hàng đang ở trạng thái Chờ xác nhận", "400");
+            throw new ApiException("Chỉ có thể thay đổi địa chỉ giao hàng khi đơn hàng đang ở trạng thái Chờ xác nhận",
+                    "400");
         }
 
         boolean alreadyChanged = thongTinDonHangRepository.existsByHoaDonIdAndStatusId(hoaDon.getId(), 8)
@@ -623,6 +681,64 @@ public class InvoiceService {
                 surcharge != null ? surcharge : BigDecimal.ZERO);
     }
 
+    private void sendOrderStatusUpdateEmail(Integer orderId, String statusText) {
+        HoaDon hoaDon = hoaDonRepository.findById(orderId).orElse(null);
+        if (hoaDon == null) {
+            return;
+        }
+
+        String customerEmail = resolveEmail(hoaDon);
+        if (!StringUtils.hasText(customerEmail)) {
+            log.warn("[InvoiceService] Skipping status update email for order {} due to missing email",
+                    hoaDon.getMaHoaDon());
+            return;
+        }
+
+        String customerName = resolveCustomerName(hoaDon);
+        BigDecimal total = safe(hoaDon.getTongTien());
+        BigDecimal shipping = safe(hoaDon.getPhiVanChuyen());
+        BigDecimal discount = determineDiscountAmount(hoaDon, calculateDetailTotal(hoaDon), shipping);
+        BigDecimal finalAmount = resolveGrandTotal(hoaDon);
+
+        // Build items list
+        List<OrderEmailData.OrderItemData> items = new ArrayList<>();
+        if (hoaDon.getHoaDonChiTiets() != null) {
+            for (HoaDonChiTiet item : hoaDon.getHoaDonChiTiets()) {
+                items.add(OrderEmailData.OrderItemData.builder()
+                        .productName(item.getTenSanPhamChiTiet() != null ? item.getTenSanPhamChiTiet() : "Sản phẩm")
+                        .quantity(item.getSoLuong())
+                        .price(safe(item.getGiaBan()))
+                        .subtotal(resolveLineTotal(item))
+                        .build());
+            }
+        }
+
+        OrderEmailData emailData = OrderEmailData.builder()
+                .orderId(hoaDon.getId())
+                .orderCode(hoaDon.getMaHoaDon())
+                .customerName(customerName)
+                .customerEmail(customerEmail)
+                .orderDate(hoaDon.getCreateAt())
+                .totalAmount(total)
+                .discountAmount(discount)
+                .shippingFee(shipping)
+                .finalAmount(finalAmount)
+                .orderStatus(statusText)
+                .deliveryAddress(hoaDon.getDiaChiNguoiNhan())
+                .phoneNumber(hoaDon.getSoDienThoaiNguoiNhan())
+                .items(items)
+                .build();
+
+        emailService.sendOrderStatusUpdateEmail(emailData);
+    }
+
+    private String resolveEmail(HoaDon hoaDon) {
+        if (StringUtils.hasText(hoaDon.getEmailNguoiNhan())) {
+            return hoaDon.getEmailNguoiNhan();
+        }
+        return hoaDon.getIdKhachHang() != null ? hoaDon.getIdKhachHang().getEmail() : null;
+    }
+
     private String resolveCustomerName(HoaDon hoaDon) {
         if (StringUtils.hasText(hoaDon.getTenNguoiNhan())) {
             return hoaDon.getTenNguoiNhan();
@@ -750,12 +866,12 @@ public class InvoiceService {
 
             BigDecimal currentFee = request != null && request.getShippingFeeChange() != null
                     && request.getShippingFeeChange().getCurrentFee() != null
-                    ? request.getShippingFeeChange().getCurrentFee()
-                    : hoaDon.getPhiVanChuyen();
+                            ? request.getShippingFeeChange().getCurrentFee()
+                            : hoaDon.getPhiVanChuyen();
             BigDecimal newFee = request != null && request.getShippingFeeChange() != null
                     && request.getShippingFeeChange().getNewFee() != null
-                    ? request.getShippingFeeChange().getNewFee()
-                    : currentFee;
+                            ? request.getShippingFeeChange().getNewFee()
+                            : currentFee;
 
             BigDecimal difference = BigDecimal.ZERO;
             if (request != null && request.getShippingFeeChange() != null
@@ -775,7 +891,8 @@ public class InvoiceService {
             String customerEmail = resolveEmail(hoaDon);
             String customerName = resolveName(hoaDon);
 
-            return new AddressChangeContext(request, originalTotal, productTotal, discountAmount, difference, currentFee, newFee,
+            return new AddressChangeContext(request, originalTotal, productTotal, discountAmount, difference,
+                    currentFee, newFee,
                     paidInFull, customerEmail,
                     customerName);
         }

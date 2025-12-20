@@ -124,7 +124,8 @@ public class BanHangService {
             return;
         }
         try {
-            // Use existing deletion path to make sure stock is returned before removing invoice
+            // Use existing deletion path to make sure stock is returned before removing
+            // invoice
             xoaHoaDon(hoaDon.getId(), staffId);
         } catch (Exception e) {
             log.error("Failed to auto delete stale invoice {}: {}", hoaDon.getId(), e.getMessage(), e);
@@ -186,13 +187,13 @@ public class BanHangService {
         LocalDateTime now = LocalDateTime.now();
         ChiTietDotGiamGia bestDiscount = chiTietSanPham.getChiTietDotGiamGias().stream()
                 .filter(ctdg -> ctdg != null
-                && Boolean.TRUE.equals(ctdg.getTrangThai())
-                && !Boolean.TRUE.equals(ctdg.getDeleted())
-                && ctdg.getIdDotGiamGia() != null
-                && ctdg.getIdDotGiamGia().getNgayBatDau() != null
-                && ctdg.getIdDotGiamGia().getNgayKetThuc() != null
-                && !ctdg.getIdDotGiamGia().getNgayBatDau().isAfter(now)
-                && ctdg.getIdDotGiamGia().getNgayKetThuc().isAfter(now))
+                        && Boolean.TRUE.equals(ctdg.getTrangThai())
+                        && !Boolean.TRUE.equals(ctdg.getDeleted())
+                        && ctdg.getIdDotGiamGia() != null
+                        && ctdg.getIdDotGiamGia().getNgayBatDau() != null
+                        && ctdg.getIdDotGiamGia().getNgayKetThuc() != null
+                        && !ctdg.getIdDotGiamGia().getNgayBatDau().isAfter(now)
+                        && ctdg.getIdDotGiamGia().getNgayKetThuc().isAfter(now))
                 .max(Comparator.comparingInt(ctdg -> ctdg.getIdDotGiamGia().getGiaTriGiamGia()))
                 .orElse(null);
 
@@ -540,22 +541,26 @@ public class BanHangService {
         // Create timeline: Cập nhật hình thức giao hàng
         addTimeline(hoaDon, "Đang xử lý", "Đang xử lý", "Cập nhật",
                 "Cập nhật hình thức giao hàng: " + (giaohangCu ? "Không giao" : "Giao hàng")
-                + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
+                        + " → " + (hoaDon.getGiaoHang() ? "Giao hàng" : "Không giao"),
                 idNhanVien);
     }
 
     public void updateHTTT(Integer idHoaDon, Integer idPTTT, Integer idNhanVien) {
         HoaDon hoaDon = hdRepository.findById(idHoaDon)
                 .orElseThrow(() -> new ApiException("Không tìm thấy hóa đơn với id: " + idHoaDon, "404"));
-        HinhThucThanhToan httt = htttRepository.findByIdHoaDonAndTrangThaiAndDeleted(
-                hdRepository.findById(idHoaDon).orElseThrow(),
-                true,
-                false);
 
-        // Create new HinhThucThanhToan if none exists
-        if (httt == null) {
-            httt = new HinhThucThanhToan();
+        // Deactivate all existing payment methods for this invoice to avoid duplicates
+        List<HinhThucThanhToan> existingPayments = htttRepository.findByIdHoaDonAndDeleted(hoaDon, false);
+        if (existingPayments != null && !existingPayments.isEmpty()) {
+            for (HinhThucThanhToan existing : existingPayments) {
+                existing.setDeleted(true);
+                existing.setTrangThai(false);
+                htttRepository.save(existing);
+            }
         }
+
+        // Create new payment method record
+        HinhThucThanhToan httt = new HinhThucThanhToan();
 
         httt.setIdHoaDon(hoaDon);
         httt.setIdPhuongThucThanhToan(ptttRepository.findById(idPTTT).orElseThrow());

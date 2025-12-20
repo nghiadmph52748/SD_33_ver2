@@ -505,6 +505,17 @@ const useChatStore = defineStore('chat', {
       this.wsConnecting = true
       console.log('Connecting to WebSocket...')
 
+      // Deactivate existing client if any to prevent leaks/duplication
+      if (this.stompClient) {
+        try {
+          console.log('Deactivating existing STOMP client...')
+          this.stompClient.deactivate()
+        } catch (e) {
+          console.error('Error deactivating existing client:', e)
+        }
+        this.stompClient = null
+      }
+
       // Get base URL from axios defaults or use localhost
       const baseURL = axios.defaults.baseURL || 'http://localhost:8080'
       const wsUrl = `${baseURL}/ws-chat/sockjs`
@@ -578,8 +589,8 @@ const useChatStore = defineStore('chat', {
           console.log('Subscribed to messages:', subscription.id)
           console.log('Subscription destination:', subscriptionDestination)
 
-          // Store subscription for debugging
-          ;(window as any).chatSubscription = subscription
+            // Store subscription for debugging
+            ; (window as any).chatSubscription = subscription
 
           // Subscribe typing notifications
           client.subscribe(`/user/queue/typing`, (message: IMessage) => {
@@ -634,13 +645,7 @@ const useChatStore = defineStore('chat', {
           console.log('WebSocket closed:', event.code, event.reason)
           this.wsConnected = false
           this.wsConnecting = false
-          // Try to reconnect after a delay
-          setTimeout(() => {
-            if (!this.wsConnected && !this.wsConnecting) {
-              console.log('Attempting to reconnect WebSocket...')
-              this.connectWebSocket()
-            }
-          }, 5000)
+          // Auto-reconnect is handled by stompjs via reconnectDelay
         },
 
         onDisconnect: () => {

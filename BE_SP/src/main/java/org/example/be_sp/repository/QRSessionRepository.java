@@ -13,26 +13,23 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface QRSessionRepository extends JpaRepository<QRSession, Long> {
 
-    Optional<QRSession> findBySessionId(String sessionId);
+        Optional<QRSession> findBySessionId(String sessionId);
 
-    @Query("SELECT q FROM QRSession q WHERE q.status = :status AND q.expiresAt > :now")
-    List<QRSession> findByStatusAndExpiresAtAfter(@Param("status") String status, @Param("now") LocalDateTime now);
+        @Query("SELECT q FROM QRSession q WHERE q.status = :status AND q.expiresAt > :now")
+        List<QRSession> findByStatusAndExpiresAtAfter(@Param("status") String status, @Param("now") LocalDateTime now);
 
-    Optional<QRSession> findFirstByStatusAndExpiresAtAfterOrderByCreatedAtDesc(String status, LocalDateTime now);
+        Optional<QRSession> findFirstByStatusAndExpiresAtAfterOrderByCreatedAtDesc(String status, LocalDateTime now);
 
-    @Query("SELECT q FROM QRSession q WHERE q.status = :status AND q.expiresAt > :now AND q.createdAt >= :minCreatedAt ORDER BY q.createdAt DESC")
-    Optional<QRSession> findFirstByStatusAndExpiresAtAfterAndCreatedAtAfterOrderByCreatedAtDesc(
-            @Param("status") String status, 
-            @Param("now") LocalDateTime now,
-            @Param("minCreatedAt") LocalDateTime minCreatedAt);
+        @Query(value = "SELECT TOP 1 * FROM qr_sessions q WHERE q.status = :status AND q.expires_at > :now ORDER BY q.expires_at DESC", nativeQuery = true)
+        List<QRSession> findLatestActiveSessionCustom(
+                        @Param("status") String status,
+                        @Param("now") LocalDateTime now);
 
-    Optional<QRSession> findByIdHoaDon_Id(Integer hoaDonId);
+        Optional<QRSession> findByIdHoaDon_Id(Integer hoaDonId);
 
-    List<QRSession> findAllByIdHoaDon_Id(Integer hoaDonId);
+        List<QRSession> findAllByIdHoaDon_Id(Integer hoaDonId);
 
-    List<QRSession> findByStatusAndExpiresAtBefore(String status, LocalDateTime time);
+        List<QRSession> findByStatusAndExpiresAtBefore(String status, LocalDateTime time);
 
-    Optional<QRSession> findByOrderCode(String orderCode);
+        Optional<QRSession> findByOrderCode(String orderCode);
 }
-
-

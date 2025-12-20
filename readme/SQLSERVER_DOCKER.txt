@@ -1,0 +1,307 @@
+# SQL Server Docker Setup for GearUp
+
+This document describes the SQL Server containerized setup for the GearUp e-commerce platform.
+
+## 🎯 Overview
+
+The project uses **Azure SQL Edge** as the database engine, running in a Docker container. Azure SQL Edge is chosen for its:
+- ✅ **Cross-platform compatibility** (works on both x86/AMD64 and ARM64/Apple Silicon)
+- ✅ **Lightweight** (~500MB vs ~1.5GB for full SQL Server)
+- ✅ **Full T-SQL compatibility** with SQL Server
+- ✅ **Production-ready** for development and testing
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────┐
+│   Docker Network: gearup-network    │
+│                                     │
+│  ┌──────────────┐    ┌───────────┐ │
+│  │   Backend    │───▶│ SQL Server│ │
+│  │   :8080      │    │   :1433   │ │
+│  └──────────────┘    └─────┬─────┘ │
+│                            │       │
+│  ┌──────────────┐          │       │
+│  │ AI Service   │──────────┘       │
+│  │   :8001      │                  │
+│  └──────────────┘                  │
+│                                    │
+│  Volume: sqlserver_data            │
+│  └─ /var/opt/mssql (persisted)     │
+└─────────────────────────────────────┘
+```
+
+## 📋 Prerequisites
+
+Before starting, ensure you have:
+- Docker Desktop installed and running
+- Docker Compose v2.0 or higher
+- At least 2GB of free disk space
+- `.env` file with `SQL_PASSWORD` set (minimum 8 characters with uppercase, lowercase, numbers, and special characters)
+
+## 🚀 Quick Start
+
+### 1. Environment Setup
+
+Create or update your `.env` file with the SQL Server password:
+
+```bash
+# Database Configuration
+SQL_SERVER=sqlserver
+SQL_DATABASE=GearUp
+SQL_USERNAME=sa
+SQL_PASSWORD=YourStrong@Passw0rd  # CHANGE THIS!
+SQL_PORT=1433
+```
+
+> ⚠️ **Security Note**: The SQL Server password must be at least 8 characters and include:
+> - Uppercase letters
+> - Lowercase letters
+> - Numbers
+> - Special characters
+
+### 2. Start SQL Server Only
+
+To start only the SQL Server container:
+
+```bash
+docker compose up -d sqlserver
+```
+
+Check the status:
+
+```bash
+docker compose ps
+```
+
+You should see:
+```
+NAME                 STATUS              PORTS
+gearup-sqlserver     Up (healthy)        0.0.0.0:1433->1433/tcp
+```
+
+### 3. Start All Services
+
+To start the entire application stack:
+
+```bash
+docker compose up -d
+```
+
+## 🔌 Connecting to SQL Server
+
+### From Host Machine
+
+You can connect to the containerized SQL Server from your host machine using any SQL client:
+
+**Connection Details:**
+- **Host**: `localhost` or `127.0.0.1`
+- **Port**: `1433`
+- **Username**: `sa`
+- **Password**: (value from `.env` file)
+- **Database**: `GearUp`
+
+**Example with sqlcmd:**
+
+```bash
+docker exec -it gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "YourStrong@Passw0rd" \\
+  -Q "SELECT name FROM sys.databases"
+```
+
+### From Other Docker Services
+
+Services within the `gearup-network` use the container name:
+
+**Connection Details:**
+- **Host**: `sqlserver` (container name)
+- **Port**: `1433`
+- **Username**: `sa`
+- **Password**: (from environment variable)
+- **Database**: `GearUp`
+
+**Java JDBC URL:**
+```
+jdbc:sqlserver://sqlserver:1433;databaseName=GearUp;encrypt=true;trustServerCertificate=true;
+```
+
+## 📊 Database Initialization
+
+The database is initialized automatically on first start:
+
+1. **Automatic Creation**: The `GearUp` database is created if it doesn't exist
+2. **Initialization Scripts**: Located in `docker/sqlserver/init/` and executed in alphabetical order
+3. **One-time Execution**: A flag file prevents re-running initialization on subsequent starts
+
+### Manual Data Restoration
+
+To restore your database schema and data:
+
+```bash
+# Copy your SQL file into the container
+docker cp SQLQuery_new.sql gearup-sqlserver:/tmp/
+
+# Execute the SQL file
+docker exec -it gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "YourStrong@Passw0rd" \\
+  -i /tmp/SQLQuery_new.sql
+```
+
+Or use Azure Data Studio / SQL Server Management Studio to connect and run the script manually.
+
+## 🔍 Troubleshooting
+
+### Container Won't Start
+
+**Check logs:**
+```bash
+docker compose logs sqlserver
+```
+
+**Common issues:**
+- **Weak password**: Ensure password meets complexity requirements
+- **Port conflict**: Another service using port 1433
+- **Insufficient memory**: SQL Server needs at least 2GB RAM
+
+### Health Check Failing
+
+The health check verifies SQL Server is accepting connections. If it fails:
+
+```bash
+# Check container status
+docker compose ps
+
+# View detailed logs
+docker compose logs sqlserver --tail=50
+
+# Restart the service
+docker compose restart sqlserver
+```
+
+### Connection Refused
+
+If you can't connect from your application:
+
+1. **Verify container is healthy:**
+   ```bash
+   docker compose ps
+   ```
+
+2. **Test connection from container:**
+   ```bash
+   docker exec gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+     -S localhost -U sa -P "YourStrong@Passw0rd" -Q "SELECT 1"
+   ```
+
+3. **Check environment variables:**
+   ```bash
+   docker compose config
+   ```
+
+## 💾 Data Persistence
+
+### Volume Management
+
+Database files are stored in a Docker volume:
+
+```bash
+# List volumes
+docker volume ls
+
+# Inspect volume
+docker volume inspect sd_33_ver2_sqlserver_data
+
+# View volume size
+docker system df -v
+```
+
+### Backup Database
+
+```bash
+# Backup to container
+docker exec gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "YourStrong@Passw0rd" \\
+  -Q "BACKUP DATABASE GearUp TO DISK = '/var/opt/mssql/backup/GearUp.bak'"
+
+# Copy backup to host
+docker cp gearup-sqlserver:/var/opt/mssql/backup/GearUp.bak ./backup/
+```
+
+### Restore Database
+
+```bash
+# Copy backup to container
+docker cp ./backup/GearUp.bak gearup-sqlserver:/var/opt/mssql/backup/
+
+# Restore
+docker exec gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "YourStrong@Passw0rd" \\
+  -Q "RESTORE DATABASE GearUp FROM DISK = '/var/opt/mssql/backup/GearUp.bak' WITH REPLACE"
+```
+
+### Reset Database (Full Clean)
+
+⚠️ **Warning**: This will delete all data!
+
+```bash
+# Stop and remove containers
+docker compose down
+
+# Remove the volume
+docker volume rm sd_33_ver2_sqlserver_data
+
+# Start fresh
+docker compose up -d sqlserver
+```
+
+## 🛠️ Advanced Usage
+
+### View Initialization Logs
+
+```bash
+docker compose logs sqlserver | grep -A 20 "Initialization"
+```
+
+### Execute Custom SQL
+
+```bash
+docker exec -it gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "YourStrong@Passw0rd" \\
+  -Q "SELECT TOP 10 * FROM GearUp.dbo.san_pham"
+```
+
+### Access SQL Shell
+
+```bash
+docker exec -it gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "YourStrong@Passw0rd"
+```
+
+### Change SA Password
+
+```bash
+docker exec -it gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "OldPassword" \\
+  -Q "ALTER LOGIN sa WITH PASSWORD = 'NewStrong@Passw0rd'"
+```
+
+Update your `.env` file accordingly.
+
+## 📚 Additional Resources
+
+- [Azure SQL Edge Documentation](https://learn.microsoft.com/en-us/azure/azure-sql-edge/)
+- [SQL Server Docker Documentation](https://learn.microsoft.com/en-us/sql/linux/quickstart-install-connect-docker)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+
+## 🆘 Support
+
+If you encounter issues:
+1. Check this documentation first
+2. Review Docker logs: `docker compose logs sqlserver`
+3. Verify your `.env` configuration
+4. Ensure Docker Desktop has sufficient resources allocated (at least 4GB RAM recommended)
+
+---
+
+**Last Updated**: December 2024  
+**Maintained by**: GearUp Development Team

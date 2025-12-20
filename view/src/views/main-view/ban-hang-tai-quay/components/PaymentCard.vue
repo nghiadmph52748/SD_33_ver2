@@ -3,18 +3,14 @@
     <template #title>
       <div style="display: flex; justify-content: space-between; align-items: center">
         <span>Thanh Toán</span>
-        <span style="font-size: 12px; color: #666">{{ orderType === 'delivery' ? 'Đơn giao hàng' : 'Đơn tại quầy' }}</span>
+        <span style="font-size: 12px; color: #666">{{ orderType === 'delivery' ? 'Đơn giao hàng' : 'Đơn tại quầy'
+          }}</span>
       </div>
     </template>
 
     <a-form :model="{}" layout="vertical">
       <a-form-item :model="{}">
-        <a-button
-          long
-          size="large"
-          type="secondary"
-          :disabled="!hasEligibleVouchers"
-          style="
+        <a-button long size="large" type="secondary" :disabled="!hasEligibleVouchers" style="
             height: 56px;
             font-size: 15px;
             border: 1px solid #d9d9d9;
@@ -24,9 +20,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 0 16px;
-          "
-          @click="emit('open-voucher')"
-        >
+          " @click="emit('open-voucher')">
           <span style="font-weight: 500; text-align: left">Phiếu Giảm Giá</span>
           <span style="font-weight: 400; font-size: 12px; text-align: right; color: #999">
             {{ hasEligibleVouchers ? `${eligibleVouchersCount} voucher có thể dùng >` : 'Không có voucher phù hợp' }}
@@ -34,33 +28,25 @@
         </a-button>
       </a-form-item>
 
-      <a-alert
-        v-if="selectedCoupon"
-        :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`"
-        type="success"
-        closable
-        style="margin-bottom: 12px"
-        @close="emit('clear-voucher')"
-      >
+      <a-alert v-if="selectedCoupon" :title="`Voucher: ${selectedCoupon.tenPhieuGiamGia}`" type="success" closable
+        style="margin-bottom: 12px" @close="emit('clear-voucher')">
         <div style="display: flex; justify-content: space-between; align-items: center">
           <div>
             <strong>{{ selectedCoupon.maPhieuGiamGia }}</strong>
             <span style="margin-left: 8px; color: #52c41a">-{{ discountDisplay }}</span>
           </div>
           <div style="font-size: 12px; color: #666">
-            <span v-if="selectedCoupon.hoaDonToiThieu">Min: {{ formatCurrency(Number(selectedCoupon.hoaDonToiThieu)) }}</span>
+            <span v-if="selectedCoupon.hoaDonToiThieu">Min: {{ formatCurrency(Number(selectedCoupon.hoaDonToiThieu))
+              }}</span>
           </div>
         </div>
       </a-alert>
 
-      <VoucherAlmostEligible v-if="almostEligibleSuggestion" :suggestion="almostEligibleSuggestion" @open-voucher="emit('open-voucher')" />
+      <VoucherAlmostEligible v-if="almostEligibleSuggestion" :suggestion="almostEligibleSuggestion"
+        @open-voucher="emit('open-voucher')" />
 
-      <BestVoucherSuggestionCard
-        v-if="!selectedCoupon && bestVoucher"
-        :best-voucher="bestVoucher as any"
-        :calculate-voucher-discount="calculateVoucherDiscount as any"
-        @select="emit('select-best')"
-      />
+      <BestVoucherSuggestionCard v-if="!selectedCoupon && bestVoucher" :best-voucher="bestVoucher as any"
+        :calculate-voucher-discount="calculateVoucherDiscount as any" @select="emit('select-best')" />
 
       <div v-if="orderType === 'delivery'" style="margin-bottom: 16px">
         <a-divider orientation="left" style="margin: 12px 0">Địa chỉ giao hàng</a-divider>
@@ -69,69 +55,40 @@
         <a-row :gutter="[12, 12]">
           <a-col :span="12">
             <a-form-item label="Tỉnh/Thành phố" required>
-              <a-select
-                :model-value="walkInLocation.thanhPho"
-                placeholder="-- Chọn tỉnh/thành phố --"
-                :options="provinces"
-                @change="emit('change:province', $event)"
-                @update:model-value="emit('change:province', $event)"
-                option-label-prop="label"
-                allow-search
-                allow-clear
-              />
+              <a-select :model-value="walkInLocation.thanhPho" placeholder="-- Chọn tỉnh/thành phố --"
+                :options="provinces" @change="emit('change:province', $event)"
+                @update:model-value="emit('change:province', $event)" option-label-prop="label" allow-search
+                allow-clear />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="Quận/Huyện" required>
-              <a-select
-                :model-value="walkInLocation.quan"
-                placeholder="-- Chọn quận/huyện --"
-                :options="walkInLocation.districts"
-                @change="emit('change:district', $event)"
-                @update:model-value="emit('change:district', $event)"
-                option-label-prop="label"
-                allow-search
-                allow-clear
-                :disabled="!walkInLocation.thanhPho"
-              />
+              <a-select :model-value="walkInLocation.quan" placeholder="-- Chọn quận/huyện --"
+                :options="walkInLocation.districts" @change="emit('change:district', $event)"
+                @update:model-value="emit('change:district', $event)" option-label-prop="label" allow-search allow-clear
+                :disabled="!walkInLocation.thanhPho" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="Phường/Xã" required>
-              <a-select
-                :model-value="walkInLocation.phuong"
-                placeholder="-- Chọn phường/xã --"
-                :options="walkInLocation.wards"
-                option-label-prop="label"
-                allow-search
-                allow-clear
-                :disabled="!walkInLocation.quan"
-                @change="emit('update:walkin-ward', $event)"
-                @update:model-value="emit('update:walkin-ward', $event)"
-              />
+              <a-select :model-value="walkInLocation.phuong" placeholder="-- Chọn phường/xã --"
+                :options="walkInLocation.wards" option-label-prop="label" allow-search allow-clear
+                :disabled="!walkInLocation.quan" @change="emit('update:walkin-ward', $event)"
+                @update:model-value="emit('update:walkin-ward', $event)" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="Địa chỉ cụ thể" required>
-              <a-input
-                :model-value="walkInLocation.diaChiCuThe"
-                placeholder="Số nhà, đường..."
-                @update:model-value="emit('update:walkin-address', $event)"
-              />
+              <a-input :model-value="walkInLocation.diaChiCuThe" placeholder="Số nhà, đường..."
+                @update:model-value="emit('update:walkin-address', $event)" />
             </a-form-item>
           </a-col>
         </a-row>
 
         <!-- Shipping Fee Calculator Component -->
-        <ShippingFeeCalculator
-          :order-type="orderType"
-          :selected-customer="selectedCustomer"
-          :is-walk-in="isWalkIn"
-          :walk-in-location="walkInLocation"
-          :subtotal="subtotal"
-          :shipping-fee-from-parent="shippingFee"
-          @update:shipping-fee="emit('update:shippingFee', $event)"
-        />
+        <ShippingFeeCalculator :order-type="orderType" :selected-customer="selectedCustomer" :is-walk-in="isWalkIn"
+          :walk-in-location="walkInLocation" :subtotal="subtotal" :shipping-fee-from-parent="shippingFee"
+          @update:shipping-fee="emit('update:shippingFee', $event)" />
       </div>
 
       <a-form-item :model="{}" label="Phương Thức Thanh Toán">
@@ -142,111 +99,74 @@
         </a-radio-group>
       </a-form-item>
 
-      <a-form-item
-        v-if="paymentForm.method === 'cash' || paymentForm.method === 'both'"
-        label="Tiền Mặt"
-        class="cash-input-container"
-        style="transition: all 0.3s ease"
-      >
-        <a-input-number
-          class="payment-input"
-          :model-value="paymentForm.cashReceived ?? undefined"
-          :min="0"
-          :max="paymentForm.method === 'both' ? finalPrice : undefined"
-          placeholder="Nhập số tiền mặt"
-          style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
-          :precision="0"
-          :formatter="formatNumber"
-          :parser="parseNumericInput"
-          hide-button
-          @update:model-value="handleCashInput"
-        >
+      <a-form-item v-if="paymentForm.method === 'cash' || paymentForm.method === 'both'" label="Tiền Mặt"
+        class="cash-input-container" style="transition: all 0.3s ease">
+        <a-input-number class="payment-input" :model-value="paymentForm.cashReceived ?? undefined" :min="0"
+          :max="paymentForm.method === 'both' ? finalPrice : undefined" placeholder="Nhập số tiền mặt"
+          style="width: 100%; height: 48px; font-size: 16px; font-weight: 500" :precision="0" :formatter="formatNumber"
+          :parser="parseNumericInput" hide-button @update:model-value="handleCashInput">
           <template #suffix>
             <span class="currency-text">đ</span>
-            <a-button
-              type="text"
-              size="mini"
-              class="clear-suffix-btn"
+            <a-button type="text" size="mini" class="clear-suffix-btn"
               :disabled="paymentForm.cashReceived === null || paymentForm.cashReceived === undefined"
-              @click.stop="emit('update:cash', null)"
-            >
+              @click.stop="emit('update:cash', null)">
               <icon-close />
             </a-button>
           </template>
         </a-input-number>
       </a-form-item>
 
-      <a-form-item
-        v-if="paymentForm.method === 'transfer' || paymentForm.method === 'both'"
-        label="Chuyển Khoản"
-        class="transfer-input-container"
-        style="transition: all 0.3s ease"
-      >
-        <a-input-number
-          class="payment-input"
-          :model-value="paymentForm.transferReceived ?? undefined"
-          :min="0"
-          :max="paymentForm.method === 'both' ? finalPrice : undefined"
-          placeholder="Nhập số tiền chuyển khoản"
-          style="width: 100%; height: 48px; font-size: 16px; font-weight: 500"
-          :precision="0"
-          :formatter="formatNumber"
-          :parser="parseNumericInput"
-          hide-button
-          @update:model-value="handleTransferInput"
-        >
+      <a-form-item v-if="paymentForm.method === 'transfer' || paymentForm.method === 'both'" label="Chuyển Khoản"
+        class="transfer-input-container" style="transition: all 0.3s ease">
+        <a-input-number class="payment-input" :model-value="paymentForm.transferReceived ?? undefined" :min="0"
+          :max="paymentForm.method === 'both' ? finalPrice : undefined" placeholder="Nhập số tiền chuyển khoản"
+          style="width: 100%; height: 48px; font-size: 16px; font-weight: 500" :precision="0" :formatter="formatNumber"
+          :parser="parseNumericInput" hide-button @update:model-value="handleTransferInput">
           <template #suffix>
             <span class="currency-text">đ</span>
-            <a-button
-              type="text"
-              size="mini"
-              class="clear-suffix-btn"
+            <a-button type="text" size="mini" class="clear-suffix-btn"
               :disabled="paymentForm.transferReceived === null || paymentForm.transferReceived === undefined"
-              @click.stop="emit('update:transfer', null)"
-            >
+              @click.stop="emit('update:transfer', null)">
               <icon-close />
             </a-button>
           </template>
         </a-input-number>
       </a-form-item>
 
-      <a-alert v-if="paymentForm.method === 'transfer' || paymentForm.method === 'both'" type="info" title="Chuyển Khoản" closable>
+      <a-alert v-if="paymentForm.method === 'transfer' || paymentForm.method === 'both'" type="info"
+        title="Chuyển Khoản" closable>
         <p>Vui lòng chuyển khoản theo thông tin cung cấp. Mã hoá đơn: {{ orderCode }}</p>
-        <p v-if="paymentForm.method === 'both'">Số tiền chuyển khoản: {{ formatCurrency(paymentForm.transferReceived || 0) }}</p>
+        <p v-if="paymentForm.method === 'both'">Số tiền chuyển khoản: {{ formatCurrency(paymentForm.transferReceived ||
+          0)
+          }}</p>
       </a-alert>
       <a-divider />
       <div class="payment-summary">
         <p class="summary-row">
-          <span>Tổng tiền:</span>
+          <span>Tổng tiền:&nbsp;</span>
           <strong>{{ formatCurrency(subtotal) }}</strong>
         </p>
         <p class="summary-row">
-          <span>Giảm giá:</span>
+          <span>Giảm giá:&nbsp;</span>
           <span :class="discountAmount > 0 ? 'discount-text' : ''">
             {{ discountAmount > 0 ? '-' : '' }}{{ formatCurrency(discountAmount) }}
           </span>
         </p>
         <p v-if="orderType === 'delivery'" class="summary-row">
           <span class="shipping-label">
-            <span>Phí vận chuyển:</span>
+            <span>Phí vận chuyển:&nbsp;</span>
           </span>
           <strong style="color: #1890ff">{{ formatCurrency(shippingFee) }}</strong>
         </p>
         <p class="summary-row total">
-          <span>Thành tiền:</span>
+          <span>Thành tiền:&nbsp;</span>
           <strong class="final-price">{{ formatCurrency(finalPrice) }}</strong>
         </p>
       </div>
 
       <div class="qr-action">
-        <a-button
-          type="primary"
-          status="success"
-          long
-          :loading="qrSyncing"
-          :disabled="finalPrice <= 0 || !hasItems"
-          @click="emit('open-mobile')"
-        >
+        <a-button type="primary" status="success" long :loading="qrSyncing" :disabled="finalPrice <= 0 || !hasItems"
+          @click="emit('open-mobile')">
           <template #icon>
             <icon-qrcode />
           </template>
@@ -266,11 +186,13 @@
       </div>
 
       <div class="reset-session-action">
-        <a-button type="outline" status="warning" long @click="emit('reset-qr-session')">Reset Màn Hình Thanh Toán</a-button>
+        <a-button type="outline" status="warning" long @click="emit('reset-qr-session')">Reset Màn Hình Thanh
+          Toán</a-button>
       </div>
 
       <a-space direction="vertical" size="large" style="width: 100%; margin-top: 16px">
-        <a-button type="primary" long size="large" :disabled="!canConfirmOrder" :loading="confirmLoading" @click="emit('confirm-order')">
+        <a-button type="primary" long size="large" :disabled="!canConfirmOrder" :loading="confirmLoading"
+          @click="emit('confirm-order')">
           <template #icon>
             <icon-check />
           </template>

@@ -180,14 +180,17 @@
 <body>
 	<div class="container">
 		<div class="header">
-			<img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
+			<img class="logo"
+				src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png"
+				alt="GearUp Logo">
 			<h1>Thông báo hoàn phí thay đổi địa chỉ</h1>
 			<p>Đơn hàng <strong th:text="${orderCode}"></strong></p>
 		</div>
 		<div class="content">
 			<p>Xin chào <strong th:text="${customerName}"></strong>,</p>
 			<p>
-				Yêu cầu thay đổi địa chỉ giao hàng của bạn đã được xử lý thành công. Phí vận chuyển mới giúp giảm chi phí,
+				Yêu cầu thay đổi địa chỉ giao hàng của bạn đã được xử lý thành công. Phí vận chuyển mới giúp giảm chi
+				phí,
 				vì vậy chúng tôi sẽ hoàn lại cho bạn số tiền thừa bằng voucher:
 			</p>
 			<div class="section" th:if="${appliedToOrder}">
@@ -199,7 +202,8 @@
 							₫</strong>
 					</li>
 					<li>Giá trị sau điều chỉnh: <strong
-							th:text="${#numbers.formatDecimal(newTotal, 0, 'COMMA', 0, 'POINT')} + ' ₫'">950,000 ₫</strong>
+							th:text="${#numbers.formatDecimal(newTotal, 0, 'COMMA', 0, 'POINT')} + ' ₫'">950,000
+							₫</strong>
 					</li>
 				</ul>
 			</div>
@@ -221,11 +225,13 @@
 
 				<h2>Hoàn phí cho đơn hàng đã thanh toán đủ</h2>
 				<p>
-					Bạn đã thanh toán đủ giá trị đơn hàng, vì vậy phần hoàn phí sẽ được xử lý theo chính sách ưu đãi dành
+					Bạn đã thanh toán đủ giá trị đơn hàng, vì vậy phần hoàn phí sẽ được xử lý theo chính sách ưu đãi
+					dành
 					riêng cho bạn:
 				</p>
 				<div class="note" th:if="${giftReward}">
-					🎁 Hoàn phí nhỏ hơn 50.000 ₫, cửa hàng sẽ gửi tặng bạn một phần quà hiện vật tương ứng kèm theo đơn giao
+					🎁 Hoàn phí nhỏ hơn 50.000 ₫, cửa hàng sẽ gửi tặng bạn một phần quà hiện vật tương ứng kèm theo đơn
+					giao
 					hàng kế tiếp.
 				</div>
 				<div class="note" th:if="${voucherReward}">
@@ -235,14 +241,15 @@
 				</div>
 			</div>
 
-			<p>Nếu cần hỗ trợ thêm, bạn có thể phản hồi email này hoặc liên hệ tổng đài chăm sóc khách hàng bất cứ lúc nào.
+			<p>Nếu cần hỗ trợ thêm, bạn có thể phản hồi email này hoặc liên hệ tổng đài chăm sóc khách hàng bất cứ lúc
+				nào.
 			</p>
 
-			<a class="cta" th:href="${baseUrl}"
-				style="color: #ffffff !important; text-decoration: none;">Xem đơn hàng</a>
+			<a class="cta" th:href="${baseUrl}" style="color: #ffffff !important; text-decoration: none;">Xem đơn
+				hàng</a>
 		</div>
 		<div class="footer">
-			© 2024 GearUp Shop. Cảm ơn bạn đã đồng hành cùng chúng tôi!
+			© 2025 GearUp. Cảm ơn bạn đã đồng hành cùng chúng tôi!
 		</div>
 	</div>
 </body>

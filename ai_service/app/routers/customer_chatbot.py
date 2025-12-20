@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, validator
 from app.utils.llm_client import llm_client
 from app.utils.customer_database import CustomerDatabaseClient
 from app.utils.smart_recommendation import SmartRecommendationEngine
+from app.utils.rag_service import rag_service
 import logging
 import json
 import re
@@ -234,18 +235,33 @@ def extract_smart_keywords(message: str, chat_history: list = None) -> dict:
         "mentioned_products": keywords.get("mentioned_products", [])
     }
 
-def query_product_data(message: str, intent: str, chat_history: list = None) -> tuple[str, list]:
+async def query_product_data(message: str, intent: str, chat_history: list = None) -> tuple[str, list]:
     """Query product data using smart recommendation engine"""
     try:
         product_context = ""
+        products = []
+        metadata = {}
         
-        # Use smart recommendation engine
-        products, metadata = recommendation_engine.recommend_products(
-            message=message,
-            intent=intent,
-            chat_history=chat_history,
-            limit=15
-        )
+        # Strategy 1: Try RAG semantic search first (if available)
+        if rag_service.is_available():
+            logger.info(f"Attempting RAG semantic search for: '{message[:50]}...'")
+            # Use await instead of asyncio.run() since we're in an async context
+            products, metadata = await rag_service.search_products_semantic(message, limit=15, min_similarity=0.15)
+            
+            if products:
+                logger.info(f"RAG search successful: found {len(products)} products")
+            else:
+                logger.info("RAG search returned no results, falling back to keyword search")
+        
+        # Strategy 2: Fallback to smart recommendation engine (keyword-based)
+        if not products:
+            logger.info("Using smart recommendation engine (keyword-based)")
+            products, metadata = recommendation_engine.recommend_products(
+                message=message,
+                intent=intent,
+                chat_history=chat_history,
+                limit=15
+            )
         
         logger.info(f"Smart recommendation - keywords: {metadata.get('keywords_extracted', {})}, "
                    f"candidates: {metadata.get('total_candidates', 0)}, "
@@ -420,7 +436,67 @@ async def chat(request: ChatRequest):
             )
         
         # 2. Query product data from database
-        product_context, products_list = query_product_data(sanitized_message, intent)
+        product_context, products_list = await query_product_data(sanitized_message, intent)
+        
+        # Detect if this is a vague follow-up question (e.g., "về giá thì sao", "còn hàng không")
+        # These questions don't make sense without context from previous products
+        is_followup = any(pattern in sanitized_message.lower() for pattern in [
+            "về giá", "giá thì", "về size", "size thì", "còn hàng", "có sẵn", 
+            "màu gì", "thì sao", "how about", "what about", "còn gì",
+            "lí do", "lý do", "tại sao", "nên mua", "có nên",  # Reasons/recommendations
+            "đôi này", "giày này", "model này", "mẫu này",      # Referencing products
+            "thêm thông tin", "chi tiết hơn", "cụ thể hơn"     # More info requests
+        ]) and len(sanitized_message.split()) < 15  # Increased word limit
+        
+        # If it's a follow-up and we have chat history with products, use those products
+        if is_followup and request.chat_history:
+            logger.info("Detected follow-up question, checking chat history for product context")
+            for hist_msg in reversed(request.chat_history[-5:]):  # Last 5 messages
+                if hist_msg.get("role") == "assistant" and "products" in hist_msg:
+                    hist_products = hist_msg["products"]
+                    if hist_products:
+                        # Reuse the products from history for context
+                        logger.info(f"Reusing {len(hist_products)} products from chat history for follow-up question")
+                        products_list = hist_products
+                        
+                        # Rebuild product context with these products
+                        product_context = "\n\n**DỮ LIỆU SẢN PHẨM - BẮT BUỘC SỬ DỤNG:**\n\n⚠️ QUAN TRỌNG: BẠN CHỈ ĐƯỢC đề xuất các sản phẩm trong danh sách này. KHÔNG được tự bịa ra sản phẩm khác.\n\nDanh sách sản phẩm có sẵn trong hệ thống:\n\n"
+                        for idx, p in enumerate(hist_products, 1):
+                            product_context += f"{idx}. **{p.get('name', 'N/A')}**\n"
+                            if p.get('min_price'):
+                                product_context += f"   - Giá: {int(p['min_price']):,} VNĐ"
+                                if p.get('max_price') and p['max_price'] != p['min_price']:
+                                    product_context += f" - {int(p['max_price']):,} VNĐ"
+                                product_context += "\n"
+                            if p.get('stock'):
+                                product_context += f"   - Tồn kho: {p['stock']}\n"
+                        break
+        
+        # If user is asking about sizes/colors, enrich product data with variant information
+        if products_list and any(keyword in sanitized_message.lower() for keyword in ["size", "màu", "color", "kích thước", "kích cỡ", "variant", "phiên bản"]):
+            logger.info(f"User asking about sizes/colors, fetching variants for {len(products_list)} products")
+            for product in products_list[:3]:  # Only for top 3 products to avoid slowness
+                product_id = product.get("product_id")
+                product_name = product.get("product_name", "Sản phẩm")
+                if product_id:
+                    try:
+                        variants = db_client.get_product_variants(product_id)
+                        if variants:
+                            sizes = sorted(set(v.get('size', '') for v in variants if v.get('size')))
+                            colors = sorted(set(v.get('color', '') for v in variants if v.get('color')))
+                            
+                            # Add variant info to product context
+                            variant_info = f"\n\n**{product_name} - Chi tiết:**"
+                            if sizes:
+                                variant_info += f"\n- Sizes: {', '.join(sizes)}"
+                            if colors:
+                                variant_info += f"\n- Màu: {', '.join(colors)}"
+                            variant_info += f"\n- Có {len(variants)} phiên bản"
+                            
+                            product_context += variant_info
+                            logger.info(f"Added variants for {product_name}: {len(sizes)} sizes, {len(colors)} colors")
+                    except Exception as e:
+                        logger.error(f"Error fetching variants for product {product_id}: {e}")
         
         # 3. Build messages for LLM with sanitized input, product data, and chat history
         # Use sanitized message to prevent any injection attempts
@@ -601,6 +677,9 @@ async def chat_stream(request: ChatRequest):
         
         # Log request for security monitoring
         logger.info(f"Customer stream request - Length: {len(sanitized_message)}, Intent detection starting...")
+        logger.info(f"[DEBUG] Received chat_history: {len(request.chat_history) if request.chat_history else 0} items")
+        if request.chat_history:
+            logger.info(f"[DEBUG] Last history item: {request.chat_history[-1]}")
         
         # 1. Detect intent
         intent = detect_customer_intent(sanitized_message)
@@ -634,7 +713,65 @@ async def chat_stream(request: ChatRequest):
             )
         
         # 2. Query product data from database
-        product_context, products_list = query_product_data(sanitized_message, intent)
+        product_context, products_list = await query_product_data(sanitized_message, intent)
+        
+        # Detect if this is a vague follow-up question
+        is_followup = any(pattern in sanitized_message.lower() for pattern in [
+            "về giá", "giá thì", "về size", "size thì", "còn hàng", "có sẵn", 
+            "màu gì", "thì sao", "how about", "what about", "còn gì",
+            "lí do", "lý do", "tại sao", "nên mua", "có nên",  # Reasons/recommendations
+            "đôi này", "giày này", "model này", "mẫu này",      # Referencing products
+            "thêm thông tin", "chi tiết hơn", "cụ thể hơn"     # More info requests
+        ]) and len(sanitized_message.split()) < 15  # Increased word limit
+        
+        # If it's a follow-up and we have chat history with products, use those products
+        if is_followup and request.chat_history:
+            logger.info("Detected follow-up question, checking chat history for product context")
+            for hist_msg in reversed(request.chat_history[-5:]):
+                if hist_msg.get("role") == "assistant" and "products" in hist_msg:
+                    hist_products = hist_msg["products"]
+                    if hist_products:
+                        logger.info(f"Reusing {len(hist_products)} products from chat history for follow-up question")
+                        products_list = hist_products
+                        
+                        # Rebuild product context with these products
+                        product_context = "\n\n**DỮ LIỆU SẢN PHẨM - BẮT BUỘC SỬ DỤNG:**\n\n⚠️ QUAN TRỌNG: BẠN CHỈ ĐƯỢC đề xuất các sản phẩm trong danh sách này. KHÔNG được tự bịa ra sản phẩm khác.\n\nDanh sách sản phẩm có sẵn trong hệ thống:\n\n"
+                        for idx, p in enumerate(hist_products, 1):
+                            product_context += f"{idx}. **{p.get('name', 'N/A')}**\n"
+                            if p.get('min_price'):
+                                product_context += f"   - Giá: {int(p['min_price']):,} VNĐ"
+                                if p.get('max_price') and p['max_price'] != p['min_price']:
+                                    product_context += f" - {int(p['max_price']):,} VNĐ"
+                                product_context += "\n"
+                            if p.get('stock'):
+                                product_context += f"   - Tồn kho: {p['stock']}\n"
+                        break
+        
+        # If user is asking about sizes/colors, enrich product data with variant information
+        if products_list and any(keyword in sanitized_message.lower() for keyword in ["size", "màu", "color", "kích thước", "kích cỡ", "variant", "phiên bản"]):
+            logger.info(f"User asking about sizes/colors, fetching variants for {len(products_list)} products")
+            for product in products_list[:3]:  # Only for top 3 products to avoid slowness
+                product_id = product.get("product_id")
+                product_name = product.get("product_name", "Sản phẩm")
+                if product_id:
+                    try:
+                        variants = db_client.get_product_variants(product_id)
+                        if variants:
+                            sizes = sorted(set(v.get('size', '') for v in variants if v.get('size')))
+                            colors = sorted(set(v.get('color', '') for v in variants if v.get('color')))
+                            
+                            # Add variant info to product context
+                            variant_info = f"\n\n**{product_name} - Chi tiết:**"
+                            if sizes:
+                                variant_info += f"\n- Sizes: {', '.join(sizes)}"
+                            if colors:
+                                variant_info += f"\n- Màu: {', '.join(colors)}"
+                            variant_info += f"\n- Có {len(variants)} phiên bản"
+                            
+                            product_context += variant_info
+                            logger.info(f"Added variants for {product_name}: {len(sizes)} sizes, {len(colors)} colors")
+                    except Exception as e:
+                        logger.error(f"Error fetching variants for product {product_id}: {e}")
         
         # 3. Log product data for debugging
         logger.info(f"Product data provided to AI (stream): {product_context[:200]}...")
@@ -732,27 +869,92 @@ async def chat_stream(request: ChatRequest):
                 logger.error(f"Error in fallback product query (stream): {e}")
         
         # 4. Build messages for LLM with sanitized input, product data, and chat history
+        # Start with base prompt + current product context
         system_prompt_with_data = CUSTOMER_SYSTEM_PROMPT + product_context
-        messages = [
-            {"role": "system", "content": system_prompt_with_data}
-        ]
         
         # Add chat history (last 20 messages for better context)
+        shown_products_context = ""
+        history_messages = []
+        last_shown_products = []
+        
         if request.chat_history:
             # Filter and sanitize chat history
             logger.info(f"Received chat history (stream): {len(request.chat_history)} messages")
             for hist_msg in request.chat_history[-20:]:  # Last 20 messages for better context
                 role = hist_msg.get("role", "")
                 content = hist_msg.get("content", "")
+                
+                # Check if this assistant message had products attached
+                if role == "assistant" and "products" in hist_msg:
+                    products_in_msg = hist_msg["products"]
+                    if products_in_msg:
+                        # Save last shown products for reference
+                        last_shown_products = products_in_msg[:5]  # Keep top 5
+                        # Build a context of which products were shown
+                        product_names = [p.get("name", "") for p in last_shown_products]
+                        if product_names:
+                            shown_products_context = "\n\n**Sản phẩm đã giới thiệu gần đây:**\n" + "\n".join([f"- {name}" for name in product_names])
+                
                 if role in ["user", "assistant"] and content and content.strip():
+                    # For assistant messages with products, append product names for LLM context
+                    message_content = content
+                    if role == "assistant" and "products" in hist_msg and hist_msg.get("products"):
+                        product_names = [p.get("name", "") for p in hist_msg["products"][:3]]
+                        if product_names:
+                            message_content += f" [Sản phẩm: {', '.join(product_names)}]"
                     # Sanitize content from history
-                    sanitized_hist_content = sanitize_user_input(content)
+                    sanitized_hist_content = sanitize_user_input(message_content)
                     if sanitized_hist_content:
-                        messages.append({
+                        history_messages.append({
                             "role": role,
                             "content": sanitized_hist_content
                         })
-            logger.info(f"Added {len(messages) - 1} messages from chat history (excluding system prompt)")
+            logger.info(f"Processed {len(history_messages)} messages from chat history")
+        
+        # If we have shown products context, add it to the system prompt
+        if shown_products_context:
+            system_prompt_with_data += shown_products_context
+            logger.info(f"Added context about previously shown products: {len(last_shown_products)} products")
+        
+        # Extra context if user is asking about "this product" / "sản phẩm này"
+        if last_shown_products and any(phrase in sanitized_message.lower() for phrase in ["sản phẩm này", "this product", "mẫu này", "đôi này", "model này", "các sản phẩm này"]):
+            # Add detailed info about the last shown product (assuming user refers to the first one)
+            product_detail = last_shown_products[0]
+            detail_context = f"\n\n**Khách hàng đang hỏi về:** {product_detail.get('name', 'N/A')}"
+            if product_detail.get('min_price'):
+                detail_context += f" - Giá: {int(product_detail['min_price']):,} VNĐ"
+            
+            # If asking about sizes/colors, fetch variant information
+            if any(keyword in sanitized_message.lower() for keyword in ["size", "màu", "color", "kích thước", "kích cỡ"]):
+                product_id = product_detail.get('id')
+                if product_id:
+                    try:
+                        variants = db_client.get_product_variants(product_id)
+                        if variants:
+                            # Get unique sizes and colors
+                            sizes = sorted(set(v.get('size', '') for v in variants if v.get('size')))
+                            colors = sorted(set(v.get('color', '') for v in variants if v.get('color')))
+                            
+                            detail_context += "\n\n**Thông tin chi tiết:**"
+                            if sizes:
+                                detail_context += f"\n- Sizes có sẵn: {', '.join(sizes)}"
+                            if colors:
+                                detail_context += f"\n- Màu sắc: {', '.join(colors)}"
+                            detail_context += f"\n- Tổng số variant: {len(variants)}"
+                            
+                            logger.info(f"Added variant info: {len(variants)} variants, sizes={sizes}, colors={colors}")
+                    except Exception as e:
+                        logger.error(f"Error fetching variants: {e}")
+            
+            system_prompt_with_data += detail_context
+            logger.info(f"User asking about specific product: {product_detail.get('name', 'N/A')}")
+        
+        
+        # Now build final messages array with updated system prompt
+        messages = [
+            {"role": "system", "content": system_prompt_with_data}
+        ]
+        messages.extend(history_messages)
         
         # Add current user message
         messages.append({"role": "user", "content": sanitized_message})
@@ -770,6 +972,7 @@ async def chat_stream(request: ChatRequest):
                     'redirect_to_staff': False,
                     'products': formatted_products
                 }
+                logger.info(f"Sending {len(formatted_products)} products to frontend")
                 yield f"data: {json.dumps(metadata, ensure_ascii=False)}\n\n"
                 
                 # Call LLM with streaming enabled - adjust temperature based on intent
@@ -790,29 +993,36 @@ async def chat_stream(request: ChatRequest):
                         if hasattr(chunk, 'choices') and chunk.choices:
                             if hasattr(chunk.choices[0], 'delta') and hasattr(chunk.choices[0].delta, 'content'):
                                 content = chunk.choices[0].delta.content
-                        # Handle Gemini format - check multiple possible attributes
-                        elif hasattr(chunk, 'text'):
+                        # Handle Gemini format - check finish_reason FIRST to avoid ValueError
+                        elif hasattr(chunk, 'candidates') and chunk.candidates:
                             try:
-                                # Try to access .text, but it may raise ValueError if no valid Part
-                                # Check if chunk has candidates first to avoid accessing .text unnecessarily
-                                if hasattr(chunk, 'candidates') and chunk.candidates:
-                                    candidate = chunk.candidates[0]
-                                    if hasattr(candidate, 'finish_reason'):
-                                        finish_reason = candidate.finish_reason
-                                        # finish_reason 1 = STOP, 2 = SAFETY, 3 = RECITATION, etc.
-                                        if finish_reason in [1, 2, 3]:
-                                            # Stream is complete or blocked, break the loop
-                                            break
+                                candidate = chunk.candidates[0]
                                 
-                                # Try to get text content
-                                content = chunk.text if chunk.text else None
+                                # Check finish_reason before accessing .text
+                                if hasattr(candidate, 'finish_reason') and candidate.finish_reason:
+                                    finish_reason = candidate.finish_reason
+                                    # finish_reason: 0=UNSPECIFIED, 1=STOP, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION, 5=OTHER
+                                    if finish_reason == 3:  # SAFETY - content was blocked
+                                        logger.warning(f"Gemini blocked response due to safety filter (finish_reason={finish_reason})")
+                                        # Send safety blocked message to user
+                                        safety_msg = "Xin lỗi, tôi không thể trả lời câu hỏi này do giới hạn an toàn. Vui lòng thử cách diễn đạt khác."
+                                        content_event = json.dumps({'type': 'content', 'content': safety_msg}, ensure_ascii=False)
+                                        yield f"data: {content_event}\n\n"
+                                        break
+                                    elif finish_reason in [1, 2]:  # STOP or MAX_TOKENS - normal completion
+                                        break
+                                
+                                # Try to access .text only if finish_reason is 0 (still generating) or None
+                                if hasattr(chunk, 'text'):
+                                    content = chunk.text if chunk.text else None
+                                    
                             except ValueError as e:
-                                # Chunk has no text content (finish_reason = 1, 2, etc.)
-                                # This is normal for completion chunks, just skip
+                                # Gemini raises ValueError when accessing .text with no valid Part
+                                # This usually means finish_reason blocked the response
+                                logger.debug(f"Chunk has no text content (likely blocked): {e}")
                                 continue
                             except Exception as e:
-                                # Other errors accessing .text, skip this chunk
-                                logger.warning(f"Error accessing chunk.text: {e}")
+                                logger.warning(f"Error processing Gemini chunk: {e}")
                                 continue
                         elif hasattr(chunk, 'parts') and chunk.parts:
                             # Gemini sometimes returns parts array

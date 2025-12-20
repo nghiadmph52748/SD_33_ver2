@@ -1,0 +1,100 @@
+# SQL Server Docker - Quick Reference
+
+## Start Database
+```bash
+docker compose up -d sqlserver
+```
+
+## Check Status
+```bash
+docker compose ps
+# Should show: gearup-sqlserver Up (healthy)
+```
+
+## View Logs
+```bash
+docker compose logs sqlserver
+docker compose logs sqlserver --tail=50 --follow
+```
+
+## Connect via sqlcmd
+```bash
+docker exec -it gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "YourPassword"
+```
+
+## Restore Database
+```bash
+# Copy SQL file to container
+docker cp SQLQuery_new.sql gearup-sqlserver:/tmp/
+
+# Execute it
+docker exec -it gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "YourPassword" \\
+  -i /tmp/SQLQuery_new.sql
+```
+
+## Connection Strings
+
+### From Host (localhost)
+- Host: localhost
+- Port: 1433
+- User: sa
+- Database: GearUp
+
+### From Docker Containers
+- Host: sqlserver
+- Port: 1433
+- User: sa
+- Database: GearUp
+
+### JDBC URL
+```
+jdbc:sqlserver://sqlserver:1433;databaseName=GearUp;encrypt=true;trustServerCertificate=true;
+```
+
+## Common Issues
+
+### Password Requirements
+Minimum 8 characters with:
+- Uppercase
+- Lowercase
+- Numbers
+- Special characters
+
+Example: `YourStrong@Passw0rd`
+
+### Reset Everything
+```bash
+docker compose down
+docker volume rm sd_33_ver2_sqlserver_data
+docker compose up -d sqlserver
+```
+
+## Useful Commands
+
+### Backup
+```bash
+docker exec gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "Password" \\
+  -Q "BACKUP DATABASE GearUp TO DISK = '/var/opt/mssql/backup/GearUp.bak'"
+
+docker cp gearup-sqlserver:/var/opt/mssql/backup/GearUp.bak ./
+```
+
+### List Databases
+```bash
+docker exec gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "Password" \\
+  -Q "SELECT name FROM sys.databases"
+```
+
+### List Tables
+```bash
+docker exec gearup-sqlserver /opt/mssql-tools/bin/sqlcmd \\
+  -S localhost -U sa -P "Password" \\
+  -Q "USE GearUp; SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES"
+```
+
+---
+For full documentation, see: readme/SQLSERVER_DOCKER.txt

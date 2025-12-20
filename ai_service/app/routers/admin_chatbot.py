@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from app.utils.llm_client import llm_client
 from app.utils.database import db_client
+from app.utils.rag_service import rag_service
 import logging
 from datetime import datetime, timedelta
 import json
@@ -633,6 +634,25 @@ async def health_check():
     return provider_info
 
 
+@router.post("/resync-rag")
+async def resync_rag():
+    """Force RAG to resync product embeddings from database"""
+    try:
+        if not rag_service.is_available():
+            raise HTTPException(status_code=503, detail="RAG service not available")
+        
+        # Force resync
+        await rag_service.sync_products_from_db(force_resync=True)
+        
+        stats = rag_service.get_stats()
+        return {
+            "status": "success",
+            "message": "RAG resynced successfully",
+            "products_indexed": stats["vector_db_stats"]["products_count"]
+        }
+    except Exception as e:
+        logger.error(f"RAG resync failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 

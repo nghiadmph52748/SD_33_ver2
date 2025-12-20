@@ -8,68 +8,54 @@
           <div class="empty-content">
             <div class="empty-icon">💬</div>
             <div class="empty-title">Chào mừng đến với GearUp AI!</div>
-            <div class="empty-description">Hãy bắt đầu cuộc trò chuyện bằng cách đặt câu hỏi hoặc sử dụng các gợi ý bên dưới.</div>
+            <div class="empty-description">Hãy bắt đầu cuộc trò chuyện bằng cách đặt câu hỏi hoặc sử dụng các gợi ý bên
+              dưới.</div>
           </div>
         </div>
 
-        <div
-          v-for="msg in messages"
-          :key="msg.id"
-          :class="['message', msg.role, { 'suggestions-only': !msg.content && msg.followUpSuggestions }]"
-        >
+        <div v-for="msg in messages" :key="msg.id"
+          :class="['message', msg.role, { 'suggestions-only': !msg.content && msg.followUpSuggestions }]">
           <div class="message-wrapper">
             <div class="avatar">
               <a-avatar v-if="msg.role === 'user'" :size="40" :style="userAvatarStyle">
                 {{ userInitials }}
               </a-avatar>
-              <img
-                v-else
-                src="@/assets/logo-datn.png"
-                alt="AI"
-                class="ai-logo"
-              />
+              <img v-else src="@/assets/logo-datn.png" alt="AI" class="ai-logo" />
             </div>
             <div class="content">
               <!-- Spinning animation - keep visible while AI is processing, even if content starts streaming -->
               <div
                 v-if="msg.role === 'assistant' && (msg.processingStatus === 'querying' || msg.processingStatus === 'analyzing')"
-                class="processing-indicator"
-              >
+                class="processing-indicator">
                 <a-spin :size="16" />
                 <span style="margin-left: 8px">Đang trả lời...</span>
               </div>
 
               <!-- Content display with streaming animation -->
               <div v-if="msg.content && msg.content.trim().length > 0" class="text">
-                <span v-html="renderMarkdown(msg.content)"></span><span v-if="msg.processingStatus === 'analyzing' || (isProcessing && msg.id === messages[messages.length - 1]?.id)" class="streaming-cursor">▋</span>
+                <span v-html="renderMarkdown(msg.content)"></span><span
+                  v-if="msg.processingStatus === 'analyzing' || (isProcessing && msg.id === messages[messages.length - 1]?.id)"
+                  class="streaming-cursor">▋</span>
               </div>
 
               <!-- Product Cards - Each product in its own bubble -->
-              <div v-if="msg.role === 'assistant' && msg.products && msg.products.length > 0 && msg.processingStatus === 'ready' && msg.isProductSuggestion === true" class="product-cards">
+              <div
+                v-if="msg.role === 'assistant' && msg.products && msg.products.length > 0 && msg.processingStatus === 'ready' && msg.isProductSuggestion === true"
+                class="product-cards">
                 <ProductCard v-for="product in msg.products" :key="product.id" :product="product" />
               </div>
 
               <!-- Follow-up Suggestions (only for messages WITHOUT content AND not processing) -->
-              <div
-                v-if="
-                  msg.role === 'assistant' &&
-                  msg.isSuggestionsOnly === true &&
-                  msg.followUpSuggestions &&
-                  msg.followUpSuggestions.length > 0 &&
-                  !isProcessing
-                "
-                class="follow-up-suggestions"
-              >
+              <div v-if="
+                msg.role === 'assistant' &&
+                msg.isSuggestionsOnly === true &&
+                msg.followUpSuggestions &&
+                msg.followUpSuggestions.length > 0 &&
+                !isProcessing
+              " class="follow-up-suggestions">
                 <a-space wrap :size="6" class="suggestions-buttons">
-                  <a-button
-                    v-for="(suggestion, idx) in msg.followUpSuggestions"
-                    :key="idx"
-                    size="mini"
-                    type="text"
-                    :disabled="!isConnected || isProcessing"
-                    @click="askQuestion(suggestion)"
-                    class="suggestion-btn"
-                  >
+                  <a-button v-for="(suggestion, idx) in msg.followUpSuggestions" :key="idx" size="mini" type="text"
+                    :disabled="!isConnected || isProcessing" @click="askQuestion(suggestion)" class="suggestion-btn">
                     {{ suggestion }}
                   </a-button>
                 </a-space>
@@ -84,11 +70,7 @@
         <div v-if="loading" class="message assistant">
           <div class="message-wrapper">
             <div class="avatar">
-              <img
-                src="@/assets/logo-datn.png"
-                alt="AI"
-                class="ai-logo"
-              />
+              <img src="@/assets/logo-datn.png" alt="AI" class="ai-logo" />
             </div>
             <div class="content">
               <a-spin :size="16" />
@@ -100,20 +82,16 @@
 
       <!-- Input Box -->
       <div class="input-container">
-        <a-input-search
-          v-model="input"
+        <a-input-search v-model="input"
           :placeholder="staffChatMode ? 'Nhập tin nhắn cho nhân viên...' : (isConnected ? 'Hỏi AI bất cứ điều gì về sản phẩm...' : 'AI đang offline...')"
           :loading="loading || isProcessing"
           :disabled="staffChatMode ? (!chatStore.wsConnected || chatStore.sendingMessage) : (!isConnected || isProcessing)"
-          allow-clear
-          search-button
-          @search="handleSearch"
-          @press-enter="handleSearch"
-        >
+          allow-clear search-button @search="handleSearch" @press-enter="handleSearch">
           <template #button-icon>
             <icon-send />
           </template>
-          <template #button-default>{{ staffChatMode ? (chatStore.sendingMessage ? 'Đang gửi...' : 'Gửi') : (isProcessing ? 'Đang xử lý...' : 'Gửi') }}</template>
+          <template #button-default>{{ staffChatMode ? (chatStore.sendingMessage ? 'Đang gửi...' : 'Gửi') :
+            (isProcessing ? 'Đang xử lý...' : 'Gửi') }}</template>
         </a-input-search>
       </div>
     </a-card>
@@ -232,6 +210,7 @@ const input = ref('')
 const loading = ref(false)
 const isProcessing = ref(false)
 const isConnected = ref(props.connectionStatus ?? !shouldHealthCheck)
+const lastShownProducts = ref<Product[]>([]) // Track last products shown for context
 const staffChatMode = computed(() => props.staffChatMode ?? false)
 
 watch(
@@ -330,7 +309,7 @@ function generateSessionName(msgs: ChatMessage[]): string {
 function generateDefaultSuggestions(aiResponse: string, allMessages: ChatMessage[]): string[] {
   const responseLower = aiResponse.toLowerCase()
   const lastUserMessage = allMessages.filter((m) => m.role === 'user').pop()?.content.toLowerCase() || ''
-  
+
   // Default suggestions that are always relevant
   const defaultSuggestions = [
     'Sản phẩm nào đang giảm giá?',
@@ -338,56 +317,56 @@ function generateDefaultSuggestions(aiResponse: string, allMessages: ChatMessage
     'Chính sách đổi trả là gì?',
     'Gợi ý cho tôi giày chạy bộ',
   ]
-  
+
   // Context-aware suggestions based on AI response
   const contextSuggestions: string[] = []
-  
+
   // If AI mentioned products, suggest related questions
   if (responseLower.includes('sản phẩm') || responseLower.includes('giày') || responseLower.includes('nike') || responseLower.includes('adidas')) {
     contextSuggestions.push('Sản phẩm này có size nào?')
     contextSuggestions.push('Giá của sản phẩm này là bao nhiêu?')
     contextSuggestions.push('Sản phẩm này còn hàng không?')
   }
-  
+
   // If AI mentioned promotions/discounts
   if (responseLower.includes('giảm giá') || responseLower.includes('khuyến mãi') || responseLower.includes('voucher')) {
     contextSuggestions.push('Có mã giảm giá nào khác không?')
     contextSuggestions.push('Chương trình khuyến mãi kéo dài đến khi nào?')
     contextSuggestions.push('Làm sao để sử dụng voucher?')
   }
-  
+
   // If AI mentioned orders
   if (responseLower.includes('đơn hàng') || responseLower.includes('order') || lastUserMessage.includes('đơn')) {
     contextSuggestions.push('Tôi muốn kiểm tra trạng thái đơn hàng')
     contextSuggestions.push('Thời gian giao hàng là bao lâu?')
     contextSuggestions.push('Có thể hủy đơn hàng không?')
   }
-  
+
   // If AI mentioned shipping/delivery
   if (responseLower.includes('vận chuyển') || responseLower.includes('giao hàng') || responseLower.includes('shipping')) {
     contextSuggestions.push('Phí vận chuyển là bao nhiêu?')
     contextSuggestions.push('Có giao hàng nhanh không?')
     contextSuggestions.push('Tôi có thể đổi địa chỉ giao hàng không?')
   }
-  
+
   // If AI mentioned size/fit
   if (responseLower.includes('size') || responseLower.includes('kích cỡ') || responseLower.includes('fit')) {
     contextSuggestions.push('Làm sao để chọn size đúng?')
     contextSuggestions.push('Size này có phù hợp với chân tôi không?')
     contextSuggestions.push('Có bảng size không?')
   }
-  
+
   // If AI mentioned return/refund
   if (responseLower.includes('đổi trả') || responseLower.includes('hoàn hàng') || responseLower.includes('refund')) {
     contextSuggestions.push('Thời gian đổi trả là bao lâu?')
     contextSuggestions.push('Có thể đổi sang sản phẩm khác không?')
     contextSuggestions.push('Phí đổi trả là bao nhiêu?')
   }
-  
+
   // Combine context suggestions with defaults, remove duplicates, limit to 4
   const allSuggestions = [...contextSuggestions, ...defaultSuggestions]
   const uniqueSuggestions = Array.from(new Set(allSuggestions))
-  
+
   // Return top 4 suggestions (prioritize context-aware ones)
   return uniqueSuggestions.slice(0, 4)
 }
@@ -425,18 +404,18 @@ function saveHistory() {
 async function saveAiChatToDatabase(role: 'user' | 'assistant', content: string) {
   // Don't save if in staff chat mode
   if (props.staffChatMode) return
-  
+
   // Don't save if user is not authenticated or not a customer
   if (!userStore.isAuthenticated || !userStore.id) return
-  
+
   // Don't save empty content
   if (!content || !content.trim()) return
-  
+
   // Ensure we have a session ID
   if (!currentSessionId.value) {
     currentSessionId.value = generateSessionId()
   }
-  
+
   try {
     await luuLichSuAiChat({
       customerId: userStore.id,
@@ -457,19 +436,19 @@ function clearChatHistory() {
     localStorage.removeItem(CHAT_SESSIONS_KEY)
     localStorage.removeItem(SESSION_NAMES_KEY)
     localStorage.removeItem('__ai_chat_last_save')
-    
+
     // Clear all sessionStorage flags
     sessionStorage.removeItem('__ai_chat_window_closed')
     sessionStorage.removeItem('__ai_chat_close_time')
     sessionStorage.removeItem('__ai_chat_actual_reload')
-    
+
     // Reset all state
     chatSessions.value = {}
     sessionNames.value = {}
     currentSessionId.value = generateSessionId()
     loadedConversationIds.value.clear()
     processedMessageIds.value.clear()
-    
+
     // Set default messages
     messages.value = [
       {
@@ -494,12 +473,12 @@ function clearChatHistory() {
       },
     ]
     normalizeSuggestionMessages(messages.value)
-    
+
     // DO NOT save history after clearing - let user start fresh
     // Only create session in memory, don't persist to localStorage
     sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
     chatSessions.value[currentSessionId.value] = [...messages.value]
-    
+
     console.log('🧹 Chat history cleared completely')
   } catch (error) {
     console.error('Error clearing chat history:', error)
@@ -510,7 +489,7 @@ function loadHistory() {
   try {
     // Load history for both authenticated and guest users
     // Guest history is only cleared on page reload (in onMounted), not when closing window
-    
+
     const sessionsRaw = localStorage.getItem(CHAT_SESSIONS_KEY)
     if (sessionsRaw) {
       const parsed: Record<string, ChatMessage[]> = JSON.parse(sessionsRaw)
@@ -637,17 +616,17 @@ async function sendMessage(text: string = input.value) {
   if (props.staffChatMode) {
     const messageText = text.trim()
     input.value = ''
-    
+
     // For guest users, receiverId can be null - backend will assign a staff member
     // For authenticated users, receiverId should be set
     const receiverId = props.staffReceiverId
-    
+
     if (!receiverId && userStore.isAuthenticated) {
       Message.error('Không xác định được nhân viên nhận tin nhắn. Vui lòng thử lại.')
       input.value = messageText // Restore input
       return
     }
-    
+
     // Add optimistic message immediately to show in UI
     const optimisticUserMessage: ChatMessage = {
       id: Date.now(),
@@ -659,7 +638,7 @@ async function sendMessage(text: string = input.value) {
     await nextTick()
     scrollToBottom()
     saveHistory()
-    
+
     try {
       // Send to staff via WebSocket - it will add the message to chatStore
       // The watcher will pick it up and update the message if needed
@@ -727,18 +706,18 @@ async function sendMessage(text: string = input.value) {
     dataSource: '',
     queryType: '',
   }
-  
+
   // Push message immediately - Vue will reactively update
   messages.value.push(aiMessage)
   input.value = ''
-  
+
   // Force immediate DOM update to show spinner
   await nextTick()
   scrollToBottom()
-  
+
   // Additional tick to ensure spinner renders
   await nextTick()
-  
+
   saveHistory()
 
   try {
@@ -757,28 +736,51 @@ async function sendMessage(text: string = input.value) {
           return msg.content && msg.content.trim() && msg.id !== userMessage.id
         }
         if (msg.role === 'assistant') {
-          // Include assistant messages with content, but exclude:
-          // - Messages that are only suggestions (isSuggestionsOnly)
-          // - Messages that are only product cards (isProductSuggestion without content)
-          return msg.content && 
-                 msg.content.trim() && 
-                 !msg.isSuggestionsOnly &&
-                 !(msg.isProductSuggestion && !msg.content.trim())
+          // Include assistant messages with content, exclude only suggestions-only messages
+          return msg.content &&
+            msg.content.trim() &&
+            !msg.isSuggestionsOnly
         }
         return false
       })
       .slice(-20) // Last 20 messages for better context
-      .map((msg) => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content || '',
-      }))
-    
+      .map((msg) => {
+        console.log(`[DEBUG] Mapping message:`, {
+          role: msg.role,
+          hasContent: !!msg.content,
+          hasProducts: !!(msg.products && msg.products.length > 0),
+          isSuggestionsOnly: msg.isSuggestionsOnly,
+          productsCount: msg.products?.length || 0
+        })
+        const histItem: any = {
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content || ''
+        }
+        // Only include products if they exist (avoid undefined being stripped from JSON)
+        if (msg.products && msg.products.length > 0) {
+          histItem.products = msg.products
+          console.log(`[DEBUG] Including ${msg.products.length} products in history`)
+        }
+        return histItem
+      })
+
+    // If we have lastShownProducts, inject them into the most recent assistant message
+    if (lastShownProducts.value.length > 0) {
+      for (let i = recentMessages.length - 1; i >= 0; i--) {
+        if (recentMessages[i].role === 'assistant') {
+          recentMessages[i].products = lastShownProducts.value
+          console.log(`✅ Injected ${lastShownProducts.value.length} products into last assistant message for context`)
+          break
+        }
+      }
+    }
+
     console.log('📝 Sending chat history to LLM:', {
       totalMessages: messages.value.length,
       filteredHistory: recentMessages.length,
       historyPreview: recentMessages.slice(-3).map(m => `${m.role}: ${m.content.substring(0, 50)}...`)
     })
-    
+
     await chatWithAIStream(
       text,
       (chunk: string, metadata?: any) => {
@@ -799,10 +801,12 @@ async function sendMessage(text: string = input.value) {
               receivedQueryType = metadata.intent
             }
             if (metadata.products && Array.isArray(metadata.products) && metadata.products.length > 0) {
-              // Store products in the message AND in local variable
+              // Store products in the message AND in local variable AND component state
               messages.value[msgIndex].products = metadata.products
               receivedProducts = [...metadata.products]
+              lastShownProducts.value = [...metadata.products] // Store for next request
               console.log('📦 Products received from backend:', metadata.products.length, 'products', metadata.products)
+              console.log('✅ Products stored in message:', messages.value[msgIndex].id, messages.value[msgIndex].products)
             }
             messages.value[msgIndex].processingStatus = 'analyzing'
           }
@@ -827,7 +831,7 @@ async function sendMessage(text: string = input.value) {
         if (msgIndex !== -1) {
           const msg = messages.value[msgIndex]
           msg.content = fullContent.trim()
-          
+
           // If we already have streamed content, mark as ready immediately
           if (msg.content && msg.content.trim().length > 0) {
             msg.processingStatus = 'ready'
@@ -884,7 +888,7 @@ async function sendMessage(text: string = input.value) {
         // Product cards & suggestions logic unchanged
         const userMessageLower = text.toLowerCase().trim()
 
-        const hasExplicitSuggestionRequest = 
+        const hasExplicitSuggestionRequest =
           (userMessageLower.includes('gợi ý') && (
             userMessageLower.includes('giày') ||
             userMessageLower.includes('shoe') ||
@@ -955,33 +959,33 @@ async function sendMessage(text: string = input.value) {
         const isProductIntent = resolvedQueryType === 'product_inquiry'
 
         const aiResponseLower = (aiMsg?.content || fullContent).toLowerCase()
-        const isErrorResponse = aiResponseLower.includes('lỗi') || 
-                               aiResponseLower.includes('sự cố') || 
-                               aiResponseLower.includes('không thể') ||
-                               aiResponseLower.includes('gặp sự cố') ||
-                               aiResponseLower.includes('liên hệ nhân viên') ||
-                               aiResponseLower.includes('xin lỗi') && !aiResponseLower.includes('sản phẩm')
-        
+        const isErrorResponse = aiResponseLower.includes('lỗi') ||
+          aiResponseLower.includes('sự cố') ||
+          aiResponseLower.includes('không thể') ||
+          aiResponseLower.includes('gặp sự cố') ||
+          aiResponseLower.includes('liên hệ nhân viên') ||
+          aiResponseLower.includes('xin lỗi') && !aiResponseLower.includes('sản phẩm')
+
         const aiMentionsProducts = aiResponseLower.includes('sản phẩm') ||
-                                  aiResponseLower.includes('giày') ||
-                                  aiResponseLower.includes('giảm giá') ||
-                                  aiResponseLower.includes('khuyến mãi') ||
-                                  aiResponseLower.includes('nike') ||
-                                  aiResponseLower.includes('adidas') ||
-                                  aiResponseLower.includes('puma') ||
-                                  aiResponseLower.includes('vans')
-        
+          aiResponseLower.includes('giày') ||
+          aiResponseLower.includes('giảm giá') ||
+          aiResponseLower.includes('khuyến mãi') ||
+          aiResponseLower.includes('nike') ||
+          aiResponseLower.includes('adidas') ||
+          aiResponseLower.includes('puma') ||
+          aiResponseLower.includes('vans')
+
         const isProductSuggestionQuery = (
           (isPromotionIntent && (hasExplicitSuggestionRequest || mentionsDiscount)) ||
           (isProductIntent && (hasExplicitSuggestionRequest || mentionsAvailability))
         ) && !isErrorResponse && aiMentionsProducts
-        
+
         const productsToCheck = aiMsg?.products || receivedProducts
         const filteredProducts = filterProductsByMention(
           aiMsg?.content || fullContent,
           productsToCheck || []
         )
-        
+
         if (isProductSuggestionQuery && filteredProducts && filteredProducts.length > 0) {
           console.log('📦 Creating separate product cards messages (one per product):', {
             queryType: aiMsg?.queryType || receivedQueryType,
@@ -990,11 +994,11 @@ async function sendMessage(text: string = input.value) {
             hasExplicitSuggestionRequest,
             products: filteredProducts
           })
-          
+
           if (aiMsg) {
             aiMsg.products = undefined
           }
-          
+
           let baseId = Date.now()
           for (const product of filteredProducts) {
             const productMessage: ChatMessage = {
@@ -1008,30 +1012,23 @@ async function sendMessage(text: string = input.value) {
             }
             messages.value.push(productMessage)
           }
-          
+
           await nextTick()
           scrollToBottom()
-        } else if (aiMsg && aiMsg.products && aiMsg.products.length > 0) {
-          console.log('📦 Products received but not a suggestion query, removing from message', {
-            queryType: aiMsg.queryType,
-            hasExplicitSuggestionRequest,
-            userMessage: text.substring(0, 50)
-          })
-          aiMsg.products = undefined
         }
-        
+
         if (aiMsg && aiMsg.content && aiMsg.content.trim()) {
           let suggestions: string[] = []
-          
+
           if (aiMsg.followUpSuggestions && aiMsg.followUpSuggestions.length > 0) {
             suggestions = [...aiMsg.followUpSuggestions]
           } else {
             suggestions = generateDefaultSuggestions(aiMsg.content, messages.value)
           }
-          
+
           aiMsg.followUpSuggestions = undefined
           aiMsg.isSuggestionsOnly = false
-          
+
           const suggestionsMessage: ChatMessage = {
             id: Date.now() + 2,
             role: 'assistant',
@@ -1048,7 +1045,7 @@ async function sendMessage(text: string = input.value) {
       async (error: string) => {
         loading.value = false
         isProcessing.value = false
-        Message.error(`Lỗi khi gửi tin nhắn: ${error}`)
+        Message.error(`Lỗi khi gửi tin nhắn: ${error} `)
 
         const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
         if (msgIndex !== -1) {
@@ -1060,7 +1057,7 @@ async function sendMessage(text: string = input.value) {
   } catch (error: any) {
     loading.value = false
     isProcessing.value = false
-    Message.error(`Lỗi khi gửi tin nhắn: ${error.message}`)
+    Message.error(`Lỗi khi gửi tin nhắn: ${error.message} `)
 
     const msgIndex = messages.value.findIndex((m) => m.id === aiMessageId)
     if (msgIndex !== -1) {
@@ -1083,15 +1080,15 @@ watch(
   () => [props.staffChatMode, props.staffConversationId],
   async ([isStaffMode, convId]) => {
     if (!isStaffMode || !convId || typeof convId !== 'number') return
-    
+
     // Only load once per conversation
     if (loadedConversationIds.value.has(convId)) return
-    
+
     // Load existing messages from the conversation
     if (chatStore.activeMessages && Array.isArray(chatStore.activeMessages)) {
       // Mark this conversation as loaded
       loadedConversationIds.value.add(convId)
-      
+
       // Add all messages from the conversation
       chatStore.activeMessages.forEach((staffMsg: any) => {
         // Check if message already exists
@@ -1102,7 +1099,7 @@ watch(
           }
           return false
         })
-        
+
         if (!exists) {
           if (staffMsg.senderId === userStore.id) {
             // User message
@@ -1125,7 +1122,7 @@ watch(
           }
         }
       })
-      
+
       await nextTick()
       scrollToBottom()
       saveHistory()
@@ -1139,10 +1136,10 @@ watch(
   () => [chatStore.activeMessages, chatStore.messages, props.staffChatMode, props.staffConversationId, props.staffReceiverId, chatStore.activeConversationId],
   ([activeMessages, allMessages, isStaffMode, convId, receiverId, activeConvId]) => {
     if (!isStaffMode) return
-    
+
     // Get messages from active conversation, or find messages for the staff receiver if no active conversation yet
     let messagesToProcess: any[] = []
-    
+
     if (convId && activeConvId === convId && Array.isArray(activeMessages)) {
       // We have an active conversation matching the staff conversation
       messagesToProcess = activeMessages
@@ -1163,7 +1160,7 @@ watch(
         }
         return false
       })
-      
+
       if (matchingConv && allMessages && typeof allMessages === 'object' && !Array.isArray(allMessages)) {
         const convMessages = (allMessages as Record<number, any[]>)[matchingConv.id]
         if (Array.isArray(convMessages)) {
@@ -1178,7 +1175,7 @@ watch(
               if (userStore.id) {
                 // Authenticated user - check by senderId/receiverId
                 if ((msg.senderId === receiverId && msg.receiverId === userStore.id) ||
-                    (msg.receiverId === receiverId && msg.senderId === userStore.id)) {
+                  (msg.receiverId === receiverId && msg.senderId === userStore.id)) {
                   messagesToProcess.push(msg)
                 }
               } else {
@@ -1192,9 +1189,9 @@ watch(
                   const msgConv = chatStore.conversations.find((c: any) => {
                     if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
                       return (c.khachHangId === msg.senderId && c.nhanVienId === msg.receiverId) ||
-                             (c.nhanVienId === msg.senderId && c.khachHangId === msg.receiverId) ||
-                             (c.khachHangId === msg.receiverId && c.nhanVienId === msg.senderId) ||
-                             (c.nhanVienId === msg.receiverId && c.khachHangId === msg.senderId)
+                        (c.nhanVienId === msg.senderId && c.khachHangId === msg.receiverId) ||
+                        (c.khachHangId === msg.receiverId && c.nhanVienId === msg.senderId) ||
+                        (c.nhanVienId === msg.receiverId && c.khachHangId === msg.senderId)
                     }
                     return false
                   })
@@ -1208,9 +1205,9 @@ watch(
         })
       }
     }
-    
+
     if (messagesToProcess.length === 0) return
-    
+
     console.log('📬 Processing staff messages in AI chat:', {
       isStaffMode,
       convId,
@@ -1218,7 +1215,7 @@ watch(
       activeConvId,
       messagesToProcessCount: messagesToProcess.length,
     })
-    
+
     messagesToProcess.forEach((staffMsg: any) => {
       // Check if this message is relevant to the current staff chat
       let isRelevant = false
@@ -1231,27 +1228,27 @@ watch(
       } else {
         // Guest user - accept messages from any staff (senderId is staff, receiverId is guest customer ID)
         // or messages to any staff (senderId is guest customer ID, receiverId is staff)
-        isRelevant = staffMsg.senderId && staffMsg.senderId !== 0 && 
-                     staffMsg.receiverId && staffMsg.receiverId !== 0 &&
-                     staffMsg.senderId !== staffMsg.receiverId
+        isRelevant = staffMsg.senderId && staffMsg.senderId !== 0 &&
+          staffMsg.receiverId && staffMsg.receiverId !== 0 &&
+          staffMsg.senderId !== staffMsg.receiverId
       }
-      
+
       if (!isRelevant) return
-      
+
       // Check if message already exists - improved duplicate detection
       const msgId = staffMsg.id || staffMsg.maTinNhan
       const msgContent = staffMsg.content || ''
       const msgSentAt = staffMsg.sentAt ? new Date(staffMsg.sentAt).getTime() : 0
-      
+
       // Create a unique key for this message
-      const messageKey = msgId ? `${msgId}` : `${staffMsg.senderId}-${msgContent}-${msgSentAt}`
-      
+      const messageKey = msgId ? `${msgId} ` : `${staffMsg.senderId} -${msgContent} -${msgSentAt} `
+
       // First check if we've already processed this message
       if (processedMessageIds.value.has(messageKey)) {
         console.log('⚠️ Skipped already processed message:', msgContent.substring(0, 50))
         return
       }
-      
+
       // Then check if message exists in messages array
       // First determine if this is a user message to check the correct role
       let isUserMsgForDuplicateCheck = false
@@ -1264,24 +1261,24 @@ watch(
         const receiverIsHigh = staffMsg.receiverId && staffMsg.receiverId > 10
         const senderIsHigh = staffMsg.senderId && staffMsg.senderId > 10
         const receiverIsLow = staffMsg.receiverId && staffMsg.receiverId < 10
-        
+
         // If sender is high ID and receiver is low ID, likely guest to staff
         isUserMsgForDuplicateCheck = senderIsHigh && receiverIsLow
       }
-      
+
       const exists = messages.value.some((msg) => {
         // Check by ID if available
         if (msgId && typeof msg.id === 'number' && msg.id === msgId) {
           return true
         }
-        
+
         // Check by content + role + timestamp (within 5 seconds for better matching)
         if (msgContent && msg.content === msgContent) {
           const expectedRole = isUserMsgForDuplicateCheck ? 'user' : 'assistant'
           if (msg.role === expectedRole) {
             // If we have timestamp, check within 5 seconds
             if (msgSentAt > 0) {
-              const msgTimestamp = msg.timestamp ? new Date(`2000-01-01 ${msg.timestamp}`).getTime() : 0
+              const msgTimestamp = msg.timestamp ? new Date(`2000-01-01 ${msg.timestamp} `).getTime() : 0
               const timeDiff = Math.abs(msgSentAt - msgTimestamp)
               if (timeDiff < 5000 || msgTimestamp === 0) {
                 return true
@@ -1292,14 +1289,14 @@ watch(
             }
           }
         }
-        
+
         return false
       })
-      
+
       if (!exists) {
         // Mark as processed
         processedMessageIds.value.add(messageKey)
-        
+
         // Check if this is a user message (sent by current user/guest)
         // For guest users, check if senderId matches guest customer ID
         // Guest customer ID will be in senderId when guest sends, or in receiverId when staff sends to guest
@@ -1317,24 +1314,24 @@ watch(
               // - Guest sends to staff: senderId === khachHangId && receiverId === nhanVienId
               // - Staff sends to guest: senderId === nhanVienId && receiverId === khachHangId
               return (c.khachHangId === staffMsg.senderId && c.nhanVienId === staffMsg.receiverId) ||
-                     (c.nhanVienId === staffMsg.senderId && c.khachHangId === staffMsg.receiverId)
+                (c.nhanVienId === staffMsg.senderId && c.khachHangId === staffMsg.receiverId)
             }
             return false
           })
-          
+
           // Determine role based on message direction FIRST, then verify with conversation
           // This is more reliable when there are multiple conversations or conversation is created incorrectly
-          
+
           // PRIORITY 1: Determine role based on message direction, not conversation
           // Check if senderId is staff ID in ANY conversation (more reliable)
-          const senderIsStaff = chatStore.conversations.some((c: any) => 
+          const senderIsStaff = chatStore.conversations.some((c: any) =>
             c.loaiCuocTraoDoi === 'CUSTOMER_STAFF' && c.nhanVienId === staffMsg.senderId
           )
           // Check if receiverId is guest customer ID in ANY conversation
-          const receiverIsGuest = chatStore.conversations.some((c: any) => 
+          const receiverIsGuest = chatStore.conversations.some((c: any) =>
             c.loaiCuocTraoDoi === 'CUSTOMER_STAFF' && c.khachHangId === staffMsg.receiverId
           )
-          
+
           // Find conversation that matches exact direction (for reference only)
           const correctConvForMessage = chatStore.conversations.find((c: any) => {
             if (c.loaiCuocTraoDoi === 'CUSTOMER_STAFF') {
@@ -1342,21 +1339,21 @@ watch(
               // - Staff sends to guest: senderId === nhanVienId && receiverId === khachHangId
               // - Guest sends to staff: senderId === khachHangId && receiverId === nhanVienId
               return (c.nhanVienId === staffMsg.senderId && c.khachHangId === staffMsg.receiverId) ||
-                     (c.khachHangId === staffMsg.senderId && c.nhanVienId === staffMsg.receiverId)
+                (c.khachHangId === staffMsg.senderId && c.nhanVienId === staffMsg.receiverId)
             }
             return false
           })
-          
+
           // Determine role based on message direction checks (more reliable than conversation)
           // PRIORITY 1: Check if sender is staff AND receiver is guest (staff sends to guest)
           // This is the most reliable check: if sender is staff ID AND receiver is guest customer ID
           const senderIsStaffAndReceiverIsGuest = senderIsStaff && receiverIsGuest
-          
+
           // PRIORITY 2: Check if sender is guest customer ID in any conversation
-          const senderIsGuest = chatStore.conversations.some((c: any) => 
+          const senderIsGuest = chatStore.conversations.some((c: any) =>
             c.loaiCuocTraoDoi === 'CUSTOMER_STAFF' && c.khachHangId === staffMsg.senderId
           )
-          
+
           // Determine role with priority order:
           // PRIORITY 0: Use ID-based heuristic FIRST (most reliable when conversation is missing/wrong)
           // This works even when conversation is not created yet or is wrong
@@ -1364,7 +1361,7 @@ watch(
           const receiverIsHigh = staffMsg.receiverId && staffMsg.receiverId > 10
           const senderIsHigh = staffMsg.senderId && staffMsg.senderId > 10
           const receiverIsLow = staffMsg.receiverId && staffMsg.receiverId < 10
-          
+
           // If sender is low ID (< 10) and receiver is high ID (> 10), likely staff to guest
           if (senderIsLow && receiverIsHigh && staffMsg.senderId !== 0 && staffMsg.receiverId !== 0) {
             // Sender is low ID (likely staff), receiver is high ID (likely guest) → staff message
@@ -1396,18 +1393,18 @@ watch(
           else if (senderIsGuest && !receiverIsGuest && !senderIsStaff) {
             // Sender is guest customer AND receiver is not guest AND sender is not staff → user message
             isUserMessage = true
-          } 
+          }
           // PRIORITY 3: Use conversation if found and matches exact direction
           else if (correctConvForMessage) {
             // Fallback: use conversation if found
             // Case 1: Staff sends to guest
-            if (staffMsg.senderId === correctConvForMessage.nhanVienId && 
-                staffMsg.receiverId === correctConvForMessage.khachHangId) {
+            if (staffMsg.senderId === correctConvForMessage.nhanVienId &&
+              staffMsg.receiverId === correctConvForMessage.khachHangId) {
               isUserMessage = false
             }
             // Case 2: Guest sends to staff
-            else if (staffMsg.senderId === correctConvForMessage.khachHangId && 
-                     staffMsg.receiverId === correctConvForMessage.nhanVienId) {
+            else if (staffMsg.senderId === correctConvForMessage.khachHangId &&
+              staffMsg.receiverId === correctConvForMessage.nhanVienId) {
               isUserMessage = true
             }
             // Fallback
@@ -1420,16 +1417,16 @@ watch(
             // When staff sends to guest: senderId = staff ID (usually 1, 2, etc.), receiverId = guest customer ID (newly created, usually > 10)
             // Heuristic: If senderId is low (< 10) and receiverId is high (> 10), likely staff to guest
             // If senderId is high (> 10) and receiverId is low (< 10), likely guest to staff
-            if (staffMsg.senderId && staffMsg.senderId !== 0 && 
-                staffMsg.receiverId && staffMsg.receiverId !== 0 &&
-                staffMsg.senderId !== staffMsg.receiverId) {
+            if (staffMsg.senderId && staffMsg.senderId !== 0 &&
+              staffMsg.receiverId && staffMsg.receiverId !== 0 &&
+              staffMsg.senderId !== staffMsg.receiverId) {
               // Both are valid IDs and different
               // Heuristic: staff IDs are usually low (1, 2, etc.), guest customer IDs are usually high (newly created)
               const senderIsLow = staffMsg.senderId < 10
               const receiverIsHigh = staffMsg.receiverId > 10
               const senderIsHigh = staffMsg.senderId > 10
               const receiverIsLow = staffMsg.receiverId < 10
-              
+
               if (senderIsLow && receiverIsHigh) {
                 // Sender is low ID (likely staff), receiver is high ID (likely guest) → staff message
                 isUserMessage = false
@@ -1445,7 +1442,7 @@ watch(
               isUserMessage = staffMsg.senderId === null || staffMsg.senderId === 0
             }
           }
-          
+
           // Debug logging
           console.log('🔍 Guest message role determination:', {
             senderId: staffMsg.senderId,
@@ -1467,7 +1464,7 @@ watch(
             }))
           })
         }
-        
+
         if (isUserMessage) {
           // User message (customer/guest sent this)
           // Check if we already have this message (optimistic message)
@@ -1488,7 +1485,7 @@ watch(
               }
             }
           }
-          
+
           if (!existingMsg) {
             const chatMsg: ChatMessage = {
               id: msgId || Date.now(),
@@ -1544,19 +1541,19 @@ watch(
         localStorage.removeItem(CHAT_SESSIONS_KEY)
         localStorage.removeItem(SESSION_NAMES_KEY)
         localStorage.removeItem('__ai_chat_last_save')
-        
+
         // Clear all sessionStorage flags
         sessionStorage.removeItem('__ai_chat_window_closed')
         sessionStorage.removeItem('__ai_chat_close_time')
         sessionStorage.removeItem('__ai_chat_actual_reload')
-        
+
         // Reset all state
         currentSessionId.value = ''
         chatSessions.value = {}
         sessionNames.value = {}
         loadedConversationIds.value.clear()
         processedMessageIds.value.clear()
-        
+
         messages.value = [
           {
             id: 0,
@@ -1565,7 +1562,7 @@ watch(
             timestamp: new Date().toLocaleTimeString('vi-VN'),
           },
         ]
-        
+
         // DO NOT save history after logout - start completely fresh
         console.log('🧹 Chat history cleared on logout')
       } catch (error) {
@@ -1642,12 +1639,12 @@ function clearMessages() {
     localStorage.removeItem(CHAT_SESSIONS_KEY)
     localStorage.removeItem(SESSION_NAMES_KEY)
     localStorage.removeItem('__ai_chat_last_save')
-    
+
     // Clear all sessionStorage flags
     sessionStorage.removeItem('__ai_chat_window_closed')
     sessionStorage.removeItem('__ai_chat_close_time')
     sessionStorage.removeItem('__ai_chat_actual_reload')
-    
+
     // Reset all state
     chatSessions.value = {}
     sessionNames.value = {}
@@ -1680,7 +1677,7 @@ function clearMessages() {
 
     sessionNames.value[currentSessionId.value] = 'Cuộc trò chuyện mới'
     chatSessions.value[currentSessionId.value] = [...messages.value]
-    
+
     // Save the cleared state (empty session) to localStorage
     saveHistory()
 
@@ -1715,7 +1712,7 @@ onMounted(async () => {
       loadHistory()
     }
   }
-  
+
   await nextTick()
 
   setTimeout(() => {
@@ -1745,8 +1742,8 @@ onMounted(async () => {
   updateTheme()
   const observer = new MutationObserver(updateTheme)
   observer.observe(root, { attributes: true, attributeFilter: ['class'] })
-  ;(window as any).storefrontAiChatThemeObserver = observer
-  
+    ; (window as any).storefrontAiChatThemeObserver = observer
+
   // Save history before window closes (for both authenticated and guest)
   // Use both beforeunload and pagehide for better reliability
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -1755,40 +1752,40 @@ onMounted(async () => {
       if (messages.value.length > 0) {
         normalizeSuggestionMessages(messages.value)
         const messagesToSave = [...messages.value]
-        
+
         if (currentSessionId.value) {
           chatSessions.value[currentSessionId.value] = [...messagesToSave]
         }
-        
+
         // Use synchronous localStorage operations
         localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(chatSessions.value))
         localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(sessionNames.value))
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messagesToSave))
-        
+
         // Force synchronous write to localStorage
         localStorage.setItem('__ai_chat_last_save', Date.now().toString())
-        
+
         // Mark that window is closing (not reloading)
         sessionStorage.setItem('__ai_chat_window_closed', 'true')
         sessionStorage.setItem('__ai_chat_close_time', Date.now().toString())
-        
+
         console.log('💾 Saved chat history on beforeunload:', messagesToSave.length, 'messages')
       }
     } catch (e) {
       console.error('Error saving history on beforeunload:', e)
     }
   }
-  
+
   // Detect actual page reload (F5) vs component remount
   // Only set reload flag on actual page navigation/reload, not component remount
   const handleActualReload = () => {
     // This will only fire on actual page reload, not component remount
     sessionStorage.setItem('__ai_chat_actual_reload', 'true')
   }
-  
+
   // Listen for actual page reload (only fires on real reload, not component remount)
   window.addEventListener('beforeunload', handleActualReload)
-  
+
   // pagehide is more reliable than beforeunload for saving data
   const handlePageHide = (event: PageTransitionEvent) => {
     // Save history when page is being hidden (window close, tab switch, etc.)
@@ -1796,16 +1793,16 @@ onMounted(async () => {
       if (messages.value.length > 0) {
         normalizeSuggestionMessages(messages.value)
         const messagesToSave = [...messages.value]
-        
+
         if (currentSessionId.value) {
           chatSessions.value[currentSessionId.value] = [...messagesToSave]
         }
-        
+
         // Use synchronous localStorage operations
         localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(chatSessions.value))
         localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(sessionNames.value))
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messagesToSave))
-        
+
         // Mark that we saved and this is NOT a reload
         // Only mark as window close if not persisted (not from cache/back-forward)
         if (!event.persisted) {
@@ -1822,7 +1819,7 @@ onMounted(async () => {
       console.error('Error saving history on pagehide:', e)
     }
   }
-  
+
   // Handle page visibility to detect actual page reload
   const handlePageShow = (event: PageTransitionEvent) => {
     // If page was restored from cache (back/forward), don't clear history
@@ -1833,10 +1830,10 @@ onMounted(async () => {
       }
     }
   }
-  
+
   window.addEventListener('pageshow', handlePageShow)
   window.addEventListener('pagehide', handlePageHide)
-  
+
   // Save history when tab becomes hidden (for both authenticated and guest)
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'hidden') {
@@ -1844,7 +1841,7 @@ onMounted(async () => {
       saveHistory()
     }
   }
-  
+
   // Save history periodically (every 30 seconds)
   const saveHistoryInterval = setInterval(() => {
     // Save for both authenticated and guest users
@@ -1852,20 +1849,20 @@ onMounted(async () => {
       saveHistory()
     }
   }, 30000)
-  
+
   window.addEventListener('beforeunload', handleBeforeUnload)
   window.addEventListener('beforeunload', handleActualReload)
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  
-  // Store cleanup functions
-  ;(window as any).__aiChatCleanup = () => {
-    window.removeEventListener('beforeunload', handleBeforeUnload)
-    window.removeEventListener('beforeunload', handleActualReload)
-    window.removeEventListener('pagehide', handlePageHide)
-    window.removeEventListener('pageshow', handlePageShow)
-    document.removeEventListener('visibilitychange', handleVisibilityChange)
-    if (saveHistoryInterval) clearInterval(saveHistoryInterval)
-  }
+
+    // Store cleanup functions
+    ; (window as any).__aiChatCleanup = () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('beforeunload', handleActualReload)
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('pageshow', handlePageShow)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (saveHistoryInterval) clearInterval(saveHistoryInterval)
+    }
 })
 onUnmounted(() => {
   // Save history before unmounting (for both authenticated and guest)
@@ -1875,32 +1872,32 @@ onUnmounted(() => {
       // Save immediately and synchronously
       normalizeSuggestionMessages(messages.value)
       const messagesToSave = [...messages.value]
-      
+
       if (currentSessionId.value) {
         chatSessions.value[currentSessionId.value] = [...messagesToSave]
       }
-      
+
       // Use synchronous localStorage operations
       localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(chatSessions.value))
       localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(sessionNames.value))
       localStorage.setItem(STORAGE_KEY, JSON.stringify(messagesToSave))
-      
+
       // CRITICAL: Set flag to indicate window was closed (component unmount)
       // This flag will be checked when component mounts again to distinguish from page reload
       sessionStorage.setItem('__ai_chat_window_closed', 'true')
       sessionStorage.setItem('__ai_chat_close_time', Date.now().toString())
-      
+
       console.log('💾 Saved chat history on unmount:', messagesToSave.length, 'messages')
       console.log('🏷️ Set window closed flag for guest session')
     } catch (e) {
       console.error('Error saving history on unmount:', e)
     }
   }
-  
+
   if (healthTimer) clearInterval(healthTimer)
   const obs = (window as any).storefrontAiChatThemeObserver
   if (obs && typeof obs.disconnect === 'function') obs.disconnect()
-  
+
   // Cleanup event listeners
   const cleanup = (window as any).__aiChatCleanup
   if (cleanup && typeof cleanup === 'function') {
@@ -1918,16 +1915,16 @@ watch(
       try {
         normalizeSuggestionMessages(messages.value)
         const messagesToSave = [...messages.value]
-        
+
         if (currentSessionId.value) {
           chatSessions.value[currentSessionId.value] = [...messagesToSave]
         }
-        
+
         // Save synchronously to localStorage
         localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(chatSessions.value))
         localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(sessionNames.value))
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messagesToSave))
-        
+
         emit('session-state', {
           sessions: chatSessions.value,
           currentSessionId: currentSessionId.value,
@@ -2181,14 +2178,16 @@ defineExpose({
 
     .text {
       line-height: 1.7;
-      white-space: normal; /* Let markdown handle line breaks */
+      white-space: normal;
+      /* Let markdown handle line breaks */
       word-wrap: break-word;
       font-size: 14px;
       color: var(--color-text-1);
-      display: block; /* Ensure block-level display */
+      display: block;
+      /* Ensure block-level display */
 
       /* Ensure streaming cursor is inline with content */
-      > span:first-child {
+      >span:first-child {
         display: inline;
       }
 
@@ -2197,7 +2196,8 @@ defineExpose({
         margin: 0 0 12px 0;
         line-height: 1.7;
         color: var(--color-text-1);
-        display: block; /* Ensure paragraphs are block-level */
+        display: block;
+        /* Ensure paragraphs are block-level */
       }
 
       :deep(p:first-child) {
@@ -2207,12 +2207,12 @@ defineExpose({
       :deep(p:last-child) {
         margin-bottom: 0;
       }
-      
+
       /* Ensure last paragraph's content allows inline cursor */
       :deep(p:last-child) {
         display: block;
       }
-      
+
       /* Make sure inline elements in last paragraph allow cursor on same line */
       :deep(p:last-child > *:last-child) {
         display: inline;
@@ -2465,6 +2465,7 @@ defineExpose({
     z-index: 1;
     backdrop-filter: blur(8px);
     flex-shrink: 0;
+
     :deep(.arco-input-search) {
       .arco-input {
         border-radius: 20px 0 0 20px;
@@ -2521,46 +2522,57 @@ defineExpose({
 
   .messages-container {
     background: linear-gradient(180deg, #0f1115 0%, #12141a 100%);
+
     &::-webkit-scrollbar-track {
       background: #161922;
     }
+
     &::-webkit-scrollbar-thumb {
       background: #2a2f3a;
     }
+
     &::-webkit-scrollbar-thumb:hover {
       background: #3a4150;
     }
   }
+
   .message.assistant .content {
     background: #151823;
     color: #e6e9ef;
     border: 1px solid #272b36;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
   }
+
   .message.user .message-wrapper .content {
     box-shadow: 0 6px 16px rgba(17, 17, 17, 0.35);
   }
+
   .content .text table {
     border-color: #2b3040;
   }
+
   .content .text th,
   .content .text td {
     border-color: #2b3040;
   }
+
   .content .text th {
     background: #1b2030;
     color: #e6e9ef;
   }
+
   .content .text code,
   .content .text pre code {
     background: #0f1420;
     color: #e6e9ef;
   }
+
   .content .sources .sources-content {
     background: #141926;
     border-color: #2b3040;
     color: #cfd6e4;
   }
+
   .content .timestamp {
     opacity: 0.7;
   }
@@ -2586,6 +2598,7 @@ defineExpose({
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2661,12 +2674,14 @@ defineExpose({
 }
 
 @keyframes typingDot {
+
   0%,
   60%,
   100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
+
   30% {
     opacity: 1;
     transform: scale(1);
@@ -2674,20 +2689,24 @@ defineExpose({
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
 }
 
 @keyframes blink {
+
   0%,
   50% {
     opacity: 1;
   }
+
   51%,
   100% {
     opacity: 0;

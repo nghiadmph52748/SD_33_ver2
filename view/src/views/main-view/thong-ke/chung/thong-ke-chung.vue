@@ -3,61 +3,32 @@
     <!-- AI Assistant trigger moved into BoLocThongKe -->
 
     <!-- Bộ lọc thống kê -->
-    <BoLocThongKe
-      v-model:khoang-thoi-gian="khoangThoiGian"
-      v-model:loai-bieu-do="loaiBieuDo"
-      v-model:khoang-ngay-tuy-chon="khoangNgayTuyChon"
-      :tong-don-hang="tongDonHang"
-      :tong-doanh-thu="tongDoanhThu"
-      @dat-lai="datLaiBoLoc"
-      @xuat-excel="xuatBaoCaoExcel"
-      @hoiAI="openAIAssistant"
-    />
+    <BoLocThongKe v-model:khoang-thoi-gian="khoangThoiGian" v-model:loai-bieu-do="loaiBieuDo"
+      v-model:khoang-ngay-tuy-chon="khoangNgayTuyChon" :tong-don-hang="tongDonHang" :tong-doanh-thu="tongDoanhThu"
+      @dat-lai="datLaiBoLoc" @xuat-excel="xuatBaoCaoExcel" @hoiAI="openAIAssistant" />
 
     <!-- Thẻ thống kê 4 cột -->
     <div class="stats-grid">
-      <TheThongKe
-        :tieu-de="duLieuHienThi.title"
-        :doanh-thu="duLieuHienThi.revenue"
-        :san-pham-da-ban="duLieuHienThi.productsSold"
-        :so-don-hang="duLieuHienThi.orders"
-        :so-tien-giam-gia="duLieuHienThi.soTienGiamGia"
-        :tang-truong="duLieuHienThi.tangTruong"
-        :loai-mau="khoangThoiGian === 'custom' ? 'today' : khoangThoiGian"
-      />
-      <TheThongKe
-        :tieu-de="$t('thongKe.card.thisWeek')"
-        :doanh-thu="duLieuTuan.revenue"
-        :san-pham-da-ban="duLieuTuan.productsSold"
-        :so-don-hang="duLieuTuan.orders"
-        :so-tien-giam-gia="duLieuTuan.soTienGiamGia"
-        :tang-truong="duLieuTuan.tangTruong"
-        loai-mau="week"
-      />
-      <TheThongKe
-        :tieu-de="$t('thongKe.card.thisMonth')"
-        :doanh-thu="duLieuThang.revenue"
-        :san-pham-da-ban="duLieuThang.productsSold"
-        :so-don-hang="duLieuThang.orders"
-        :so-tien-giam-gia="duLieuThang.soTienGiamGia"
-        :tang-truong="duLieuThang.tangTruong"
-        loai-mau="month"
-      />
-      <TheThongKe
-        :tieu-de="$t('thongKe.card.thisYear')"
-        :doanh-thu="duLieuNam.revenue"
-        :san-pham-da-ban="duLieuNam.productsSold"
-        :so-don-hang="duLieuNam.orders"
-        :so-tien-giam-gia="duLieuNam.soTienGiamGia"
-        :tang-truong="duLieuNam.tangTruong"
-        loai-mau="year"
-      />
+      <TheThongKe :tieu-de="duLieuHienThi.title" :doanh-thu="duLieuHienThi.revenue"
+        :san-pham-da-ban="duLieuHienThi.productsSold" :so-don-hang="duLieuHienThi.orders"
+        :so-tien-giam-gia="duLieuHienThi.soTienGiamGia" :tang-truong="duLieuHienThi.tangTruong"
+        :loai-mau="khoangThoiGian === 'custom' ? 'today' : khoangThoiGian" />
+      <TheThongKe :tieu-de="$t('thongKe.card.thisWeek')" :doanh-thu="duLieuTuan.revenue"
+        :san-pham-da-ban="duLieuTuan.productsSold" :so-don-hang="duLieuTuan.orders"
+        :so-tien-giam-gia="duLieuTuan.soTienGiamGia" :tang-truong="duLieuTuan.tangTruong" loai-mau="week" />
+      <TheThongKe :tieu-de="$t('thongKe.card.thisMonth')" :doanh-thu="duLieuThang.revenue"
+        :san-pham-da-ban="duLieuThang.productsSold" :so-don-hang="duLieuThang.orders"
+        :so-tien-giam-gia="duLieuThang.soTienGiamGia" :tang-truong="duLieuThang.tangTruong" loai-mau="month" />
+      <TheThongKe :tieu-de="$t('thongKe.card.thisYear')" :doanh-thu="duLieuNam.revenue"
+        :san-pham-da-ban="duLieuNam.productsSold" :so-don-hang="duLieuNam.orders"
+        :so-tien-giam-gia="duLieuNam.soTienGiamGia" :tang-truong="duLieuNam.tangTruong" loai-mau="year" />
     </div>
 
     <!-- Biểu đồ Row 1: Doanh thu + Top sản phẩm -->
     <a-row :gutter="16" class="charts-section">
       <a-col :span="17">
-        <BieuDoDoanhThu v-model:ky-doanh-thu="kyDoanhThu" :du-lieu-doanh-thu="duLieuDoanhThu" :loai-bieu-do="loaiBieuDo" />
+        <BieuDoDoanhThu v-model:ky-doanh-thu="kyDoanhThu" :du-lieu-doanh-thu="duLieuDoanhThu"
+          :loai-bieu-do="loaiBieuDo" />
       </a-col>
       <a-col :span="7">
         <DanhSachSanPhamBanChay v-model:ky-thong-ke="kyTopProducts" :du-lieu-san-pham="duLieuSanPhamBanChay" />
@@ -275,11 +246,11 @@ const generateStatisticsPrompt = () => {
 
  **TOP 5 SẢN PHẨM BÁN CHẠY:**
 ${topProducts
-  .map(
-    (product, index) =>
-      `${index + 1}. ${product.tenSanPham} - ${product.soLuongDaBan} sản phẩm - ${(product.giaBan * product.soLuongDaBan).toLocaleString('vi-VN')} VNĐ`
-  )
-  .join('\n')}
+      .map(
+        (product, index) =>
+          `${index + 1}. ${product.tenSanPham} - ${product.soLuongDaBan} sản phẩm - ${(product.giaBan * product.soLuongDaBan).toLocaleString('vi-VN')} VNĐ`
+      )
+      .join('\n')}
 
  **SẢN PHẨM SẮP HẾT HÀNG:**
 ${lowStockProducts.map((product, index) => `${index + 1}. ${product.tenSanPham} - Còn ${product.soLuongTon} sản phẩm`).join('\n')}

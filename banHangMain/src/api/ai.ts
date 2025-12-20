@@ -20,7 +20,11 @@ aiAxios.interceptors.request.use((config: any) => {
 export interface ChatRequest {
   message: string
   context?: string
-  chat_history?: Array<{ role: 'user' | 'assistant'; content: string }>
+  chat_history?: Array<{
+    role: 'user' | 'assistant'
+    content: string
+    products?: Product[]  // Include for conversation context
+  }>
 }
 
 export interface Product {
@@ -70,12 +74,17 @@ export async function chatWithAIStream(
         'Content-Type': 'application/json',
         Authorization: token ? `Bearer ${token}` : '',
       },
-      body: JSON.stringify({ 
-        message, 
+      body: JSON.stringify({
+        message,
         context: '',
         chat_history: chatHistory || []
       }),
     })
+
+    console.log('[DEBUG API] chatWithAIStream called with history length:', chatHistory?.length)
+    if (chatHistory && chatHistory.length > 0) {
+      console.log('[DEBUG API] First item:', chatHistory[0])
+    }
 
     if (!response.ok) {
       const errorText = await response.text()

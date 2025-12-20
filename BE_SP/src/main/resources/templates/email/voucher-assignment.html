@@ -1,42 +1,180 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phiếu giảm giá mới</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; line-height: 1.6; color: #1d2129; background-color: #f7f8fa; padding: 20px; }
-        .email-container { max-width: 600px; margin: 0 auto; background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
-        .email-header { background: #F77234; padding: 32px 24px; text-align: center; }
-        .logo { height: 36px; margin-bottom: 8px; }
-        .email-header p { color: rgba(255, 255, 255, 0.85); font-size: 14px; }
-        .email-body { padding: 32px 24px; }
-        .greeting { font-size: 16px; color: #1d2129; margin-bottom: 20px; line-height: 1.5; }
-        .voucher-card { background: linear-gradient(135deg, #FFF7E6 0%, #FFF1DC 100%); border: 2px dashed #F77234; padding: 24px; margin: 24px 0; border-radius: 8px; text-align: center; }
-        .voucher-code { display: inline-block; background: #F77234; color: white; padding: 12px 24px; border-radius: 4px; font-size: 20px; font-weight: 600; letter-spacing: 2px; margin: 12px 0; }
-        .voucher-info { background: #F7F8FA; border: 1px solid #E5E6EB; border-left: 3px solid #F77234; padding: 20px; margin: 24px 0; border-radius: 4px; }
-        .voucher-info h3 { color: #1d2129; font-size: 16px; font-weight: 600; margin-bottom: 16px; }
-        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #E5E6EB; }
-        .info-row:last-child { border-bottom: none; }
-        .info-label { color: #4e5969; font-size: 14px; }
-        .info-value { color: #1d2129; font-weight: 500; font-size: 14px; }
-        .highlight { color: #F77234; font-weight: 600; }
-        .button { display: inline-block; background: #165DFF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500; font-size: 14px; margin: 20px 0; transition: background 0.2s; }
-        .button:hover { background: #4080FF; }
-        .email-footer { background: #F7F8FA; padding: 24px; text-align: center; color: #86909C; font-size: 13px; border-top: 1px solid #E5E6EB; }
-        .email-footer p { margin: 8px 0; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #1d2129;
+            background-color: #f7f8fa;
+            padding: 20px;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .email-header {
+            background: #F77234;
+            padding: 32px 24px;
+            text-align: center;
+        }
+
+        .logo {
+            height: 36px;
+            margin-bottom: 8px;
+        }
+
+        .email-header p {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 14px;
+        }
+
+        .email-body {
+            padding: 32px 24px;
+        }
+
+        .greeting {
+            font-size: 16px;
+            color: #1d2129;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .voucher-card {
+            background: linear-gradient(135deg, #FFF7E6 0%, #FFF1DC 100%);
+            border: 2px dashed #F77234;
+            padding: 24px;
+            margin: 24px 0;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .voucher-code {
+            display: inline-block;
+            background: #F77234;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin: 12px 0;
+        }
+
+        .voucher-info {
+            background: #F7F8FA;
+            border: 1px solid #E5E6EB;
+            border-left: 3px solid #F77234;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 4px;
+        }
+
+        .voucher-info h3 {
+            color: #1d2129;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #E5E6EB;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #4e5969;
+            font-size: 14px;
+        }
+
+        .info-value {
+            color: #1d2129;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .highlight {
+            color: #F77234;
+            font-weight: 600;
+        }
+
+        .button {
+            display: inline-block;
+            background: #165DFF;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 14px;
+            margin: 20px 0;
+            transition: background 0.2s;
+        }
+
+        .button:hover {
+            background: #4080FF;
+        }
+
+        .email-footer {
+            background: #F7F8FA;
+            padding: 24px;
+            text-align: center;
+            color: #86909C;
+            font-size: 13px;
+            border-top: 1px solid #E5E6EB;
+        }
+
+        .email-footer p {
+            margin: 8px 0;
+        }
+
         @media only screen and (max-width: 600px) {
-            .email-container { border-radius: 0; }
-            .email-header, .email-body, .email-footer { padding: 20px; }
-            .info-row { flex-direction: column; gap: 5px; }
+            .email-container {
+                border-radius: 0;
+            }
+
+            .email-header,
+            .email-body,
+            .email-footer {
+                padding: 20px;
+            }
+
+            .info-row {
+                flex-direction: column;
+                gap: 5px;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="email-container">
         <div class="email-header">
-            <img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
+            <img class="logo"
+                src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png"
+                alt="GearUp Logo">
             <p>Bạn nhận được phiếu giảm giá mới!</p>
         </div>
         <div class="email-body">
@@ -57,16 +195,23 @@
                 </div>
                 <div class="info-row">
                     <span class="info-label">Giảm giá:</span>
-                    <span class="info-value highlight" th:if="${voucher.voucherType == 'PERCENTAGE'}" th:text="${voucher.discountValue + '%'}">10%</span>
-                    <span class="info-value highlight" th:if="${voucher.voucherType == 'FIXED_AMOUNT'}" th:text="${#numbers.formatDecimal(voucher.discountValue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">100.000 VNĐ</span>
+                    <span class="info-value highlight" th:if="${voucher.voucherType == 'PERCENTAGE'}"
+                        th:text="${voucher.discountValue + '%'}">10%</span>
+                    <span class="info-value highlight" th:if="${voucher.voucherType == 'FIXED_AMOUNT'}"
+                        th:text="${#numbers.formatDecimal(voucher.discountValue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">100.000
+                        VNĐ</span>
                 </div>
                 <div class="info-row" th:if="${voucher.maxDiscount != null && voucher.voucherType == 'PERCENTAGE'}">
                     <span class="info-label">Giảm tối đa:</span>
-                    <span class="info-value" th:text="${#numbers.formatDecimal(voucher.maxDiscount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">200.000 VNĐ</span>
+                    <span class="info-value"
+                        th:text="${#numbers.formatDecimal(voucher.maxDiscount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">200.000
+                        VNĐ</span>
                 </div>
                 <div class="info-row" th:if="${voucher.minOrderValue != null}">
                     <span class="info-label">Đơn hàng tối thiểu:</span>
-                    <span class="info-value" th:text="${#numbers.formatDecimal(voucher.minOrderValue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">500.000 VNĐ</span>
+                    <span class="info-value"
+                        th:text="${#numbers.formatDecimal(voucher.minOrderValue, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">500.000
+                        VNĐ</span>
                 </div>
                 <div class="info-row" th:if="${voucher.usageLimit != null}">
                     <span class="info-label">Số lần sử dụng:</span>
@@ -74,11 +219,13 @@
                 </div>
                 <div class="info-row">
                     <span class="info-label">Ngày bắt đầu:</span>
-                    <span class="info-value" th:text="${#temporals.format(voucher.validFrom, 'dd/MM/yyyy HH:mm')}">01/10/2024 00:00</span>
+                    <span class="info-value"
+                        th:text="${#temporals.format(voucher.validFrom, 'dd/MM/yyyy HH:mm')}">01/10/2024 00:00</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Ngày kết thúc:</span>
-                    <span class="info-value" th:text="${#temporals.format(voucher.validUntil, 'dd/MM/yyyy HH:mm')}">31/10/2024 23:59</span>
+                    <span class="info-value"
+                        th:text="${#temporals.format(voucher.validUntil, 'dd/MM/yyyy HH:mm')}">31/10/2024 23:59</span>
                 </div>
                 <div class="info-row" th:if="${voucher.description != null && !voucher.description.isEmpty()}">
                     <span class="info-label">Mô tả:</span>
@@ -87,22 +234,27 @@
             </div>
             <div style="text-align: center;">
                 <a th:href="${baseUrl + '/products'}" class="button"
-                   style="color: #ffffff !important; text-decoration: none;">
+                    style="color: #ffffff !important; text-decoration: none;">
                     🛒 Mua sắm ngay
                 </a>
             </div>
-            <div style="background: #FFF7E6; border: 1px solid #FFECC6; border-radius: 4px; padding: 16px; margin: 20px 0;">
+            <div
+                style="background: #FFF7E6; border: 1px solid #FFECC6; border-radius: 4px; padding: 16px; margin: 20px 0;">
                 <p style="color: #D97706; font-size: 14px; margin: 0;">
-                    <strong>⏰ Lưu ý:</strong> Phiếu giảm giá có thời hạn sử dụng. Hãy sử dụng ngay để không bỏ lỡ ưu đãi!
+                    <strong>⏰ Lưu ý:</strong> Phiếu giảm giá có thời hạn sử dụng. Hãy sử dụng ngay để không bỏ lỡ ưu
+                    đãi!
                 </p>
             </div>
         </div>
         <div class="email-footer">
             <p><strong>GearUp - Gear Up Your Style!</strong></p>
-            <p>Địa chỉ: 123 Đường Sneaker, Quận Giày, TP. Thể Thao</p>
-            <p>Email: info@gearup.com | Hotline: 1900-1234</p>
-            <p style="margin-top: 16px; font-size: 12px;">Email này được gửi tự động, vui lòng không trả lời.</p>
+            <p>Địa chỉ: FPT Polytechnic, Trịnh Văn Bô, Nam Từ Liêm - TP. Hà Nội</p>
+            <p>Email: duyhmph53492@ggmail.com | Hotline: 0332 050 542</p>
+            <p style="margin-top: 16px; font-size: 12px;">
+                Email này được gửi tự động, vui lòng không trả lời.
+            </p>
         </div>
     </div>
 </body>
+
 </html>

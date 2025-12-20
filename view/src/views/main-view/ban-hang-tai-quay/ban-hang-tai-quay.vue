@@ -3,45 +3,29 @@
     <!-- Main Layout -->
     <a-card class="main-pos-card">
       <!-- <template #title> -->
-      <OrdersTabs
-        :orders="orders as any"
-        :active-key="currentOrderIndex"
-        :can-add="orders.length < 8"
-        @change="handleOrderChange"
-        @delete="showDeleteConfirm"
-        @add="createNewOrder"
-      />
+      <OrdersTabs :orders="orders as any" :active-key="currentOrderIndex" :can-add="orders.length < 8"
+        @change="handleOrderChange" @delete="showDeleteConfirm" @add="createNewOrder" />
       <!-- </template> -->
       <a-row :gutter="16" class="pos-main">
         <!-- Left: Orders & Cart -->
         <a-col :xs="24" :lg="16" class="pos-left">
           <a-empty v-if="orders.length === 0" description="Chưa có đơn hàng nào" />
           <div v-else>
-            <OrderHeaderCard
-              :order-code="currentOrder?.orderCode || ''"
-              :ma-hoa-don="currentOrder?.maHoaDon"
-              :has-items="!!currentOrder?.items.length"
-              @clear-cart="clearCart"
-              @open-qr="showQRScanner = true"
-              @open-product="openProductModal"
-            >
+            <OrderHeaderCard :order-code="currentOrder?.orderCode || ''" :ma-hoa-don="currentOrder?.maHoaDon"
+              :has-items="!!currentOrder?.items.length" @clear-cart="clearCart" @open-qr="showQRScanner = true"
+              @open-product="openProductModal">
               <a-card class="cart-card">
                 <template #title>Giỏ Hàng</template>
-                <CartTable
-                  :items="paginatedCartItems as any"
-                  :table-key="cartTableKey"
-                  :pagination="{
-                    current: (cartPagination as any).value?.current || 1,
-                    pageSize: (cartPagination as any).value?.pageSize || 5,
-                    total: currentOrder?.items.length || 0,
-                    showTotal: true,
-                    showPageSize: true,
-                  }"
-                  :over-stock-items="overStockItems"
+                <CartTable :items="paginatedCartItems as any" :table-key="cartTableKey" :pagination="{
+                  current: (cartPagination as any).value?.current || 1,
+                  pageSize: (cartPagination as any).value?.pageSize || 5,
+                  total: currentOrder?.items.length || 0,
+                  showTotal: true,
+                  showPageSize: true,
+                }" :over-stock-items="overStockItems"
                   @paginate="(page) => ((cartPagination as any).value.current = page)"
                   @update-quantity="({ id, value }) => updateQuantity(id, value)"
-                  @delete="(record: any) => showDeleteProductConfirm(record)"
-                />
+                  @delete="(record: any) => showDeleteProductConfirm(record)" />
               </a-card>
             </OrderHeaderCard>
           </div>
@@ -50,195 +34,105 @@
         <!-- Right: Customer & Payment -->
         <a-col :xs="24" :lg="8" class="pos-right">
           <!-- Customer Section -->
-          <CustomerCard
-            :customer-id="currentOrder?.customerId || ''"
-            :customers="filteredCustomers"
-            :selected-customer="selectedCustomer"
-            :order-type="orderType as any"
-            :is-walk-in="isWalkIn"
-            :walk-in-name="walkInName"
-            :walk-in-email="walkInEmail"
-            :walk-in-phone="walkInPhone"
-            @update:customerId="updateCustomerId"
-            @change:customer="handleCustomerChange"
-            @add-new="showAddCustomerModal = true"
-            @change:orderType="handleOrderTypeChange"
-            @update:walkInName="walkInName = $event"
-            @update:walkInEmail="walkInEmail = $event"
-            @update:walkInPhone="walkInPhone = $event"
-            @update:walkInDeliveryValid="walkInDeliveryValid = $event"
-          />
+          <CustomerCard :customer-id="currentOrder?.customerId || ''" :customers="filteredCustomers"
+            :selected-customer="selectedCustomer" :order-type="orderType as any" :is-walk-in="isWalkIn"
+            :walk-in-name="walkInName" :walk-in-email="walkInEmail" :walk-in-phone="walkInPhone"
+            @update:customerId="updateCustomerId" @change:customer="handleCustomerChange"
+            @add-new="showAddCustomerModal = true" @change:orderType="handleOrderTypeChange"
+            @update:walkInName="walkInName = $event" @update:walkInEmail="walkInEmail = $event"
+            @update:walkInPhone="walkInPhone = $event" @update:walkInDeliveryValid="walkInDeliveryValid = $event" />
           <!-- Payment Section -->
-          <PaymentCard
-            :order-type="orderType as any"
-            :order-code="currentOrder?.orderCode || ''"
-            :payment-form="paymentForm as any"
-            :subtotal="subtotal"
-            :discount-amount="discountAmount"
-            :shipping-fee="shippingFee"
-            :final-price="finalPrice"
-            :can-confirm-order="canConfirmOrder"
-            :confirm-loading="confirmLoading"
-            :has-items="hasItems"
-            :has-eligible-vouchers="hasEligibleVouchers"
-            :eligible-vouchers-count="eligibleVouchersCount"
-            :selected-customer="selectedCustomer as any"
-            :is-walk-in="isWalkIn"
-            :provinces="provinces"
-            :walk-in-location="walkInLocation as any"
+          <PaymentCard :order-type="orderType as any" :order-code="currentOrder?.orderCode || ''"
+            :payment-form="paymentForm as any" :subtotal="subtotal" :discount-amount="discountAmount"
+            :shipping-fee="shippingFee" :final-price="finalPrice" :can-confirm-order="canConfirmOrder"
+            :confirm-loading="confirmLoading" :has-items="hasItems" :has-eligible-vouchers="hasEligibleVouchers"
+            :eligible-vouchers-count="eligibleVouchersCount" :selected-customer="selectedCustomer as any"
+            :is-walk-in="isWalkIn" :provinces="provinces" :walk-in-location="walkInLocation as any"
             :selected-coupon="selectedCoupon as any"
             :discount-display="selectedCoupon ? getDiscountDisplay(selectedCoupon as any) : ''"
-            :best-voucher="bestVoucher as any"
-            :calculate-voucher-discount="calculateVoucherDiscount as any"
-            :qr-session="currentQrSession"
-            :qr-syncing="qrSyncing"
-            :qr-sync-error="qrSyncError"
-            @change:orderType="handleOrderTypeChange"
-            @open-voucher="showVoucherModal = true"
-            @change:paymentMethod="handlePaymentMethodChange"
-            @update:cash="handleCashAmountChange"
-            @update:transfer="handleTransferAmountChange"
-            @clear-voucher="clearVoucher"
-            @confirm-order="confirmOrder"
-            @select-best="bestVoucher && selectVoucher(bestVoucher as any)"
-            @print="printOrder"
-            @update:shippingFee="updateShippingFeeValue"
-            @change:province="onWalkInProvinceChange"
-            @change:district="onWalkInDistrictChange"
-            @update:walkin-address="updateWalkInAddress"
-            @update:walkin-ward="updateWalkInWard"
-            @open-mobile="openMobileSession"
-            @sync-qr="forceSyncQrSession"
-            @reset-qr-session="handleResetQrSessionClick"
-          />
+            :best-voucher="bestVoucher as any" :calculate-voucher-discount="calculateVoucherDiscount as any"
+            :qr-session="currentQrSession" :qr-syncing="qrSyncing" :qr-sync-error="qrSyncError"
+            @change:orderType="handleOrderTypeChange" @open-voucher="showVoucherModal = true"
+            @change:paymentMethod="handlePaymentMethodChange" @update:cash="handleCashAmountChange"
+            @update:transfer="handleTransferAmountChange" @clear-voucher="clearVoucher" @confirm-order="confirmOrder"
+            @select-best="bestVoucher && selectVoucher(bestVoucher as any)" @print="printOrder"
+            @update:shippingFee="updateShippingFeeValue" @change:province="onWalkInProvinceChange"
+            @change:district="onWalkInDistrictChange" @update:walkin-address="updateWalkInAddress"
+            @update:walkin-ward="updateWalkInWard" @open-mobile="openMobileSession" @sync-qr="forceSyncQrSession"
+            @reset-qr-session="handleResetQrSessionClick" />
         </a-col>
       </a-row>
     </a-card>
 
     <!-- Modals -->
     <!-- Product Selection Modal -->
-    <ProductModal
-      :visible="showProductModal"
-      :search-text="productSearchText"
-      :product-filters="productFilters as any"
-      :product-material-options="productMaterialOptions"
-      :product-sole-options="productSoleOptions"
-      :product-manufacturer-options="productManufacturerOptions"
-      :product-origin-options="productOriginOptions"
-      :product-color-options="productColorOptions"
-      :product-size-options="productSizeOptions"
-      :filtered-product-variants="filteredProductVariants as any"
-      :product-pagination="productPagination as any"
-      @update:visible="(v) => (showProductModal = v)"
-      @cancel="handleProductModalCancel"
+    <ProductModal :visible="showProductModal" :search-text="productSearchText" :product-filters="productFilters as any"
+      :product-material-options="productMaterialOptions" :product-sole-options="productSoleOptions"
+      :product-manufacturer-options="productManufacturerOptions" :product-origin-options="productOriginOptions"
+      :product-color-options="productColorOptions" :product-size-options="productSizeOptions"
+      :filtered-product-variants="filteredProductVariants as any" :product-pagination="productPagination as any"
+      @update:visible="(v) => (showProductModal = v)" @cancel="handleProductModalCancel"
       @update:searchText="(v) => (productSearchText = v)"
       @update-filter="({ key, value }) => ((productFilters as any)[key] = value)"
-      @page-change="(page) => loadProductPage(page)"
-      @select-product="(record) => showAddProductConfirm(record)"
-    />
+      @page-change="(page) => loadProductPage(page)" @select-product="(record) => showAddProductConfirm(record)" />
 
     <!-- QR Scanner Modal -->
     <QrScannerModal :visible="showQRScanner" @update:visible="(v) => (showQRScanner = v)" />
 
     <!-- Add Customer Modal -->
-    <AddCustomerModal
-      :visible="showAddCustomerModal"
-      :name="newCustomerForm?.name || ''"
-      :phone="newCustomerForm?.phone || ''"
-      :email="newCustomerForm?.email || ''"
+    <AddCustomerModal :visible="showAddCustomerModal" :name="newCustomerForm?.name || ''"
+      :phone="newCustomerForm?.phone || ''" :email="newCustomerForm?.email || ''"
       @update:visible="(v) => (showAddCustomerModal = v)"
       @update:name="(v) => newCustomerForm && (newCustomerForm.name = v)"
       @update:phone="(v) => newCustomerForm && (newCustomerForm.phone = v)"
-      @update:email="(v) => newCustomerForm && (newCustomerForm.email = v)"
-      @ok="addNewCustomer"
-    />
+      @update:email="(v) => newCustomerForm && (newCustomerForm.email = v)" @ok="addNewCustomer" />
 
     <!-- Voucher Selection Modal -->
-    <VoucherModal
-      :visible="showVoucherModal"
-      :coupons="coupons as any"
-      :eligible-vouchers-count="eligibleVouchersCount"
-      :show-order-summary="!!(currentOrder && currentOrder.items.length > 0)"
-      :subtotal="subtotal"
+    <VoucherModal :visible="showVoucherModal" :coupons="coupons as any" :eligible-vouchers-count="eligibleVouchersCount"
+      :show-order-summary="!!(currentOrder && currentOrder.items.length > 0)" :subtotal="subtotal"
       :total-quantity="currentOrder?.items.reduce((sum, item) => sum + item.quantity, 0) || 0"
-      :best-voucher-id="bestVoucher ? bestVoucher.id : null"
-      :is-voucher-eligible-fn="isVoucherEligible as any"
-      :get-voucher-status-fn="getVoucherStatus as any"
-      :get-discount-display-fn="getDiscountDisplay as any"
-      @update:visible="(v) => (showVoucherModal = v)"
-      @select-voucher="(c) => selectVoucher(c as any)"
-    />
+      :best-voucher-id="bestVoucher ? bestVoucher.id : null" :is-voucher-eligible-fn="isVoucherEligible as any"
+      :get-voucher-status-fn="getVoucherStatus as any" :get-discount-display-fn="getDiscountDisplay as any"
+      @update:visible="(v) => (showVoucherModal = v)" @select-voucher="(c) => selectVoucher(c as any)" />
 
     <!-- Delete Product Confirm Modal -->
-    <DeleteProductModal
-      :visible="showDeleteProductModal"
-      :product="productToDelete as any"
-      @update:visible="(v) => (showDeleteProductModal = v)"
-      @ok="confirmDeleteProduct"
-    />
+    <DeleteProductModal :visible="showDeleteProductModal" :product="productToDelete as any"
+      @update:visible="(v) => (showDeleteProductModal = v)" @ok="confirmDeleteProduct" />
 
     <!-- Delete Order Confirm Modal -->
-    <DeleteOrderModal :visible="showDeleteConfirmModal" @update:visible="(v) => (showDeleteConfirmModal = v)" @ok="confirmDeleteOrder" />
+    <DeleteOrderModal :visible="showDeleteConfirmModal" @update:visible="(v) => (showDeleteConfirmModal = v)"
+      @ok="confirmDeleteOrder" />
 
     <!-- Price Change Notification Modal -->
-    <PriceChangeNotificationModal
-      :visible="showPriceChangeModal"
-      :price-changes="priceChanges"
-      :confirm-loading="priceChangeConfirmLoading"
-      @update:visible="(v) => (showPriceChangeModal = v)"
-      @confirm="confirmPriceChangeModal"
-      @cancel="() => (showPriceChangeModal = false)"
-    />
+    <PriceChangeNotificationModal :visible="showPriceChangeModal" :price-changes="priceChanges"
+      :confirm-loading="priceChangeConfirmLoading" @update:visible="(v) => (showPriceChangeModal = v)"
+      @confirm="confirmPriceChangeModal" @cancel="() => (showPriceChangeModal = false)" />
 
     <!-- Add Product Confirm Modal -->
-    <AddProductConfirmModal
-      :visible="showAddProductConfirmModal"
-      :product="selectedProductForAdd as any"
-      :quantity="productQuantityInput"
-      :is-quantity-valid="isQuantityValid"
-      :confirm-loading="addProductConfirmLoading"
-      @update:visible="(v) => (showAddProductConfirmModal = v)"
-      @update:quantity="handleQuantityChange"
-      @ok="confirmAddProduct"
-    />
+    <AddProductConfirmModal :visible="showAddProductConfirmModal" :product="selectedProductForAdd as any"
+      :quantity="productQuantityInput" :is-quantity-valid="isQuantityValid" :confirm-loading="addProductConfirmLoading"
+      @update:visible="(v) => (showAddProductConfirmModal = v)" @update:quantity="handleQuantityChange"
+      @ok="confirmAddProduct" />
 
     <!-- Confirm Order Modal -->
-    <ConfirmOrderModal
-      :visible="showConfirmOrderModal"
-      :order-code="currentOrder?.orderCode || ''"
-      :order-type="orderType as any"
-      :customer-name="selectedCustomer?.name || walkInName || 'Khách lẻ'"
-      :customer-phone="selectedCustomer?.phone || walkInPhone || ''"
-      :customer-address="getCustomerAddress()"
-      :items="currentOrder?.items || []"
-      :subtotal="subtotal"
-      :discount-amount="discountAmount"
-      :shipping-fee="shippingFee"
-      :final-price="finalPrice"
-      :payment-method="paymentForm.method"
-      :cash-received="paymentForm.cashReceived"
-      :transfer-received="paymentForm.transferReceived"
-      :selected-coupon="selectedCoupon as any"
-      :confirm-loading="confirmLoading"
-      @cancel="cancelConfirmOrder"
-      @confirm="handleConfirmOrderFromModal"
-    />
+    <ConfirmOrderModal :visible="showConfirmOrderModal" :order-code="currentOrder?.orderCode || ''"
+      :order-type="orderType as any" :customer-name="selectedCustomer?.name || walkInName || 'Khách lẻ'"
+      :customer-phone="selectedCustomer?.phone || walkInPhone || ''" :customer-address="getCustomerAddress()"
+      :items="currentOrder?.items || []" :subtotal="subtotal" :discount-amount="discountAmount"
+      :shipping-fee="shippingFee" :final-price="finalPrice" :payment-method="paymentForm.method"
+      :cash-received="paymentForm.cashReceived" :transfer-received="paymentForm.transferReceived"
+      :selected-coupon="selectedCoupon as any" :confirm-loading="confirmLoading" @cancel="cancelConfirmOrder"
+      @confirm="handleConfirmOrderFromModal" />
 
     <!-- Confirm Order - Better Voucher Modal -->
-    <ConfirmBetterVoucherModal
-      :visible="showBetterVoucherModal"
-      :suggested-better-vouchers="checkBetterVouchers()"
-      :selected-coupon="selectedCoupon as any"
-      :calculate-voucher-discount="calculateVoucherDiscount as any"
-      :confirm-loading="confirmLoading"
-      @cancel="
+    <ConfirmBetterVoucherModal :visible="showBetterVoucherModal" :suggested-better-vouchers="checkBetterVouchers()"
+      :selected-coupon="selectedCoupon as any" :calculate-voucher-discount="calculateVoucherDiscount as any"
+      :confirm-loading="confirmLoading" @cancel="
         () => {
           showBetterVoucherModal = false
           showConfirmOrderModal = true
         }
-      "
-      @confirm="handleConfirmFromBetterVoucher"
-    />
+      " @confirm="handleConfirmFromBetterVoucher" />
   </div>
 </template>
 
@@ -1847,7 +1741,7 @@ watch(
 // Watch for isWalkIn changes to debug reactivity
 watch(
   () => [isWalkIn.value, orderType.value, currentOrder.value?.customerId],
-  ([walkIn, type, custId]) => {},
+  ([walkIn, type, custId]) => { },
   { immediate: true }
 )
 
@@ -2198,9 +2092,13 @@ const buildQrPayload = (order: Order): CreateQrSessionPayload | null => {
 
 const syncQrSession = async (force = false) => {
   const order = currentOrder.value
-  if (!order) return
+  if (!order) {
+    console.log('[syncQrSession] No current order')
+    return
+  }
   const payload = buildQrPayload(order)
   if (!payload) {
+    console.log('[syncQrSession] No payload (empty cart), canceling existing session if any')
     const existing = qrSessions.value[order.id]
     if (existing?.sessionId) {
       try {
@@ -2216,12 +2114,34 @@ const syncQrSession = async (force = false) => {
 
   const payloadHash = JSON.stringify(payload)
   const existing = qrSessions.value[order.id]
-  if (!force && existing?.lastPayloadHash === payloadHash) return
+
+  if (!force && existing?.lastPayloadHash === payloadHash) {
+    console.log('[syncQrSession] Skipping - payload unchanged', {
+      orderId: order.id,
+      sessionId: existing.sessionId,
+    })
+    return
+  }
+
+  console.log('[syncQrSession] Syncing QR session', {
+    orderId: order.id,
+    orderCode: payload.orderCode,
+    finalPrice: payload.finalPrice,
+    force,
+    hasExistingSession: !!existing?.sessionId,
+    existingSessionId: existing?.sessionId,
+  })
 
   qrSyncing.value = true
   qrSyncError.value = null
   try {
     const response = existing?.sessionId ? await updateQrPaymentSession(existing.sessionId, payload) : await createQrPaymentSession(payload)
+
+    console.log('[syncQrSession] QR session synced successfully', {
+      sessionId: response.qrSessionId,
+      status: response.status,
+      orderCode: response.orderCode,
+    })
 
     qrSessions.value[order.id] = {
       sessionId: response.qrSessionId,
@@ -2232,7 +2152,7 @@ const syncQrSession = async (force = false) => {
       updatedAt: Date.now(),
     }
   } catch (error: any) {
-    console.error('Không thể đồng bộ QR session:', error)
+    console.error('[syncQrSession] Failed to sync:', error)
     qrSyncError.value = error.message || 'Không thể đồng bộ VietQR'
   } finally {
     qrSyncing.value = false
@@ -2448,6 +2368,44 @@ watch(
   { deep: true }
 )
 
+// Watch for order tab changes and immediately sync QR session to mobile
+// This ensures mobile app always displays the currently active order
+watch(
+  currentOrderIndex,
+  async (newIndex, oldIndex) => {
+    console.log('[QR Sync] Order tab changed:', { from: oldIndex, to: newIndex })
+
+    // Wait for Vue to update all computed properties after order switch
+    await nextTick()
+
+    const order = currentOrder.value
+    console.log('[QR Sync] Current order after switch:', {
+      orderId: order?.id,
+      orderCode: order?.orderCode,
+      hasItems: !!order?.items?.length,
+      itemCount: order?.items?.length || 0,
+      finalPrice: finalPrice.value,
+    })
+
+    if (!order || !order.items?.length) {
+      // If switched to empty order, cancel any existing QR session for this order
+      console.log('[QR Sync] Skipping sync - empty order')
+      return
+    }
+
+    if (!finalPrice.value || finalPrice.value <= 0) {
+      console.log('[QR Sync] Skipping sync - invalid final price')
+      return
+    }
+
+    // Force immediate QR sync (no debounce) when user switches order tabs
+    // This provides instant feedback on mobile app
+    console.log('[QR Sync] Calling forceSyncQrSession()')
+    forceSyncQrSession()
+  },
+  { immediate: false }
+)
+
 const {
   showProductModal,
   productSearchText,
@@ -2487,11 +2445,11 @@ const loadInitialData = async () => {
 
     const waitingInvoices = Array.isArray(pendingInvoices)
       ? pendingInvoices.filter((invoice) => {
-          if (!invoice) return false
-          const isWaiting = invoice.trangThai === false || invoice.trangThai === undefined || invoice.trangThai === null
-          const isNotDeleted = invoice.deleted === false || invoice.deleted === undefined || invoice.deleted === null
-          return isWaiting && isNotDeleted
-        })
+        if (!invoice) return false
+        const isWaiting = invoice.trangThai === false || invoice.trangThai === undefined || invoice.trangThai === null
+        const isNotDeleted = invoice.deleted === false || invoice.deleted === undefined || invoice.deleted === null
+        return isWaiting && isNotDeleted
+      })
       : []
 
     const staleInvoiceIds = new Set<string>()
@@ -2670,32 +2628,32 @@ const handleConfirmFromBetterVoucher = async () => {
 // Watch for walk-in location changes (province, district, ward, address)
 watch(
   () => walkInLocation.value,
-  (newLocation) => {},
+  (newLocation) => { },
   { deep: true }
 )
 
 // Watch for province change
 watch(
   () => walkInLocation.value.thanhPho,
-  async (newProvince) => {}
+  async (newProvince) => { }
 )
 
 // Watch for district change
 watch(
   () => walkInLocation.value.quan,
-  async (newDistrict) => {}
+  async (newDistrict) => { }
 )
 
 // Watch for ward change
 watch(
   () => walkInLocation.value.phuong,
-  async (newWard) => {}
+  async (newWard) => { }
 )
 
 // Watch for address detail change
 watch(
   () => walkInLocation.value.diaChiCuThe,
-  async (newAddress) => {}
+  async (newAddress) => { }
 )
 
 onMounted(() => {
@@ -2803,9 +2761,9 @@ onMounted(() => {
     }
   )
 
-  // Store interval IDs for cleanup
-  ;(window as any).__stockRefreshInterval = stockRefreshInterval
-  ;(window as any).__productModalRefreshInterval = productModalRefreshInterval
+    // Store interval IDs for cleanup
+    ; (window as any).__stockRefreshInterval = stockRefreshInterval
+    ; (window as any).__productModalRefreshInterval = productModalRefreshInterval
 
   // Huỷ QR session hiện tại khi reload/đóng tab
   window.addEventListener('beforeunload', cancelCurrentQrSession)
@@ -3064,6 +3022,7 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
@@ -3089,6 +3048,7 @@ onBeforeUnmount(() => {
 }
 
 @keyframes paymentCheckPulse {
+
   0%,
   100% {
     opacity: 0.7;
@@ -3155,6 +3115,7 @@ onBeforeUnmount(() => {
 }
 
 @keyframes cashNegativeShake {
+
   0%,
   100% {
     transform: translateX(0);

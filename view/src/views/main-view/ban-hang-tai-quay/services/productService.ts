@@ -13,8 +13,8 @@ import {
 
 export async function fetchAllProducts(pageSize = 100): Promise<BienTheSanPham[]> {
   const firstPageResponse = await getBienTheSanPhamPage(0, undefined, pageSize)
-  const total = firstPageResponse?.data?.total || 0
-  let all: BienTheSanPham[] = [...(firstPageResponse?.data?.data || [])]
+  const total = (firstPageResponse?.data as any)?.totalElements || 0
+  let all: BienTheSanPham[] = [...((firstPageResponse?.data as any)?.data || [])]
   const totalPages = Math.ceil(total / pageSize)
   if (totalPages > 1) {
     const pagePromises: Promise<any>[] = []

@@ -175,13 +175,16 @@
 <body>
 	<div class="email-container">
 		<div class="email-header">
-			<img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
+			<img class="logo"
+				src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png"
+				alt="GearUp Logo">
 			<p>Cập nhật trạng thái đơn hàng</p>
 		</div>
 		<div class="email-body">
 			<div class="greeting">
 				<p>Xin chào <strong th:text="${order.customerName}">Khách hàng</strong>,</p>
-				<p>Đơn hàng <span class="highlight" th:text="${order.orderCode}">#HD00001</span> của bạn đã được cập nhật
+				<p>Đơn hàng <span class="highlight" th:text="${order.orderCode}">#HD00001</span> của bạn đã được cập
+					nhật
 					trạng thái:</p>
 			</div>
 			<div style="text-align: center;">
@@ -204,25 +207,21 @@
 						VNĐ</span>
 				</div>
 			</div>
-			<div style="text-align: center;">
-				<a th:href="|${baseUrl}/tra-cuu-hoa-don?code=${order.orderCode}|" class="button"
-					style="color: #ffffff !important; text-decoration: none;">
-					👁️ Xem chi tiết đơn hàng
-				</a>
-			</div>
 			<div
 				style="background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 4px; padding: 16px; margin: 20px 0;">
 				<p style="color: #0369A1; font-size: 14px; margin: 0;">
-					<strong>📞 Cần hỗ trợ?</strong> Liên hệ với chúng tôi qua hotline <span
-						class="highlight">1900-1234</span> hoặc email <span class="highlight">support@gearup.com</span>
+					<strong>📞 Cần hỗ trợ?</strong> Liên hệ với chúng tôi qua hotline <span class="highlight">0332 050
+						542</span> hoặc email <span class="highlight">duyhmph53492@ggmail.com</span>
 				</p>
 			</div>
 		</div>
 		<div class="email-footer">
 			<p><strong>GearUp - Gear Up Your Style!</strong></p>
-			<p>Địa chỉ: 123 Đường Sneaker, Quận Giày, TP. Thể Thao</p>
-			<p>Email: info@gearup.com | Hotline: 1900-1234</p>
-			<p style="margin-top: 16px; font-size: 12px;">Email này được gửi tự động, vui lòng không trả lời.</p>
+			<p>Địa chỉ: FPT Polytechnic, Trịnh Văn Bô, Nam Từ Liêm - TP. Hà Nội</p>
+			<p>Email: duyhmph53492@ggmail.com | Hotline: 0332 050 542</p>
+			<p style="margin-top: 16px; font-size: 12px;">
+				Email này được gửi tự động, vui lòng không trả lời.
+			</p>
 		</div>
 	</div>
 </body>

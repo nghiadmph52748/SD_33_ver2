@@ -4,11 +4,13 @@
     <a-card class="filters-card">
       <a-form layout="inline" :model="filters">
         <a-form-item :label="t('invoice.common.search')">
-          <a-input v-model="filters.search" :placeholder="t('invoice.common.searchPlaceholder')" style="width: 250px" allow-clear />
+          <a-input v-model="filters.search" :placeholder="t('invoice.common.searchPlaceholder')" style="width: 250px"
+            allow-clear />
         </a-form-item>
 
         <a-form-item :label="t('invoice.common.status')">
-          <a-select v-model="filters.status" :placeholder="t('invoice.common.selectStatus')" style="width: 150px" allow-clear @change="handleStatusFilterChange">
+          <a-select v-model="filters.status" :placeholder="t('invoice.common.selectStatus')" style="width: 150px"
+            allow-clear @change="handleStatusFilterChange">
             <a-option value="all">{{ t('invoice.common.all') }}</a-option>
             <a-option value="paid">{{ t('invoice.common.paid') }}</a-option>
             <a-option value="pending">{{ t('invoice.common.pending') }}</a-option>
@@ -25,7 +27,8 @@
             <a-button @click="filterToday" type="outline" size="small">
               {{ t('invoice.common.today') }}
             </a-button>
-            <a-button @click="clearDateFilter" type="text" size="small" v-if="filters.dateRange && filters.dateRange.length > 0">
+            <a-button @click="clearDateFilter" type="text" size="small"
+              v-if="filters.dateRange && filters.dateRange.length > 0">
               {{ t('invoice.common.clear') }}
             </a-button>
           </a-space>
@@ -132,16 +135,10 @@
         </div>
       </div>
 
-      <a-table
-        :columns="invoiceColumns"
-        :data="invoices"
-        :pagination="{ ...pagination, total: invoices.length }"
-        :loading="loading"
-        :scroll="{ x: 1200 }"
-        @change="handleTableChange"
-      >
-        <template #stt="{ record, index }">
-          {{ record.id || index + 1 }}
+      <a-table :columns="invoiceColumns" :data="invoices" :pagination="{ ...pagination, total: invoices.length }"
+        :loading="loading" :scroll="{ x: 1200 }" @page-change="onPageChange" @page-size-change="onPageSizeChange">
+        <template #stt="{ rowIndex }">
+          {{ (pagination.current - 1) * pagination.pageSize + rowIndex + 1 }}
         </template>
 
         <template #maHoaDon="{ record }">
@@ -558,31 +555,44 @@ const invoices = computed(() => {
     const dateStrA = a.thoiGianTao || a.ngayTao || a.createAt || ''
     const dateStrB = b.thoiGianTao || b.ngayTao || b.createAt || ''
 
-    // Nếu cả hai đều không có ngày, sort theo ID giảm dần (mới nhất trước)
-    if (!dateStrA && !dateStrB) {
-      return (b.id || 0) - (a.id || 0)
+    // Sort theo ngày tạo giảm dần (mới nhất trước)
+    const parseDate = (value: any): number => {
+      if (!value) return 0
+      if (value instanceof Date) return value.getTime()
+
+      const str = String(value).trim()
+
+      // Try standard Date parsing first (ISO, etc.)
+      const d = new Date(str)
+      if (!isNaN(d.getTime())) return d.getTime()
+
+      // Attempt to parse "dd-MM-yyyy HH:mm:ss" or "dd/MM/yyyy HH:mm:ss" common in VN
+      // Refund regex: capture day, month, year, time parts
+      const parts = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/)
+      if (parts) {
+        return new Date(
+          parseInt(parts[3]), // year
+          parseInt(parts[2]) - 1, // month (0-indexed)
+          parseInt(parts[1]), // day
+          parts[4] ? parseInt(parts[4]) : 0, // hours
+          parts[5] ? parseInt(parts[5]) : 0, // minutes
+          parts[6] ? parseInt(parts[6]) : 0  // seconds
+        ).getTime()
+      }
+      return 0
     }
 
-    // Nếu một trong hai không có ngày, đưa xuống dưới
-    if (!dateStrA) return 1
-    if (!dateStrB) return -1
+    const timeA = parseDate(a.thoiGianTao || a.ngayTao || a.createAt)
+    const timeB = parseDate(b.thoiGianTao || b.ngayTao || b.createAt)
 
-    // Parse dates - handle both string and Date objects
-    const dateA = typeof dateStrA === 'string' ? new Date(dateStrA).getTime() : (dateStrA instanceof Date ? dateStrA.getTime() : 0)
-    const dateB = typeof dateStrB === 'string' ? new Date(dateStrB).getTime() : (dateStrB instanceof Date ? dateStrB.getTime() : 0)
-
-    // Nếu parse lỗi, fallback về ID
-    if (isNaN(dateA) && isNaN(dateB)) {
-      return (b.id || 0) - (a.id || 0)
+    // Sort by time descending
+    if (timeA !== timeB) {
+      if (timeA === 0) return 1  // No date goes to bottom
+      if (timeB === 0) return -1
+      return timeB - timeA
     }
-    if (isNaN(dateA)) return 1
-    if (isNaN(dateB)) return -1
 
-    // Sort giảm dần: mới nhất trước
-    const diff = dateB - dateA
-    if (diff !== 0) return diff
-
-    // Nếu cùng ngày, sort theo ID giảm dần (mới nhất trước)
+    // If times are equal (or both invalid), sort by ID descending
     return (b.id || 0) - (a.id || 0)
   })
 
@@ -913,10 +923,13 @@ const handleStatusFilterChange = (value: string | undefined | null) => {
   }
 }
 
-const handleTableChange = (paginationData: any) => {
-  pagination.value.current = paginationData.current
-  pagination.value.pageSize = paginationData.pageSize
-  fetchInvoices()
+const onPageChange = (page: number) => {
+  pagination.value.current = page
+}
+
+const onPageSizeChange = (pageSize: number) => {
+  pagination.value.pageSize = pageSize
+  pagination.value.current = 1
 }
 
 const onSelectChange = (selectedKeys: any) => {

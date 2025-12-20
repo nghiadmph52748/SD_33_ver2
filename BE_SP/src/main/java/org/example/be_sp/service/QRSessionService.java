@@ -92,29 +92,31 @@ public class QRSessionService {
 
     public QRSessionResponse getLatestActiveSession() {
         LocalDateTime now = LocalDateTime.now();
-        // Only return sessions created in the last 5 minutes to avoid stale sessions after page reload
-        LocalDateTime minCreatedAt = now.minusMinutes(5);
 
-        while (true) {
-            Optional<QRSession> sessionOpt = qrSessionRepository
-                    .findFirstByStatusAndExpiresAtAfterAndCreatedAtAfterOrderByCreatedAtDesc("PENDING", now, minCreatedAt);
+        // Use the new custom query that sorts by expiresAt DESC
+        // This ensures checking the most recently updated session
+        List<QRSession> sessions = qrSessionRepository
+                .findLatestActiveSessionCustom("PENDING", now);
 
-            if (sessionOpt.isEmpty()) {
-                throw new RuntimeException("Không có phiên VNPAY đang hoạt động");
-            }
-
-            QRSession session = sessionOpt.get();
-
-            if (isSessionUsable(session)) {
-                return mapToDTO(session);
-            }
-
-            // Session không còn hợp lệ -> chuyển sang EXPIRED và tiếp tục tìm session khác
-            session.setStatus("EXPIRED");
-            session.setExpiresAt(now);
-            qrSessionRepository.save(session);
-            publishSessionUpdate(session);
+        if (sessions.isEmpty()) {
+            throw new RuntimeException("Không có phiên VNPAY đang hoạt động");
         }
+
+        QRSession session = sessions.get(0);
+
+        if (isSessionUsable(session)) {
+            return mapToDTO(session);
+        }
+
+        // Session không còn hợp lệ -> chuyển sang EXPIRED và tiếp tục tìm k
+        // Note: In this simplified version with TOP 1, we just return the latest.
+        // If it's not usable (e.g. no products), we might need to look deeper,
+        // but for now let's just expire it and throw/return info.
+        session.setStatus("EXPIRED");
+        session.setExpiresAt(now);
+        qrSessionRepository.save(session);
+
+        throw new RuntimeException("Phiên làm việc hiện tại không hợp lệ");
     }
 
     @Transactional
@@ -203,6 +205,10 @@ public class QRSessionService {
         if (hoaDon != null) {
             session.setIdHoaDon(hoaDon);
         }
+        // Update expiresAt to now + timeout. This serves dual purpose:
+        // 1. Session expiration
+        // 2. Ordering mechanism - the most recently updated session will have
+        // the furthest future expiresAt, making it the "latest" active session
         session.setExpiresAt(now.plusMinutes(SESSION_TIMEOUT_MINUTES));
 
         if (!"PAID".equals(session.getStatus())) {
@@ -237,8 +243,7 @@ public class QRSessionService {
 
     private String generateQrUrl(String sessionId, CreateQRSessionRequest request) {
         try {
-            org.example.be_sp.model.request.VnpayCreatePaymentRequest vnpayRequest
-                    = new org.example.be_sp.model.request.VnpayCreatePaymentRequest();
+            org.example.be_sp.model.request.VnpayCreatePaymentRequest vnpayRequest = new org.example.be_sp.model.request.VnpayCreatePaymentRequest();
             vnpayRequest.setOrderId(request.getOrderCode());
             BigDecimal finalPrice = request.getFinalPrice();
             vnpayRequest.setAmount(finalPrice != null ? finalPrice.longValue() : 0L);
@@ -246,8 +251,8 @@ public class QRSessionService {
             vnpayRequest.setLocale("vn");
 
             String clientIp = "127.0.0.1";
-            org.example.be_sp.model.response.VnpayCreatePaymentResponse vnpayResponse
-                    = vnPayService.createPayment(vnpayRequest, clientIp, null);
+            org.example.be_sp.model.response.VnpayCreatePaymentResponse vnpayResponse = vnPayService
+                    .createPayment(vnpayRequest, clientIp, null);
 
             if (vnpayResponse != null && vnpayResponse.getPayUrl() != null) {
                 // VNPAY payment URL when encoded as QR code IS the banking QR format
@@ -259,8 +264,11 @@ public class QRSessionService {
             }
             throw new RuntimeException("VNPAY payment URL generation failed");
         } catch (Exception e) {
-            log.error("VNPAY QR generation failed: {}. Cannot generate banking QR without VNPAY configuration.", e.getMessage());
-            throw new RuntimeException("Không thể tạo mã QR thanh toán. Vui lòng cấu hình VNPAY (tmnCode/hashSecret) trong application.properties", e);
+            log.error("VNPAY QR generation failed: {}. Cannot generate banking QR without VNPAY configuration.",
+                    e.getMessage());
+            throw new RuntimeException(
+                    "Không thể tạo mã QR thanh toán. Vui lòng cấu hình VNPAY (tmnCode/hashSecret) trong application.properties",
+                    e);
         }
     }
 

@@ -192,10 +192,21 @@ export default function QRPaymentScreen() {
       if (initializing) return
       try {
         const latest = await getLatestQRSession()
-        if (latest && latest.qrSessionId !== sessionId) {
+
+        // Check if we should update to this session:
+        // 1. Different sessionId (new order created)
+        // 2. Same sessionId but different orderCode (shouldn't happen, but defensive)
+        // 3. Session became "latest" again (staff switched back to it)
+        const shouldUpdate = latest && (
+          latest.qrSessionId !== sessionId ||
+          (session && latest.orderCode !== session.orderCode)
+        )
+
+        if (shouldUpdate) {
           loadSessionById(latest.qrSessionId, { showLoader: false })
           return
         }
+
         if (!latest && sessionId) {
           setSessionId(null)
           setSession(null)
@@ -368,7 +379,7 @@ export default function QRPaymentScreen() {
                     <Text style={styles.itemName}>{getProductDisplayName(item)}</Text>
                     <Text style={styles.lineTotal}>{currencyFormatter.format(lineTotal)}</Text>
                   </View>
-                    {getVariantText(item) ? <Text style={styles.variantText}>{getVariantText(item)}</Text> : null}
+                  {getVariantText(item) ? <Text style={styles.variantText}>{getVariantText(item)}</Text> : null}
                   <View style={styles.itemMetaRow}>
                     <Text style={styles.metaText}>Đơn giá: {currencyFormatter.format(unitPrice)}</Text>
                     <Text style={styles.quantityChip}>x{item.quantity}</Text>

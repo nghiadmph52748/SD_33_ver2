@@ -208,7 +208,7 @@ const useNotificationStore = defineStore('notification', {
       try {
         localStorage.removeItem(LOCAL_NOTI_STORAGE_KEY)
         localStorage.removeItem(READ_STORAGE_KEY)
-      } catch {}
+      } catch { }
     },
 
     // Add a new notification (for real-time updates)
@@ -245,6 +245,15 @@ const useNotificationStore = defineStore('notification', {
 
       this.wsConnecting = true
 
+      if (this.stompClient) {
+        try {
+          this.stompClient.deactivate()
+        } catch (e) {
+          console.error('Error deactivating existing notification client:', e)
+        }
+        this.stompClient = null
+      }
+
       const baseURL = axios.defaults.baseURL || 'http://localhost:8080'
       const wsUrl = `${baseURL}/ws-chat/sockjs`
 
@@ -253,7 +262,7 @@ const useNotificationStore = defineStore('notification', {
         connectHeaders: {
           Authorization: `Bearer ${token}`,
         },
-        debug: () => {}, // Disable debug logs in production
+        debug: () => { }, // Disable debug logs in production
         reconnectDelay: 5000,
         heartbeatOutgoing: 4000,
 

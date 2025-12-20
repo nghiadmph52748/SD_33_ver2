@@ -242,7 +242,9 @@
 <body>
 	<div class="email-container">
 		<div class="email-header">
-			<img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
+			<img class="logo"
+				src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png"
+				alt="GearUp Logo">
 			<p>Thông báo về tình trạng đơn hàng</p>
 		</div>
 		<div class="email-body">
@@ -255,7 +257,8 @@
 			<!-- Shortage Alert Card -->
 			<div class="shortage-card">
 				<h3>❌ Sự cố về số lượng sản phẩm</h3>
-				<p style="margin-bottom: 12px; color: #1d2129;">Rất tiếc, một số sản phẩm trong đơn hàng của bạn hiện không
+				<p style="margin-bottom: 12px; color: #1d2129;">Rất tiếc, một số sản phẩm trong đơn hàng của bạn hiện
+					không
 					đủ số lượng:</p>
 				<div class="product-shortage-item">
 					<strong th:text="${order.orderStatus}">Nike Air Max: yêu cầu 5, có 3</strong>
@@ -284,7 +287,8 @@
 				</div>
 				<div class="info-row">
 					<span class="info-label">Ngày đặt hàng:</span>
-					<span class="info-value" th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}">15/11/2024
+					<span class="info-value"
+						th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm')}">15/11/2024
 						10:30</span>
 				</div>
 				<div class="info-row">
@@ -324,11 +328,10 @@
 		</div>
 		<div class="email-footer">
 			<p><strong>GearUp - Gear Up Your Style!</strong></p>
-			<p>Địa chỉ: 123 Đường Sneaker, Quận Giày, TP. Thể Thao</p>
-			<p>Email: info@gearup.com | Hotline: 1900-1234</p>
-			<p style="margin-top: 16px; font-size: 12px; line-height: 1.4;">
-				⚠️ Email này được gửi tự động để thông báo về tình trạng đơn hàng của bạn. <br>
-				Vui lòng không trả lời email này. Liên hệ hotline hoặc email ở trên để được hỗ trợ.
+			<p>Địa chỉ: FPT Polytechnic, Trịnh Văn Bô, Nam Từ Liêm - TP. Hà Nội</p>
+			<p>Email: duyhmph53492@ggmail.com | Hotline: 0332 050 542</p>
+			<p style="margin-top: 16px; font-size: 12px;">
+				Email này được gửi tự động, vui lòng không trả lời.
 			</p>
 		</div>
 	</div>

@@ -230,7 +230,9 @@
 	<div class="email-container">
 		<!-- Header -->
 		<div class="header">
-			<img class="logo" src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png" alt="GearUp Logo">
+			<img class="logo"
+				src="https://res.cloudinary.com/dlgbdwd96/image/upload/v1765830968/rrstgsohcmcahazcxizg.png"
+				alt="GearUp Logo">
 			<p>Thông báo thay đổi địa chỉ giao hàng</p>
 		</div>
 
@@ -274,10 +276,12 @@
 			<!-- Surcharge Info -->
 			<div class="surcharge-info" th:if="${surcharge != null and surcharge.signum() > 0}">
 				<h4>⚠️ Phí phụ thêm</h4>
-				<div class="surcharge-amount" th:text="${#numbers.formatDecimal(surcharge, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+				<div class="surcharge-amount"
+					th:text="${#numbers.formatDecimal(surcharge, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
 				</div>
 				<p class="surcharge-note">
-					Thay đổi địa chỉ giao hàng làm phát sinh thêm chi phí vận chuyển. Phí phụ thêm sẽ được cộng vào tổng giá
+					Thay đổi địa chỉ giao hàng làm phát sinh thêm chi phí vận chuyển. Phí phụ thêm sẽ được cộng vào tổng
+					giá
 					trị
 					đơn hàng.
 				</p>
@@ -288,7 +292,8 @@
 				<div class="surcharge-amount"
 					th:text="${#numbers.formatDecimal(surcharge.abs(), 0, 'COMMA', 0, 'POINT')} + ' ₫'"></div>
 				<p class="surcharge-note">
-					Cước vận chuyển mới thấp hơn so với trước đây nên chúng tôi sẽ hoàn trả phần chênh lệch như trên. Khoản
+					Cước vận chuyển mới thấp hơn so với trước đây nên chúng tôi sẽ hoàn trả phần chênh lệch như trên.
+					Khoản
 					phí này
 					sẽ được xử lý theo chính sách thanh toán hiện hành của đơn hàng.
 				</p>
@@ -297,7 +302,8 @@
 			<div class="note-section" th:if="${surcharge == null or surcharge.signum() == 0}">
 				<h4>ℹ️ Không phát sinh phí thêm</h4>
 				<p>
-					Thay đổi địa chỉ giao hàng không làm thay đổi chi phí vận chuyển. Đơn hàng của bạn sẽ tiếp tục được xử lý
+					Thay đổi địa chỉ giao hàng không làm thay đổi chi phí vận chuyển. Đơn hàng của bạn sẽ tiếp tục được
+					xử lý
 					theo
 					đúng tiến độ.
 				</p>
@@ -318,7 +324,8 @@
 				style="color: #ffffff !important; text-decoration: none;">Xem chi tiết đơn hàng</a>
 
 			<p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
-				Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với <strong>bộ phận Chăm sóc khách hàng</strong> của chúng
+				Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với <strong>bộ phận Chăm sóc khách hàng</strong> của
+				chúng
 				tôi. Chúng tôi luôn sẵn sàng hỗ trợ!
 			</p>
 		</div>
@@ -326,8 +333,11 @@
 		<!-- Footer -->
 		<div class="footer">
 			<p><strong>GearUp - Gear Up Your Style!</strong></p>
-			<p>Địa chỉ: 123 Đường Sneaker, Quận Giày, TP. Thể Thao</p>
-			<p>Liên hệ: support@gearup.com | Hotline: 1900-1234</p>
+			<p>Địa chỉ: FPT Polytechnic, Trịnh Văn Bô, Nam Từ Liêm - TP. Hà Nội</p>
+			<p>Email: duyhmph53492@ggmail.com | Hotline: 0332 050 542</p>
+			<p style="margin-top: 16px; font-size: 12px;">
+				Email này được gửi tự động, vui lòng không trả lời.
+			</p>
 		</div>
 	</div>
 </body>
