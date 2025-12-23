@@ -1,6 +1,13 @@
 <template>
   <div class="product-detail-view">
-    <div class="pdp" v-if="product">
+    <!-- Loading state -->
+    <div v-if="detailLoading || cartStore.loading" class="pdp-loading">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">{{ $t('common.loading') || 'Loading...' }}</p>
+    </div>
+
+    <!-- Product content -->
+    <div class="pdp" v-else-if="product">
       <section class="pdp-hero">
         <!-- Left: Gallery and Accordion -->
         <div class="left-panel">
@@ -37,7 +44,7 @@
                 </span>
               </summary>
               <div class="accordion-panel">
-                <p class="muted">{{ product.description }}</p>
+                <div class="product-description" v-html="product.description"></div>
               </div>
             </details>
             <details class="accordion-item">
@@ -856,14 +863,17 @@ function scrollRecommendations(direction: number) {
 }
 
 function setupAccordion(el: HTMLDetailsElement) {
+  if (el.dataset.accordionInitialized) return
+  el.dataset.accordionInitialized = 'true'
+
   const panel = el.querySelector<HTMLElement>('.accordion-panel')
   if (!panel) return
   panel.style.overflow = 'hidden'
-  panel.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease'
+  panel.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease'
 
   // Set initial height
   if (el.open) {
-    panel.style.height = panel.scrollHeight + 'px'
+    panel.style.height = 'auto'
     panel.style.opacity = '1'
   } else {
     panel.style.height = '0px'
@@ -872,27 +882,45 @@ function setupAccordion(el: HTMLDetailsElement) {
 
   el.addEventListener('toggle', () => {
     if (el.open) {
-      // expanding
+      // expanding - measure natural height first
+      // Temporarily allow natural height to get accurate measurement
+      const originalTransition = panel.style.transition
+      panel.style.transition = 'none'
+      panel.style.height = 'auto'
       const targetHeight = panel.scrollHeight
-      panel.style.height = targetHeight + 'px'
-      panel.style.opacity = '1'
 
-      const after = () => {
-        panel.style.height = 'auto'
-        panel.removeEventListener('transitionend', after)
-      }
-      panel.addEventListener('transitionend', after, { once: true })
-    } else {
-      // collapsing from auto height back to 0
-      const currentHeight = panel.scrollHeight
-      panel.style.height = currentHeight + 'px'
+      // Reset to 0 for animation
+      panel.style.height = '0px'
       panel.style.opacity = '0'
 
-      // Force reflow to ensure height is set before transition
+      // Force reflow
+      void panel.offsetHeight
+
+      // Re-enable transition and animate
+      panel.style.transition = originalTransition
+
+      requestAnimationFrame(() => {
+        panel.style.height = targetHeight + 'px'
+        panel.style.opacity = '1'
+
+        const after = () => {
+          panel.style.height = 'auto'
+        }
+        panel.addEventListener('transitionend', after, { once: true })
+        // Safety timeout in case transitionend is missed
+        setTimeout(after, 350)
+      })
+    } else {
+      // collapsing
+      const currentHeight = panel.scrollHeight
+      panel.style.height = currentHeight + 'px'
+
+      // Force reflow
       void panel.offsetHeight
 
       requestAnimationFrame(() => {
         panel.style.height = '0px'
+        panel.style.opacity = '0'
       })
     }
   })
@@ -900,6 +928,41 @@ function setupAccordion(el: HTMLDetailsElement) {
 </script>
 
 <style scoped>
+/* Loading state */
+.pdp-loading {
+  padding: 80px 24px;
+  max-width: 1240px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #111111;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+}
+
 .pdp {
   padding: 32px 24px;
   max-width: 1240px;
@@ -1388,7 +1451,7 @@ function setupAccordion(el: HTMLDetailsElement) {
 }
 
 .accordion-panel {
-  padding: 0 18px;
+  padding: 4px 18px 18px 18px;
   color: #4b5563;
   height: 0;
   overflow: hidden;
@@ -1397,8 +1460,93 @@ function setupAccordion(el: HTMLDetailsElement) {
 }
 
 .accordion-item[open] .accordion-panel {
-  padding: 4px 18px 18px 18px;
   opacity: 1;
+}
+
+/* Product Description Rich Text Styles */
+.product-description {
+  color: #4b5563;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.product-description :deep(p) {
+  margin-bottom: 12px;
+  line-height: 1.7;
+}
+
+.product-description :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.product-description :deep(strong) {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.product-description :deep(em) {
+  font-style: italic;
+}
+
+.product-description :deep(u) {
+  text-decoration: underline;
+}
+
+.product-description :deep(s) {
+  text-decoration: line-through;
+}
+
+.product-description :deep(h1) {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12px;
+  margin-top: 16px;
+}
+
+.product-description :deep(h2) {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 10px;
+  margin-top: 14px;
+}
+
+.product-description :deep(h3) {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+.product-description :deep(ul),
+.product-description :deep(ol) {
+  padding-left: 24px;
+  margin-bottom: 12px;
+}
+
+.product-description :deep(li) {
+  margin-bottom: 6px;
+  line-height: 1.6;
+}
+
+.product-description :deep(a) {
+  color: #3b82f6;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.product-description :deep(a:hover) {
+  color: #2563eb;
+}
+
+.product-description :deep(blockquote) {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 16px;
+  margin: 12px 0;
+  color: #6b7280;
+  font-style: italic;
 }
 
 .muted {

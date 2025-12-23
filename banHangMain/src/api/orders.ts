@@ -279,9 +279,9 @@ export function fetchCustomerOrders(
 ): Promise<HttpResponse<{ content: OrderTrackingDetail[]; totalElements: number; totalPages: number }>> {
   return axios.get(`/api/hoa-don-management/paging`, {
     params: {
-      page,
-      size: 100,
-      sort: 'createAt,desc' // Request backend to sort by createAt descending (newest first)
+      page: 0,
+      size: 500, // Increase to get more orders (was 100)
+      sort: 'id,desc' // Sort by ID descending to get newest orders first
     }
   }).then((response) => {
     const data = response.data as any

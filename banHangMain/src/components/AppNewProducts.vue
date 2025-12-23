@@ -2,62 +2,40 @@
   <section class="new-products">
     <div class="header">
       <h2>{{ t("home.sections.newProducts") }}</h2>
-      <div class="controls">
+      <div class="controls" v-if="!loading">
         <button class="nav" aria-label="Previous" @click="scrollByAmount(-1)">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              fill="#111111"
-              d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"
-            />
+            <path fill="#111111" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
           </svg>
         </button>
         <button class="nav" aria-label="Next" @click="scrollByAmount(1)">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              fill="#111111"
-              d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"
-            />
+            <path fill="#111111" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z" />
           </svg>
         </button>
       </div>
     </div>
-    <div
-      ref="scroller"
-      class="scroller"
-      role="list"
-      tabindex="0"
-      aria-label="New products"
-      @keydown="onKeydown"
-    >
-      <article
-        v-for="p in newProducts"
-        :key="p.id"
-        class="card"
-        role="listitem"
-      >
+    <!-- Loading state: show only when actively loading -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+    </div>
+    <!-- Content: show when not loading -->
+    <div v-else ref="scroller" class="scroller" role="list" tabindex="0" aria-label="New products" @keydown="onKeydown">
+      <article v-for="p in newProducts" :key="p.id" class="card" role="listitem">
         <RouterLink :to="`/product/${p.id}`" class="card-link">
           <div class="img-wrap">
-            <img
-              :src="resolveImage(p.img)"
-              :alt="p.name"
-              loading="lazy"
-              v-img-fallback
-            />
+            <img :src="resolveImage(p.img)" :alt="p.name" loading="lazy" v-img-fallback />
           </div>
           <div class="info">
             <h4 class="name">{{ p.name }}</h4>
             <p class="meta">{{ p.gender }}'s Shoes</p>
             <p class="price">
-              <span
-                v-if="p.originalPrice && p.originalPrice > p.price"
-                class="price-original"
-                >{{ formatCurrency(p.originalPrice) }}</span
-              >
+              <span v-if="p.originalPrice && p.originalPrice > p.price" class="price-original">{{
+                formatCurrency(p.originalPrice) }}</span>
               <span class="price-current">
                 {{ formatCurrency(p.price)
                 }}<span v-if="p.priceMax && p.priceMax !== p.price">
-                  - {{ formatCurrency(p.priceMax) }}</span
-                >
+                  - {{ formatCurrency(p.priceMax) }}</span>
               </span>
             </p>
           </div>
@@ -77,7 +55,7 @@ import { formatCurrency } from "@/utils/currency";
 const cartStore = useCartStore();
 const { t } = useI18n();
 // Use newProducts from store
-const { newProducts } = storeToRefs(cartStore);
+const { newProducts, loading, products } = storeToRefs(cartStore);
 
 const scroller = ref<HTMLDivElement | null>(null);
 
@@ -186,8 +164,10 @@ h2 {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 8px;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
 }
 
 .scroller:focus-visible {
@@ -260,6 +240,7 @@ h2 {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -311,5 +292,28 @@ h2 {
   font-size: 14px;
   font-weight: 500;
   color: #111111;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  margin: 20px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f0f0f0;
+  border-top-color: #111111;
+  border-radius: 50%;
+  animation: new-spinner-spin 0.8s linear infinite;
+}
+
+@keyframes new-spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

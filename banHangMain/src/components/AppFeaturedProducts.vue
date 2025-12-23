@@ -3,36 +3,25 @@
     <h2>
       <span>{{ t("home.sections.featured") }}</span>
     </h2>
-    <div class="featureditems">
+    <!-- Loading state: show only when actively loading -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+    </div>
+    <!-- Content: show when not loading, even if empty -->
+    <div v-else class="featureditems">
       <div class="item" v-for="product in featuredProducts" :key="product.id">
-        <RouterLink
-          class="image-link"
-          :to="`/product/${product.id}`"
-          :aria-label="t('buttons.viewItem')"
-        >
-          <img
-            :src="product.img"
-            :alt="product.name"
-            loading="lazy"
-            v-img-fallback
-          />
+        <RouterLink class="image-link" :to="`/product/${product.id}`" :aria-label="t('buttons.viewItem')">
+          <img :src="product.img" :alt="product.name" loading="lazy" v-img-fallback />
         </RouterLink>
         <h3>{{ product.name }}</h3>
         <h4>
-          <span
-            v-if="
-              product.originalPrice && product.originalPrice > product.price
-            "
-            class="price-original"
-            >{{ formatCurrency(product.originalPrice) }}</span
-          >
+          <span v-if="
+            product.originalPrice && product.originalPrice > product.price
+          " class="price-original">{{ formatCurrency(product.originalPrice) }}</span>
           <span class="price-current">
             {{ formatCurrency(product.price)
-            }}<span
-              v-if="product.priceMax && product.priceMax !== product.price"
-            >
-              - {{ formatCurrency(product.priceMax) }}</span
-            >
+            }}<span v-if="product.priceMax && product.priceMax !== product.price">
+              - {{ formatCurrency(product.priceMax) }}</span>
           </span>
         </h4>
         <RouterLink :to="`/product/${product.id}`">
@@ -50,7 +39,7 @@ import { useCartStore } from "@/stores/cart";
 import { formatCurrency } from "@/utils/currency";
 
 const cartStore = useCartStore();
-const { featuredProducts } = storeToRefs(cartStore);
+const { featuredProducts, loading, products } = storeToRefs(cartStore);
 const { t } = useI18n();
 </script>
 
@@ -195,9 +184,11 @@ h2 span::after {
   margin-bottom: 12px;
   flex-shrink: 0;
 }
+
 .image-link:hover {
   text-decoration: none;
 }
+
 .image-link img {
   cursor: pointer;
   display: block;
@@ -214,8 +205,32 @@ h2 span::after {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
+  }
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  margin: 20px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f0f0f0;
+  border-top-color: #111111;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

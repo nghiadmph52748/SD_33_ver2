@@ -337,11 +337,34 @@ async function loadOrders() {
     if (res?.data) {
       const data = res.data as any
       const orderList = Array.isArray(data.content) ? data.content : (Array.isArray(data) ? data : [])
-      // Sort by creation date descending (latest first)
+      // Sort by latest first - try multiple date fields and use ID as final fallback
       orders.value = orderList.sort((a: any, b: any) => {
-        const dateA = new Date(a.createAt || a.ngayTao || 0).getTime()
-        const dateB = new Date(b.createAt || b.ngayTao || 0).getTime()
-        return dateB - dateA // Descending order
+        // Try update date first (most recent activity)
+        const updateA = a.updateAt || a.ngayCapNhat
+        const updateB = b.updateAt || b.ngayCapNhat
+        if (updateA && updateB) {
+          const timeA = new Date(updateA).getTime()
+          const timeB = new Date(updateB).getTime()
+          if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+            return timeB - timeA
+          }
+        }
+
+        // Try creation date
+        const createA = a.createAt || a.ngayTao
+        const createB = b.createAt || b.ngayTao
+        if (createA && createB) {
+          const timeA = new Date(createA).getTime()
+          const timeB = new Date(createB).getTime()
+          if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+            return timeB - timeA
+          }
+        }
+
+        // Fallback to ID (higher ID = newer order)
+        const idA = a.id || 0
+        const idB = b.id || 0
+        return idB - idA
       })
     }
   } catch {

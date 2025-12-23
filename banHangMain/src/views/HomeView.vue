@@ -10,9 +10,9 @@
     </div>
     <div class="container" :aria-label="t('home.sections.featured')">
       <AppFeaturedProducts />
-        </div>
+    </div>
     <div class="container narrow" :aria-label="t('home.sections.sales')">
-    <AppSalesBoxes />
+      <AppSalesBoxes />
     </div>
   </div>
 </template>

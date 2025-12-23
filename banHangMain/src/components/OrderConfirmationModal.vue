@@ -1,590 +1,245 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>{{ $t("checkout.confirmOrder") || "Xác nhận đơn hàng" }}</h2>
-        <button class="close-btn" @click="emit('close')">×</button>
-      </div>
+    <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Xác nhận đơn hàng</h2>
+                <button class="close-btn" @click="$emit('close')" aria-label="Đóng">×</button>
+            </div>
 
-      <div class="modal-body">
-        <!-- Customer Information -->
-        <section class="info-section">
-          <h3>{{ $t("checkout.customerInfo") || "Thông tin khách hàng" }}</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <label>{{ $t("checkout.fullName") || "Họ và tên" }}</label>
-              <span>{{ orderInfo.fullName }}</span>
-            </div>
-            <div class="info-item">
-              <label>{{ $t("checkout.phone") || "Số điện thoại" }}</label>
-              <span>{{ orderInfo.phone }}</span>
-            </div>
-            <div class="info-item">
-              <label>{{ $t("checkout.email") || "Email" }}</label>
-              <span>{{ orderInfo.email }}</span>
-            </div>
-            <div class="info-item full-width">
-              <label>{{
-                $t("checkout.deliveryAddress") || "Địa chỉ giao hàng"
-              }}</label>
-              <span>{{ orderInfo.address }}</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- Payment Method -->
-        <section class="info-section">
-          <h3>{{ $t("checkout.paymentInfo") || "Thông tin thanh toán" }}</h3>
-          <div class="info-grid">
-            <div class="info-item full-width">
-              <label>{{
-                $t("checkout.paymentMethod") || "Phương thức thanh toán"
-              }}</label>
-              <span class="payment-badge" :class="paymentMethod">
-                {{ paymentMethodLabel }}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <!-- Order Items -->
-        <section class="info-section">
-          <h3>{{ $t("checkout.orderItems") || "Sản phẩm đặt hàng" }}</h3>
-          <div class="items-list">
-            <div
-              v-for="item in orderInfo.items"
-              :key="`${item.id}-${item.color}-${item.size}`"
-              class="item-row"
-            >
-              <div class="item-info">
-                <div class="item-name">{{ item.name }}</div>
-                <div class="item-variant">
-                  <span v-if="item.color" class="variant-badge color">{{
-                    item.color
-                  }}</span>
-                  <span v-if="item.size" class="variant-badge size"
-                    >{{ $t("checkout.size") || "Size" }}: {{ item.size }}</span
-                  >
+            <div class="modal-body">
+                <div class="info-section">
+                    <h3>Thông tin giao hàng</h3>
+                    <p><strong>Người nhận:</strong> {{ orderInfo.fullName }}</p>
+                    <p><strong>Số điện thoại:</strong> {{ orderInfo.phone }}</p>
+                    <p><strong>Email:</strong> {{ orderInfo.email }}</p>
+                    <p><strong>Địa chỉ:</strong> {{ orderInfo.address }}</p>
                 </div>
-              </div>
-              <div class="item-qty">x{{ item.quantity }}</div>
-              <div class="item-price">
-                {{ formatCurrency(item.price * item.quantity) }}
-              </div>
-            </div>
-          </div>
-        </section>
 
-        <!-- Order Summary -->
-        <section class="info-section">
-          <h3>{{ $t("checkout.orderSummary") || "Tóm tắt đơn hàng" }}</h3>
-          <div class="summary-grid">
-            <div class="summary-row">
-              <span>{{ $t("cart.subtotal") || "Tạm tính" }}</span>
-              <span>{{ formatCurrency(orderInfo.subtotal) }}</span>
-            </div>
-            <div class="summary-row">
-              <span>{{ $t("cart.estimatedDelivery") || "Phí giao hàng" }}</span>
-              <span>{{ formatCurrency(orderInfo.shippingFee) }}</span>
-            </div>
-            <div
-              v-if="orderInfo.voucherDiscount > 0"
-              class="summary-row discount"
-            >
-              <span>{{ $t("checkout.discount") || "Giảm giá" }}</span>
-              <span>-{{ formatCurrency(orderInfo.voucherDiscount) }}</span>
-            </div>
-            <div class="summary-row divider">
-              <span>{{ $t("cart.total") || "Tổng cộng" }}</span>
-              <span class="total-amount">{{
-                formatCurrency(orderInfo.total)
-              }}</span>
-            </div>
-          </div>
-        </section>
+                <div class="info-section">
+                    <h3>Phương thức thanh toán</h3>
+                    <p>{{ paymentMethodLabel }}</p>
+                </div>
 
-        <!-- Voucher Info -->
-        <section v-if="orderInfo.voucher" class="info-section">
-          <h3>
-            {{ $t("checkout.voucherApplied") || "Phiếu giảm giá áp dụng" }}
-          </h3>
-          <div class="voucher-info">
-            <div class="voucher-code">
-              {{ orderInfo.voucher.maPhieuGiamGia }}
+                <div class="info-section">
+                    <h3>Tóm tắt đơn hàng</h3>
+                    <div class="summary-row">
+                        <span>Tạm tính:</span>
+                        <span>{{ formatCurrency(orderInfo.subtotal) }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Phí vận chuyển:</span>
+                        <span>{{ formatCurrency(orderInfo.shippingFee) }}</span>
+                    </div>
+                    <div v-if="orderInfo.voucherDiscount > 0" class="summary-row discount">
+                        <span>Giảm giá:</span>
+                        <span>-{{ formatCurrency(orderInfo.voucherDiscount) }}</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Tổng cộng:</span>
+                        <span>{{ formatCurrency(orderInfo.total) }}</span>
+                    </div>
+                </div>
             </div>
-            <div class="voucher-desc">
-              <span v-if="orderInfo.voucher.loaiPhieuGiamGia">
-                Giảm {{ formatCurrency(orderInfo.voucher.giaTriGiamGia) }}
-              </span>
-              <span v-else> Giảm {{ orderInfo.voucher.giaTriGiamGia }}% </span>
-            </div>
-          </div>
-        </section>
-      </div>
 
-      <div class="modal-footer">
-        <button
-          class="btn btn-secondary"
-          @click="emit('close')"
-          :disabled="props.loading"
-        >
-          {{ $t("checkout.cancel") || "Hủy" }}
-        </button>
-        <button
-          class="btn btn-primary"
-          @click="emit('confirm')"
-          :disabled="props.loading"
-        >
-          <span v-if="props.loading" class="loading-spinner"></span>
-          {{ confirmButtonText }}
-        </button>
-      </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="$emit('close')" :disabled="loading">
+                    Hủy
+                </button>
+                <button class="btn btn-primary" @click="$emit('confirm')" :disabled="loading">
+                    {{ loading ? 'Đang xử lý...' : 'Xác nhận đặt hàng' }}
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { useI18n } from "vue-i18n";
-import { formatCurrency } from "@/utils/currency";
-import type { CartItem } from "@/stores/cart";
-import type { Voucher } from "@/api/vouchers";
-
-const { t } = useI18n();
-
-interface OrderConfirmationInfo {
-  fullName: string;
-  phone: string;
-  email: string;
-  address: string;
-  paymentMethod: "cod" | "vnpay";
-  items: CartItem[];
-  subtotal: number;
-  shippingFee: number;
-  voucherDiscount: number;
-  total: number;
-  voucher?: Voucher | null;
-}
+import { computed } from 'vue';
+import { formatCurrency } from '@/utils/currency';
 
 interface Props {
-  isOpen: boolean;
-  orderInfo: OrderConfirmationInfo;
-  loading?: boolean;
+    isOpen: boolean;
+    orderInfo: {
+        fullName?: string;
+        phone?: string;
+        email?: string;
+        address?: string;
+        paymentMethod?: 'cod' | 'vnpay' | 'momo';
+        subtotal?: number;
+        shippingFee?: number;
+        voucherDiscount?: number;
+        total?: number;
+    };
+    loading?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    isOpen: false,
+    orderInfo: () => ({}),
+    loading: false
+});
 
-const emit = defineEmits<{
-  close: [];
-  confirm: [];
+defineEmits<{
+    (e: 'close'): void;
+    (e: 'confirm'): void;
 }>();
 
 const paymentMethodLabel = computed(() => {
-  const method = props.orderInfo?.paymentMethod;
-  if (method === "cod") {
-    return t("checkout.cod") || "Thanh toán khi nhận hàng";
-  } else if (method === "vnpay") {
-    return "VNPAY";
-  }
-  return "Chưa chọn";
-});
-
-const confirmButtonText = computed(() => {
-  const method = props.orderInfo?.paymentMethod;
-  if (method === "cod") {
-    return t("checkout.confirmAndPlaceOrder") || "Xác nhận đặt hàng";
-  } else if (method === "vnpay") {
-    return t("checkout.confirmAndPayment") || "Xác nhận và thanh toán";
-  }
-  return t("checkout.confirmOrder") || "Xác nhận";
-});
-
-const paymentMethod = computed(() => {
-  return props.orderInfo?.paymentMethod || "";
+    switch (props.orderInfo.paymentMethod) {
+        case 'cod':
+            return 'Thanh toán khi nhận hàng (COD)';
+        case 'vnpay':
+            return 'VNPAY';
+        case 'momo':
+            return 'MoMo';
+        default:
+            return '';
+    }
 });
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-  animation: fadeIn 0.2s ease;
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.3s ease;
-
-  @keyframes slideUp {
-    from {
-      transform: translateY(20px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
+    background: white;
+    border-radius: 16px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
 
-  h2 {
+.modal-header h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 600;
-    color: #111;
-  }
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
-  cursor: pointer;
-  color: #999;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s ease;
+    background: none;
+    border: none;
+    font-size: 32px;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
 
-  &:hover {
-    color: #333;
-  }
+.close-btn:hover {
+    color: #111827;
 }
 
 .modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
+    padding: 24px;
 }
 
 .info-section {
-  margin-bottom: 24px;
+    margin-bottom: 24px;
+}
 
-  &:last-child {
+.info-section:last-child {
     margin-bottom: 0;
-  }
+}
 
-  h3 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
+.info-section h3 {
+    font-size: 16px;
     font-weight: 600;
-    color: #111;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+    margin: 0 0 12px 0;
+    color: #111827;
 }
 
-.info-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  &.full-width {
-    grid-column: 1 / -1;
-  }
-
-  label {
-    font-size: 12px;
-    color: #666;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-
-  span {
-    font-size: 14px;
-    color: #111;
-    word-break: break-word;
-  }
-}
-
-.payment-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  background: #f0f0f0;
-  color: #333;
-  width: fit-content;
-
-  &.cod {
-    background: #e8f5e9;
-    color: #2e7d32;
-  }
-
-  &.vnpay {
-    background: #e3f2fd;
-    color: #1565c0;
-  }
-}
-
-.items-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: #f9f9f9;
-  padding: 12px;
-  border-radius: 8px;
-}
-
-.item-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #f0f0f0;
-}
-
-.item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.item-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #111;
-  word-break: break-word;
-}
-
-.item-variant {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.variant-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  color: #666;
-  background: #f0f0f0;
-
-  &.color {
-    background: #e8e8e8;
-  }
-
-  &.size {
-    background: #f0f0f0;
-  }
-}
-
-.item-qty {
-  font-size: 13px;
-  color: #666;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.item-price {
-  font-size: 13px;
-  font-weight: 600;
-  color: #111;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.summary-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: #f9f9f9;
-  padding: 12px;
-  border-radius: 8px;
+.info-section p {
+    margin: 8px 0;
+    color: #4b5563;
+    line-height: 1.6;
 }
 
 .summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  padding: 6px 0;
-
-  span:first-child {
-    color: #666;
-  }
-
-  span:last-child {
-    color: #111;
-    font-weight: 500;
-  }
-
-  &.discount {
-    span:last-child {
-      color: #f77234;
-      font-weight: 600;
-    }
-  }
-
-  &.divider {
-    border-top: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
     padding: 8px 0;
+    color: #4b5563;
+}
+
+.summary-row.discount {
+    color: #dc2626;
+}
+
+.summary-row.total {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px solid #e5e7eb;
+    font-size: 18px;
     font-weight: 600;
-
-    span {
-      color: #111;
-    }
-  }
-}
-
-.total-amount {
-  font-size: 16px !important;
-  color: #f77234 !important;
-  font-weight: 700 !important;
-}
-
-.voucher-info {
-  background: #fff8f2;
-  border-left: 3px solid #f77234;
-  padding: 12px;
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.voucher-code {
-  font-size: 13px;
-  font-weight: 600;
-  color: #f77234;
-}
-
-.voucher-desc {
-  font-size: 12px;
-  color: #666;
+    color: #111827;
 }
 
 .modal-footer {
-  display: flex;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid #f0f0f0;
-  background: #f9f9f9;
+    padding: 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
 }
 
 .btn {
-  flex: 1;
-  padding: 12px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-size: 16px;
 }
 
-.btn-primary {
-  background: #f77234 !important;
-  color: white !important;
-  border: none !important;
-
-  &:hover:not(:disabled) {
-    background: #ff8c42 !important;
-  }
-
-  &:active:not(:disabled) {
-    background: #e65820 !important;
-  }
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn-secondary {
-  background: white;
-  color: #666;
-  border: 1px solid #e5e5e5;
-
-  &:hover:not(:disabled) {
-    background: #f5f5f5;
-    border-color: #d0d0d0;
-  }
+    background: #f3f4f6;
+    color: #374151;
 }
 
-.loading-spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 6px;
-  vertical-align: middle;
+.btn-secondary:hover:not(:disabled) {
+    background: #e5e7eb;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
 }
 
-@media (max-width: 600px) {
-  .modal-overlay {
-    padding: 12px;
-  }
-
-  .modal-content {
-    max-height: 95vh;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .item-row {
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-  }
-
-  .item-price {
-    grid-column: 1 / -1;
-    text-align: left;
-  }
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
 }
 </style>

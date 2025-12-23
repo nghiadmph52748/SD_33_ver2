@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 class Settings(BaseSettings):
@@ -28,8 +28,10 @@ class Settings(BaseSettings):
     api_port: int = 8001
     api_host: str = "0.0.0.0"
     
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore"  # Ignore extra env vars like SQL_* for Docker
+    )
 
 @lru_cache()
 def get_settings():

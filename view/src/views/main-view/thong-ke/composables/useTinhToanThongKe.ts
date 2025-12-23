@@ -730,16 +730,34 @@ export function useTinhToanThongKe(
           if (ct.tenSanPhamChiTiet && ct.tenSanPhamChiTiet.trim()) {
             tenSanPham = ct.tenSanPhamChiTiet
           } else {
+            // @ts-ignore
             const tenSP = sanPham.tenSanPham || 'Không rõ'
             const mauPart = mauSac ? ` + ${mauSac}` : ''
             const sizePart = kichThuoc ? ` + ${kichThuoc}` : ''
             tenSanPham = `${tenSP}${mauPart}${sizePart}`.trim()
           }
 
+          let anhSanPham = '/default-product.png'
+
+          if (ct.anh) {
+            anhSanPham = ct.anh
+          } else if (ct.anhSanPham) {
+            if (Array.isArray(ct.anhSanPham) && ct.anhSanPham.length > 0) {
+              anhSanPham = ct.anhSanPham[0]
+            } else if (typeof ct.anhSanPham === 'string' && ct.anhSanPham !== '') {
+              anhSanPham = ct.anhSanPham
+            }
+          } else if (ct.hinhAnh) {
+            anhSanPham = ct.hinhAnh
+          } else if (sanPham && 'anh' in sanPham && sanPham.anh) {
+            anhSanPham = sanPham.anh
+          }
+
           return {
             id: index + 1,
             tenSanPham,
-            anh: ct.anh || ct.anhSanPham || ct.hinhAnh || sanPham.anh || '/default-product.png',
+            anh: anhSanPham,
+            // @ts-ignore
             giaBan: ct.giaBan || sanPham.giaBan || 0,
             soLuongTon: ct.soLuongTon || ct.soLuong || 0,
             trangThai: layTrangThaiKho(ct.soLuongTon || ct.soLuong || 0),

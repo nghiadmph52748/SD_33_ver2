@@ -9,6 +9,7 @@ export interface ProductVariantResponse {
   maChiTietSanPham?: string
   tenSanPham?: string
   tenMauSac?: string
+  maMau?: string // Hex color code for the color variant
   tenKichThuoc?: string
   giaBan?: number // Original price
   giaTriGiamGia?: number // Discount percentage (0-100)

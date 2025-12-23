@@ -118,6 +118,10 @@ export const useCartStore = defineStore("cart", {
         .sort((a, b) => Number(b.id) - Number(a.id))
         .slice(0, 10);
     },
+    trendingProducts(state): Product[] {
+      // Return first 10 products as trending (can be customized with backend logic later)
+      return state.products.slice(0, 10);
+    },
     womenProducts(state): Product[] {
       return state.products.filter((product) => product.gender === "Female");
     },
@@ -161,6 +165,9 @@ export const useCartStore = defineStore("cart", {
     async fetchProducts(sneakersOnly: boolean = true, forceRefresh: boolean = false) {
       // Skip fetch if products already loaded and not forcing refresh
       if (!forceRefresh && this.products.length > 0) {
+        // IMPORTANT: Ensure loading is false even when skipping fetch
+        // This prevents blank pages when navigating via logo click
+        this.loading = false;
         return;
       }
 

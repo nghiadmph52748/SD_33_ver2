@@ -51,7 +51,7 @@ export interface ChiTietSanPham {
   soLuongTon?: number
   giaBan: number
   anh?: string
-  anhSanPham?: string
+  anhSanPham?: string | string[]
   hinhAnh?: string
   idSanPham?: SanPham
   idMauSac?: {

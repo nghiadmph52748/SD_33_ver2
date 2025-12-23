@@ -1,190 +1,192 @@
 <template>
-  <div class="order-lookup">
-    <div class="container narrow">
-      <header class="lookup-hero">
-        <p class="eyebrow">{{ $t("orderLookup.eyebrow") }}</p>
-        <h1>{{ $t("orderLookup.title") }}</h1>
-        <p class="lead">{{ $t("orderLookup.subtitle") }}</p>
-      </header>
+  <div class="order-lookup-wrapper">
+    <div class="order-lookup">
+      <div class="container narrow">
+        <header class="lookup-hero">
+          <p class="eyebrow">{{ $t("orderLookup.eyebrow") }}</p>
+          <h1>{{ $t("orderLookup.title") }}</h1>
+          <p class="lead">{{ $t("orderLookup.subtitle") }}</p>
+        </header>
 
-      <div class="lookup-grid">
-        <form class="lookup-form" @submit.prevent="lookupOrder">
-          <label class="field">
-            <span>{{ $t("orderLookup.form.codeLabel") }}</span>
-            <input v-model.trim="orderCode" type="text" :placeholder="$t('orderLookup.form.codePlaceholder')"
-              autocomplete="off" inputmode="text" @blur="orderCode = orderCode.toUpperCase()" />
-            <small v-if="formErrors.code" class="field-error">{{
-              formErrors.code
+        <div class="lookup-grid">
+          <form class="lookup-form" @submit.prevent="lookupOrder">
+            <label class="field">
+              <span>{{ $t("orderLookup.form.codeLabel") }}</span>
+              <input v-model.trim="orderCode" type="text" :placeholder="$t('orderLookup.form.codePlaceholder')"
+                autocomplete="off" inputmode="text" @blur="orderCode = orderCode.toUpperCase()" />
+              <small v-if="formErrors.code" class="field-error">{{
+                formErrors.code
               }}</small>
-          </label>
+            </label>
 
-          <label class="field" v-if="isAuthenticated">
-            <span>{{ $t("orderLookup.form.contactLabel") }}</span>
-            <input v-model.trim="contactValue" type="text" :placeholder="$t('orderLookup.form.contactPlaceholder')"
-              autocomplete="off" inputmode="text" />
-            <small v-if="formErrors.contact" class="field-error">{{
-              formErrors.contact
+            <label class="field" v-if="isAuthenticated">
+              <span>{{ $t("orderLookup.form.contactLabel") }}</span>
+              <input v-model.trim="contactValue" type="text" :placeholder="$t('orderLookup.form.contactPlaceholder')"
+                autocomplete="off" inputmode="text" />
+              <small v-if="formErrors.contact" class="field-error">{{
+                formErrors.contact
               }}</small>
-          </label>
-          <p v-else class="form-hint">
-            {{ $t("orderLookup.form.guestHint") }}
-          </p>
-
-          <button class="submit-btn" type="submit" :disabled="isLoading">
-            <span class="btn-content">
-              <span v-if="isLoading" class="inline-spinner" aria-hidden="true"></span>
-              {{
-                isLoading
-                  ? $t("orderLookup.form.checking")
-                  : $t("orderLookup.form.submit")
-              }}
-            </span>
-          </button>
-
-          <p class="form-hint">{{ $t("orderLookup.form.hint") }}</p>
-        </form>
-
-        <div class="result-card" :class="resultCardClass">
-          <template v-if="state === 'success' && order">
-            <dl class="result-grid">
-              <div>
-                <dt>{{ $t("orderLookup.results.orderCode") }}</dt>
-                <dd class="order-code-value">{{ orderCodeDisplay }}</dd>
-              </div>
-              <div class="order-action-row" v-if="hasPrimaryAction">
-                <dt>{{ $t("orderLookup.actions.label") }}</dt>
-                <dd class="cancel-action-cell">
-                  <button type="button" :class="primaryActionClasses" :disabled="primaryActionDisabled"
-                    @click="handlePrimaryAction">
-                    <span v-if="isProcessingAction" class="inline-spinner" aria-hidden="true"></span>
-                    <span>{{ primaryActionLabel }}</span>
-                  </button>
-                </dd>
-              </div>
-              <div>
-                <dt>{{ $t("orderLookup.results.placedOn") }}</dt>
-                <dd>{{ placedOnLabel }}</dd>
-              </div>
-              <div>
-                <dt>{{ $t("orderLookup.results.total") }}</dt>
-                <dd>{{ totalLabel }}</dd>
-              </div>
-              <div>
-                <dt>{{ $t("orderLookup.results.shippingTo") }}</dt>
-                <dd>{{ shippingAddress || "—" }}</dd>
-              </div>
-              <div v-if="isAuthenticated">
-                <dt>{{ $t("orderLookup.results.contact") }}</dt>
-                <dd style="white-space: pre-line">{{ contactSummary }}</dd>
-              </div>
-              <div>
-                <dt>Trạng thái gần nhất</dt>
-                <dd class="latest-status-dd">
-                  <span class="status-chip" :class="statusTone">
-                    {{ currentStatusLabel }}
-                  </span>
-                  <span v-if="hasStatusUpdatedTime" class="latest-status-time">
-                    {{ statusUpdatedLabel }}
-                  </span>
-                </dd>
-              </div>
-            </dl>
-          </template>
-
-          <template v-else-if="state === 'error'">
-            <h3>{{ $t("orderLookup.error.title") }}</h3>
-            <p class="muted">
-              {{ errorMessage || $t("orderLookup.error.generic") }}
+            </label>
+            <p v-else class="form-hint">
+              {{ $t("orderLookup.form.guestHint") }}
             </p>
-            <RouterLink to="/" class="text-link">{{
-              $t("orderLookup.help")
-              }}</RouterLink>
-          </template>
 
-          <template v-else>
-            <h3>{{ $t("orderLookup.empty.title") }}</h3>
-            <p class="muted">{{ $t("orderLookup.empty.subtitle") }}</p>
-            <RouterLink to="/" class="text-link">{{
-              $t("orderLookup.help")
+            <button class="submit-btn" type="submit" :disabled="isLoading">
+              <span class="btn-content">
+                <span v-if="isLoading" class="inline-spinner" aria-hidden="true"></span>
+                {{
+                  isLoading
+                    ? $t("orderLookup.form.checking")
+                    : $t("orderLookup.form.submit")
+                }}
+              </span>
+            </button>
+
+            <p class="form-hint">{{ $t("orderLookup.form.hint") }}</p>
+          </form>
+
+          <div class="result-card" :class="resultCardClass">
+            <template v-if="state === 'success' && order">
+              <dl class="result-grid">
+                <div>
+                  <dt>{{ $t("orderLookup.results.orderCode") }}</dt>
+                  <dd class="order-code-value">{{ orderCodeDisplay }}</dd>
+                </div>
+                <div class="order-action-row" v-if="hasPrimaryAction">
+                  <dt>{{ $t("orderLookup.actions.label") }}</dt>
+                  <dd class="cancel-action-cell">
+                    <button type="button" :class="primaryActionClasses" :disabled="primaryActionDisabled"
+                      @click="handlePrimaryAction">
+                      <span v-if="isProcessingAction" class="inline-spinner" aria-hidden="true"></span>
+                      <span>{{ primaryActionLabel }}</span>
+                    </button>
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ $t("orderLookup.results.placedOn") }}</dt>
+                  <dd>{{ placedOnLabel }}</dd>
+                </div>
+                <div>
+                  <dt>{{ $t("orderLookup.results.total") }}</dt>
+                  <dd>{{ totalLabel }}</dd>
+                </div>
+                <div>
+                  <dt>{{ $t("orderLookup.results.shippingTo") }}</dt>
+                  <dd>{{ shippingAddress || "—" }}</dd>
+                </div>
+                <div v-if="isAuthenticated">
+                  <dt>{{ $t("orderLookup.results.contact") }}</dt>
+                  <dd style="white-space: pre-line">{{ contactSummary }}</dd>
+                </div>
+                <div>
+                  <dt>Trạng thái gần nhất</dt>
+                  <dd class="latest-status-dd">
+                    <span class="status-chip" :class="statusTone">
+                      {{ currentStatusLabel }}
+                    </span>
+                    <span v-if="hasStatusUpdatedTime" class="latest-status-time">
+                      {{ statusUpdatedLabel }}
+                    </span>
+                  </dd>
+                </div>
+              </dl>
+            </template>
+
+            <template v-else-if="state === 'error'">
+              <h3>{{ $t("orderLookup.error.title") }}</h3>
+              <p class="muted">
+                {{ errorMessage || $t("orderLookup.error.generic") }}
+              </p>
+              <RouterLink to="/" class="text-link">{{
+                $t("orderLookup.help")
               }}</RouterLink>
-          </template>
+            </template>
+
+            <template v-else>
+              <h3>{{ $t("orderLookup.empty.title") }}</h3>
+              <p class="muted">{{ $t("orderLookup.empty.subtitle") }}</p>
+              <RouterLink to="/" class="text-link">{{
+                $t("orderLookup.help")
+              }}</RouterLink>
+            </template>
+          </div>
         </div>
+
+        <section class="timeline-section" v-if="state === 'success'">
+          <div class="section-heading">
+            <h2>{{ $t("orderLookup.timeline.heading") }}</h2>
+            <span class="muted">{{ timelineEvents.length }}
+              {{ $t("orderLookup.timeline.updates") }}</span>
+          </div>
+
+          <div v-if="timelineEvents.length" class="timeline-list">
+            <article v-for="item in timelineEvents" :key="item.id" class="timeline-item">
+              <div class="timeline-marker"></div>
+              <div class="timeline-body">
+                <div class="timeline-meta">
+                  <span class="time">{{ formatDateTimeVN(item.thoiGian) }}</span>
+                </div>
+                <h3>{{ item.tenTrangThaiDonHang }}</h3>
+                <p v-if="item.ghiChu" class="muted">{{ item.ghiChu }}</p>
+              </div>
+            </article>
+          </div>
+          <div v-else class="timeline-empty">
+            <p class="muted">{{ $t("orderLookup.timeline.emptyTitle") }}</p>
+            <p>{{ $t("orderLookup.timeline.emptySubtitle") }}</p>
+          </div>
+        </section>
+
+        <section class="items-section" v-if="state === 'success'">
+          <div class="section-heading">
+            <h2>{{ $t("orderLookup.items.heading") }}</h2>
+            <span class="muted" v-if="orderItems.length">{{ orderItems.length }}
+              {{ $t("orderLookup.items.itemsCount") }}</span>
+          </div>
+
+          <div v-if="orderItems.length" class="items-table">
+            <div class="items-header">
+              <span>{{ $t("orderLookup.items.product") }}</span>
+              <span>{{ $t("orderLookup.items.quantity") }}</span>
+              <span>{{ $t("orderLookup.items.price") }}</span>
+              <span>{{ $t("orderLookup.items.subtotal") }}</span>
+            </div>
+            <div v-for="item in orderItems" :key="item.id" class="items-row">
+              <div class="product-details">
+                <div class="product-main">
+                  {{ item.productName
+                  }}<span v-if="item.color"> - {{ item.color }}</span><span v-if="item.size"> - {{ item.size }}</span>
+                </div>
+                <div v-if="item.productCode" class="product-code">
+                  {{ item.productCode }}
+                </div>
+              </div>
+              <span>{{ item.quantity }}</span>
+              <span>{{ formatCurrency(item.price) }}</span>
+              <span>{{ formatCurrency(item.subtotal) }}</span>
+            </div>
+          </div>
+          <div v-else class="items-empty">
+            <p>{{ $t("orderLookup.items.empty") }}</p>
+          </div>
+        </section>
       </div>
-
-      <section class="timeline-section" v-if="state === 'success'">
-        <div class="section-heading">
-          <h2>{{ $t("orderLookup.timeline.heading") }}</h2>
-          <span class="muted">{{ timelineEvents.length }}
-            {{ $t("orderLookup.timeline.updates") }}</span>
-        </div>
-
-        <div v-if="timelineEvents.length" class="timeline-list">
-          <article v-for="item in timelineEvents" :key="item.id" class="timeline-item">
-            <div class="timeline-marker"></div>
-            <div class="timeline-body">
-              <div class="timeline-meta">
-                <span class="time">{{ formatDateTimeVN(item.thoiGian) }}</span>
-              </div>
-              <h3>{{ item.tenTrangThaiDonHang }}</h3>
-              <p v-if="item.ghiChu" class="muted">{{ item.ghiChu }}</p>
-            </div>
-          </article>
-        </div>
-        <div v-else class="timeline-empty">
-          <p class="muted">{{ $t("orderLookup.timeline.emptyTitle") }}</p>
-          <p>{{ $t("orderLookup.timeline.emptySubtitle") }}</p>
-        </div>
-      </section>
-
-      <section class="items-section" v-if="state === 'success'">
-        <div class="section-heading">
-          <h2>{{ $t("orderLookup.items.heading") }}</h2>
-          <span class="muted" v-if="orderItems.length">{{ orderItems.length }}
-            {{ $t("orderLookup.items.itemsCount") }}</span>
-        </div>
-
-        <div v-if="orderItems.length" class="items-table">
-          <div class="items-header">
-            <span>{{ $t("orderLookup.items.product") }}</span>
-            <span>{{ $t("orderLookup.items.quantity") }}</span>
-            <span>{{ $t("orderLookup.items.price") }}</span>
-            <span>{{ $t("orderLookup.items.subtotal") }}</span>
-          </div>
-          <div v-for="item in orderItems" :key="item.id" class="items-row">
-            <div class="product-details">
-              <div class="product-main">
-                {{ item.productName
-                }}<span v-if="item.color"> - {{ item.color }}</span><span v-if="item.size"> - {{ item.size }}</span>
-              </div>
-              <div v-if="item.productCode" class="product-code">
-                {{ item.productCode }}
-              </div>
-            </div>
-            <span>{{ item.quantity }}</span>
-            <span>{{ formatCurrency(item.price) }}</span>
-            <span>{{ formatCurrency(item.subtotal) }}</span>
-          </div>
-        </div>
-        <div v-else class="items-empty">
-          <p>{{ $t("orderLookup.items.empty") }}</p>
-        </div>
-      </section>
     </div>
-  </div>
 
-  <div v-if="showCancelConfirm" class="cancel-confirm-overlay" @click.self="closeCancelConfirm">
-    <div class="cancel-confirm-dialog">
-      <h3>{{ t("orderLookup.actions.confirmTitle") }}</h3>
-      <p>{{ t("orderLookup.actions.cancelConfirm") }}</p>
-      <div class="cancel-confirm-actions">
-        <button type="button" class="cancel-confirm-secondary" :disabled="isProcessingAction"
-          @click="closeCancelConfirm">
-          {{ t("orderLookup.actions.keepOrder") }}
-        </button>
-        <button type="button" class="cancel-confirm-danger" :disabled="isProcessingAction" @click="cancelOrder">
-          <span v-if="isProcessingAction" class="inline-spinner" aria-hidden="true"></span>
-          <span>{{ t("orderLookup.actions.cancelNow") }}</span>
-        </button>
+    <div v-if="showCancelConfirm" class="cancel-confirm-overlay" @click.self="closeCancelConfirm">
+      <div class="cancel-confirm-dialog">
+        <h3>{{ t("orderLookup.actions.confirmTitle") }}</h3>
+        <p>{{ t("orderLookup.actions.cancelConfirm") }}</p>
+        <div class="cancel-confirm-actions">
+          <button type="button" class="cancel-confirm-secondary" :disabled="isProcessingAction"
+            @click="closeCancelConfirm">
+            {{ t("orderLookup.actions.keepOrder") }}
+          </button>
+          <button type="button" class="cancel-confirm-danger" :disabled="isProcessingAction" @click="cancelOrder">
+            <span v-if="isProcessingAction" class="inline-spinner" aria-hidden="true"></span>
+            <span>{{ t("orderLookup.actions.cancelNow") }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

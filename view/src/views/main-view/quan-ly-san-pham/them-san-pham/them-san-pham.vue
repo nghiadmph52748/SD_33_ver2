@@ -236,15 +236,19 @@
     <a-card title="Mô tả sản phẩm" class="product-form-card" style="margin-top: 16px">
       <a-row :gutter="16">
         <a-col :span="14">
-          <a-form-item>
-            <template #label>
-              <span>Nội dung mô tả</span>
-            </template>
-            <a-textarea v-model="formData.moTa" placeholder="Nhập mô tả sản phẩm..." :rows="10" allow-clear />
+          <div style="margin-bottom: 8px; font-weight: 500; color: var(--color-text-2);">
+            Nội dung mô tả
+          </div>
+          <a-form-item no-style>
+            <div class="product-description-editor-container">
+              <QuillEditor v-model:content="formData.moTa" contentType="html" :toolbar="editorToolbar" theme="snow"
+                placeholder="Nhập mô tả sản phẩm..." />
+            </div>
           </a-form-item>
           <div style="margin-top: 8px; color: #86909c; font-size: 12px">
-            <icon-info-circle /> Sử dụng các công cụ phía trên để định dạng văn bản (in đậm, in nghiêng, danh sách,
-            v.v.)
+            <icon-info-circle /> Sử dụng các công cụ trên thanh công cụ để định dạng văn bản (in đậm, in nghiêng, danh
+            sách,
+            tiêu đề, v.v.)
           </div>
         </a-col>
         <a-col :span="10">
@@ -345,7 +349,7 @@
                 backgroundColor: colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.maMau || '#ccc',
               }"></div>
               <span class="color-name">{{colorInputs.find((c) => String(c.value) === String(colorVariant.color))?.label
-              }}</span>
+                }}</span>
             </div>
             <a-button type="outline" size="small" @click="showImageModal(colorVariant.color)">
               <template #icon>
@@ -3840,6 +3844,152 @@ watch(
   font-weight: 500;
 }
 
+/* Rich Text Editor Styles */
+.product-description-editor-container {
+  border: 1px solid var(--color-border-2);
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: var(--color-bg-1);
+}
+
+.product-description-editor-container :deep(.ql-toolbar) {
+  border: none !important;
+  border-bottom: 1px solid var(--color-border-2) !important;
+  background-color: var(--color-fill-1);
+  padding: 8px;
+  display: block;
+  width: 100%;
+}
+
+.product-description-editor-container :deep(.ql-container) {
+  border: none !important;
+  min-height: 280px;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--color-bg-1);
+  display: block;
+  width: 100%;
+}
+
+.product-description-editor-container :deep(.ql-editor) {
+  min-height: 280px;
+  max-height: 500px;
+  padding: 16px;
+  line-height: 1.6;
+  color: var(--color-text-1);
+  overflow-y: auto;
+}
+
+.product-description-editor-container :deep(.ql-editor.ql-blank::before) {
+  color: var(--color-text-3);
+  font-style: italic;
+  opacity: 0.6;
+  left: 16px;
+  right: 16px;
+}
+
+.product-description-editor-container :deep(.ql-editor:focus) {
+  outline: none;
+}
+
+.product-description-editor-container :deep(.ql-editor p) {
+  margin-bottom: 8px;
+}
+
+.product-description-editor-container :deep(.ql-snow .ql-stroke) {
+  stroke: var(--color-text-2);
+}
+
+.product-description-editor-container :deep(.ql-snow .ql-fill) {
+  fill: var(--color-text-2);
+}
+
+.product-description-editor-container :deep(.ql-snow .ql-picker-label) {
+  color: var(--color-text-2);
+}
+
+.product-description-editor-container :deep(.ql-toolbar button:hover),
+.product-description-editor-container :deep(.ql-toolbar button:focus) {
+  color: rgb(var(--primary-6));
+}
+
+.product-description-editor-container :deep(.ql-toolbar button:hover .ql-stroke),
+.product-description-editor-container :deep(.ql-toolbar button:focus .ql-stroke) {
+  stroke: rgb(var(--primary-6));
+}
+
+.product-description-editor-container :deep(.ql-toolbar button:hover .ql-fill),
+.product-description-editor-container :deep(.ql-toolbar button:focus .ql-fill) {
+  fill: rgb(var(--primary-6));
+}
+
+.product-description-editor-container :deep(.ql-toolbar button.ql-active),
+.product-description-editor-container :deep(.ql-toolbar .ql-picker-label.ql-active) {
+  color: rgb(var(--primary-6));
+}
+
+.product-description-editor-container :deep(.ql-toolbar button.ql-active .ql-stroke),
+.product-description-editor-container :deep(.ql-toolbar .ql-picker-label.ql-active .ql-stroke) {
+  stroke: rgb(var(--primary-6));
+}
+
+.product-description-editor-container :deep(.ql-toolbar button.ql-active .ql-fill),
+.product-description-editor-container :deep(.ql-toolbar .ql-picker-label.ql-active .ql-fill) {
+  fill: rgb(var(--primary-6));
+}
+
+/* Fix Quill Picker Dropdowns */
+.product-description-editor-container :deep(.ql-snow .ql-picker) {
+  color: var(--color-text-2);
+  height: auto;
+  line-height: normal;
+}
+
+.product-description-editor-container :deep(.ql-snow .ql-picker-label) {
+  border: 1px solid var(--color-border-2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.product-description-editor-container :deep(.ql-snow .ql-picker-options) {
+  background-color: white;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  padding: 4px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.product-description-editor-container :deep(.ql-snow .ql-picker-item) {
+  padding: 4px 12px;
+  color: var(--color-text-1);
+  white-space: nowrap;
+}
+
+.product-description-editor-container :deep(.ql-snow .ql-picker-item:hover) {
+  background-color: var(--color-fill-2);
+  color: rgb(var(--primary-6));
+}
+
+.product-description-editor-container :deep(.ql-snow.ql-toolbar button) {
+  height: 28px;
+  width: 28px;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-description-editor-container :deep(.ql-formats) {
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 /* Preview Panel Styles */
 .preview-panel {
   border: 1px solid var(--color-border-2);
@@ -3864,10 +4014,13 @@ watch(
   background-color: var(--color-bg-1);
   overflow-y: auto;
   max-height: 500px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
 }
 
 .preview-content :deep(p) {
   margin-bottom: 8px;
+  line-height: 1.6;
 }
 
 .preview-content :deep(ul),
@@ -3876,26 +4029,61 @@ watch(
   padding-left: 24px;
 }
 
+.preview-content :deep(li) {
+  margin-bottom: 4px;
+}
+
 .preview-content :deep(h1) {
   font-size: 24px;
   font-weight: 600;
   margin-bottom: 12px;
+  color: var(--color-text-1);
 }
 
 .preview-content :deep(h2) {
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 10px;
+  color: var(--color-text-1);
 }
 
 .preview-content :deep(h3) {
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 8px;
+  color: var(--color-text-1);
+}
+
+.preview-content :deep(strong) {
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.preview-content :deep(em) {
+  font-style: italic;
+}
+
+.preview-content :deep(u) {
+  text-decoration: underline;
+}
+
+.preview-content :deep(s) {
+  text-decoration: line-through;
 }
 
 .preview-content :deep(a) {
   color: rgb(var(--primary-6));
   text-decoration: underline;
+}
+
+.preview-content :deep(a:hover) {
+  color: rgb(var(--primary-5));
+}
+
+.preview-content :deep(blockquote) {
+  border-left: 4px solid var(--color-border-2);
+  padding-left: 16px;
+  margin: 8px 0;
+  color: var(--color-text-2);
 }
 </style>
